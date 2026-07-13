@@ -1,0 +1,96 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "gaato/discord/interaction"
+
+import {
+  "gaato/discord/model",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn attachment_option(String, String, required? : Bool) -> @model.CommandOption
+
+pub fn boolean_option(String, String, required? : Bool) -> @model.CommandOption
+
+pub fn channel_option(String, String, required? : Bool, channel_types? : Array[@model.ChannelType]) -> @model.CommandOption
+
+pub fn int_choice(String, Int64) -> @model.CommandOptionChoice
+
+pub fn integer_option(String, String, required? : Bool, choices? : Array[@model.CommandOptionChoice], min_value? : Int64, max_value? : Int64, autocomplete? : Bool) -> @model.CommandOption
+
+pub fn mentionable_option(String, String, required? : Bool) -> @model.CommandOption
+
+pub fn number_choice(String, Double) -> @model.CommandOptionChoice
+
+pub fn number_option(String, String, required? : Bool, choices? : Array[@model.CommandOptionChoice], min_value? : Double, max_value? : Double, autocomplete? : Bool) -> @model.CommandOption
+
+pub fn role_option(String, String, required? : Bool) -> @model.CommandOption
+
+pub fn string_choice(String, String) -> @model.CommandOptionChoice
+
+pub fn string_option(String, String, required? : Bool, choices? : Array[@model.CommandOptionChoice], min_length? : Int, max_length? : Int, autocomplete? : Bool) -> @model.CommandOption
+
+pub fn sub_command(String, String, options? : Array[@model.CommandOption]) -> @model.CommandOption
+
+pub fn sub_command_group(String, String, Array[@model.CommandOption]) -> @model.CommandOption
+
+pub fn user_option(String, String, required? : Bool) -> @model.CommandOption
+
+// Errors
+pub(all) suberror OptionError {
+  MissingOption(name~ : String)
+  WrongType(name~ : String, expected~ : String)
+  MissingResolved(name~ : String, kind~ : String)
+} derive(@debug.Debug)
+
+// Types and methods
+pub struct CommandOptions {
+  // private fields
+}
+pub fn CommandOptions::attachment(Self, String) -> @model.Attachment raise OptionError
+pub fn CommandOptions::bool(Self, String) -> Bool raise OptionError
+pub fn CommandOptions::bool_opt(Self, String) -> Bool? raise OptionError
+pub fn CommandOptions::channel(Self, String) -> @model.Id[@model.ChannelMarker] raise OptionError
+pub fn CommandOptions::channel_opt(Self, String) -> @model.Id[@model.ChannelMarker]? raise OptionError
+pub fn CommandOptions::focused(Self) -> String?
+pub fn CommandOptions::from_data(@model.CommandData) -> Self
+pub fn CommandOptions::has(Self, String) -> Bool
+pub fn CommandOptions::int(Self, String) -> Int64 raise OptionError
+pub fn CommandOptions::int_opt(Self, String) -> Int64? raise OptionError
+pub fn CommandOptions::mentionable(Self, String) -> @model.Id[@model.GenericMarker] raise OptionError
+pub fn CommandOptions::mentionable_opt(Self, String) -> @model.Id[@model.GenericMarker]? raise OptionError
+pub fn CommandOptions::number(Self, String) -> Double raise OptionError
+pub fn CommandOptions::number_opt(Self, String) -> Double? raise OptionError
+pub fn CommandOptions::path(Self) -> Array[String]
+pub fn CommandOptions::resolved_channel(Self, @model.Id[@model.ChannelMarker]) -> @model.Channel?
+pub fn CommandOptions::resolved_member(Self, @model.Id[@model.UserMarker]) -> @model.GuildMember?
+pub fn CommandOptions::resolved_role(Self, @model.Id[@model.RoleMarker]) -> @model.Role?
+pub fn CommandOptions::resolved_user(Self, @model.Id[@model.UserMarker]) -> @model.User?
+pub fn CommandOptions::role(Self, String) -> @model.Id[@model.RoleMarker] raise OptionError
+pub fn CommandOptions::role_opt(Self, String) -> @model.Id[@model.RoleMarker]? raise OptionError
+pub fn CommandOptions::string(Self, String) -> String raise OptionError
+pub fn CommandOptions::string_opt(Self, String) -> String? raise OptionError
+pub fn CommandOptions::user(Self, String) -> @model.Id[@model.UserMarker] raise OptionError
+pub fn CommandOptions::user_opt(Self, String) -> @model.Id[@model.UserMarker]? raise OptionError
+
+pub(all) struct CommandSpec {
+  name : String
+  description : String
+  typ : @model.ApplicationCommandType
+  options : Array[@model.CommandOption]
+  default_member_permissions : @model.Permissions?
+  nsfw : Bool?
+  integration_types : Array[Int]?
+  contexts : Array[Int]?
+} derive(@debug.Debug)
+pub fn CommandSpec::message(String, default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[Int], contexts? : Array[Int]) -> Self
+pub fn CommandSpec::slash(String, String, options? : Array[@model.CommandOption], default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[Int], contexts? : Array[Int]) -> Self
+pub fn CommandSpec::user(String, default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[Int], contexts? : Array[Int]) -> Self
+pub impl ToJson for CommandSpec
+
+// Type aliases
+
+// Traits
+pub(open) trait CommandModel {
+  fn from_options(CommandOptions) -> Self raise
+}
+
