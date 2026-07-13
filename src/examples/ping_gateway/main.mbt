@@ -5,12 +5,16 @@
 /// Run: DISCORD_TOKEN=... moon run --release src/examples/ping_gateway
 /// Without DISCORD_TOKEN it still exercises the stack live: the gateway
 /// rejects the empty identify with close code 4004, which the shard
-/// classifies as fatal.
-const RUN_SECONDS : Int = 60
+/// classifies as fatal. RUN_SECONDS overrides the default 60s window.
+const DEFAULT_RUN_SECONDS : Int = 60
 
 ///|
 async fn main {
   let token = @env.get_env_var("DISCORD_TOKEN").unwrap_or("")
+  let run_seconds = match @env.get_env_var("RUN_SECONDS") {
+    Some(s) => @string.parse_int(s) catch { _ => DEFAULT_RUN_SECONDS }
+    None => DEFAULT_RUN_SECONDS
+  }
   let client = @dhttp.Client::new(token)
   let gateway_url = client.get_gateway()
   println("[rest] gateway url: \{gateway_url}")
@@ -18,7 +22,7 @@ async fn main {
     @model.Intents::guild_messages() |
     @model.Intents::direct_messages() |
     @model.Intents::message_content()
-  @async.with_timeout_opt(RUN_SECONDS * 1000, () => {
+  @async.with_timeout_opt(run_seconds * 1000, () => {
     @async.with_task_group((group : @async.TaskGroup[Unit]) => {
       let shard = @gateway.Shard::start(group, token~, intents~, gateway_url~)
       for ;; {

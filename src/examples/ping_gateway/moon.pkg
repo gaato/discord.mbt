@@ -4,6 +4,7 @@ import {
   "gaato/discord/gateway",
   "moonbitlang/async",
   "moonbitlang/core/env",
+  "moonbitlang/core/string",
 }
 
 supported_targets = "native"
