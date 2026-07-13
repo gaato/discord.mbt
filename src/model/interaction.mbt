@@ -16,8 +16,7 @@ pub(all) struct Interaction {
   app_permissions : Permissions?
   locale : String?
   guild_locale : String?
-  // TODO(entitlement): Replace raw entries when the entitlement domain is ported.
-  entitlements : Array[Json]?
+  entitlements : Array[Entitlement]?
   context : Int?
   // TODO(interaction-full): Port guild summary, authorization owners, and attachment size metadata later.
 } derive(Debug)
@@ -109,7 +108,7 @@ priv struct InteractionFields {
   app_permissions : Permissions?
   locale : String?
   guild_locale : String?
-  entitlements : Array[Json]?
+  entitlements : Array[Entitlement]?
   context : Int?
 } derive (
   ToJson(fields(typ(rename="type"), guild_member(rename="member"))),

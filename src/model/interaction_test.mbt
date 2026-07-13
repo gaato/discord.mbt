@@ -47,7 +47,17 @@ test "slash command autocomplete dispatches command data with resolved users" {
     #|  "app_permissions": "2048",
     #|  "locale": "en-US",
     #|  "guild_locale": "ja",
-    #|  "entitlements": [{"id": "raw-entitlement", "future": true}],
+    #|  "entitlements": [{
+    #|    "id": "125000000000000001",
+    #|    "sku_id": "125000000000000002",
+    #|    "application_id": "172150183260323840",
+    #|    "user_id": "80351110224678912",
+    #|    "type": 1,
+    #|    "deleted": false,
+    #|    "starts_at": null,
+    #|    "ends_at": null,
+    #|    "future": true
+    #|  }],
     #|  "context": 0,
     #|  "brand_new_field_from_discord": true
     #|}
@@ -184,7 +194,22 @@ test "slash command autocomplete dispatches command data with resolved users" {
       #|  app_permissions: Some(2048),
       #|  locale: Some("en-US"),
       #|  guild_locale: Some("ja"),
-      #|  entitlements: Some([Object({ "id": String("raw-entitlement"), "future": True })]),
+      #|  entitlements: Some(
+      #|    [
+      #|      {
+      #|        id: 125000000000000001,
+      #|        sku_id: 125000000000000002,
+      #|        application_id: 172150183260323840,
+      #|        user_id: Some(80351110224678912),
+      #|        typ: Purchase,
+      #|        deleted: false,
+      #|        starts_at: Null,
+      #|        ends_at: Null,
+      #|        guild_id: None,
+      #|        consumed: None,
+      #|      },
+      #|    ],
+      #|  ),
       #|  context: Some(0),
       #|}
     ),

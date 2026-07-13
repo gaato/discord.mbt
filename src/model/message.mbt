@@ -29,10 +29,10 @@ pub(all) struct Message {
   sticker_items : Array[StickerItem]?
   position : Int?
   role_subscription_data : RoleSubscriptionData?
+  poll : Poll?
   call : MessageCall?
   // TODO(application): Add the partial application payload with its domain.
   // TODO(interaction): Add interaction and interaction_metadata later.
-  // TODO(poll): Add poll payloads with the poll domain.
   // TODO(resolved): Add resolved interaction data with the interaction domain.
   // TODO(message_snapshots): Add forwarded message snapshots later.
   // TODO(soundboard_sounds): Add message soundboard payloads later.

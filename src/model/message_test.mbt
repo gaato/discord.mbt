@@ -300,6 +300,7 @@ test "message decodes a full fixture with a string nonce and nested reference" {
       #|        sticker_items: None,
       #|        position: None,
       #|        role_subscription_data: None,
+      #|        poll: None,
       #|        call: None,
       #|      },
       #|    ),
@@ -374,6 +375,7 @@ test "message decodes a full fixture with a string nonce and nested reference" {
       #|      is_renewal: true,
       #|    },
       #|  ),
+      #|  poll: None,
       #|  call: Some({ participants: [80351110224678912], ended_timestamp: Some(Null) }),
       #|}
     ),
@@ -473,6 +475,7 @@ test "message encode omits absent optional fields" {
     sticker_items: None,
     position: None,
     role_subscription_data: None,
+    poll: None,
     call: None,
   }
   inspect(
