@@ -1,0 +1,78 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "gaato/discord/framework"
+
+import {
+  "gaato/discord/http",
+  "gaato/discord/interaction",
+  "gaato/discord/model",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub(all) struct AutocompleteCtx {
+  client : @http.Client
+  application_id : @model.Id[@model.ApplicationMarker]
+  interaction : @model.Interaction
+  data : @model.CommandData
+  options : @interaction.CommandOptions
+}
+pub async fn AutocompleteCtx::suggest(Self, Array[@model.CommandOptionChoice]) -> Unit
+
+pub(all) struct CommandCtx {
+  client : @http.Client
+  application_id : @model.Id[@model.ApplicationMarker]
+  interaction : @model.Interaction
+  data : @model.CommandData
+  options : @interaction.CommandOptions
+}
+pub async fn CommandCtx::defer_response(Self, ephemeral? : Bool) -> Unit
+pub async fn CommandCtx::edit_response(Self, content? : @model.Undefinable[String], embeds? : @model.Undefinable[Array[@model.Embed]], components? : @model.Undefinable[Array[@model.Component]]) -> @model.Message
+pub async fn CommandCtx::followup(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], ephemeral? : Bool) -> @model.Message
+pub fn[T : @interaction.CommandModel] CommandCtx::model(Self) -> T raise
+pub async fn CommandCtx::respond(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], ephemeral? : Bool) -> Unit
+pub fn CommandCtx::user(Self) -> @model.User?
+
+pub(all) struct ComponentCtx {
+  client : @http.Client
+  application_id : @model.Id[@model.ApplicationMarker]
+  interaction : @model.Interaction
+  data : @model.ComponentData
+}
+pub async fn ComponentCtx::defer_update(Self) -> Unit
+pub async fn ComponentCtx::respond(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], ephemeral? : Bool) -> Unit
+pub async fn ComponentCtx::update_message(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component]) -> Unit
+pub fn ComponentCtx::user(Self) -> @model.User?
+
+pub struct Framework {
+  // private fields
+}
+pub fn Framework::autocomplete(Self, String, async (AutocompleteCtx) -> Unit) -> Self
+pub fn Framework::command(Self, @interaction.CommandSpec, async (CommandCtx) -> Unit) -> Self
+pub fn Framework::command_specs(Self) -> Json
+pub fn Framework::component(Self, String, async (ComponentCtx) -> Unit) -> Self
+pub fn Framework::modal(Self, String, async (ModalCtx) -> Unit) -> Self
+pub fn Framework::new(@http.Client, @model.Id[@model.ApplicationMarker]) -> Self
+pub fn Framework::on_error(Self, async (String, Error) -> Unit) -> Self
+pub async fn Framework::process(Self, @model.Interaction) -> Bool
+pub async fn Framework::sync_global(Self) -> Array[@model.ApplicationCommand]
+pub async fn Framework::sync_guild(Self, @model.Id[@model.GuildMarker]) -> Array[@model.ApplicationCommand]
+pub async fn Framework::wait_for_component(Self, custom_id~ : String, timeout_ms? : Int) -> ComponentCtx?
+
+pub(all) struct ModalCtx {
+  client : @http.Client
+  application_id : @model.Id[@model.ApplicationMarker]
+  interaction : @model.Interaction
+  data : @model.ModalData
+}
+pub async fn ModalCtx::defer_response(Self, ephemeral? : Bool) -> Unit
+pub async fn ModalCtx::respond(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], ephemeral? : Bool) -> Unit
+pub fn ModalCtx::text_value(Self, String) -> String?
+pub fn ModalCtx::user(Self) -> @model.User?
+
+// Type aliases
+
+// Traits
+
