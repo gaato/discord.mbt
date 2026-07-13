@@ -1,4 +1,26 @@
 ///|
+struct RouteMetadata {
+  name : String
+  method_name : String
+  path : String
+  bucket : String
+  needs_auth : Bool
+  supports_reason : Bool
+} derive(Debug)
+
+///|
+fn route_metadata(name : String, route : @http.Route) -> RouteMetadata {
+  {
+    name,
+    method_name: route.method_().to_string(),
+    path: route.path(),
+    bucket: route.bucket(),
+    needs_auth: route.needs_auth(),
+    supports_reason: route.supports_reason(),
+  }
+}
+
+///|
 test "route paths and buckets" {
   let channel_id : @model.ChannelId = @model.Id(100UL)
   let message_id : @model.MessageId = @model.Id(200UL)
@@ -11,6 +33,309 @@ test "route paths and buckets" {
   inspect(del.bucket(), content="DELETE:/channels/100/messages/{}")
   let edit = @http.Route::EditMessage(channel_id~, message_id~)
   inspect(edit.bucket(), content="PATCH:/channels/100/messages/{}")
+}
+
+///|
+test "webhook route metadata" {
+  let channel_id : @model.ChannelId = @model.Id(10UL)
+  let guild_id : @model.GuildId = @model.Id(20UL)
+  let webhook_id : @model.WebhookId = @model.Id(30UL)
+  let message_id : @model.MessageId = @model.Id(40UL)
+  debug_inspect(
+    [
+      route_metadata("create", @http.Route::CreateWebhook(channel_id~)),
+      route_metadata("channel", @http.Route::GetChannelWebhooks(channel_id~)),
+      route_metadata("guild", @http.Route::GetGuildWebhooks(guild_id~)),
+      route_metadata("get", @http.Route::GetWebhook(webhook_id~)),
+      route_metadata("modify", @http.Route::ModifyWebhook(webhook_id~)),
+      route_metadata("delete", @http.Route::DeleteWebhook(webhook_id~)),
+      route_metadata(
+        "execute",
+        @http.Route::ExecuteWebhook(
+          webhook_id~,
+          token="tok",
+          query="?wait=true",
+        ),
+      ),
+      route_metadata(
+        "get-message",
+        @http.Route::GetWebhookMessage(webhook_id~, token="tok", message_id~),
+      ),
+      route_metadata(
+        "edit-message",
+        @http.Route::EditWebhookMessage(webhook_id~, token="tok", message_id~),
+      ),
+      route_metadata(
+        "delete-message",
+        @http.Route::DeleteWebhookMessage(webhook_id~, token="tok", message_id~),
+      ),
+    ],
+    content=(
+      #|[
+      #|  {
+      #|    name: "create",
+      #|    method_name: "Post",
+      #|    path: "/channels/10/webhooks",
+      #|    bucket: "POST:/channels/10/webhooks",
+      #|    needs_auth: true,
+      #|    supports_reason: true,
+      #|  },
+      #|  {
+      #|    name: "channel",
+      #|    method_name: "Get",
+      #|    path: "/channels/10/webhooks",
+      #|    bucket: "GET:/channels/10/webhooks",
+      #|    needs_auth: true,
+      #|    supports_reason: false,
+      #|  },
+      #|  {
+      #|    name: "guild",
+      #|    method_name: "Get",
+      #|    path: "/guilds/20/webhooks",
+      #|    bucket: "GET:/guilds/20/webhooks",
+      #|    needs_auth: true,
+      #|    supports_reason: false,
+      #|  },
+      #|  {
+      #|    name: "get",
+      #|    method_name: "Get",
+      #|    path: "/webhooks/30",
+      #|    bucket: "GET:/webhooks/30",
+      #|    needs_auth: true,
+      #|    supports_reason: false,
+      #|  },
+      #|  {
+      #|    name: "modify",
+      #|    method_name: "Patch",
+      #|    path: "/webhooks/30",
+      #|    bucket: "PATCH:/webhooks/30",
+      #|    needs_auth: true,
+      #|    supports_reason: true,
+      #|  },
+      #|  {
+      #|    name: "delete",
+      #|    method_name: "Delete",
+      #|    path: "/webhooks/30",
+      #|    bucket: "DELETE:/webhooks/30",
+      #|    needs_auth: true,
+      #|    supports_reason: true,
+      #|  },
+      #|  {
+      #|    name: "execute",
+      #|    method_name: "Post",
+      #|    path: "/webhooks/30/tok?wait=true",
+      #|    bucket: "POST:/webhooks/30/tok",
+      #|    needs_auth: false,
+      #|    supports_reason: false,
+      #|  },
+      #|  {
+      #|    name: "get-message",
+      #|    method_name: "Get",
+      #|    path: "/webhooks/30/tok/messages/40",
+      #|    bucket: "GET:/webhooks/30/tok/messages/{}",
+      #|    needs_auth: false,
+      #|    supports_reason: false,
+      #|  },
+      #|  {
+      #|    name: "edit-message",
+      #|    method_name: "Patch",
+      #|    path: "/webhooks/30/tok/messages/40",
+      #|    bucket: "PATCH:/webhooks/30/tok/messages/{}",
+      #|    needs_auth: false,
+      #|    supports_reason: false,
+      #|  },
+      #|  {
+      #|    name: "delete-message",
+      #|    method_name: "Delete",
+      #|    path: "/webhooks/30/tok/messages/40",
+      #|    bucket: "DELETE:/webhooks/30/tok/messages/{}",
+      #|    needs_auth: false,
+      #|    supports_reason: false,
+      #|  },
+      #|]
+    ),
+  )
+}
+
+///|
+test "channel miscellaneous route metadata" {
+  let channel_id : @model.ChannelId = @model.Id(10UL)
+  let overwrite_id : @model.GenericId = @model.Id(50UL)
+  debug_inspect(
+    [
+      route_metadata(
+        "bulk-delete",
+        @http.Route::BulkDeleteMessages(channel_id~),
+      ),
+      route_metadata("pins", @http.Route::GetPinnedMessages(channel_id~)),
+      route_metadata(
+        "edit-permissions",
+        @http.Route::EditChannelPermissions(channel_id~, overwrite_id~),
+      ),
+      route_metadata(
+        "delete-permission",
+        @http.Route::DeleteChannelPermission(channel_id~, overwrite_id~),
+      ),
+      route_metadata("invites", @http.Route::GetChannelInvites(channel_id~)),
+      route_metadata(
+        "create-invite",
+        @http.Route::CreateChannelInvite(channel_id~),
+      ),
+    ],
+    content=(
+      #|[
+      #|  {
+      #|    name: "bulk-delete",
+      #|    method_name: "Post",
+      #|    path: "/channels/10/messages/bulk-delete",
+      #|    bucket: "POST:/channels/10/messages/bulk-delete",
+      #|    needs_auth: true,
+      #|    supports_reason: true,
+      #|  },
+      #|  {
+      #|    name: "pins",
+      #|    method_name: "Get",
+      #|    path: "/channels/10/pins",
+      #|    bucket: "GET:/channels/10/pins",
+      #|    needs_auth: true,
+      #|    supports_reason: false,
+      #|  },
+      #|  {
+      #|    name: "edit-permissions",
+      #|    method_name: "Put",
+      #|    path: "/channels/10/permissions/50",
+      #|    bucket: "PUT:/channels/10/permissions/{}",
+      #|    needs_auth: true,
+      #|    supports_reason: true,
+      #|  },
+      #|  {
+      #|    name: "delete-permission",
+      #|    method_name: "Delete",
+      #|    path: "/channels/10/permissions/50",
+      #|    bucket: "DELETE:/channels/10/permissions/{}",
+      #|    needs_auth: true,
+      #|    supports_reason: true,
+      #|  },
+      #|  {
+      #|    name: "invites",
+      #|    method_name: "Get",
+      #|    path: "/channels/10/invites",
+      #|    bucket: "GET:/channels/10/invites",
+      #|    needs_auth: true,
+      #|    supports_reason: false,
+      #|  },
+      #|  {
+      #|    name: "create-invite",
+      #|    method_name: "Post",
+      #|    path: "/channels/10/invites",
+      #|    bucket: "POST:/channels/10/invites",
+      #|    needs_auth: true,
+      #|    supports_reason: true,
+      #|  },
+      #|]
+    ),
+  )
+}
+
+///|
+test "invite route metadata keeps the invite code" {
+  debug_inspect(
+    [
+      route_metadata(
+        "get",
+        @http.Route::GetInvite(
+          code="moonbit",
+          query="?with_counts=true&with_expiration=true",
+        ),
+      ),
+      route_metadata("delete", @http.Route::DeleteInvite(code="moonbit")),
+    ],
+    content=(
+      #|[
+      #|  {
+      #|    name: "get",
+      #|    method_name: "Get",
+      #|    path: "/invites/moonbit?with_counts=true&with_expiration=true",
+      #|    bucket: "GET:/invites/moonbit",
+      #|    needs_auth: true,
+      #|    supports_reason: false,
+      #|  },
+      #|  {
+      #|    name: "delete",
+      #|    method_name: "Delete",
+      #|    path: "/invites/moonbit",
+      #|    bucket: "DELETE:/invites/moonbit",
+      #|    needs_auth: true,
+      #|    supports_reason: true,
+      #|  },
+      #|]
+    ),
+  )
+}
+
+///|
+test "guild emoji route metadata" {
+  let guild_id : @model.GuildId = @model.Id(20UL)
+  let emoji_id : @model.EmojiId = @model.Id(60UL)
+  debug_inspect(
+    [
+      route_metadata("list", @http.Route::ListGuildEmojis(guild_id~)),
+      route_metadata("get", @http.Route::GetGuildEmoji(guild_id~, emoji_id~)),
+      route_metadata("create", @http.Route::CreateGuildEmoji(guild_id~)),
+      route_metadata(
+        "modify",
+        @http.Route::ModifyGuildEmoji(guild_id~, emoji_id~),
+      ),
+      route_metadata(
+        "delete",
+        @http.Route::DeleteGuildEmoji(guild_id~, emoji_id~),
+      ),
+    ],
+    content=(
+      #|[
+      #|  {
+      #|    name: "list",
+      #|    method_name: "Get",
+      #|    path: "/guilds/20/emojis",
+      #|    bucket: "GET:/guilds/20/emojis",
+      #|    needs_auth: true,
+      #|    supports_reason: false,
+      #|  },
+      #|  {
+      #|    name: "get",
+      #|    method_name: "Get",
+      #|    path: "/guilds/20/emojis/60",
+      #|    bucket: "GET:/guilds/20/emojis/{}",
+      #|    needs_auth: true,
+      #|    supports_reason: false,
+      #|  },
+      #|  {
+      #|    name: "create",
+      #|    method_name: "Post",
+      #|    path: "/guilds/20/emojis",
+      #|    bucket: "POST:/guilds/20/emojis",
+      #|    needs_auth: true,
+      #|    supports_reason: true,
+      #|  },
+      #|  {
+      #|    name: "modify",
+      #|    method_name: "Patch",
+      #|    path: "/guilds/20/emojis/60",
+      #|    bucket: "PATCH:/guilds/20/emojis/{}",
+      #|    needs_auth: true,
+      #|    supports_reason: true,
+      #|  },
+      #|  {
+      #|    name: "delete",
+      #|    method_name: "Delete",
+      #|    path: "/guilds/20/emojis/60",
+      #|    bucket: "DELETE:/guilds/20/emojis/{}",
+      #|    needs_auth: true,
+      #|    supports_reason: true,
+      #|  },
+      #|]
+    ),
+  )
 }
 
 ///|

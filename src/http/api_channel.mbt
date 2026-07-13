@@ -90,6 +90,85 @@ pub async fn Client::unpin_message(
 }
 
 ///|
+/// List every pinned message in a channel.
+pub async fn Client::get_pinned_messages(
+  self : Client,
+  channel_id : @model.ChannelId,
+) -> Array[@model.Message] raise DiscordHttpError {
+  decode(self.request(Route::GetPinnedMessages(channel_id~)))
+}
+
+///|
+/// Create or replace a channel permission overwrite.
+pub async fn Client::edit_channel_permissions(
+  self : Client,
+  channel_id : @model.ChannelId,
+  overwrite_id : @model.GenericId,
+  allow : @model.Permissions,
+  deny : @model.Permissions,
+  typ : Int,
+  audit_reason? : String,
+) -> Unit raise DiscordHttpError {
+  let body = @model.ObjBuilder::new()
+    .field("allow", allow)
+    .field("deny", deny)
+    .field("type", typ)
+    .build()
+  self.request(
+    Route::EditChannelPermissions(channel_id~, overwrite_id~),
+    body~,
+    audit_reason?,
+  )
+  |> ignore
+}
+
+///|
+/// Delete a channel permission overwrite.
+pub async fn Client::delete_channel_permission(
+  self : Client,
+  channel_id : @model.ChannelId,
+  overwrite_id : @model.GenericId,
+  audit_reason? : String,
+) -> Unit raise DiscordHttpError {
+  self.request(
+    Route::DeleteChannelPermission(channel_id~, overwrite_id~),
+    audit_reason?,
+  )
+  |> ignore
+}
+
+///|
+/// List invites created for a channel.
+pub async fn Client::get_channel_invites(
+  self : Client,
+  channel_id : @model.ChannelId,
+) -> Array[@model.Invite] raise DiscordHttpError {
+  decode(self.request(Route::GetChannelInvites(channel_id~)))
+}
+
+///|
+/// Create an invite for a channel.
+pub async fn Client::create_channel_invite(
+  self : Client,
+  channel_id : @model.ChannelId,
+  max_age? : Int,
+  max_uses? : Int,
+  temporary? : Bool,
+  unique? : Bool,
+  audit_reason? : String,
+) -> @model.Invite raise DiscordHttpError {
+  let body = @model.ObjBuilder::new()
+    .opt("max_age", max_age)
+    .opt("max_uses", max_uses)
+    .opt("temporary", temporary)
+    .opt("unique", unique)
+    .build()
+  decode(
+    self.request(Route::CreateChannelInvite(channel_id~), body~, audit_reason?),
+  )
+}
+
+///|
 /// Add a reaction. The emoji must already be URL-encoded; for custom emoji,
 /// callers should pass forms such as name%3A123456789012345678.
 pub async fn Client::create_reaction(

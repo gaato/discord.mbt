@@ -20,6 +20,7 @@ pub(all) enum Route {
   CreateMessage(channel_id~ : @model.ChannelId)
   EditMessage(channel_id~ : @model.ChannelId, message_id~ : @model.MessageId)
   DeleteMessage(channel_id~ : @model.ChannelId, message_id~ : @model.MessageId)
+  BulkDeleteMessages(channel_id~ : @model.ChannelId)
   CreateReaction(
     channel_id~ : @model.ChannelId,
     message_id~ : @model.MessageId,
@@ -49,6 +50,19 @@ pub(all) enum Route {
   TriggerTypingIndicator(channel_id~ : @model.ChannelId)
   PinMessage(channel_id~ : @model.ChannelId, message_id~ : @model.MessageId)
   UnpinMessage(channel_id~ : @model.ChannelId, message_id~ : @model.MessageId)
+  GetPinnedMessages(channel_id~ : @model.ChannelId)
+  EditChannelPermissions(
+    channel_id~ : @model.ChannelId,
+    overwrite_id~ : @model.GenericId
+  )
+  DeleteChannelPermission(
+    channel_id~ : @model.ChannelId,
+    overwrite_id~ : @model.GenericId
+  )
+  GetChannelInvites(channel_id~ : @model.ChannelId)
+  CreateChannelInvite(channel_id~ : @model.ChannelId)
+  CreateWebhook(channel_id~ : @model.ChannelId)
+  GetChannelWebhooks(channel_id~ : @model.ChannelId)
   StartThreadFromMessage(
     channel_id~ : @model.ChannelId,
     message_id~ : @model.MessageId
@@ -86,6 +100,37 @@ pub(all) enum Route {
   RemoveGuildBan(guild_id~ : @model.GuildId, user_id~ : @model.UserId)
   GetGuildBans(guild_id~ : @model.GuildId, query~ : String)
   GetGuildAuditLog(guild_id~ : @model.GuildId, query~ : String)
+  GetGuildWebhooks(guild_id~ : @model.GuildId)
+  ListGuildEmojis(guild_id~ : @model.GuildId)
+  GetGuildEmoji(guild_id~ : @model.GuildId, emoji_id~ : @model.EmojiId)
+  CreateGuildEmoji(guild_id~ : @model.GuildId)
+  ModifyGuildEmoji(guild_id~ : @model.GuildId, emoji_id~ : @model.EmojiId)
+  DeleteGuildEmoji(guild_id~ : @model.GuildId, emoji_id~ : @model.EmojiId)
+  GetInvite(code~ : String, query~ : String)
+  DeleteInvite(code~ : String)
+  GetWebhook(webhook_id~ : @model.WebhookId)
+  ModifyWebhook(webhook_id~ : @model.WebhookId)
+  DeleteWebhook(webhook_id~ : @model.WebhookId)
+  ExecuteWebhook(
+    webhook_id~ : @model.WebhookId,
+    token~ : String,
+    query~ : String
+  )
+  GetWebhookMessage(
+    webhook_id~ : @model.WebhookId,
+    token~ : String,
+    message_id~ : @model.MessageId
+  )
+  EditWebhookMessage(
+    webhook_id~ : @model.WebhookId,
+    token~ : String,
+    message_id~ : @model.MessageId
+  )
+  DeleteWebhookMessage(
+    webhook_id~ : @model.WebhookId,
+    token~ : String,
+    message_id~ : @model.MessageId
+  )
   CreateInteractionResponse(
     interaction_id~ : @model.InteractionId,
     token~ : String
@@ -173,6 +218,9 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | GetChannelMessages(..)
     | GetChannelMessage(..)
     | GetReactions(..)
+    | GetPinnedMessages(..)
+    | GetChannelInvites(..)
+    | GetChannelWebhooks(..)
     | GetGuild(..)
     | GetGuildWithCounts(..)
     | GetGuildChannels(..)
@@ -182,6 +230,12 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | GetGuildRoles(..)
     | GetGuildBans(..)
     | GetGuildAuditLog(..)
+    | GetGuildWebhooks(..)
+    | ListGuildEmojis(..)
+    | GetGuildEmoji(..)
+    | GetInvite(..)
+    | GetWebhook(..)
+    | GetWebhookMessage(..)
     | GetOriginalInteractionResponse(..)
     | GetFollowupMessage(..)
     | GetGlobalCommands(..)
@@ -190,11 +244,16 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | GetGuildCommand(..) => Get
     CreateDm
     | CreateMessage(..)
+    | BulkDeleteMessages(..)
     | TriggerTypingIndicator(..)
     | StartThreadFromMessage(..)
     | StartThreadWithoutMessage(..)
     | CreateGuildChannel(..)
     | CreateGuildRole(..)
+    | CreateChannelInvite(..)
+    | CreateWebhook(..)
+    | CreateGuildEmoji(..)
+    | ExecuteWebhook(..)
     | CreateInteractionResponse(..)
     | CreateFollowupMessage(..)
     | CreateGlobalCommand(..)
@@ -207,6 +266,9 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | ModifyGuildMember(..)
     | ModifyCurrentMember(..)
     | ModifyGuildRole(..)
+    | ModifyWebhook(..)
+    | EditWebhookMessage(..)
+    | ModifyGuildEmoji(..)
     | EditOriginalInteractionResponse(..)
     | EditFollowupMessage(..)
     | EditGlobalCommand(..)
@@ -216,17 +278,23 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | DeleteOwnReaction(..)
     | DeleteUserReaction(..)
     | DeleteAllReactions(..)
+    | DeleteChannelPermission(..)
     | UnpinMessage(..)
     | LeaveThread(..)
     | DeleteGuildRole(..)
     | RemoveGuildMemberRole(..)
     | RemoveGuildMember(..)
     | RemoveGuildBan(..)
+    | DeleteInvite(..)
+    | DeleteWebhook(..)
+    | DeleteWebhookMessage(..)
+    | DeleteGuildEmoji(..)
     | DeleteOriginalInteractionResponse(..)
     | DeleteFollowupMessage(..)
     | DeleteGlobalCommand(..)
     | DeleteGuildCommand(..) => Delete
     CreateReaction(..)
+    | EditChannelPermissions(..)
     | PinMessage(..)
     | JoinThread(..)
     | AddGuildMemberRole(..)
@@ -254,6 +322,8 @@ pub fn Route::path(self : Route) -> String {
     | DeleteMessage(channel_id~, message_id~) =>
       "/channels/\{channel_id}/messages/\{message_id}"
     CreateMessage(channel_id~) => "/channels/\{channel_id}/messages"
+    BulkDeleteMessages(channel_id~) =>
+      "/channels/\{channel_id}/messages/bulk-delete"
     CreateReaction(channel_id~, message_id~, emoji~)
     | DeleteOwnReaction(channel_id~, message_id~, emoji~) =>
       "/channels/\{channel_id}/messages/\{message_id}/reactions/\{emoji}/@me"
@@ -267,6 +337,14 @@ pub fn Route::path(self : Route) -> String {
     PinMessage(channel_id~, message_id~)
     | UnpinMessage(channel_id~, message_id~) =>
       "/channels/\{channel_id}/pins/\{message_id}"
+    GetPinnedMessages(channel_id~) => "/channels/\{channel_id}/pins"
+    EditChannelPermissions(channel_id~, overwrite_id~)
+    | DeleteChannelPermission(channel_id~, overwrite_id~) =>
+      "/channels/\{channel_id}/permissions/\{overwrite_id}"
+    GetChannelInvites(channel_id~) | CreateChannelInvite(channel_id~) =>
+      "/channels/\{channel_id}/invites"
+    CreateWebhook(channel_id~) | GetChannelWebhooks(channel_id~) =>
+      "/channels/\{channel_id}/webhooks"
     StartThreadFromMessage(channel_id~, message_id~) =>
       "/channels/\{channel_id}/messages/\{message_id}/threads"
     StartThreadWithoutMessage(channel_id~) => "/channels/\{channel_id}/threads"
@@ -299,6 +377,24 @@ pub fn Route::path(self : Route) -> String {
     GetGuildBans(guild_id~, query~) => "/guilds/\{guild_id}/bans\{query}"
     GetGuildAuditLog(guild_id~, query~) =>
       "/guilds/\{guild_id}/audit-logs\{query}"
+    GetGuildWebhooks(guild_id~) => "/guilds/\{guild_id}/webhooks"
+    ListGuildEmojis(guild_id~) | CreateGuildEmoji(guild_id~) =>
+      "/guilds/\{guild_id}/emojis"
+    GetGuildEmoji(guild_id~, emoji_id~)
+    | ModifyGuildEmoji(guild_id~, emoji_id~)
+    | DeleteGuildEmoji(guild_id~, emoji_id~) =>
+      "/guilds/\{guild_id}/emojis/\{emoji_id}"
+    GetInvite(code~, query~) => "/invites/\{code}\{query}"
+    DeleteInvite(code~) => "/invites/\{code}"
+    GetWebhook(webhook_id~)
+    | ModifyWebhook(webhook_id~)
+    | DeleteWebhook(webhook_id~) => "/webhooks/\{webhook_id}"
+    ExecuteWebhook(webhook_id~, token~, query~) =>
+      "/webhooks/\{webhook_id}/\{token}\{query}"
+    GetWebhookMessage(webhook_id~, token~, message_id~)
+    | EditWebhookMessage(webhook_id~, token~, message_id~)
+    | DeleteWebhookMessage(webhook_id~, token~, message_id~) =>
+      "/webhooks/\{webhook_id}/\{token}/messages/\{message_id}"
     CreateInteractionResponse(interaction_id~, token~) =>
       "/interactions/\{interaction_id}/\{token}/callback"
     GetOriginalInteractionResponse(application_id~, token~)
@@ -332,7 +428,7 @@ pub fn Route::path(self : Route) -> String {
 
 ///|
 /// Rate-limit bucket key: method plus path template with channel, guild, and
-/// webhook application/token majors kept while minor resource IDs are squashed.
+/// webhook ID/token majors kept while minor resource IDs are squashed.
 pub fn Route::bucket(self : Route) -> String {
   match self {
     GetGateway => "GET:/gateway"
@@ -352,6 +448,8 @@ pub fn Route::bucket(self : Route) -> String {
     EditMessage(channel_id~, ..) => "PATCH:/channels/\{channel_id}/messages/{}"
     DeleteMessage(channel_id~, ..) =>
       "DELETE:/channels/\{channel_id}/messages/{}"
+    BulkDeleteMessages(channel_id~) =>
+      "POST:/channels/\{channel_id}/messages/bulk-delete"
     CreateReaction(channel_id~, ..) =>
       "PUT:/channels/\{channel_id}/messages/{}/reactions/{}"
     DeleteOwnReaction(channel_id~, ..) =>
@@ -365,6 +463,15 @@ pub fn Route::bucket(self : Route) -> String {
     TriggerTypingIndicator(channel_id~) => "POST:/channels/\{channel_id}/typing"
     PinMessage(channel_id~, ..) => "PUT:/channels/\{channel_id}/pins/{}"
     UnpinMessage(channel_id~, ..) => "DELETE:/channels/\{channel_id}/pins/{}"
+    GetPinnedMessages(channel_id~) => "GET:/channels/\{channel_id}/pins"
+    EditChannelPermissions(channel_id~, ..) =>
+      "PUT:/channels/\{channel_id}/permissions/{}"
+    DeleteChannelPermission(channel_id~, ..) =>
+      "DELETE:/channels/\{channel_id}/permissions/{}"
+    GetChannelInvites(channel_id~) => "GET:/channels/\{channel_id}/invites"
+    CreateChannelInvite(channel_id~) => "POST:/channels/\{channel_id}/invites"
+    CreateWebhook(channel_id~) => "POST:/channels/\{channel_id}/webhooks"
+    GetChannelWebhooks(channel_id~) => "GET:/channels/\{channel_id}/webhooks"
     StartThreadFromMessage(channel_id~, ..) =>
       "POST:/channels/\{channel_id}/messages/{}/threads"
     StartThreadWithoutMessage(channel_id~) =>
@@ -398,6 +505,25 @@ pub fn Route::bucket(self : Route) -> String {
     RemoveGuildBan(guild_id~, ..) => "DELETE:/guilds/\{guild_id}/bans/{}"
     GetGuildBans(guild_id~, ..) => "GET:/guilds/\{guild_id}/bans"
     GetGuildAuditLog(guild_id~, ..) => "GET:/guilds/\{guild_id}/audit-logs"
+    GetGuildWebhooks(guild_id~) => "GET:/guilds/\{guild_id}/webhooks"
+    ListGuildEmojis(guild_id~) => "GET:/guilds/\{guild_id}/emojis"
+    GetGuildEmoji(guild_id~, ..) => "GET:/guilds/\{guild_id}/emojis/{}"
+    CreateGuildEmoji(guild_id~) => "POST:/guilds/\{guild_id}/emojis"
+    ModifyGuildEmoji(guild_id~, ..) => "PATCH:/guilds/\{guild_id}/emojis/{}"
+    DeleteGuildEmoji(guild_id~, ..) => "DELETE:/guilds/\{guild_id}/emojis/{}"
+    GetInvite(code~, ..) => "GET:/invites/\{code}"
+    DeleteInvite(code~) => "DELETE:/invites/\{code}"
+    GetWebhook(webhook_id~) => "GET:/webhooks/\{webhook_id}"
+    ModifyWebhook(webhook_id~) => "PATCH:/webhooks/\{webhook_id}"
+    DeleteWebhook(webhook_id~) => "DELETE:/webhooks/\{webhook_id}"
+    ExecuteWebhook(webhook_id~, token~, ..) =>
+      "POST:/webhooks/\{webhook_id}/\{token}"
+    GetWebhookMessage(webhook_id~, token~, ..) =>
+      "GET:/webhooks/\{webhook_id}/\{token}/messages/{}"
+    EditWebhookMessage(webhook_id~, token~, ..) =>
+      "PATCH:/webhooks/\{webhook_id}/\{token}/messages/{}"
+    DeleteWebhookMessage(webhook_id~, token~, ..) =>
+      "DELETE:/webhooks/\{webhook_id}/\{token}/messages/{}"
     CreateInteractionResponse(..) => "POST:/interactions/{}/{}/callback"
     GetOriginalInteractionResponse(application_id~, token~) =>
       "GET:/webhooks/\{application_id}/\{token}/messages/@original"
@@ -451,7 +577,11 @@ pub fn Route::is_interaction(self : Route) -> Bool {
     | CreateFollowupMessage(..)
     | GetFollowupMessage(..)
     | EditFollowupMessage(..)
-    | DeleteFollowupMessage(..) => true
+    | DeleteFollowupMessage(..)
+    | ExecuteWebhook(..)
+    | GetWebhookMessage(..)
+    | EditWebhookMessage(..)
+    | DeleteWebhookMessage(..) => true
     _ => false
   }
 }
@@ -463,8 +593,19 @@ pub fn Route::supports_reason(self : Route) -> Bool {
     ModifyChannel(..)
     | DeleteChannel(..)
     | DeleteMessage(..)
+    | BulkDeleteMessages(..)
     | PinMessage(..)
     | UnpinMessage(..)
+    | EditChannelPermissions(..)
+    | DeleteChannelPermission(..)
+    | CreateChannelInvite(..)
+    | CreateWebhook(..)
+    | ModifyWebhook(..)
+    | DeleteWebhook(..)
+    | DeleteInvite(..)
+    | CreateGuildEmoji(..)
+    | ModifyGuildEmoji(..)
+    | DeleteGuildEmoji(..)
     | StartThreadFromMessage(..)
     | StartThreadWithoutMessage(..)
     | ModifyGuild(..)

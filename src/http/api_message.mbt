@@ -99,6 +99,31 @@ pub async fn Client::delete_message(
 }
 
 ///|
+fn validate_bulk_delete_messages(
+  messages : Array[@model.MessageId],
+) -> Unit raise DiscordHttpError {
+  if messages.length() < 2 || messages.length() > 100 {
+    raise DiscordHttpError::Validation(
+      message="bulk delete requires between 2 and 100 messages",
+    )
+  }
+}
+
+///|
+/// Delete between 2 and 100 messages in one request.
+pub async fn Client::bulk_delete_messages(
+  self : Client,
+  channel_id : @model.ChannelId,
+  messages : Array[@model.MessageId],
+  audit_reason? : String,
+) -> Unit raise DiscordHttpError {
+  validate_bulk_delete_messages(messages)
+  let body = @model.ObjBuilder::new().field("messages", messages).build()
+  self.request(Route::BulkDeleteMessages(channel_id~), body~, audit_reason?)
+  |> ignore
+}
+
+///|
 /// Fetch a single message.
 pub async fn Client::get_message(
   self : Client,
