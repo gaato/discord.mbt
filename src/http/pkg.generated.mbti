@@ -11,6 +11,8 @@ import {
 // Values
 pub const VERSION : String = "0.1.0"
 
+pub fn attachments_json(Array[FileUpload]) -> Json
+
 // Errors
 pub(all) suberror DiscordHttpError {
   Api(status~ : Int, error~ : ApiError)
@@ -35,14 +37,14 @@ pub async fn Client::bulk_overwrite_global_commands(Self, @model.Id[@model.Appli
 pub async fn Client::bulk_overwrite_guild_commands(Self, @model.Id[@model.ApplicationMarker], @model.Id[@model.GuildMarker], Json) -> Array[@model.ApplicationCommand] raise DiscordHttpError
 pub fn Client::close(Self) -> Unit
 pub async fn Client::create_dm(Self, @model.Id[@model.UserMarker]) -> @model.Channel raise DiscordHttpError
-pub async fn Client::create_followup(Self, @model.Id[@model.ApplicationMarker], String, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], flags? : @model.MessageFlags) -> @model.Message raise DiscordHttpError
+pub async fn Client::create_followup(Self, @model.Id[@model.ApplicationMarker], String, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[FileUpload], flags? : @model.MessageFlags) -> @model.Message raise DiscordHttpError
 pub async fn Client::create_global_command(Self, @model.Id[@model.ApplicationMarker], String, String, options? : Array[@model.CommandOption], typ? : @model.ApplicationCommandType, default_member_permissions? : @model.Undefinable[@model.Permissions], nsfw? : Bool) -> @model.ApplicationCommand raise DiscordHttpError
 pub async fn Client::create_guild_ban(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker], delete_message_seconds? : Int, audit_reason? : String) -> Unit raise DiscordHttpError
 pub async fn Client::create_guild_channel(Self, @model.Id[@model.GuildMarker], String, typ? : @model.ChannelType, topic? : String, parent_id? : @model.Id[@model.ChannelMarker], position? : Int, permission_overwrites? : Array[@model.Overwrite], nsfw? : Bool, bitrate? : Int, user_limit? : Int, rate_limit_per_user? : Int, audit_reason? : String) -> @model.Channel raise DiscordHttpError
 pub async fn Client::create_guild_command(Self, @model.Id[@model.ApplicationMarker], @model.Id[@model.GuildMarker], String, String, options? : Array[@model.CommandOption], typ? : @model.ApplicationCommandType, default_member_permissions? : @model.Undefinable[@model.Permissions], nsfw? : Bool) -> @model.ApplicationCommand raise DiscordHttpError
 pub async fn Client::create_guild_role(Self, @model.Id[@model.GuildMarker], name? : String, permissions? : @model.Permissions, color? : Int, hoist? : Bool, mentionable? : Bool, audit_reason? : String) -> @model.Role raise DiscordHttpError
-pub async fn Client::create_interaction_response(Self, @model.Id[@model.InteractionMarker], String, @model.InteractionResponse) -> Unit raise DiscordHttpError
-pub async fn Client::create_message(Self, @model.Id[@model.ChannelMarker], content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], sticker_ids? : Array[@model.Id[@model.StickerMarker]], reply_to? : @model.Id[@model.MessageMarker], tts? : Bool, flags? : @model.MessageFlags, allowed_mentions? : Json, nonce? : @model.Nonce, enforce_nonce? : Bool) -> @model.Message raise DiscordHttpError
+pub async fn Client::create_interaction_response(Self, @model.Id[@model.InteractionMarker], String, @model.InteractionResponse, files? : Array[FileUpload]) -> Unit raise DiscordHttpError
+pub async fn Client::create_message(Self, @model.Id[@model.ChannelMarker], content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], sticker_ids? : Array[@model.Id[@model.StickerMarker]], files? : Array[FileUpload], reply_to? : @model.Id[@model.MessageMarker], tts? : Bool, flags? : @model.MessageFlags, allowed_mentions? : Json, nonce? : @model.Nonce, enforce_nonce? : Bool) -> @model.Message raise DiscordHttpError
 pub async fn Client::create_reaction(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], String) -> Unit raise DiscordHttpError
 pub async fn Client::delete_all_reactions(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker]) -> Unit raise DiscordHttpError
 pub async fn Client::delete_channel(Self, @model.Id[@model.ChannelMarker], audit_reason? : String) -> @model.Channel raise DiscordHttpError
@@ -54,11 +56,11 @@ pub async fn Client::delete_message(Self, @model.Id[@model.ChannelMarker], @mode
 pub async fn Client::delete_original_response(Self, @model.Id[@model.ApplicationMarker], String) -> Unit raise DiscordHttpError
 pub async fn Client::delete_own_reaction(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], String) -> Unit raise DiscordHttpError
 pub async fn Client::delete_user_reaction(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], String, @model.Id[@model.UserMarker]) -> Unit raise DiscordHttpError
-pub async fn Client::edit_followup(Self, @model.Id[@model.ApplicationMarker], String, @model.Id[@model.MessageMarker], content? : @model.Undefinable[String], embeds? : @model.Undefinable[Array[@model.Embed]], components? : @model.Undefinable[Array[@model.Component]]) -> @model.Message raise DiscordHttpError
+pub async fn Client::edit_followup(Self, @model.Id[@model.ApplicationMarker], String, @model.Id[@model.MessageMarker], content? : @model.Undefinable[String], embeds? : @model.Undefinable[Array[@model.Embed]], components? : @model.Undefinable[Array[@model.Component]], files? : Array[FileUpload]) -> @model.Message raise DiscordHttpError
 pub async fn Client::edit_global_command(Self, @model.Id[@model.ApplicationMarker], @model.Id[@model.CommandMarker], name? : String, description? : String, options? : @model.Undefinable[Array[@model.CommandOption]], default_member_permissions? : @model.Undefinable[@model.Permissions], nsfw? : Bool) -> @model.ApplicationCommand raise DiscordHttpError
 pub async fn Client::edit_guild_command(Self, @model.Id[@model.ApplicationMarker], @model.Id[@model.GuildMarker], @model.Id[@model.CommandMarker], name? : String, description? : String, options? : @model.Undefinable[Array[@model.CommandOption]], default_member_permissions? : @model.Undefinable[@model.Permissions], nsfw? : Bool) -> @model.ApplicationCommand raise DiscordHttpError
-pub async fn Client::edit_message(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], content? : @model.Undefinable[String], embeds? : @model.Undefinable[Array[@model.Embed]], components? : @model.Undefinable[Array[@model.Component]], flags? : @model.Undefinable[@model.MessageFlags]) -> @model.Message raise DiscordHttpError
-pub async fn Client::edit_original_response(Self, @model.Id[@model.ApplicationMarker], String, content? : @model.Undefinable[String], embeds? : @model.Undefinable[Array[@model.Embed]], components? : @model.Undefinable[Array[@model.Component]]) -> @model.Message raise DiscordHttpError
+pub async fn Client::edit_message(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], content? : @model.Undefinable[String], embeds? : @model.Undefinable[Array[@model.Embed]], components? : @model.Undefinable[Array[@model.Component]], flags? : @model.Undefinable[@model.MessageFlags], files? : Array[FileUpload]) -> @model.Message raise DiscordHttpError
+pub async fn Client::edit_original_response(Self, @model.Id[@model.ApplicationMarker], String, content? : @model.Undefinable[String], embeds? : @model.Undefinable[Array[@model.Embed]], components? : @model.Undefinable[Array[@model.Component]], files? : Array[FileUpload]) -> @model.Message raise DiscordHttpError
 pub async fn Client::get_channel(Self, @model.Id[@model.ChannelMarker]) -> @model.Channel raise DiscordHttpError
 pub async fn Client::get_channel_messages(Self, @model.Id[@model.ChannelMarker], limit? : Int, around? : @model.Id[@model.MessageMarker], before? : @model.Id[@model.MessageMarker], after? : @model.Id[@model.MessageMarker]) -> Array[@model.Message] raise DiscordHttpError
 pub async fn Client::get_current_user(Self) -> @model.User raise DiscordHttpError
@@ -89,12 +91,17 @@ pub async fn Client::pin_message(Self, @model.Id[@model.ChannelMarker], @model.I
 pub async fn Client::remove_guild_ban(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker], audit_reason? : String) -> Unit raise DiscordHttpError
 pub async fn Client::remove_guild_member(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker], audit_reason? : String) -> Unit raise DiscordHttpError
 pub async fn Client::remove_member_role(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker], @model.Id[@model.RoleMarker], audit_reason? : String) -> Unit raise DiscordHttpError
-pub async fn Client::request(Self, Route, body? : Json, audit_reason? : String) -> Json raise DiscordHttpError
+pub async fn Client::request(Self, Route, body? : Json, audit_reason? : String, files? : Array[FileUpload]) -> Json raise DiscordHttpError
 pub async fn Client::search_guild_members(Self, @model.Id[@model.GuildMarker], String, limit? : Int) -> Array[@model.GuildMember] raise DiscordHttpError
 pub async fn Client::start_thread_from_message(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], String, auto_archive_duration? : @model.ThreadAutoArchiveDuration, rate_limit_per_user? : Int, audit_reason? : String) -> @model.Channel raise DiscordHttpError
 pub async fn Client::trigger_typing(Self, @model.Id[@model.ChannelMarker]) -> Unit raise DiscordHttpError
 pub async fn Client::unpin_message(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], audit_reason? : String) -> Unit raise DiscordHttpError
 pub impl Show for Client
+
+pub struct FileUpload {
+  // private fields
+}
+pub fn FileUpload::new(String, Bytes, content_type? : String, description? : String) -> Self
 
 pub(all) enum Route {
   GetGateway

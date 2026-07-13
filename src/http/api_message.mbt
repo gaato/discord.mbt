@@ -1,7 +1,7 @@
 ///|
 /// Post a message to a channel. Labeled optional arguments replace the
-/// builder pattern; at least one of `content`, `embeds`, `components`, or
-/// `sticker_ids` must be provided.
+/// builder pattern; at least one of `content`, `embeds`, `components`,
+/// `sticker_ids`, or `files` must be provided.
 pub async fn Client::create_message(
   self : Client,
   channel_id : @model.ChannelId,
@@ -9,6 +9,7 @@ pub async fn Client::create_message(
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
   sticker_ids? : Array[@model.StickerId],
+  files? : Array[FileUpload],
   reply_to? : @model.MessageId,
   tts? : Bool,
   flags? : @model.MessageFlags,
@@ -24,9 +25,10 @@ pub async fn Client::create_message(
   if content is None &&
     embeds is None &&
     components is None &&
-    sticker_ids is None {
+    sticker_ids is None &&
+    files is None {
     raise DiscordHttpError::Validation(
-      message="one of content/embeds/components/sticker_ids is required",
+      message="one of content/embeds/components/sticker_ids/files is required",
     )
   }
   let body = @model.ObjBuilder::new()
@@ -45,11 +47,18 @@ pub async fn Client::create_message(
     })
     |> ignore
   }
-  decode(self.request(Route::CreateMessage(channel_id~), body=body.build()))
+  if files is Some(fs) && fs.length() > 0 {
+    body.field("attachments", attachments_json(fs)) |> ignore
+  }
+  decode(
+    self.request(Route::CreateMessage(channel_id~), body=body.build(), files?),
+  )
 }
 
 ///|
-/// Edit a previously sent message.
+/// Edit a previously sent message. When `files` is given, the message's
+/// attachments are replaced by the uploaded files (Discord keeps only the
+/// attachments listed in the request).
 pub async fn Client::edit_message(
   self : Client,
   channel_id : @model.ChannelId,
@@ -58,14 +67,23 @@ pub async fn Client::edit_message(
   embeds? : @model.Undefinable[Array[@model.Embed]] = Missing,
   components? : @model.Undefinable[Array[@model.Component]] = Missing,
   flags? : @model.Undefinable[@model.MessageFlags] = Missing,
+  files? : Array[FileUpload],
 ) -> @model.Message raise DiscordHttpError {
-  let body = @model.ObjBuilder::new()
+  let builder = @model.ObjBuilder::new()
     .und("content", content)
     .und("embeds", embeds)
     .und("components", components)
     .und("flags", flags)
-    .build()
-  decode(self.request(Route::EditMessage(channel_id~, message_id~), body~))
+  if files is Some(fs) && fs.length() > 0 {
+    builder.field("attachments", attachments_json(fs)) |> ignore
+  }
+  decode(
+    self.request(
+      Route::EditMessage(channel_id~, message_id~),
+      body=builder.build(),
+      files?,
+    ),
+  )
 }
 
 ///|

@@ -29,10 +29,10 @@ pub(all) struct CommandCtx {
   options : @interaction.CommandOptions
 }
 pub async fn CommandCtx::defer_response(Self, ephemeral? : Bool) -> Unit
-pub async fn CommandCtx::edit_response(Self, content? : @model.Undefinable[String], embeds? : @model.Undefinable[Array[@model.Embed]], components? : @model.Undefinable[Array[@model.Component]]) -> @model.Message
-pub async fn CommandCtx::followup(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], ephemeral? : Bool) -> @model.Message
+pub async fn CommandCtx::edit_response(Self, content? : @model.Undefinable[String], embeds? : @model.Undefinable[Array[@model.Embed]], components? : @model.Undefinable[Array[@model.Component]], files? : Array[@http.FileUpload]) -> @model.Message
+pub async fn CommandCtx::followup(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], ephemeral? : Bool) -> @model.Message
 pub fn[T : @interaction.CommandModel] CommandCtx::model(Self) -> T raise
-pub async fn CommandCtx::respond(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], ephemeral? : Bool) -> Unit
+pub async fn CommandCtx::respond(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], ephemeral? : Bool) -> Unit
 pub fn CommandCtx::user(Self) -> @model.User?
 
 pub(all) struct ComponentCtx {
@@ -42,7 +42,7 @@ pub(all) struct ComponentCtx {
   data : @model.ComponentData
 }
 pub async fn ComponentCtx::defer_update(Self) -> Unit
-pub async fn ComponentCtx::respond(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], ephemeral? : Bool) -> Unit
+pub async fn ComponentCtx::respond(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], ephemeral? : Bool) -> Unit
 pub async fn ComponentCtx::update_message(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component]) -> Unit
 pub fn ComponentCtx::user(Self) -> @model.User?
 
@@ -68,7 +68,7 @@ pub(all) struct ModalCtx {
   data : @model.ModalData
 }
 pub async fn ModalCtx::defer_response(Self, ephemeral? : Bool) -> Unit
-pub async fn ModalCtx::respond(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], ephemeral? : Bool) -> Unit
+pub async fn ModalCtx::respond(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], ephemeral? : Bool) -> Unit
 pub fn ModalCtx::text_value(Self, String) -> String?
 pub fn ModalCtx::user(Self) -> @model.User?
 

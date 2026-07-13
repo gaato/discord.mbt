@@ -13,6 +13,7 @@ async fn Client::perform(
   route : Route,
   body? : Json,
   audit_reason? : String,
+  files? : Array[FileUpload],
 ) -> RawResponse {
   self.pool.with_conn(conn => {
     let headers : Map[String, String] = {
@@ -26,15 +27,29 @@ async fn Client::perform(
       headers["x-audit-log-reason"] = reason
     }
     let path = self.base_path + route.path()
-    let response = match body {
-      Some(json) => {
+    let response = match (files, body) {
+      (Some(fs), _) if fs.length() > 0 => {
+        let payload = body.unwrap_or(Json::object({})).stringify()
+        let seed = "\{@async.now()}-\{next_multipart_seq()}"
+        let boundary = fresh_boundary(seed, payload, fs)
+        headers["content-type"] = "multipart/form-data; boundary=\{boundary}"
+        conn.request(route.method_(), path, extra_headers=headers)
+        for part in multipart_parts(boundary, payload, fs) {
+          match part {
+            Text(text) => conn.write(text)
+            Blob(bytes) => conn.write(bytes)
+          }
+        }
+        conn.end_request()
+      }
+      (_, Some(json)) => {
         headers["content-type"] = "application/json"
         conn
         ..request(route.method_(), path, extra_headers=headers)
         ..write(json)
         .end_request()
       }
-      None => {
+      (_, None) => {
         conn.request(route.method_(), path, extra_headers=headers)
         conn.end_request()
       }
@@ -65,7 +80,11 @@ pub async fn Client::request(
   route : Route,
   body? : Json,
   audit_reason? : String,
+  files? : Array[FileUpload],
 ) -> Json raise DiscordHttpError {
+  if files is Some(fs) {
+    validate_files(fs)
+  }
   let bucket = route.bucket()
   let global_exempt = route.is_interaction()
   let max_attempts = 4
@@ -73,7 +92,7 @@ pub async fn Client::request(
     self.limiter.acquire(bucket, global_exempt~) catch {
       e => raise DiscordHttpError::Transport(message="cancelled: \{e}")
     }
-    let response = try self.perform(route, body?, audit_reason?) catch {
+    let response = try self.perform(route, body?, audit_reason?, files?) catch {
       e => {
         self.limiter.release(bucket, status=0, headers={})
         raise DiscordHttpError::Transport(message="\{e}")

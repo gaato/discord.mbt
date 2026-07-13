@@ -4,12 +4,16 @@ fn message_response_data(
   content : String?,
   embeds : Array[@model.Embed]?,
   components : Array[@model.Component]?,
+  files : Array[@dhttp.FileUpload]?,
   ephemeral : Bool,
 ) -> Json {
   let builder = @model.ObjBuilder::new()
     .opt("content", content)
     .opt("embeds", embeds)
     .opt("components", components)
+  if files is Some(fs) && fs.length() > 0 {
+    builder.field("attachments", @dhttp.attachments_json(fs)) |> ignore
+  }
   if ephemeral {
     builder.field("flags", @model.MessageFlags::ephemeral()) |> ignore
   }
@@ -24,12 +28,20 @@ async fn respond_message(
   content : String?,
   embeds : Array[@model.Embed]?,
   components : Array[@model.Component]?,
+  files : Array[@dhttp.FileUpload]?,
   ephemeral : Bool,
 ) -> Unit {
-  client.create_interaction_response(interaction.id, interaction.token, {
-    typ,
-    data: Some(message_response_data(content, embeds, components, ephemeral)),
-  })
+  client.create_interaction_response(
+    interaction.id,
+    interaction.token,
+    {
+      typ,
+      data: Some(
+        message_response_data(content, embeds, components, files, ephemeral),
+      ),
+    },
+    files?,
+  )
 }
 
 ///|
@@ -73,6 +85,7 @@ pub async fn CommandCtx::respond(
   content? : String,
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
+  files? : Array[@dhttp.FileUpload],
   ephemeral? : Bool = false,
 ) -> Unit {
   respond_message(
@@ -82,6 +95,7 @@ pub async fn CommandCtx::respond(
     content,
     embeds,
     components,
+    files,
     ephemeral,
   )
 }
@@ -99,6 +113,7 @@ pub async fn CommandCtx::defer_response(
     None,
     None,
     None,
+    None,
     ephemeral,
   )
 }
@@ -110,6 +125,7 @@ pub async fn CommandCtx::edit_response(
   content? : @model.Undefinable[String] = Missing,
   embeds? : @model.Undefinable[Array[@model.Embed]] = Missing,
   components? : @model.Undefinable[Array[@model.Component]] = Missing,
+  files? : Array[@dhttp.FileUpload],
 ) -> @model.Message {
   self.client.edit_original_response(
     self.application_id,
@@ -117,6 +133,7 @@ pub async fn CommandCtx::edit_response(
     content~,
     embeds~,
     components~,
+    files?,
   )
 }
 
@@ -127,6 +144,7 @@ pub async fn CommandCtx::followup(
   content? : String,
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
+  files? : Array[@dhttp.FileUpload],
   ephemeral? : Bool = false,
 ) -> @model.Message {
   self.client.create_followup(
@@ -135,6 +153,7 @@ pub async fn CommandCtx::followup(
     content?,
     embeds?,
     components?,
+    files?,
     flags=if ephemeral {
       @model.MessageFlags::ephemeral()
     } else {
@@ -165,6 +184,7 @@ pub async fn ComponentCtx::respond(
   content? : String,
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
+  files? : Array[@dhttp.FileUpload],
   ephemeral? : Bool = false,
 ) -> Unit {
   respond_message(
@@ -174,6 +194,7 @@ pub async fn ComponentCtx::respond(
     content,
     embeds,
     components,
+    files,
     ephemeral,
   )
 }
@@ -193,6 +214,7 @@ pub async fn ComponentCtx::update_message(
     content,
     embeds,
     components,
+    None,
     false,
   )
 }
@@ -252,6 +274,7 @@ pub async fn ModalCtx::respond(
   content? : String,
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
+  files? : Array[@dhttp.FileUpload],
   ephemeral? : Bool = false,
 ) -> Unit {
   respond_message(
@@ -261,6 +284,7 @@ pub async fn ModalCtx::respond(
     content,
     embeds,
     components,
+    files,
     ephemeral,
   )
 }
@@ -275,6 +299,7 @@ pub async fn ModalCtx::defer_response(
     self.client,
     self.interaction,
     DeferredChannelMessageWithSource,
+    None,
     None,
     None,
     None,
