@@ -1,6 +1,14 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "gaato/discord"
 
+import {
+  "gaato/discord/framework",
+  "gaato/discord/gateway",
+  "gaato/discord/http",
+  "gaato/discord/interaction",
+  "gaato/discord/model",
+}
+
 // Values
 pub const API_VERSION : Int = 10
 
@@ -9,6 +17,33 @@ pub const API_VERSION : Int = 10
 // Types and methods
 
 // Type aliases
+pub using @framework {type AutocompleteCtx}
+
+pub using @http {type Client}
+
+pub using @framework {type CommandCtx}
+
+pub using @interaction {type CommandOptions}
+
+pub using @interaction {type CommandSpec}
+
+pub using @framework {type ComponentCtx}
+
+pub using @model {type Event}
+
+pub using @http {type FileUpload}
+
+pub using @framework {type Framework}
+
+pub using @model {type Intents}
+
+pub using @framework {type ModalCtx}
+
+pub using @gateway {type Shard}
+
+pub using @gateway {type ShardEvent}
+
+pub using @interaction {trait CommandModel}
 
 // Traits
 

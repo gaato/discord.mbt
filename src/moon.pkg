@@ -1,1 +1,13 @@
+import {
+  "gaato/discord/model",
+  "gaato/discord/http" @dhttp,
+  "gaato/discord/gateway",
+  "gaato/discord/interaction",
+  "gaato/discord/framework",
+}
 
+import {
+  "moonbitlang/core/json",
+  "gaato/discord/model",
+  "gaato/discord/interaction",
+} for "test"
