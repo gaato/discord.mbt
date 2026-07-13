@@ -26,6 +26,11 @@ pub enum AuditLogEntryMarker {
 pub enum AutoModerationRuleMarker {
 }
 
+pub(all) struct AvatarDecorationData {
+  asset : ImageHash
+  sku_id : Id[SkuMarker]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
 pub enum ChannelMarker {
 }
 
@@ -208,6 +213,18 @@ pub impl ToJson for Permissions
 pub impl @debug.Debug for Permissions
 pub impl @json.FromJson for Permissions
 
+pub(all) enum PremiumType {
+  None
+  NitroClassic
+  Nitro
+  NitroBasic
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn PremiumType::from_int(Int) -> Self
+pub fn PremiumType::to_int(Self) -> Int
+pub impl ToJson for PremiumType
+pub impl @json.FromJson for PremiumType
+
 pub enum RoleMarker {
 }
 
@@ -247,6 +264,61 @@ pub(all) enum Undefinable[T] {
 pub fn[T] Undefinable::to_option(Self[T]) -> T?
 pub impl[T : ToJson] ToJson for Undefinable[T]
 pub impl[T : @json.FromJson] @json.FromJson for Undefinable[T]
+
+pub(all) struct User {
+  id : Id[UserMarker]
+  username : String
+  discriminator : String
+  global_name : Nullable[String]
+  avatar : Nullable[ImageHash]
+  bot : Bool?
+  system : Bool?
+  mfa_enabled : Bool?
+  banner : Nullable[ImageHash]?
+  accent_color : Nullable[Int]?
+  locale : String?
+  verified : Bool?
+  email : Nullable[String]?
+  flags : UserFlags?
+  premium_type : PremiumType?
+  public_flags : UserFlags?
+  avatar_decoration : Nullable[ImageHash]?
+  avatar_decoration_data : Nullable[AvatarDecorationData]?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct UserFlags(UInt64) derive(Eq)
+pub fn UserFlags::active_developer() -> Self
+pub fn UserFlags::bits(Self) -> UInt64
+pub fn UserFlags::bot_http_interactions() -> Self
+pub fn UserFlags::bug_hunter_level_1() -> Self
+pub fn UserFlags::bug_hunter_level_2() -> Self
+pub fn UserFlags::certified_moderator() -> Self
+pub fn UserFlags::collaborator() -> Self
+pub fn UserFlags::contains(Self, Self) -> Bool
+pub fn UserFlags::disable_premium() -> Self
+pub fn UserFlags::from_bits(UInt64) -> Self
+pub fn UserFlags::has_unread_urgent_messages() -> Self
+pub fn UserFlags::hype_squad_online_house_1() -> Self
+pub fn UserFlags::hype_squad_online_house_2() -> Self
+pub fn UserFlags::hype_squad_online_house_3() -> Self
+pub fn UserFlags::hypesquad() -> Self
+pub fn UserFlags::mfa_sms() -> Self
+pub fn UserFlags::none() -> Self
+pub fn UserFlags::partner() -> Self
+pub fn UserFlags::premium_early_supporter() -> Self
+pub fn UserFlags::premium_promo_dismissed() -> Self
+pub fn UserFlags::quarantined() -> Self
+pub fn UserFlags::restricted_collaborator() -> Self
+pub fn UserFlags::spammer() -> Self
+pub fn UserFlags::staff() -> Self
+pub fn UserFlags::team_pseudo_user() -> Self
+pub fn UserFlags::verified_bot() -> Self
+pub fn UserFlags::verified_developer() -> Self
+pub impl BitAnd for UserFlags
+pub impl BitOr for UserFlags
+pub impl ToJson for UserFlags
+pub impl @debug.Debug for UserFlags
+pub impl @json.FromJson for UserFlags
 
 pub enum UserMarker {
 }
