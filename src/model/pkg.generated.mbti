@@ -18,6 +18,75 @@ pub(all) struct ActionRow {
   components : Array[Component]
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
+pub(all) struct Application {
+  id : Id[ApplicationMarker]
+  name : String
+  icon : Nullable[ImageHash]
+  description : String
+  bot : User?
+  owner : User?
+  flags : ApplicationFlags?
+  approximate_guild_count : Int?
+  approximate_user_install_count : Int?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ApplicationCommand {
+  id : Id[CommandMarker]
+  typ : ApplicationCommandType?
+  application_id : Id[ApplicationMarker]
+  guild_id : Id[GuildMarker]?
+  name : String
+  name_localizations : Nullable[Map[String, String]]?
+  description : String
+  description_localizations : Nullable[Map[String, String]]?
+  options : Array[CommandOption]?
+  default_member_permissions : Nullable[Permissions]
+  dm_permission : Bool?
+  nsfw : Bool?
+  integration_types : Array[Int]?
+  contexts : Nullable[Array[Int]]?
+  version : Id[CommandVersionMarker]
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum ApplicationCommandType {
+  ChatInput
+  User
+  Message
+  PrimaryEntryPoint
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn ApplicationCommandType::from_int(Int) -> Self
+pub fn ApplicationCommandType::to_int(Self) -> Int
+pub impl ToJson for ApplicationCommandType
+pub impl @json.FromJson for ApplicationCommandType
+
+pub(all) struct ApplicationFlags(UInt64) derive(Eq)
+pub fn ApplicationFlags::application_auto_moderation_rule_create_badge() -> Self
+pub fn ApplicationFlags::application_command_badge() -> Self
+pub fn ApplicationFlags::bits(Self) -> UInt64
+pub fn ApplicationFlags::contains(Self, Self) -> Bool
+pub fn ApplicationFlags::embedded() -> Self
+pub fn ApplicationFlags::embedded_first_party() -> Self
+pub fn ApplicationFlags::embedded_iap() -> Self
+pub fn ApplicationFlags::embedded_released() -> Self
+pub fn ApplicationFlags::from_bits(UInt64) -> Self
+pub fn ApplicationFlags::gateway_guild_members() -> Self
+pub fn ApplicationFlags::gateway_guild_members_limited() -> Self
+pub fn ApplicationFlags::gateway_message_content() -> Self
+pub fn ApplicationFlags::gateway_message_content_limited() -> Self
+pub fn ApplicationFlags::gateway_presence() -> Self
+pub fn ApplicationFlags::gateway_presence_limited() -> Self
+pub fn ApplicationFlags::group_dm_create() -> Self
+pub fn ApplicationFlags::managed_emoji() -> Self
+pub fn ApplicationFlags::none() -> Self
+pub fn ApplicationFlags::rpc_has_connected() -> Self
+pub fn ApplicationFlags::verification_pending_guild_limit() -> Self
+pub impl BitAnd for ApplicationFlags
+pub impl BitOr for ApplicationFlags
+pub impl ToJson for ApplicationFlags
+pub impl @debug.Debug for ApplicationFlags
+pub impl @json.FromJson for ApplicationFlags
+
 pub enum ApplicationMarker {
 }
 
@@ -181,8 +250,68 @@ pub fn ChannelType::to_int(Self) -> Int
 pub impl ToJson for ChannelType
 pub impl @json.FromJson for ChannelType
 
+pub(all) struct CommandData {
+  id : Id[CommandMarker]
+  name : String
+  typ : ApplicationCommandType
+  resolved : ResolvedData?
+  options : Array[CommandDataOption]?
+  guild_id : Id[GuildMarker]?
+  target_id : Id[GenericMarker]?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct CommandDataOption {
+  name : String
+  typ : CommandOptionType
+  value : Json?
+  options : Array[CommandDataOption]?
+  focused : Bool?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
 pub enum CommandMarker {
 }
+
+pub(all) struct CommandOption {
+  typ : CommandOptionType
+  name : String
+  name_localizations : Nullable[Map[String, String]]?
+  description : String
+  description_localizations : Nullable[Map[String, String]]?
+  required : Bool?
+  choices : Array[CommandOptionChoice]?
+  options : Array[CommandOption]?
+  channel_types : Array[ChannelType]?
+  min_value : Json?
+  max_value : Json?
+  min_length : Int?
+  max_length : Int?
+  autocomplete : Bool?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct CommandOptionChoice {
+  name : String
+  name_localizations : Nullable[Map[String, String]]?
+  value : Json
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum CommandOptionType {
+  SubCommand
+  SubCommandGroup
+  String
+  Integer
+  Boolean
+  User
+  Channel
+  Role
+  Mentionable
+  Number
+  Attachment
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn CommandOptionType::from_int(Int) -> Self
+pub fn CommandOptionType::to_int(Self) -> Int
+pub impl ToJson for CommandOptionType
+pub impl @json.FromJson for CommandOptionType
 
 pub enum CommandVersionMarker {
 }
@@ -200,6 +329,13 @@ pub(all) enum Component {
 } derive(@debug.Debug)
 pub impl ToJson for Component
 pub impl @json.FromJson for Component
+
+pub(all) struct ComponentData {
+  custom_id : String
+  component_type : Int
+  values : Array[String]?
+  resolved : ResolvedData?
+} derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) enum DefaultMessageNotifications {
   AllMessages
@@ -537,8 +673,73 @@ pub impl ToJson for Intents
 pub impl @debug.Debug for Intents
 pub impl @json.FromJson for Intents
 
+pub(all) struct Interaction {
+  id : Id[InteractionMarker]
+  application_id : Id[ApplicationMarker]
+  typ : InteractionType
+  data : InteractionData?
+  guild_id : Id[GuildMarker]?
+  channel : Channel?
+  channel_id : Id[ChannelMarker]?
+  guild_member : GuildMember?
+  user : User?
+  token : String
+  version : Int
+  message : Message?
+  app_permissions : Permissions?
+  locale : String?
+  guild_locale : String?
+  entitlements : Array[Json]?
+  context : Int?
+} derive(@debug.Debug)
+pub impl ToJson for Interaction
+pub impl @json.FromJson for Interaction
+
+pub(all) enum InteractionData {
+  Command(CommandData)
+  Component(ComponentData)
+  Modal(ModalData)
+  Unknown(Json)
+} derive(@debug.Debug)
+pub impl ToJson for InteractionData
+
 pub enum InteractionMarker {
 }
+
+pub(all) struct InteractionResponse {
+  typ : InteractionResponseType
+  data : Json?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum InteractionResponseType {
+  Pong
+  ChannelMessageWithSource
+  DeferredChannelMessageWithSource
+  DeferredUpdateMessage
+  UpdateMessage
+  Autocomplete
+  Modal
+  PremiumRequired
+  LaunchActivity
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn InteractionResponseType::from_int(Int) -> Self
+pub fn InteractionResponseType::to_int(Self) -> Int
+pub impl ToJson for InteractionResponseType
+pub impl @json.FromJson for InteractionResponseType
+
+pub(all) enum InteractionType {
+  Ping
+  ApplicationCommand
+  MessageComponent
+  ApplicationCommandAutocomplete
+  ModalSubmit
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn InteractionType::from_int(Int) -> Self
+pub fn InteractionType::to_int(Self) -> Int
+pub impl ToJson for InteractionType
+pub impl @json.FromJson for InteractionType
 
 pub(all) struct Invite {
   typ : InviteType?
@@ -734,6 +935,11 @@ pub fn MfaLevel::to_int(Self) -> Int
 pub impl ToJson for MfaLevel
 pub impl @json.FromJson for MfaLevel
 
+pub(all) struct ModalData {
+  custom_id : String
+  components : Array[Component]
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) enum Nonce {
   Str(String)
   Num(Int64)
@@ -885,6 +1091,15 @@ pub(all) struct Reaction {
 pub(all) struct ReactionCountDetails {
   burst : Int
   normal : Int
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ResolvedData {
+  users : Map[String, User]?
+  members : Map[String, GuildMember]?
+  roles : Map[String, Role]?
+  channels : Map[String, Channel]?
+  messages : Map[String, Message]?
+  attachments : Map[String, Attachment]?
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct Role {
