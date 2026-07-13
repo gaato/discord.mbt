@@ -61,6 +61,17 @@ pub enum CommandMarker {
 pub enum CommandVersionMarker {
 }
 
+pub(all) struct Emoji {
+  id : Nullable[Id[EmojiMarker]]
+  name : Nullable[String]
+  animated : Bool?
+  roles : Array[Id[RoleMarker]]?
+  user : User?
+  require_colons : Bool?
+  managed : Bool?
+  available : Bool?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
 pub enum EmojiMarker {
 }
 
@@ -225,8 +236,46 @@ pub fn PremiumType::to_int(Self) -> Int
 pub impl ToJson for PremiumType
 pub impl @json.FromJson for PremiumType
 
+pub(all) struct Role {
+  id : Id[RoleMarker]
+  name : String
+  color : Int
+  hoist : Bool
+  icon : Nullable[ImageHash]?
+  unicode_emoji : Nullable[String]?
+  position : Int
+  permissions : Permissions
+  managed : Bool
+  mentionable : Bool
+  tags : RoleTags?
+  flags : RoleFlags
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct RoleFlags(UInt64) derive(Eq)
+pub fn RoleFlags::bits(Self) -> UInt64
+pub fn RoleFlags::contains(Self, Self) -> Bool
+pub fn RoleFlags::from_bits(UInt64) -> Self
+pub fn RoleFlags::in_prompt() -> Self
+pub fn RoleFlags::none() -> Self
+pub impl BitAnd for RoleFlags
+pub impl BitOr for RoleFlags
+pub impl ToJson for RoleFlags
+pub impl @debug.Debug for RoleFlags
+pub impl @json.FromJson for RoleFlags
+
 pub enum RoleMarker {
 }
+
+pub(all) struct RoleTags {
+  bot_id : Id[UserMarker]?
+  premium_subscriber : Bool
+  integration_id : Id[IntegrationMarker]?
+  subscription_listing_id : Id[SkuMarker]?
+  available_for_purchase : Bool
+  guild_connections : Bool
+} derive(Eq, @debug.Debug)
+pub impl ToJson for RoleTags
+pub impl @json.FromJson for RoleTags
 
 pub enum ScheduledEventMarker {
 }
@@ -240,11 +289,64 @@ pub enum SoundboardSoundMarker {
 pub enum StageInstanceMarker {
 }
 
+pub(all) struct Sticker {
+  id : Id[StickerMarker]
+  pack_id : Id[StickerPackMarker]?
+  name : String
+  description : Nullable[String]
+  tags : String
+  asset : String?
+  typ : StickerType
+  format_type : StickerFormatType
+  available : Bool?
+  guild_id : Id[GuildMarker]?
+  user : User?
+  sort_value : Int?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum StickerFormatType {
+  Png
+  Apng
+  Lottie
+  Gif
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn StickerFormatType::from_int(Int) -> Self
+pub fn StickerFormatType::to_int(Self) -> Int
+pub impl ToJson for StickerFormatType
+pub impl @json.FromJson for StickerFormatType
+
+pub(all) struct StickerItem {
+  id : Id[StickerMarker]
+  name : String
+  format_type : StickerFormatType
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
 pub enum StickerMarker {
 }
 
+pub(all) struct StickerPack {
+  id : Id[StickerPackMarker]
+  stickers : Array[Sticker]
+  name : String
+  sku_id : Id[SkuMarker]
+  cover_sticker_id : Id[StickerMarker]?
+  description : String
+  banner_asset_id : Id[GenericMarker]?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
 pub enum StickerPackMarker {
 }
+
+pub(all) enum StickerType {
+  Standard
+  Guild
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn StickerType::from_int(Int) -> Self
+pub fn StickerType::to_int(Self) -> Int
+pub impl ToJson for StickerType
+pub impl @json.FromJson for StickerType
 
 pub enum TeamMarker {
 }
