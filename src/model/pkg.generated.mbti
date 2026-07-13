@@ -251,6 +251,20 @@ pub(all) struct AutoModerationAction {
   metadata : ActionMetadata?
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
+pub(all) struct AutoModerationActionExecutionEvent {
+  guild_id : Id[GuildMarker]
+  action : AutoModerationAction
+  rule_id : Id[AutoModerationRuleMarker]
+  rule_trigger_type : AutoModerationTriggerType
+  user_id : Id[UserMarker]
+  channel_id : Id[ChannelMarker]?
+  message_id : Id[MessageMarker]?
+  alert_system_message_id : Id[MessageMarker]?
+  content : String
+  matched_keyword : Nullable[String]
+  matched_content : Nullable[String]
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) enum AutoModerationActionType {
   BlockMessage
   SendAlertMessage
@@ -401,6 +415,17 @@ pub impl ToJson for ChannelFlags
 pub impl @debug.Debug for ChannelFlags
 pub impl @json.FromJson for ChannelFlags
 
+pub(all) struct ChannelInfo {
+  id : Id[ChannelMarker]
+  status : Nullable[String]?
+  voice_start_time : Nullable[Int64]?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ChannelInfoEvent {
+  guild_id : Id[GuildMarker]
+  channels : Array[ChannelInfo]
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
 pub enum ChannelMarker {
 }
 
@@ -409,6 +434,12 @@ pub(all) struct ChannelMention {
   guild_id : Id[GuildMarker]
   typ : ChannelType
   name : String
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ChannelPinsUpdateEvent {
+  guild_id : Id[GuildMarker]?
+  channel_id : Id[ChannelMarker]
+  last_pin_timestamp : Nullable[Timestamp]?
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) enum ChannelType {
@@ -709,54 +740,168 @@ pub(all) struct EntityMetadata {
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) enum Event {
-  Ready(Ready)
-  Resumed
-  MessageCreate(Message)
-  MessageUpdate(Message)
-  MessageDelete(MessageDeleteEvent)
-  InteractionCreate(Interaction)
+  ApplicationCommandPermissionsUpdate(Json)
+  AutoModerationActionExecution(AutoModerationActionExecutionEvent)
+  AutoModerationRuleCreate(AutoModerationRule)
+  AutoModerationRuleDelete(AutoModerationRule)
+  AutoModerationRuleUpdate(AutoModerationRule)
+  ChannelCreate(Channel)
+  ChannelDelete(Channel)
+  ChannelInfo(ChannelInfoEvent)
+  ChannelPinsUpdate(ChannelPinsUpdateEvent)
+  ChannelUpdate(Channel)
+  EntitlementCreate(Entitlement)
+  EntitlementDelete(Entitlement)
+  EntitlementUpdate(Entitlement)
+  GuildAuditLogEntryCreate(GuildAuditLogEntryCreateEvent)
+  GuildBanAdd(GuildBanEvent)
+  GuildBanRemove(GuildBanEvent)
   GuildCreate(Json)
   GuildDelete(UnavailableGuild)
-  ChannelCreate(Channel)
-  ChannelUpdate(Channel)
-  ChannelDelete(Channel)
-  ThreadCreate(Channel)
-  ThreadUpdate(Channel)
-  ThreadDelete(Json)
-  GuildMemberAdd(Json)
-  GuildMemberRemove(Json)
-  GuildMemberUpdate(Json)
-  MessageReactionAdd(Json)
-  MessageReactionRemove(Json)
-  TypingStart(Json)
+  GuildEmojisUpdate(GuildEmojisUpdateEvent)
+  GuildIntegrationsUpdate(GuildIntegrationsUpdateEvent)
+  GuildMemberAdd(GuildMemberAddEvent)
+  GuildMemberRemove(GuildMemberRemoveEvent)
+  GuildMembersChunk(GuildMembersChunkEvent)
+  GuildMemberUpdate(GuildMemberUpdateEvent)
+  GuildRoleCreate(GuildRoleEvent)
+  GuildRoleDelete(GuildRoleDeleteEvent)
+  GuildRoleUpdate(GuildRoleEvent)
+  GuildScheduledEventCreate(GuildScheduledEvent)
+  GuildScheduledEventDelete(GuildScheduledEvent)
+  GuildScheduledEventUpdate(GuildScheduledEvent)
+  GuildScheduledEventUserAdd(GuildScheduledEventUserEvent)
+  GuildScheduledEventUserRemove(GuildScheduledEventUserEvent)
+  GuildSoundboardSoundCreate(SoundboardSound)
+  GuildSoundboardSoundDelete(GuildSoundboardSoundDeleteEvent)
+  GuildSoundboardSoundsUpdate(SoundboardSoundsEvent)
+  GuildSoundboardSoundUpdate(SoundboardSound)
+  SoundboardSounds(SoundboardSoundsEvent)
+  GuildStickersUpdate(GuildStickersUpdateEvent)
+  GuildUpdate(Guild)
+  IntegrationCreate(IntegrationEvent)
+  IntegrationDelete(IntegrationDeleteEvent)
+  IntegrationUpdate(IntegrationEvent)
+  InteractionCreate(Interaction)
+  InviteCreate(InviteCreateEvent)
+  InviteDelete(InviteDeleteEvent)
+  MessageCreate(Message)
+  MessageDelete(MessageDeleteEvent)
+  MessageDeleteBulk(MessageDeleteBulkEvent)
+  MessagePollVoteAdd(MessagePollVoteEvent)
+  MessagePollVoteRemove(MessagePollVoteEvent)
+  MessageReactionAdd(MessageReactionAddEvent)
+  MessageReactionRemove(MessageReactionRemoveEvent)
+  MessageReactionRemoveAll(MessageReactionRemoveAllEvent)
+  MessageReactionRemoveEmoji(MessageReactionRemoveEmojiEvent)
+  MessageUpdate(Message)
   PresenceUpdate(Json)
+  RateLimited(GatewayRateLimitedEvent)
+  Ready(Ready)
+  Resumed
+  StageInstanceCreate(StageInstance)
+  StageInstanceDelete(StageInstance)
+  StageInstanceUpdate(StageInstance)
+  SubscriptionCreate(Json)
+  SubscriptionDelete(Json)
+  SubscriptionUpdate(Json)
+  ThreadCreate(Channel)
+  ThreadDelete(ThreadDeleteEvent)
+  ThreadListSync(ThreadListSyncEvent)
+  ThreadMembersUpdate(ThreadMembersUpdateEvent)
+  ThreadMemberUpdate(ThreadMemberUpdateEvent)
+  ThreadUpdate(Channel)
+  TypingStart(TypingStartEvent)
+  UserUpdate(User)
+  VoiceChannelEffectSend(VoiceChannelEffectSendEvent)
+  VoiceChannelStartTimeUpdate(VoiceChannelStartTimeUpdateEvent)
+  VoiceChannelStatusUpdate(VoiceChannelStatusUpdateEvent)
+  VoiceServerUpdate(VoiceServerUpdateEvent)
   VoiceStateUpdate(VoiceState)
+  WebhooksUpdate(WebhooksUpdateEvent)
   Unknown(t~ : String, d~ : Json)
 } derive(@debug.Debug)
 
 pub(all) enum EventKind {
-  KReady
-  KResumed
-  KMessageCreate
-  KMessageUpdate
-  KMessageDelete
-  KInteractionCreate
+  KApplicationCommandPermissionsUpdate
+  KAutoModerationActionExecution
+  KAutoModerationRuleCreate
+  KAutoModerationRuleDelete
+  KAutoModerationRuleUpdate
+  KChannelCreate
+  KChannelDelete
+  KChannelInfo
+  KChannelPinsUpdate
+  KChannelUpdate
+  KEntitlementCreate
+  KEntitlementDelete
+  KEntitlementUpdate
+  KGuildAuditLogEntryCreate
+  KGuildBanAdd
+  KGuildBanRemove
   KGuildCreate
   KGuildDelete
-  KChannelCreate
-  KChannelUpdate
-  KChannelDelete
-  KThreadCreate
-  KThreadUpdate
-  KThreadDelete
+  KGuildEmojisUpdate
+  KGuildIntegrationsUpdate
   KGuildMemberAdd
   KGuildMemberRemove
+  KGuildMembersChunk
   KGuildMemberUpdate
+  KGuildRoleCreate
+  KGuildRoleDelete
+  KGuildRoleUpdate
+  KGuildScheduledEventCreate
+  KGuildScheduledEventDelete
+  KGuildScheduledEventUpdate
+  KGuildScheduledEventUserAdd
+  KGuildScheduledEventUserRemove
+  KGuildSoundboardSoundCreate
+  KGuildSoundboardSoundDelete
+  KGuildSoundboardSoundsUpdate
+  KGuildSoundboardSoundUpdate
+  KSoundboardSounds
+  KGuildStickersUpdate
+  KGuildUpdate
+  KIntegrationCreate
+  KIntegrationDelete
+  KIntegrationUpdate
+  KInteractionCreate
+  KInviteCreate
+  KInviteDelete
+  KMessageCreate
+  KMessageDelete
+  KMessageDeleteBulk
+  KMessagePollVoteAdd
+  KMessagePollVoteRemove
   KMessageReactionAdd
   KMessageReactionRemove
-  KTypingStart
+  KMessageReactionRemoveAll
+  KMessageReactionRemoveEmoji
+  KMessageUpdate
   KPresenceUpdate
+  KRateLimited
+  KReady
+  KResumed
+  KStageInstanceCreate
+  KStageInstanceDelete
+  KStageInstanceUpdate
+  KSubscriptionCreate
+  KSubscriptionDelete
+  KSubscriptionUpdate
+  KThreadCreate
+  KThreadDelete
+  KThreadListSync
+  KThreadMembersUpdate
+  KThreadMemberUpdate
+  KThreadUpdate
+  KTypingStart
+  KUserUpdate
+  KVoiceChannelEffectSend
+  KVoiceChannelStartTimeUpdate
+  KVoiceChannelStatusUpdate
+  KVoiceServerUpdate
   KVoiceStateUpdate
+  KWebhooksUpdate
   KUnknown
 } derive(Eq, @debug.Debug)
 pub fn EventKind::of_name(String) -> Self
@@ -815,6 +960,12 @@ pub(all) enum GatewayOpcode {
 pub fn GatewayOpcode::from_int(Int) -> Self
 pub fn GatewayOpcode::to_int(Self) -> Int
 
+pub(all) struct GatewayRateLimitedEvent {
+  opcode : Int
+  retry_after : Double
+  meta : Json
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
 pub enum GenericMarker {
 }
 
@@ -863,9 +1014,25 @@ pub(all) struct Guild {
   safety_alerts_channel_id : Nullable[Id[ChannelMarker]]
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
+pub(all) struct GuildAuditLogEntryCreateEvent {
+  guild_id : Id[GuildMarker]
+  entry : AuditLogEntry
+} derive(@debug.Debug)
+pub impl @json.FromJson for GuildAuditLogEntryCreateEvent
+
 pub(all) struct GuildBan {
   reason : Nullable[String]
   user : User
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct GuildBanEvent {
+  guild_id : Id[GuildMarker]
+  user : User
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct GuildEmojisUpdateEvent {
+  guild_id : Id[GuildMarker]
+  emojis : Array[Emoji]
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) enum GuildFeature {
@@ -915,6 +1082,10 @@ pub fn GuildFeature::to_string(Self) -> String
 pub impl ToJson for GuildFeature
 pub impl @json.FromJson for GuildFeature
 
+pub(all) struct GuildIntegrationsUpdateEvent {
+  guild_id : Id[GuildMarker]
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
 pub enum GuildMarker {
 }
 
@@ -934,6 +1105,12 @@ pub(all) struct GuildMember {
   communication_disabled_until : Nullable[Timestamp]?
   avatar_decoration_data : Nullable[AvatarDecorationData]?
 } derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct GuildMemberAddEvent {
+  guild_id : Id[GuildMarker]
+  guild_member : GuildMember
+} derive(@debug.Debug)
+pub impl @json.FromJson for GuildMemberAddEvent
 
 pub(all) struct GuildMemberFlags(UInt64) derive(Eq)
 pub fn GuildMemberFlags::auto_mod_quarantined_guild_tag() -> Self
@@ -956,6 +1133,47 @@ pub impl BitOr for GuildMemberFlags
 pub impl ToJson for GuildMemberFlags
 pub impl @debug.Debug for GuildMemberFlags
 pub impl @json.FromJson for GuildMemberFlags
+
+pub(all) struct GuildMemberRemoveEvent {
+  guild_id : Id[GuildMarker]
+  user : User
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct GuildMemberUpdateEvent {
+  guild_id : Id[GuildMarker]
+  roles : Array[Id[RoleMarker]]
+  user : User
+  nick : Nullable[String]?
+  avatar : Nullable[ImageHash]
+  joined_at : Nullable[Timestamp]
+  premium_since : Nullable[Timestamp]?
+  deaf : Bool?
+  mute : Bool?
+  pending : Bool?
+  communication_disabled_until : Nullable[Timestamp]?
+  flags : GuildMemberFlags?
+  avatar_decoration_data : Nullable[AvatarDecorationData]?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct GuildMembersChunkEvent {
+  guild_id : Id[GuildMarker]
+  members : Array[GuildMember]
+  chunk_index : Int
+  chunk_count : Int
+  not_found : Array[Json]?
+  presences : Array[Json]?
+  nonce : String?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct GuildRoleDeleteEvent {
+  guild_id : Id[GuildMarker]
+  role_id : Id[RoleMarker]
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct GuildRoleEvent {
+  guild_id : Id[GuildMarker]
+  role : Role
+} derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct GuildScheduledEvent {
   id : Id[ScheduledEventMarker]
@@ -1009,6 +1227,22 @@ pub fn GuildScheduledEventStatus::to_int(Self) -> Int
 pub impl ToJson for GuildScheduledEventStatus
 pub impl @json.FromJson for GuildScheduledEventStatus
 
+pub(all) struct GuildScheduledEventUserEvent {
+  guild_scheduled_event_id : Id[ScheduledEventMarker]
+  user_id : Id[UserMarker]
+  guild_id : Id[GuildMarker]
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct GuildSoundboardSoundDeleteEvent {
+  sound_id : Id[SoundboardSoundMarker]
+  guild_id : Id[GuildMarker]
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct GuildStickersUpdateEvent {
+  guild_id : Id[GuildMarker]
+  stickers : Array[Sticker]
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) struct GuildTemplate {
   code : String
   name : String
@@ -1046,6 +1280,18 @@ pub fn ImageHash::to_string(Self) -> String
 pub impl ToJson for ImageHash
 pub impl @debug.Debug for ImageHash
 pub impl @json.FromJson for ImageHash
+
+pub(all) struct IntegrationDeleteEvent {
+  id : Id[IntegrationMarker]
+  guild_id : Id[GuildMarker]
+  application_id : Id[ApplicationMarker]?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct IntegrationEvent {
+  guild_id : Id[GuildMarker]
+  integration : Json
+} derive(@debug.Debug)
+pub impl @json.FromJson for IntegrationEvent
 
 pub enum IntegrationMarker {
 }
@@ -1167,6 +1413,29 @@ pub(all) struct Invite {
   created_at : Timestamp?
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
+pub(all) struct InviteCreateEvent {
+  channel_id : Id[ChannelMarker]
+  code : String
+  created_at : Timestamp
+  guild_id : Id[GuildMarker]?
+  inviter : User?
+  max_age : Int
+  max_uses : Int
+  target_type : InviteTargetType?
+  target_user : User?
+  target_application : Json?
+  temporary : Bool
+  uses : Int
+  expires_at : Nullable[Timestamp]
+  role_ids : Array[Id[RoleMarker]]?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct InviteDeleteEvent {
+  channel_id : Id[ChannelMarker]
+  guild_id : Id[GuildMarker]?
+  code : String
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) enum InviteTargetType {
   Stream
   EmbeddedApplication
@@ -1243,6 +1512,12 @@ pub(all) struct MessageCall {
   ended_timestamp : Nullable[Timestamp]?
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
+pub(all) struct MessageDeleteBulkEvent {
+  ids : Array[Id[MessageMarker]]
+  channel_id : Id[ChannelMarker]
+  guild_id : Id[GuildMarker]?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) struct MessageDeleteEvent {
   id : Id[MessageMarker]
   channel_id : Id[ChannelMarker]
@@ -1276,6 +1551,50 @@ pub impl @json.FromJson for MessageFlags
 
 pub enum MessageMarker {
 }
+
+pub(all) struct MessagePollVoteEvent {
+  user_id : Id[UserMarker]
+  channel_id : Id[ChannelMarker]
+  message_id : Id[MessageMarker]
+  guild_id : Id[GuildMarker]?
+  answer_id : Int
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct MessageReactionAddEvent {
+  user_id : Id[UserMarker]
+  channel_id : Id[ChannelMarker]
+  message_id : Id[MessageMarker]
+  guild_id : Id[GuildMarker]?
+  guild_member : GuildMember?
+  emoji : Emoji
+  message_author_id : Id[UserMarker]?
+  burst : Bool
+  burst_colors : Array[String]?
+  typ : Int
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct MessageReactionRemoveAllEvent {
+  channel_id : Id[ChannelMarker]
+  message_id : Id[MessageMarker]
+  guild_id : Id[GuildMarker]?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct MessageReactionRemoveEmojiEvent {
+  channel_id : Id[ChannelMarker]
+  message_id : Id[MessageMarker]
+  guild_id : Id[GuildMarker]?
+  emoji : Emoji
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct MessageReactionRemoveEvent {
+  user_id : Id[UserMarker]
+  channel_id : Id[ChannelMarker]
+  message_id : Id[MessageMarker]
+  guild_id : Id[GuildMarker]?
+  emoji : Emoji
+  burst : Bool
+  typ : Int
+} derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct MessageReference {
   typ : MessageReferenceType?
@@ -1716,6 +2035,11 @@ pub(all) struct SoundboardSound {
 pub enum SoundboardSoundMarker {
 }
 
+pub(all) struct SoundboardSoundsEvent {
+  soundboard_sounds : Array[SoundboardSound]
+  guild_id : Id[GuildMarker]
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) struct StageInstance {
   id : Id[StageInstanceMarker]
   guild_id : Id[GuildMarker]
@@ -1875,12 +2199,40 @@ pub fn ThreadAutoArchiveDuration::to_int(Self) -> Int
 pub impl ToJson for ThreadAutoArchiveDuration
 pub impl @json.FromJson for ThreadAutoArchiveDuration
 
+pub(all) struct ThreadDeleteEvent {
+  id : Id[ChannelMarker]
+  guild_id : Id[GuildMarker]
+  parent_id : Id[ChannelMarker]
+  typ : ChannelType
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ThreadListSyncEvent {
+  guild_id : Id[GuildMarker]
+  channel_ids : Array[Id[ChannelMarker]]?
+  threads : Array[Channel]
+  members : Array[ThreadMember]
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) struct ThreadMember {
   id : Id[ChannelMarker]?
   user_id : Id[UserMarker]?
   join_timestamp : Timestamp
   flags : Int
   guild_member : GuildMember?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ThreadMemberUpdateEvent {
+  guild_id : Id[GuildMarker]
+  thread_member : ThreadMember
+} derive(@debug.Debug)
+pub impl @json.FromJson for ThreadMemberUpdateEvent
+
+pub(all) struct ThreadMembersUpdateEvent {
+  id : Id[ChannelMarker]
+  guild_id : Id[GuildMarker]
+  member_count : Int
+  added_members : Array[ThreadMember]?
+  removed_member_ids : Array[Id[UserMarker]]?
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct ThreadMetadata {
@@ -1906,6 +2258,14 @@ pub(all) struct TriggerMetadata {
   regex_patterns : Array[String]?
   mention_total_limit : Int?
   mention_raid_protection_enabled : Bool?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct TypingStartEvent {
+  channel_id : Id[ChannelMarker]
+  guild_id : Id[GuildMarker]?
+  user_id : Id[UserMarker]
+  timestamp : Int64
+  guild_member : GuildMember?
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct UnavailableGuild {
@@ -2003,12 +2363,41 @@ pub fn VideoQualityMode::to_int(Self) -> Int
 pub impl ToJson for VideoQualityMode
 pub impl @json.FromJson for VideoQualityMode
 
+pub(all) struct VoiceChannelEffectSendEvent {
+  channel_id : Id[ChannelMarker]
+  guild_id : Id[GuildMarker]
+  user_id : Id[UserMarker]
+  emoji : Nullable[Emoji]?
+  animation_type : Nullable[Int]?
+  animation_id : Int?
+  sound_id : Json?
+  sound_volume : Double?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct VoiceChannelStartTimeUpdateEvent {
+  id : Id[ChannelMarker]
+  guild_id : Id[GuildMarker]
+  voice_start_time : Nullable[Int64]?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct VoiceChannelStatusUpdateEvent {
+  id : Id[ChannelMarker]
+  guild_id : Id[GuildMarker]
+  status : Nullable[String]
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) struct VoiceRegion {
   id : String
   name : String
   optimal : Bool
   deprecated : Bool
   custom : Bool
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct VoiceServerUpdateEvent {
+  token : String
+  guild_id : Id[GuildMarker]
+  endpoint : Nullable[String]
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct VoiceState {
@@ -2053,6 +2442,11 @@ pub fn WebhookType::from_int(Int) -> Self
 pub fn WebhookType::to_int(Self) -> Int
 pub impl ToJson for WebhookType
 pub impl @json.FromJson for WebhookType
+
+pub(all) struct WebhooksUpdateEvent {
+  guild_id : Id[GuildMarker]
+  channel_id : Id[ChannelMarker]
+} derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct WelcomeScreen {
   description : Nullable[String]
