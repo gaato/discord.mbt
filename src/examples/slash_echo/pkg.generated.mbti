@@ -1,0 +1,18 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "gaato/discord/examples/slash_echo"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+type Echo derive(@debug.Debug)
+
+// Type aliases
+
+// Traits
+
