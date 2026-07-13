@@ -1,0 +1,21 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "gaato/discord/queue"
+
+// Values
+
+// Errors
+
+// Types and methods
+pub struct InMemoryQueue {
+  // private fields
+}
+pub fn InMemoryQueue::new(max_concurrency? : Int, spacing_ms? : Int) -> Self
+pub impl IdentifyQueue for InMemoryQueue
+
+// Type aliases
+
+// Traits
+pub(open) trait IdentifyQueue {
+  async fn wait_for_identify(Self, Int) -> Unit
+}
+

@@ -1,0 +1,17 @@
+import {
+  "gaato/discord/model",
+  "gaato/discord/queue",
+  "moonbitlang/async",
+  "moonbitlang/async/aqueue",
+  "moonbitlang/async/websocket",
+  "moonbitlang/core/json",
+  "moonbitlang/core/random",
+}
+
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/aqueue",
+  "moonbitlang/core/json",
+  "gaato/discord/model",
+  "gaato/discord/queue",
+} for "test"

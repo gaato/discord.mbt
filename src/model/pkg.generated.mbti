@@ -7,6 +7,7 @@ import {
 }
 
 // Values
+pub fn dispatch_event(String, Json) -> Event raise
 
 // Errors
 pub suberror TimestampError {
@@ -707,6 +708,59 @@ pub(all) struct EntityMetadata {
   location : String?
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
+pub(all) enum Event {
+  Ready(Ready)
+  Resumed
+  MessageCreate(Message)
+  MessageUpdate(Message)
+  MessageDelete(MessageDeleteEvent)
+  InteractionCreate(Interaction)
+  GuildCreate(Json)
+  GuildDelete(UnavailableGuild)
+  ChannelCreate(Channel)
+  ChannelUpdate(Channel)
+  ChannelDelete(Channel)
+  ThreadCreate(Channel)
+  ThreadUpdate(Channel)
+  ThreadDelete(Json)
+  GuildMemberAdd(Json)
+  GuildMemberRemove(Json)
+  GuildMemberUpdate(Json)
+  MessageReactionAdd(Json)
+  MessageReactionRemove(Json)
+  TypingStart(Json)
+  PresenceUpdate(Json)
+  VoiceStateUpdate(VoiceState)
+  Unknown(t~ : String, d~ : Json)
+} derive(@debug.Debug)
+
+pub(all) enum EventKind {
+  KReady
+  KResumed
+  KMessageCreate
+  KMessageUpdate
+  KMessageDelete
+  KInteractionCreate
+  KGuildCreate
+  KGuildDelete
+  KChannelCreate
+  KChannelUpdate
+  KChannelDelete
+  KThreadCreate
+  KThreadUpdate
+  KThreadDelete
+  KGuildMemberAdd
+  KGuildMemberRemove
+  KGuildMemberUpdate
+  KMessageReactionAdd
+  KMessageReactionRemove
+  KTypingStart
+  KPresenceUpdate
+  KVoiceStateUpdate
+  KUnknown
+} derive(Eq, @debug.Debug)
+pub fn EventKind::of_name(String) -> Self
+
 pub(all) enum ExplicitContentFilter {
   Disabled
   MembersWithoutRoles
@@ -742,6 +796,24 @@ pub(all) struct GatewayBotInfo {
   shards : Int
   session_start_limit : SessionStartLimit
 } derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum GatewayOpcode {
+  Dispatch
+  Heartbeat
+  Identify
+  PresenceUpdate
+  VoiceStateUpdate
+  Resume
+  Reconnect
+  RequestGuildMembers
+  InvalidSession
+  Hello
+  HeartbeatAck
+  RequestSoundboardSounds
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn GatewayOpcode::from_int(Int) -> Self
+pub fn GatewayOpcode::to_int(Self) -> Int
 
 pub enum GenericMarker {
 }
@@ -949,6 +1021,10 @@ pub(all) struct GuildTemplate {
   source_guild_id : Id[GuildMarker]
   serialized_source_guild : Json
   is_dirty : Nullable[Bool]
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct Hello {
+  heartbeat_interval : Int
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct Id[M](UInt64)
@@ -1165,6 +1241,12 @@ pub impl @json.FromJson for MessageActivityType
 pub(all) struct MessageCall {
   participants : Array[Id[UserMarker]]
   ended_timestamp : Nullable[Timestamp]?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct MessageDeleteEvent {
+  id : Id[MessageMarker]
+  channel_id : Id[ChannelMarker]
+  guild_id : Id[GuildMarker]?
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct MessageFlags(UInt64) derive(Eq)
@@ -1464,6 +1546,21 @@ pub(all) struct Reaction {
 pub(all) struct ReactionCountDetails {
   burst : Int
   normal : Int
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct Ready {
+  v : Int
+  user : User
+  guilds : Array[UnavailableGuild]
+  session_id : String
+  resume_gateway_url : String
+  shard : Array[Int]?
+  application : ReadyApplication
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ReadyApplication {
+  id : Id[ApplicationMarker]
+  flags : ApplicationFlags?
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct ResolvedData {

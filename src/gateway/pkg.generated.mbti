@@ -1,0 +1,74 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "gaato/discord/gateway"
+
+import {
+  "gaato/discord/model",
+  "gaato/discord/queue",
+  "moonbitlang/async",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub async fn connect_websocket(String) -> &GatewayTransport
+
+pub fn on_close(Int?, Bool) -> ReconnectPolicy
+
+// Errors
+pub(all) suberror TransportClosed {
+  TransportClosed(code~ : Int?, reason~ : String)
+} derive(@debug.Debug)
+
+// Types and methods
+pub struct CommandLimiter {
+  // private fields
+}
+pub async fn CommandLimiter::acquire(Self) -> Unit
+pub fn CommandLimiter::new(limit? : Int) -> Self
+
+pub(all) enum ReconnectPolicy {
+  Resume
+  Reidentify
+  Fatal
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Session {
+  id : String
+  resume_url : String
+  mut sequence : Int64
+} derive(@debug.Debug)
+
+pub struct Shard {
+  // private fields
+}
+pub async fn Shard::close(Self) -> Unit noraise
+pub fn Shard::latency_ms(Self) -> Int64?
+pub async fn Shard::next(Self) -> ShardEvent
+pub async fn Shard::send(Self, Json) -> Unit
+pub fn[X] Shard::start(@async.TaskGroup[X], token~ : String, intents~ : @model.Intents, gateway_url? : String, shard_id? : Int, shard_count? : Int, identify_queue? : &@queue.IdentifyQueue, event_filter? : (@model.EventKind) -> Bool, connector? : async (String) -> &GatewayTransport, queue_capacity? : Int) -> Self
+pub fn Shard::state(Self) -> ShardState
+
+pub(all) enum ShardEvent {
+  Dispatch(@model.Event)
+  Connected(resumed~ : Bool)
+  Disconnected(code~ : Int?, resuming~ : Bool)
+  FatallyClosed(code~ : Int)
+} derive(@debug.Debug)
+
+pub(all) enum ShardState {
+  Disconnected(reconnect_attempts~ : Int)
+  Connecting
+  Identifying
+  Resuming
+  Active
+  FatallyClosed(code~ : Int)
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits
+pub(open) trait GatewayTransport {
+  async fn recv(Self) -> String
+  async fn send(Self, String) -> Unit
+  async fn close(Self, code~ : Int) -> Unit
+}
+
