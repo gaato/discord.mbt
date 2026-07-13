@@ -14,6 +14,10 @@ pub suberror TimestampError {
 } derive(@debug.Debug)
 
 // Types and methods
+pub(all) struct ActionRow {
+  components : Array[Component]
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
 pub enum ApplicationMarker {
 }
 
@@ -63,6 +67,30 @@ pub(all) struct AvatarDecorationData {
   asset : ImageHash
   sku_id : Id[SkuMarker]
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct Button {
+  style : ButtonStyle
+  label : String?
+  emoji : Emoji?
+  custom_id : String?
+  sku_id : Id[SkuMarker]?
+  url : String?
+  disabled : Bool?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum ButtonStyle {
+  Primary
+  Secondary
+  Success
+  Danger
+  Link
+  Premium
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn ButtonStyle::from_int(Int) -> Self
+pub fn ButtonStyle::to_int(Self) -> Int
+pub impl ToJson for ButtonStyle
+pub impl @json.FromJson for ButtonStyle
 
 pub(all) struct Channel {
   id : Id[ChannelMarker]
@@ -125,6 +153,13 @@ pub impl @json.FromJson for ChannelFlags
 pub enum ChannelMarker {
 }
 
+pub(all) struct ChannelMention {
+  id : Id[ChannelMarker]
+  guild_id : Id[GuildMarker]
+  typ : ChannelType
+  name : String
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) enum ChannelType {
   GuildText
   Dm
@@ -151,6 +186,20 @@ pub enum CommandMarker {
 
 pub enum CommandVersionMarker {
 }
+
+pub(all) enum Component {
+  ActionRow(ActionRow)
+  Button(Button)
+  StringSelect(SelectMenu)
+  TextInput(TextInput)
+  UserSelect(SelectMenu)
+  RoleSelect(SelectMenu)
+  MentionableSelect(SelectMenu)
+  ChannelSelect(SelectMenu)
+  Unknown(Json)
+} derive(@debug.Debug)
+pub impl ToJson for Component
+pub impl @json.FromJson for Component
 
 pub(all) struct DefaultReaction {
   emoji_id : Nullable[Id[EmojiMarker]]
@@ -276,6 +325,45 @@ pub enum GenericMarker {
 pub enum GuildMarker {
 }
 
+pub(all) struct GuildMember {
+  user : User?
+  nick : Nullable[String]?
+  avatar : Nullable[ImageHash]?
+  banner : Nullable[ImageHash]?
+  roles : Array[Id[RoleMarker]]
+  joined_at : Nullable[Timestamp]
+  premium_since : Nullable[Timestamp]?
+  deaf : Bool
+  mute : Bool
+  flags : GuildMemberFlags
+  pending : Bool?
+  permissions : Permissions?
+  communication_disabled_until : Nullable[Timestamp]?
+  avatar_decoration_data : Nullable[AvatarDecorationData]?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct GuildMemberFlags(UInt64) derive(Eq)
+pub fn GuildMemberFlags::auto_mod_quarantined_guild_tag() -> Self
+pub fn GuildMemberFlags::automod_quarantined_bio() -> Self
+pub fn GuildMemberFlags::automod_quarantined_username_or_guild_nickname() -> Self
+pub fn GuildMemberFlags::bits(Self) -> UInt64
+pub fn GuildMemberFlags::bypasses_verification() -> Self
+pub fn GuildMemberFlags::completed_home_actions() -> Self
+pub fn GuildMemberFlags::completed_onboarding() -> Self
+pub fn GuildMemberFlags::contains(Self, Self) -> Bool
+pub fn GuildMemberFlags::did_rejoin() -> Self
+pub fn GuildMemberFlags::dm_settings_upsell_acknowledged() -> Self
+pub fn GuildMemberFlags::from_bits(UInt64) -> Self
+pub fn GuildMemberFlags::is_guest() -> Self
+pub fn GuildMemberFlags::none() -> Self
+pub fn GuildMemberFlags::started_home_actions() -> Self
+pub fn GuildMemberFlags::started_onboarding() -> Self
+pub impl BitAnd for GuildMemberFlags
+pub impl BitOr for GuildMemberFlags
+pub impl ToJson for GuildMemberFlags
+pub impl @debug.Debug for GuildMemberFlags
+pub impl @json.FromJson for GuildMemberFlags
+
 pub(all) struct Id[M](UInt64)
 pub fn[M, N] Id::cast(Self[M]) -> Self[N]
 pub fn[M] Id::parse(StringView) -> Self[M] raise
@@ -334,8 +422,158 @@ pub impl @json.FromJson for Intents
 pub enum InteractionMarker {
 }
 
+pub(all) struct Message {
+  id : Id[MessageMarker]
+  channel_id : Id[ChannelMarker]
+  author : User
+  content : String
+  timestamp : Timestamp
+  edited_timestamp : Nullable[Timestamp]
+  tts : Bool
+  mention_everyone : Bool
+  mentions : Array[User]
+  mention_roles : Array[Id[RoleMarker]]
+  mention_channels : Array[ChannelMention]?
+  attachments : Array[Attachment]
+  embeds : Array[Embed]
+  reactions : Array[Reaction]?
+  nonce : Nonce?
+  pinned : Bool
+  webhook_id : Id[WebhookMarker]?
+  typ : MessageType
+  activity : MessageActivity?
+  application_id : Id[ApplicationMarker]?
+  message_reference : MessageReference?
+  flags : MessageFlags?
+  referenced_message : Nullable[Message]?
+  thread : Channel?
+  components : Array[Component]?
+  sticker_items : Array[StickerItem]?
+  position : Int?
+  role_subscription_data : RoleSubscriptionData?
+  call : MessageCall?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct MessageActivity {
+  typ : MessageActivityType
+  party_id : String?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum MessageActivityType {
+  Join
+  Spectate
+  Listen
+  JoinRequest
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn MessageActivityType::from_int(Int) -> Self
+pub fn MessageActivityType::to_int(Self) -> Int
+pub impl ToJson for MessageActivityType
+pub impl @json.FromJson for MessageActivityType
+
+pub(all) struct MessageCall {
+  participants : Array[Id[UserMarker]]
+  ended_timestamp : Nullable[Timestamp]?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct MessageFlags(UInt64) derive(Eq)
+pub fn MessageFlags::bits(Self) -> UInt64
+pub fn MessageFlags::contains(Self, Self) -> Bool
+pub fn MessageFlags::crossposted() -> Self
+pub fn MessageFlags::ephemeral() -> Self
+pub fn MessageFlags::failed_to_mention_some_roles_in_thread() -> Self
+pub fn MessageFlags::from_bits(UInt64) -> Self
+pub fn MessageFlags::has_snapshot() -> Self
+pub fn MessageFlags::has_thread() -> Self
+pub fn MessageFlags::is_components_v2() -> Self
+pub fn MessageFlags::is_crosspost() -> Self
+pub fn MessageFlags::is_voice_message() -> Self
+pub fn MessageFlags::loading() -> Self
+pub fn MessageFlags::none() -> Self
+pub fn MessageFlags::should_show_link_not_discord_warning() -> Self
+pub fn MessageFlags::source_message_deleted() -> Self
+pub fn MessageFlags::suppress_embeds() -> Self
+pub fn MessageFlags::suppress_notifications() -> Self
+pub fn MessageFlags::urgent() -> Self
+pub impl BitAnd for MessageFlags
+pub impl BitOr for MessageFlags
+pub impl ToJson for MessageFlags
+pub impl @debug.Debug for MessageFlags
+pub impl @json.FromJson for MessageFlags
+
 pub enum MessageMarker {
 }
+
+pub(all) struct MessageReference {
+  typ : MessageReferenceType?
+  message_id : Id[MessageMarker]?
+  channel_id : Id[ChannelMarker]?
+  guild_id : Id[GuildMarker]?
+  fail_if_not_exists : Bool?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum MessageReferenceType {
+  Default
+  Forward
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn MessageReferenceType::from_int(Int) -> Self
+pub fn MessageReferenceType::to_int(Self) -> Int
+pub impl ToJson for MessageReferenceType
+pub impl @json.FromJson for MessageReferenceType
+
+pub(all) enum MessageType {
+  Default
+  RecipientAdd
+  RecipientRemove
+  Call
+  ChannelNameChange
+  ChannelIconChange
+  ChannelPinnedMessage
+  UserJoin
+  GuildBoost
+  GuildBoostTier1
+  GuildBoostTier2
+  GuildBoostTier3
+  ChannelFollowAdd
+  GuildDiscoveryDisqualified
+  GuildDiscoveryRequalified
+  GuildDiscoveryGracePeriodInitialWarning
+  GuildDiscoveryGracePeriodFinalWarning
+  ThreadCreated
+  Reply
+  ChatInputCommand
+  ThreadStarterMessage
+  GuildInviteReminder
+  ContextMenuCommand
+  AutoModerationAction
+  RoleSubscriptionPurchase
+  InteractionPremiumUpsell
+  StageStart
+  StageEnd
+  StageSpeaker
+  StageRaiseHand
+  StageTopic
+  GuildApplicationPremiumSubscription
+  GuildIncidentAlertModeEnabled
+  GuildIncidentAlertModeDisabled
+  GuildIncidentReportRaid
+  GuildIncidentReportFalseAlarm
+  PurchaseNotification
+  PollResult
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn MessageType::from_int(Int) -> Self
+pub fn MessageType::to_int(Self) -> Int
+pub impl ToJson for MessageType
+pub impl @json.FromJson for MessageType
+
+pub(all) enum Nonce {
+  Str(String)
+  Num(Int64)
+} derive(Eq, @debug.Debug)
+pub impl ToJson for Nonce
+pub impl @json.FromJson for Nonce
 
 pub(all) enum Nullable[T] {
   Null
@@ -445,6 +683,20 @@ pub fn PremiumType::to_int(Self) -> Int
 pub impl ToJson for PremiumType
 pub impl @json.FromJson for PremiumType
 
+pub(all) struct Reaction {
+  count : Int
+  count_details : ReactionCountDetails
+  me : Bool
+  me_burst : Bool
+  emoji : Emoji
+  burst_colors : Array[String]
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ReactionCountDetails {
+  burst : Int
+  normal : Int
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) struct Role {
   id : Id[RoleMarker]
   name : String
@@ -475,6 +727,13 @@ pub impl @json.FromJson for RoleFlags
 pub enum RoleMarker {
 }
 
+pub(all) struct RoleSubscriptionData {
+  role_subscription_listing_id : Id[SkuMarker]
+  tier_name : String
+  total_months_subscribed : Int
+  is_renewal : Bool
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) struct RoleTags {
   bot_id : Id[UserMarker]?
   premium_subscriber : Bool
@@ -488,6 +747,30 @@ pub impl @json.FromJson for RoleTags
 
 pub enum ScheduledEventMarker {
 }
+
+pub(all) struct SelectDefaultValue {
+  id : Id[GenericMarker]
+  typ : String
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct SelectMenu {
+  custom_id : String
+  placeholder : String?
+  min_values : Int?
+  max_values : Int?
+  disabled : Bool?
+  options : Array[SelectOption]?
+  channel_types : Array[ChannelType]?
+  default_values : Array[SelectDefaultValue]?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct SelectOption {
+  label : String
+  value : String
+  description : String?
+  emoji : Emoji?
+  default : Bool?
+} derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub enum SkuMarker {
 }
@@ -570,6 +853,27 @@ pub impl @json.FromJson for StickerType
 pub enum TeamMarker {
 }
 
+pub(all) struct TextInput {
+  custom_id : String
+  style : TextInputStyle
+  label : String
+  min_length : Int?
+  max_length : Int?
+  required : Bool?
+  value : String?
+  placeholder : String?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum TextInputStyle {
+  Short
+  Paragraph
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn TextInputStyle::from_int(Int) -> Self
+pub fn TextInputStyle::to_int(Self) -> Int
+pub impl ToJson for TextInputStyle
+pub impl @json.FromJson for TextInputStyle
+
 pub(all) enum ThreadAutoArchiveDuration {
   OneHour
   OneDay
@@ -587,6 +891,7 @@ pub(all) struct ThreadMember {
   user_id : Id[UserMarker]?
   join_timestamp : Timestamp
   flags : Int
+  guild_member : GuildMember?
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct ThreadMetadata {

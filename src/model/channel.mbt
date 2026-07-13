@@ -295,8 +295,12 @@ pub(all) struct ThreadMember {
   user_id : UserId?
   join_timestamp : Timestamp
   flags : Int
-  // TODO(member): Add GuildMember after the guild-member domain is ported.
-} derive(ToJson, FromJson, Debug)
+  guild_member : GuildMember?
+} derive (
+  ToJson(fields(guild_member(rename="member"))),
+  FromJson(fields(guild_member(rename="member"))),
+  Debug,
+)
 
 ///|
 /// A tag available for categorizing threads in a forum or media channel.

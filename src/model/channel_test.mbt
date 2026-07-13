@@ -97,7 +97,14 @@ test "channel decodes a thread fixture with metadata and membership" {
     #|    "user_id": "80351110224678912",
     #|    "join_timestamp": "2024-01-01T03:05:00.000000+00:00",
     #|    "flags": 1,
-    #|    "member": {"nick": "Nelly"}
+    #|    "member": {
+    #|      "nick": "Nelly",
+    #|      "roles": [],
+    #|      "joined_at": null,
+    #|      "deaf": false,
+    #|      "mute": false,
+    #|      "flags": 0
+    #|    }
     #|  },
     #|  "flags": 2,
     #|  "total_message_sent": 15,
@@ -148,6 +155,24 @@ test "channel decodes a thread fixture with metadata and membership" {
       #|      user_id: Some(80351110224678912),
       #|      join_timestamp: "2024-01-01T03:05:00.000000+00:00",
       #|      flags: 1,
+      #|      guild_member: Some(
+      #|        {
+      #|          user: None,
+      #|          nick: Some(Value("Nelly")),
+      #|          avatar: None,
+      #|          banner: None,
+      #|          roles: [],
+      #|          joined_at: Null,
+      #|          premium_since: None,
+      #|          deaf: false,
+      #|          mute: false,
+      #|          flags: 0,
+      #|          pending: None,
+      #|          permissions: None,
+      #|          communication_disabled_until: None,
+      #|          avatar_decoration_data: None,
+      #|        },
+      #|      ),
       #|    },
       #|  ),
       #|  default_auto_archive_duration: None,
