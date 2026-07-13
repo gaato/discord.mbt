@@ -15,16 +15,10 @@ const RUN_SECONDS : Int = 30
 
 ///|
 async fn main {
-  // --- 1. REST over TLS, no auth ---
-  let (resp, body) = @http.get("https://discord.com/api/v10/gateway")
-  println("[rest] GET /gateway -> \{resp.code} \{resp.reason}")
-  let gateway_url = match body.json() {
-    { "url": String(url), .. } => url
-    other => {
-      println("[rest] unexpected body: \{other.stringify()}")
-      panic()
-    }
-  }
+  let token = @env.get_env_var("DISCORD_TOKEN")
+  let client = @dhttp.Client::new(token.unwrap_or(""))
+  // --- 1. REST over TLS through the library client (rate limited, pooled) ---
+  let gateway_url = client.get_gateway()
   println("[rest] gateway url: \{gateway_url}")
 
   // --- 2. WebSocket handshake + Hello ---
@@ -43,7 +37,6 @@ async fn main {
     }
   }
   println("[ws] Hello: heartbeat_interval=\{heartbeat_interval}ms")
-  let token = @env.get_env_var("DISCORD_TOKEN")
   let sequence : Ref[Json] = Ref(Json::null())
   @async.with_timeout_opt(RUN_SECONDS * 1000, () => {
     @async.with_task_group((group : @async.TaskGroup[Unit]) => {
@@ -93,12 +86,12 @@ async fn main {
                     ..
                   } {
                   println("[ws] <- READY session=\{sid} resume=\{resume_url}")
-                  match (token, @env.get_env_var("DISCORD_CHANNEL_ID")) {
-                    (Some(token), Some(channel)) =>
+                  match @env.get_env_var("DISCORD_CHANNEL_ID") {
+                    Some(channel) =>
                       group.spawn_bg(no_wait=true, () => {
-                        post_message(token, channel)
+                        post_message(client, channel)
                       })
-                    _ =>
+                    None =>
                       println(
                         "[rest] DISCORD_CHANNEL_ID not set; skipping POST",
                       )
@@ -123,19 +116,21 @@ async fn main {
 }
 
 ///|
-async fn post_message(token : String, channel_id : String) -> Unit {
-  let payload : Json = { "content": "hello from discord.mbt P0 spike" }
-  let (resp, body) = @http.post(
-    "https://discord.com/api/v10/channels/\{channel_id}/messages",
-    payload,
-    headers={
-      "Authorization": "Bot \{token}",
-      "Content-Type": "application/json",
-    },
-  )
-  println("[rest] POST /channels/\{channel_id}/messages -> \{resp.code}")
-  if resp.code >= 400 {
-    let text = body.text() catch { _ => "<unreadable>" }
-    println("[rest] error body: \{text}")
+async fn post_message(client : @dhttp.Client, channel_id : String) -> Unit {
+  let channel_id : @model.ChannelId = @model.Id::parse(channel_id) catch {
+    _ => {
+      println("[rest] DISCORD_CHANNEL_ID is not a snowflake")
+      return
+    }
   }
+  let message = client.create_message(
+    channel_id,
+    content="hello from discord.mbt (typed client)",
+  ) catch {
+    e => {
+      println("[rest] create_message failed: \{to_repr(e)}")
+      return
+    }
+  }
+  println("[rest] created message id=\{message.id} in #\{message.channel_id}")
 }

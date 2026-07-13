@@ -1,0 +1,13 @@
+import {
+  "gaato/discord/model",
+  "gaato/discord/ratelimit",
+  "gaato/discord/internal/pool",
+  "moonbitlang/async",
+  "moonbitlang/async/http" @ahttp,
+  "moonbitlang/core/json",
+}
+
+import {
+  "moonbitlang/core/json",
+  "gaato/discord/model",
+} for "test"

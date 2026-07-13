@@ -1,0 +1,83 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "gaato/discord/http"
+
+import {
+  "gaato/discord/model",
+  "gaato/discord/ratelimit",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub const VERSION : String = "0.1.0"
+
+// Errors
+pub(all) suberror DiscordHttpError {
+  Api(status~ : Int, error~ : ApiError)
+  RateLimited(retry_after_ms~ : Int64, global~ : Bool)
+  Deserialize(message~ : String)
+  Transport(message~ : String)
+  Validation(message~ : String)
+} derive(@debug.Debug)
+
+// Types and methods
+pub(all) struct ApiError {
+  code : Int
+  message : String
+  errors : Json?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub struct Client {
+  // private fields
+}
+pub fn Client::close(Self) -> Unit
+pub async fn Client::create_message(Self, @model.Id[@model.ChannelMarker], content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], sticker_ids? : Array[@model.Id[@model.StickerMarker]], reply_to? : @model.Id[@model.MessageMarker], tts? : Bool, flags? : @model.MessageFlags, allowed_mentions? : Json, nonce? : @model.Nonce, enforce_nonce? : Bool) -> @model.Message raise DiscordHttpError
+pub async fn Client::delete_message(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], audit_reason? : String) -> Unit raise DiscordHttpError
+pub async fn Client::edit_message(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], content? : @model.Undefinable[String], embeds? : @model.Undefinable[Array[@model.Embed]], components? : @model.Undefinable[Array[@model.Component]], flags? : @model.Undefinable[@model.MessageFlags]) -> @model.Message raise DiscordHttpError
+pub async fn Client::get_channel_messages(Self, @model.Id[@model.ChannelMarker], limit? : Int, around? : @model.Id[@model.MessageMarker], before? : @model.Id[@model.MessageMarker], after? : @model.Id[@model.MessageMarker]) -> Array[@model.Message] raise DiscordHttpError
+pub async fn Client::get_gateway(Self) -> String raise DiscordHttpError
+pub async fn Client::get_gateway_bot(Self) -> @model.GatewayBotInfo raise DiscordHttpError
+pub async fn Client::get_message(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker]) -> @model.Message raise DiscordHttpError
+pub fn Client::new(String, base_url? : String, api_version? : Int, limiter? : &@ratelimit.RateLimiter, max_connections? : Int) -> Self
+pub async fn Client::request(Self, Route, body? : Json, audit_reason? : String) -> Json raise DiscordHttpError
+pub impl Show for Client
+
+pub(all) enum Route {
+  GetGateway
+  GetGatewayBot
+  GetCurrentUser
+  GetUser(user_id~ : @model.Id[@model.UserMarker])
+  GetChannel(channel_id~ : @model.Id[@model.ChannelMarker])
+  ModifyChannel(channel_id~ : @model.Id[@model.ChannelMarker])
+  DeleteChannel(channel_id~ : @model.Id[@model.ChannelMarker])
+  GetChannelMessages(channel_id~ : @model.Id[@model.ChannelMarker], query~ : String)
+  GetChannelMessage(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])
+  CreateMessage(channel_id~ : @model.Id[@model.ChannelMarker])
+  EditMessage(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])
+  DeleteMessage(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])
+  CreateReaction(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker], emoji~ : String)
+  GetGuild(guild_id~ : @model.Id[@model.GuildMarker])
+  GetGuildChannels(guild_id~ : @model.Id[@model.GuildMarker])
+  GetGuildMember(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])
+  CreateInteractionResponse(interaction_id~ : @model.Id[@model.InteractionMarker], token~ : String)
+  GetOriginalInteractionResponse(application_id~ : @model.Id[@model.ApplicationMarker], token~ : String)
+  EditOriginalInteractionResponse(application_id~ : @model.Id[@model.ApplicationMarker], token~ : String)
+  CreateFollowupMessage(application_id~ : @model.Id[@model.ApplicationMarker], token~ : String)
+  GetGlobalCommands(application_id~ : @model.Id[@model.ApplicationMarker])
+  CreateGlobalCommand(application_id~ : @model.Id[@model.ApplicationMarker])
+  BulkOverwriteGlobalCommands(application_id~ : @model.Id[@model.ApplicationMarker])
+  GetGuildCommands(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker])
+  CreateGuildCommand(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker])
+  BulkOverwriteGuildCommands(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker])
+}
+pub fn Route::bucket(Self) -> String
+pub fn Route::is_interaction(Self) -> Bool
+pub fn Route::method_(Self) -> @moonbitlang/async/http.RequestMethod
+pub fn Route::needs_auth(Self) -> Bool
+pub fn Route::path(Self) -> String
+pub fn Route::supports_reason(Self) -> Bool
+
+// Type aliases
+
+// Traits
+

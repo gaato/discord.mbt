@@ -1,0 +1,8 @@
+import {
+  "moonbitlang/async",
+  "moonbitlang/core/string",
+}
+
+import {
+  "moonbitlang/async",
+} for "test"

@@ -1,0 +1,29 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "gaato/discord/internal/pool"
+
+import {
+  "moonbitlang/async/http",
+  "moonbitlang/async/semaphore",
+  "moonbitlang/core/debug",
+}
+
+// Values
+
+// Errors
+pub suberror PoolClosed derive(@debug.Debug)
+
+// Types and methods
+pub struct Pool {
+  uri : String
+  idle : Array[@http.Client]
+  slots : @semaphore.Semaphore
+  mut closed : Bool
+}
+pub fn Pool::close(Self) -> Unit
+pub fn Pool::new(String, max_connections? : Int) -> Self
+pub async fn[T] Pool::with_conn(Self, async (@http.Client) -> T) -> T
+
+// Type aliases
+
+// Traits
+

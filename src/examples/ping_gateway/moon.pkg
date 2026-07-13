@@ -1,6 +1,7 @@
 import {
+  "gaato/discord/model",
+  "gaato/discord/http" @dhttp,
   "moonbitlang/async",
-  "moonbitlang/async/http",
   "moonbitlang/async/websocket",
   "moonbitlang/core/env",
 }

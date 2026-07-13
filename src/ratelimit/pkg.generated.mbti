@@ -1,0 +1,26 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "gaato/discord/ratelimit"
+
+// Values
+
+// Errors
+
+// Types and methods
+pub struct InMemoryRateLimiter {
+  global_limit : Int
+  mut global_window_start : Int64
+  mut global_count : Int
+  mut global_blocked_until : Int64
+  // private fields
+}
+pub fn InMemoryRateLimiter::new(global_limit? : Int) -> Self
+pub impl RateLimiter for InMemoryRateLimiter
+
+// Type aliases
+
+// Traits
+pub(open) trait RateLimiter {
+  async fn acquire(Self, String, global_exempt~ : Bool) -> Unit
+  fn release(Self, String, status~ : Int, headers~ : Map[String, String]) -> Unit
+}
+
