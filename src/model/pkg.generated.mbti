@@ -17,6 +17,39 @@ pub suberror TimestampError {
 pub enum ApplicationMarker {
 }
 
+pub(all) struct Attachment {
+  id : Id[AttachmentMarker]
+  filename : String
+  title : String?
+  description : String?
+  content_type : String?
+  size : Int
+  url : String
+  proxy_url : String
+  height : Nullable[Int]?
+  width : Nullable[Int]?
+  ephemeral : Bool?
+  duration_secs : Double?
+  waveform : String?
+  flags : AttachmentFlags?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct AttachmentFlags(UInt64) derive(Eq)
+pub fn AttachmentFlags::bits(Self) -> UInt64
+pub fn AttachmentFlags::contains(Self, Self) -> Bool
+pub fn AttachmentFlags::from_bits(UInt64) -> Self
+pub fn AttachmentFlags::is_animated() -> Self
+pub fn AttachmentFlags::is_clip() -> Self
+pub fn AttachmentFlags::is_remix() -> Self
+pub fn AttachmentFlags::is_spoiler() -> Self
+pub fn AttachmentFlags::is_thumbnail() -> Self
+pub fn AttachmentFlags::none() -> Self
+pub impl BitAnd for AttachmentFlags
+pub impl BitOr for AttachmentFlags
+pub impl ToJson for AttachmentFlags
+pub impl @debug.Debug for AttachmentFlags
+pub impl @json.FromJson for AttachmentFlags
+
 pub enum AttachmentMarker {
 }
 
@@ -30,6 +63,64 @@ pub(all) struct AvatarDecorationData {
   asset : ImageHash
   sku_id : Id[SkuMarker]
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct Channel {
+  id : Id[ChannelMarker]
+  typ : ChannelType
+  guild_id : Id[GuildMarker]?
+  position : Int?
+  permission_overwrites : Array[Overwrite]?
+  name : Nullable[String]?
+  topic : Nullable[String]?
+  nsfw : Bool?
+  last_message_id : Nullable[Id[MessageMarker]]?
+  bitrate : Int?
+  user_limit : Int?
+  rate_limit_per_user : Int?
+  recipients : Array[User]?
+  icon : Nullable[ImageHash]?
+  owner_id : Id[UserMarker]?
+  application_id : Id[ApplicationMarker]?
+  managed : Bool?
+  parent_id : Nullable[Id[ChannelMarker]]?
+  last_pin_timestamp : Nullable[Timestamp]?
+  rtc_region : Nullable[String]?
+  video_quality_mode : VideoQualityMode?
+  message_count : Int?
+  member_count : Int?
+  thread_metadata : ThreadMetadata?
+  thread_member : ThreadMember?
+  default_auto_archive_duration : ThreadAutoArchiveDuration?
+  permissions : Permissions?
+  flags : ChannelFlags?
+  total_message_sent : Int?
+  available_tags : Array[ForumTag]?
+  applied_tags : Array[Id[GenericMarker]]?
+  default_reaction_emoji : Nullable[DefaultReaction]?
+  default_thread_rate_limit_per_user : Int?
+  default_sort_order : Nullable[SortOrderType]?
+  default_forum_layout : ForumLayoutType?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ChannelFlags(UInt64) derive(Eq)
+pub fn ChannelFlags::active_channels_removed() -> Self
+pub fn ChannelFlags::bits(Self) -> UInt64
+pub fn ChannelFlags::clyde_ai() -> Self
+pub fn ChannelFlags::contains(Self, Self) -> Bool
+pub fn ChannelFlags::from_bits(UInt64) -> Self
+pub fn ChannelFlags::guild_feed_removed() -> Self
+pub fn ChannelFlags::hide_media_download_options() -> Self
+pub fn ChannelFlags::is_guild_resource_channel() -> Self
+pub fn ChannelFlags::is_scheduled_for_deletion() -> Self
+pub fn ChannelFlags::is_spam() -> Self
+pub fn ChannelFlags::none() -> Self
+pub fn ChannelFlags::pinned() -> Self
+pub fn ChannelFlags::require_tag() -> Self
+pub impl BitAnd for ChannelFlags
+pub impl BitOr for ChannelFlags
+pub impl ToJson for ChannelFlags
+pub impl @debug.Debug for ChannelFlags
+pub impl @json.FromJson for ChannelFlags
 
 pub enum ChannelMarker {
 }
@@ -61,6 +152,88 @@ pub enum CommandMarker {
 pub enum CommandVersionMarker {
 }
 
+pub(all) struct DefaultReaction {
+  emoji_id : Nullable[Id[EmojiMarker]]
+  emoji_name : Nullable[String]
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct Embed {
+  title : String?
+  typ : EmbedType?
+  url : String?
+  description : String?
+  timestamp : Timestamp?
+  color : Int?
+  footer : EmbedFooter?
+  image : EmbedImage?
+  thumbnail : EmbedThumbnail?
+  video : EmbedVideo?
+  provider : EmbedProvider?
+  author : EmbedAuthor?
+  fields : Array[EmbedField]?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct EmbedAuthor {
+  name : String
+  url : String?
+  icon_url : String?
+  proxy_icon_url : String?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct EmbedField {
+  name : String
+  value : String
+  inline : Bool?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct EmbedFooter {
+  text : String
+  icon_url : String?
+  proxy_icon_url : String?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct EmbedImage {
+  url : String
+  proxy_url : String?
+  height : Int?
+  width : Int?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct EmbedProvider {
+  name : String?
+  url : String?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct EmbedThumbnail {
+  url : String
+  proxy_url : String?
+  height : Int?
+  width : Int?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum EmbedType {
+  Rich
+  Image
+  Video
+  Gifv
+  Article
+  Link
+  AutoModerationMessage
+  PollResult
+  Unknown(String)
+} derive(Eq, @debug.Debug)
+pub fn EmbedType::from_string(String) -> Self
+pub fn EmbedType::to_string(Self) -> String
+pub impl ToJson for EmbedType
+pub impl @json.FromJson for EmbedType
+
+pub(all) struct EmbedVideo {
+  url : String?
+  proxy_url : String?
+  height : Int?
+  width : Int?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) struct Emoji {
   id : Nullable[Id[EmojiMarker]]
   name : Nullable[String]
@@ -77,6 +250,25 @@ pub enum EmojiMarker {
 
 pub enum EntitlementMarker {
 }
+
+pub(all) enum ForumLayoutType {
+  NotSet
+  ListView
+  GalleryView
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn ForumLayoutType::from_int(Int) -> Self
+pub fn ForumLayoutType::to_int(Self) -> Int
+pub impl ToJson for ForumLayoutType
+pub impl @json.FromJson for ForumLayoutType
+
+pub(all) struct ForumTag {
+  id : Id[GenericMarker]
+  name : String
+  moderated : Bool
+  emoji_id : Nullable[Id[EmojiMarker]]
+  emoji_name : Nullable[String]
+} derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub enum GenericMarker {
 }
@@ -160,6 +352,23 @@ pub fn[T : ToJson] ObjBuilder::field(Self, String, T) -> Self
 pub fn ObjBuilder::new() -> Self
 pub fn[T : ToJson] ObjBuilder::opt(Self, String, T?) -> Self
 pub fn[T : ToJson] ObjBuilder::und(Self, String, Undefinable[T]) -> Self
+
+pub(all) struct Overwrite {
+  id : Id[GenericMarker]
+  typ : OverwriteType
+  allow : Permissions
+  deny : Permissions
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum OverwriteType {
+  Role
+  Member
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn OverwriteType::from_int(Int) -> Self
+pub fn OverwriteType::to_int(Self) -> Int
+pub impl ToJson for OverwriteType
+pub impl @json.FromJson for OverwriteType
 
 pub(all) struct Permissions(UInt64) derive(Eq)
 pub fn Permissions::add_reactions() -> Self
@@ -283,6 +492,16 @@ pub enum ScheduledEventMarker {
 pub enum SkuMarker {
 }
 
+pub(all) enum SortOrderType {
+  LatestActivity
+  CreationDate
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn SortOrderType::from_int(Int) -> Self
+pub fn SortOrderType::to_int(Self) -> Int
+pub impl ToJson for SortOrderType
+pub impl @json.FromJson for SortOrderType
+
 pub enum SoundboardSoundMarker {
 }
 
@@ -350,6 +569,34 @@ pub impl @json.FromJson for StickerType
 
 pub enum TeamMarker {
 }
+
+pub(all) enum ThreadAutoArchiveDuration {
+  OneHour
+  OneDay
+  ThreeDays
+  OneWeek
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn ThreadAutoArchiveDuration::from_int(Int) -> Self
+pub fn ThreadAutoArchiveDuration::to_int(Self) -> Int
+pub impl ToJson for ThreadAutoArchiveDuration
+pub impl @json.FromJson for ThreadAutoArchiveDuration
+
+pub(all) struct ThreadMember {
+  id : Id[ChannelMarker]?
+  user_id : Id[UserMarker]?
+  join_timestamp : Timestamp
+  flags : Int
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ThreadMetadata {
+  archived : Bool
+  auto_archive_duration : ThreadAutoArchiveDuration
+  archive_timestamp : Timestamp
+  locked : Bool
+  invitable : Bool?
+  create_timestamp : Timestamp?
+} derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct Timestamp(String) derive(Eq)
 pub fn Timestamp::to_string(Self) -> String
@@ -424,6 +671,16 @@ pub impl @json.FromJson for UserFlags
 
 pub enum UserMarker {
 }
+
+pub(all) enum VideoQualityMode {
+  Auto
+  Full
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn VideoQualityMode::from_int(Int) -> Self
+pub fn VideoQualityMode::to_int(Self) -> Int
+pub impl ToJson for VideoQualityMode
+pub impl @json.FromJson for VideoQualityMode
 
 pub enum WebhookMarker {
 }
