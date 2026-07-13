@@ -201,6 +201,16 @@ pub(all) enum Component {
 pub impl ToJson for Component
 pub impl @json.FromJson for Component
 
+pub(all) enum DefaultMessageNotifications {
+  AllMessages
+  OnlyMentions
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn DefaultMessageNotifications::from_int(Int) -> Self
+pub fn DefaultMessageNotifications::to_int(Self) -> Int
+pub impl ToJson for DefaultMessageNotifications
+pub impl @json.FromJson for DefaultMessageNotifications
+
 pub(all) struct DefaultReaction {
   emoji_id : Nullable[Id[EmojiMarker]]
   emoji_name : Nullable[String]
@@ -300,6 +310,17 @@ pub enum EmojiMarker {
 pub enum EntitlementMarker {
 }
 
+pub(all) enum ExplicitContentFilter {
+  Disabled
+  MembersWithoutRoles
+  AllMembers
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn ExplicitContentFilter::from_int(Int) -> Self
+pub fn ExplicitContentFilter::to_int(Self) -> Int
+pub impl ToJson for ExplicitContentFilter
+pub impl @json.FromJson for ExplicitContentFilter
+
 pub(all) enum ForumLayoutType {
   NotSet
   ListView
@@ -321,6 +342,103 @@ pub(all) struct ForumTag {
 
 pub enum GenericMarker {
 }
+
+pub(all) struct Guild {
+  id : Id[GuildMarker]
+  name : String
+  icon : Nullable[ImageHash]
+  icon_hash : Nullable[ImageHash]?
+  splash : Nullable[ImageHash]
+  discovery_splash : Nullable[ImageHash]
+  owner : Bool?
+  owner_id : Id[UserMarker]
+  permissions : Permissions?
+  afk_channel_id : Nullable[Id[ChannelMarker]]
+  afk_timeout : Int
+  widget_enabled : Bool?
+  widget_channel_id : Nullable[Id[ChannelMarker]]?
+  verification_level : VerificationLevel
+  default_message_notifications : DefaultMessageNotifications
+  explicit_content_filter : ExplicitContentFilter
+  roles : Array[Role]
+  emojis : Array[Emoji]
+  features : Array[GuildFeature]
+  mfa_level : MfaLevel
+  application_id : Nullable[Id[ApplicationMarker]]
+  system_channel_id : Nullable[Id[ChannelMarker]]
+  system_channel_flags : SystemChannelFlags
+  rules_channel_id : Nullable[Id[ChannelMarker]]
+  max_presences : Nullable[Int]?
+  max_members : Int?
+  vanity_url_code : Nullable[String]
+  description : Nullable[String]
+  banner : Nullable[ImageHash]
+  premium_tier : PremiumTier
+  premium_subscription_count : Int?
+  preferred_locale : String
+  public_updates_channel_id : Nullable[Id[ChannelMarker]]
+  max_video_channel_users : Int?
+  max_stage_video_channel_users : Int?
+  approximate_member_count : Int?
+  approximate_presence_count : Int?
+  welcome_screen : WelcomeScreen?
+  nsfw_level : NsfwLevel
+  stickers : Array[Sticker]?
+  premium_progress_bar_enabled : Bool
+  safety_alerts_channel_id : Nullable[Id[ChannelMarker]]
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct GuildBan {
+  reason : Nullable[String]
+  user : User
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum GuildFeature {
+  AnimatedBanner
+  AnimatedIcon
+  ApplicationCommandPermissionsV2
+  AutoModeration
+  Banner
+  Community
+  CreatorMonetizableProvisional
+  CreatorStorePage
+  DeveloperSupportServer
+  Discoverable
+  Featurable
+  HasDirectoryEntry
+  Hub
+  InvitesDisabled
+  InviteSplash
+  LinkedToHub
+  MemberVerificationGateEnabled
+  MoreSoundboard
+  MonetizationEnabled
+  MoreStickers
+  News
+  Partnered
+  PreviewEnabled
+  PrivateThreads
+  RaidAlertsDisabled
+  RelayEnabled
+  RoleIcons
+  RoleSubscriptionsAvailableForPurchase
+  RoleSubscriptionsEnabled
+  Soundboard
+  TicketedEventsEnabled
+  VanityUrl
+  Verified
+  VipRegions
+  WelcomeScreenEnabled
+  GuildTags
+  EnhancedRoleColors
+  GuestsEnabled
+  PinPermissionMigrationComplete
+  Unknown(String)
+} derive(Eq, @debug.Debug)
+pub fn GuildFeature::from_string(String) -> Self
+pub fn GuildFeature::to_string(Self) -> String
+pub impl ToJson for GuildFeature
+pub impl @json.FromJson for GuildFeature
 
 pub enum GuildMarker {
 }
@@ -421,6 +539,44 @@ pub impl @json.FromJson for Intents
 
 pub enum InteractionMarker {
 }
+
+pub(all) struct Invite {
+  typ : InviteType?
+  code : String
+  channel : Nullable[Channel]?
+  inviter : User?
+  target_type : InviteTargetType?
+  target_user : User?
+  approximate_presence_count : Int?
+  approximate_member_count : Int?
+  expires_at : Nullable[Timestamp]?
+  uses : Int?
+  max_uses : Int?
+  max_age : Int?
+  temporary : Bool?
+  created_at : Timestamp?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum InviteTargetType {
+  Stream
+  EmbeddedApplication
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn InviteTargetType::from_int(Int) -> Self
+pub fn InviteTargetType::to_int(Self) -> Int
+pub impl ToJson for InviteTargetType
+pub impl @json.FromJson for InviteTargetType
+
+pub(all) enum InviteType {
+  Guild
+  GroupDm
+  Friend
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn InviteType::from_int(Int) -> Self
+pub fn InviteType::to_int(Self) -> Int
+pub impl ToJson for InviteType
+pub impl @json.FromJson for InviteType
 
 pub(all) struct Message {
   id : Id[MessageMarker]
@@ -568,12 +724,34 @@ pub fn MessageType::to_int(Self) -> Int
 pub impl ToJson for MessageType
 pub impl @json.FromJson for MessageType
 
+pub(all) enum MfaLevel {
+  None
+  Elevated
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn MfaLevel::from_int(Int) -> Self
+pub fn MfaLevel::to_int(Self) -> Int
+pub impl ToJson for MfaLevel
+pub impl @json.FromJson for MfaLevel
+
 pub(all) enum Nonce {
   Str(String)
   Num(Int64)
 } derive(Eq, @debug.Debug)
 pub impl ToJson for Nonce
 pub impl @json.FromJson for Nonce
+
+pub(all) enum NsfwLevel {
+  Default
+  Explicit
+  Safe
+  AgeRestricted
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn NsfwLevel::from_int(Int) -> Self
+pub fn NsfwLevel::to_int(Self) -> Int
+pub impl ToJson for NsfwLevel
+pub impl @json.FromJson for NsfwLevel
 
 pub(all) enum Nullable[T] {
   Null
@@ -670,6 +848,18 @@ pub impl BitOr for Permissions
 pub impl ToJson for Permissions
 pub impl @debug.Debug for Permissions
 pub impl @json.FromJson for Permissions
+
+pub(all) enum PremiumTier {
+  None
+  Tier1
+  Tier2
+  Tier3
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn PremiumTier::from_int(Int) -> Self
+pub fn PremiumTier::to_int(Self) -> Int
+pub impl ToJson for PremiumTier
+pub impl @json.FromJson for PremiumTier
 
 pub(all) enum PremiumType {
   None
@@ -850,6 +1040,23 @@ pub fn StickerType::to_int(Self) -> Int
 pub impl ToJson for StickerType
 pub impl @json.FromJson for StickerType
 
+pub(all) struct SystemChannelFlags(UInt64) derive(Eq)
+pub fn SystemChannelFlags::bits(Self) -> UInt64
+pub fn SystemChannelFlags::contains(Self, Self) -> Bool
+pub fn SystemChannelFlags::from_bits(UInt64) -> Self
+pub fn SystemChannelFlags::none() -> Self
+pub fn SystemChannelFlags::suppress_guild_reminder_notifications() -> Self
+pub fn SystemChannelFlags::suppress_join_notification_replies() -> Self
+pub fn SystemChannelFlags::suppress_join_notifications() -> Self
+pub fn SystemChannelFlags::suppress_premium_subscriptions() -> Self
+pub fn SystemChannelFlags::suppress_role_subscription_purchase_notification_replies() -> Self
+pub fn SystemChannelFlags::suppress_role_subscription_purchase_notifications() -> Self
+pub impl BitAnd for SystemChannelFlags
+pub impl BitOr for SystemChannelFlags
+pub impl ToJson for SystemChannelFlags
+pub impl @debug.Debug for SystemChannelFlags
+pub impl @json.FromJson for SystemChannelFlags
+
 pub enum TeamMarker {
 }
 
@@ -909,6 +1116,11 @@ pub fn Timestamp::unix_ms(Self) -> Int64 raise TimestampError
 pub impl ToJson for Timestamp
 pub impl @debug.Debug for Timestamp
 pub impl @json.FromJson for Timestamp
+
+pub(all) struct UnavailableGuild {
+  id : Id[GuildMarker]
+  unavailable : Bool
+} derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) enum Undefinable[T] {
   Missing
@@ -977,6 +1189,19 @@ pub impl @json.FromJson for UserFlags
 pub enum UserMarker {
 }
 
+pub(all) enum VerificationLevel {
+  None
+  Low
+  Medium
+  High
+  VeryHigh
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn VerificationLevel::from_int(Int) -> Self
+pub fn VerificationLevel::to_int(Self) -> Int
+pub impl ToJson for VerificationLevel
+pub impl @json.FromJson for VerificationLevel
+
 pub(all) enum VideoQualityMode {
   Auto
   Full
@@ -987,8 +1212,68 @@ pub fn VideoQualityMode::to_int(Self) -> Int
 pub impl ToJson for VideoQualityMode
 pub impl @json.FromJson for VideoQualityMode
 
+pub(all) struct VoiceRegion {
+  id : String
+  name : String
+  optimal : Bool
+  deprecated : Bool
+  custom : Bool
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct VoiceState {
+  guild_id : Id[GuildMarker]?
+  channel_id : Nullable[Id[ChannelMarker]]
+  user_id : Id[UserMarker]
+  guild_member : GuildMember?
+  session_id : String
+  deaf : Bool
+  mute : Bool
+  self_deaf : Bool
+  self_mute : Bool
+  self_stream : Bool?
+  self_video : Bool
+  suppress : Bool
+  request_to_speak_timestamp : Nullable[Timestamp]
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct Webhook {
+  id : Id[WebhookMarker]
+  typ : WebhookType
+  guild_id : Nullable[Id[GuildMarker]]?
+  channel_id : Nullable[Id[ChannelMarker]]
+  user : User?
+  name : Nullable[String]
+  avatar : Nullable[ImageHash]
+  token : String?
+  application_id : Nullable[Id[ApplicationMarker]]
+  url : String?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
 pub enum WebhookMarker {
 }
+
+pub(all) enum WebhookType {
+  Incoming
+  ChannelFollower
+  Application
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn WebhookType::from_int(Int) -> Self
+pub fn WebhookType::to_int(Self) -> Int
+pub impl ToJson for WebhookType
+pub impl @json.FromJson for WebhookType
+
+pub(all) struct WelcomeScreen {
+  description : Nullable[String]
+  welcome_channels : Array[WelcomeScreenChannel]
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WelcomeScreenChannel {
+  channel_id : Id[ChannelMarker]
+  description : String
+  emoji_id : Nullable[Id[EmojiMarker]]
+  emoji_name : Nullable[String]
+} derive(ToJson, @debug.Debug, @json.FromJson)
 
 // Type aliases
 pub type ApplicationId = Id[ApplicationMarker]
