@@ -1,0 +1,11 @@
+// Id[M] uses a phantom marker type parameter by design
+warnings = "-unused_type_variable"
+
+import {
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+}
+
+import {
+  "moonbitlang/core/json",
+} for "test"

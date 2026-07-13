@@ -1,0 +1,307 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "gaato/discord/model"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+// Values
+
+// Errors
+pub suberror TimestampError {
+  InvalidTimestamp(String)
+} derive(@debug.Debug)
+
+// Types and methods
+pub enum ApplicationMarker {
+}
+
+pub enum AttachmentMarker {
+}
+
+pub enum AuditLogEntryMarker {
+}
+
+pub enum AutoModerationRuleMarker {
+}
+
+pub enum ChannelMarker {
+}
+
+pub(all) enum ChannelType {
+  GuildText
+  Dm
+  GuildVoice
+  GroupDm
+  GuildCategory
+  GuildAnnouncement
+  AnnouncementThread
+  PublicThread
+  PrivateThread
+  GuildStageVoice
+  GuildDirectory
+  GuildForum
+  GuildMedia
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn ChannelType::from_int(Int) -> Self
+pub fn ChannelType::to_int(Self) -> Int
+pub impl ToJson for ChannelType
+pub impl @json.FromJson for ChannelType
+
+pub enum CommandMarker {
+}
+
+pub enum CommandVersionMarker {
+}
+
+pub enum EmojiMarker {
+}
+
+pub enum EntitlementMarker {
+}
+
+pub enum GenericMarker {
+}
+
+pub enum GuildMarker {
+}
+
+pub(all) struct Id[M](UInt64)
+pub fn[M, N] Id::cast(Self[M]) -> Self[N]
+pub fn[M] Id::parse(StringView) -> Self[M] raise
+pub fn[M] Id::timestamp_ms(Self[M]) -> Int64
+pub fn[M] Id::value(Self[M]) -> UInt64
+pub impl[M] Compare for Id[M]
+pub impl[M] Eq for Id[M]
+pub impl[M] Hash for Id[M]
+pub impl[M] Show for Id[M]
+pub impl[M] ToJson for Id[M]
+pub impl[M] @debug.Debug for Id[M]
+pub impl[M] @json.FromJson for Id[M]
+
+pub(all) struct ImageHash(String) derive(Eq)
+pub fn ImageHash::is_animated(Self) -> Bool
+pub fn ImageHash::to_string(Self) -> String
+pub impl ToJson for ImageHash
+pub impl @debug.Debug for ImageHash
+pub impl @json.FromJson for ImageHash
+
+pub enum IntegrationMarker {
+}
+
+pub(all) struct Intents(UInt) derive(Eq)
+pub fn Intents::auto_moderation_configuration() -> Self
+pub fn Intents::auto_moderation_execution() -> Self
+pub fn Intents::bits(Self) -> UInt
+pub fn Intents::contains(Self, Self) -> Bool
+pub fn Intents::direct_message_polls() -> Self
+pub fn Intents::direct_message_reactions() -> Self
+pub fn Intents::direct_message_typing() -> Self
+pub fn Intents::direct_messages() -> Self
+pub fn Intents::from_bits(UInt) -> Self
+pub fn Intents::guild_expressions() -> Self
+pub fn Intents::guild_integrations() -> Self
+pub fn Intents::guild_invites() -> Self
+pub fn Intents::guild_members() -> Self
+pub fn Intents::guild_message_polls() -> Self
+pub fn Intents::guild_message_reactions() -> Self
+pub fn Intents::guild_message_typing() -> Self
+pub fn Intents::guild_messages() -> Self
+pub fn Intents::guild_moderation() -> Self
+pub fn Intents::guild_presences() -> Self
+pub fn Intents::guild_scheduled_events() -> Self
+pub fn Intents::guild_voice_states() -> Self
+pub fn Intents::guild_webhooks() -> Self
+pub fn Intents::guilds() -> Self
+pub fn Intents::message_content() -> Self
+pub fn Intents::none() -> Self
+pub impl BitAnd for Intents
+pub impl BitOr for Intents
+pub impl ToJson for Intents
+pub impl @debug.Debug for Intents
+pub impl @json.FromJson for Intents
+
+pub enum InteractionMarker {
+}
+
+pub enum MessageMarker {
+}
+
+pub(all) enum Nullable[T] {
+  Null
+  Value(T)
+} derive(Eq, @debug.Debug)
+pub fn[T] Nullable::from_option(T?) -> Self[T]
+pub fn[T] Nullable::to_option(Self[T]) -> T?
+pub impl[T : ToJson] ToJson for Nullable[T]
+pub impl[T : @json.FromJson] @json.FromJson for Nullable[T]
+
+pub struct ObjBuilder(Map[String, Json])
+pub fn ObjBuilder::build(Self) -> Json
+pub fn[T : ToJson] ObjBuilder::field(Self, String, T) -> Self
+pub fn ObjBuilder::new() -> Self
+pub fn[T : ToJson] ObjBuilder::opt(Self, String, T?) -> Self
+pub fn[T : ToJson] ObjBuilder::und(Self, String, Undefinable[T]) -> Self
+
+pub(all) struct Permissions(UInt64) derive(Eq)
+pub fn Permissions::add_reactions() -> Self
+pub fn Permissions::administrator() -> Self
+pub fn Permissions::attach_files() -> Self
+pub fn Permissions::ban_members() -> Self
+pub fn Permissions::bits(Self) -> UInt64
+pub fn Permissions::bypass_slowmode() -> Self
+pub fn Permissions::change_nickname() -> Self
+pub fn Permissions::connect() -> Self
+pub fn Permissions::contains(Self, Self) -> Bool
+pub fn Permissions::create_events() -> Self
+pub fn Permissions::create_guild_expressions() -> Self
+pub fn Permissions::create_instant_invite() -> Self
+pub fn Permissions::create_private_threads() -> Self
+pub fn Permissions::create_public_threads() -> Self
+pub fn Permissions::deafen_members() -> Self
+pub fn Permissions::embed_links() -> Self
+pub fn Permissions::from_bits(UInt64) -> Self
+pub fn Permissions::kick_members() -> Self
+pub fn Permissions::manage_channels() -> Self
+pub fn Permissions::manage_events() -> Self
+pub fn Permissions::manage_guild() -> Self
+pub fn Permissions::manage_guild_expressions() -> Self
+pub fn Permissions::manage_messages() -> Self
+pub fn Permissions::manage_nicknames() -> Self
+pub fn Permissions::manage_roles() -> Self
+pub fn Permissions::manage_threads() -> Self
+pub fn Permissions::manage_webhooks() -> Self
+pub fn Permissions::mention_everyone() -> Self
+pub fn Permissions::moderate_members() -> Self
+pub fn Permissions::move_members() -> Self
+pub fn Permissions::mute_members() -> Self
+pub fn Permissions::none() -> Self
+pub fn Permissions::pin_messages() -> Self
+pub fn Permissions::priority_speaker() -> Self
+pub fn Permissions::read_message_history() -> Self
+pub fn Permissions::request_to_speak() -> Self
+pub fn Permissions::send_messages() -> Self
+pub fn Permissions::send_messages_in_threads() -> Self
+pub fn Permissions::send_polls() -> Self
+pub fn Permissions::send_tts_messages() -> Self
+pub fn Permissions::send_voice_messages() -> Self
+pub fn Permissions::set_voice_channel_status() -> Self
+pub fn Permissions::speak() -> Self
+pub fn Permissions::stream() -> Self
+pub fn Permissions::use_application_commands() -> Self
+pub fn Permissions::use_embedded_activities() -> Self
+pub fn Permissions::use_external_apps() -> Self
+pub fn Permissions::use_external_emojis() -> Self
+pub fn Permissions::use_external_sounds() -> Self
+pub fn Permissions::use_external_stickers() -> Self
+pub fn Permissions::use_soundboard() -> Self
+pub fn Permissions::use_vad() -> Self
+pub fn Permissions::view_audit_log() -> Self
+pub fn Permissions::view_channel() -> Self
+pub fn Permissions::view_creator_monetization_analytics() -> Self
+pub fn Permissions::view_guild_insights() -> Self
+pub impl BitAnd for Permissions
+pub impl BitOr for Permissions
+pub impl ToJson for Permissions
+pub impl @debug.Debug for Permissions
+pub impl @json.FromJson for Permissions
+
+pub enum RoleMarker {
+}
+
+pub enum ScheduledEventMarker {
+}
+
+pub enum SkuMarker {
+}
+
+pub enum SoundboardSoundMarker {
+}
+
+pub enum StageInstanceMarker {
+}
+
+pub enum StickerMarker {
+}
+
+pub enum StickerPackMarker {
+}
+
+pub enum TeamMarker {
+}
+
+pub(all) struct Timestamp(String) derive(Eq)
+pub fn Timestamp::to_string(Self) -> String
+pub fn Timestamp::unix_ms(Self) -> Int64 raise TimestampError
+pub impl ToJson for Timestamp
+pub impl @debug.Debug for Timestamp
+pub impl @json.FromJson for Timestamp
+
+pub(all) enum Undefinable[T] {
+  Missing
+  Null
+  Value(T)
+} derive(Eq, @debug.Debug)
+pub fn[T] Undefinable::to_option(Self[T]) -> T?
+pub impl[T : ToJson] ToJson for Undefinable[T]
+pub impl[T : @json.FromJson] @json.FromJson for Undefinable[T]
+
+pub enum UserMarker {
+}
+
+pub enum WebhookMarker {
+}
+
+// Type aliases
+pub type ApplicationId = Id[ApplicationMarker]
+
+pub type AttachmentId = Id[AttachmentMarker]
+
+pub type AuditLogEntryId = Id[AuditLogEntryMarker]
+
+pub type AutoModerationRuleId = Id[AutoModerationRuleMarker]
+
+pub type ChannelId = Id[ChannelMarker]
+
+pub type CommandId = Id[CommandMarker]
+
+pub type CommandVersionId = Id[CommandVersionMarker]
+
+pub type EmojiId = Id[EmojiMarker]
+
+pub type EntitlementId = Id[EntitlementMarker]
+
+pub type GenericId = Id[GenericMarker]
+
+pub type GuildId = Id[GuildMarker]
+
+pub type IntegrationId = Id[IntegrationMarker]
+
+pub type InteractionId = Id[InteractionMarker]
+
+pub type MessageId = Id[MessageMarker]
+
+pub type RoleId = Id[RoleMarker]
+
+pub type ScheduledEventId = Id[ScheduledEventMarker]
+
+pub type SkuId = Id[SkuMarker]
+
+pub type SoundboardSoundId = Id[SoundboardSoundMarker]
+
+pub type StageInstanceId = Id[StageInstanceMarker]
+
+pub type StickerId = Id[StickerMarker]
+
+pub type StickerPackId = Id[StickerPackMarker]
+
+pub type TeamId = Id[TeamMarker]
+
+pub type UserId = Id[UserMarker]
+
+pub type WebhookId = Id[WebhookMarker]
+
+// Traits
+
