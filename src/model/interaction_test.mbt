@@ -328,7 +328,7 @@ test "modal submit dispatches recursive components" {
       #|                  {
       #|                    id: None,
       #|                    custom_id: "feedback",
-      #|                    style: Paragraph,
+      #|                    style: Some(Paragraph),
       #|                    label: Some("Feedback"),
       #|                    min_length: None,
       #|                    max_length: None,

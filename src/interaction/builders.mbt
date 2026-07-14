@@ -454,7 +454,7 @@ pub fn label(
   component~ : @model.Component,
   description? : String,
 ) -> @model.Component {
-  Label({ id: None, label, description, component })
+  Label({ id: None, label: Some(label), description, component })
 }
 
 ///|
@@ -470,7 +470,7 @@ pub fn text_input(
   TextInput({
     id: None,
     custom_id,
-    style,
+    style: Some(style),
     label: None,
     min_length,
     max_length,

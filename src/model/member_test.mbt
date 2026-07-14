@@ -61,8 +61,8 @@ test "guild member decodes a full fixture" {
       #|  roles: [41771983423143936],
       #|  joined_at: Null,
       #|  premium_since: Some(Value("2024-01-02T03:04:05.000000+00:00")),
-      #|  deaf: false,
-      #|  mute: true,
+      #|  deaf: Some(false),
+      #|  mute: Some(true),
       #|  flags: 3,
       #|  pending: Some(false),
       #|  permissions: Some(1024),
@@ -102,8 +102,8 @@ test "guild member decodes required fields only" {
       #|  roles: [],
       #|  joined_at: Null,
       #|  premium_since: None,
-      #|  deaf: false,
-      #|  mute: false,
+      #|  deaf: Some(false),
+      #|  mute: Some(false),
       #|  flags: 0,
       #|  pending: None,
       #|  permissions: None,
@@ -112,6 +112,29 @@ test "guild member decodes required fields only" {
       #|}
     ),
   )
+}
+
+///|
+test "guild member decodes the partial shape from interaction resolved data" {
+  // Resolved members omit user, deaf, and mute (live USER command payload).
+  let fixture =
+    #|{
+    #|  "roles": ["628172666569752597"],
+    #|  "premium_since": null,
+    #|  "permissions": "2249600790429687",
+    #|  "pending": false,
+    #|  "nick": null,
+    #|  "joined_at": "2023-06-13T07:50:53.730000+00:00",
+    #|  "flags": 8,
+    #|  "communication_disabled_until": null,
+    #|  "banner": null,
+    #|  "avatar": null
+    #|}
+  let guild_member : @model.GuildMember = @json.from_json(@json.parse(fixture))
+  assert_true(guild_member.user is None)
+  assert_true(guild_member.deaf is None)
+  assert_true(guild_member.mute is None)
+  inspect(guild_member.roles.length(), content="1")
 }
 
 ///|
@@ -124,8 +147,8 @@ test "guild member encode omits absent optional fields" {
     roles: [],
     joined_at: @model.Nullable::Null,
     premium_since: None,
-    deaf: false,
-    mute: false,
+    deaf: Some(false),
+    mute: Some(false),
     flags: @model.GuildMemberFlags::none(),
     pending: None,
     permissions: None,

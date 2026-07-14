@@ -152,7 +152,7 @@ test "text input component round-trips" {
       #|  {
       #|    id: None,
       #|    custom_id: "feedback",
-      #|    style: Paragraph,
+      #|    style: Some(Paragraph),
       #|    label: Some("Feedback"),
       #|    min_length: Some(1),
       #|    max_length: Some(1000),
@@ -171,7 +171,7 @@ test "text input component round-trips" {
       #|  {
       #|    id: None,
       #|    custom_id: "feedback",
-      #|    style: Paragraph,
+      #|    style: Some(Paragraph),
       #|    label: Some("Feedback"),
       #|    min_length: Some(1),
       #|    max_length: Some(1000),
@@ -188,6 +188,22 @@ test "text input component round-trips" {
       #|{"custom_id":"feedback","style":2,"label":"Feedback","min_length":1,"max_length":1000,"required":true,"value":"hello","placeholder":"Tell us more","type":4}
     ),
   )
+}
+
+///|
+test "label-wrapped text input without style decodes (modal submit shape)" {
+  // Modal-submit payloads carry only type/id/custom_id/value (live payload).
+  let raw =
+    #|{"type":18,"id":1,"component":{"value":"aaa","type":4,"id":2,"custom_id":"topic"}}
+  let component : @model.Component = @json.from_json(@json.parse(raw))
+  guard component is Label(label) else { fail("expected a label component") }
+  guard label.component is TextInput(input) else {
+    fail("expected a text input inside the label")
+  }
+  assert_true(input.style is None)
+  assert_true(label.label is None)
+  inspect(input.custom_id, content="topic")
+  assert_true(input.value is Some("aaa"))
 }
 
 ///|

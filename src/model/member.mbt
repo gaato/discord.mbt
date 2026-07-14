@@ -8,8 +8,9 @@ pub(all) struct GuildMember {
   roles : Array[RoleId]
   joined_at : Nullable[Timestamp]
   premium_since : Nullable[Timestamp]?
-  deaf : Bool
-  mute : Bool
+  // Absent on the partial members in interaction resolved data.
+  deaf : Bool?
+  mute : Bool?
   flags : GuildMemberFlags
   pending : Bool?
   permissions : Permissions?

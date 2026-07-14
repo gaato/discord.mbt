@@ -1163,8 +1163,8 @@ pub(all) struct GuildMember {
   roles : Array[Id[RoleMarker]]
   joined_at : Nullable[Timestamp]
   premium_since : Nullable[Timestamp]?
-  deaf : Bool
-  mute : Bool
+  deaf : Bool?
+  mute : Bool?
   flags : GuildMemberFlags
   pending : Bool?
   permissions : Permissions?
@@ -1536,7 +1536,7 @@ pub impl @json.FromJson for InviteType
 
 pub(all) struct Label {
   id : Int?
-  label : String
+  label : String?
   description : String?
   component : Component
 } derive(ToJson, @debug.Debug, @json.FromJson)
@@ -2299,7 +2299,7 @@ pub(all) struct TextDisplay {
 pub(all) struct TextInput {
   id : Int?
   custom_id : String
-  style : TextInputStyle
+  style : TextInputStyle?
   label : String?
   min_length : Int?
   max_length : Int?

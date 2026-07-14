@@ -273,7 +273,8 @@ pub(all) struct Container {
 /// A modal label wrapping one interactive component.
 pub(all) struct Label {
   id : Int?
-  label : String
+  // Required when sending a modal; omitted in modal-submit payloads.
+  label : String?
   description : String?
   component : Component
 } derive(ToJson, FromJson, Debug)
@@ -348,7 +349,8 @@ pub(all) struct UnfurledMediaItem {
 pub(all) struct TextInput {
   id : Int?
   custom_id : String
-  style : TextInputStyle
+  // Required when sending a modal; omitted in modal-submit payloads.
+  style : TextInputStyle?
   label : String?
   min_length : Int?
   max_length : Int?
