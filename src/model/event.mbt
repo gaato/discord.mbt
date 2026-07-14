@@ -69,7 +69,7 @@ pub(all) enum Event {
   SubscriptionCreate(Subscription)
   SubscriptionDelete(Subscription)
   SubscriptionUpdate(Subscription)
-  ThreadCreate(Channel)
+  ThreadCreate(ThreadCreateEvent)
   ThreadDelete(ThreadDeleteEvent)
   ThreadListSync(ThreadListSyncEvent)
   ThreadMembersUpdate(ThreadMembersUpdateEvent)

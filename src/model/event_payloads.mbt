@@ -71,9 +71,7 @@ pub(all) struct GuildMembersChunkEvent {
   chunk_index : Int
   chunk_count : Int
   not_found : Array[Json]?
-  // Member-chunk presence entries remain raw; typing that auxiliary response
-  // is separate from the PRESENCE_UPDATE dispatch modeled by this package.
-  presences : Array[Json]?
+  presences : Array[PresenceUpdateEvent]?
   nonce : String?
 } derive(ToJson, FromJson, Debug)
 
@@ -298,6 +296,28 @@ pub(all) struct ChannelInfo {
   status : Nullable[String]?
   voice_start_time : Nullable[Int64]?
 } derive(ToJson, FromJson, Debug)
+
+///|
+/// A thread channel delivered with THREAD_CREATE-only metadata.
+pub(all) struct ThreadCreateEvent {
+  channel : Channel
+  newly_created : Bool?
+} derive(Debug)
+
+///|
+pub impl @json.FromJson for ThreadCreateEvent with fn from_json(json, path) {
+  guard json is Object(fields) else {
+    raise @json.JsonDecodeError((path, "expected thread create event (object)"))
+  }
+  {
+    channel: @json.from_json(json, path~),
+    newly_created: match fields.get("newly_created") {
+      None => None
+      Some(value) =>
+        Some(@json.from_json(value, path=path.add_key("newly_created")))
+    },
+  }
+}
 
 ///|
 /// Threads and memberships synchronized for a guild.

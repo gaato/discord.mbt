@@ -908,7 +908,7 @@ pub fn Events::subscription_update() -> EventType[@model.Subscription] {
 }
 
 ///|
-pub fn Events::thread_create() -> EventType[@model.Channel] {
+pub fn Events::thread_create() -> EventType[@model.ThreadCreateEvent] {
   {
     kind_: KThreadCreate,
     project_: event => {

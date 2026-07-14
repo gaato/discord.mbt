@@ -954,7 +954,7 @@ pub(all) enum Event {
   SubscriptionCreate(Subscription)
   SubscriptionDelete(Subscription)
   SubscriptionUpdate(Subscription)
-  ThreadCreate(Channel)
+  ThreadCreate(ThreadCreateEvent)
   ThreadDelete(ThreadDeleteEvent)
   ThreadListSync(ThreadListSyncEvent)
   ThreadMembersUpdate(ThreadMembersUpdateEvent)
@@ -1362,7 +1362,7 @@ pub(all) struct GuildMembersChunkEvent {
   chunk_index : Int
   chunk_count : Int
   not_found : Array[Json]?
-  presences : Array[Json]?
+  presences : Array[PresenceUpdateEvent]?
   nonce : String?
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
@@ -2557,6 +2557,12 @@ pub fn ThreadAutoArchiveDuration::from_int(Int) -> Self
 pub fn ThreadAutoArchiveDuration::to_int(Self) -> Int
 pub impl ToJson for ThreadAutoArchiveDuration
 pub impl @json.FromJson for ThreadAutoArchiveDuration
+
+pub(all) struct ThreadCreateEvent {
+  channel : Channel
+  newly_created : Bool?
+} derive(@debug.Debug)
+pub impl @json.FromJson for ThreadCreateEvent
 
 pub(all) struct ThreadDeleteEvent {
   id : Id[ChannelMarker]

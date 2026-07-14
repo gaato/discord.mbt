@@ -401,6 +401,141 @@ test "discord docs: PRESENCE_UPDATE is lenient per field" {
 }
 
 ///|
+test "discord docs: GUILD_MEMBERS_CHUNK has typed presences" {
+  let fixture =
+    #|{
+    #|  "guild_id": "100000000000000001",
+    #|  "members": [
+    #|    {
+    #|      "user": {
+    #|        "id": "200000000000000001",
+    #|        "username": "moonbit-user",
+    #|        "discriminator": "0",
+    #|        "global_name": "MoonBit User",
+    #|        "avatar": null
+    #|      },
+    #|      "roles": [],
+    #|      "joined_at": "2025-06-01T10:00:00.000000+00:00"
+    #|    }
+    #|  ],
+    #|  "chunk_index": 0,
+    #|  "chunk_count": 1,
+    #|  "presences": [
+    #|    {
+    #|      "user": {"id": "200000000000000001"},
+    #|      "guild_id": "100000000000000001",
+    #|      "status": "online",
+    #|      "activities": [],
+    #|      "client_status": {"desktop": "online"}
+    #|    }
+    #|  ],
+    #|  "nonce": "request-1"
+    #|}
+  let event = @model.dispatch_event("GUILD_MEMBERS_CHUNK", @json.parse(fixture))
+  match event {
+    @model.Event::GuildMembersChunk(chunk) => {
+      inspect(chunk.members.length(), content="1")
+      guard chunk.presences is Some(presences) else {
+        fail("expected typed member-chunk presences")
+      }
+      guard presences[0].user is Some(user) && user.id is Some(user_id) else {
+        fail("expected typed presence user")
+      }
+      inspect(user_id.to_string(), content="200000000000000001")
+      assert_true(presences[0].status == Some(@model.PresenceStatus::Online))
+    }
+    _ => fail("expected GUILD_MEMBERS_CHUNK payload")
+  }
+}
+
+///|
+test "discord docs: THREAD_CREATE newly created thread payload" {
+  let fixture =
+    #|{
+    #|  "id": "110000000000000001",
+    #|  "type": 11,
+    #|  "guild_id": "100000000000000001",
+    #|  "name": "MoonBit roadmap",
+    #|  "parent_id": "110000000000000000",
+    #|  "owner_id": "200000000000000001",
+    #|  "message_count": 0,
+    #|  "member_count": 1,
+    #|  "rate_limit_per_user": 0,
+    #|  "thread_metadata": {
+    #|    "archived": false,
+    #|    "auto_archive_duration": 1440,
+    #|    "archive_timestamp": "2025-06-01T10:00:00.000000+00:00",
+    #|    "locked": false
+    #|  },
+    #|  "newly_created": true
+    #|}
+  let event = @model.dispatch_event("THREAD_CREATE", @json.parse(fixture))
+  match event {
+    @model.Event::ThreadCreate(create) => {
+      inspect(create.channel.id.to_string(), content="110000000000000001")
+      assert_true(create.channel.typ is @model.ChannelType::PublicThread)
+      assert_true(create.newly_created == Some(true))
+      assert_true(create.channel.thread_member is None)
+    }
+    _ => fail("expected THREAD_CREATE payload")
+  }
+}
+
+///|
+test "discord docs: THREAD_CREATE existing private thread member payload" {
+  let fixture =
+    #|{
+    #|  "id": "110000000000000002",
+    #|  "type": 12,
+    #|  "guild_id": "100000000000000001",
+    #|  "name": "private roadmap",
+    #|  "parent_id": "110000000000000000",
+    #|  "member": {
+    #|    "id": "110000000000000002",
+    #|    "user_id": "200000000000000001",
+    #|    "join_timestamp": "2025-06-01T10:05:00.000000+00:00",
+    #|    "flags": 0
+    #|  }
+    #|}
+  let event = @model.dispatch_event("THREAD_CREATE", @json.parse(fixture))
+  match event {
+    @model.Event::ThreadCreate(create) => {
+      assert_true(create.channel.typ is @model.ChannelType::PrivateThread)
+      assert_true(create.newly_created is None)
+      guard create.channel.thread_member is Some(thread_member) else {
+        fail("expected the channel's thread member")
+      }
+      guard thread_member.user_id is Some(user_id) else {
+        fail("expected thread member user id")
+      }
+      inspect(user_id.to_string(), content="200000000000000001")
+    }
+    _ => fail("expected THREAD_CREATE payload")
+  }
+}
+
+///|
+test "discord docs: THREAD_CREATE payload without event-only fields" {
+  let fixture =
+    #|{
+    #|  "id": "110000000000000003",
+    #|  "type": 11,
+    #|  "guild_id": "100000000000000001",
+    #|  "name": "existing public thread",
+    #|  "parent_id": "110000000000000000"
+    #|}
+  let event = @model.dispatch_event("THREAD_CREATE", @json.parse(fixture))
+  match event {
+    @model.Event::ThreadCreate(create) => {
+      inspect(create.channel.id.to_string(), content="110000000000000003")
+      assert_true(create.newly_created is None)
+      assert_true(create.channel.thread_member is None)
+    }
+    _ => fail("expected THREAD_CREATE payload")
+  }
+}
+
+///|
 test "discord docs: subscription dispatch payloads" {
   let fixture =
     #|{
