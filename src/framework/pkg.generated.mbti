@@ -5,11 +5,16 @@ import {
   "gaato/discord/http",
   "gaato/discord/interaction",
   "gaato/discord/model",
+  "moonbitlang/core/debug",
 }
 
 // Values
 
 // Errors
+pub(all) suberror ResponseGateError {
+  AlreadyResponded
+  InvalidCallback(kind~ : @model.InteractionType, typ~ : @model.InteractionResponseType)
+} derive(@debug.Debug)
 
 // Types and methods
 pub(all) struct AutocompleteCtx {
@@ -18,8 +23,14 @@ pub(all) struct AutocompleteCtx {
   interaction : @model.Interaction
   data : @model.CommandData
   options : @interaction.CommandOptions
+  // private fields
 }
 pub async fn AutocompleteCtx::suggest(Self, Array[@model.CommandOptionChoice]) -> Unit
+
+pub(all) struct CapturedResponse {
+  response : @model.InteractionResponse
+  files : Array[@http.FileUpload]?
+}
 
 pub(all) struct CommandCtx {
   client : @http.Client
@@ -27,6 +38,7 @@ pub(all) struct CommandCtx {
   interaction : @model.Interaction
   data : @model.CommandData
   options : @interaction.CommandOptions
+  // private fields
 }
 pub async fn CommandCtx::defer_response(Self, ephemeral? : Bool) -> Unit
 pub async fn CommandCtx::edit_response(Self, content? : @model.Undefinable[String], embeds? : @model.Undefinable[Array[@model.Embed]], components? : @model.Undefinable[Array[@model.Component]], files? : Array[@http.FileUpload]) -> @model.Message
@@ -40,6 +52,7 @@ pub(all) struct ComponentCtx {
   application_id : @model.Id[@model.ApplicationMarker]
   interaction : @model.Interaction
   data : @model.ComponentData
+  // private fields
 }
 pub async fn ComponentCtx::defer_update(Self) -> Unit
 pub async fn ComponentCtx::respond(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], ephemeral? : Bool) -> Unit
@@ -57,6 +70,7 @@ pub fn Framework::modal(Self, String, async (ModalCtx) -> Unit) -> Self
 pub fn Framework::new(@http.Client, @model.Id[@model.ApplicationMarker]) -> Self
 pub fn Framework::on_error(Self, async (String, Error) -> Unit) -> Self
 pub async fn Framework::process(Self, @model.Interaction) -> Bool
+pub async fn Framework::process_with(Self, @model.Interaction, gate~ : ResponseGate) -> Bool
 pub async fn Framework::sync_global(Self) -> Array[@model.ApplicationCommand]
 pub async fn Framework::sync_guild(Self, @model.Id[@model.GuildMarker]) -> Array[@model.ApplicationCommand]
 pub async fn Framework::wait_for_component(Self, custom_id~ : String, timeout_ms? : Int) -> ComponentCtx?
@@ -66,11 +80,27 @@ pub(all) struct ModalCtx {
   application_id : @model.Id[@model.ApplicationMarker]
   interaction : @model.Interaction
   data : @model.ModalData
+  // private fields
 }
 pub async fn ModalCtx::defer_response(Self, ephemeral? : Bool) -> Unit
 pub async fn ModalCtx::respond(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], ephemeral? : Bool) -> Unit
 pub fn ModalCtx::text_value(Self, String) -> String?
 pub fn ModalCtx::user(Self) -> @model.User?
+
+pub struct ResponseCapture {
+  // private fields
+}
+pub async fn ResponseCapture::get(Self) -> CapturedResponse
+pub fn ResponseCapture::try_get(Self) -> CapturedResponse? raise
+
+pub struct ResponseGate {
+  // private fields
+}
+pub fn ResponseGate::capture(@model.Interaction) -> (Self, ResponseCapture)
+pub fn ResponseGate::new(@model.InteractionType, async (@model.InteractionResponse, Array[@http.FileUpload]?) -> Unit) -> Self
+pub fn ResponseGate::responded(Self) -> Bool
+pub fn ResponseGate::rest(@http.Client, @model.Interaction) -> Self
+pub async fn ResponseGate::send(Self, @model.InteractionResponse, files? : Array[@http.FileUpload]) -> Unit
 
 // Type aliases
 

@@ -194,7 +194,6 @@ test "command registration payload" {
   json_inspect(spec, content={
     "name": "echo",
     "description": "Echo your text back",
-    "type": 1,
     "options": [
       {
         "type": 3,

@@ -110,6 +110,115 @@ test "commands_in_sync compares declarations and ignores server fields" {
 }
 
 ///|
+test "commands_in_sync normalizes command defaults and uses type plus name" {
+  let slash = @interaction.CommandSpec::slash("inspect", "Inspect a target")
+  assert_false(slash.to_json().stringify().contains("\"type\""))
+  let response = fetched_command(
+    (
+      #|{
+      #|  "id": "900000000000000010",
+      #|  "application_id": "400000000000000001",
+      #|  "type": 1,
+      #|  "name": "inspect",
+      #|  "description": "Inspect a target",
+      #|  "default_member_permissions": null,
+      #|  "dm_permission": true,
+      #|  "nsfw": false,
+      #|  "integration_types": [0],
+      #|  "contexts": null,
+      #|  "version": "900000000000000011"
+      #|}
+    ),
+  )
+  let wrong_nsfw = fetched_command(
+    response
+    .to_json()
+    .stringify()
+    .replace(old="\"nsfw\":false", new="\"nsfw\":true"),
+  )
+  let wrong_integration = fetched_command(
+    response
+    .to_json()
+    .stringify()
+    .replace(old="\"integration_types\":[0]", new="\"integration_types\":[1]"),
+  )
+  let wrong_contexts = fetched_command(
+    response
+    .to_json()
+    .stringify()
+    .replace(old="\"contexts\":null", new="\"contexts\":[0]"),
+  )
+  let wrong_dm_permission = fetched_command(
+    response
+    .to_json()
+    .stringify()
+    .replace(old="\"dm_permission\":true", new="\"dm_permission\":false"),
+  )
+  let wrong_permissions = fetched_command(
+    response
+    .to_json()
+    .stringify()
+    .replace(
+      old="\"default_member_permissions\":null",
+      new="\"default_member_permissions\":\"8\"",
+    ),
+  )
+  let wrong_type = fetched_command(
+    response.to_json().stringify().replace(old="\"type\":1", new="\"type\":2"),
+  )
+  debug_inspect(
+    [
+      commands_in_sync([slash], [response]),
+      commands_in_sync([slash], [wrong_nsfw]),
+      commands_in_sync([slash], [wrong_integration]),
+      commands_in_sync([slash], [wrong_contexts]),
+      commands_in_sync([slash], [wrong_dm_permission]),
+      commands_in_sync([slash], [wrong_permissions]),
+      commands_in_sync([slash], [wrong_type]),
+    ],
+    content="[true, false, false, false, false, false, false]",
+  )
+  let explicit_defaults = @interaction.CommandSpec::slash(
+    "inspect",
+    "Inspect a target",
+    nsfw=false,
+    integration_types=[@model.ApplicationIntegrationType::GuildInstall],
+  )
+  let omitted_defaults = fetched_command(
+    (
+      #|{
+      #|  "id": "900000000000000014",
+      #|  "application_id": "400000000000000001",
+      #|  "name": "inspect",
+      #|  "description": "Inspect a target",
+      #|  "default_member_permissions": null,
+      #|  "version": "900000000000000015"
+      #|}
+    ),
+  )
+  assert_true(commands_in_sync([explicit_defaults], [omitted_defaults]))
+  let user = @interaction.CommandSpec::user("inspect")
+  let user_response = fetched_command(
+    (
+      #|{
+      #|  "id": "900000000000000012",
+      #|  "application_id": "400000000000000001",
+      #|  "type": 2,
+      #|  "name": "inspect",
+      #|  "description": "",
+      #|  "default_member_permissions": null,
+      #|  "dm_permission": true,
+      #|  "nsfw": false,
+      #|  "integration_types": [0],
+      #|  "contexts": null,
+      #|  "version": "900000000000000013"
+      #|}
+    ),
+  )
+  assert_true(commands_in_sync([slash, user], [response, user_response]))
+}
+
+///|
 test "intent derivation strips privileged intents and warns" {
   let bot = Bot::new(token="token", sync=Disabled)
   let warnings : Array[String] = []

@@ -6,6 +6,11 @@ priv struct CommandEntry {
 }
 
 ///|
+fn command_key(typ : @model.ApplicationCommandType, name : String) -> String {
+  "\{typ.to_int()}:\{name}"
+}
+
+///|
 /// One task waiting for a specific component interaction.
 priv struct ComponentWaiter {
   custom_id : String
@@ -48,14 +53,14 @@ pub fn Framework::new(
 
 ///|
 /// Register a command: `spec` describes it to Discord, `handler` runs when
-/// it is invoked. Routing is by top-level command name; subcommand routing
-/// happens inside the handler via `ctx.options.path()`.
+/// it is invoked. Routing is by command type and top-level command name;
+/// subcommand routing happens inside the handler via `ctx.options.path()`.
 pub fn Framework::command(
   self : Framework,
   spec : @interaction.CommandSpec,
   handler : async (CommandCtx) -> Unit,
 ) -> Framework {
-  self.commands[spec.name] = { spec, handler }
+  self.commands[command_key(spec.typ, spec.name)] = { spec, handler }
   self
 }
 
@@ -161,24 +166,34 @@ pub async fn Framework::process(
   self : Framework,
   interaction : @model.Interaction,
 ) -> Bool {
+  let gate = ResponseGate::rest(self.client, interaction)
+  self.process_with(interaction, gate~)
+}
+
+///|
+/// Route one interaction through a caller-provided initial-response gate.
+pub async fn Framework::process_with(
+  self : Framework,
+  interaction : @model.Interaction,
+  gate~ : ResponseGate,
+) -> Bool {
   match interaction.typ {
     Ping => {
-      self.client.create_interaction_response(
-        interaction.id,
-        interaction.token,
-        { typ: Pong, data: None },
-      )
+      gate.send({ typ: Pong, data: None })
       true
     }
     ApplicationCommand => {
       guard interaction.data is Some(Command(data)) else { return false }
-      guard self.commands.get(data.name) is Some(entry) else { return false }
+      guard self.commands.get(command_key(data.typ, data.name)) is Some(entry) else {
+        return false
+      }
       let ctx : CommandCtx = {
         client: self.client,
         application_id: self.application_id,
         interaction,
         data,
         options: @interaction.CommandOptions::from_data(data),
+        gate,
       }
       self.guard_errors("command:\{data.name}", () => (entry.handler)(ctx))
       true
@@ -194,6 +209,7 @@ pub async fn Framework::process(
         interaction,
         data,
         options: @interaction.CommandOptions::from_data(data),
+        gate,
       }
       self.guard_errors("autocomplete:\{data.name}", () => handler(ctx))
       true
@@ -205,6 +221,7 @@ pub async fn Framework::process(
         application_id: self.application_id,
         interaction,
         data,
+        gate,
       }
       for i, waiter in self.waiters {
         if waiter.custom_id == data.custom_id {
@@ -232,6 +249,7 @@ pub async fn Framework::process(
             application_id: self.application_id,
             interaction,
             data,
+            gate,
           }
           self.guard_errors("modal:\{data.custom_id}", () => handler(ctx))
           return true

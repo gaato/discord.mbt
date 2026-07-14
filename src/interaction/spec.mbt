@@ -1,7 +1,7 @@
 ///|
 /// A declarative description of one application command, used both to
 /// register the command (its `ToJson` is the registration payload) and to
-/// route incoming interactions by name.
+/// route incoming interactions by command type and name.
 pub(all) struct CommandSpec {
   name : String
   description : String
@@ -9,8 +9,8 @@ pub(all) struct CommandSpec {
   options : Array[@model.CommandOption]
   default_member_permissions : @model.Permissions?
   nsfw : Bool?
-  integration_types : Array[Int]?
-  contexts : Array[Int]?
+  integration_types : Array[@model.ApplicationIntegrationType]?
+  contexts : Array[@model.InteractionContextType]?
 } derive(Debug)
 
 ///|
@@ -21,8 +21,8 @@ pub fn CommandSpec::slash(
   options? : Array[@model.CommandOption] = [],
   default_member_permissions? : @model.Permissions,
   nsfw? : Bool,
-  integration_types? : Array[Int],
-  contexts? : Array[Int],
+  integration_types? : Array[@model.ApplicationIntegrationType],
+  contexts? : Array[@model.InteractionContextType],
 ) -> CommandSpec {
   {
     name,
@@ -42,8 +42,8 @@ pub fn CommandSpec::user(
   name : String,
   default_member_permissions? : @model.Permissions,
   nsfw? : Bool,
-  integration_types? : Array[Int],
-  contexts? : Array[Int],
+  integration_types? : Array[@model.ApplicationIntegrationType],
+  contexts? : Array[@model.InteractionContextType],
 ) -> CommandSpec {
   {
     name,
@@ -63,8 +63,8 @@ pub fn CommandSpec::message(
   name : String,
   default_member_permissions? : @model.Permissions,
   nsfw? : Bool,
-  integration_types? : Array[Int],
-  contexts? : Array[Int],
+  integration_types? : Array[@model.ApplicationIntegrationType],
+  contexts? : Array[@model.InteractionContextType],
 ) -> CommandSpec {
   {
     name,
@@ -83,7 +83,9 @@ pub impl ToJson for CommandSpec with fn to_json(self) {
   let builder = @model.ObjBuilder::new()
     .field("name", self.name)
     .field("description", self.description)
-    .field("type", self.typ)
+  if self.typ != ChatInput {
+    builder.field("type", self.typ) |> ignore
+  }
   if self.options.length() > 0 {
     builder.field("options", self.options) |> ignore
   }

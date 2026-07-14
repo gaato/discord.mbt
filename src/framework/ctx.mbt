@@ -22,8 +22,7 @@ fn message_response_data(
 
 ///|
 async fn respond_message(
-  client : @dhttp.Client,
-  interaction : @model.Interaction,
+  gate : ResponseGate,
   typ : @model.InteractionResponseType,
   content : String?,
   embeds : Array[@model.Embed]?,
@@ -31,9 +30,7 @@ async fn respond_message(
   files : Array[@dhttp.FileUpload]?,
   ephemeral : Bool,
 ) -> Unit {
-  client.create_interaction_response(
-    interaction.id,
-    interaction.token,
+  gate.send(
     {
       typ,
       data: Some(
@@ -62,6 +59,7 @@ pub(all) struct CommandCtx {
   interaction : @model.Interaction
   data : @model.CommandData
   options : @interaction.CommandOptions
+  priv gate : ResponseGate
 }
 
 ///|
@@ -89,8 +87,7 @@ pub async fn CommandCtx::respond(
   ephemeral? : Bool = false,
 ) -> Unit {
   respond_message(
-    self.client,
-    self.interaction,
+    self.gate,
     ChannelMessageWithSource,
     content,
     embeds,
@@ -107,8 +104,7 @@ pub async fn CommandCtx::defer_response(
   ephemeral? : Bool = false,
 ) -> Unit {
   respond_message(
-    self.client,
-    self.interaction,
+    self.gate,
     DeferredChannelMessageWithSource,
     None,
     None,
@@ -169,6 +165,7 @@ pub(all) struct ComponentCtx {
   application_id : @model.ApplicationId
   interaction : @model.Interaction
   data : @model.ComponentData
+  priv gate : ResponseGate
 }
 
 ///|
@@ -188,8 +185,7 @@ pub async fn ComponentCtx::respond(
   ephemeral? : Bool = false,
 ) -> Unit {
   respond_message(
-    self.client,
-    self.interaction,
+    self.gate,
     ChannelMessageWithSource,
     content,
     embeds,
@@ -208,8 +204,7 @@ pub async fn ComponentCtx::update_message(
   components? : Array[@model.Component],
 ) -> Unit {
   respond_message(
-    self.client,
-    self.interaction,
+    self.gate,
     UpdateMessage,
     content,
     embeds,
@@ -222,11 +217,7 @@ pub async fn ComponentCtx::update_message(
 ///|
 /// Acknowledge without any visible change (edit later if needed).
 pub async fn ComponentCtx::defer_update(self : ComponentCtx) -> Unit {
-  self.client.create_interaction_response(
-    self.interaction.id,
-    self.interaction.token,
-    { typ: DeferredUpdateMessage, data: None },
-  )
+  self.gate.send({ typ: DeferredUpdateMessage, data: None })
 }
 
 ///|
@@ -236,6 +227,7 @@ pub(all) struct ModalCtx {
   application_id : @model.ApplicationId
   interaction : @model.Interaction
   data : @model.ModalData
+  priv gate : ResponseGate
 }
 
 ///|
@@ -278,8 +270,7 @@ pub async fn ModalCtx::respond(
   ephemeral? : Bool = false,
 ) -> Unit {
   respond_message(
-    self.client,
-    self.interaction,
+    self.gate,
     ChannelMessageWithSource,
     content,
     embeds,
@@ -296,8 +287,7 @@ pub async fn ModalCtx::defer_response(
   ephemeral? : Bool = false,
 ) -> Unit {
   respond_message(
-    self.client,
-    self.interaction,
+    self.gate,
     DeferredChannelMessageWithSource,
     None,
     None,
@@ -315,6 +305,7 @@ pub(all) struct AutocompleteCtx {
   interaction : @model.Interaction
   data : @model.CommandData
   options : @interaction.CommandOptions
+  priv gate : ResponseGate
 }
 
 ///|
@@ -323,12 +314,8 @@ pub async fn AutocompleteCtx::suggest(
   self : AutocompleteCtx,
   choices : Array[@model.CommandOptionChoice],
 ) -> Unit {
-  self.client.create_interaction_response(
-    self.interaction.id,
-    self.interaction.token,
-    {
-      typ: Autocomplete,
-      data: Some(@model.ObjBuilder::new().field("choices", choices).build()),
-    },
-  )
+  self.gate.send({
+    typ: Autocomplete,
+    data: Some(@model.ObjBuilder::new().field("choices", choices).build()),
+  })
 }

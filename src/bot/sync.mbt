@@ -1,40 +1,65 @@
 ///|
+/// Defaults that Discord may add to or omit from response objects.
+fn object_defaults(command_root : Bool) -> Array[(String, Json)] {
+  let defaults = [
+    ("required", Json::boolean(false)),
+    ("options", Json::array([])),
+    ("choices", Json::array([])),
+  ]
+  if command_root {
+    defaults.push(("type", Json::number(1.0)))
+    defaults.push(("nsfw", Json::boolean(false)))
+    defaults.push(("dm_permission", Json::boolean(true)))
+    defaults.push(("integration_types", Json::array([Json::number(0.0)])))
+    defaults.push(("contexts", Json::null()))
+    defaults.push(("default_member_permissions", Json::null()))
+  }
+  defaults
+}
+
+///|
+fn object_default(key : String, command_root : Bool) -> Json? {
+  for entry in object_defaults(command_root) {
+    let (candidate, value) = entry
+    if candidate == key {
+      return Some(value)
+    }
+  }
+  None
+}
+
+///|
 /// Compare one declared JSON subtree with the corresponding Discord value.
 /// Discord may add fields to response objects; only keys emitted by the
-/// declaration participate in equality. The three optional container/value
-/// fields below are normalized because Discord commonly omits their defaults.
-fn declared_json_matches(declared : Json, fetched : Json) -> Bool {
+/// declaration and known declaration defaults participate in equality.
+fn declared_json_matches_at(
+  declared : Json,
+  fetched : Json,
+  command_root : Bool,
+) -> Bool {
   match (declared, fetched) {
     (Object(expected), Object(actual)) => {
       for key, value in expected {
         match actual.get(key) {
           Some(other) =>
-            if !declared_json_matches(value, other) {
+            if !declared_json_matches_at(value, other, false) {
               return false
             }
-          None =>
-            if !((key == "required" && value == Json::boolean(false)) ||
-              (
-                (key == "options" || key == "choices") &&
-                value == Json::array([])
-              )) {
+          None => {
+            guard object_default(key, command_root) is Some(fallback) else {
               return false
             }
+            if !declared_json_matches_at(value, fallback, false) {
+              return false
+            }
+          }
         }
       }
-      // These are declaration-owned fields even when their default is omitted
-      // from CommandSpec JSON, so fetched non-default values must not be
-      // mistaken for harmless server metadata.
-      for
-        entry in [
-          ("required", Json::boolean(false)),
-          ("options", Json::array([])),
-          ("choices", Json::array([])),
-        ] {
+      for entry in object_defaults(command_root) {
         let (key, fallback) = entry
         if !expected.contains(key) &&
           actual.get(key) is Some(value) &&
-          !declared_json_matches(fallback, value) {
+          !declared_json_matches_at(fallback, value, false) {
           return false
         }
       }
@@ -45,7 +70,7 @@ fn declared_json_matches(declared : Json, fetched : Json) -> Bool {
         return false
       }
       for i, value in expected {
-        if !declared_json_matches(value, actual[i]) {
+        if !declared_json_matches_at(value, actual[i], false) {
           return false
         }
       }
@@ -56,11 +81,21 @@ fn declared_json_matches(declared : Json, fetched : Json) -> Bool {
 }
 
 ///|
+fn declared_json_matches(declared : Json, fetched : Json) -> Bool {
+  declared_json_matches_at(declared, fetched, true)
+}
+
+///|
+fn command_key(typ : @model.ApplicationCommandType, name : String) -> String {
+  "\{typ.to_int()}:\{name}"
+}
+
+///|
 /// Whether Discord's registered commands already match the declarations.
 ///
-/// Command names must form the same set. For each command, comparison follows
-/// the declaration shape recursively, ignoring server-owned fields such as
-/// ids and versions while preserving option and choice order.
+/// Command `(type, name)` pairs must form the same set. For each command,
+/// comparison follows the declaration shape recursively, ignoring server-owned
+/// fields such as ids and versions while preserving option and choice order.
 pub fn commands_in_sync(
   declared : Array[@interaction.CommandSpec],
   fetched : Array[@model.ApplicationCommand],
@@ -68,20 +103,23 @@ pub fn commands_in_sync(
   if declared.length() != fetched.length() {
     return false
   }
-  let by_name : Map[String, @model.ApplicationCommand] = {}
+  let by_key : Map[String, @model.ApplicationCommand] = {}
   for command in fetched {
-    if by_name.contains(command.name) {
+    let typ = command.typ.unwrap_or(ChatInput)
+    let key = command_key(typ, command.name)
+    if by_key.contains(key) {
       return false
     }
-    by_name[command.name] = command
+    by_key[key] = command
   }
-  let declared_names : Set[String] = Set([])
+  let declared_keys : Set[String] = Set([])
   for spec in declared {
-    if declared_names.contains(spec.name) {
+    let key = command_key(spec.typ, spec.name)
+    if declared_keys.contains(key) {
       return false
     }
-    declared_names.add(spec.name)
-    guard by_name.get(spec.name) is Some(command) else { return false }
+    declared_keys.add(key)
+    guard by_key.get(key) is Some(command) else { return false }
     if !declared_json_matches(spec.to_json(), command.to_json()) {
       return false
     }

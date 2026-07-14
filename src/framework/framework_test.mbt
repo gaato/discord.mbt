@@ -26,6 +26,33 @@ fn echo_interaction(text : String) -> @model.Interaction raise {
 }
 
 ///|
+fn named_command_interaction(
+  name : String,
+  typ : Int,
+) -> @model.Interaction raise {
+  @json.from_json(
+    @json.parse(
+      (
+        #|{
+        #|  "id": "500000000000000011",
+        #|  "application_id": "400000000000000001",
+        #|  "type": 2,
+        #|  "token": "interaction-token",
+        #|  "version": 1,
+        #|  "data": {
+        #|    "id": "600000000000000011",
+        #|    "name": "NAME",
+        #|    "type": COMMAND_TYPE
+        #|  }
+        #|}
+      )
+      .replace(old="NAME", new=name)
+      .replace(old="COMMAND_TYPE", new=typ.to_string()),
+    ),
+  )
+}
+
+///|
 fn component_interaction(custom_id : String) -> @model.Interaction raise {
   let json =
     #|{
@@ -104,6 +131,47 @@ async test "framework routes commands by name" {
     ),
   }
   assert_false(fw.process(unknown))
+}
+
+///|
+async test "framework routes same-name commands by type" {
+  let fw = test_framework()
+  let seen : Array[String] = []
+  fw
+  .command(@interaction.CommandSpec::slash("inspect", "Inspect"), _ => {
+    seen.push("slash")
+  })
+  .command(@interaction.CommandSpec::user("inspect"), _ => seen.push("user"))
+  |> ignore
+  assert_true(fw.process(named_command_interaction("inspect", 1)))
+  assert_true(fw.process(named_command_interaction("inspect", 2)))
+  inspect(seen.join(","), content="slash,user")
+}
+
+///|
+async test "process_with captures handler and ping callbacks" {
+  let fw = test_framework()
+  fw.command(@interaction.CommandSpec::slash("echo", "Echo"), ctx => {
+    ctx.respond(content="captured")
+  })
+  |> ignore
+  let command = echo_interaction("hello")
+  let (command_gate, command_capture) = @framework.ResponseGate::capture(
+    command,
+  )
+  assert_true(fw.process_with(command, gate=command_gate))
+  let command_response = command_capture.get().response
+  assert_true(command_response.typ == ChannelMessageWithSource)
+  inspect(
+    command_response.to_json().stringify(),
+    content=(
+      #|{"type":4,"data":{"content":"captured"}}
+    ),
+  )
+  let ping = gate_interaction(1)
+  let (ping_gate, ping_capture) = @framework.ResponseGate::capture(ping)
+  assert_true(fw.process_with(ping, gate=ping_gate))
+  assert_true(ping_capture.get().response.typ == Pong)
 }
 
 ///|

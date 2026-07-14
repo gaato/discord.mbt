@@ -60,13 +60,19 @@ test "slash command registration payload includes every scalar option kind" {
     ],
     default_member_permissions=@model.Permissions::manage_guild(),
     nsfw=false,
-    integration_types=[0, 1],
-    contexts=[0, 1, 2],
+    integration_types=[
+      @model.ApplicationIntegrationType::GuildInstall,
+      @model.ApplicationIntegrationType::UserInstall,
+    ],
+    contexts=[
+      @model.InteractionContextType::Guild,
+      @model.InteractionContextType::BotDm,
+      @model.InteractionContextType::PrivateChannel,
+    ],
   )
   json_inspect(spec.to_json(), content={
     "name": "configure",
     "description": "Configure the bot",
-    "type": 1,
     "options": [
       {
         "type": 3,
@@ -147,7 +153,6 @@ test "subcommand and context-menu registration payloads" {
   json_inspect(spec.to_json(), content={
     "name": "admin",
     "description": "Administrative tools",
-    "type": 1,
     "options": [
       {
         "type": 2,
@@ -186,7 +191,10 @@ test "subcommand and context-menu registration payloads" {
     @interaction.CommandSpec::user(
       "View profile",
       default_member_permissions=@model.Permissions::view_channel(),
-      contexts=[0, 1],
+      contexts=[
+        @model.InteractionContextType::Guild,
+        @model.InteractionContextType::BotDm,
+      ],
     ).to_json(),
     content={
       "name": "View profile",
@@ -198,7 +206,7 @@ test "subcommand and context-menu registration payloads" {
   )
   json_inspect(
     @interaction.CommandSpec::message("Archive message", nsfw=true, integration_types=[
-      0,
+      @model.ApplicationIntegrationType::GuildInstall,
     ]).to_json(),
     content={
       "name": "Archive message",

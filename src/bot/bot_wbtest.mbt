@@ -31,7 +31,6 @@ test "typed command spec derives options from Args" {
   json_inspect(command.spec().to_json(), content={
     "name": "echo",
     "description": "Echo some text",
-    "type": 1,
     "options": [
       {
         "type": 3,

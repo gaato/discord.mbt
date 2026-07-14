@@ -131,12 +131,12 @@ pub(all) struct CommandSpec {
   options : Array[@model.CommandOption]
   default_member_permissions : @model.Permissions?
   nsfw : Bool?
-  integration_types : Array[Int]?
-  contexts : Array[Int]?
+  integration_types : Array[@model.ApplicationIntegrationType]?
+  contexts : Array[@model.InteractionContextType]?
 } derive(@debug.Debug)
-pub fn CommandSpec::message(String, default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[Int], contexts? : Array[Int]) -> Self
-pub fn CommandSpec::slash(String, String, options? : Array[@model.CommandOption], default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[Int], contexts? : Array[Int]) -> Self
-pub fn CommandSpec::user(String, default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[Int], contexts? : Array[Int]) -> Self
+pub fn CommandSpec::message(String, default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType]) -> Self
+pub fn CommandSpec::slash(String, String, options? : Array[@model.CommandOption], default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType]) -> Self
+pub fn CommandSpec::user(String, default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType]) -> Self
 pub impl ToJson for CommandSpec
 
 // Type aliases
