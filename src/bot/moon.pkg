@@ -2,11 +2,9 @@ import {
   "gaato/discord/model",
   "gaato/discord/http" @dhttp,
   "gaato/discord/gateway",
-  "gaato/discord/interaction",
   "gaato/discord/framework",
+  "gaato/discord/app",
   "moonbitlang/async",
-  "moonbitlang/async/aqueue",
-  "moonbitlang/core/json",
 }
 
 import {
@@ -14,10 +12,7 @@ import {
 } for "test"
 
 import {
+  "gaato/discord/interaction",
+  "moonbitlang/core/json",
   "moonbitlang/async/aqueue",
 } for "wbtest"
-
-// `member` is part of the public TargetUser API, but MoonBit currently marks
-// it as a possible future keyword before local warning attributes take effect.
-
-warnings = "-35"

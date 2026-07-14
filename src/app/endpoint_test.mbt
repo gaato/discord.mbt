@@ -79,32 +79,32 @@ fn autocomplete_choices(
 }
 
 ///|
-async test "interaction app dispatches captured responses and completion outcomes" {
-  let bot = @bot.Bot::new(token="test-token", sync=Disabled)
+async test "interaction endpoint dispatches captured responses and completion outcomes" {
+  let app = @app.App::new(sync=Disabled)
   let warnings : Array[String] = []
-  bot.on_warn(message => warnings.push(message))
+  app.on_warn(message => warnings.push(message))
   let waiter_results : @aqueue.Queue[Bool] = @aqueue.Queue::new(kind=Unbounded)
   let slow_finished : @aqueue.Queue[Unit] = @aqueue.Queue::new(kind=Unbounded)
-  bot.command(
-    @bot.slash(
+  app.command(
+    @app.slash(
       name="immediate",
       description="Immediate response",
       args=@interaction.Args::unit(),
       handler=Immediate((_, _) => {
-        @bot.CommandReply::message(content="hello from http")
+        @app.CommandReply::message(content="hello from http")
       }),
     ),
   )
-  bot.command(
-    @bot.slash(
+  app.command(
+    @app.slash(
       name="silent",
       description="No initial response",
       args=@interaction.Args::unit(),
       handler=Raw(_ => ()),
     ),
   )
-  bot.command(
-    @bot.slash(
+  app.command(
+    @app.slash(
       name="deferred",
       description="Deferred without gateway waiter",
       args=@interaction.Args::unit(),
@@ -115,8 +115,8 @@ async test "interaction app dispatches captured responses and completion outcome
       }),
     ),
   )
-  bot.command(
-    @bot.slash(
+  app.command(
+    @app.slash(
       name="slow",
       description="Slow initial response",
       args=@interaction.Args::unit(),
@@ -127,6 +127,14 @@ async test "interaction app dispatches captured responses and completion outcome
       }),
     ),
   )
+  @async.with_task_group(group => {
+    try app.serve(group, token="") catch {
+      @app.AppConfigError::EmptyToken => ()
+      error => fail("unexpected error: \{to_repr(error)}")
+    } noraise {
+      _ => fail("expected an empty token error")
+    }
+  })
   let client = @dhttp.Client::new(
     "test-token",
     base_url="http://127.0.0.1:1",
@@ -135,7 +143,7 @@ async test "interaction app dispatches captured responses and completion outcome
   defer client.close()
   @async.with_task_group(group => {
     // Explicit client/id plus sync=false must perform no startup HTTP.
-    let app = bot.start_interaction_app(
+    let app = app.serve(
       group,
       client~,
       application_id=@model.Id::parse("400000000000000001"),
@@ -210,15 +218,15 @@ async test "interaction app dispatches captured responses and completion outcome
 }
 
 ///|
-async test "interaction app dispatches component and typed modal handlers" {
-  let bot = @bot.Bot::new(token="test-token", sync=Disabled)
-  let feedback = @bot.modal(
+async test "interaction endpoint dispatches component and typed modal handlers" {
+  let app = @app.App::new(sync=Disabled)
+  let feedback = @app.modal(
     custom_id="feedback",
     title="Feedback",
-    fields=@bot.ModalFields::of(@bot.text_field(custom_id="note", label="Note")),
+    fields=@app.ModalFields::of(@app.text_field(custom_id="note", label="Note")),
   )
-  bot.command(
-    @bot.slash(
+  app.command(
+    @app.slash(
       name="open-form",
       description="Open the feedback form",
       args=@interaction.Args::unit(),
@@ -227,23 +235,23 @@ async test "interaction app dispatches component and typed modal handlers" {
       }),
     ),
   )
-  bot.on_component(
+  app.on_component(
     prefix="update:",
     Immediate(ctx => {
-      @bot.ComponentReply::update_message(content="updated:\{ctx.suffix()}")
+      @app.ComponentReply::update_message(content="updated:\{ctx.suffix()}")
     }),
   )
-  bot.on_component(
+  app.on_component(
     prefix="open:",
     Immediate(ctx => {
       ComponentReply::ShowModal(feedback.show(state=ctx.suffix()))
     }),
   )
-  bot.on_component(prefix="defer:", DeferredUpdate(_ => ()))
-  bot.on_modal(
+  app.on_component(prefix="defer:", DeferredUpdate(_ => ()))
+  app.on_modal(
     feedback,
     Immediate((ctx, note) => {
-      @bot.InitialResponse::message(
+      @app.InitialResponse::message(
         content="saved:\{note}:\{ctx.state().unwrap_or("none")}",
       )
     }),
@@ -255,7 +263,7 @@ async test "interaction app dispatches component and typed modal handlers" {
   )
   defer client.close()
   @async.with_task_group(group => {
-    let app = bot.start_interaction_app(
+    let app = app.serve(
       group,
       client~,
       application_id=@model.Id::parse("400000000000000001"),
@@ -334,9 +342,9 @@ async test "interaction app dispatches component and typed modal handlers" {
 
 ///|
 async test "typed autocomplete dispatches partial and nested focused options" {
-  let bot = @bot.Bot::new(token="test-token", sync=Disabled)
-  bot.command(
-    @bot.slash(
+  let app = @app.App::new(sync=Disabled)
+  app.command(
+    @app.slash(
       name="search",
       description="Search documents",
       args=@interaction.Args::map2(
@@ -365,10 +373,10 @@ async test "typed autocomplete dispatches partial and nested focused options" {
       handler=Raw(_ => ()),
     ),
   )
-  bot.command(
-    @bot.slash_group(name="tools", description="Tool commands", children=[
-      @bot.subcommand_group(name="catalog", description="Catalog tools", children=[
-        @bot.subcommand(
+  app.command(
+    @app.slash_group(name="tools", description="Tool commands", children=[
+      @app.subcommand_group(name="catalog", description="Catalog tools", children=[
+        @app.subcommand(
           name="lookup",
           description="Look up an item",
           args=@interaction.Args::of(
@@ -382,8 +390,8 @@ async test "typed autocomplete dispatches partial and nested focused options" {
       ]),
     ]),
   )
-  bot.command(
-    @bot.slash(
+  app.command(
+    @app.slash(
       name="manual",
       description="Manual override",
       args=@interaction.Args::of(
@@ -395,7 +403,7 @@ async test "typed autocomplete dispatches partial and nested focused options" {
       handler=Raw(_ => ()),
     ),
   )
-  bot.autocomplete("manual", raw => {
+  app.autocomplete("manual", raw => {
     raw.suggest([@interaction.string_choice("raw", "raw")])
   })
   let top = app_interaction(
@@ -420,7 +428,7 @@ async test "typed autocomplete dispatches partial and nested focused options" {
   )
   defer client.close()
   @async.with_task_group(group => {
-    let app = bot.start_interaction_app(
+    let app = app.serve(
       group,
       client~,
       application_id=@model.Id::parse("400000000000000001"),
@@ -459,15 +467,15 @@ async test "typed autocomplete dispatches partial and nested focused options" {
 ///|
 test "command constructors emit context types and slash attributes" {
   json_inspect(
-    @bot.user_command(name="Inspect", handler=Raw(_ => ())).spec().to_json(),
+    @app.user_command(name="Inspect", handler=Raw(_ => ())).spec().to_json(),
     content={ "name": "Inspect", "description": "", "type": 2 },
   )
   json_inspect(
-    @bot.message_command(name="Inspect", handler=Raw(_ => ())).spec().to_json(),
+    @app.message_command(name="Inspect", handler=Raw(_ => ())).spec().to_json(),
     content={ "name": "Inspect", "description": "", "type": 3 },
   )
   json_inspect(
-    @bot.slash(
+    @app.slash(
       name="configured",
       description="Configured command",
       args=@interaction.Args::unit(),
@@ -492,22 +500,22 @@ test "command constructors emit context types and slash attributes" {
 
 ///|
 async test "context menu commands decode resolved targets" {
-  let bot = @bot.Bot::new(token="test-token", sync=Disabled)
-  bot.command(
-    @bot.user_command(
+  let app = @app.App::new(sync=Disabled)
+  app.command(
+    @app.user_command(
       name="Inspect",
       handler=Immediate((_, target) => {
-        @bot.CommandReply::message(
+        @app.CommandReply::message(
           content="user:\{target.user.username}:member=\{target.member is Some(_)}",
         )
       }),
     ),
   )
-  bot.command(
-    @bot.message_command(
+  app.command(
+    @app.message_command(
       name="Inspect",
       handler=Immediate((_, message) => {
-        @bot.CommandReply::message(content="message:\{message.content}")
+        @app.CommandReply::message(content="message:\{message.content}")
       }),
     ),
   )
@@ -604,7 +612,7 @@ async test "context menu commands decode resolved targets" {
   )
   defer client.close()
   @async.with_task_group(group => {
-    let app = bot.start_interaction_app(
+    let app = app.serve(
       group,
       client~,
       application_id=@model.Id::parse("400000000000000001"),
@@ -645,21 +653,21 @@ async test "context menu commands decode resolved targets" {
 
 ///|
 async test "slash groups emit nested specs and dispatch direct and grouped paths" {
-  let command = @bot.slash_group(
+  let command = @app.slash_group(
     name="admin",
     description="Administrative tools",
     children=[
-      @bot.subcommand(
+      @app.subcommand(
         name="ping",
         description="Check availability",
         args=@interaction.Args::unit(),
-        handler=Immediate((_, _) => @bot.CommandReply::message(content="pong")),
+        handler=Immediate((_, _) => @app.CommandReply::message(content="pong")),
       ),
-      @bot.subcommand_group(
+      @app.subcommand_group(
         name="member",
         description="Member administration",
         children=[
-          @bot.subcommand(
+          @app.subcommand(
             name="rename",
             description="Rename a member",
             args=@interaction.Args::of(
@@ -669,7 +677,7 @@ async test "slash groups emit nested specs and dispatch direct and grouped paths
               ),
             ),
             handler=Immediate((_, name) => {
-              @bot.CommandReply::message(content="renamed:\{name}")
+              @app.CommandReply::message(content="renamed:\{name}")
             }),
           ),
         ],
@@ -703,8 +711,8 @@ async test "slash groups emit nested specs and dispatch direct and grouped paths
       },
     ],
   })
-  let bot = @bot.Bot::new(token="test-token", sync=Disabled)
-  bot.command(command)
+  let app = @app.App::new(sync=Disabled)
+  app.command(command)
   let direct = app_interaction(
     (
       #|{"id":"500000000000000211","application_id":"400000000000000001","type":2,"token":"interaction-token","version":1,"data":{"id":"600000000000000211","name":"admin","type":1,"options":[{"name":"ping","type":1}]}}
@@ -727,7 +735,7 @@ async test "slash groups emit nested specs and dispatch direct and grouped paths
   )
   defer client.close()
   @async.with_task_group(group => {
-    let app = bot.start_interaction_app(
+    let app = app.serve(
       group,
       client~,
       application_id=@model.Id::parse("400000000000000001"),

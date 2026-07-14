@@ -1,25 +1,4 @@
 ///|
-/// Where application commands are synchronized after the first READY.
-pub(all) enum CommandSync {
-  Global
-  Guild(@model.GuildId)
-  Guilds(Array[@model.GuildId])
-  Disabled
-} derive(Debug)
-
-///|
-/// Configuration errors detected before opening the gateway.
-pub(all) suberror BotConfigError {
-  EmptyToken
-  DuplicateCommand(name~ : String)
-  DuplicateCommandPath(command~ : String, path~ : String)
-  NestedSubcommandGroup(command~ : String, path~ : String)
-  ChoicesWithAutocomplete(command~ : String, path~ : String)
-  RequiredOptionAfterOptional(command~ : String, path~ : String)
-  InvalidModalFieldCount(custom_id~ : String, count~ : Int)
-} derive(Debug)
-
-///|
 /// Fatal runtime failures reported by Discord.
 pub(all) suberror BotError {
   /// Close codes 4013 and 4014 indicate invalid or disallowed gateway
@@ -49,55 +28,24 @@ priv struct TypedEventHandler {
 }
 
 ///|
-priv struct RegisteredComponent {
-  prefix : String
-  handler : ComponentHandler
-}
-
-///|
-priv struct RegisteredModal {
-  prefix : String
-  field_count : Int?
-  dispatch : async (BotCtx, @framework.ModalCtx) -> Unit
-}
-
-///|
-priv struct AutocompleteHandler {
-  name : String
-  dispatch : async (@framework.AutocompleteCtx) -> Unit
-}
-
-///|
 priv struct ServiceHandler {
   name : String
   dispatch : async (GatewayCtx) -> Unit
 }
 
 ///|
-type Spawner = async (async () -> Unit) -> Unit
-
-///|
-/// A declaratively configured Discord bot. Registration mutates this value so
-/// callers can use MoonBit's cascade syntax; `run` and
-/// `start_interaction_app` freeze the declarations into a Framework.
+/// Native gateway executor for a gateway-free application core.
 pub struct Bot {
+  priv app_ : @app.App
   priv token_ : String
   priv intents_ : @model.Intents?
-  priv sync_ : CommandSync
   priv client_ : @dhttp.Client?
   priv gateway_url_ : String?
   priv shard_id_ : Int
   priv shard_count_ : Int
-  priv max_in_flight_ : Int
-  priv commands_ : Array[RegisteredCommand]
   priv typed_events_ : Array[TypedEventHandler]
   priv raw_events_ : Array[async (GatewayCtx, @model.Event) -> Unit]
-  priv components_ : Array[RegisteredComponent]
-  priv modals_ : Array[RegisteredModal]
-  priv autocompletes_ : Array[AutocompleteHandler]
   priv services_ : Array[ServiceHandler]
-  priv mut policy_ : ErrorPolicy?
-  priv mut warn_ : (String) -> Unit
   // Production uses Shard::start's WebSocket connector. Whitebox tests inject
   // the same in-memory GatewayTransport seam used by gateway_test.mbt.
   priv connector_ : Ref[(async (String) -> &@gateway.GatewayTransport)?]
@@ -105,45 +53,27 @@ pub struct Bot {
 
 ///|
 pub fn Bot::new(
+  app : @app.App,
   token~ : String,
   intents? : @model.Intents,
-  sync? : CommandSync = Global,
   client? : @dhttp.Client,
   gateway_url? : String,
   shard_id? : Int = 0,
   shard_count? : Int = 1,
-  max_in_flight? : Int = 64,
 ) -> Bot {
   {
+    app_: app,
     token_: token,
     intents_: intents,
-    sync_: sync,
     client_: client,
     gateway_url_: gateway_url,
     shard_id_: shard_id,
     shard_count_: shard_count,
-    max_in_flight_: max_in_flight,
-    commands_: [],
     typed_events_: [],
     raw_events_: [],
-    components_: [],
-    modals_: [],
-    autocompletes_: [],
     services_: [],
-    policy_: None,
-    warn_: message => println(message),
     connector_: Ref(None),
   }
-}
-
-///|
-pub fn[A] Bot::command(self : Bot, command : Command[A]) -> Unit {
-  self.register(command.erase())
-}
-
-///|
-pub fn Bot::register(self : Bot, command : RegisteredCommand) -> Unit {
-  self.commands_.push(command)
 }
 
 ///|
@@ -172,134 +102,12 @@ pub fn Bot::on_event(
 }
 
 ///|
-pub fn Bot::on_component(
-  self : Bot,
-  prefix~ : String,
-  handler : ComponentHandler,
-) -> Unit {
-  self.components_.push({ prefix, handler })
-}
-
-///|
-pub fn[A] Bot::on_modal(
-  self : Bot,
-  modal : Modal[A],
-  handler : ModalSubmitHandler[A],
-) -> Unit {
-  self.modals_.push({
-    prefix: modal.custom_id_,
-    field_count: Some(modal.fields_.definitions_.length()),
-    dispatch: (bot, raw) => dispatch_modal_handler(modal, handler, bot, raw),
-  })
-}
-
-///|
-/// Register a fully raw modal route without a typed modal definition.
-pub fn Bot::on_modal_raw(
-  self : Bot,
-  prefix~ : String,
-  handler : async (@framework.ModalCtx) -> Unit,
-) -> Unit {
-  self.modals_.push({
-    prefix,
-    field_count: None,
-    dispatch: (_, raw) => handler(raw),
-  })
-}
-
-///|
-/// Register a raw autocomplete handler. A raw handler takes precedence over
-/// Arg-level `suggest` handlers registered for the same command name.
-pub fn Bot::autocomplete(
-  self : Bot,
-  name : String,
-  handler : async (@framework.AutocompleteCtx) -> Unit,
-) -> Unit {
-  self.autocompletes_.push({ name, dispatch: handler })
-}
-
-///|
 pub fn Bot::service(
   self : Bot,
   name~ : String,
   handler : async (GatewayCtx) -> Unit,
 ) -> Unit {
   self.services_.push({ name, dispatch: handler })
-}
-
-///|
-pub fn Bot::error_policy(self : Bot, policy : ErrorPolicy) -> Unit {
-  self.policy_ = Some(policy)
-}
-
-///|
-pub fn Bot::on_warn(self : Bot, hook : (String) -> Unit) -> Unit {
-  self.warn_ = hook
-}
-
-///|
-fn Bot::current_policy(self : Bot) -> ErrorPolicy {
-  self.policy_.unwrap_or_else(() => default_error_policy(self.warn_))
-}
-
-///|
-fn validate_command_options(
-  command : String,
-  parent_path : Array[String],
-  options : Array[@model.CommandOption],
-) -> Unit raise BotConfigError {
-  let mut saw_optional = false
-  for option in options {
-    let path = parent_path.copy()
-    path.push(option.name)
-    if option.autocomplete is Some(true) && option.choices is Some(_) {
-      raise ChoicesWithAutocomplete(command~, path=path.join("/"))
-    }
-    if !(option.typ is (SubCommand | SubCommandGroup)) {
-      if option.required is Some(true) {
-        if saw_optional {
-          raise RequiredOptionAfterOptional(command~, path=path.join("/"))
-        }
-      } else {
-        saw_optional = true
-      }
-    }
-    if option.options is Some(children) {
-      validate_command_options(command, path, children)
-    }
-  }
-}
-
-///|
-fn Bot::validate(self : Bot) -> Unit raise BotConfigError {
-  if self.token_.is_empty() {
-    raise EmptyToken
-  }
-  let commands : Set[String] = Set([])
-  for command in self.commands_ {
-    let command_key = command_key(command.definition.typ, command.name_)
-    if commands.contains(command_key) {
-      raise DuplicateCommand(name=command.name_)
-    }
-    commands.add(command_key)
-    for path in command.nested_group_paths_ {
-      raise NestedSubcommandGroup(command=command.name_, path=path.join("/"))
-    }
-    let paths : Set[String] = Set([])
-    for path in command.node_paths_ {
-      let key = path_key(path)
-      if paths.contains(key) {
-        raise DuplicateCommandPath(command=command.name_, path=path.join("/"))
-      }
-      paths.add(key)
-    }
-    validate_command_options(command.name_, [], command.definition.options)
-  }
-  for modal in self.modals_ {
-    if modal.field_count is Some(count) && (count < 1 || count > 5) {
-      raise InvalidModalFieldCount(custom_id=modal.prefix, count~)
-    }
-  }
 }
 
 ///|
@@ -321,7 +129,7 @@ fn Bot::resolved_intents(self : Bot) -> @model.Intents {
       for subscription in self.typed_events_ {
         let required = subscription.required_intents
         if required.bits() != 0U && (required & explicit).bits() == 0U {
-          (self.warn_)(
+          self.app_.warn(
             "event \{to_repr(subscription.kind)} may not be delivered; add one of its required intents explicitly",
           )
         }
@@ -334,14 +142,14 @@ fn Bot::resolved_intents(self : Bot) -> @model.Intents {
       for subscription in self.typed_events_ {
         let required = subscription.required_intents
         if (required & privileged).bits() != 0U {
-          (self.warn_)(
+          self.app_.warn(
             "event \{to_repr(subscription.kind)} requires a privileged intent; pass intents explicitly",
           )
         }
         derived = derived | required
       }
       if !self.raw_events_.is_empty() {
-        (self.warn_)(
+        self.app_.warn(
           "raw event handlers do not imply gateway intents; pass intents explicitly for the events they consume",
         )
       }
@@ -457,243 +265,6 @@ fn Bot::event_filter(self : Bot) -> (@model.EventKind) -> Bool {
 }
 
 ///|
-async fn spawn_limited(
-  group : @async.TaskGroup[Unit],
-  limiter : @async.Semaphore,
-  body : async () -> Unit,
-) -> Unit {
-  // Acquire in the pull loop: at capacity, gateway delivery applies bounded
-  // backpressure instead of allocating an unbounded list of pending tasks.
-  limiter.acquire()
-  group.spawn_bg(allow_failure=true, () => {
-    defer limiter.release()
-    body()
-  })
-}
-
-///|
-fn bounded_spawner(
-  group : @async.TaskGroup[Unit],
-  limiter : @async.Semaphore,
-) -> Spawner {
-  body => spawn_limited(group, limiter, body)
-}
-
-///|
-fn failure_context(
-  origin : FailureOrigin,
-  phase : ResponsePhase?,
-  raw : FailureRaw?,
-  warn : (String) -> Unit,
-) -> FailureCtx {
-  { origin_: origin, phase_: phase, raw_: raw, warn_: warn }
-}
-
-///|
-async fn Bot::run_registered_command(
-  self : Bot,
-  bot : BotCtx,
-  waiter : ComponentWaiter?,
-  command : RegisteredCommand,
-  raw : @framework.CommandCtx,
-) -> Unit {
-  (command.dispatch)(bot, waiter, self.warn_, raw) catch {
-    error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
-      raise error
-    BotDispatchError::Failure(command=name, phase~, source~) =>
-      invoke_error_policy(
-        self.current_policy(),
-        failure_context(
-          Command(name~),
-          Some(phase),
-          Some(RawCommand(raw)),
-          self.warn_,
-        ),
-        source,
-      )
-    error =>
-      invoke_error_policy(
-        self.current_policy(),
-        failure_context(
-          Command(name=command.name_),
-          Some(BeforeInitial),
-          Some(RawCommand(raw)),
-          self.warn_,
-        ),
-        error,
-      )
-  }
-}
-
-///|
-async fn Bot::run_registered_component(
-  self : Bot,
-  bot : BotCtx,
-  waiter : ComponentWaiter?,
-  entry : RegisteredComponent,
-  raw : @framework.ComponentCtx,
-) -> Unit {
-  dispatch_component_handler(
-    entry.prefix,
-    entry.handler,
-    bot,
-    waiter,
-    self.warn_,
-    raw,
-  ) catch {
-    error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
-      raise error
-    BotDispatchError::Failure(command=_, phase~, source~) =>
-      invoke_error_policy(
-        self.current_policy(),
-        failure_context(
-          Component(custom_id=raw.data.custom_id),
-          Some(phase),
-          Some(RawComponent(raw)),
-          self.warn_,
-        ),
-        source,
-      )
-    error =>
-      invoke_error_policy(
-        self.current_policy(),
-        failure_context(
-          Component(custom_id=raw.data.custom_id),
-          Some(BeforeInitial),
-          Some(RawComponent(raw)),
-          self.warn_,
-        ),
-        error,
-      )
-  }
-}
-
-///|
-async fn Bot::run_registered_modal(
-  self : Bot,
-  bot : BotCtx,
-  entry : RegisteredModal,
-  raw : @framework.ModalCtx,
-) -> Unit {
-  (entry.dispatch)(bot, raw) catch {
-    error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
-      raise error
-    BotDispatchError::Failure(command=_, phase~, source~) =>
-      invoke_error_policy(
-        self.current_policy(),
-        failure_context(
-          Modal(custom_id=raw.data.custom_id),
-          Some(phase),
-          Some(RawModal(raw)),
-          self.warn_,
-        ),
-        source,
-      )
-    error =>
-      invoke_error_policy(
-        self.current_policy(),
-        failure_context(
-          Modal(custom_id=raw.data.custom_id),
-          Some(BeforeInitial),
-          Some(RawModal(raw)),
-          self.warn_,
-        ),
-        error,
-      )
-  }
-}
-
-///|
-async fn Bot::run_registered_autocomplete(
-  self : Bot,
-  command : RegisteredCommand,
-  raw : @framework.AutocompleteCtx,
-) -> Unit {
-  dispatch_suggest(command.suggest_routes_, raw) catch {
-    error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
-      raise error
-    error => {
-      invoke_error_policy(
-        self.current_policy(),
-        failure_context(
-          Autocomplete(name=command.name_),
-          None,
-          None,
-          self.warn_,
-        ),
-        error,
-      )
-      // ErrorPolicy is transport-neutral and cannot construct an autocomplete
-      // callback, so complete the interaction with a safe empty result.
-      raw.suggest([])
-    }
-  }
-}
-
-///|
-fn Bot::populate_framework(
-  self : Bot,
-  framework : @framework.Framework,
-  bot : BotCtx,
-  waiter : ComponentWaiter?,
-) -> Unit {
-  for command in self.commands_ {
-    framework.command(command.definition, raw => {
-      self.run_registered_command(bot, waiter, command, raw)
-    })
-    |> ignore
-    if !command.suggest_routes_.is_empty() {
-      framework.autocomplete(command.name_, raw => {
-        self.run_registered_autocomplete(command, raw)
-      })
-      |> ignore
-    }
-  }
-  for entry in self.components_ {
-    framework.component(entry.prefix, raw => {
-      self.run_registered_component(bot, waiter, entry, raw)
-    })
-    |> ignore
-  }
-  for entry in self.modals_ {
-    framework.modal(entry.prefix, raw => {
-      self.run_registered_modal(bot, entry, raw)
-    })
-    |> ignore
-  }
-  // Registered last so explicitly configured raw handlers win by name.
-  for entry in self.autocompletes_ {
-    framework.autocomplete(entry.name, entry.dispatch) |> ignore
-  }
-  framework.on_error((label, error) => {
-    if @async.is_being_cancelled() || @async.is_cancellation_error(error) {
-      raise error
-    }
-    (self.warn_)("framework handler failed (\{label}): \{to_repr(error)}")
-  })
-  |> ignore
-}
-
-///|
-async fn Bot::sync_commands(
-  self : Bot,
-  client : @dhttp.Client,
-  application_id : @model.ApplicationId,
-) -> Unit {
-  let specs = self.commands_.map(command => command.definition)
-  match self.sync_ {
-    Global => sync_global_commands(client, application_id, specs)
-    Guild(guild_id) =>
-      sync_guild_commands(client, application_id, guild_id, specs)
-    Guilds(guild_ids) =>
-      for guild_id in guild_ids {
-        sync_guild_commands(client, application_id, guild_id, specs)
-      }
-    Disabled => ()
-  }
-}
-
-///|
 fn Bot::spawn_services(
   self : Bot,
   group : @async.TaskGroup[Unit],
@@ -705,9 +276,8 @@ fn Bot::spawn_services(
         error if @async.is_being_cancelled() ||
           @async.is_cancellation_error(error) => raise error
         error =>
-          invoke_error_policy(
-            self.current_policy(),
-            failure_context(Service(name=service.name), None, None, self.warn_),
+          self.app_.report_failure(
+            @app.FailureOrigin::Service(name=service.name),
             error,
           )
       }
@@ -718,7 +288,7 @@ fn Bot::spawn_services(
 ///|
 async fn Bot::spawn_event_handlers(
   self : Bot,
-  spawner : Spawner,
+  spawner : @app.Spawner,
   gateway : GatewayCtx,
   event : @model.Event,
 ) -> Unit {
@@ -730,11 +300,7 @@ async fn Bot::spawn_event_handlers(
           error if @async.is_being_cancelled() ||
             @async.is_cancellation_error(error) => raise error
           error =>
-            invoke_error_policy(
-              self.current_policy(),
-              failure_context(Event(kind~), None, None, self.warn_),
-              error,
-            )
+            self.app_.report_failure(@app.FailureOrigin::Event(kind~), error)
         }
       })
     }
@@ -745,11 +311,7 @@ async fn Bot::spawn_event_handlers(
         error if @async.is_being_cancelled() ||
           @async.is_cancellation_error(error) => raise error
         error =>
-          invoke_error_policy(
-            self.current_policy(),
-            failure_context(Event(kind~), None, None, self.warn_),
-            error,
-          )
+          self.app_.report_failure(@app.FailureOrigin::Event(kind~), error)
       }
     })
   }
@@ -758,7 +320,7 @@ async fn Bot::spawn_event_handlers(
 ///|
 async fn Bot::spawn_interaction(
   self : Bot,
-  spawner : Spawner,
+  spawner : @app.Spawner,
   framework : @framework.Framework,
   interaction : @model.Interaction,
 ) -> Unit {
@@ -768,7 +330,7 @@ async fn Bot::spawn_interaction(
         error if @async.is_being_cancelled() ||
           @async.is_cancellation_error(error) => raise error
         error => {
-          (self.warn_)("interaction processing failed: \{to_repr(error)}")
+          self.app_.warn("interaction processing failed: \{to_repr(error)}")
           false
         }
       },
@@ -779,7 +341,10 @@ async fn Bot::spawn_interaction(
 ///|
 /// Connect and process gateway events until graceful shutdown or a fatal close.
 pub async fn Bot::run(self : Bot) -> Unit {
-  self.validate()
+  self.app_.validate()
+  if self.token_.is_empty() {
+    raise @app.AppConfigError::EmptyToken
+  }
   let intents = self.resolved_intents()
   let owns_client = self.client_ is None
   let client = self.client_.unwrap_or_else(() => @dhttp.Client::new(self.token_))
@@ -813,25 +378,25 @@ pub async fn Bot::run(self : Bot) -> Unit {
           event_filter=filter,
         )
     }
-    let limiter = @async.Semaphore::new(self.max_in_flight_)
-    let spawner = bounded_spawner(group, limiter)
+    let spawner = self.app_.spawner(group)
     let mut gateway_ctx : GatewayCtx? = None
     let mut framework : @framework.Framework? = None
     for ;; {
       match shard.next() {
         Dispatch(Ready(ready) as event) => {
           if gateway_ctx is None {
-            let bot : BotCtx = {
-              client_: client,
-              application_id_: ready.application.id,
-            }
             let router = @framework.Framework::new(client, ready.application.id)
-            let waiter : ComponentWaiter = (custom_id, timeout_ms) => {
+            let waiter : @app.ComponentWaiter = (custom_id, timeout_ms) => {
               router.wait_for_component(custom_id~, timeout_ms?)
             }
-            self.populate_framework(router, bot, Some(waiter))
+            let app_ctx = self.app_.attach(
+              router,
+              client~,
+              application_id=ready.application.id,
+              waiter~,
+            )
             let created : GatewayCtx = {
-              bot_: bot,
+              app_: app_ctx,
               ready_: ready,
               shard_: shard,
               framework_: router,
@@ -839,7 +404,7 @@ pub async fn Bot::run(self : Bot) -> Unit {
             }
             gateway_ctx = Some(created)
             framework = Some(router)
-            self.sync_commands(client, ready.application.id)
+            self.app_.sync_commands(client, ready.application.id)
             self.spawn_services(group, created)
           }
           guard gateway_ctx is Some(ctx)
@@ -855,13 +420,15 @@ pub async fn Bot::run(self : Bot) -> Unit {
               self.spawn_event_handlers(spawner, ctx, event)
             }
             _ =>
-              (self.warn_)("dropping INTERACTION_CREATE received before READY")
+              self.app_.warn(
+                "dropping INTERACTION_CREATE received before READY",
+              )
           }
         Dispatch(event) =>
           match gateway_ctx {
             Some(ctx) => self.spawn_event_handlers(spawner, ctx, event)
             None =>
-              (self.warn_)(
+              self.app_.warn(
                 "dropping \{to_repr(event_kind(event))} received before READY",
               )
           }

@@ -17,7 +17,7 @@ pub(all) struct TargetUser {
 priv struct SlashRoute {
   path : Array[String]
   dispatch : async (
-    BotCtx,
+    AppCtx,
     ComponentWaiter?,
     (String) -> Unit,
     @framework.CommandCtx,
@@ -258,7 +258,7 @@ pub fn[A] subcommand(
 
 ///|
 /// Define a slash subcommand group. Nested groups are retained for validation
-/// and rejected by `Bot::validate`, never by panic or abort here.
+/// and rejected by `App::validate`, never by panic or abort here.
 pub fn subcommand_group(
   name~ : String,
   description~ : String,
@@ -347,7 +347,7 @@ fn[A] raise_failure(
   command : String,
   phase : ResponsePhase,
   source : Error,
-) -> A raise BotDispatchError {
+) -> A raise AppDispatchError {
   raise Failure(command~, phase~, source~)
 }
 
@@ -356,7 +356,7 @@ async fn[A] dispatch_command_handler(
   command : String,
   decode : (@framework.CommandCtx) -> A raise,
   handler : InteractionHandler[A],
-  bot : BotCtx,
+  bot : AppCtx,
   waiter : ComponentWaiter?,
   warn : (String) -> Unit,
   raw : @framework.CommandCtx,
@@ -391,7 +391,7 @@ async fn[A] dispatch_command_handler(
 ///|
 async fn[A] Command::dispatch_typed(
   self : Command[A],
-  bot : BotCtx,
+  bot : AppCtx,
   waiter : ComponentWaiter?,
   warn : (String) -> Unit,
   raw : @framework.CommandCtx,
@@ -472,7 +472,7 @@ pub struct RegisteredCommand {
   priv nested_group_paths_ : Array[Array[String]]
   priv suggest_routes_ : Array[SuggestRoute]
   priv dispatch : async (
-    BotCtx,
+    AppCtx,
     ComponentWaiter?,
     (String) -> Unit,
     @framework.CommandCtx,

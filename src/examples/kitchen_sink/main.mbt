@@ -158,8 +158,8 @@ fn run_seconds() -> Int {
 async fn main {
   let feedback = feedback_modal()
   let token = @env.get_env_var("DISCORD_TOKEN").unwrap_or("")
-  let bot = @discord.Bot::new(token~, sync=command_sync())
-  bot
+  let app = @discord.App::new(sync=command_sync())
+  app
   ..command(demo_command())
   ..command(wave_command())
   ..command(quote_command())
@@ -181,7 +181,7 @@ async fn main {
       |> ignore
     }),
   )
-  ..on_modal(
+  .on_modal(
     feedback,
     Immediate((ctx, form) => {
       let details = form.details.unwrap_or("(no details)")
@@ -192,7 +192,8 @@ async fn main {
       )
     }),
   )
-  .on(@discord.Events::ready(), (_ctx, ready) => {
+  let bot = @discord.Bot::new(app, token~)
+  bot.on(@discord.Events::ready(), (_ctx, ready) => {
     println("[bot] ready as \{ready.user.username}")
   })
   println("[try] /demo greet name:<autocomplete>")
@@ -201,7 +202,7 @@ async fn main {
   println("[try] Apps → Quote on a message")
   println("[try] use both buttons on the /demo greet response")
   try @async.with_timeout_opt(run_seconds() * 1000, () => bot.run()) catch {
-    @discord.BotConfigError::EmptyToken =>
+    @discord.AppConfigError::EmptyToken =>
       println("[error] EmptyToken: set DISCORD_TOKEN to run the bot")
     error => raise error
   } noraise {

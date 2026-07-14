@@ -12,7 +12,7 @@ pub(all) enum InteractionOutcome {
 
 ///|
 /// A gateway-free interaction dispatcher backed by a caller-owned task group.
-pub struct InteractionApp {
+pub struct InteractionEndpoint {
   priv framework : @framework.Framework
   priv spawner : Spawner
   priv warn : (String) -> Unit
@@ -27,24 +27,32 @@ priv enum InteractionRace {
 ///|
 /// Build a gateway-free dispatcher.
 ///
-/// When `client` is omitted, the app owns a client created from the bot token
+/// When `client` is omitted, the endpoint owns a client created from `token`
 /// and closes it when `group` finishes. When `application_id` is omitted, this
 /// method always resolves it through `GET /applications/@me`, including when
 /// `sync` is false. Supplying both values avoids startup HTTP requests when
 /// synchronization is disabled.
 ///
-/// If `sync` is true, command synchronization follows the bot's `CommandSync`
+/// If `sync` is true, command synchronization follows the app's `CommandSync`
 /// setting; `CommandSync::Disabled` still performs no synchronization.
-pub async fn Bot::start_interaction_app(
-  self : Bot,
+pub async fn App::serve(
+  self : App,
   group : @async.TaskGroup[Unit],
   client? : @dhttp.Client,
+  token? : String,
   application_id? : @model.ApplicationId,
   sync? : Bool = false,
-) -> InteractionApp {
+) -> InteractionEndpoint {
   self.validate()
-  let owns_client = client is None
-  let client = client.unwrap_or_else(() => @dhttp.Client::new(self.token_))
+  let (client, owns_client) = match client {
+    Some(client) => (client, false)
+    None => {
+      guard token is Some(token) && !token.is_empty() else {
+        raise AppConfigError::EmptyToken
+      }
+      (@dhttp.Client::new(token), true)
+    }
+  }
   if owns_client {
     group.add_defer(() => client.close())
   }
@@ -56,18 +64,16 @@ pub async fn Bot::start_interaction_app(
     self.sync_commands(client, application_id)
   }
   let framework = @framework.Framework::new(client, application_id)
-  let bot : BotCtx = { client_: client, application_id_: application_id }
-  self.populate_framework(framework, bot, None)
-  let limiter = @async.Semaphore::new(self.max_in_flight_)
-  { framework, spawner: bounded_spawner(group, limiter), warn: self.warn_ }
+  self.attach(framework, client~, application_id~) |> ignore
+  { framework, spawner: self.spawner(group), warn: self.warn_ }
 }
 
 ///|
 /// Dispatch one interaction and wait only for its initial response deadline.
 /// A timed-out handler remains attached to the app's task group and continues
 /// in the background.
-pub async fn InteractionApp::handle_interaction(
-  self : InteractionApp,
+pub async fn InteractionEndpoint::handle_interaction(
+  self : InteractionEndpoint,
   interaction : @model.Interaction,
   deadline_ms? : Int = 2500,
 ) -> InteractionOutcome {
@@ -111,8 +117,8 @@ pub async fn InteractionApp::handle_interaction(
 /// Returns callback JSON only for `Reply`. Multipart files cannot be expressed
 /// by this thin JSON API; callers that accept uploads should use
 /// `handle_interaction` and inspect `InteractionOutcome::Reply.files`.
-pub async fn InteractionApp::handle(
-  self : InteractionApp,
+pub async fn InteractionEndpoint::handle(
+  self : InteractionEndpoint,
   body : Json,
   deadline_ms? : Int = 2500,
 ) -> Json? {

@@ -363,7 +363,7 @@ pub(all) enum ModalSubmitHandler[A] {
 /// Read-only modal-submit context for handlers returning an initial message.
 pub struct ModalImmediateCtx {
   priv raw_ : @framework.ModalCtx
-  priv bot_ : BotCtx
+  priv bot_ : AppCtx
   priv state_ : String?
 }
 
@@ -371,7 +371,7 @@ pub struct ModalImmediateCtx {
 /// Modal-submit context available after a deferred response.
 pub struct ModalDeferredCtx {
   priv raw_ : @framework.ModalCtx
-  priv bot_ : BotCtx
+  priv bot_ : AppCtx
   priv state_ : String?
 }
 
@@ -388,7 +388,7 @@ fn modal_state(base : String, custom_id : String) -> String? raise HandlerError 
 }
 
 ///|
-pub fn ModalImmediateCtx::bot(self : ModalImmediateCtx) -> BotCtx {
+pub fn ModalImmediateCtx::app(self : ModalImmediateCtx) -> AppCtx {
   self.bot_
 }
 
@@ -420,7 +420,7 @@ pub fn ModalImmediateCtx::raw(self : ModalImmediateCtx) -> @framework.ModalCtx {
 }
 
 ///|
-pub fn ModalDeferredCtx::bot(self : ModalDeferredCtx) -> BotCtx {
+pub fn ModalDeferredCtx::app(self : ModalDeferredCtx) -> AppCtx {
   self.bot_
 }
 
@@ -492,7 +492,7 @@ async fn InitialResponse::send_modal(
 async fn[A] dispatch_modal_handler(
   modal : Modal[A],
   handler : ModalSubmitHandler[A],
-  bot : BotCtx,
+  bot : AppCtx,
   raw : @framework.ModalCtx,
 ) -> Unit {
   let route = raw.data.custom_id

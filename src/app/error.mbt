@@ -9,6 +9,6 @@ pub(all) suberror HandlerError {
 
 ///|
 /// A command dispatch failure with its response phase and original cause.
-pub(all) suberror BotDispatchError {
+pub(all) suberror AppDispatchError {
   Failure(command~ : String, phase~ : ResponsePhase, source~ : Error)
 } derive(Debug)

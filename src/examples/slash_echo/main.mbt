@@ -68,10 +68,10 @@ async fn main {
     Some(s) => @string.parse_int(s) catch { _ => DEFAULT_RUN_SECONDS }
     None => DEFAULT_RUN_SECONDS
   }
-  let bot = @discord.Bot::new(token~, sync=command_sync())
-  bot
-  ..command(echo_command())
-  .on(@discord.Events::ready(), (_ctx, ready) => {
+  let app = @discord.App::new(sync=command_sync())
+  app.command(echo_command())
+  let bot = @discord.Bot::new(app, token~)
+  bot.on(@discord.Events::ready(), (_ctx, ready) => {
     println("[bot] ready as \{ready.user.username}")
   })
   @async.with_timeout_opt(run_seconds * 1000, () => bot.run()) |> ignore

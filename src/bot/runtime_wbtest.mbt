@@ -98,12 +98,12 @@ test "commands_in_sync compares declarations and ignores server fields" {
   )
   debug_inspect(
     [
-      commands_in_sync([ping], [fetched_ping()]),
-      commands_in_sync([ping], [fetched_ping(description="Changed")]),
-      commands_in_sync([ping], [ping_with_option]),
-      commands_in_sync([echo], [echo_wrong_required]),
-      commands_in_sync([ping], [fetched_ping(name="other")]),
-      commands_in_sync([echo], [echo_matching]),
+      @app.commands_in_sync([ping], [fetched_ping()]),
+      @app.commands_in_sync([ping], [fetched_ping(description="Changed")]),
+      @app.commands_in_sync([ping], [ping_with_option]),
+      @app.commands_in_sync([echo], [echo_wrong_required]),
+      @app.commands_in_sync([ping], [fetched_ping(name="other")]),
+      @app.commands_in_sync([echo], [echo_matching]),
     ],
     content="[true, false, false, false, false, true]",
   )
@@ -168,13 +168,13 @@ test "commands_in_sync normalizes command defaults and uses type plus name" {
   )
   debug_inspect(
     [
-      commands_in_sync([slash], [response]),
-      commands_in_sync([slash], [wrong_nsfw]),
-      commands_in_sync([slash], [wrong_integration]),
-      commands_in_sync([slash], [wrong_contexts]),
-      commands_in_sync([slash], [wrong_dm_permission]),
-      commands_in_sync([slash], [wrong_permissions]),
-      commands_in_sync([slash], [wrong_type]),
+      @app.commands_in_sync([slash], [response]),
+      @app.commands_in_sync([slash], [wrong_nsfw]),
+      @app.commands_in_sync([slash], [wrong_integration]),
+      @app.commands_in_sync([slash], [wrong_contexts]),
+      @app.commands_in_sync([slash], [wrong_dm_permission]),
+      @app.commands_in_sync([slash], [wrong_permissions]),
+      @app.commands_in_sync([slash], [wrong_type]),
     ],
     content="[true, false, false, false, false, false, false]",
   )
@@ -196,7 +196,7 @@ test "commands_in_sync normalizes command defaults and uses type plus name" {
       #|}
     ),
   )
-  assert_true(commands_in_sync([explicit_defaults], [omitted_defaults]))
+  assert_true(@app.commands_in_sync([explicit_defaults], [omitted_defaults]))
   let user = @interaction.CommandSpec::user("inspect")
   let user_response = fetched_command(
     (
@@ -215,155 +215,31 @@ test "commands_in_sync normalizes command defaults and uses type plus name" {
       #|}
     ),
   )
-  assert_true(commands_in_sync([slash, user], [response, user_response]))
+  assert_true(@app.commands_in_sync([slash, user], [response, user_response]))
 }
 
 ///|
 test "intent derivation strips privileged intents and warns" {
-  let bot = Bot::new(token="token", sync=Disabled)
+  let app = @app.App::new(sync=@app.CommandSync::Disabled)
+  let bot = Bot::new(app, token="token")
   let warnings : Array[String] = []
-  bot.on_warn(message => warnings.push(message))
+  app.on_warn(message => warnings.push(message))
   bot.on(Events::message_create(), (_, _) => ())
   bot.on(Events::guild_member_add(), (_, _) => ())
   inspect(bot.resolved_intents().bits(), content="4608")
   inspect(warnings.length(), content="1")
   assert_true(warnings[0].contains("privileged intent"))
+  let explicit_app = @app.App::new(sync=@app.CommandSync::Disabled)
   let explicit = Bot::new(
+    explicit_app,
     token="token",
     intents=@model.Intents::guilds(),
-    sync=Disabled,
   )
   let explicit_warnings : Array[String] = []
-  explicit.on_warn(message => explicit_warnings.push(message))
+  explicit_app.on_warn(message => explicit_warnings.push(message))
   explicit.on(Events::message_create(), (_, _) => ())
   inspect(explicit.resolved_intents().bits(), content="1")
   inspect(explicit_warnings.length(), content="1")
-}
-
-///|
-test "bot validates command type names and slash child structure" {
-  try Bot::new(token="", sync=Disabled).validate() catch {
-    BotConfigError::EmptyToken => ()
-    error => fail("unexpected error: \{to_repr(error)}")
-  } noraise {
-    _ => fail("expected empty token error")
-  }
-  let duplicate = Bot::new(token="token", sync=Disabled)
-  let command = slash(
-    name="same",
-    description="Duplicate",
-    args=@interaction.Args::unit(),
-    handler=Raw(_ => ()),
-  )
-  duplicate.command(command)
-  duplicate.command(command)
-  try duplicate.validate() catch {
-    BotConfigError::DuplicateCommand(name~) => inspect(name, content="same")
-    error => fail("unexpected error: \{to_repr(error)}")
-  } noraise {
-    _ => fail("expected duplicate command error")
-  }
-  let mixed = Bot::new(token="token", sync=Disabled)
-  mixed.command(
-    slash(
-      name="shared",
-      description="Slash command",
-      args=@interaction.Args::unit(),
-      handler=Raw(_ => ()),
-    ),
-  )
-  mixed.command(user_command(name="shared", handler=Raw(_ => ())))
-  mixed.validate()
-  let duplicate_path = Bot::new(token="token", sync=Disabled)
-  duplicate_path.command(
-    slash_group(name="admin", description="Administrative tools", children=[
-      subcommand(
-        name="ping",
-        description="First",
-        args=@interaction.Args::unit(),
-        handler=Raw(_ => ()),
-      ),
-      subcommand(
-        name="ping",
-        description="Second",
-        args=@interaction.Args::unit(),
-        handler=Raw(_ => ()),
-      ),
-    ]),
-  )
-  try duplicate_path.validate() catch {
-    BotConfigError::DuplicateCommandPath(command~, path~) => {
-      inspect(command, content="admin")
-      inspect(path, content="ping")
-    }
-    error => fail("unexpected error: \{to_repr(error)}")
-  } noraise {
-    _ => fail("expected duplicate path error")
-  }
-  let nested_group = Bot::new(token="token", sync=Disabled)
-  nested_group.command(
-    slash_group(name="admin", description="Administrative tools", children=[
-      subcommand_group(name="outer", description="Outer group", children=[
-        subcommand_group(name="inner", description="Invalid inner group", children=[]),
-      ]),
-    ]),
-  )
-  try nested_group.validate() catch {
-    BotConfigError::NestedSubcommandGroup(command~, path~) => {
-      inspect(command, content="admin")
-      inspect(path, content="outer/inner")
-    }
-    error => fail("unexpected error: \{to_repr(error)}")
-  } noraise {
-    _ => fail("expected nested group error")
-  }
-  let choices_and_suggest = Bot::new(token="token", sync=Disabled)
-  choices_and_suggest.command(
-    slash(
-      name="search",
-      description="Search",
-      args=@interaction.Args::of(
-        @interaction.arg_string(
-          name="query",
-          description="Query",
-          choices=[@interaction.string_choice("Moon", "moon")],
-          suggest=(_, value) => [@interaction.string_choice(value, value)],
-        ),
-      ),
-      handler=Raw(_ => ()),
-    ),
-  )
-  try choices_and_suggest.validate() catch {
-    BotConfigError::ChoicesWithAutocomplete(command~, path~) => {
-      inspect(command, content="search")
-      inspect(path, content="query")
-    }
-    error => fail("unexpected error: \{to_repr(error)}")
-  } noraise {
-    _ => fail("expected choices and autocomplete error")
-  }
-  let invalid_order = Bot::new(token="token", sync=Disabled)
-  invalid_order.command(
-    slash(
-      name="ordered",
-      description="Option ordering",
-      args=@interaction.Args::map2(
-        @interaction.arg_string(name="optional", description="Optional").optional(),
-        @interaction.arg_string(name="required", description="Required"),
-        (_, _) => (),
-      ),
-      handler=Raw(_ => ()),
-    ),
-  )
-  try invalid_order.validate() catch {
-    BotConfigError::RequiredOptionAfterOptional(command~, path~) => {
-      inspect(command, content="ordered")
-      inspect(path, content="required")
-    }
-    error => fail("unexpected error: \{to_repr(error)}")
-  } noraise {
-    _ => fail("expected required-after-optional error")
-  }
 }
 
 ///|
@@ -436,13 +312,20 @@ fn message_delete_frame(sequence : Int, id : String) -> String {
 
 ///|
 async test "bot run dispatches concurrently, survives handlers, and shuts down" {
+  let empty_app = @app.App::new(sync=@app.CommandSync::Disabled)
+  try Bot::new(empty_app, token="").run() catch {
+    @app.AppConfigError::EmptyToken => ()
+    error => fail("unexpected error: \{to_repr(error)}")
+  } noraise {
+    _ => fail("expected empty token error")
+  }
   let transport = BotFakeTransport::new()
+  let app = @app.App::new(sync=@app.CommandSync::Disabled, max_in_flight=8)
   let bot = Bot::new(
+    app,
     token="test-token",
-    sync=Disabled,
     client=@dhttp.Client::new("test-token"),
     gateway_url="wss://gateway.example",
-    max_in_flight=8,
   )
   bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
   let ready_contexts : @aqueue.Queue[GatewayCtx] = @aqueue.Queue::new(
@@ -453,8 +336,8 @@ async test "bot run dispatches concurrently, survives handlers, and shuts down" 
   let first_started : @aqueue.Queue[Unit] = @aqueue.Queue::new(kind=Unbounded)
   let release_first : @aqueue.Queue[Unit] = @aqueue.Queue::new(kind=Unbounded)
   let second_started : @aqueue.Queue[Unit] = @aqueue.Queue::new(kind=Unbounded)
-  bot.command(
-    slash(
+  app.command(
+    @app.slash(
       name="raw",
       description="Raw command",
       args=@interaction.Args::unit(),
@@ -470,8 +353,8 @@ async test "bot run dispatches concurrently, survives handlers, and shuts down" 
       }),
     ),
   )
-  bot.command(
-    slash(
+  app.command(
+    @app.slash(
       name="fail",
       description="Failing command",
       args=@interaction.Args::unit(),
@@ -488,7 +371,7 @@ async test "bot run dispatches concurrently, survives handlers, and shuts down" 
     }
   })
   let policy_calls : @aqueue.Queue[String] = @aqueue.Queue::new(kind=Unbounded)
-  bot.error_policy((failure, _) => {
+  app.error_policy((failure, _) => {
     policy_calls.put("\{to_repr(failure.origin())}")
   })
   // No raw event handler is registered, so the gateway filter can reject
@@ -506,7 +389,7 @@ async test "bot run dispatches concurrently, survives handlers, and shuts down" 
     }
     transport.incoming.put(bot_ready_frame())
     let ctx = ready_contexts.get()
-    inspect(ctx.bot().application_id().to_string(), content="42")
+    inspect(ctx.app().application_id().to_string(), content="42")
     inspect(ctx.ready().application.id.to_string(), content="42")
     // The first command blocks. The second must still be pulled and dispatched,
     // otherwise component-waiter style command flows would deadlock.

@@ -55,10 +55,10 @@ async fn run_echo_bot(token : String) -> Unit {
       )
     }),
   )
-  let bot = @discord.Bot::new(token~)
-  bot
-  ..command(echo)
-  .on(@discord.Events::ready(), (_ctx, ready) => {
+  let app = @discord.App::new()
+  app.command(echo)
+  let bot = @discord.Bot::new(app, token~)
+  bot.on(@discord.Events::ready(), (_ctx, ready) => {
     println("ready as \{ready.user.username}")
   })
   bot.run()
@@ -80,7 +80,8 @@ test "quickstart is wired" {
 | `gaato/discord/gateway` | `Shard`: connection state machine, heartbeat, resume |
 | `gaato/discord/interaction` | Command/component builders, typed args and autocomplete data |
 | `gaato/discord/framework` | Interaction routing, response gates, low-level response contexts |
-| `gaato/discord/bot` | Typed commands/components/modals, gateway run loop, HTTP app, sync and policy |
+| `gaato/discord/app` | Gateway-free typed commands/components/modals, HTTP endpoint, sync and policy |
+| `gaato/discord/bot` | Native gateway executor and typed gateway event descriptors |
 | `gaato/discord/ratelimit` | Rate limiter trait + in-memory implementation |
 | `gaato/discord/queue` | Identify queue trait + in-memory implementation |
 
@@ -108,13 +109,13 @@ Typed gateway subscriptions use descriptors:
 ```mbt nocheck
 bot.on(@discord.Events::message_create(), (ctx, message) => {
   println("\{message.author.username}: \{message.content}")
-  let client = ctx.bot().http()
+  let client = ctx.app().http()
 })
 ```
 
-Gateway event and service handlers receive `GatewayCtx`. Its `bot()` method
-returns the transport-neutral `BotCtx`; READY, shard, shutdown, and component
-waiting remain gateway-only, with no reverse reference from `BotCtx`.
+Gateway event and service handlers receive `GatewayCtx`. Its `app()` method
+returns the transport-neutral `AppCtx`; READY, shard, shutdown, and component
+waiting remain gateway-only, with no reverse reference from `AppCtx`.
 
 When `intents` is omitted, `Bot` derives non-privileged intents from these
 descriptors. Privileged intents are never enabled automatically; pass them
@@ -136,8 +137,8 @@ modal, event, or service origin.
 
 Escape hatches are layered rather than hidden:
 
-1. `BotCtx::http()` returns the typed REST `Client`; gateway handlers obtain it
-   through `GatewayCtx::bot()`.
+1. `AppCtx::http()` returns the typed REST `Client`; gateway handlers obtain it
+   through `GatewayCtx::app()`.
 2. `client.request(...)` exposes route-level raw JSON for unsupported payloads.
 3. Fully manual gateway/framework wiring remains documented in
    `src/examples/low_level`.
@@ -173,8 +174,8 @@ fn readme_feedback_modal() -> @discord.Modal[ReadmeFeedback] {
 ///|
 fn readme_v3_bot(token : String) -> @discord.Bot {
   let feedback = readme_feedback_modal()
-  let bot = @discord.Bot::new(token~, sync=Disabled)
-  bot
+  let app = @discord.App::new(sync=Disabled)
+  app
   ..command(
     @discord.slash_group(name="demo", description="v3 demo", children=[
       @discord.subcommand(
@@ -234,7 +235,7 @@ fn readme_v3_bot(token : String) -> @discord.Bot {
       )
     }),
   )
-  bot
+  @discord.Bot::new(app, token~)
 }
 
 ///|
@@ -249,19 +250,20 @@ gateway lifecycle.
 
 ## HTTP interactions (experimental)
 
-`InteractionApp` dispatches the same declarations without opening a gateway.
+`InteractionEndpoint` dispatches the same declarations without opening a gateway.
 The caller owns the task group; handlers that defer or exceed the initial
 response deadline continue on that group after `handle` returns.
 
 ```mbt check
 ///|
 async fn dispatch_http_interaction(
-  bot : @discord.Bot,
+  app : @discord.App,
   group : @async.TaskGroup[Unit],
+  token : String,
   body : Json,
 ) -> Json? {
-  let app = bot.start_interaction_app(group, sync=false)
-  app.handle(body, deadline_ms=2500)
+  let endpoint = app.serve(group, token~, sync=false)
+  endpoint.handle(body, deadline_ms=2500)
 }
 
 ///|

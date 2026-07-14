@@ -33,14 +33,15 @@ pub using @framework {
 }
 
 ///|
-/// High-level bot runtime, typed commands, event descriptors, and error policy
-/// contexts. Their implementations remain owned by the focused `bot` package.
-pub using @bot {
-  type Bot,
-  type BotCtx,
-  type GatewayCtx,
-  type InteractionApp,
+/// Gateway-free application declarations, typed interaction handlers, command
+/// synchronization, and error policy contexts.
+pub using @app {
+  type App,
+  type AppCtx,
+  type InteractionEndpoint,
   type InteractionOutcome,
+  type Spawner,
+  type ComponentWaiter,
   type Command,
   type RegisteredCommand,
   type InteractionHandler,
@@ -61,12 +62,10 @@ pub using @bot {
   type SlashChild,
   type ImmediateCtx,
   type DeferredCtx,
-  type EventType,
-  type Events,
   type CommandSync,
-  type BotError,
-  type BotConfigError,
+  type AppConfigError,
   type HandlerError,
+  type ErrorPolicy,
   type FailureCtx,
   type FailureOrigin,
   type ResponsePhase,
@@ -79,6 +78,16 @@ pub using @bot {
   text_field,
   select_field,
   modal,
+}
+
+///|
+/// Native gateway executor and typed event descriptors.
+pub using @bot {
+  type Bot,
+  type GatewayCtx,
+  type EventType,
+  type Events,
+  type BotError,
 }
 
 ///|

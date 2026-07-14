@@ -23,7 +23,7 @@ pub(all) enum ComponentHandler {
 /// Read-only component context for handlers returning their initial callback.
 pub struct ComponentImmediateCtx {
   priv raw_ : @framework.ComponentCtx
-  priv bot_ : BotCtx
+  priv bot_ : AppCtx
   priv prefix_ : String
 }
 
@@ -31,7 +31,7 @@ pub struct ComponentImmediateCtx {
 /// Component context available after a deferred callback.
 pub struct ComponentDeferredCtx {
   priv raw_ : @framework.ComponentCtx
-  priv bot_ : BotCtx
+  priv bot_ : AppCtx
   priv prefix_ : String
   priv waiter_ : ComponentWaiter?
   priv warn_ : (String) -> Unit
@@ -143,7 +143,7 @@ fn selected_channels(raw : @framework.ComponentCtx) -> Array[@model.Channel] {
 }
 
 ///|
-pub fn ComponentImmediateCtx::bot(self : ComponentImmediateCtx) -> BotCtx {
+pub fn ComponentImmediateCtx::app(self : ComponentImmediateCtx) -> AppCtx {
   self.bot_
 }
 
@@ -221,7 +221,7 @@ pub fn ComponentImmediateCtx::raw(
 }
 
 ///|
-pub fn ComponentDeferredCtx::bot(self : ComponentDeferredCtx) -> BotCtx {
+pub fn ComponentDeferredCtx::app(self : ComponentDeferredCtx) -> AppCtx {
   self.bot_
 }
 
@@ -340,7 +340,7 @@ pub async fn ComponentDeferredCtx::wait_for_component(
 async fn dispatch_component_handler(
   prefix : String,
   handler : ComponentHandler,
-  bot : BotCtx,
+  bot : AppCtx,
   waiter : ComponentWaiter?,
   warn : (String) -> Unit,
   raw : @framework.ComponentCtx,
