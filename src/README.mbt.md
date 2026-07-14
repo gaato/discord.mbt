@@ -572,6 +572,31 @@ bot.on(@discord.Events::message_create(), (ctx, event) => {
 })
 ```
 
+### Opt-in cache
+
+`gaato/discord/cache` is a portable, gateway-driven in-memory cache. Attach it
+to a native `Bot` to apply decoded events before event handlers run. The cache
+only sees events allowed by the bot's configured intents.
+
+```mbt nocheck
+let cache = @cache.InMemoryCache::new(
+  resources=@cache.CacheResources::new(presences=true),
+  max_messages_per_channel=100,
+)
+bot.attach_cache(cache)
+
+match cache.permissions_in(guild_id, channel_id, user_id) {
+  Some(permissions) if permissions.contains(@model.Permissions::send_messages()) =>
+    println("can send")
+  _ => println("missing cache data or permission")
+}
+```
+
+Guilds, channels, roles, members, users, and voice states are cached by
+default. Presences and messages are disabled by default because of their
+volume; enable only the resources the application reads. Entity values are
+shared read-only model values, while list getters return fresh outer arrays.
+
 ### Pagination
 
 List endpoints expose stateful `Paginator[T]` values. `next_page` returns

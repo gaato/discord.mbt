@@ -243,6 +243,25 @@ test "intent derivation strips privileged intents and warns" {
 }
 
 ///|
+test "cache attachment keeps the gateway filter open and shares state" {
+  let app = @app.App::new(sync=@app.CommandSync::Disabled)
+  let bot = Bot::new(app, token="token")
+  let cache = @cache.InMemoryCache::new(
+    resources=@cache.CacheResources::default(),
+  )
+  bot.attach_cache(cache)
+  let filter = bot.event_filter()
+  assert_true(filter(KReady))
+  assert_true(filter(KInviteDelete))
+  guard bot.cache_ is Some(attached) else { fail("expected attached cache") }
+  attached.update(
+    @model.Event::GuildDelete({ id: @model.Id::parse("100"), unavailable: true }),
+  )
+  let guild_id : @model.GuildId = @model.Id::parse("100")
+  assert_true(cache.is_guild_unavailable(guild_id))
+}
+
+///|
 priv suberror RuntimeTestFailure {
   RuntimeTestFailure
 } derive(Debug)
@@ -315,6 +334,56 @@ fn message_delete_frame(sequence : Int, id : String) -> String {
   )
   .replace(old="SEQUENCE_PLACEHOLDER", new=sequence.to_string())
   .replace(old="ID_PLACEHOLDER", new=id)
+}
+
+///|
+fn message_create_frame(sequence : Int, id : String) -> String {
+  (
+    #|{"op":0,"s":SEQUENCE_PLACEHOLDER,"t":"MESSAGE_CREATE","d":{"id":"ID_PLACEHOLDER","channel_id":"6","author":{"id":"200","username":"nelly","discriminator":"0","avatar":null},"content":"cached","timestamp":"2025-06-01T10:00:00Z","edited_timestamp":null,"tts":false,"mention_everyone":false,"mentions":[],"mention_roles":[],"attachments":[],"embeds":[],"pinned":false,"type":0}}
+  )
+  .replace(old="SEQUENCE_PLACEHOLDER", new=sequence.to_string())
+  .replace(old="ID_PLACEHOLDER", new=id)
+}
+
+///|
+async test "bot updates cache before typed event handlers" {
+  let transport = BotFakeTransport::new()
+  let app = @app.App::new(sync=@app.CommandSync::Disabled)
+  let bot = Bot::new(
+    app,
+    token="test-token",
+    intents=@model.Intents::guild_messages(),
+    client=@dhttp.Client::new("test-token"),
+    gateway_url="wss://gateway.example",
+  )
+  bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  let cache = @cache.InMemoryCache::new(
+    resources=@cache.CacheResources::new(messages=true),
+  )
+  bot.attach_cache(cache)
+  let ready_contexts : @aqueue.Queue[GatewayCtx] = @aqueue.Queue::new(
+    kind=Unbounded,
+  )
+  bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
+  let observed : @aqueue.Queue[Bool] = @aqueue.Queue::new(kind=Unbounded)
+  bot.on(Events::message_create(), (_, event) => {
+    observed.put(
+      cache.message(event.message.channel_id, event.message.id) is Some(_),
+    )
+  })
+  @async.with_task_group(group => {
+    let running = group.spawn(no_wait=true, () => bot.run())
+    transport.incoming.put(BOT_HELLO)
+    guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
+      fail("expected identify")
+    }
+    transport.incoming.put(bot_ready_frame())
+    let ctx = ready_contexts.get()
+    transport.incoming.put(message_create_frame(2, "700"))
+    assert_true(observed.get())
+    ctx.shutdown()
+    running.wait()
+  })
 }
 
 ///|

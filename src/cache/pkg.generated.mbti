@@ -1,0 +1,50 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "gaato/discord/cache"
+
+import {
+  "gaato/discord/model",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub struct CacheResources {
+  // private fields
+}
+pub fn CacheResources::all() -> Self
+pub fn CacheResources::default() -> Self
+pub fn CacheResources::new(guilds? : Bool, channels? : Bool, roles? : Bool, members? : Bool, users? : Bool, voice_states? : Bool, presences? : Bool, messages? : Bool) -> Self
+pub fn CacheResources::none() -> Self
+
+pub struct InMemoryCache {
+  // private fields
+}
+pub fn InMemoryCache::channel(Self, @model.Id[@model.ChannelMarker]) -> @model.Channel?
+pub fn InMemoryCache::channels(Self) -> Array[@model.Channel]
+pub fn InMemoryCache::guild(Self, @model.Id[@model.GuildMarker]) -> @model.Guild?
+pub fn InMemoryCache::guilds(Self) -> Array[@model.Guild]
+pub fn InMemoryCache::is_guild_unavailable(Self, @model.Id[@model.GuildMarker]) -> Bool
+pub fn InMemoryCache::member(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker]) -> @model.GuildMember?
+pub fn InMemoryCache::members(Self, @model.Id[@model.GuildMarker]) -> Array[@model.GuildMember]
+pub fn InMemoryCache::message(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker]) -> @model.Message?
+pub fn InMemoryCache::messages(Self, @model.Id[@model.ChannelMarker]) -> Array[@model.Message]
+pub fn InMemoryCache::new(resources~ : CacheResources, max_messages_per_channel? : Int) -> Self
+pub fn InMemoryCache::permissions(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker]) -> @model.Permissions?
+pub fn InMemoryCache::permissions_in(Self, @model.Id[@model.GuildMarker], @model.Id[@model.ChannelMarker], @model.Id[@model.UserMarker]) -> @model.Permissions?
+pub fn InMemoryCache::presence(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker]) -> @model.PresenceUpdateEvent?
+pub fn InMemoryCache::presences(Self, @model.Id[@model.GuildMarker]) -> Array[@model.PresenceUpdateEvent]
+pub fn InMemoryCache::role(Self, @model.Id[@model.GuildMarker], @model.Id[@model.RoleMarker]) -> @model.Role?
+pub fn InMemoryCache::roles(Self, @model.Id[@model.GuildMarker]) -> Array[@model.Role]
+pub fn InMemoryCache::unavailable_guilds(Self) -> Array[@model.Id[@model.GuildMarker]]
+pub fn InMemoryCache::update(Self, @model.Event) -> Unit
+pub fn InMemoryCache::user(Self, @model.Id[@model.UserMarker]) -> @model.User?
+pub fn InMemoryCache::users(Self) -> Array[@model.User]
+pub fn InMemoryCache::voice_state(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker]) -> @model.VoiceState?
+pub fn InMemoryCache::voice_states(Self, @model.Id[@model.GuildMarker]) -> Array[@model.VoiceState]
+
+// Type aliases
+
+// Traits
+

@@ -45,6 +45,7 @@ pub struct Bot {
   priv shard_count_ : Int
   priv typed_events_ : Array[TypedEventHandler]
   priv raw_events_ : Array[async (GatewayCtx, @model.Event) -> Unit]
+  priv mut cache_ : @cache.InMemoryCache?
   priv decode_errors_ : Array[(String, Json) -> Unit]
   priv services_ : Array[ServiceHandler]
   // Production uses Shard::start's WebSocket connector. Whitebox tests inject
@@ -72,10 +73,18 @@ pub fn Bot::new(
     shard_count_: shard_count,
     typed_events_: [],
     raw_events_: [],
+    cache_: None,
     decode_errors_: [],
     services_: [],
     connector_: Ref(None),
   }
+}
+
+///|
+/// Feeds every decoded gateway event into an opt-in cache before dispatching
+/// typed and raw event handlers.
+pub fn Bot::attach_cache(self : Bot, cache : @cache.InMemoryCache) -> Unit {
+  self.cache_ = Some(cache)
 }
 
 ///|
@@ -279,7 +288,7 @@ fn event_kind(event : @model.Event) -> @model.EventKind {
 
 ///|
 fn Bot::event_filter(self : Bot) -> (@model.EventKind) -> Bool {
-  if !self.raw_events_.is_empty() {
+  if self.cache_ is Some(_) || !self.raw_events_.is_empty() {
     return _ => true
   }
   kind => {
@@ -415,6 +424,9 @@ pub async fn Bot::run(self : Bot) -> Unit {
     for ;; {
       match shard.next() {
         Dispatch(Ready(ready) as event) => {
+          if self.cache_ is Some(cache) {
+            cache.update(event)
+          }
           if gateway_ctx is None {
             let router = @framework.Framework::new(client, ready.application.id)
             let waiter : @app.ComponentWaiter = (custom_id, timeout_ms) => {
@@ -442,7 +454,10 @@ pub async fn Bot::run(self : Bot) -> Unit {
           ctx.ready_ = ready
           self.spawn_event_handlers(spawner, ctx, event)
         }
-        Dispatch(InteractionCreate(interaction) as event) =>
+        Dispatch(InteractionCreate(interaction) as event) => {
+          if self.cache_ is Some(cache) {
+            cache.update(event)
+          }
           match (gateway_ctx, framework) {
             (Some(ctx), Some(router)) => {
               // Processing is another bounded child task. Awaiting it here
@@ -455,7 +470,11 @@ pub async fn Bot::run(self : Bot) -> Unit {
                 "dropping INTERACTION_CREATE received before READY",
               )
           }
+        }
         Dispatch(event) => {
+          if self.cache_ is Some(cache) {
+            cache.update(event)
+          }
           self.observe_decode_error(event)
           match gateway_ctx {
             Some(ctx) => self.spawn_event_handlers(spawner, ctx, event)

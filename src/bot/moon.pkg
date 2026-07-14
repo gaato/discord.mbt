@@ -1,5 +1,6 @@
 import {
   "gaato/discord/model",
+  "gaato/discord/cache",
   "gaato/discord/http" @dhttp,
   "gaato/discord/gateway",
   "gaato/discord/framework",
