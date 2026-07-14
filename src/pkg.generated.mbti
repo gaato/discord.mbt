@@ -2,6 +2,7 @@
 package "gaato/discord"
 
 import {
+  "gaato/discord/bot",
   "gaato/discord/framework",
   "gaato/discord/gateway",
   "gaato/discord/http",
@@ -12,14 +13,56 @@ import {
 // Values
 pub const API_VERSION : Int = 10
 
+pub fn arg_attachment(name~ : String, description~ : String) -> @interaction.Arg[@model.Attachment]
+
+pub fn arg_bool(name~ : String, description~ : String) -> @interaction.Arg[Bool]
+
+pub fn arg_channel(name~ : String, description~ : String, channel_types? : Array[@model.ChannelType]) -> @interaction.Arg[@model.Id[@model.ChannelMarker]]
+
+pub fn arg_int(name~ : String, description~ : String, min? : Int64, max? : Int64, choices? : Array[@model.CommandOptionChoice]) -> @interaction.Arg[Int64]
+
+pub fn arg_mentionable(name~ : String, description~ : String) -> @interaction.Arg[@model.Id[@model.GenericMarker]]
+
+pub fn arg_number(name~ : String, description~ : String, min? : Double, max? : Double, choices? : Array[@model.CommandOptionChoice]) -> @interaction.Arg[Double]
+
+pub fn arg_role(name~ : String, description~ : String) -> @interaction.Arg[@model.Id[@model.RoleMarker]]
+
+pub fn arg_string(name~ : String, description~ : String, choices? : Array[@model.CommandOptionChoice], min_length? : Int, max_length? : Int) -> @interaction.Arg[String]
+
+pub fn arg_user(name~ : String, description~ : String) -> @interaction.Arg[@model.Id[@model.UserMarker]]
+
+pub fn[A] default(@interaction.Arg[A], A) -> @interaction.Arg[A]
+
+pub fn[A] optional(@interaction.Arg[A]) -> @interaction.Arg[A?]
+
+pub fn[A] slash(name~ : String, description~ : String, args~ : @interaction.Args[A], handler~ : @bot.InteractionHandler[A]) -> @bot.Command[A]
+
+pub fn[A] validate(@interaction.Arg[A], (A) -> String?) -> @interaction.Arg[A]
+
 // Errors
 
 // Types and methods
 
 // Type aliases
+pub using @interaction {type Arg}
+
+pub using @interaction {type Args}
+
+pub using @interaction {type ArgsDecodeError}
+
 pub using @framework {type AutocompleteCtx}
 
+pub using @bot {type Bot}
+
+pub using @bot {type BotConfigError}
+
+pub using @bot {type BotCtx}
+
+pub using @bot {type BotError}
+
 pub using @http {type Client}
+
+pub using @bot {type Command}
 
 pub using @framework {type CommandCtx}
 
@@ -27,17 +70,41 @@ pub using @interaction {type CommandOptions}
 
 pub using @interaction {type CommandSpec}
 
+pub using @bot {type CommandSync}
+
 pub using @framework {type ComponentCtx}
 
+pub using @bot {type DeferredCtx}
+
 pub using @model {type Event}
+
+pub using @bot {type EventType}
+
+pub using @bot {type Events}
+
+pub using @bot {type FailureCtx}
+
+pub using @bot {type FailureOrigin}
 
 pub using @http {type FileUpload}
 
 pub using @framework {type Framework}
 
+pub using @bot {type HandlerError}
+
+pub using @bot {type ImmediateCtx}
+
+pub using @bot {type InitialResponse}
+
 pub using @model {type Intents}
 
+pub using @bot {type InteractionHandler}
+
 pub using @framework {type ModalCtx}
+
+pub using @bot {type RegisteredCommand}
+
+pub using @bot {type ResponsePhase}
 
 pub using @gateway {type Shard}
 

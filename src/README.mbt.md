@@ -1,15 +1,16 @@
 # discord.mbt
 
-A low-level Discord bot library for [MoonBit](https://www.moonbit-lang.com/)
-(native backend): typed API models, a rate-limited REST client, a WebSocket
-gateway shard, and a small command framework on top.
+A Discord bot library for [MoonBit](https://www.moonbit-lang.com/) (native
+backend): typed API models, a rate-limited REST client, a WebSocket gateway
+shard, and a high-level typed bot layer.
 
 The design follows [twilight](https://github.com/twilight-rs/twilight):
 loosely coupled packages that are accurate to the Discord API first, with an
 ergonomic layer added on top rather than baked in.
 
-> **Status**: pre-1.0. The API surface may still change. Gateway compression
-> and sharding coordination across processes are not implemented yet.
+> **Status**: pre-1.0. The high-level bot layer is available, but the API
+> surface may still change. Gateway compression and sharding coordination
+> across processes are not implemented yet.
 
 ## Install
 
@@ -25,52 +26,48 @@ The library targets the **native** backend and is built on
 A bot that registers a `/echo` slash command and answers it
 (see `src/examples/slash_echo` for the full version):
 
-```mbt nocheck
+```mbt check
 ///|
-async fn main {
-  let token = @env.get_env_var("DISCORD_TOKEN").unwrap_or("")
-  let client = @discord.Client::new(token)
-  let gateway_url = client.get_gateway()
-  @async.with_task_group(group => {
-    let shard = @discord.Shard::start(
-      group,
-      token~,
-      intents=@discord.Intents::guilds(),
-      gateway_url~,
+struct QuickstartEchoArgs {
+  text : String
+  times : Int
+}
+
+///|
+async fn run_echo_bot(token : String) -> Unit {
+  let args : @discord.Args[QuickstartEchoArgs] = @discord.Args::map2(
+    @discord.arg_string(name="text", description="What to echo"),
+    @discord.arg_int(
+      name="times",
+      description="How many times (1-5)",
+      min=1,
+      max=5,
     )
-    let mut framework : @discord.Framework? = None
-    for ;; {
-      match shard.next() {
-        Dispatch(Ready(ready)) => {
-          let fw = @discord.Framework::new(client, ready.application.id)
-            .command(
-              @discord.CommandSpec::slash("echo", "Echo your text back", options=[
-                @interaction.string_option(
-                  "text",
-                  "What to echo",
-                  required=true,
-                ),
-              ]),
-              ctx => ctx.respond(content=ctx.options.string("text")),
-            )
-            .on_error((label, error) => {
-              println("\{label} failed: \{to_repr(error)}")
-            })
-          fw.sync_global() |> ignore
-          framework = Some(fw)
-        }
-        Dispatch(InteractionCreate(interaction)) => {
-          guard framework is Some(fw) else { continue }
-          fw.process(interaction) |> ignore
-        }
-        FatallyClosed(code~) => {
-          println("closed: \{code}")
-          break
-        }
-        _ => ()
-      }
-    }
+    |> @discord.default(1L),
+    (text, times) => { text, times: times.to_int() },
+  )
+  let echo = @discord.slash(
+    name="echo",
+    description="Echo your text back",
+    args~,
+    handler=Immediate((_ctx, value) => {
+      @discord.InitialResponse::message(
+        content=Array::make(value.times, value.text).join("\n"),
+      )
+    }),
+  )
+  let bot = @discord.Bot::new(token~)
+  bot
+  ..command(echo)
+  .on(@discord.Events::ready(), (_ctx, ready) => {
+    println("ready as \{ready.user.username}")
   })
+  bot.run()
+}
+
+///|
+test "quickstart is wired" {
+  ignore(run_echo_bot)
 }
 ```
 
@@ -84,11 +81,60 @@ async fn main {
 | `gaato/discord/gateway` | `Shard`: connection state machine, heartbeat, resume |
 | `gaato/discord/interaction` | Command specs, option builders, typed option decoding |
 | `gaato/discord/framework` | Routing interactions to handlers, response contexts |
+| `gaato/discord/bot` | Managed run loop, typed commands/events, sync and error policy |
 | `gaato/discord/ratelimit` | Rate limiter trait + in-memory implementation |
 | `gaato/discord/queue` | Identify queue trait + in-memory implementation |
 
 Everything below `framework` is usable on its own — a REST-only tool needs
 nothing but `http` and `model`.
+
+## High-level bot layer
+
+`Command[A]` pairs one handler with `Args[A]`. The argument value is the single
+source of truth for both Discord's option registration payload and interaction
+decoding. Build records with `Args::map1` through `Args::map8`; for nine or
+more fields, compose smaller values with `zip` and `map`. `Args::custom`
+remains available when a command needs a specialized decoder.
+
+Choose a handler mode according to Discord's three-second initial-response
+deadline:
+
+- `Immediate` computes and returns an `InitialResponse` before the deadline.
+- `Deferred` acknowledges first, then receives a `DeferredCtx` exposing only
+  `edit_original`, `followup`, and component waiting.
+- `Raw` receives the underlying `CommandCtx` for imperative or unusual flows.
+
+Typed gateway subscriptions use descriptors:
+
+```mbt nocheck
+bot.on(@discord.Events::message_create(), (ctx, message) => {
+  println("\{message.author.username}: \{message.content}")
+})
+```
+
+When `intents` is omitted, `Bot` derives non-privileged intents from these
+descriptors. Privileged intents are never enabled automatically; pass them
+explicitly when subscribing to member or presence events, or when message
+content visibility is required.
+
+`CommandSync` defaults to `Global`. On the first READY, the bot fetches current
+commands and skips the bulk PUT when declarations already match. Guild and
+multi-guild targets are also available. **Synchronization uses Discord's bulk
+overwrite endpoints: commands registered outside this code are deleted from
+the selected scope when a PUT is needed.** Use `Disabled` when another process
+owns registration.
+
+Install an `error_policy` to map failures to logs or interaction responses.
+Handlers can raise `HandlerError::UserMessage`, `GuildOnly`,
+`MissingPermission`, or `InvalidArgument` for expected failures; unexpected
+errors reach the same policy with their command, event, or service origin.
+
+Escape hatches are layered rather than hidden:
+
+1. `BotCtx::http()` returns the typed REST `Client`.
+2. `client.request(...)` exposes route-level raw JSON for unsupported payloads.
+3. Fully manual gateway/framework wiring remains documented in
+   `src/examples/low_level`.
 
 ## Typed models
 

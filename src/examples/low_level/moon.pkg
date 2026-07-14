@@ -4,11 +4,13 @@ import {
   "gaato/discord/gateway",
   "gaato/discord/interaction",
   "gaato/discord/framework",
-  "gaato/discord/bot",
+  "moonbitlang/async",
+  "moonbitlang/core/env",
+  "moonbitlang/core/string",
 }
 
-import {
-  "moonbitlang/core/json",
-  "gaato/discord/model",
-  "gaato/discord/interaction",
-} for "test"
+supported_targets = "native"
+
+options(
+  "is-main": true,
+)
