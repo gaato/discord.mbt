@@ -4,9 +4,14 @@ import {
   "gaato/discord/gateway",
   "gaato/discord/interaction",
   "gaato/discord/framework",
+  "moonbitlang/async",
   "moonbitlang/core/json",
 }
 
 import {
   "moonbitlang/core/json",
 } for "test"
+
+import {
+  "moonbitlang/async/aqueue",
+} for "wbtest"

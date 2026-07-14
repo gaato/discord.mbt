@@ -3,13 +3,21 @@
 ///
 /// Values are constructed by the bot runtime; the public API intentionally
 /// exposes read-only accessors only.
-#warnings("-struct_never_constructed")
 pub struct BotCtx {
   priv client_ : @dhttp.Client
   priv application_id_ : @model.ApplicationId
-  priv ready_ : @model.Ready
+  priv mut ready_ : @model.Ready
   priv shard_ : @gateway.Shard
   priv framework_ : @framework.Framework
+  priv mut shutdown_requested_ : Bool
+}
+
+///|
+/// Request a graceful stop. Closing the shard wakes the run loop; the task
+/// group then waits for already-started handlers before returning normally.
+pub async fn BotCtx::shutdown(self : BotCtx) -> Unit {
+  self.shutdown_requested_ = true
+  self.shard_.close()
 }
 
 ///|

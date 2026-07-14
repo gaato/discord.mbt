@@ -11,12 +11,24 @@ import {
 }
 
 // Values
+pub fn commands_in_sync(Array[@interaction.CommandSpec], Array[@model.ApplicationCommand]) -> Bool
+
 pub fn[A] slash(name~ : String, description~ : String, args~ : @interaction.Args[A], handler~ : InteractionHandler[A]) -> Command[A]
 
 // Errors
+pub(all) suberror BotConfigError {
+  EmptyToken
+  DuplicateCommand(name~ : String)
+} derive(@debug.Debug)
+
 pub(all) suberror BotDispatchError {
   Failure(command~ : String, phase~ : ResponsePhase, source~ : Error)
 } derive(@debug.Debug)
+
+pub(all) suberror BotError {
+  FatallyClosed(code~ : Int)
+} derive(@debug.Debug)
+pub impl Show for BotError
 
 pub(all) suberror HandlerError {
   UserMessage(message~ : String, ephemeral~ : Bool)
@@ -26,6 +38,22 @@ pub(all) suberror HandlerError {
 } derive(@debug.Debug)
 
 // Types and methods
+pub struct Bot {
+  // private fields
+}
+pub fn Bot::autocomplete(Self, String, async (@framework.AutocompleteCtx) -> Unit) -> Unit
+pub fn[A] Bot::command(Self, Command[A]) -> Unit
+pub fn Bot::component(Self, String, async (@framework.ComponentCtx) -> Unit) -> Unit
+pub fn Bot::error_policy(Self, async (FailureCtx, Error) -> Unit) -> Unit
+pub fn Bot::modal(Self, String, async (@framework.ModalCtx) -> Unit) -> Unit
+pub fn Bot::new(token~ : String, intents? : @model.Intents, sync? : CommandSync, client? : @http.Client, gateway_url? : String, shard_id? : Int, shard_count? : Int, max_in_flight? : Int) -> Self
+pub fn[T] Bot::on(Self, EventType[T], async (BotCtx, T) -> Unit) -> Unit
+pub fn Bot::on_event(Self, async (BotCtx, @model.Event) -> Unit) -> Unit
+pub fn Bot::on_warn(Self, (String) -> Unit) -> Unit
+pub fn Bot::register(Self, RegisteredCommand) -> Unit
+pub async fn Bot::run(Self) -> Unit
+pub fn Bot::service(Self, name~ : String, async (BotCtx) -> Unit) -> Unit
+
 pub struct BotCtx {
   // private fields
 }
@@ -34,6 +62,7 @@ pub fn BotCtx::framework_raw(Self) -> @framework.Framework
 pub fn BotCtx::http(Self) -> @http.Client
 pub fn BotCtx::ready(Self) -> @model.Ready
 pub fn BotCtx::shard_raw(Self) -> @gateway.Shard
+pub async fn BotCtx::shutdown(Self) -> Unit
 pub async fn BotCtx::wait_for_component(Self, custom_id~ : String, timeout_ms? : Int) -> @framework.ComponentCtx?
 
 pub struct Command[A] {
@@ -41,6 +70,13 @@ pub struct Command[A] {
 }
 pub fn[A] Command::erase(Self[A]) -> RegisteredCommand
 pub fn[A] Command::spec(Self[A]) -> @interaction.CommandSpec
+
+pub(all) enum CommandSync {
+  Global
+  Guild(@model.Id[@model.GuildMarker])
+  Guilds(Array[@model.Id[@model.GuildMarker]])
+  Disabled
+} derive(@debug.Debug)
 
 pub struct DeferredCtx {
   // private fields
@@ -136,6 +172,19 @@ pub fn Events::voice_server_update() -> EventType[@model.VoiceServerUpdateEvent]
 pub fn Events::voice_state_update() -> EventType[@model.VoiceState]
 pub fn Events::webhooks_update() -> EventType[@model.WebhooksUpdateEvent]
 
+pub struct FailureCtx {
+  // private fields
+}
+pub fn FailureCtx::origin(Self) -> FailureOrigin
+pub fn FailureCtx::phase(Self) -> ResponsePhase?
+pub async fn FailureCtx::respond_error(Self, String, ephemeral? : Bool) -> Unit
+
+pub(all) enum FailureOrigin {
+  Command(name~ : String)
+  Event(kind~ : @model.EventKind)
+  Service(name~ : String)
+} derive(@debug.Debug)
+
 pub struct ImmediateCtx {
   // private fields
 }
@@ -168,6 +217,7 @@ pub(all) enum ResponsePhase {
 } derive(Eq, @debug.Debug)
 
 // Type aliases
+pub type ErrorPolicy = async (FailureCtx, Error) -> Unit
 
 // Traits
 

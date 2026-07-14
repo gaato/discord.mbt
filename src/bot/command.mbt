@@ -93,7 +93,6 @@ async fn[A] Command::dispatch_typed(
 
 ///|
 /// A type-erased command consumed by the bot runtime.
-#warnings("-unused_field")
 pub struct RegisteredCommand {
   priv name_ : String
   priv definition : @interaction.CommandSpec
