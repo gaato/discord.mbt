@@ -738,7 +738,7 @@ pub(all) struct EmbedVideo {
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct Emoji {
-  id : Nullable[Id[EmojiMarker]]
+  id : Nullable[Id[EmojiMarker]]?
   name : Nullable[String]
   animated : Bool?
   roles : Array[Id[RoleMarker]]?
@@ -1074,9 +1074,9 @@ pub(all) struct Guild {
   approximate_member_count : Int?
   approximate_presence_count : Int?
   welcome_screen : WelcomeScreen?
-  nsfw_level : NsfwLevel
+  nsfw_level : NsfwLevel?
   stickers : Array[Sticker]?
-  premium_progress_bar_enabled : Bool
+  premium_progress_bar_enabled : Bool?
   safety_alerts_channel_id : Nullable[Id[ChannelMarker]]
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
@@ -1165,7 +1165,7 @@ pub(all) struct GuildMember {
   premium_since : Nullable[Timestamp]?
   deaf : Bool?
   mute : Bool?
-  flags : GuildMemberFlags
+  flags : GuildMemberFlags?
   pending : Bool?
   permissions : Permissions?
   communication_disabled_until : Nullable[Timestamp]?
@@ -2014,7 +2014,7 @@ pub(all) struct Role {
   managed : Bool
   mentionable : Bool
   tags : RoleTags?
-  flags : RoleFlags
+  flags : RoleFlags?
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct RoleFlags(UInt64) derive(Eq)
@@ -2436,7 +2436,7 @@ pub(all) struct User {
   id : Id[UserMarker]
   username : String
   discriminator : String
-  global_name : Nullable[String]
+  global_name : Nullable[String]?
   avatar : Nullable[ImageHash]
   bot : Bool?
   system : Bool?
@@ -2561,7 +2561,7 @@ pub(all) struct VoiceState {
   self_deaf : Bool
   self_mute : Bool
   self_stream : Bool?
-  self_video : Bool
+  self_video : Bool?
   suppress : Bool
   request_to_speak_timestamp : Nullable[Timestamp]
 } derive(ToJson, @debug.Debug, @json.FromJson)

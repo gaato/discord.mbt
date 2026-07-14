@@ -13,7 +13,7 @@ pub(all) struct Role {
   managed : Bool
   mentionable : Bool
   tags : RoleTags?
-  flags : RoleFlags
+  flags : RoleFlags?
 } derive(ToJson, FromJson, Debug)
 
 ///|

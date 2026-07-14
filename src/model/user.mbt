@@ -4,7 +4,7 @@ pub(all) struct User {
   id : UserId
   username : String
   discriminator : String
-  global_name : Nullable[String]
+  global_name : Nullable[String]?
   avatar : Nullable[ImageHash]
   bot : Bool?
   system : Bool?

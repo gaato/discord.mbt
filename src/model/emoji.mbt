@@ -1,7 +1,7 @@
 ///|
 /// A Discord custom or reaction emoji.
 pub(all) struct Emoji {
-  id : Nullable[EmojiId]
+  id : Nullable[EmojiId]?
   name : Nullable[String]
   animated : Bool?
   roles : Array[RoleId]?

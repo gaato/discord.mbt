@@ -104,12 +104,12 @@ test "guild decodes a full fixture with future features" {
       #|      managed: false,
       #|      mentionable: false,
       #|      tags: None,
-      #|      flags: 0,
+      #|      flags: Some(0),
       #|    },
       #|  ],
       #|  emojis: [
       #|    {
-      #|      id: Value(41771983429993937),
+      #|      id: Some(Value(41771983429993937)),
       #|      name: Value("wave"),
       #|      animated: Some(false),
       #|      roles: None,
@@ -151,9 +151,9 @@ test "guild decodes a full fixture with future features" {
       #|      ],
       #|    },
       #|  ),
-      #|  nsfw_level: Default,
+      #|  nsfw_level: Some(Default),
       #|  stickers: Some([]),
-      #|  premium_progress_bar_enabled: true,
+      #|  premium_progress_bar_enabled: Some(true),
       #|  safety_alerts_channel_id: Null,
       #|}
     ),
@@ -230,9 +230,9 @@ test "guild decodes required fields only" {
       #|  approximate_member_count: None,
       #|  approximate_presence_count: None,
       #|  welcome_screen: None,
-      #|  nsfw_level: Default,
+      #|  nsfw_level: Some(Default),
       #|  stickers: None,
-      #|  premium_progress_bar_enabled: false,
+      #|  premium_progress_bar_enabled: Some(false),
       #|  safety_alerts_channel_id: Null,
       #|}
     ),

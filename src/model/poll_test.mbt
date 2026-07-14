@@ -29,7 +29,7 @@ test "poll decodes directly and through a message" {
       #|        text: Some("Yes"),
       #|        emoji: Some(
       #|          {
-      #|            id: Null,
+      #|            id: Some(Null),
       #|            name: Value("👍"),
       #|            animated: None,
       #|            roles: None,

@@ -11,7 +11,7 @@ pub(all) struct GuildMember {
   // Absent on the partial members in interaction resolved data.
   deaf : Bool?
   mute : Bool?
-  flags : GuildMemberFlags
+  flags : GuildMemberFlags?
   pending : Bool?
   permissions : Permissions?
   communication_disabled_until : Nullable[Timestamp]?

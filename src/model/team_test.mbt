@@ -27,7 +27,7 @@ test "developer team decodes a realistic fixture" {
       #|        id: 80351110224678912,
       #|        username: "Nelly",
       #|        discriminator: "0",
-      #|        global_name: Value("Nelly"),
+      #|        global_name: Some(Value("Nelly")),
       #|        avatar: Null,
       #|        bot: None,
       #|        system: None,

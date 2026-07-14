@@ -40,7 +40,7 @@ test "sticker decodes a full fixture" {
       #|      id: 80351110224678912,
       #|      username: "Nelly",
       #|      discriminator: "0",
-      #|      global_name: Null,
+      #|      global_name: Some(Null),
       #|      avatar: Null,
       #|      bot: None,
       #|      system: None,

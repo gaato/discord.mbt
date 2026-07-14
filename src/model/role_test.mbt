@@ -53,7 +53,7 @@ test "role decodes a full fixture" {
       #|      guild_connections: true,
       #|    },
       #|  ),
-      #|  flags: 1,
+      #|  flags: Some(1),
       #|}
     ),
   )
@@ -89,7 +89,7 @@ test "role decodes required fields only" {
       #|  managed: false,
       #|  mentionable: false,
       #|  tags: None,
-      #|  flags: 0,
+      #|  flags: Some(0),
       #|}
     ),
   )
@@ -109,7 +109,7 @@ test "role encode omits absent optional fields" {
     managed: false,
     mentionable: false,
     tags: None,
-    flags: @model.RoleFlags::none(),
+    flags: Some(@model.RoleFlags::none()),
   }
   inspect(
     role.to_json().stringify(),

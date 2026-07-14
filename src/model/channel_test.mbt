@@ -166,7 +166,7 @@ test "channel decodes a thread fixture with metadata and membership" {
       #|          premium_since: None,
       #|          deaf: Some(false),
       #|          mute: Some(false),
-      #|          flags: 0,
+      #|          flags: Some(0),
       #|          pending: None,
       #|          permissions: None,
       #|          communication_disabled_until: None,

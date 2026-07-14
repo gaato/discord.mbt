@@ -36,7 +36,7 @@ test "voice state decodes a full fixture" {
       #|      premium_since: None,
       #|      deaf: Some(false),
       #|      mute: Some(false),
-      #|      flags: 0,
+      #|      flags: Some(0),
       #|      pending: None,
       #|      permissions: None,
       #|      communication_disabled_until: None,
@@ -49,7 +49,7 @@ test "voice state decodes a full fixture" {
       #|  self_deaf: false,
       #|  self_mute: true,
       #|  self_stream: Some(true),
-      #|  self_video: false,
+      #|  self_video: Some(false),
       #|  suppress: false,
       #|  request_to_speak_timestamp: Value("2024-01-02T03:04:05.000000+00:00"),
       #|}
@@ -81,7 +81,7 @@ test "voice state decodes required fields only" {
       #|  self_deaf: false,
       #|  self_mute: false,
       #|  self_stream: None,
-      #|  self_video: false,
+      #|  self_video: Some(false),
       #|  suppress: false,
       #|  request_to_speak_timestamp: Null,
       #|}
@@ -102,7 +102,7 @@ test "voice state encode omits absent optional fields" {
     self_deaf: false,
     self_mute: false,
     self_stream: None,
-    self_video: false,
+    self_video: Some(false),
     suppress: false,
     request_to_speak_timestamp: @model.Nullable::Null,
   }

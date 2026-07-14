@@ -49,7 +49,7 @@ test "component decodes an action row with a button and string select" {
       #|          label: Some("Confirm"),
       #|          emoji: Some(
       #|            {
-      #|              id: Value(41771983429993937),
+      #|              id: Some(Value(41771983429993937)),
       #|              name: Value("check"),
       #|              animated: Some(false),
       #|              roles: None,
@@ -81,7 +81,7 @@ test "component decodes an action row with a button and string select" {
       #|                description: Some("A calm color"),
       #|                emoji: Some(
       #|                  {
-      #|                    id: Null,
+      #|                    id: Some(Null),
       #|                    name: Value("🔵"),
       #|                    animated: None,
       #|                    roles: None,

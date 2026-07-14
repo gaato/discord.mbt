@@ -11,7 +11,7 @@ pub(all) struct VoiceState {
   self_deaf : Bool
   self_mute : Bool
   self_stream : Bool?
-  self_video : Bool
+  self_video : Bool?
   suppress : Bool
   request_to_speak_timestamp : Nullable[Timestamp]
 } derive (

@@ -39,9 +39,9 @@ pub(all) struct Guild {
   approximate_member_count : Int?
   approximate_presence_count : Int?
   welcome_screen : WelcomeScreen?
-  nsfw_level : NsfwLevel
+  nsfw_level : NsfwLevel?
   stickers : Array[Sticker]?
-  premium_progress_bar_enabled : Bool
+  premium_progress_bar_enabled : Bool?
   safety_alerts_channel_id : Nullable[ChannelId]
   // TODO(incidents): Port incidents_data with the incidents domain.
 } derive(ToJson, FromJson, Debug)

@@ -23,7 +23,7 @@ test "emoji decodes a full fixture" {
     emoji,
     content=(
       #|{
-      #|  id: Value(41771983429993937),
+      #|  id: Some(Value(41771983429993937)),
       #|  name: Value("LUL"),
       #|  animated: Some(true),
       #|  roles: Some([41771983423143936]),
@@ -32,7 +32,7 @@ test "emoji decodes a full fixture" {
       #|      id: 80351110224678912,
       #|      username: "Nelly",
       #|      discriminator: "0",
-      #|      global_name: Value("Nelly"),
+      #|      global_name: Some(Value("Nelly")),
       #|      avatar: Null,
       #|      bot: None,
       #|      system: None,
@@ -73,7 +73,7 @@ test "emoji decodes required nullable fields only" {
     emoji,
     content=(
       #|{
-      #|  id: Null,
+      #|  id: Some(Null),
       #|  name: Null,
       #|  animated: None,
       #|  roles: None,
@@ -89,7 +89,7 @@ test "emoji decodes required nullable fields only" {
 ///|
 test "emoji encode omits absent optional fields" {
   let emoji : @model.Emoji = {
-    id: @model.Nullable::Null,
+    id: Some(@model.Nullable::Null),
     name: @model.Nullable::Value("wave"),
     animated: None,
     roles: None,
