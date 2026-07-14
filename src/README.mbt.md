@@ -559,6 +559,27 @@ let members = client.paginate_guild_members(guild_id)
 members.each(user => println(user.user.unwrap().username))
 ```
 
+### Pure utilities
+
+The cache-independent `gaato/discord/util` package computes effective
+permissions and formats Discord mentions, timestamps, and CDN URLs. It works
+on both native and JavaScript targets and depends only on `model`.
+
+```mbt nocheck
+///|
+let mention = @util.user_mention(user_id)
+
+///|
+let avatar = @util.user_avatar_url(user_id, avatar_hash, size=128)
+
+///|
+let base = @util.base_permissions(
+  is_owner=false,
+  everyone_permissions=everyone.permissions,
+  role_permissions=member_role_permissions,
+)
+```
+
 ## Development
 
 ```bash

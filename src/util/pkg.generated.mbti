@@ -1,0 +1,75 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "gaato/discord/util"
+
+import {
+  "gaato/discord/model",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn all_permissions() -> @model.Permissions
+
+pub fn apply_communication_timeout(permissions~ : @model.Permissions, communication_disabled_until~ : @model.Timestamp, now_unix_ms~ : Int64) -> @model.Permissions raise @model.TimestampError
+
+pub fn base_permissions(is_owner~ : Bool, everyone_permissions~ : @model.Permissions, role_permissions~ : Array[@model.Permissions]) -> @model.Permissions
+
+pub fn channel_mention(@model.Id[@model.ChannelMarker]) -> String
+
+pub fn channel_permissions(base~ : @model.Permissions, guild_id~ : @model.Id[@model.GuildMarker], member_id~ : @model.Id[@model.UserMarker], role_ids~ : Array[@model.Id[@model.RoleMarker]], overwrites~ : Array[@model.Overwrite]) -> @model.Permissions
+
+pub fn custom_emoji_mention(name~ : String, emoji_id~ : @model.Id[@model.EmojiMarker], animated? : Bool) -> String
+
+pub fn default_user_avatar_url(@model.Id[@model.UserMarker]) -> String
+
+pub fn emoji_url(@model.Id[@model.EmojiMarker], format? : CdnImageFormat, size? : Int) -> String raise CdnUrlError
+
+pub fn guild_banner_url(@model.Id[@model.GuildMarker], @model.ImageHash, format? : CdnImageFormat, size? : Int) -> String raise CdnUrlError
+
+pub fn guild_icon_url(@model.Id[@model.GuildMarker], @model.ImageHash, format? : CdnImageFormat, size? : Int) -> String raise CdnUrlError
+
+pub fn guild_splash_url(@model.Id[@model.GuildMarker], @model.ImageHash, format? : CdnImageFormat, size? : Int) -> String raise CdnUrlError
+
+pub fn legacy_default_user_avatar_url(Int) -> String
+
+pub fn role_mention(@model.Id[@model.RoleMarker]) -> String
+
+pub fn slash_command_mention(name~ : String, command_id~ : @model.Id[@model.CommandMarker]) -> String
+
+pub fn sticker_url(@model.Id[@model.StickerMarker], format~ : @model.StickerFormatType, size? : Int) -> String raise CdnUrlError
+
+pub fn timestamp(Int64, style? : TimestampStyle) -> String
+
+pub fn timestamp_from_model(@model.Timestamp, style? : TimestampStyle) -> String raise @model.TimestampError
+
+pub fn user_avatar_url(@model.Id[@model.UserMarker], @model.ImageHash, format? : CdnImageFormat, size? : Int) -> String raise CdnUrlError
+
+pub fn user_mention(@model.Id[@model.UserMarker]) -> String
+
+// Errors
+pub(all) suberror CdnUrlError {
+  InvalidSize(Int)
+  UnsupportedStickerFormat(Int)
+} derive(Eq, @debug.Debug)
+
+// Types and methods
+pub(all) enum CdnImageFormat {
+  Png
+  Jpeg
+  Webp
+  Gif
+} derive(Eq, @debug.Debug)
+
+pub(all) enum TimestampStyle {
+  ShortTime
+  LongTime
+  ShortDate
+  LongDate
+  ShortDateTime
+  LongDateTime
+  Relative
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits
+
