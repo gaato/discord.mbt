@@ -22,6 +22,8 @@ executor for native and JavaScript adapters.
   configuration, and state ownership.
 - [Scaling across processes](guide/08-scaling-processes.md): run the bundled
   coordinator and share Identify and REST rate limits between workers.
+- [Middleware](guide/09-middleware.md): wrap REST calls, routed interactions,
+  and Gateway handler fan-out.
 - [Cookbook](cookbook/dm-user.md): focused examples for common tasks.
 - [API reference](reference.md): package map and `moon doc` commands.
 

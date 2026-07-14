@@ -87,6 +87,33 @@ Decode observers run synchronously in the dispatch loop. Keep them short and
 avoid logging payloads where message content or credentials could be exposed.
 Registering one does not add intents.
 
+## Gateway event middleware
+
+`Bot::middleware` can filter an event by omitting `next`, or transform the
+event passed to typed and raw handlers:
+
+```moonbit
+bot.middleware((_, event, next) => {
+  match event {
+    @model.Event::MessageCreate(created)
+      if created.message.author.bot is Some(true) => ()
+    @model.Event::MessageCreate(created) => {
+      let message = {
+        ..created.message,
+        content: "[gateway] \{created.message.content}",
+      }
+      next(@model.Event::MessageCreate({ ..created, message, }))
+    }
+    _ => next(event)
+  }
+})
+```
+
+This chain wraps handler fan-out only. Cache updates, collectors, decode-error
+observation, and interaction routing stay outside it. Middleware also cannot
+add intents. See [Middleware](09-middleware.md) for the dispatch-loop contract
+and registration order.
+
 ## Sharding
 
 `Bot` runs a single shard by default. For larger bots, select shards with the

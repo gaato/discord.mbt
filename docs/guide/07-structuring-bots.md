@@ -7,12 +7,16 @@ pub fn install_feedback(
   app : @discord.App,
   config~ : FeedbackConfig,
 ) -> Unit {
+  app.middleware(feedback_access_policy(config))
   FeedbackFeature::new(config).install(app)
 }
 ```
 
-The installer registers commands, components, and modals that belong to the
-feature. A feature that consumes Gateway events also accepts `Bot`:
+The installer registers middleware, commands, components, and modals that
+belong to the feature. App middleware is global, so a feature-specific policy
+should inspect its routed target and call `next()` for unrelated interactions.
+See [Middleware](09-middleware.md) for a complete installer example. A feature
+that consumes Gateway events also accepts `Bot`:
 
 ```moonbit
 pub fn install_starboard(

@@ -111,3 +111,23 @@ global window inside one process. The client updates bucket state from response
 headers and retries 429 responses after the declared delay. Typed and custom
 routes use the same request path, so no separate limiter integration is
 required. A custom limiter can be passed through `Client::new(limiter=...)`.
+
+## Request middleware
+
+`Client::middleware` wraps each logical REST call. The rate limiter, wire
+exchange, and bounded 429 retries all run inside `next`:
+
+```moonbit
+client.middleware((request, next) => {
+  let method = request.route.method_().to_string()
+  let path = request.route.path()
+  println("http -> \{method} \{path}")
+  let response = next(request)
+  println("http <- \{method} \{path} \{response.status}")
+  response
+})
+```
+
+Middleware sees the final wire response before status-code-to-error mapping.
+See [Middleware](09-middleware.md) for header injection, short-circuiting, and
+retry visibility.

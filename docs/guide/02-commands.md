@@ -132,3 +132,15 @@ let quote = @discord.message_command(
 Register every command with `app.command(command)`. Command synchronization is
 controlled by `App::new(sync=...)`: `Global`, `Guild(id)`, `Guilds(ids)`, or
 `Disabled`.
+
+## Checks and app middleware
+
+A command check is a per-command gate, and cooldown state is also per-command.
+App middleware is application-global and wraps checks, cooldowns, and handler
+dispatch for commands, components, and modals. It does not run for
+autocomplete.
+
+Use checks for command-specific permissions and preconditions. Use middleware
+for policy that spans interaction kinds, or inspect its routed target to keep
+the policy scoped. See [Middleware](09-middleware.md) for ordering,
+short-circuiting, and error-policy behavior.
