@@ -4,9 +4,10 @@ pub struct GatewayCtx {
   priv app_ : @app.AppCtx
   priv mut ready_ : @model.Ready
   priv shard_ : @gateway.Shard
+  priv shards_ : Array[@gateway.Shard]
   priv framework_ : @framework.Framework
   priv collector_ : EventCollector
-  priv mut shutdown_requested_ : Bool
+  priv shutdown_requested_ : Ref[Bool]
 }
 
 ///|
@@ -76,9 +77,9 @@ pub async fn[T] GatewayCtx::wait_for(
 }
 
 ///|
-/// Request a graceful stop. Closing the shard wakes the run loop; the task
-/// group then waits for already-started handlers before returning normally.
+/// Request a graceful stop. Closing every managed shard wakes the run loop;
+/// the task group then waits for already-started handlers before returning.
 pub async fn GatewayCtx::shutdown(self : GatewayCtx) -> Unit {
-  self.shutdown_requested_ = true
-  self.shard_.close()
+  self.shutdown_requested_.val = true
+  close_shards(self.shards_)
 }

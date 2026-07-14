@@ -159,6 +159,8 @@ async fn Shard::run(
       None => gateway_url
     }
     let transport = connector("\{base}/?v=10&encoding=json") catch {
+      error if @async.is_being_cancelled() ||
+        @async.is_cancellation_error(error) => return
       _ => {
         attempts += 1
         self.state = Disconnected(reconnect_attempts=attempts)
@@ -188,6 +190,8 @@ async fn Shard::run(
     } catch {
       ConnectionEnded(code~, reason~) => ConnectionEnded(code~, reason~)
       TransportClosed(code~, reason~) => ConnectionEnded(code~, reason~)
+      error if @async.is_being_cancelled() ||
+        @async.is_cancellation_error(error) => return
       e => ConnectionEnded(code=None, reason="\{e}")
     } noraise {
       ended => ended

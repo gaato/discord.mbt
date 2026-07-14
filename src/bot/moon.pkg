@@ -4,6 +4,7 @@ import {
   "gaato/discord/cache",
   "gaato/discord/http" @dhttp,
   "gaato/discord/gateway",
+  "gaato/discord/queue",
   "gaato/discord/framework",
   "gaato/discord/app",
   "moonbitlang/async",
@@ -35,5 +36,7 @@ options(
     "events.mbt": [ "native" ],
     "pkg.generated.mbti": [ "native" ],
     "runtime_wbtest.mbt": [ "native" ],
+    "shard_manager.mbt": [ "native" ],
+    "shard_manager_wbtest.mbt": [ "native" ],
   },
 )

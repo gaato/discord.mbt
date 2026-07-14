@@ -4,6 +4,16 @@ pub(all) suberror BotError {
   /// Close codes 4013 and 4014 indicate invalid or disallowed gateway
   /// intents. Check explicit intents and privileged-intent approval.
   FatallyClosed(code~ : Int)
+  /// A shard id/count selection cannot be represented by Discord's sharding
+  /// rules.
+  InvalidShardConfig(message~ : String)
+  /// Starting every selected shard would exceed the current identify session
+  /// allowance returned by `GET /gateway/bot`.
+  SessionStartLimitExceeded(
+    required~ : Int,
+    remaining~ : Int,
+    reset_after_ms~ : Int64
+  )
 } derive(Debug)
 
 ///|
@@ -17,6 +27,12 @@ pub impl Show for BotError with fn output(self, logger) {
         )
       }
     }
+    InvalidShardConfig(message~) =>
+      logger.write_string("invalid shard configuration: \{message}")
+    SessionStartLimitExceeded(required~, remaining~, reset_after_ms~) =>
+      logger.write_string(
+        "gateway session start limit exceeded: need \{required}, have \{remaining}; resets in \{reset_after_ms}ms",
+      )
   }
 }
 
@@ -41,8 +57,7 @@ pub struct Bot {
   priv intents_ : @model.Intents?
   priv client_ : @dhttp.Client?
   priv gateway_url_ : String?
-  priv shard_id_ : Int
-  priv shard_count_ : Int
+  priv shards_ : ShardConfig
   priv typed_events_ : Array[TypedEventHandler]
   priv raw_events_ : Array[async (GatewayCtx, @model.Event) -> Unit]
   priv mut cache_ : @cache.InMemoryCache?
@@ -53,6 +68,10 @@ pub struct Bot {
   // Production uses Shard::start's WebSocket connector. Whitebox tests inject
   // the same in-memory GatewayTransport seam used by gateway_test.mbt.
   priv connector_ : Ref[(async (String) -> &@gateway.GatewayTransport)?]
+  // Whitebox seams for `/gateway/bot` and Discord's five-second identify
+  // interval. Production always uses the REST response and 5250ms margin.
+  priv gateway_bot_info_ : Ref[@model.GatewayBotInfo?]
+  priv identify_spacing_ms_ : Ref[Int]
 }
 
 ///|
@@ -62,8 +81,7 @@ pub fn Bot::new(
   intents? : @model.Intents,
   client? : @dhttp.Client,
   gateway_url? : String,
-  shard_id? : Int = 0,
-  shard_count? : Int = 1,
+  shards? : ShardConfig = Single(id=0, count=1),
 ) -> Bot {
   {
     app_: app,
@@ -71,8 +89,7 @@ pub fn Bot::new(
     intents_: intents,
     client_: client,
     gateway_url_: gateway_url,
-    shard_id_: shard_id,
-    shard_count_: shard_count,
+    shards_: shards,
     typed_events_: [],
     raw_events_: [],
     cache_: None,
@@ -81,6 +98,8 @@ pub fn Bot::new(
     services_: [],
     collector_: EventCollector::new(),
     connector_: Ref(None),
+    gateway_bot_info_: Ref(None),
+    identify_spacing_ms_: Ref(5250),
   }
 }
 
@@ -429,72 +448,93 @@ pub async fn Bot::run(self : Bot) -> Unit {
   let client = self.client_.unwrap_or_else(() => @dhttp.Client::new(self.token_))
   defer (if owns_client { client.close() })
   client.on_telemetry(event => self.emit_telemetry(event))
-  let gateway_url = match self.gateway_url_ {
-    Some(url) => url
-    None => client.get_gateway()
-  }
+  let resolved = self.resolve_shards(client)
   @async.with_task_group(group => {
     let filter = self.event_filter()
-    let shard = match self.connector_.val {
-      Some(connector) =>
-        @gateway.Shard::start(
-          group,
-          token=self.token_,
-          intents~,
-          gateway_url~,
-          shard_id=self.shard_id_,
-          shard_count=self.shard_count_,
-          event_filter=filter,
-          connector~,
-          telemetry=event => self.emit_telemetry(event),
-        )
-      None =>
-        @gateway.Shard::start(
-          group,
-          token=self.token_,
-          intents~,
-          gateway_url~,
-          shard_id=self.shard_id_,
-          shard_count=self.shard_count_,
-          event_filter=filter,
-          telemetry=event => self.emit_telemetry(event),
-        )
+    let identify_queue : &@queue.IdentifyQueue = @queue.InMemoryQueue::new(
+      max_concurrency=resolved.max_concurrency,
+      spacing_ms=self.identify_spacing_ms_.val,
+    )
+    let managed_shards : Array[ManagedShard] = []
+    let shard_handles : Array[@gateway.Shard] = []
+    for shard_id in resolved.ids {
+      let shard = self.start_managed_shard(
+        group,
+        token=self.token_,
+        intents~,
+        gateway_url=resolved.gateway_url,
+        shard_id~,
+        shard_count=resolved.count,
+        identify_queue~,
+        event_filter=filter,
+      )
+      managed_shards.push({ id: shard_id, shard, context: None })
+      shard_handles.push(shard)
+    }
+    group.add_defer(() => close_shards(shard_handles))
+    let shard_events : @aqueue.Queue[ManagedShardEvent] = @aqueue.Queue::new(
+      kind=Unbounded,
+    )
+    for owner in managed_shards {
+      group.spawn_bg(no_wait=true, () => {
+        for ;; {
+          shard_events.put({ owner, event: owner.shard.next() })
+        }
+      })
     }
     let spawner = self.app_.spawner(group)
-    let mut gateway_ctx : GatewayCtx? = None
+    let shutdown_requested = Ref(false)
+    let mut app_ctx : @app.AppCtx? = None
     let mut framework : @framework.Framework? = None
     for ;; {
-      match shard.next() {
+      let incoming = shard_events.get()
+      let owner = incoming.owner
+      match incoming.event {
         Dispatch(Ready(ready) as event) => {
           if self.cache_ is Some(cache) {
             cache.update(event)
           }
-          if gateway_ctx is None {
+          let first_ready = framework is None
+          if first_ready {
             let router = @framework.Framework::new(client, ready.application.id)
             let waiter : @app.ComponentWaiter = (custom_id, timeout_ms) => {
               router.wait_for_component(custom_id~, timeout_ms?)
             }
-            let app_ctx = self.app_.attach(
+            let attached = self.app_.attach(
               router,
               client~,
               application_id=ready.application.id,
               waiter~,
             )
-            let created : GatewayCtx = {
-              app_: app_ctx,
-              ready_: ready,
-              shard_: shard,
-              framework_: router,
-              collector_: self.collector_,
-              shutdown_requested_: false,
-            }
-            gateway_ctx = Some(created)
+            app_ctx = Some(attached)
             framework = Some(router)
-            self.app_.sync_commands(client, ready.application.id)
-            self.spawn_services(group, created)
           }
-          guard gateway_ctx is Some(ctx)
-          ctx.ready_ = ready
+          guard app_ctx is Some(attached) && framework is Some(router) else {
+            abort("gateway runtime initialized without an application context")
+          }
+          let ctx = match owner.context {
+            Some(existing) => {
+              existing.ready_ = ready
+              existing
+            }
+            None => {
+              let created : GatewayCtx = {
+                app_: attached,
+                ready_: ready,
+                shard_: owner.shard,
+                shards_: shard_handles,
+                framework_: router,
+                collector_: self.collector_,
+                shutdown_requested_: shutdown_requested,
+              }
+              owner.context = Some(created)
+              created
+            }
+          }
+          if first_ready {
+            self.app_.sync_commands(client, ready.application.id)
+            self.spawn_services(group, ctx)
+          }
           self.collector_.dispatch(event)
           self.spawn_event_handlers(spawner, ctx, event)
         }
@@ -502,7 +542,7 @@ pub async fn Bot::run(self : Bot) -> Unit {
           if self.cache_ is Some(cache) {
             cache.update(event)
           }
-          match (gateway_ctx, framework) {
+          match (owner.context, framework) {
             (Some(ctx), Some(router)) => {
               self.collector_.dispatch(event)
               // Processing is another bounded child task. Awaiting it here
@@ -512,7 +552,7 @@ pub async fn Bot::run(self : Bot) -> Unit {
             }
             _ =>
               self.app_.warn(
-                "dropping INTERACTION_CREATE received before READY",
+                "dropping INTERACTION_CREATE received before shard \{owner.id} READY",
               )
           }
         }
@@ -521,26 +561,24 @@ pub async fn Bot::run(self : Bot) -> Unit {
             cache.update(event)
           }
           self.observe_decode_error(event)
-          match gateway_ctx {
+          match owner.context {
             Some(ctx) => {
               self.collector_.dispatch(event)
               self.spawn_event_handlers(spawner, ctx, event)
             }
             None =>
               self.app_.warn(
-                "dropping \{to_repr(event_kind(event))} received before READY",
+                "dropping \{to_repr(event_kind(event))} received before shard \{owner.id} READY",
               )
           }
         }
         Connected(..) => ()
-        Disconnected(..) =>
-          if gateway_ctx is Some(ctx) && ctx.shutdown_requested_ {
-            break
-          }
+        Disconnected(..) => if shutdown_requested.val { break }
         FatallyClosed(code~) => {
-          if gateway_ctx is Some(ctx) && ctx.shutdown_requested_ {
+          if shutdown_requested.val {
             break
           }
+          close_shards(shard_handles)
           raise BotError::FatallyClosed(code~)
         }
       }

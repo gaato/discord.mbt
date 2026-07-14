@@ -86,3 +86,21 @@ bot.on_decode_error((marker, payload) => {
 Decode observers run synchronously in the dispatch loop. Keep them short and
 avoid logging payloads where message content or credentials could be exposed.
 Registering one does not add intents.
+
+## Sharding
+
+`Bot` runs a single shard by default. For larger bots, select shards with the
+`shards` option:
+
+```moonbit
+let bot = @discord.Bot::new(app, token~, shards=Auto)          // recommended count
+let bot = @discord.Bot::new(app, token~, shards=Fixed(count=4)) // explicit local count
+let bot = @discord.Bot::new(app, token~, shards=Range(ids=[0, 1], count=8))
+```
+
+Every shard feeds the same handlers, cache, and collectors. Identify calls are
+serialized according to the `max_concurrency` rules Discord returns from
+`GET /gateway/bot`, and startup fails early if the remaining session-start
+allowance cannot cover the selected shards. Running shards across multiple
+processes additionally needs an external `IdentifyQueue`/`RateLimiter`
+implementation shared by those processes.

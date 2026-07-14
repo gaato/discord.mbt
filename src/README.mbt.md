@@ -155,6 +155,33 @@ subscriptions. Pass privileged intents for member or presence events and for
 message content visibility. Raw event handlers cannot imply an intent set, so
 applications using them must pass `intents`.
 
+#### Sharding
+
+`Bot` runs one shard by default (`ShardConfig::Single(id=0, count=1)`). To run
+several shards in this process, pass `shards`:
+
+```mbt nocheck
+///|
+/// Discord's recommended count, all shards in this process.
+let auto_bot : @discord.Bot = @discord.Bot::new(app, token~, shards=Auto)
+
+///|
+/// An explicit slice of a larger logical shard set.
+let sliced_bot : @discord.Bot = @discord.Bot::new(
+  app,
+  token~,
+  shards=Range(ids=[0, 1], count=8),
+)
+```
+
+All shards share one dispatch path, so handlers, the cache, collectors, and
+telemetry observe every shard; telemetry events carry the shard id. Identify
+calls are serialized through an `IdentifyQueue` honoring the
+`max_concurrency` bucket rules from `GET /gateway/bot`, and startup fails with
+`SessionStartLimitExceeded` when the selected shards would exhaust the
+remaining session allowance. Coordinating shards **across** processes still
+requires an external `IdentifyQueue` implementation.
+
 When a known gateway event fails typed decoding, `Bot` always reports a
 `DECODE_ERROR:<event-name>:<decode-error>` summary through the `App` warning
 hook without including the payload. The event still reaches raw event handlers.
