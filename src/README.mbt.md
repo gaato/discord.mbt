@@ -12,6 +12,11 @@ typed interaction declarations.
 > compression and sharding coordination across processes are not implemented
 > yet.
 
+Long-form guides and task-focused recipes are in
+[`docs/`](docs/index.md). Generate the complete API reference with
+`moon doc`; package roles and reference commands are listed in
+[`docs/reference.md`](docs/reference.md).
+
 ## Install
 
 ```bash
