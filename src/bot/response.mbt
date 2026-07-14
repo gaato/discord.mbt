@@ -9,6 +9,26 @@ pub struct InitialResponse {
 }
 
 ///|
+/// An initial response returned by an immediate command handler.
+pub(all) enum CommandReply {
+  Message(InitialResponse)
+}
+
+///|
+/// Construct an immediate message reply.
+pub fn CommandReply::message(
+  content? : String,
+  embeds? : Array[@model.Embed],
+  components? : Array[@model.Component],
+  files? : Array[@dhttp.FileUpload],
+  ephemeral? : Bool = false,
+) -> CommandReply {
+  Message(
+    InitialResponse::message(content?, embeds?, components?, files?, ephemeral~),
+  )
+}
+
+///|
 /// Construct an initial channel-message response.
 pub fn InitialResponse::message(
   content? : String,
@@ -55,4 +75,14 @@ async fn InitialResponse::send(
     files?=self.files_,
     ephemeral=self.ephemeral_,
   )
+}
+
+///|
+async fn CommandReply::send(
+  self : CommandReply,
+  ctx : @framework.CommandCtx,
+) -> Unit {
+  match self {
+    Message(response) => response.send(ctx)
+  }
 }

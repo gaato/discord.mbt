@@ -43,7 +43,10 @@ pub using @bot {
   type Command,
   type RegisteredCommand,
   type InteractionHandler,
+  type CommandReply,
   type InitialResponse,
+  type TargetUser,
+  type SlashChild,
   type ImmediateCtx,
   type DeferredCtx,
   type EventType,
@@ -56,6 +59,11 @@ pub using @bot {
   type FailureOrigin,
   type ResponsePhase,
   slash,
+  user_command,
+  message_command,
+  subcommand,
+  subcommand_group,
+  slash_group,
 }
 
 ///|

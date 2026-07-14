@@ -12,6 +12,8 @@ pub(all) enum CommandSync {
 pub(all) suberror BotConfigError {
   EmptyToken
   DuplicateCommand(name~ : String)
+  DuplicateCommandPath(command~ : String, path~ : String)
+  NestedSubcommandGroup(command~ : String, path~ : String)
 } derive(Debug)
 
 ///|
@@ -221,12 +223,24 @@ fn Bot::validate(self : Bot) -> Unit raise BotConfigError {
   if self.token_.is_empty() {
     raise EmptyToken
   }
-  let names : Set[String] = Set([])
+  let commands : Set[String] = Set([])
   for command in self.commands_ {
-    if names.contains(command.name_) {
+    let command_key = command_key(command.definition.typ, command.name_)
+    if commands.contains(command_key) {
       raise DuplicateCommand(name=command.name_)
     }
-    names.add(command.name_)
+    commands.add(command_key)
+    for path in command.nested_group_paths_ {
+      raise NestedSubcommandGroup(command=command.name_, path=path.join("/"))
+    }
+    let paths : Set[String] = Set([])
+    for path in command.node_paths_ {
+      let key = path_key(path)
+      if paths.contains(key) {
+        raise DuplicateCommandPath(command=command.name_, path=path.join("/"))
+      }
+      paths.add(key)
+    }
   }
 }
 

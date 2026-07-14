@@ -14,12 +14,24 @@ import {
 // Values
 pub fn commands_in_sync(Array[@interaction.CommandSpec], Array[@model.ApplicationCommand]) -> Bool
 
-pub fn[A] slash(name~ : String, description~ : String, args~ : @interaction.Args[A], handler~ : InteractionHandler[A]) -> Command[A]
+pub fn message_command(name~ : String, handler~ : InteractionHandler[@model.Message], default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType]) -> Command[@model.Message]
+
+pub fn[A] slash(name~ : String, description~ : String, args~ : @interaction.Args[A], handler~ : InteractionHandler[A], default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType]) -> Command[A]
+
+pub fn slash_group(name~ : String, description~ : String, children~ : Array[SlashChild], default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType]) -> Command[Unit]
+
+pub fn[A] subcommand(name~ : String, description~ : String, args~ : @interaction.Args[A], handler~ : InteractionHandler[A]) -> SlashChild
+
+pub fn subcommand_group(name~ : String, description~ : String, children~ : Array[SlashChild]) -> SlashChild
+
+pub fn user_command(name~ : String, handler~ : InteractionHandler[TargetUser], default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType]) -> Command[TargetUser]
 
 // Errors
 pub(all) suberror BotConfigError {
   EmptyToken
   DuplicateCommand(name~ : String)
+  DuplicateCommandPath(command~ : String, path~ : String)
+  NestedSubcommandGroup(command~ : String, path~ : String)
 } derive(@debug.Debug)
 
 pub(all) suberror BotDispatchError {
@@ -67,6 +79,11 @@ pub struct Command[A] {
 }
 pub fn[A] Command::erase(Self[A]) -> RegisteredCommand
 pub fn[A] Command::spec(Self[A]) -> @interaction.CommandSpec
+
+pub(all) enum CommandReply {
+  Message(InitialResponse)
+}
+pub fn CommandReply::message(content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], ephemeral? : Bool) -> Self
 
 pub(all) enum CommandSync {
   Global
@@ -213,7 +230,7 @@ pub async fn InteractionApp::handle(Self, Json, deadline_ms? : Int) -> Json?
 pub async fn InteractionApp::handle_interaction(Self, @model.Interaction, deadline_ms? : Int) -> InteractionOutcome
 
 pub(all) enum InteractionHandler[A] {
-  Immediate(async (ImmediateCtx, A) -> InitialResponse)
+  Immediate(async (ImmediateCtx, A) -> CommandReply)
   Deferred(ephemeral~ : Bool, async (DeferredCtx, A) -> Unit)
   Raw(async (@framework.CommandCtx) -> Unit)
 }
@@ -235,6 +252,15 @@ pub(all) enum ResponsePhase {
   AfterDeferred
   AfterInitial
 } derive(Eq, @debug.Debug)
+
+pub struct SlashChild {
+  // private fields
+}
+
+pub(all) struct TargetUser {
+  user : @model.User
+  member : @model.GuildMember?
+}
 
 // Type aliases
 pub type ErrorPolicy = async (FailureCtx, Error) -> Unit

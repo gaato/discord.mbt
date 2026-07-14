@@ -36,7 +36,7 @@ fn echo_command() -> @discord.Command[EchoArgs] {
     description="Echo your text back",
     args=echo_args(),
     handler=Immediate((_ctx, args) => {
-      @discord.InitialResponse::message(
+      @discord.CommandReply::message(
         content=Array::make(args.times, args.text).join("\n"),
       )
     }),

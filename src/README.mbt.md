@@ -51,7 +51,7 @@ async fn run_echo_bot(token : String) -> Unit {
     description="Echo your text back",
     args~,
     handler=Immediate((_ctx, value) => {
-      @discord.InitialResponse::message(
+      @discord.CommandReply::message(
         content=Array::make(value.times, value.text).join("\n"),
       )
     }),
@@ -99,7 +99,7 @@ remains available when a command needs a specialized decoder.
 Choose a handler mode according to Discord's three-second initial-response
 deadline:
 
-- `Immediate` computes and returns an `InitialResponse` before the deadline.
+- `Immediate` computes and returns a `CommandReply` before the deadline.
 - `Deferred` acknowledges first, then receives a `DeferredCtx` exposing only
   `edit_original`, `followup`, and component waiting.
 - `Raw` receives the underlying `CommandCtx` for imperative or unusual flows.

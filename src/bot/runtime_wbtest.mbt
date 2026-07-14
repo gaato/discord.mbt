@@ -241,7 +241,7 @@ test "intent derivation strips privileged intents and warns" {
 }
 
 ///|
-test "bot validates token and duplicate command names before connecting" {
+test "bot validates command type names and slash child structure" {
   try Bot::new(token="", sync=Disabled).validate() catch {
     BotConfigError::EmptyToken => ()
     error => fail("unexpected error: \{to_repr(error)}")
@@ -262,6 +262,60 @@ test "bot validates token and duplicate command names before connecting" {
     error => fail("unexpected error: \{to_repr(error)}")
   } noraise {
     _ => fail("expected duplicate command error")
+  }
+  let mixed = Bot::new(token="token", sync=Disabled)
+  mixed.command(
+    slash(
+      name="shared",
+      description="Slash command",
+      args=@interaction.Args::unit(),
+      handler=Raw(_ => ()),
+    ),
+  )
+  mixed.command(user_command(name="shared", handler=Raw(_ => ())))
+  mixed.validate()
+  let duplicate_path = Bot::new(token="token", sync=Disabled)
+  duplicate_path.command(
+    slash_group(name="admin", description="Administrative tools", children=[
+      subcommand(
+        name="ping",
+        description="First",
+        args=@interaction.Args::unit(),
+        handler=Raw(_ => ()),
+      ),
+      subcommand(
+        name="ping",
+        description="Second",
+        args=@interaction.Args::unit(),
+        handler=Raw(_ => ()),
+      ),
+    ]),
+  )
+  try duplicate_path.validate() catch {
+    BotConfigError::DuplicateCommandPath(command~, path~) => {
+      inspect(command, content="admin")
+      inspect(path, content="ping")
+    }
+    error => fail("unexpected error: \{to_repr(error)}")
+  } noraise {
+    _ => fail("expected duplicate path error")
+  }
+  let nested_group = Bot::new(token="token", sync=Disabled)
+  nested_group.command(
+    slash_group(name="admin", description="Administrative tools", children=[
+      subcommand_group(name="outer", description="Outer group", children=[
+        subcommand_group(name="inner", description="Invalid inner group", children=[]),
+      ]),
+    ]),
+  )
+  try nested_group.validate() catch {
+    BotConfigError::NestedSubcommandGroup(command~, path~) => {
+      inspect(command, content="admin")
+      inspect(path, content="outer/inner")
+    }
+    error => fail("unexpected error: \{to_repr(error)}")
+  } noraise {
+    _ => fail("expected nested group error")
   }
 }
 

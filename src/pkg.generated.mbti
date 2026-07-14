@@ -33,9 +33,19 @@ pub fn arg_user(name~ : String, description~ : String) -> @interaction.Arg[@mode
 
 pub fn[A] default(@interaction.Arg[A], A) -> @interaction.Arg[A]
 
+pub fn message_command(name~ : String, handler~ : @bot.InteractionHandler[@model.Message], default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType]) -> @bot.Command[@model.Message]
+
 pub fn[A] optional(@interaction.Arg[A]) -> @interaction.Arg[A?]
 
-pub fn[A] slash(name~ : String, description~ : String, args~ : @interaction.Args[A], handler~ : @bot.InteractionHandler[A]) -> @bot.Command[A]
+pub fn[A] slash(name~ : String, description~ : String, args~ : @interaction.Args[A], handler~ : @bot.InteractionHandler[A], default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType]) -> @bot.Command[A]
+
+pub fn slash_group(name~ : String, description~ : String, children~ : Array[@bot.SlashChild], default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType]) -> @bot.Command[Unit]
+
+pub fn[A] subcommand(name~ : String, description~ : String, args~ : @interaction.Args[A], handler~ : @bot.InteractionHandler[A]) -> @bot.SlashChild
+
+pub fn subcommand_group(name~ : String, description~ : String, children~ : Array[@bot.SlashChild]) -> @bot.SlashChild
+
+pub fn user_command(name~ : String, handler~ : @bot.InteractionHandler[@bot.TargetUser], default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType]) -> @bot.Command[@bot.TargetUser]
 
 pub fn[A] validate(@interaction.Arg[A], (A) -> String?) -> @interaction.Arg[A]
 
@@ -67,6 +77,8 @@ pub using @bot {type Command}
 pub using @framework {type CommandCtx}
 
 pub using @interaction {type CommandOptions}
+
+pub using @bot {type CommandReply}
 
 pub using @interaction {type CommandSpec}
 
@@ -115,6 +127,10 @@ pub using @bot {type ResponsePhase}
 pub using @gateway {type Shard}
 
 pub using @gateway {type ShardEvent}
+
+pub using @bot {type SlashChild}
+
+pub using @bot {type TargetUser}
 
 pub using @interaction {trait CommandModel}
 

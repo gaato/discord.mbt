@@ -16,3 +16,8 @@ import {
 import {
   "moonbitlang/async/aqueue",
 } for "wbtest"
+
+// `member` is part of the public TargetUser API, but MoonBit currently marks
+// it as a possible future keyword before local warning attributes take effect.
+
+warnings = "-35"
