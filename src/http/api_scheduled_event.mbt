@@ -235,6 +235,7 @@ pub async fn Client::list_guild_scheduled_event_users(
   before? : @model.UserId,
   after? : @model.UserId,
 ) -> Array[@model.GuildScheduledEventUser] raise DiscordHttpError {
+  validate_cursor_pair("scheduled event user", before, after)
   if limit is Some(value) && (value < 1 || value > 100) {
     raise DiscordHttpError::Validation(
       message="scheduled event user limit must be 1 through 100",

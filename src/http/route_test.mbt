@@ -26,6 +26,17 @@ fn route_signature(route : @http.Route) -> String {
 }
 
 ///|
+test "current user guild REST route metadata" {
+  let route = @http.Route::GetCurrentUserGuilds(query="?limit=200&before=10")
+  inspect(
+    route_signature(route),
+    content=(
+      #|Get /users/@me/guilds?limit=200&before=10 | GET:/users/@me/guilds | reason=false
+    ),
+  )
+}
+
+///|
 test "automod and sticker REST route metadata" {
   let guild_id : @model.GuildId = @model.Id(10UL)
   let rule_id : @model.AutoModerationRuleId = @model.Id(40UL)

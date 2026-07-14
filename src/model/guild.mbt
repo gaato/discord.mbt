@@ -47,6 +47,20 @@ pub(all) struct Guild {
 } derive(ToJson, FromJson, Debug)
 
 ///|
+/// The partial guild representation returned for the current user's guilds.
+pub(all) struct CurrentUserGuild {
+  id : GuildId
+  name : String
+  icon : Nullable[ImageHash]
+  banner : Nullable[ImageHash]
+  owner : Bool
+  permissions : Permissions
+  features : Array[GuildFeature]
+  approximate_member_count : Int?
+  approximate_presence_count : Int?
+} derive(ToJson, FromJson, Debug)
+
+///|
 /// Discord's guild verification level.
 pub(all) enum VerificationLevel {
   None

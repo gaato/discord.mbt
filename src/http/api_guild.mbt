@@ -128,6 +128,7 @@ pub async fn Client::get_guild_audit_log(
   after? : @model.AuditLogEntryId,
   limit? : Int,
 ) -> @model.AuditLog raise DiscordHttpError {
+  validate_cursor_pair("audit log", before, after)
   if limit is Some(value) && (value < 1 || value > 100) {
     raise DiscordHttpError::Validation(
       message="audit log limit must be 1 through 100",
@@ -167,11 +168,7 @@ pub async fn Client::get_guild_bans(
       message="guild ban limit must be 1 through 1000",
     )
   }
-  if before is Some(_) && after is Some(_) {
-    raise DiscordHttpError::Validation(
-      message="guild ban pagination cannot use before and after together",
-    )
-  }
+  validate_cursor_pair("guild ban", before, after)
   let params : Array[String] = []
   if limit is Some(value) {
     params.push("limit=\{value}")

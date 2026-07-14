@@ -544,6 +544,21 @@ Request failures use `DiscordHttpError`: `Api` (Discord error object),
 before any I/O). Cancellation propagates unchanged, so structured concurrency
 stays intact.
 
+### Pagination
+
+List endpoints expose stateful `Paginator[T]` values. `next_page` returns
+`None` at the end; `collect` and `each` consume the same cursor state. The
+ordinary typed wrappers still perform every request, so rate limiting and 429
+retry behavior are unchanged.
+
+```mbt nocheck
+let pages = client.paginate_messages(channel_id, page_size=100)
+let recent = pages.collect(max=250)
+
+let members = client.paginate_guild_members(guild_id)
+members.each(user => println(user.user.unwrap().username))
+```
+
 ## Development
 
 ```bash

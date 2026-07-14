@@ -746,6 +746,18 @@ pub(all) struct Container {
   spoiler : Bool?
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
+pub(all) struct CurrentUserGuild {
+  id : Id[GuildMarker]
+  name : String
+  icon : Nullable[ImageHash]
+  banner : Nullable[ImageHash]
+  owner : Bool
+  permissions : Permissions
+  features : Array[GuildFeature]
+  approximate_member_count : Int?
+  approximate_presence_count : Int?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) enum DefaultMessageNotifications {
   AllMessages
   OnlyMentions

@@ -96,6 +96,7 @@ pub async fn Client::get_channel_messages(Self, @model.Id[@model.ChannelMarker],
 pub async fn Client::get_channel_webhooks(Self, @model.Id[@model.ChannelMarker]) -> Array[@model.Webhook] raise DiscordHttpError
 pub async fn Client::get_current_application(Self) -> @model.Application raise DiscordHttpError
 pub async fn Client::get_current_user(Self) -> @model.User raise DiscordHttpError
+pub async fn Client::get_current_user_guilds(Self, limit? : Int, before? : @model.Id[@model.GuildMarker], after? : @model.Id[@model.GuildMarker], with_counts? : Bool) -> Array[@model.CurrentUserGuild] raise DiscordHttpError
 pub async fn Client::get_followup(Self, @model.Id[@model.ApplicationMarker], String, @model.Id[@model.MessageMarker]) -> @model.Message raise DiscordHttpError
 pub async fn Client::get_gateway(Self) -> String raise DiscordHttpError
 pub async fn Client::get_gateway_bot(Self) -> @model.GatewayBotInfo raise DiscordHttpError
@@ -150,6 +151,13 @@ pub async fn Client::modify_guild_sticker(Self, @model.Id[@model.GuildMarker], @
 pub async fn Client::modify_stage_instance(Self, @model.Id[@model.ChannelMarker], topic? : String, privacy_level? : @model.StagePrivacyLevel, audit_reason? : String) -> @model.StageInstance raise DiscordHttpError
 pub async fn Client::modify_webhook(Self, @model.Id[@model.WebhookMarker], name? : String, avatar? : String, clear_avatar? : Bool, channel_id? : @model.Id[@model.ChannelMarker], audit_reason? : String) -> @model.Webhook raise DiscordHttpError
 pub fn Client::new(String, base_url? : String, api_version? : Int, limiter? : &@ratelimit.RateLimiter, max_connections? : Int, default_allowed_mentions? : @model.AllowedMentions) -> Self
+pub fn Client::paginate_current_user_guilds(Self, before? : @model.Id[@model.GuildMarker], after? : @model.Id[@model.GuildMarker], with_counts? : Bool, page_size? : Int) -> Paginator[@model.CurrentUserGuild] raise DiscordHttpError
+pub fn Client::paginate_guild_audit_log(Self, @model.Id[@model.GuildMarker], user_id? : @model.Id[@model.UserMarker], action_type? : @model.AuditLogEvent, before? : @model.Id[@model.AuditLogEntryMarker], page_size? : Int) -> Paginator[@model.AuditLogEntry] raise DiscordHttpError
+pub fn Client::paginate_guild_bans(Self, @model.Id[@model.GuildMarker], before? : @model.Id[@model.UserMarker], after? : @model.Id[@model.UserMarker], page_size? : Int) -> Paginator[@model.GuildBan] raise DiscordHttpError
+pub fn Client::paginate_guild_members(Self, @model.Id[@model.GuildMarker], after? : @model.Id[@model.UserMarker], page_size? : Int) -> Paginator[@model.GuildMember] raise DiscordHttpError
+pub fn Client::paginate_guild_scheduled_event_users(Self, @model.Id[@model.GuildMarker], @model.Id[@model.ScheduledEventMarker], with_member? : Bool, before? : @model.Id[@model.UserMarker], after? : @model.Id[@model.UserMarker], page_size? : Int) -> Paginator[@model.GuildScheduledEventUser] raise DiscordHttpError
+pub fn Client::paginate_messages(Self, @model.Id[@model.ChannelMarker], before? : @model.Id[@model.MessageMarker], after? : @model.Id[@model.MessageMarker], around? : @model.Id[@model.MessageMarker], page_size? : Int) -> Paginator[@model.Message] raise DiscordHttpError
+pub fn Client::paginate_poll_answer_voters(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], Int, after? : @model.Id[@model.UserMarker], page_size? : Int) -> Paginator[@model.User] raise DiscordHttpError
 pub async fn Client::pin_message(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], audit_reason? : String) -> Unit raise DiscordHttpError
 pub async fn Client::remove_guild_ban(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker], audit_reason? : String) -> Unit raise DiscordHttpError
 pub async fn Client::remove_guild_member(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker], audit_reason? : String) -> Unit raise DiscordHttpError
@@ -168,12 +176,20 @@ pub struct FileUpload {
 pub fn FileUpload::new(String, Bytes, content_type? : String, description? : String) -> Self
 pub impl @debug.Debug for FileUpload
 
+pub struct Paginator[T] {
+  // private fields
+}
+pub async fn[T] Paginator::collect(Self[T], max~ : Int) -> Array[T]
+pub async fn[T] Paginator::each(Self[T], (T) -> Unit raise) -> Unit
+pub async fn[T] Paginator::next_page(Self[T]) -> Array[T]?
+
 pub(all) enum Route {
   Custom(request_method~ : @moonbitlang/async/http.RequestMethod, path~ : String, bucket_key~ : String, is_interaction~ : Bool, supports_reason~ : Bool)
   GetGateway
   GetGatewayBot
   GetCurrentApplication
   GetCurrentUser
+  GetCurrentUserGuilds(query~ : String)
   GetUser(user_id~ : @model.Id[@model.UserMarker])
   ModifyCurrentUser
   CreateDm

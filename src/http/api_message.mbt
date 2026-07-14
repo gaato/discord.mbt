@@ -151,7 +151,7 @@ pub async fn Client::get_message(
 
 ///|
 /// List messages in a channel. `around`/`before`/`after` are mutually
-/// exclusive per the API; the first one provided wins here.
+/// exclusive.
 pub async fn Client::get_channel_messages(
   self : Client,
   channel_id : @model.ChannelId,
@@ -160,15 +160,26 @@ pub async fn Client::get_channel_messages(
   before? : @model.MessageId,
   after? : @model.MessageId,
 ) -> Array[@model.Message] raise DiscordHttpError {
+  validate_page_limit("message", limit, 100)
+  let cursor_count = (if around is Some(_) { 1 } else { 0 }) +
+    (if before is Some(_) { 1 } else { 0 }) +
+    (if after is Some(_) { 1 } else { 0 })
+  if cursor_count > 1 {
+    raise DiscordHttpError::Validation(
+      message="message pagination accepts only one of around, before, or after",
+    )
+  }
   let params : Array[String] = []
   if limit is Some(n) {
     params.push("limit=\{n}")
   }
   if around is Some(id) {
     params.push("around=\{id}")
-  } else if before is Some(id) {
+  }
+  if before is Some(id) {
     params.push("before=\{id}")
-  } else if after is Some(id) {
+  }
+  if after is Some(id) {
     params.push("after=\{id}")
   }
   let query = if params.length() == 0 { "" } else { "?" + params.join("&") }

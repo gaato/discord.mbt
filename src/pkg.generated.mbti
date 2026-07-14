@@ -225,6 +225,8 @@ pub using @framework {type ModalOrigin}
 
 pub using @app {type ModalSubmitHandler}
 
+pub using @http {type Paginator}
+
 pub using @app {type RegisteredCommand}
 
 pub using @app {type ResponsePhase}
