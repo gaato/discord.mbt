@@ -14,6 +14,11 @@ pub const VERSION : String = "0.1.0"
 pub fn attachments_json(Array[FileUpload]) -> Json
 
 // Errors
+pub(all) suberror CustomRouteError {
+  InvalidPath(path~ : String)
+  EmptyBucket
+} derive(@debug.Debug)
+
 pub(all) suberror DiscordHttpError {
   Api(status~ : Int, error~ : ApiError)
   RateLimited(retry_after_ms~ : Int64, global~ : Bool)
@@ -129,6 +134,7 @@ pub fn FileUpload::new(String, Bytes, content_type? : String, description? : Str
 pub impl @debug.Debug for FileUpload
 
 pub(all) enum Route {
+  Custom(request_method~ : @moonbitlang/async/http.RequestMethod, path~ : String, bucket_key~ : String, is_interaction~ : Bool, supports_reason~ : Bool)
   GetGateway
   GetGatewayBot
   GetCurrentApplication
@@ -223,6 +229,7 @@ pub(all) enum Route {
   BulkOverwriteGuildCommands(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker])
 }
 pub fn Route::bucket(Self) -> String
+pub fn Route::custom(request_method~ : @moonbitlang/async/http.RequestMethod, path~ : String, bucket? : String, is_interaction? : Bool, supports_reason? : Bool) -> Self raise CustomRouteError
 pub fn Route::is_interaction(Self) -> Bool
 pub fn Route::method_(Self) -> @moonbitlang/async/http.RequestMethod
 pub fn Route::needs_auth(Self) -> Bool
@@ -230,6 +237,7 @@ pub fn Route::path(Self) -> String
 pub fn Route::supports_reason(Self) -> Bool
 
 // Type aliases
+pub using @moonbitlang/async/http {type RequestMethod}
 
 // Traits
 

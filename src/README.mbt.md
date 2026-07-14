@@ -498,10 +498,31 @@ let message = client.create_message(channel_id, content="hello")
 client.create_message(channel_id, content="with reply", reply_to=message.id) |> ignore
 ```
 
-Errors are one suberror: `Api` (Discord error object), `RateLimited`,
-`Deserialize`, `Transport`, and `Validation` (cheap checks made before any
-IO). Cancellation propagates unchanged, so structured concurrency stays
-intact.
+Endpoints without a typed wrapper can still use the same authentication,
+rate limiter, and retry path through a custom route:
+
+```mbt nocheck
+///|
+let route = @dhttp.Route::custom(
+  request_method=@dhttp.RequestMethod::Get,
+  path="/guilds/123/stickers",
+  bucket="GET:/guilds/123/stickers",
+)
+
+///|
+let stickers = client.request(route)
+```
+
+Omit `bucket` for a method-and-path-derived key. For endpoints with minor
+resource IDs, pass a template such as
+`PATCH:/guilds/123/auto-moderation/rules/{}` so related requests share rate
+limit state.
+
+Invalid custom route metadata raises `CustomRouteError` before any I/O.
+Request failures use `DiscordHttpError`: `Api` (Discord error object),
+`RateLimited`, `Deserialize`, `Transport`, and `Validation` (cheap checks made
+before any I/O). Cancellation propagates unchanged, so structured concurrency
+stays intact.
 
 ## Development
 

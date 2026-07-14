@@ -74,7 +74,8 @@ async fn Client::perform(
 /// Send a request through the rate limiter, retrying on 429 (bounded).
 ///
 /// This is also the raw escape hatch: typed endpoint wrappers build a `Route`
-/// plus JSON body and decode the returned JSON.
+/// plus JSON body and decode the returned JSON, while unwrapped endpoints use
+/// `Route::custom`.
 pub async fn Client::request(
   self : Client,
   route : Route,

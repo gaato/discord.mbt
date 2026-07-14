@@ -1,8 +1,26 @@
 ///|
+/// HTTP methods accepted by Discord REST routes.
+pub using @ahttp {type RequestMethod}
+
+///|
+/// Invalid metadata supplied while constructing a custom REST route.
+pub(all) suberror CustomRouteError {
+  InvalidPath(path~ : String)
+  EmptyBucket
+} derive(Debug)
+
+///|
 /// One variant per Discord REST endpoint. A route knows its HTTP method, its
 /// concrete path (including query string), and its rate-limit bucket key
 /// (path template with major parameters kept and minor ones squashed).
 pub(all) enum Route {
+  Custom(
+    request_method~ : @ahttp.RequestMethod,
+    path~ : String,
+    bucket_key~ : String,
+    is_interaction~ : Bool,
+    supports_reason~ : Bool
+  )
   GetGateway
   GetGatewayBot
   GetCurrentApplication
@@ -211,8 +229,46 @@ pub(all) enum Route {
 }
 
 ///|
+/// Construct a route for a Discord REST endpoint without a typed wrapper.
+///
+/// `path` is relative to the configured API base and must start with `/`; it
+/// may include a query string. When `bucket` is omitted, the rate limiter uses
+/// a custom-route namespace plus the HTTP method and query-free concrete path.
+/// Supply a bucket explicitly to group minor resource IDs, for example
+/// `PATCH:/guilds/123/auto-moderation/rules/{}`.
+///
+/// Set `is_interaction=true` only for interaction or webhook-token endpoints:
+/// these skip the global rate limit and omit bot-token authentication.
+pub fn Route::custom(
+  request_method~ : @ahttp.RequestMethod,
+  path~ : String,
+  bucket? : String,
+  is_interaction? : Bool = false,
+  supports_reason? : Bool = false,
+) -> Route raise CustomRouteError {
+  guard path.has_prefix("/") && !path.has_prefix("//") && !path.contains("#") else {
+    raise InvalidPath(path~)
+  }
+  let bucket_key = match bucket {
+    Some(value) => {
+      guard !value.is_empty() else { raise EmptyBucket }
+      value
+    }
+    None => {
+      let bucket_path = match path.split_once("?") {
+        Some((value, _)) => value.to_owned()
+        None => path
+      }
+      "CUSTOM:\{request_method.to_string().to_upper()}:\{bucket_path}"
+    }
+  }
+  Custom(request_method~, path~, bucket_key~, is_interaction~, supports_reason~)
+}
+
+///|
 pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
   match self {
+    Custom(request_method~, ..) => request_method
     GetGateway
     | GetGatewayBot
     | GetCurrentApplication
@@ -311,6 +367,7 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
 ///|
 pub fn Route::path(self : Route) -> String {
   match self {
+    Custom(path~, ..) => path
     GetGateway => "/gateway"
     GetGatewayBot => "/gateway/bot"
     GetCurrentApplication => "/applications/@me"
@@ -436,6 +493,7 @@ pub fn Route::path(self : Route) -> String {
 /// webhook ID/token majors kept while minor resource IDs are squashed.
 pub fn Route::bucket(self : Route) -> String {
   match self {
+    Custom(bucket_key~, ..) => bucket_key
     GetGateway => "GET:/gateway"
     GetGatewayBot => "GET:/gateway/bot"
     GetCurrentApplication => "GET:/applications/@me"
@@ -576,6 +634,7 @@ pub fn Route::bucket(self : Route) -> String {
 /// Interaction/webhook-token endpoints are exempt from the global limit.
 pub fn Route::is_interaction(self : Route) -> Bool {
   match self {
+    Custom(is_interaction~, ..) => is_interaction
     CreateInteractionResponse(..)
     | GetOriginalInteractionResponse(..)
     | EditOriginalInteractionResponse(..)
@@ -596,6 +655,7 @@ pub fn Route::is_interaction(self : Route) -> Bool {
 /// Whether the endpoint accepts the X-Audit-Log-Reason header.
 pub fn Route::supports_reason(self : Route) -> Bool {
   match self {
+    Custom(supports_reason~, ..) => supports_reason
     ModifyChannel(..)
     | DeleteChannel(..)
     | DeleteMessage(..)

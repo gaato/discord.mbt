@@ -36,6 +36,101 @@ test "route paths and buckets" {
 }
 
 ///|
+test "custom route derives a stable query-free bucket" {
+  let route = @http.Route::custom(
+    request_method=@http.RequestMethod::Get,
+    path="/guilds/100/auto-moderation/rules?limit=25",
+  )
+  inspect(route.method_().to_string(), content="Get")
+  inspect(route.path(), content="/guilds/100/auto-moderation/rules?limit=25")
+  inspect(
+    route.bucket(),
+    content="CUSTOM:GET:/guilds/100/auto-moderation/rules",
+  )
+  let other_query = @http.Route::custom(
+    request_method=@http.RequestMethod::Get,
+    path="/guilds/100/auto-moderation/rules?limit=100&before=200",
+  )
+  assert_true(route.bucket() == other_query.bucket())
+  assert_false(route.is_interaction())
+  assert_true(route.needs_auth())
+  assert_false(route.supports_reason())
+}
+
+///|
+test "custom route accepts explicit bucket and interaction metadata" {
+  let first = @http.Route::custom(
+    request_method=@http.RequestMethod::Patch,
+    path="/guilds/100/auto-moderation/rules/200",
+    bucket="PATCH:/guilds/100/auto-moderation/rules/{}",
+    supports_reason=true,
+  )
+  let second = @http.Route::custom(
+    request_method=@http.RequestMethod::Patch,
+    path="/guilds/100/auto-moderation/rules/201",
+    bucket="PATCH:/guilds/100/auto-moderation/rules/{}",
+    supports_reason=true,
+  )
+  inspect(first.bucket(), content="PATCH:/guilds/100/auto-moderation/rules/{}")
+  assert_true(first.bucket() == second.bucket())
+  assert_true(first.supports_reason())
+  let interaction = @http.Route::custom(
+    request_method=@http.RequestMethod::Post,
+    path="/interactions/1/token/callback",
+    is_interaction=true,
+  )
+  assert_true(interaction.is_interaction())
+  assert_false(interaction.needs_auth())
+}
+
+///|
+test "default custom buckets do not collide with typed routes" {
+  let channel_id : @model.ChannelId = @model.Id(100UL)
+  let typed = @http.Route::CreateMessage(channel_id~)
+  let custom = @http.Route::custom(
+    request_method=@http.RequestMethod::Post,
+    path="/channels/100/messages",
+  )
+  inspect(typed.bucket(), content="POST:/channels/100/messages")
+  inspect(custom.bucket(), content="CUSTOM:POST:/channels/100/messages")
+  assert_false(typed.bucket() == custom.bucket())
+  let explicitly_shared = @http.Route::custom(
+    request_method=@http.RequestMethod::Post,
+    path="/channels/100/messages",
+    bucket=typed.bucket(),
+  )
+  assert_true(explicitly_shared.bucket() == typed.bucket())
+}
+
+///|
+test "custom route rejects invalid paths and empty buckets" {
+  try
+    @http.Route::custom(
+      request_method=@http.RequestMethod::Get,
+      path="guilds/100/stickers",
+    )
+  catch {
+    @http.CustomRouteError::InvalidPath(path~) =>
+      inspect(path, content="guilds/100/stickers")
+    error => fail("unexpected error: \{to_repr(error)}")
+  } noraise {
+    _ => fail("expected invalid path")
+  }
+  try
+    @http.Route::custom(
+      request_method=@http.RequestMethod::Get,
+      path="/guilds/100/stickers",
+      bucket="",
+    )
+  catch {
+    @http.CustomRouteError::EmptyBucket => ()
+    error => fail("unexpected error: \{to_repr(error)}")
+  } noraise {
+    _ => fail("expected empty bucket")
+  }
+}
+
+///|
 test "current application route metadata" {
   let route = @http.Route::GetCurrentApplication
   debug_inspect(
