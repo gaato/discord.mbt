@@ -4,6 +4,7 @@ package "gaato/discord/gateway"
 import {
   "gaato/discord/model",
   "gaato/discord/queue",
+  "gaato/discord/telemetry",
   "moonbitlang/async",
   "moonbitlang/core/debug",
 }
@@ -44,7 +45,7 @@ pub async fn Shard::close(Self) -> Unit noraise
 pub fn Shard::latency_ms(Self) -> Int64?
 pub async fn Shard::next(Self) -> ShardEvent
 pub async fn Shard::send(Self, Json) -> Unit
-pub fn[X] Shard::start(@async.TaskGroup[X], token~ : String, intents~ : @model.Intents, gateway_url? : String, shard_id? : Int, shard_count? : Int, identify_queue? : &@queue.IdentifyQueue, event_filter? : (@model.EventKind) -> Bool, connector? : async (String) -> &GatewayTransport, queue_capacity? : Int) -> Self
+pub fn[X] Shard::start(@async.TaskGroup[X], token~ : String, intents~ : @model.Intents, gateway_url? : String, shard_id? : Int, shard_count? : Int, identify_queue? : &@queue.IdentifyQueue, event_filter? : (@model.EventKind) -> Bool, connector? : async (String) -> &GatewayTransport, queue_capacity? : Int, telemetry? : (@telemetry.TelemetryEvent) -> Unit) -> Self
 pub fn Shard::state(Self) -> ShardState
 
 pub(all) enum ShardEvent {

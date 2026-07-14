@@ -267,6 +267,20 @@ priv suberror RuntimeTestFailure {
 } derive(Debug)
 
 ///|
+test "bot telemetry hook failures flow to app warnings" {
+  let app = @app.App::new(sync=@app.CommandSync::Disabled)
+  let warnings : Array[String] = []
+  app.on_warn(message => warnings.push(message))
+  let bot = Bot::new(app, token="test-token")
+  bot.on_telemetry(_ => raise RuntimeTestFailure)
+  bot.emit_telemetry(
+    @telemetry.TelemetryEvent::DecodeError(marker="DECODE_ERROR:test"),
+  )
+  inspect(warnings.length(), content="1")
+  assert_true(warnings[0].contains("telemetry hook failed"))
+}
+
+///|
 struct BotFakeTransport {
   incoming : @aqueue.Queue[String]
   outgoing : @aqueue.Queue[Json]
@@ -519,6 +533,24 @@ async test "bot reports gateway decode errors and preserves dispatch" {
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
   let decode_errors : Array[(String, Json)] = []
   bot.on_decode_error((marker, payload) => decode_errors.push((marker, payload)))
+  let saw_identified = Ref(false)
+  let saw_decode_telemetry = Ref(false)
+  let saw_decode_dispatch = Ref(false)
+  bot.on_telemetry(event => {
+    match event {
+      @telemetry.TelemetryEvent::ShardIdentified(shard_id=0) =>
+        saw_identified.val = true
+      @telemetry.TelemetryEvent::DecodeError(marker~) =>
+        saw_decode_telemetry.val = marker.has_prefix(
+          "DECODE_ERROR:INTERACTION_CREATE:",
+        )
+      @telemetry.TelemetryEvent::EventDispatched(
+        kind="KUnknown",
+        handler_count=1
+      ) => saw_decode_dispatch.val = true
+      _ => ()
+    }
+  })
   let raw_decode_errors : @aqueue.Queue[(String, Json)] = @aqueue.Queue::new(
     kind=Unbounded,
   )
@@ -552,6 +584,9 @@ async test "bot reports gateway decode errors and preserves dispatch" {
     inspect(warnings.length(), content="1")
     assert_true(warnings[0].contains("DECODE_ERROR:INTERACTION_CREATE:"))
     assert_false(warnings[0].contains("payload-must-stay-private"))
+    assert_true(saw_identified.val)
+    assert_true(saw_decode_telemetry.val)
+    assert_true(saw_decode_dispatch.val)
 
     // An ordinary dispatch proves the loop continues and does not notify the
     // decode-error observers.

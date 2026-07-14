@@ -24,6 +24,10 @@ pub using @model {
 }
 
 ///|
+/// Structured observability events shared by REST and gateway runtimes.
+pub using @telemetry {type TelemetryEvent}
+
+///|
 pub using @interaction {
   type Arg,
   type Args,

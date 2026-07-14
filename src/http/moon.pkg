@@ -1,5 +1,6 @@
 import {
   "gaato/discord/model",
+  "gaato/discord/telemetry",
   "gaato/discord/ratelimit",
   "gaato/discord/internal/pool",
   "moonbitlang/async",

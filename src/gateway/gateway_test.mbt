@@ -67,6 +67,7 @@ async test "shard identifies, dispatches, and resumes across a drop" {
   let first = FakeTransport::new()
   let second = FakeTransport::new()
   let pending : Array[FakeTransport] = [second, first]
+  let telemetry : Array[@telemetry.TelemetryEvent] = []
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
@@ -78,6 +79,7 @@ async test "shard identifies, dispatches, and resumes across a drop" {
           None => raise @gateway.TransportClosed(code=None, reason="no more")
         }
       },
+      telemetry=event => telemetry.push(event),
     )
     // --- connection 1: identify ---
     first.incoming.put(HELLO)
@@ -147,6 +149,18 @@ async test "shard identifies, dispatches, and resumes across a drop" {
     )
     guard shard.next() is Connected(resumed=true)
     debug_inspect(shard.state(), content="Active")
+    guard telemetry
+      is [
+        ShardConnecting(shard_id=0),
+        ShardIdentified(shard_id=0),
+        ShardConnected(shard_id=0),
+        ShardDisconnected(shard_id=0, code=Some(4000), will_resume=true),
+        ShardConnecting(shard_id=0),
+        ShardResumed(shard_id=0),
+        ShardConnected(shard_id=0),
+      ] else {
+      fail("unexpected shard telemetry: \{to_repr(telemetry)}")
+    }
     shard.close()
   })
 }
@@ -156,6 +170,7 @@ async test "shard answers heartbeat requests and tracks op9" {
   let first = FakeTransport::new()
   let second = FakeTransport::new()
   let pending : Array[FakeTransport] = [second, first]
+  let latencies : Array[Int64] = []
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
@@ -165,6 +180,12 @@ async test "shard answers heartbeat requests and tracks op9" {
         match pending.pop() {
           Some(t) => (t : &@gateway.GatewayTransport)
           None => raise @gateway.TransportClosed(code=None, reason="no more")
+        }
+      },
+      telemetry=event => {
+        if event
+          is @telemetry.TelemetryEvent::ShardHeartbeatLatency(latency_ms~, ..) {
+          latencies.push(latency_ms)
         }
       },
     )
@@ -183,6 +204,12 @@ async test "shard answers heartbeat requests and tracks op9" {
     guard beat is { "op": Number(1, ..), "d": Number(1, ..), .. } else {
       fail("expected heartbeat with seq 1, got \{beat.stringify()}")
     }
+    first.incoming.put("{\"op\":11,\"d\":null}")
+    @async.sleep(1)
+    guard latencies.get(0) is Some(latency) else {
+      fail("expected heartbeat latency telemetry")
+    }
+    assert_true(latency >= 0L)
     // op 9 non-resumable clears the session -> next connection identifies
     first.incoming.put(
       (

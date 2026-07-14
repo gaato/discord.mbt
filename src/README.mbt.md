@@ -83,6 +83,7 @@ test "quickstart is wired" {
 |---|---|
 | `gaato/discord` | Facade: aliases for the types a typical application names directly |
 | `gaato/discord/model` | Pure data: ~24 entity domains, gateway payloads, zero IO |
+| `gaato/discord/telemetry` | Structured REST, gateway, and dispatch observability values |
 | `gaato/discord/http` | REST `Client`, routes, rate limiting, multipart uploads |
 | `gaato/discord/gateway` | `Shard`: connection state machine, heartbeat, resume |
 | `gaato/discord/interaction` | Command/component builders, typed args and autocomplete data |
@@ -581,9 +582,44 @@ limit state.
 
 Invalid custom route metadata raises `CustomRouteError` before any I/O.
 Request failures use `DiscordHttpError`: `Api` (Discord error object),
-`RateLimited`, `Deserialize`, `Transport`, and `Validation` (cheap checks made
-before any I/O). Cancellation propagates unchanged, so structured concurrency
-stays intact.
+`RateLimited`, `Timeout`, `Deserialize`, `Transport`, and `Validation` (cheap
+checks made before any I/O). Configure the whole-request deadline, 429 retry
+count, and pool size when constructing a client:
+
+```mbt nocheck
+///|
+let client = @dhttp.Client::new(
+  token,
+  request_timeout_ms=15_000,
+  max_retries=4,
+  max_connections=8,
+)
+```
+
+### Observability
+
+`Client` and `Bot` expose dependency-free structured telemetry callbacks.
+`Bot` aggregates its shard, dispatch, decode-error, and REST client events.
+Callbacks are synchronous and should enqueue or record values promptly rather
+than perform blocking work.
+
+```mbt nocheck
+bot.on_telemetry(event => {
+  match event {
+    HttpRequest(route_bucket~, status~, duration_ms~, retries~, ..) =>
+      metrics.http(route_bucket, status, duration_ms, retries)
+    ShardHeartbeatLatency(shard_id~, latency_ms~) =>
+      metrics.gateway_latency(shard_id, latency_ms)
+    DecodeError(marker~) => logger.error(marker)
+    _ => ()
+  }
+})
+```
+
+Telemetry is an additional channel: `App::on_warn` and
+`Bot::on_decode_error` retain their existing behavior. A telemetry callback
+failure is reported through the warning hook instead of being silently
+discarded. Standalone clients can configure that sink with `client.on_warn`.
 
 ### Client-bound handles
 

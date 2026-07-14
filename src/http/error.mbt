@@ -16,6 +16,8 @@ pub(all) suberror DiscordHttpError {
   Deserialize(message~ : String)
   /// Connection-level failure (DNS, TLS, socket, protocol).
   Transport(message~ : String)
+  /// The configured whole-request deadline elapsed.
+  Timeout(timeout_ms~ : Int)
   /// The request was rejected client-side before any I/O.
   Validation(message~ : String)
 } derive(Debug)

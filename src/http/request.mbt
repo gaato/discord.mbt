@@ -6,6 +6,12 @@ priv struct RawResponse {
 }
 
 ///|
+priv enum TimedRequestResult {
+  RequestSucceeded(Json)
+  RequestFailed(DiscordHttpError)
+}
+
+///|
 fn Client::request_headers(
   self : Client,
   route : Route,
@@ -124,16 +130,69 @@ pub async fn Client::request(
       message="create guild sticker requires exactly one file and form fields",
     )
   }
+  let timed = @async.with_timeout_opt(self.request_timeout_ms_, () => {
+    RequestSucceeded(self.request_inner(route, body?, audit_reason?, files?)) catch {
+      error if @async.is_being_cancelled() ||
+        @async.is_cancellation_error(error) => raise error
+      DiscordHttpError::Api(status~, error~) =>
+        RequestFailed(DiscordHttpError::Api(status~, error~))
+      DiscordHttpError::RateLimited(retry_after_ms~, global~) =>
+        RequestFailed(DiscordHttpError::RateLimited(retry_after_ms~, global~))
+      DiscordHttpError::Deserialize(message~) =>
+        RequestFailed(DiscordHttpError::Deserialize(message~))
+      DiscordHttpError::Transport(message~) =>
+        RequestFailed(DiscordHttpError::Transport(message~))
+      DiscordHttpError::Timeout(timeout_ms~) =>
+        RequestFailed(DiscordHttpError::Timeout(timeout_ms~))
+      DiscordHttpError::Validation(message~) =>
+        RequestFailed(DiscordHttpError::Validation(message~))
+      error => RequestFailed(DiscordHttpError::Transport(message="\{error}"))
+    }
+  }) catch {
+    error => raise DiscordHttpError::Transport(message="cancelled: \{error}")
+  }
+  match timed {
+    Some(RequestSucceeded(result)) => result
+    Some(RequestFailed(error)) => raise error
+    None => raise DiscordHttpError::Timeout(timeout_ms=self.request_timeout_ms_)
+  }
+}
+
+///|
+/// Rate-limit and retry implementation bounded by `Client::request`'s
+/// whole-request timeout.
+async fn Client::request_inner(
+  self : Client,
+  route : Route,
+  body? : Json,
+  audit_reason? : String,
+  files? : Array[FileUpload],
+) -> Json {
   let bucket = route.bucket()
   let global_exempt = route.is_interaction()
-  let max_attempts = 4
+  let max_attempts = self.max_retries_ + 1
   for attempt in 0..<max_attempts {
     self.limiter.acquire(bucket, global_exempt~) catch {
+      e if @async.is_being_cancelled() || @async.is_cancellation_error(e) =>
+        raise e
       e => raise DiscordHttpError::Transport(message="cancelled: \{e}")
     }
+    let started_at = @async.now()
     let response = try self.perform(route, body?, audit_reason?, files?) catch {
       e => {
         self.limiter.release(bucket, status=0, headers={})
+        self.emit_telemetry(
+          @telemetry.TelemetryEvent::HttpRequest(
+            route_bucket=bucket,
+            method_name=route.method_().to_string(),
+            status=0,
+            duration_ms=@async.now() - started_at,
+            retries=attempt,
+          ),
+        )
+        if @async.is_being_cancelled() || @async.is_cancellation_error(e) {
+          raise e
+        }
         raise DiscordHttpError::Transport(message="\{e}")
       }
     } noraise {
@@ -144,6 +203,15 @@ pub async fn Client::request(
       status=response.status,
       headers=response.headers,
     )
+    self.emit_telemetry(
+      @telemetry.TelemetryEvent::HttpRequest(
+        route_bucket=bucket,
+        method_name=route.method_().to_string(),
+        status=response.status,
+        duration_ms=@async.now() - started_at,
+        retries=attempt,
+      ),
+    )
     if response.status == 429 {
       let global = response.headers.get("x-ratelimit-global") is Some(_)
       let retry_after_ms : Int64 = match response.body {
@@ -151,10 +219,19 @@ pub async fn Client::request(
           (seconds * 1000.0).to_int64()
         _ => 1000L
       }
+      self.emit_telemetry(
+        @telemetry.TelemetryEvent::HttpRateLimited(
+          route_bucket=bucket,
+          global~,
+          retry_after_ms~,
+        ),
+      )
       if attempt == max_attempts - 1 {
         raise DiscordHttpError::RateLimited(retry_after_ms~, global~)
       }
       @async.sleep(retry_after_ms.to_int() + 1) catch {
+        e if @async.is_being_cancelled() || @async.is_cancellation_error(e) =>
+          raise e
         e => raise DiscordHttpError::Transport(message="cancelled: \{e}")
       }
       continue

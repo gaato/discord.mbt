@@ -47,6 +47,7 @@ pub struct Bot {
   priv raw_events_ : Array[async (GatewayCtx, @model.Event) -> Unit]
   priv mut cache_ : @cache.InMemoryCache?
   priv decode_errors_ : Array[(String, Json) -> Unit]
+  priv telemetry_ : Array[(@telemetry.TelemetryEvent) -> Unit raise]
   priv services_ : Array[ServiceHandler]
   priv collector_ : EventCollector
   // Production uses Shard::start's WebSocket connector. Whitebox tests inject
@@ -76,9 +77,29 @@ pub fn Bot::new(
     raw_events_: [],
     cache_: None,
     decode_errors_: [],
+    telemetry_: [],
     services_: [],
     collector_: EventCollector::new(),
     connector_: Ref(None),
+  }
+}
+
+///|
+/// Observe structured gateway, dispatch, and REST telemetry aggregated by
+/// this bot. Hooks run synchronously and should return promptly.
+pub fn Bot::on_telemetry(
+  self : Bot,
+  hook : (@telemetry.TelemetryEvent) -> Unit raise,
+) -> Unit {
+  self.telemetry_.push(hook)
+}
+
+///|
+fn Bot::emit_telemetry(self : Bot, event : @telemetry.TelemetryEvent) -> Unit {
+  for hook in self.telemetry_ {
+    hook(event) catch {
+      error => self.app_.warn("telemetry hook failed: \{to_repr(error)}")
+    }
   }
 }
 
@@ -144,6 +165,7 @@ fn Bot::observe_decode_error(self : Bot, event : @model.Event) -> Unit {
     Unknown(t~, d~) if t.has_prefix("DECODE_ERROR:") => {
       // Never include `d`: payloads can contain user content and credentials.
       self.app_.warn("gateway event decode failure: \{t}")
+      self.emit_telemetry(@telemetry.TelemetryEvent::DecodeError(marker=t))
       for handler in self.decode_errors_ {
         handler(t, d)
       }
@@ -338,6 +360,18 @@ async fn Bot::spawn_event_handlers(
   event : @model.Event,
 ) -> Unit {
   let kind = event_kind(event)
+  let mut handler_count = self.raw_events_.length()
+  for subscription in self.typed_events_ {
+    if subscription.kind == kind {
+      handler_count += 1
+    }
+  }
+  self.emit_telemetry(
+    @telemetry.TelemetryEvent::EventDispatched(
+      kind="\{to_repr(kind)}",
+      handler_count~,
+    ),
+  )
   for subscription in self.typed_events_ {
     if subscription.kind == kind {
       spawner(() => {
@@ -394,6 +428,7 @@ pub async fn Bot::run(self : Bot) -> Unit {
   let owns_client = self.client_ is None
   let client = self.client_.unwrap_or_else(() => @dhttp.Client::new(self.token_))
   defer (if owns_client { client.close() })
+  client.on_telemetry(event => self.emit_telemetry(event))
   let gateway_url = match self.gateway_url_ {
     Some(url) => url
     None => client.get_gateway()
@@ -411,6 +446,7 @@ pub async fn Bot::run(self : Bot) -> Unit {
           shard_count=self.shard_count_,
           event_filter=filter,
           connector~,
+          telemetry=event => self.emit_telemetry(event),
         )
       None =>
         @gateway.Shard::start(
@@ -421,6 +457,7 @@ pub async fn Bot::run(self : Bot) -> Unit {
           shard_id=self.shard_id_,
           shard_count=self.shard_count_,
           event_filter=filter,
+          telemetry=event => self.emit_telemetry(event),
         )
     }
     let spawner = self.app_.spawner(group)

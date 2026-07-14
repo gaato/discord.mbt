@@ -1,5 +1,6 @@
 import {
   "gaato/discord/model",
+  "gaato/discord/telemetry",
   "gaato/discord/queue",
   "moonbitlang/async",
   "moonbitlang/async/aqueue",
@@ -13,6 +14,7 @@ import {
   "moonbitlang/async/aqueue",
   "moonbitlang/core/json",
   "gaato/discord/model",
+  "gaato/discord/telemetry",
   "gaato/discord/queue",
 } for "test"
 

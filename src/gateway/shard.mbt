@@ -20,6 +20,7 @@ pub struct Shard {
   priv mut session : Session?
   priv mut latency : Int64?
   priv mut closing : Bool
+  priv telemetry_ : (@telemetry.TelemetryEvent) -> Unit
 }
 
 ///|
@@ -85,6 +86,7 @@ pub fn[X] Shard::start(
   event_filter? : (@model.EventKind) -> Bool = _ => true,
   connector? : async (String) -> &GatewayTransport = connect_websocket,
   queue_capacity? : Int = 256,
+  telemetry? : (@telemetry.TelemetryEvent) -> Unit = _ => (),
 ) -> Shard {
   let shard : Shard = {
     events: @aqueue.Queue::new(kind=Blocking(queue_capacity)),
@@ -95,6 +97,7 @@ pub fn[X] Shard::start(
     session: None,
     latency: None,
     closing: false,
+    telemetry_: telemetry,
   }
   group.spawn_bg(no_wait=true, () => {
     shard.run(
@@ -109,6 +112,14 @@ pub fn[X] Shard::start(
     )
   })
   shard
+}
+
+///|
+fn Shard::emit_telemetry(
+  self : Shard,
+  event : @telemetry.TelemetryEvent,
+) -> Unit {
+  (self.telemetry_)(event)
 }
 
 ///|
@@ -142,6 +153,7 @@ async fn Shard::run(
       }
     }
     self.state = Connecting
+    self.emit_telemetry(@telemetry.TelemetryEvent::ShardConnecting(shard_id~))
     let base = match self.session {
       Some(session) => session.resume_url
       None => gateway_url
@@ -150,6 +162,13 @@ async fn Shard::run(
       _ => {
         attempts += 1
         self.state = Disconnected(reconnect_attempts=attempts)
+        self.emit_telemetry(
+          @telemetry.TelemetryEvent::ShardDisconnected(
+            shard_id~,
+            code=None,
+            will_resume=false,
+          ),
+        )
         continue
       }
     }
@@ -178,6 +197,13 @@ async fn Shard::run(
     guard ended is ConnectionEnded(code~, ..)
     if self.closing {
       self.state = Disconnected(reconnect_attempts=0)
+      self.emit_telemetry(
+        @telemetry.TelemetryEvent::ShardDisconnected(
+          shard_id~,
+          code~,
+          will_resume=false,
+        ),
+      )
       self.events.put(Disconnected(code~, resuming=false)) catch {
         _ => ()
       }
@@ -187,6 +213,13 @@ async fn Shard::run(
       Fatal => {
         let fatal_code = code.unwrap_or(0)
         self.state = FatallyClosed(code=fatal_code)
+        self.emit_telemetry(
+          @telemetry.TelemetryEvent::ShardDisconnected(
+            shard_id~,
+            code~,
+            will_resume=false,
+          ),
+        )
         self.events.put(FatallyClosed(code=fatal_code)) catch {
           _ => ()
         }
@@ -196,6 +229,13 @@ async fn Shard::run(
         self.session = None
         attempts += 1
         self.state = Disconnected(reconnect_attempts=attempts)
+        self.emit_telemetry(
+          @telemetry.TelemetryEvent::ShardDisconnected(
+            shard_id~,
+            code~,
+            will_resume=false,
+          ),
+        )
         self.events.put(Disconnected(code~, resuming=false)) catch {
           _ => ()
         }
@@ -203,6 +243,13 @@ async fn Shard::run(
       Resume => {
         attempts += 1
         self.state = Disconnected(reconnect_attempts=attempts)
+        self.emit_telemetry(
+          @telemetry.TelemetryEvent::ShardDisconnected(
+            shard_id~,
+            code~,
+            will_resume=true,
+          ),
+        )
         self.events.put(Disconnected(code~, resuming=true)) catch {
           _ => ()
         }
@@ -330,10 +377,22 @@ async fn Shard::run_connection(
               }
               self.session = Some({ id: session_id, resume_url, sequence })
               self.state = Active
+              self.emit_telemetry(
+                @telemetry.TelemetryEvent::ShardIdentified(shard_id~),
+              )
+              self.emit_telemetry(
+                @telemetry.TelemetryEvent::ShardConnected(shard_id~),
+              )
               self.events.put(Connected(resumed=false))
             }
             "RESUMED" => {
               self.state = Active
+              self.emit_telemetry(
+                @telemetry.TelemetryEvent::ShardResumed(shard_id~),
+              )
+              self.emit_telemetry(
+                @telemetry.TelemetryEvent::ShardConnected(shard_id~),
+              )
               self.events.put(Connected(resumed=true))
             }
             _ => ()
@@ -349,7 +408,11 @@ async fn Shard::run_connection(
             self.events.put(Dispatch(event))
           }
         }
-        1 => self.send_heartbeat(transport)
+        1 => {
+          self.send_heartbeat(transport)
+          heartbeat_state.val = false
+          heartbeat_sent_at.val = @async.now()
+        }
         7 =>
           // Reconnect request: close and resume
           raise ConnectionEnded(code=None, reason="server requested reconnect")
@@ -365,6 +428,13 @@ async fn Shard::run_connection(
         11 => {
           heartbeat_state.val = true
           self.latency = Some(@async.now() - heartbeat_sent_at.val)
+          guard self.latency is Some(latency_ms)
+          self.emit_telemetry(
+            @telemetry.TelemetryEvent::ShardHeartbeatLatency(
+              shard_id~,
+              latency_ms~,
+            ),
+          )
         }
         _ => ()
       }

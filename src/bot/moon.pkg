@@ -1,5 +1,6 @@
 import {
   "gaato/discord/model",
+  "gaato/discord/telemetry",
   "gaato/discord/cache",
   "gaato/discord/http" @dhttp,
   "gaato/discord/gateway",
@@ -11,6 +12,7 @@ import {
 
 import {
   "moonbitlang/core/json",
+  "gaato/discord/telemetry",
 } for "test"
 
 import {

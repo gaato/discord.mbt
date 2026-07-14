@@ -6,6 +6,10 @@ pub struct Client {
   priv limiter : &@ratelimit.RateLimiter
   priv base_path : String
   priv default_allowed_mentions : @model.AllowedMentions
+  priv request_timeout_ms_ : Int
+  priv max_retries_ : Int
+  priv telemetry_ : Array[(@telemetry.TelemetryEvent) -> Unit raise]
+  priv warn_ : Ref[(String) -> Unit]
   // Whitebox tests intercept prepared requests here; production always uses
   // the pooled transport through `perform`.
   priv perform_override_ : Ref[
@@ -25,6 +29,8 @@ pub fn Client::new(
   api_version? : Int = 10,
   limiter? : &@ratelimit.RateLimiter,
   max_connections? : Int = 4,
+  request_timeout_ms? : Int = 30000,
+  max_retries? : Int = 4,
   default_allowed_mentions? : @model.AllowedMentions,
 ) -> Client {
   let limiter : &@ratelimit.RateLimiter = match limiter {
@@ -39,7 +45,39 @@ pub fn Client::new(
     default_allowed_mentions: default_allowed_mentions.unwrap_or_else(
       @model.AllowedMentions::safe_default,
     ),
+    request_timeout_ms_: request_timeout_ms,
+    max_retries_: max_retries,
+    telemetry_: [],
+    warn_: Ref(message => println(message)),
     perform_override_: Ref(None),
+  }
+}
+
+///|
+/// Observe structured HTTP telemetry. Hooks run synchronously and should
+/// return promptly. A hook failure is reported through `on_warn`.
+pub fn Client::on_telemetry(
+  self : Client,
+  hook : (@telemetry.TelemetryEvent) -> Unit raise,
+) -> Unit {
+  self.telemetry_.push(hook)
+}
+
+///|
+/// Set the warning sink used for telemetry-hook failures.
+pub fn Client::on_warn(self : Client, hook : (String) -> Unit) -> Unit {
+  self.warn_.val = hook
+}
+
+///|
+fn Client::emit_telemetry(
+  self : Client,
+  event : @telemetry.TelemetryEvent,
+) -> Unit {
+  for hook in self.telemetry_ {
+    hook(event) catch {
+      error => (self.warn_.val)("telemetry hook failed: \{to_repr(error)}")
+    }
   }
 }
 

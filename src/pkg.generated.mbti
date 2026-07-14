@@ -9,6 +9,7 @@ import {
   "gaato/discord/http",
   "gaato/discord/interaction",
   "gaato/discord/model",
+  "gaato/discord/telemetry",
 }
 
 // Values
@@ -260,6 +261,8 @@ pub type Spawner = async (async () -> Unit) -> Unit
 pub using @interaction {type SuggestCtx}
 
 pub using @app {type TargetUser}
+
+pub using @telemetry {type TelemetryEvent}
 
 pub using @http {type UserRef}
 

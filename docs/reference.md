@@ -33,6 +33,7 @@ are useful when checking API drift.
 |---|---|
 | `gaato/discord` | Application facade. Re-exports the common interaction API, plus native Gateway or JavaScript verification symbols by target. |
 | `gaato/discord/model` | Discord entities, payloads, IDs, bitfields, and wire codecs. No I/O. |
+| `gaato/discord/telemetry` | Dependency-free structured REST, Gateway, and dispatch observability events. |
 | `gaato/discord/interaction` | Command options, typed `Arg`/`Args`, autocomplete data, and component builders. |
 | `gaato/discord/app` | Typed commands, components, modals, command synchronization, and HTTP interaction endpoint. |
 | `gaato/discord/framework` | Lower-level interaction contexts, routing, response gates, and waiters. |
