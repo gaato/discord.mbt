@@ -54,3 +54,9 @@ executors.
 - `src/examples/workers_echo`: Cloudflare Workers adapter.
 - `src/examples/plugin_demo`: a stateful feedback feature installed as a
   separate package.
+
+## Design documents
+
+- [`design/voice-dave.md`](design/voice-dave.md): accepted design for voice
+  support (voice gateway v8 + the DAVE end-to-end encryption protocol) and
+  its milestone plan. Voice is not implemented yet.
