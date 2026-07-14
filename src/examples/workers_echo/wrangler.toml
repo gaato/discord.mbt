@@ -1,0 +1,6 @@
+name = "discord-mbt-workers-echo"
+main = "entry.js"
+compatibility_date = "2026-07-14"
+
+[build]
+command = "moon build --target js ."

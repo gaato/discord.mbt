@@ -1,0 +1,30 @@
+import {
+  "gaato/discord",
+  "gaato/discord/model",
+  "moonbitlang/async",
+  "moonbitlang/async/aqueue",
+  "moonbitlang/async/js_async",
+  "moonbitlang/core/json",
+}
+
+import {
+  "moonbitlang/async",
+} for "test"
+
+// This example is intentionally empty on non-JavaScript targets.
+
+warnings = "-29"
+
+options(
+  link: {
+    "js": {
+      "exports": [ "start_interaction", "verify_signature" ],
+      "format": "esm",
+    },
+  },
+  targets: {
+    "pkg.generated.mbti": [ "js" ],
+    "worker.mbt": [ "js" ],
+    "worker_wbtest.mbt": [ "js" ],
+  },
+)

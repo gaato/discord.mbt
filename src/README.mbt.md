@@ -303,8 +303,13 @@ uses WebCrypto Ed25519 and works on Cloudflare Workers and Node 19+. It is also
 re-exported as `@discord.verify_signature` on the JavaScript target. Native
 adapters still bring their own Ed25519 implementation, such as libsodium.
 
-The library does not yet include an HTTP server or Workers adapter. A Workers
-example is planned for the next phase.
+The core library does not include an HTTP server. A Workers adapter example is
+available at `src/examples/workers_echo`.
+
+### Serverless (Cloudflare Workers) quickstart
+
+See `src/examples/workers_echo` for request verification, the two-promise
+`ctx.waitUntil` integration, build instructions, and manual deployment steps.
 
 After verification, pass the decoded body to `endpoint.handle(body)`. A Discord
 Ping produces the Pong callback.
