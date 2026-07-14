@@ -145,8 +145,8 @@ test "application command decodes nested slash options" {
       #|  default_member_permissions: Value(8),
       #|  dm_permission: Some(false),
       #|  nsfw: Some(false),
-      #|  integration_types: Some([0, 1]),
-      #|  contexts: Some(Value([0, 1, 2])),
+      #|  integration_types: Some([GuildInstall, UserInstall]),
+      #|  contexts: Some(Value([Guild, BotDm, PrivateChannel])),
       #|  version: 107000000000000002,
       #|}
     ),

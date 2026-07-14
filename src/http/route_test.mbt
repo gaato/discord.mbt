@@ -36,6 +36,24 @@ test "route paths and buckets" {
 }
 
 ///|
+test "current application route metadata" {
+  let route = @http.Route::GetCurrentApplication
+  debug_inspect(
+    route_metadata("current-application", route),
+    content=(
+      #|{
+      #|  name: "current-application",
+      #|  method_name: "Get",
+      #|  path: "/applications/@me",
+      #|  bucket: "GET:/applications/@me",
+      #|  needs_auth: true,
+      #|  supports_reason: false,
+      #|}
+    ),
+  )
+}
+
+///|
 test "webhook route metadata" {
   let channel_id : @model.ChannelId = @model.Id(10UL)
   let guild_id : @model.GuildId = @model.Id(20UL)

@@ -348,9 +348,11 @@ test "message decodes a full fixture with a string nonce and nested reference" {
       #|    [
       #|      ActionRow(
       #|        {
+      #|          id: None,
       #|          components: [
       #|            Button(
       #|              {
+      #|                id: None,
       #|                style: Primary,
       #|                label: Some("Open"),
       #|                emoji: None,

@@ -77,6 +77,7 @@ pub async fn Client::get_channel(Self, @model.Id[@model.ChannelMarker]) -> @mode
 pub async fn Client::get_channel_invites(Self, @model.Id[@model.ChannelMarker]) -> Array[@model.Invite] raise DiscordHttpError
 pub async fn Client::get_channel_messages(Self, @model.Id[@model.ChannelMarker], limit? : Int, around? : @model.Id[@model.MessageMarker], before? : @model.Id[@model.MessageMarker], after? : @model.Id[@model.MessageMarker]) -> Array[@model.Message] raise DiscordHttpError
 pub async fn Client::get_channel_webhooks(Self, @model.Id[@model.ChannelMarker]) -> Array[@model.Webhook] raise DiscordHttpError
+pub async fn Client::get_current_application(Self) -> @model.Application raise DiscordHttpError
 pub async fn Client::get_current_user(Self) -> @model.User raise DiscordHttpError
 pub async fn Client::get_followup(Self, @model.Id[@model.ApplicationMarker], String, @model.Id[@model.MessageMarker]) -> @model.Message raise DiscordHttpError
 pub async fn Client::get_gateway(Self) -> String raise DiscordHttpError
@@ -129,6 +130,7 @@ pub fn FileUpload::new(String, Bytes, content_type? : String, description? : Str
 pub(all) enum Route {
   GetGateway
   GetGatewayBot
+  GetCurrentApplication
   GetCurrentUser
   GetUser(user_id~ : @model.Id[@model.UserMarker])
   ModifyCurrentUser

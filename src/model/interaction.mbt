@@ -17,7 +17,7 @@ pub(all) struct Interaction {
   locale : String?
   guild_locale : String?
   entitlements : Array[Entitlement]?
-  context : Int?
+  context : InteractionContextType?
   // TODO(interaction-full): Port guild summary, authorization owners, and attachment size metadata later.
 } derive(Debug)
 
@@ -109,7 +109,7 @@ priv struct InteractionFields {
   locale : String?
   guild_locale : String?
   entitlements : Array[Entitlement]?
-  context : Int?
+  context : InteractionContextType?
 } derive (
   ToJson(fields(typ(rename="type"), guild_member(rename="member"))),
   FromJson(fields(typ(rename="type"), guild_member(rename="member"))),
@@ -242,6 +242,7 @@ pub(all) struct ComponentData {
 pub(all) struct ModalData {
   custom_id : String
   components : Array[Component]
+  resolved : ResolvedData?
 } derive(ToJson, FromJson, Debug)
 
 ///|

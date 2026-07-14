@@ -1,0 +1,38 @@
+///|
+test "application integration types round-trip" {
+  let values : Array[@model.ApplicationIntegrationType] = [
+    @model.ApplicationIntegrationType::GuildInstall,
+    @model.ApplicationIntegrationType::UserInstall,
+    @model.ApplicationIntegrationType::Unknown(99),
+  ]
+  for value in values {
+    let decoded : @model.ApplicationIntegrationType = @json.from_json(
+      value.to_json(),
+    )
+    assert_true(decoded == value)
+    assert_true(
+      @model.ApplicationIntegrationType::from_int(value.to_int()) == value,
+    )
+  }
+  inspect(values.to_json().stringify(), content="[0,1,99]")
+}
+
+///|
+test "interaction context types round-trip" {
+  let values : Array[@model.InteractionContextType] = [
+    @model.InteractionContextType::Guild,
+    @model.InteractionContextType::BotDm,
+    @model.InteractionContextType::PrivateChannel,
+    @model.InteractionContextType::Unknown(99),
+  ]
+  for value in values {
+    let decoded : @model.InteractionContextType = @json.from_json(
+      value.to_json(),
+    )
+    assert_true(decoded == value)
+    assert_true(
+      @model.InteractionContextType::from_int(value.to_int()) == value,
+    )
+  }
+  inspect(values.to_json().stringify(), content="[0,1,2,99]")
+}

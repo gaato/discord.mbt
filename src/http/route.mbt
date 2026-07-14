@@ -5,6 +5,7 @@
 pub(all) enum Route {
   GetGateway
   GetGatewayBot
+  GetCurrentApplication
   GetCurrentUser
   GetUser(user_id~ : @model.UserId)
   ModifyCurrentUser
@@ -212,6 +213,7 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
   match self {
     GetGateway
     | GetGatewayBot
+    | GetCurrentApplication
     | GetCurrentUser
     | GetUser(..)
     | GetChannel(..)
@@ -309,6 +311,7 @@ pub fn Route::path(self : Route) -> String {
   match self {
     GetGateway => "/gateway"
     GetGatewayBot => "/gateway/bot"
+    GetCurrentApplication => "/applications/@me"
     GetCurrentUser | ModifyCurrentUser => "/users/@me"
     GetUser(user_id~) => "/users/\{user_id}"
     CreateDm => "/users/@me/channels"
@@ -433,6 +436,7 @@ pub fn Route::bucket(self : Route) -> String {
   match self {
     GetGateway => "GET:/gateway"
     GetGatewayBot => "GET:/gateway/bot"
+    GetCurrentApplication => "GET:/applications/@me"
     GetCurrentUser => "GET:/users/@me"
     ModifyCurrentUser => "PATCH:/users/@me"
     GetUser(..) => "GET:/users/{}"

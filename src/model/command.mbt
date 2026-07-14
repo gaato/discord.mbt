@@ -13,8 +13,8 @@ pub(all) struct ApplicationCommand {
   default_member_permissions : Nullable[Permissions]
   dm_permission : Bool?
   nsfw : Bool?
-  integration_types : Array[Int]?
-  contexts : Nullable[Array[Int]]?
+  integration_types : Array[ApplicationIntegrationType]?
+  contexts : Nullable[Array[InteractionContextType]]?
   version : CommandVersionId
 } derive (
   ToJson(fields(typ(rename="type"))),

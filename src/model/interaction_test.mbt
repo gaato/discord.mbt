@@ -210,7 +210,7 @@ test "slash command autocomplete dispatches command data with resolved users" {
       #|      },
       #|    ],
       #|  ),
-      #|  context: Some(0),
+      #|  context: Some(Guild),
       #|}
     ),
   )
@@ -322,12 +322,14 @@ test "modal submit dispatches recursive components" {
       #|        components: [
       #|          ActionRow(
       #|            {
+      #|              id: None,
       #|              components: [
       #|                TextInput(
       #|                  {
+      #|                    id: None,
       #|                    custom_id: "feedback",
       #|                    style: Paragraph,
-      #|                    label: "Feedback",
+      #|                    label: Some("Feedback"),
       #|                    min_length: None,
       #|                    max_length: None,
       #|                    required: None,
@@ -339,6 +341,7 @@ test "modal submit dispatches recursive components" {
       #|            },
       #|          ),
       #|        ],
+      #|        resolved: None,
       #|      },
       #|    ),
       #|  ),
@@ -502,4 +505,63 @@ test "interaction response types preserve known and unknown values" {
       #|[12,99]
     ),
   )
+}
+
+///|
+test "modal data decodes resolved attachments" {
+  let fixture =
+    #|{
+    #|  "custom_id": "upload-form",
+    #|  "components": [{
+    #|    "type": 18,
+    #|    "label": "Receipt",
+    #|    "component": {
+    #|      "type": 19,
+    #|      "custom_id": "receipt",
+    #|      "values": ["987654321098765432"]
+    #|    }
+    #|  }],
+    #|  "resolved": {
+    #|    "attachments": {
+    #|      "987654321098765432": {
+    #|        "id": "987654321098765432",
+    #|        "filename": "receipt.pdf",
+    #|        "content_type": "application/pdf",
+    #|        "size": 2048,
+    #|        "url": "https://cdn.discordapp.com/attachments/receipt.pdf",
+    #|        "proxy_url": "https://media.discordapp.net/attachments/receipt.pdf"
+    #|      }
+    #|    }
+    #|  }
+    #|}
+  let modal : @model.ModalData = @json.from_json(@json.parse(fixture))
+  let encoded = modal.to_json()
+  let round_trip : @model.ModalData = @json.from_json(encoded)
+  assert_eq(round_trip.to_json().stringify(), encoded.stringify())
+  json_inspect(encoded, content={
+    "custom_id": "upload-form",
+    "components": [
+      {
+        "label": "Receipt",
+        "component": {
+          "custom_id": "receipt",
+          "values": ["987654321098765432"],
+          "type": 19,
+        },
+        "type": 18,
+      },
+    ],
+    "resolved": {
+      "attachments": {
+        "987654321098765432": {
+          "id": "987654321098765432",
+          "filename": "receipt.pdf",
+          "content_type": "application/pdf",
+          "size": 2048,
+          "url": "https://cdn.discordapp.com/attachments/receipt.pdf",
+          "proxy_url": "https://media.discordapp.net/attachments/receipt.pdf",
+        },
+      },
+    },
+  })
 }

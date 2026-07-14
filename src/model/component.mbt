@@ -9,8 +9,19 @@ pub(all) enum Component {
   RoleSelect(SelectMenu)
   MentionableSelect(SelectMenu)
   ChannelSelect(SelectMenu)
+  Section(Section)
+  TextDisplay(TextDisplay)
+  Thumbnail(Thumbnail)
+  MediaGallery(MediaGallery)
+  File(FileComponent)
+  Separator(Separator)
+  Container(Container)
+  Label(Label)
+  FileUpload(FileUpload)
+  RadioGroup(RadioGroup)
+  CheckboxGroup(CheckboxGroup)
+  Checkbox(Checkbox)
   Unknown(Json)
-  // TODO(components-v2): Port component payloads with type values 9 through 17.
 } derive(Debug)
 
 ///|
@@ -35,6 +46,18 @@ pub impl ToJson for Component with fn to_json(self) {
     RoleSelect(value) => component_payload(value.to_json(), 6)
     MentionableSelect(value) => component_payload(value.to_json(), 7)
     ChannelSelect(value) => component_payload(value.to_json(), 8)
+    Section(value) => component_payload(value.to_json(), 9)
+    TextDisplay(value) => component_payload(value.to_json(), 10)
+    Thumbnail(value) => component_payload(value.to_json(), 11)
+    MediaGallery(value) => component_payload(value.to_json(), 12)
+    File(value) => component_payload(value.to_json(), 13)
+    Separator(value) => component_payload(value.to_json(), 14)
+    Container(value) => component_payload(value.to_json(), 17)
+    Label(value) => component_payload(value.to_json(), 18)
+    FileUpload(value) => component_payload(value.to_json(), 19)
+    RadioGroup(value) => component_payload(value.to_json(), 21)
+    CheckboxGroup(value) => component_payload(value.to_json(), 22)
+    Checkbox(value) => component_payload(value.to_json(), 23)
     Unknown(value) => value
   }
 }
@@ -55,6 +78,18 @@ pub impl @json.FromJson for Component with fn from_json(json, path) {
         6 => RoleSelect(@json.from_json(json, path~))
         7 => MentionableSelect(@json.from_json(json, path~))
         8 => ChannelSelect(@json.from_json(json, path~))
+        9 => Section(@json.from_json(json, path~))
+        10 => TextDisplay(@json.from_json(json, path~))
+        11 => Thumbnail(@json.from_json(json, path~))
+        12 => MediaGallery(@json.from_json(json, path~))
+        13 => File(@json.from_json(json, path~))
+        14 => Separator(@json.from_json(json, path~))
+        17 => Container(@json.from_json(json, path~))
+        18 => Label(@json.from_json(json, path~))
+        19 => FileUpload(@json.from_json(json, path~))
+        21 => RadioGroup(@json.from_json(json, path~))
+        22 => CheckboxGroup(@json.from_json(json, path~))
+        23 => Checkbox(@json.from_json(json, path~))
         _ => Unknown(json)
       }
     _ => Unknown(json)
@@ -64,12 +99,14 @@ pub impl @json.FromJson for Component with fn from_json(json, path) {
 ///|
 /// A layout row containing nested interactive components.
 pub(all) struct ActionRow {
+  id : Int?
   components : Array[Component]
 } derive(ToJson, FromJson, Debug)
 
 ///|
 /// A clickable button component.
 pub(all) struct Button {
+  id : Int?
   style : ButtonStyle
   label : String?
   emoji : Emoji?
@@ -133,6 +170,7 @@ pub impl @json.FromJson for ButtonStyle with fn from_json(json, path) {
 ///|
 /// A text or auto-populated select menu component.
 pub(all) struct SelectMenu {
+  id : Int?
   custom_id : String
   placeholder : String?
   min_values : Int?
@@ -141,6 +179,7 @@ pub(all) struct SelectMenu {
   options : Array[SelectOption]?
   channel_types : Array[ChannelType]?
   default_values : Array[SelectDefaultValue]?
+  values : Array[String]?
 } derive(ToJson, FromJson, Debug)
 
 ///|
@@ -165,11 +204,152 @@ pub(all) struct SelectDefaultValue {
 )
 
 ///|
+/// A section containing text components and a button or thumbnail accessory.
+pub(all) struct Section {
+  id : Int?
+  components : Array[Component]
+  accessory : Component
+} derive(ToJson, FromJson, Debug)
+
+///|
+/// A markdown text block displayed in a Components v2 layout.
+pub(all) struct TextDisplay {
+  id : Int?
+  content : String
+} derive(ToJson, FromJson, Debug)
+
+///|
+/// A thumbnail accessory rendered from an unfurled media item.
+pub(all) struct Thumbnail {
+  id : Int?
+  media : UnfurledMediaItem
+  description : String?
+  spoiler : Bool?
+} derive(ToJson, FromJson, Debug)
+
+///|
+/// A gallery containing one to ten media items.
+pub(all) struct MediaGallery {
+  id : Int?
+  items : Array[MediaGalleryItem]
+} derive(ToJson, FromJson, Debug)
+
+///|
+/// One item in a media gallery.
+pub(all) struct MediaGalleryItem {
+  media : UnfurledMediaItem
+  description : String?
+  spoiler : Bool?
+} derive(ToJson, FromJson, Debug)
+
+///|
+/// A file attachment rendered as a Components v2 file component.
+pub(all) struct FileComponent {
+  id : Int?
+  file : UnfurledMediaItem
+  spoiler : Bool?
+  name : String?
+  size : Int?
+} derive(ToJson, FromJson, Debug)
+
+///|
+/// A visual separator between Components v2 content blocks.
+pub(all) struct Separator {
+  id : Int?
+  divider : Bool?
+  spacing : Int?
+} derive(ToJson, FromJson, Debug)
+
+///|
+/// A Components v2 container with an optional accent color.
+pub(all) struct Container {
+  id : Int?
+  components : Array[Component]
+  accent_color : Nullable[Int]?
+  spoiler : Bool?
+} derive(ToJson, FromJson, Debug)
+
+///|
+/// A modal label wrapping one interactive component.
+pub(all) struct Label {
+  id : Int?
+  label : String
+  description : String?
+  component : Component
+} derive(ToJson, FromJson, Debug)
+
+///|
+/// A modal file upload component.
+pub(all) struct FileUpload {
+  id : Int?
+  custom_id : String
+  min_values : Int?
+  max_values : Int?
+  required : Bool?
+  values : Array[String]?
+} derive(ToJson, FromJson, Debug)
+
+///|
+/// A modal radio group accepting one option.
+pub(all) struct RadioGroup {
+  id : Int?
+  custom_id : String
+  options : Array[RadioOption]
+  required : Bool?
+  value : String?
+} derive(ToJson, FromJson, Debug)
+
+///|
+/// A selectable option shared by radio and checkbox groups.
+pub(all) struct RadioOption {
+  value : String
+  label : String
+  description : String?
+  default : Bool?
+} derive(ToJson, FromJson, Debug)
+
+///|
+/// A modal checkbox group accepting zero or more options.
+pub(all) struct CheckboxGroup {
+  id : Int?
+  custom_id : String
+  options : Array[RadioOption]
+  min_values : Int?
+  max_values : Int?
+  required : Bool?
+  values : Array[String]?
+} derive(ToJson, FromJson, Debug)
+
+///|
+/// A single modal checkbox.
+pub(all) struct Checkbox {
+  id : Int?
+  custom_id : String
+  default : Bool?
+  value : Bool?
+} derive(ToJson, FromJson, Debug)
+
+///|
+/// Media metadata used by thumbnail, gallery, and file components.
+pub(all) struct UnfurledMediaItem {
+  url : String
+  proxy_url : String?
+  height : Int?
+  width : Int?
+  placeholder : String?
+  placeholder_version : Int?
+  content_type : String?
+  flags : Int?
+  attachment_id : String?
+} derive(ToJson, FromJson, Debug)
+
+///|
 /// A free-form text input component used in a modal.
 pub(all) struct TextInput {
+  id : Int?
   custom_id : String
   style : TextInputStyle
-  label : String
+  label : String?
   min_length : Int?
   max_length : Int?
   required : Bool?

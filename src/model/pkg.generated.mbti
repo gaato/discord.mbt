@@ -22,6 +22,7 @@ pub(all) struct ActionMetadata {
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct ActionRow {
+  id : Int?
   components : Array[Component]
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
@@ -50,8 +51,8 @@ pub(all) struct ApplicationCommand {
   default_member_permissions : Nullable[Permissions]
   dm_permission : Bool?
   nsfw : Bool?
-  integration_types : Array[Int]?
-  contexts : Nullable[Array[Int]]?
+  integration_types : Array[ApplicationIntegrationType]?
+  contexts : Nullable[Array[InteractionContextType]]?
   version : Id[CommandVersionMarker]
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
@@ -93,6 +94,16 @@ pub impl BitOr for ApplicationFlags
 pub impl ToJson for ApplicationFlags
 pub impl @debug.Debug for ApplicationFlags
 pub impl @json.FromJson for ApplicationFlags
+
+pub(all) enum ApplicationIntegrationType {
+  GuildInstall
+  UserInstall
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn ApplicationIntegrationType::from_int(Int) -> Self
+pub fn ApplicationIntegrationType::to_int(Self) -> Int
+pub impl ToJson for ApplicationIntegrationType
+pub impl @json.FromJson for ApplicationIntegrationType
 
 pub enum ApplicationMarker {
 }
@@ -334,6 +345,7 @@ pub(all) struct AvatarDecorationData {
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct Button {
+  id : Int?
   style : ButtonStyle
   label : String?
   emoji : Emoji?
@@ -463,6 +475,23 @@ pub fn ChannelType::to_int(Self) -> Int
 pub impl ToJson for ChannelType
 pub impl @json.FromJson for ChannelType
 
+pub(all) struct Checkbox {
+  id : Int?
+  custom_id : String
+  default : Bool?
+  value : Bool?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct CheckboxGroup {
+  id : Int?
+  custom_id : String
+  options : Array[RadioOption]
+  min_values : Int?
+  max_values : Int?
+  required : Bool?
+  values : Array[String]?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) struct CommandData {
   id : Id[CommandMarker]
   name : String
@@ -538,6 +567,18 @@ pub(all) enum Component {
   RoleSelect(SelectMenu)
   MentionableSelect(SelectMenu)
   ChannelSelect(SelectMenu)
+  Section(Section)
+  TextDisplay(TextDisplay)
+  Thumbnail(Thumbnail)
+  MediaGallery(MediaGallery)
+  File(FileComponent)
+  Separator(Separator)
+  Container(Container)
+  Label(Label)
+  FileUpload(FileUpload)
+  RadioGroup(RadioGroup)
+  CheckboxGroup(CheckboxGroup)
+  Checkbox(Checkbox)
   Unknown(Json)
 } derive(@debug.Debug)
 pub impl ToJson for Component
@@ -596,6 +637,13 @@ pub fn ConnectionService::from_string(String) -> Self
 pub fn ConnectionService::to_string(Self) -> String
 pub impl ToJson for ConnectionService
 pub impl @json.FromJson for ConnectionService
+
+pub(all) struct Container {
+  id : Int?
+  components : Array[Component]
+  accent_color : Nullable[Int]?
+  spoiler : Bool?
+} derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) enum DefaultMessageNotifications {
   AllMessages
@@ -917,6 +965,23 @@ pub fn ExplicitContentFilter::from_int(Int) -> Self
 pub fn ExplicitContentFilter::to_int(Self) -> Int
 pub impl ToJson for ExplicitContentFilter
 pub impl @json.FromJson for ExplicitContentFilter
+
+pub(all) struct FileComponent {
+  id : Int?
+  file : UnfurledMediaItem
+  spoiler : Bool?
+  name : String?
+  size : Int?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct FileUpload {
+  id : Int?
+  custom_id : String
+  min_values : Int?
+  max_values : Int?
+  required : Bool?
+  values : Array[String]?
+} derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) enum ForumLayoutType {
   NotSet
@@ -1346,10 +1411,21 @@ pub(all) struct Interaction {
   locale : String?
   guild_locale : String?
   entitlements : Array[Entitlement]?
-  context : Int?
+  context : InteractionContextType?
 } derive(@debug.Debug)
 pub impl ToJson for Interaction
 pub impl @json.FromJson for Interaction
+
+pub(all) enum InteractionContextType {
+  Guild
+  BotDm
+  PrivateChannel
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn InteractionContextType::from_int(Int) -> Self
+pub fn InteractionContextType::to_int(Self) -> Int
+pub impl ToJson for InteractionContextType
+pub impl @json.FromJson for InteractionContextType
 
 pub(all) enum InteractionData {
   Command(CommandData)
@@ -1457,6 +1533,24 @@ pub fn InviteType::from_int(Int) -> Self
 pub fn InviteType::to_int(Self) -> Int
 pub impl ToJson for InviteType
 pub impl @json.FromJson for InviteType
+
+pub(all) struct Label {
+  id : Int?
+  label : String
+  description : String?
+  component : Component
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct MediaGallery {
+  id : Int?
+  items : Array[MediaGalleryItem]
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct MediaGalleryItem {
+  media : UnfurledMediaItem
+  description : String?
+  spoiler : Bool?
+} derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct Message {
   id : Id[MessageMarker]
@@ -1674,6 +1768,7 @@ pub impl @json.FromJson for MfaLevel
 pub(all) struct ModalData {
   custom_id : String
   components : Array[Component]
+  resolved : ResolvedData?
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) enum Nonce {
@@ -1854,6 +1949,21 @@ pub fn PremiumType::to_int(Self) -> Int
 pub impl ToJson for PremiumType
 pub impl @json.FromJson for PremiumType
 
+pub(all) struct RadioGroup {
+  id : Int?
+  custom_id : String
+  options : Array[RadioOption]
+  required : Bool?
+  value : String?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct RadioOption {
+  value : String
+  label : String
+  description : String?
+  default : Bool?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) struct Reaction {
   count : Int
   count_details : ReactionCountDetails
@@ -1943,12 +2053,19 @@ pub impl @json.FromJson for RoleTags
 pub enum ScheduledEventMarker {
 }
 
+pub(all) struct Section {
+  id : Int?
+  components : Array[Component]
+  accessory : Component
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) struct SelectDefaultValue {
   id : Id[GenericMarker]
   typ : String
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct SelectMenu {
+  id : Int?
   custom_id : String
   placeholder : String?
   min_values : Int?
@@ -1957,6 +2074,7 @@ pub(all) struct SelectMenu {
   options : Array[SelectOption]?
   channel_types : Array[ChannelType]?
   default_values : Array[SelectDefaultValue]?
+  values : Array[String]?
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct SelectOption {
@@ -1965,6 +2083,12 @@ pub(all) struct SelectOption {
   description : String?
   emoji : Emoji?
   default : Bool?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct Separator {
+  id : Int?
+  divider : Bool?
+  spacing : Int?
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct SessionStartLimit {
@@ -2167,10 +2291,16 @@ pub fn TeamMembershipState::to_int(Self) -> Int
 pub impl ToJson for TeamMembershipState
 pub impl @json.FromJson for TeamMembershipState
 
+pub(all) struct TextDisplay {
+  id : Int?
+  content : String
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) struct TextInput {
+  id : Int?
   custom_id : String
   style : TextInputStyle
-  label : String
+  label : String?
   min_length : Int?
   max_length : Int?
   required : Bool?
@@ -2245,6 +2375,13 @@ pub(all) struct ThreadMetadata {
   create_timestamp : Timestamp?
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
+pub(all) struct Thumbnail {
+  id : Int?
+  media : UnfurledMediaItem
+  description : String?
+  spoiler : Bool?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) struct Timestamp(String) derive(Eq)
 pub fn Timestamp::to_string(Self) -> String
 pub fn Timestamp::unix_ms(Self) -> Int64 raise TimestampError
@@ -2282,6 +2419,18 @@ pub(all) enum Undefinable[T] {
 pub fn[T] Undefinable::to_option(Self[T]) -> T?
 pub impl[T : ToJson] ToJson for Undefinable[T]
 pub impl[T : @json.FromJson] @json.FromJson for Undefinable[T]
+
+pub(all) struct UnfurledMediaItem {
+  url : String
+  proxy_url : String?
+  height : Int?
+  width : Int?
+  placeholder : String?
+  placeholder_version : Int?
+  content_type : String?
+  flags : Int?
+  attachment_id : String?
+} derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct User {
   id : Id[UserMarker]
