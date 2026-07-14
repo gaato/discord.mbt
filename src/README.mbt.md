@@ -109,8 +109,13 @@ Typed gateway subscriptions use descriptors:
 ```mbt nocheck
 bot.on(@discord.Events::message_create(), (ctx, message) => {
   println("\{message.author.username}: \{message.content}")
+  let client = ctx.bot().http()
 })
 ```
+
+Gateway event and service handlers receive `GatewayCtx`. Its `bot()` method
+returns the transport-neutral `BotCtx`; READY, shard, shutdown, and component
+waiting remain gateway-only, with no reverse reference from `BotCtx`.
 
 When `intents` is omitted, `Bot` derives non-privileged intents from these
 descriptors. Privileged intents are never enabled automatically; pass them
@@ -124,6 +129,11 @@ overwrite endpoints: commands registered outside this code are deleted from
 the selected scope when a PUT is needed.** Use `Disabled` when another process
 owns registration.
 
+For HTTP interaction endpoints without a gateway, construct an
+`InteractionApp` with `Bot::start_interaction_app`. It uses the same command
+framework and error policy, returning `Reply`, `NoRoute`, `NoResponse`, or
+`TimedOut`; timed-out handlers continue in the supplied task group.
+
 Install an `error_policy` to map failures to logs or interaction responses.
 Handlers can raise `HandlerError::UserMessage`, `GuildOnly`,
 `MissingPermission`, or `InvalidArgument` for expected failures; unexpected
@@ -131,7 +141,8 @@ errors reach the same policy with their command, event, or service origin.
 
 Escape hatches are layered rather than hidden:
 
-1. `BotCtx::http()` returns the typed REST `Client`.
+1. `BotCtx::http()` returns the typed REST `Client`; gateway handlers obtain it
+   through `GatewayCtx::bot()`.
 2. `client.request(...)` exposes route-level raw JSON for unsupported payloads.
 3. Fully manual gateway/framework wiring remains documented in
    `src/examples/low_level`.

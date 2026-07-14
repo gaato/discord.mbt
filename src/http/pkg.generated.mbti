@@ -126,6 +126,7 @@ pub struct FileUpload {
   // private fields
 }
 pub fn FileUpload::new(String, Bytes, content_type? : String, description? : String) -> Self
+pub impl @debug.Debug for FileUpload
 
 pub(all) enum Route {
   GetGateway

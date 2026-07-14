@@ -344,7 +344,7 @@ async test "bot run dispatches concurrently, survives handlers, and shuts down" 
     max_in_flight=8,
   )
   bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
-  let ready_contexts : @aqueue.Queue[BotCtx] = @aqueue.Queue::new(
+  let ready_contexts : @aqueue.Queue[GatewayCtx] = @aqueue.Queue::new(
     kind=Unbounded,
   )
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
@@ -405,6 +405,8 @@ async test "bot run dispatches concurrently, survives handlers, and shuts down" 
     }
     transport.incoming.put(bot_ready_frame())
     let ctx = ready_contexts.get()
+    inspect(ctx.bot().application_id().to_string(), content="42")
+    inspect(ctx.ready().application.id.to_string(), content="42")
     // The first command blocks. The second must still be pulled and dispatched,
     // otherwise component-waiter style command flows would deadlock.
     transport.incoming.put(command_frame(2, "500000000000000001"))

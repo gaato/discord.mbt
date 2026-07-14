@@ -40,7 +40,7 @@ pub impl Show for BotError with fn output(self, logger) {
 priv struct TypedEventHandler {
   kind : @model.EventKind
   required_intents : @model.Intents
-  dispatch : async (BotCtx, @model.Event) -> Unit
+  dispatch : async (GatewayCtx, @model.Event) -> Unit
 }
 
 ///|
@@ -64,13 +64,16 @@ priv struct AutocompleteHandler {
 ///|
 priv struct ServiceHandler {
   name : String
-  dispatch : async (BotCtx) -> Unit
+  dispatch : async (GatewayCtx) -> Unit
 }
 
 ///|
+type Spawner = async (async () -> Unit) -> Unit
+
+///|
 /// A declaratively configured Discord bot. Registration mutates this value so
-/// callers can use MoonBit's cascade syntax; `run` freezes the declarations
-/// into one Framework after READY.
+/// callers can use MoonBit's cascade syntax; `run` and
+/// `start_interaction_app` freeze the declarations into a Framework.
 pub struct Bot {
   priv token_ : String
   priv intents_ : @model.Intents?
@@ -82,7 +85,7 @@ pub struct Bot {
   priv max_in_flight_ : Int
   priv commands_ : Array[RegisteredCommand]
   priv typed_events_ : Array[TypedEventHandler]
-  priv raw_events_ : Array[async (BotCtx, @model.Event) -> Unit]
+  priv raw_events_ : Array[async (GatewayCtx, @model.Event) -> Unit]
   priv components_ : Array[ComponentHandler]
   priv modals_ : Array[ModalHandler]
   priv autocompletes_ : Array[AutocompleteHandler]
@@ -141,7 +144,7 @@ pub fn Bot::register(self : Bot, command : RegisteredCommand) -> Unit {
 pub fn[T] Bot::on(
   self : Bot,
   event : EventType[T],
-  handler : async (BotCtx, T) -> Unit,
+  handler : async (GatewayCtx, T) -> Unit,
 ) -> Unit {
   self.typed_events_.push({
     kind: event.kind(),
@@ -157,7 +160,7 @@ pub fn[T] Bot::on(
 ///|
 pub fn Bot::on_event(
   self : Bot,
-  handler : async (BotCtx, @model.Event) -> Unit,
+  handler : async (GatewayCtx, @model.Event) -> Unit,
 ) -> Unit {
   self.raw_events_.push(handler)
 }
@@ -193,7 +196,7 @@ pub fn Bot::autocomplete(
 pub fn Bot::service(
   self : Bot,
   name~ : String,
-  handler : async (BotCtx) -> Unit,
+  handler : async (GatewayCtx) -> Unit,
 ) -> Unit {
   self.services_.push({ name, dispatch: handler })
 }
@@ -397,6 +400,14 @@ async fn spawn_limited(
 }
 
 ///|
+fn bounded_spawner(
+  group : @async.TaskGroup[Unit],
+  limiter : @async.Semaphore,
+) -> Spawner {
+  body => spawn_limited(group, limiter, body)
+}
+
+///|
 fn failure_context(
   origin : FailureOrigin,
   phase : ResponsePhase?,
@@ -410,10 +421,11 @@ fn failure_context(
 async fn Bot::run_registered_command(
   self : Bot,
   bot : BotCtx,
+  waiter : ComponentWaiter?,
   command : RegisteredCommand,
   raw : @framework.CommandCtx,
 ) -> Unit {
-  (command.dispatch)(bot, raw) catch {
+  (command.dispatch)(bot, waiter, self.warn_, raw) catch {
     error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
       raise error
     BotDispatchError::Failure(command=name, phase~, source~) =>
@@ -437,24 +449,15 @@ async fn Bot::run_registered_command(
 }
 
 ///|
-fn Bot::build_framework(
+fn Bot::populate_framework(
   self : Bot,
-  client : @dhttp.Client,
-  ready : @model.Ready,
-  shard : @gateway.Shard,
-) -> (BotCtx, @framework.Framework) {
-  let framework = @framework.Framework::new(client, ready.application.id)
-  let bot : BotCtx = {
-    client_: client,
-    application_id_: ready.application.id,
-    ready_: ready,
-    shard_: shard,
-    framework_: framework,
-    shutdown_requested_: false,
-  }
+  framework : @framework.Framework,
+  bot : BotCtx,
+  waiter : ComponentWaiter?,
+) -> Unit {
   for command in self.commands_ {
     framework.command(command.definition, raw => {
-      self.run_registered_command(bot, command, raw)
+      self.run_registered_command(bot, waiter, command, raw)
     })
     |> ignore
   }
@@ -474,7 +477,6 @@ fn Bot::build_framework(
     (self.warn_)("framework handler failed (\{label}): \{to_repr(error)}")
   })
   |> ignore
-  (bot, framework)
 }
 
 ///|
@@ -500,11 +502,11 @@ async fn Bot::sync_commands(
 fn Bot::spawn_services(
   self : Bot,
   group : @async.TaskGroup[Unit],
-  bot : BotCtx,
+  gateway : GatewayCtx,
 ) -> Unit {
   for service in self.services_ {
     group.spawn_bg(no_wait=true, allow_failure=true, () => {
-      (service.dispatch)(bot) catch {
+      (service.dispatch)(gateway) catch {
         error if @async.is_being_cancelled() ||
           @async.is_cancellation_error(error) => raise error
         error =>
@@ -521,16 +523,15 @@ fn Bot::spawn_services(
 ///|
 async fn Bot::spawn_event_handlers(
   self : Bot,
-  group : @async.TaskGroup[Unit],
-  limiter : @async.Semaphore,
-  bot : BotCtx,
+  spawner : Spawner,
+  gateway : GatewayCtx,
   event : @model.Event,
 ) -> Unit {
   let kind = event_kind(event)
   for subscription in self.typed_events_ {
     if subscription.kind == kind {
-      spawn_limited(group, limiter, () => {
-        (subscription.dispatch)(bot, event) catch {
+      spawner(() => {
+        (subscription.dispatch)(gateway, event) catch {
           error if @async.is_being_cancelled() ||
             @async.is_cancellation_error(error) => raise error
           error =>
@@ -544,8 +545,8 @@ async fn Bot::spawn_event_handlers(
     }
   }
   for handler in self.raw_events_ {
-    spawn_limited(group, limiter, () => {
-      handler(bot, event) catch {
+    spawner(() => {
+      handler(gateway, event) catch {
         error if @async.is_being_cancelled() ||
           @async.is_cancellation_error(error) => raise error
         error =>
@@ -562,12 +563,11 @@ async fn Bot::spawn_event_handlers(
 ///|
 async fn Bot::spawn_interaction(
   self : Bot,
-  group : @async.TaskGroup[Unit],
-  limiter : @async.Semaphore,
+  spawner : Spawner,
   framework : @framework.Framework,
   interaction : @model.Interaction,
 ) -> Unit {
-  spawn_limited(group, limiter, () => {
+  spawner(() => {
     ignore(
       framework.process(interaction) catch {
         error if @async.is_being_cancelled() ||
@@ -619,36 +619,52 @@ pub async fn Bot::run(self : Bot) -> Unit {
         )
     }
     let limiter = @async.Semaphore::new(self.max_in_flight_)
-    let mut bot_ctx : BotCtx? = None
+    let spawner = bounded_spawner(group, limiter)
+    let mut gateway_ctx : GatewayCtx? = None
     let mut framework : @framework.Framework? = None
     for ;; {
       match shard.next() {
         Dispatch(Ready(ready) as event) => {
-          if bot_ctx is None {
-            let (created, router) = self.build_framework(client, ready, shard)
-            bot_ctx = Some(created)
+          if gateway_ctx is None {
+            let bot : BotCtx = {
+              client_: client,
+              application_id_: ready.application.id,
+            }
+            let router = @framework.Framework::new(client, ready.application.id)
+            let waiter : ComponentWaiter = (custom_id, timeout_ms) => {
+              router.wait_for_component(custom_id~, timeout_ms?)
+            }
+            self.populate_framework(router, bot, Some(waiter))
+            let created : GatewayCtx = {
+              bot_: bot,
+              ready_: ready,
+              shard_: shard,
+              framework_: router,
+              shutdown_requested_: false,
+            }
+            gateway_ctx = Some(created)
             framework = Some(router)
             self.sync_commands(client, ready.application.id)
             self.spawn_services(group, created)
           }
-          guard bot_ctx is Some(ctx)
+          guard gateway_ctx is Some(ctx)
           ctx.ready_ = ready
-          self.spawn_event_handlers(group, limiter, ctx, event)
+          self.spawn_event_handlers(spawner, ctx, event)
         }
         Dispatch(InteractionCreate(interaction) as event) =>
-          match (bot_ctx, framework) {
+          match (gateway_ctx, framework) {
             (Some(ctx), Some(router)) => {
               // Processing is another bounded child task. Awaiting it here
               // would deadlock handlers waiting for a later component event.
-              self.spawn_interaction(group, limiter, router, interaction)
-              self.spawn_event_handlers(group, limiter, ctx, event)
+              self.spawn_interaction(spawner, router, interaction)
+              self.spawn_event_handlers(spawner, ctx, event)
             }
             _ =>
               (self.warn_)("dropping INTERACTION_CREATE received before READY")
           }
         Dispatch(event) =>
-          match bot_ctx {
-            Some(ctx) => self.spawn_event_handlers(group, limiter, ctx, event)
+          match gateway_ctx {
+            Some(ctx) => self.spawn_event_handlers(spawner, ctx, event)
             None =>
               (self.warn_)(
                 "dropping \{to_repr(event_kind(event))} received before READY",
@@ -656,11 +672,11 @@ pub async fn Bot::run(self : Bot) -> Unit {
           }
         Connected(..) => ()
         Disconnected(..) =>
-          if bot_ctx is Some(ctx) && ctx.shutdown_requested_ {
+          if gateway_ctx is Some(ctx) && ctx.shutdown_requested_ {
             break
           }
         FatallyClosed(code~) => {
-          if bot_ctx is Some(ctx) && ctx.shutdown_requested_ {
+          if gateway_ctx is Some(ctx) && ctx.shutdown_requested_ {
             break
           }
           raise BotError::FatallyClosed(code~)

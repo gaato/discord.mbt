@@ -7,6 +7,7 @@ import {
   "gaato/discord/http",
   "gaato/discord/interaction",
   "gaato/discord/model",
+  "moonbitlang/async",
   "moonbitlang/core/debug",
 }
 
@@ -47,23 +48,19 @@ pub fn Bot::component(Self, String, async (@framework.ComponentCtx) -> Unit) -> 
 pub fn Bot::error_policy(Self, async (FailureCtx, Error) -> Unit) -> Unit
 pub fn Bot::modal(Self, String, async (@framework.ModalCtx) -> Unit) -> Unit
 pub fn Bot::new(token~ : String, intents? : @model.Intents, sync? : CommandSync, client? : @http.Client, gateway_url? : String, shard_id? : Int, shard_count? : Int, max_in_flight? : Int) -> Self
-pub fn[T] Bot::on(Self, EventType[T], async (BotCtx, T) -> Unit) -> Unit
-pub fn Bot::on_event(Self, async (BotCtx, @model.Event) -> Unit) -> Unit
+pub fn[T] Bot::on(Self, EventType[T], async (GatewayCtx, T) -> Unit) -> Unit
+pub fn Bot::on_event(Self, async (GatewayCtx, @model.Event) -> Unit) -> Unit
 pub fn Bot::on_warn(Self, (String) -> Unit) -> Unit
 pub fn Bot::register(Self, RegisteredCommand) -> Unit
 pub async fn Bot::run(Self) -> Unit
-pub fn Bot::service(Self, name~ : String, async (BotCtx) -> Unit) -> Unit
+pub fn Bot::service(Self, name~ : String, async (GatewayCtx) -> Unit) -> Unit
+pub async fn Bot::start_interaction_app(Self, @async.TaskGroup[Unit], client? : @http.Client, application_id? : @model.Id[@model.ApplicationMarker], sync? : Bool) -> InteractionApp
 
 pub struct BotCtx {
   // private fields
 }
 pub fn BotCtx::application_id(Self) -> @model.Id[@model.ApplicationMarker]
-pub fn BotCtx::framework_raw(Self) -> @framework.Framework
 pub fn BotCtx::http(Self) -> @http.Client
-pub fn BotCtx::ready(Self) -> @model.Ready
-pub fn BotCtx::shard_raw(Self) -> @gateway.Shard
-pub async fn BotCtx::shutdown(Self) -> Unit
-pub async fn BotCtx::wait_for_component(Self, custom_id~ : String, timeout_ms? : Int) -> @framework.ComponentCtx?
 
 pub struct Command[A] {
   // private fields
@@ -185,6 +182,16 @@ pub(all) enum FailureOrigin {
   Service(name~ : String)
 } derive(@debug.Debug)
 
+pub struct GatewayCtx {
+  // private fields
+}
+pub fn GatewayCtx::bot(Self) -> BotCtx
+pub fn GatewayCtx::framework_raw(Self) -> @framework.Framework
+pub fn GatewayCtx::ready(Self) -> @model.Ready
+pub fn GatewayCtx::shard_raw(Self) -> @gateway.Shard
+pub async fn GatewayCtx::shutdown(Self) -> Unit
+pub async fn GatewayCtx::wait_for_component(Self, custom_id~ : String, timeout_ms? : Int) -> @framework.ComponentCtx?
+
 pub struct ImmediateCtx {
   // private fields
 }
@@ -199,11 +206,24 @@ pub struct InitialResponse {
 }
 pub fn InitialResponse::message(content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], ephemeral? : Bool) -> Self
 
+pub struct InteractionApp {
+  // private fields
+}
+pub async fn InteractionApp::handle(Self, Json, deadline_ms? : Int) -> Json?
+pub async fn InteractionApp::handle_interaction(Self, @model.Interaction, deadline_ms? : Int) -> InteractionOutcome
+
 pub(all) enum InteractionHandler[A] {
   Immediate(async (ImmediateCtx, A) -> InitialResponse)
   Deferred(ephemeral~ : Bool, async (DeferredCtx, A) -> Unit)
   Raw(async (@framework.CommandCtx) -> Unit)
 }
+
+pub(all) enum InteractionOutcome {
+  Reply(response~ : @model.InteractionResponse, files~ : Array[@http.FileUpload]?)
+  NoRoute
+  NoResponse
+  TimedOut
+} derive(@debug.Debug)
 
 pub struct RegisteredCommand {
   // private fields

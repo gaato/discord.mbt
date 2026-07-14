@@ -90,6 +90,8 @@ pub using @http {type FileUpload}
 
 pub using @framework {type Framework}
 
+pub using @bot {type GatewayCtx}
+
 pub using @bot {type HandlerError}
 
 pub using @bot {type ImmediateCtx}
@@ -98,7 +100,11 @@ pub using @bot {type InitialResponse}
 
 pub using @model {type Intents}
 
+pub using @bot {type InteractionApp}
+
 pub using @bot {type InteractionHandler}
+
+pub using @bot {type InteractionOutcome}
 
 pub using @framework {type ModalCtx}
 

@@ -37,6 +37,9 @@ pub using @framework {
 pub using @bot {
   type Bot,
   type BotCtx,
+  type GatewayCtx,
+  type InteractionApp,
+  type InteractionOutcome,
   type Command,
   type RegisteredCommand,
   type InteractionHandler,

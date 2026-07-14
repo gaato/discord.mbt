@@ -62,6 +62,8 @@ fn[A] raise_failure(
 async fn[A] Command::dispatch_typed(
   self : Command[A],
   bot : BotCtx,
+  waiter : ComponentWaiter?,
+  warn : (String) -> Unit,
   raw : @framework.CommandCtx,
 ) -> Unit {
   let value = decode_command_args(self.args, raw.options) catch {
@@ -80,7 +82,7 @@ async fn[A] Command::dispatch_typed(
       raw.defer_response(ephemeral~) catch {
         source => raise_failure(self.name, BeforeInitial, source)
       }
-      handler({ raw_: raw, bot_: bot }, value) catch {
+      handler({ raw_: raw, bot_: bot, waiter_: waiter, warn_: warn }, value) catch {
         source => raise_failure(self.name, AfterDeferred, source)
       }
     }
@@ -96,7 +98,12 @@ async fn[A] Command::dispatch_typed(
 pub struct RegisteredCommand {
   priv name_ : String
   priv definition : @interaction.CommandSpec
-  priv dispatch : async (BotCtx, @framework.CommandCtx) -> Unit
+  priv dispatch : async (
+    BotCtx,
+    ComponentWaiter?,
+    (String) -> Unit,
+    @framework.CommandCtx,
+  ) -> Unit
 }
 
 ///|
@@ -111,6 +118,8 @@ pub fn[A] Command::erase(self : Command[A]) -> RegisteredCommand {
   {
     name_: self.name,
     definition: self.spec(),
-    dispatch: (bot, raw) => self.dispatch_typed(bot, raw),
+    dispatch: (bot, waiter, warn, raw) => {
+      self.dispatch_typed(bot, waiter, warn, raw)
+    },
   }
 }
