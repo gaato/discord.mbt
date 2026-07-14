@@ -39,6 +39,12 @@ pub(all) struct PollAnswerCount {
 } derive(ToJson, FromJson, Debug)
 
 ///|
+/// Users returned by the poll answer-voters endpoint.
+pub(all) struct PollAnswerVoters {
+  users : Array[User]
+} derive(ToJson, FromJson, Debug)
+
+///|
 /// The presentation layout used by a poll.
 pub(all) enum PollLayoutType {
   Default

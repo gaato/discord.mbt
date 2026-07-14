@@ -27,8 +27,28 @@ async fn Client::perform(
       headers["x-audit-log-reason"] = reason
     }
     let path = self.base_path + route.path()
-    let response = match (files, body) {
-      (Some(fs), _) if fs.length() > 0 => {
+    let response = match (route, files, body) {
+      (CreateGuildSticker(..), Some([file]), Some(json)) => {
+        let payload = json.stringify()
+        let seed = "\{@async.now()}-\{next_multipart_seq()}"
+        let boundary = fresh_boundary(seed, payload, [file])
+        headers["content-type"] = "multipart/form-data; boundary=\{boundary}"
+        conn.request(route.method_(), path, extra_headers=headers)
+        for
+          part in multipart_form_parts(
+            boundary,
+            sticker_form_fields(json),
+            "file",
+            file,
+          ) {
+          match part {
+            Text(text) => conn.write(text)
+            Blob(bytes) => conn.write(bytes)
+          }
+        }
+        conn.end_request()
+      }
+      (_, Some(fs), _) if fs.length() > 0 => {
         let payload = body.unwrap_or(Json::object({})).stringify()
         let seed = "\{@async.now()}-\{next_multipart_seq()}"
         let boundary = fresh_boundary(seed, payload, fs)
@@ -42,14 +62,14 @@ async fn Client::perform(
         }
         conn.end_request()
       }
-      (_, Some(json)) => {
+      (_, _, Some(json)) => {
         headers["content-type"] = "application/json"
         conn
         ..request(route.method_(), path, extra_headers=headers)
         ..write(json)
         .end_request()
       }
-      (_, None) => {
+      (_, _, None) => {
         conn.request(route.method_(), path, extra_headers=headers)
         conn.end_request()
       }
@@ -85,6 +105,11 @@ pub async fn Client::request(
 ) -> Json raise DiscordHttpError {
   if files is Some(fs) {
     validate_files(fs)
+  }
+  if route is CreateGuildSticker(..) && !(files is Some([_]) && body is Some(_)) {
+    raise DiscordHttpError::Validation(
+      message="create guild sticker requires exactly one file and form fields",
+    )
   }
   let bucket = route.bucket()
   let global_exempt = route.is_interaction()

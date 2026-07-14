@@ -170,6 +170,40 @@ fn multipart_parts(
 }
 
 ///|
+/// Render a conventional multipart form with text fields and one named file.
+/// Discord's guild-sticker endpoint uses this shape instead of payload_json
+/// plus files[n].
+fn multipart_form_parts(
+  boundary : String,
+  fields : Array[(String, String)],
+  file_field : String,
+  file : FileUpload,
+) -> Array[Part] {
+  let parts : Array[Part] = []
+  for field in fields {
+    let (name, value) = field
+    parts.push(
+      Text(
+        "--\{boundary}\r\n" +
+        "content-disposition: form-data; name=\"\{name}\"\r\n\r\n" +
+        value +
+        "\r\n",
+      ),
+    )
+  }
+  parts.push(
+    Text(
+      "--\{boundary}\r\n" +
+      "content-disposition: form-data; name=\"\{file_field}\"; filename=\"\{file.filename}\"\r\n" +
+      "content-type: \{file.content_type}\r\n\r\n",
+    ),
+  )
+  parts.push(Blob(file.content))
+  parts.push(Text("\r\n--\{boundary}--\r\n"))
+  parts
+}
+
+///|
 let multipart_seq : Ref[Int] = Ref(0)
 
 ///|

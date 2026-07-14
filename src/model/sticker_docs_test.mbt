@@ -41,3 +41,14 @@ test "discord docs: example sticker pack (line 101)" {
   inspect(first.id.to_string(), content="847199849233514549")
   assert_eq(first.name, "Wumpus Beyond")
 }
+
+///|
+test "discord docs: list sticker packs response envelope" {
+  let fixture =
+    #|{"sticker_packs":[{"id":"847199849233514549","stickers":[],"name":"Wumpus Beyond","sku_id":"847199849233514547","cover_sticker_id":"749053689419006003","description":"Say hello to Wumpus!","banner_asset_id":"761773777976819732"}]}
+  let response : @model.StickerPacksResponse = @json.from_json(
+    @json.parse(fixture),
+  )
+  assert_eq(response.sticker_packs.length(), 1)
+  inspect(response.sticker_packs[0].name, content="Wumpus Beyond")
+}

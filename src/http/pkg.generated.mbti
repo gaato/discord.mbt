@@ -42,6 +42,7 @@ pub async fn Client::bulk_delete_messages(Self, @model.Id[@model.ChannelMarker],
 pub async fn Client::bulk_overwrite_global_commands(Self, @model.Id[@model.ApplicationMarker], Json) -> Array[@model.ApplicationCommand] raise DiscordHttpError
 pub async fn Client::bulk_overwrite_guild_commands(Self, @model.Id[@model.ApplicationMarker], @model.Id[@model.GuildMarker], Json) -> Array[@model.ApplicationCommand] raise DiscordHttpError
 pub fn Client::close(Self) -> Unit
+pub async fn Client::create_auto_moderation_rule(Self, @model.Id[@model.GuildMarker], String, @model.AutoModerationEventType, @model.AutoModerationTriggerType, @model.TriggerMetadata, Array[@model.AutoModerationAction], enabled? : Bool, exempt_roles? : Array[@model.Id[@model.RoleMarker]], exempt_channels? : Array[@model.Id[@model.ChannelMarker]], audit_reason? : String) -> @model.AutoModerationRule raise DiscordHttpError
 pub async fn Client::create_channel_invite(Self, @model.Id[@model.ChannelMarker], max_age? : Int, max_uses? : Int, temporary? : Bool, unique? : Bool, audit_reason? : String) -> @model.Invite raise DiscordHttpError
 pub async fn Client::create_dm(Self, @model.Id[@model.UserMarker]) -> @model.Channel raise DiscordHttpError
 pub async fn Client::create_followup(Self, @model.Id[@model.ApplicationMarker], String, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[FileUpload], flags? : @model.MessageFlags, allowed_mentions? : @model.AllowedMentions) -> @model.Message raise DiscordHttpError
@@ -51,11 +52,16 @@ pub async fn Client::create_guild_channel(Self, @model.Id[@model.GuildMarker], S
 pub async fn Client::create_guild_command(Self, @model.Id[@model.ApplicationMarker], @model.Id[@model.GuildMarker], String, String, options? : Array[@model.CommandOption], typ? : @model.ApplicationCommandType, default_member_permissions? : @model.Permissions, clear_default_member_permissions? : Bool, nsfw? : Bool) -> @model.ApplicationCommand raise DiscordHttpError
 pub async fn Client::create_guild_emoji(Self, @model.Id[@model.GuildMarker], String, String, roles? : Array[@model.Id[@model.RoleMarker]], audit_reason? : String) -> @model.Emoji raise DiscordHttpError
 pub async fn Client::create_guild_role(Self, @model.Id[@model.GuildMarker], name? : String, permissions? : @model.Permissions, color? : Int, hoist? : Bool, mentionable? : Bool, audit_reason? : String) -> @model.Role raise DiscordHttpError
+pub async fn Client::create_guild_scheduled_event(Self, @model.Id[@model.GuildMarker], String, @model.GuildScheduledEventPrivacyLevel, @model.Timestamp, @model.GuildScheduledEventEntityType, channel_id? : @model.Id[@model.ChannelMarker], clear_channel_id? : Bool, entity_metadata? : @model.EntityMetadata, clear_entity_metadata? : Bool, scheduled_end_time? : @model.Timestamp, clear_scheduled_end_time? : Bool, description? : String, image? : String, recurrence_rule? : @model.GuildScheduledEventRecurrenceRule, audit_reason? : String) -> @model.GuildScheduledEvent raise DiscordHttpError
+pub async fn Client::create_guild_soundboard_sound(Self, @model.Id[@model.GuildMarker], String, String, volume? : Double, emoji_id? : @model.Id[@model.EmojiMarker], emoji_name? : String, audit_reason? : String) -> @model.SoundboardSound raise DiscordHttpError
+pub async fn Client::create_guild_sticker(Self, @model.Id[@model.GuildMarker], FileUpload, String, String, String, audit_reason? : String) -> @model.Sticker raise DiscordHttpError
 pub async fn Client::create_interaction_response(Self, @model.Id[@model.InteractionMarker], String, @model.InteractionResponse, files? : Array[FileUpload]) -> Unit raise DiscordHttpError
 pub async fn Client::create_message(Self, @model.Id[@model.ChannelMarker], content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], sticker_ids? : Array[@model.Id[@model.StickerMarker]], files? : Array[FileUpload], reply_to? : @model.Id[@model.MessageMarker], tts? : Bool, flags? : @model.MessageFlags, allowed_mentions? : @model.AllowedMentions, nonce? : @model.Nonce, enforce_nonce? : Bool) -> @model.Message raise DiscordHttpError
 pub async fn Client::create_reaction(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], String) -> Unit raise DiscordHttpError
+pub async fn Client::create_stage_instance(Self, @model.Id[@model.ChannelMarker], String, privacy_level? : @model.StagePrivacyLevel, send_start_notification? : Bool, guild_scheduled_event_id? : @model.Id[@model.ScheduledEventMarker], audit_reason? : String) -> @model.StageInstance raise DiscordHttpError
 pub async fn Client::create_webhook(Self, @model.Id[@model.ChannelMarker], String, avatar? : String, audit_reason? : String) -> @model.Webhook raise DiscordHttpError
 pub async fn Client::delete_all_reactions(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker]) -> Unit raise DiscordHttpError
+pub async fn Client::delete_auto_moderation_rule(Self, @model.Id[@model.GuildMarker], @model.Id[@model.AutoModerationRuleMarker], audit_reason? : String) -> Unit raise DiscordHttpError
 pub async fn Client::delete_channel(Self, @model.Id[@model.ChannelMarker], audit_reason? : String) -> @model.Channel raise DiscordHttpError
 pub async fn Client::delete_channel_permission(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.GenericMarker], audit_reason? : String) -> Unit raise DiscordHttpError
 pub async fn Client::delete_followup(Self, @model.Id[@model.ApplicationMarker], String, @model.Id[@model.MessageMarker]) -> Unit raise DiscordHttpError
@@ -63,10 +69,14 @@ pub async fn Client::delete_global_command(Self, @model.Id[@model.ApplicationMar
 pub async fn Client::delete_guild_command(Self, @model.Id[@model.ApplicationMarker], @model.Id[@model.GuildMarker], @model.Id[@model.CommandMarker]) -> Unit raise DiscordHttpError
 pub async fn Client::delete_guild_emoji(Self, @model.Id[@model.GuildMarker], @model.Id[@model.EmojiMarker], audit_reason? : String) -> Unit raise DiscordHttpError
 pub async fn Client::delete_guild_role(Self, @model.Id[@model.GuildMarker], @model.Id[@model.RoleMarker], audit_reason? : String) -> Unit raise DiscordHttpError
+pub async fn Client::delete_guild_scheduled_event(Self, @model.Id[@model.GuildMarker], @model.Id[@model.ScheduledEventMarker], audit_reason? : String) -> Unit raise DiscordHttpError
+pub async fn Client::delete_guild_soundboard_sound(Self, @model.Id[@model.GuildMarker], @model.Id[@model.SoundboardSoundMarker], audit_reason? : String) -> Unit raise DiscordHttpError
+pub async fn Client::delete_guild_sticker(Self, @model.Id[@model.GuildMarker], @model.Id[@model.StickerMarker], audit_reason? : String) -> Unit raise DiscordHttpError
 pub async fn Client::delete_invite(Self, String, audit_reason? : String) -> @model.Invite raise DiscordHttpError
 pub async fn Client::delete_message(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], audit_reason? : String) -> Unit raise DiscordHttpError
 pub async fn Client::delete_original_response(Self, @model.Id[@model.ApplicationMarker], String) -> Unit raise DiscordHttpError
 pub async fn Client::delete_own_reaction(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], String) -> Unit raise DiscordHttpError
+pub async fn Client::delete_stage_instance(Self, @model.Id[@model.ChannelMarker], audit_reason? : String) -> Unit raise DiscordHttpError
 pub async fn Client::delete_user_reaction(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], String, @model.Id[@model.UserMarker]) -> Unit raise DiscordHttpError
 pub async fn Client::delete_webhook(Self, @model.Id[@model.WebhookMarker], audit_reason? : String) -> Unit raise DiscordHttpError
 pub async fn Client::delete_webhook_message(Self, @model.Id[@model.WebhookMarker], String, @model.Id[@model.MessageMarker]) -> Unit raise DiscordHttpError
@@ -78,6 +88,8 @@ pub async fn Client::edit_message(Self, @model.Id[@model.ChannelMarker], @model.
 pub async fn Client::edit_original_response(Self, @model.Id[@model.ApplicationMarker], String, content? : String, clear_content? : Bool, embeds? : Array[@model.Embed], components? : Array[@model.Component], allowed_mentions? : @model.AllowedMentions, files? : Array[FileUpload]) -> @model.Message raise DiscordHttpError
 pub async fn Client::edit_webhook_message(Self, @model.Id[@model.WebhookMarker], String, @model.Id[@model.MessageMarker], content? : String, clear_content? : Bool, embeds? : Array[@model.Embed], components? : Array[@model.Component], allowed_mentions? : @model.AllowedMentions, files? : Array[FileUpload]) -> @model.Message raise DiscordHttpError
 pub async fn Client::execute_webhook(Self, @model.Id[@model.WebhookMarker], String, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[FileUpload], username? : String, avatar_url? : String, tts? : Bool, allowed_mentions? : @model.AllowedMentions) -> @model.Message raise DiscordHttpError
+pub async fn Client::expire_poll(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker]) -> @model.Message raise DiscordHttpError
+pub async fn Client::get_auto_moderation_rule(Self, @model.Id[@model.GuildMarker], @model.Id[@model.AutoModerationRuleMarker]) -> @model.AutoModerationRule raise DiscordHttpError
 pub async fn Client::get_channel(Self, @model.Id[@model.ChannelMarker]) -> @model.Channel raise DiscordHttpError
 pub async fn Client::get_channel_invites(Self, @model.Id[@model.ChannelMarker]) -> Array[@model.Invite] raise DiscordHttpError
 pub async fn Client::get_channel_messages(Self, @model.Id[@model.ChannelMarker], limit? : Int, around? : @model.Id[@model.MessageMarker], before? : @model.Id[@model.MessageMarker], after? : @model.Id[@model.MessageMarker]) -> Array[@model.Message] raise DiscordHttpError
@@ -90,30 +102,52 @@ pub async fn Client::get_gateway_bot(Self) -> @model.GatewayBotInfo raise Discor
 pub async fn Client::get_global_command(Self, @model.Id[@model.ApplicationMarker], @model.Id[@model.CommandMarker]) -> @model.ApplicationCommand raise DiscordHttpError
 pub async fn Client::get_global_commands(Self, @model.Id[@model.ApplicationMarker]) -> Array[@model.ApplicationCommand] raise DiscordHttpError
 pub async fn Client::get_guild(Self, @model.Id[@model.GuildMarker], with_counts? : Bool) -> @model.Guild raise DiscordHttpError
+pub async fn Client::get_guild_audit_log(Self, @model.Id[@model.GuildMarker], user_id? : @model.Id[@model.UserMarker], action_type? : @model.AuditLogEvent, before? : @model.Id[@model.AuditLogEntryMarker], after? : @model.Id[@model.AuditLogEntryMarker], limit? : Int) -> @model.AuditLog raise DiscordHttpError
+pub async fn Client::get_guild_bans(Self, @model.Id[@model.GuildMarker], limit? : Int, before? : @model.Id[@model.UserMarker], after? : @model.Id[@model.UserMarker]) -> Array[@model.GuildBan] raise DiscordHttpError
 pub async fn Client::get_guild_channels(Self, @model.Id[@model.GuildMarker]) -> Array[@model.Channel] raise DiscordHttpError
 pub async fn Client::get_guild_command(Self, @model.Id[@model.ApplicationMarker], @model.Id[@model.GuildMarker], @model.Id[@model.CommandMarker]) -> @model.ApplicationCommand raise DiscordHttpError
 pub async fn Client::get_guild_commands(Self, @model.Id[@model.ApplicationMarker], @model.Id[@model.GuildMarker]) -> Array[@model.ApplicationCommand] raise DiscordHttpError
 pub async fn Client::get_guild_emoji(Self, @model.Id[@model.GuildMarker], @model.Id[@model.EmojiMarker]) -> @model.Emoji raise DiscordHttpError
 pub async fn Client::get_guild_member(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker]) -> @model.GuildMember raise DiscordHttpError
 pub async fn Client::get_guild_roles(Self, @model.Id[@model.GuildMarker]) -> Array[@model.Role] raise DiscordHttpError
+pub async fn Client::get_guild_scheduled_event(Self, @model.Id[@model.GuildMarker], @model.Id[@model.ScheduledEventMarker], with_user_count? : Bool) -> @model.GuildScheduledEvent raise DiscordHttpError
+pub async fn Client::get_guild_soundboard_sound(Self, @model.Id[@model.GuildMarker], @model.Id[@model.SoundboardSoundMarker]) -> @model.SoundboardSound raise DiscordHttpError
+pub async fn Client::get_guild_sticker(Self, @model.Id[@model.GuildMarker], @model.Id[@model.StickerMarker]) -> @model.Sticker raise DiscordHttpError
 pub async fn Client::get_guild_webhooks(Self, @model.Id[@model.GuildMarker]) -> Array[@model.Webhook] raise DiscordHttpError
 pub async fn Client::get_invite(Self, String, with_counts? : Bool, with_expiration? : Bool, guild_scheduled_event_id? : @model.Id[@model.ScheduledEventMarker]) -> @model.Invite raise DiscordHttpError
 pub async fn Client::get_message(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker]) -> @model.Message raise DiscordHttpError
 pub async fn Client::get_original_response(Self, @model.Id[@model.ApplicationMarker], String) -> @model.Message raise DiscordHttpError
 pub async fn Client::get_pinned_messages(Self, @model.Id[@model.ChannelMarker]) -> Array[@model.Message] raise DiscordHttpError
+pub async fn Client::get_poll_answer_voters(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], Int, after? : @model.Id[@model.UserMarker], limit? : Int) -> @model.PollAnswerVoters raise DiscordHttpError
 pub async fn Client::get_reactions(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], String, limit? : Int, after? : @model.Id[@model.UserMarker]) -> Array[@model.User] raise DiscordHttpError
+pub async fn Client::get_stage_instance(Self, @model.Id[@model.ChannelMarker]) -> @model.StageInstance raise DiscordHttpError
+pub async fn Client::get_sticker(Self, @model.Id[@model.StickerMarker]) -> @model.Sticker raise DiscordHttpError
+pub async fn Client::get_sticker_pack(Self, @model.Id[@model.StickerPackMarker]) -> @model.StickerPack raise DiscordHttpError
 pub async fn Client::get_user(Self, @model.Id[@model.UserMarker]) -> @model.User raise DiscordHttpError
 pub async fn Client::get_webhook(Self, @model.Id[@model.WebhookMarker]) -> @model.Webhook raise DiscordHttpError
 pub async fn Client::get_webhook_message(Self, @model.Id[@model.WebhookMarker], String, @model.Id[@model.MessageMarker]) -> @model.Message raise DiscordHttpError
 pub async fn Client::join_thread(Self, @model.Id[@model.ChannelMarker]) -> Unit raise DiscordHttpError
 pub async fn Client::leave_thread(Self, @model.Id[@model.ChannelMarker]) -> Unit raise DiscordHttpError
+pub async fn Client::list_auto_moderation_rules(Self, @model.Id[@model.GuildMarker]) -> Array[@model.AutoModerationRule] raise DiscordHttpError
+pub async fn Client::list_default_soundboard_sounds(Self) -> Array[@model.SoundboardSound] raise DiscordHttpError
 pub async fn Client::list_guild_emojis(Self, @model.Id[@model.GuildMarker]) -> Array[@model.Emoji] raise DiscordHttpError
 pub async fn Client::list_guild_members(Self, @model.Id[@model.GuildMarker], limit? : Int, after? : @model.Id[@model.UserMarker]) -> Array[@model.GuildMember] raise DiscordHttpError
+pub async fn Client::list_guild_scheduled_event_users(Self, @model.Id[@model.GuildMarker], @model.Id[@model.ScheduledEventMarker], limit? : Int, with_member? : Bool, before? : @model.Id[@model.UserMarker], after? : @model.Id[@model.UserMarker]) -> Array[@model.GuildScheduledEventUser] raise DiscordHttpError
+pub async fn Client::list_guild_scheduled_events(Self, @model.Id[@model.GuildMarker], with_user_count? : Bool) -> Array[@model.GuildScheduledEvent] raise DiscordHttpError
+pub async fn Client::list_guild_soundboard_sounds(Self, @model.Id[@model.GuildMarker]) -> Array[@model.SoundboardSound] raise DiscordHttpError
+pub async fn Client::list_guild_stickers(Self, @model.Id[@model.GuildMarker]) -> Array[@model.Sticker] raise DiscordHttpError
+pub async fn Client::list_sticker_packs(Self) -> @model.StickerPacksResponse raise DiscordHttpError
+pub async fn Client::modify_auto_moderation_rule(Self, @model.Id[@model.GuildMarker], @model.Id[@model.AutoModerationRuleMarker], name? : String, event_type? : @model.AutoModerationEventType, trigger_metadata? : @model.TriggerMetadata, actions? : Array[@model.AutoModerationAction], enabled? : Bool, exempt_roles? : Array[@model.Id[@model.RoleMarker]], exempt_channels? : Array[@model.Id[@model.ChannelMarker]], audit_reason? : String) -> @model.AutoModerationRule raise DiscordHttpError
 pub async fn Client::modify_channel(Self, @model.Id[@model.ChannelMarker], name? : String, topic? : String, clear_topic? : Bool, nsfw? : Bool, parent_id? : @model.Id[@model.ChannelMarker], clear_parent_id? : Bool, rate_limit_per_user? : Int, position? : Int, audit_reason? : String) -> @model.Channel raise DiscordHttpError
 pub async fn Client::modify_current_user(Self, username? : String, avatar? : String, clear_avatar? : Bool) -> @model.User raise DiscordHttpError
+pub async fn Client::modify_guild(Self, @model.Id[@model.GuildMarker], name? : String, verification_level? : @model.VerificationLevel, default_message_notifications? : @model.DefaultMessageNotifications, explicit_content_filter? : @model.ExplicitContentFilter, afk_channel_id? : @model.Id[@model.ChannelMarker], clear_afk_channel_id? : Bool, afk_timeout? : Int, icon? : String, clear_icon? : Bool, owner_id? : @model.Id[@model.UserMarker], splash? : String, clear_splash? : Bool, discovery_splash? : String, clear_discovery_splash? : Bool, banner? : String, clear_banner? : Bool, system_channel_id? : @model.Id[@model.ChannelMarker], clear_system_channel_id? : Bool, system_channel_flags? : @model.SystemChannelFlags, rules_channel_id? : @model.Id[@model.ChannelMarker], clear_rules_channel_id? : Bool, public_updates_channel_id? : @model.Id[@model.ChannelMarker], clear_public_updates_channel_id? : Bool, preferred_locale? : String, features? : Array[@model.GuildFeature], description? : String, clear_description? : Bool, premium_progress_bar_enabled? : Bool, safety_alerts_channel_id? : @model.Id[@model.ChannelMarker], clear_safety_alerts_channel_id? : Bool, audit_reason? : String) -> @model.Guild raise DiscordHttpError
 pub async fn Client::modify_guild_emoji(Self, @model.Id[@model.GuildMarker], @model.Id[@model.EmojiMarker], name? : String, roles? : Array[@model.Id[@model.RoleMarker]], audit_reason? : String) -> @model.Emoji raise DiscordHttpError
 pub async fn Client::modify_guild_member(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker], nick? : String, clear_nick? : Bool, roles? : Array[@model.Id[@model.RoleMarker]], mute? : Bool, deaf? : Bool, channel_id? : @model.Id[@model.ChannelMarker], clear_channel_id? : Bool, communication_disabled_until? : @model.Timestamp, clear_communication_disabled_until? : Bool, audit_reason? : String) -> @model.GuildMember raise DiscordHttpError
 pub async fn Client::modify_guild_role(Self, @model.Id[@model.GuildMarker], @model.Id[@model.RoleMarker], name? : String, permissions? : @model.Permissions, color? : Int, hoist? : Bool, mentionable? : Bool, audit_reason? : String) -> @model.Role raise DiscordHttpError
+pub async fn Client::modify_guild_scheduled_event(Self, @model.Id[@model.GuildMarker], @model.Id[@model.ScheduledEventMarker], channel_id? : @model.Id[@model.ChannelMarker], clear_channel_id? : Bool, entity_metadata? : @model.EntityMetadata, clear_entity_metadata? : Bool, name? : String, privacy_level? : @model.GuildScheduledEventPrivacyLevel, scheduled_start_time? : @model.Timestamp, scheduled_end_time? : @model.Timestamp, clear_scheduled_end_time? : Bool, description? : String, clear_description? : Bool, entity_type? : @model.GuildScheduledEventEntityType, status? : @model.GuildScheduledEventStatus, image? : String, clear_image? : Bool, recurrence_rule? : @model.GuildScheduledEventRecurrenceRule, clear_recurrence_rule? : Bool, audit_reason? : String) -> @model.GuildScheduledEvent raise DiscordHttpError
+pub async fn Client::modify_guild_soundboard_sound(Self, @model.Id[@model.GuildMarker], @model.Id[@model.SoundboardSoundMarker], name? : String, volume? : Double, emoji_id? : @model.Id[@model.EmojiMarker], clear_emoji_id? : Bool, emoji_name? : String, clear_emoji_name? : Bool, audit_reason? : String) -> @model.SoundboardSound raise DiscordHttpError
+pub async fn Client::modify_guild_sticker(Self, @model.Id[@model.GuildMarker], @model.Id[@model.StickerMarker], name? : String, description? : String, clear_description? : Bool, tags? : String, audit_reason? : String) -> @model.Sticker raise DiscordHttpError
+pub async fn Client::modify_stage_instance(Self, @model.Id[@model.ChannelMarker], topic? : String, privacy_level? : @model.StagePrivacyLevel, audit_reason? : String) -> @model.StageInstance raise DiscordHttpError
 pub async fn Client::modify_webhook(Self, @model.Id[@model.WebhookMarker], name? : String, avatar? : String, clear_avatar? : Bool, channel_id? : @model.Id[@model.ChannelMarker], audit_reason? : String) -> @model.Webhook raise DiscordHttpError
 pub fn Client::new(String, base_url? : String, api_version? : Int, limiter? : &@ratelimit.RateLimiter, max_connections? : Int, default_allowed_mentions? : @model.AllowedMentions) -> Self
 pub async fn Client::pin_message(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], audit_reason? : String) -> Unit raise DiscordHttpError
@@ -122,6 +156,7 @@ pub async fn Client::remove_guild_member(Self, @model.Id[@model.GuildMarker], @m
 pub async fn Client::remove_member_role(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker], @model.Id[@model.RoleMarker], audit_reason? : String) -> Unit raise DiscordHttpError
 pub async fn Client::request(Self, Route, body? : Json, audit_reason? : String, files? : Array[FileUpload]) -> Json raise DiscordHttpError
 pub async fn Client::search_guild_members(Self, @model.Id[@model.GuildMarker], String, limit? : Int) -> Array[@model.GuildMember] raise DiscordHttpError
+pub async fn Client::send_soundboard_sound(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.SoundboardSoundMarker], source_guild_id? : @model.Id[@model.GuildMarker]) -> Unit raise DiscordHttpError
 pub async fn Client::start_thread_from_message(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], String, auto_archive_duration? : @model.ThreadAutoArchiveDuration, rate_limit_per_user? : Int, audit_reason? : String) -> @model.Channel raise DiscordHttpError
 pub async fn Client::trigger_typing(Self, @model.Id[@model.ChannelMarker]) -> Unit raise DiscordHttpError
 pub async fn Client::unpin_message(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], audit_reason? : String) -> Unit raise DiscordHttpError
@@ -156,6 +191,9 @@ pub(all) enum Route {
   DeleteUserReaction(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker], emoji~ : String, user_id~ : @model.Id[@model.UserMarker])
   DeleteAllReactions(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])
   GetReactions(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker], emoji~ : String, query~ : String)
+  GetPollAnswerVoters(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker], answer_id~ : Int, query~ : String)
+  ExpirePoll(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])
+  SendSoundboardSound(channel_id~ : @model.Id[@model.ChannelMarker])
   TriggerTypingIndicator(channel_id~ : @model.Id[@model.ChannelMarker])
   PinMessage(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])
   UnpinMessage(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])
@@ -192,12 +230,41 @@ pub(all) enum Route {
   RemoveGuildBan(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])
   GetGuildBans(guild_id~ : @model.Id[@model.GuildMarker], query~ : String)
   GetGuildAuditLog(guild_id~ : @model.Id[@model.GuildMarker], query~ : String)
+  ListAutoModerationRules(guild_id~ : @model.Id[@model.GuildMarker])
+  GetAutoModerationRule(guild_id~ : @model.Id[@model.GuildMarker], rule_id~ : @model.Id[@model.AutoModerationRuleMarker])
+  CreateAutoModerationRule(guild_id~ : @model.Id[@model.GuildMarker])
+  ModifyAutoModerationRule(guild_id~ : @model.Id[@model.GuildMarker], rule_id~ : @model.Id[@model.AutoModerationRuleMarker])
+  DeleteAutoModerationRule(guild_id~ : @model.Id[@model.GuildMarker], rule_id~ : @model.Id[@model.AutoModerationRuleMarker])
+  ListGuildStickers(guild_id~ : @model.Id[@model.GuildMarker])
+  GetGuildSticker(guild_id~ : @model.Id[@model.GuildMarker], sticker_id~ : @model.Id[@model.StickerMarker])
+  CreateGuildSticker(guild_id~ : @model.Id[@model.GuildMarker])
+  ModifyGuildSticker(guild_id~ : @model.Id[@model.GuildMarker], sticker_id~ : @model.Id[@model.StickerMarker])
+  DeleteGuildSticker(guild_id~ : @model.Id[@model.GuildMarker], sticker_id~ : @model.Id[@model.StickerMarker])
+  ListGuildScheduledEvents(guild_id~ : @model.Id[@model.GuildMarker], query~ : String)
+  CreateGuildScheduledEvent(guild_id~ : @model.Id[@model.GuildMarker])
+  GetGuildScheduledEvent(guild_id~ : @model.Id[@model.GuildMarker], event_id~ : @model.Id[@model.ScheduledEventMarker], query~ : String)
+  ModifyGuildScheduledEvent(guild_id~ : @model.Id[@model.GuildMarker], event_id~ : @model.Id[@model.ScheduledEventMarker])
+  DeleteGuildScheduledEvent(guild_id~ : @model.Id[@model.GuildMarker], event_id~ : @model.Id[@model.ScheduledEventMarker])
+  ListGuildScheduledEventUsers(guild_id~ : @model.Id[@model.GuildMarker], event_id~ : @model.Id[@model.ScheduledEventMarker], query~ : String)
+  ListGuildSoundboardSounds(guild_id~ : @model.Id[@model.GuildMarker])
+  CreateGuildSoundboardSound(guild_id~ : @model.Id[@model.GuildMarker])
+  GetGuildSoundboardSound(guild_id~ : @model.Id[@model.GuildMarker], sound_id~ : @model.Id[@model.SoundboardSoundMarker])
+  ModifyGuildSoundboardSound(guild_id~ : @model.Id[@model.GuildMarker], sound_id~ : @model.Id[@model.SoundboardSoundMarker])
+  DeleteGuildSoundboardSound(guild_id~ : @model.Id[@model.GuildMarker], sound_id~ : @model.Id[@model.SoundboardSoundMarker])
   GetGuildWebhooks(guild_id~ : @model.Id[@model.GuildMarker])
   ListGuildEmojis(guild_id~ : @model.Id[@model.GuildMarker])
   GetGuildEmoji(guild_id~ : @model.Id[@model.GuildMarker], emoji_id~ : @model.Id[@model.EmojiMarker])
   CreateGuildEmoji(guild_id~ : @model.Id[@model.GuildMarker])
   ModifyGuildEmoji(guild_id~ : @model.Id[@model.GuildMarker], emoji_id~ : @model.Id[@model.EmojiMarker])
   DeleteGuildEmoji(guild_id~ : @model.Id[@model.GuildMarker], emoji_id~ : @model.Id[@model.EmojiMarker])
+  GetSticker(sticker_id~ : @model.Id[@model.StickerMarker])
+  ListStickerPacks
+  GetStickerPack(pack_id~ : @model.Id[@model.StickerPackMarker])
+  ListDefaultSoundboardSounds
+  CreateStageInstance
+  GetStageInstance(channel_id~ : @model.Id[@model.ChannelMarker])
+  ModifyStageInstance(channel_id~ : @model.Id[@model.ChannelMarker])
+  DeleteStageInstance(channel_id~ : @model.Id[@model.ChannelMarker])
   GetInvite(code~ : String, query~ : String)
   DeleteInvite(code~ : String)
   GetWebhook(webhook_id~ : @model.Id[@model.WebhookMarker])

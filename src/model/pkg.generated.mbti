@@ -1393,7 +1393,7 @@ pub(all) struct GuildScheduledEvent {
   creator : User?
   user_count : Int?
   image : Nullable[ImageHash]?
-  recurrence_rule : Nullable[Json]
+  recurrence_rule : Nullable[GuildScheduledEventRecurrenceRule]
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) enum GuildScheduledEventEntityType {
@@ -1416,6 +1416,71 @@ pub fn GuildScheduledEventPrivacyLevel::to_int(Self) -> Int
 pub impl ToJson for GuildScheduledEventPrivacyLevel
 pub impl @json.FromJson for GuildScheduledEventPrivacyLevel
 
+pub(all) struct GuildScheduledEventRecurrenceRule {
+  start : Timestamp
+  end : Nullable[Timestamp]?
+  frequency : GuildScheduledEventRecurrenceRuleFrequency
+  interval : Int
+  by_weekday : Array[GuildScheduledEventRecurrenceRuleWeekday]?
+  by_n_weekday : Array[GuildScheduledEventRecurrenceRuleNWeekday]?
+  by_month : Array[GuildScheduledEventRecurrenceRuleMonth]?
+  by_month_day : Array[Int]?
+  by_year_day : Array[Int]?
+  count : Int?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum GuildScheduledEventRecurrenceRuleFrequency {
+  Yearly
+  Monthly
+  Weekly
+  Daily
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn GuildScheduledEventRecurrenceRuleFrequency::from_int(Int) -> Self
+pub fn GuildScheduledEventRecurrenceRuleFrequency::to_int(Self) -> Int
+pub impl ToJson for GuildScheduledEventRecurrenceRuleFrequency
+pub impl @json.FromJson for GuildScheduledEventRecurrenceRuleFrequency
+
+pub(all) enum GuildScheduledEventRecurrenceRuleMonth {
+  January
+  February
+  March
+  April
+  May
+  June
+  July
+  August
+  September
+  October
+  November
+  December
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn GuildScheduledEventRecurrenceRuleMonth::from_int(Int) -> Self
+pub fn GuildScheduledEventRecurrenceRuleMonth::to_int(Self) -> Int
+pub impl ToJson for GuildScheduledEventRecurrenceRuleMonth
+pub impl @json.FromJson for GuildScheduledEventRecurrenceRuleMonth
+
+pub(all) struct GuildScheduledEventRecurrenceRuleNWeekday {
+  n : Int
+  day : GuildScheduledEventRecurrenceRuleWeekday
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum GuildScheduledEventRecurrenceRuleWeekday {
+  Monday
+  Tuesday
+  Wednesday
+  Thursday
+  Friday
+  Saturday
+  Sunday
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn GuildScheduledEventRecurrenceRuleWeekday::from_int(Int) -> Self
+pub fn GuildScheduledEventRecurrenceRuleWeekday::to_int(Self) -> Int
+pub impl ToJson for GuildScheduledEventRecurrenceRuleWeekday
+pub impl @json.FromJson for GuildScheduledEventRecurrenceRuleWeekday
+
 pub(all) enum GuildScheduledEventStatus {
   Scheduled
   Active
@@ -1427,6 +1492,12 @@ pub fn GuildScheduledEventStatus::from_int(Int) -> Self
 pub fn GuildScheduledEventStatus::to_int(Self) -> Int
 pub impl ToJson for GuildScheduledEventStatus
 pub impl @json.FromJson for GuildScheduledEventStatus
+
+pub(all) struct GuildScheduledEventUser {
+  guild_scheduled_event_id : Id[ScheduledEventMarker]
+  user : User
+  guild_member : GuildMember?
+} derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct GuildScheduledEventUserEvent {
   guild_scheduled_event_id : Id[ScheduledEventMarker]
@@ -2084,6 +2155,10 @@ pub(all) struct PollAnswerCount {
   me_voted : Bool
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
+pub(all) struct PollAnswerVoters {
+  users : Array[User]
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) enum PollLayoutType {
   Default
   Unknown(Int)
@@ -2439,6 +2514,10 @@ pub(all) struct StickerPack {
 
 pub enum StickerPackMarker {
 }
+
+pub(all) struct StickerPacksResponse {
+  sticker_packs : Array[StickerPack]
+} derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) enum StickerType {
   Standard

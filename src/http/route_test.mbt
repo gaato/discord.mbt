@@ -21,6 +21,185 @@ fn route_metadata(name : String, route : @http.Route) -> RouteMetadata {
 }
 
 ///|
+fn route_signature(route : @http.Route) -> String {
+  "\{route.method_()} \{route.path()} | \{route.bucket()} | reason=\{route.supports_reason()}"
+}
+
+///|
+test "automod and sticker REST route metadata" {
+  let guild_id : @model.GuildId = @model.Id(10UL)
+  let rule_id : @model.AutoModerationRuleId = @model.Id(40UL)
+  let sticker_id : @model.StickerId = @model.Id(50UL)
+  let pack_id : @model.StickerPackId = @model.Id(80UL)
+  debug_inspect(
+    [
+      route_signature(@http.Route::ListAutoModerationRules(guild_id~)),
+      route_signature(@http.Route::GetAutoModerationRule(guild_id~, rule_id~)),
+      route_signature(@http.Route::CreateAutoModerationRule(guild_id~)),
+      route_signature(
+        @http.Route::ModifyAutoModerationRule(guild_id~, rule_id~),
+      ),
+      route_signature(
+        @http.Route::DeleteAutoModerationRule(guild_id~, rule_id~),
+      ),
+      route_signature(@http.Route::GetSticker(sticker_id~)),
+      route_signature(@http.Route::ListStickerPacks),
+      route_signature(@http.Route::GetStickerPack(pack_id~)),
+      route_signature(@http.Route::ListGuildStickers(guild_id~)),
+      route_signature(@http.Route::GetGuildSticker(guild_id~, sticker_id~)),
+      route_signature(@http.Route::CreateGuildSticker(guild_id~)),
+      route_signature(@http.Route::ModifyGuildSticker(guild_id~, sticker_id~)),
+      route_signature(@http.Route::DeleteGuildSticker(guild_id~, sticker_id~)),
+    ],
+    content=(
+      #|[
+      #|  "Get /guilds/10/auto-moderation/rules | GET:/guilds/10/auto-moderation/rules | reason=false",
+      #|  "Get /guilds/10/auto-moderation/rules/40 | GET:/guilds/10/auto-moderation/rules/{} | reason=false",
+      #|  "Post /guilds/10/auto-moderation/rules | POST:/guilds/10/auto-moderation/rules | reason=true",
+      #|  "Patch /guilds/10/auto-moderation/rules/40 | PATCH:/guilds/10/auto-moderation/rules/{} | reason=true",
+      #|  "Delete /guilds/10/auto-moderation/rules/40 | DELETE:/guilds/10/auto-moderation/rules/{} | reason=true",
+      #|  "Get /stickers/50 | GET:/stickers/{} | reason=false",
+      #|  "Get /sticker-packs | GET:/sticker-packs | reason=false",
+      #|  "Get /sticker-packs/80 | GET:/sticker-packs/{} | reason=false",
+      #|  "Get /guilds/10/stickers | GET:/guilds/10/stickers | reason=false",
+      #|  "Get /guilds/10/stickers/50 | GET:/guilds/10/stickers/{} | reason=false",
+      #|  "Post /guilds/10/stickers | POST:/guilds/10/stickers | reason=true",
+      #|  "Patch /guilds/10/stickers/50 | PATCH:/guilds/10/stickers/{} | reason=true",
+      #|  "Delete /guilds/10/stickers/50 | DELETE:/guilds/10/stickers/{} | reason=true",
+      #|]
+    ),
+  )
+}
+
+///|
+test "scheduled event and stage REST route metadata" {
+  let guild_id : @model.GuildId = @model.Id(10UL)
+  let channel_id : @model.ChannelId = @model.Id(20UL)
+  let event_id : @model.ScheduledEventId = @model.Id(60UL)
+  debug_inspect(
+    [
+      route_signature(
+        @http.Route::ListGuildScheduledEvents(
+          guild_id~,
+          query="?with_user_count=true",
+        ),
+      ),
+      route_signature(@http.Route::CreateGuildScheduledEvent(guild_id~)),
+      route_signature(
+        @http.Route::GetGuildScheduledEvent(
+          guild_id~,
+          event_id~,
+          query="?with_user_count=true",
+        ),
+      ),
+      route_signature(
+        @http.Route::ModifyGuildScheduledEvent(guild_id~, event_id~),
+      ),
+      route_signature(
+        @http.Route::DeleteGuildScheduledEvent(guild_id~, event_id~),
+      ),
+      route_signature(
+        @http.Route::ListGuildScheduledEventUsers(
+          guild_id~,
+          event_id~,
+          query="?limit=25",
+        ),
+      ),
+      route_signature(@http.Route::CreateStageInstance),
+      route_signature(@http.Route::GetStageInstance(channel_id~)),
+      route_signature(@http.Route::ModifyStageInstance(channel_id~)),
+      route_signature(@http.Route::DeleteStageInstance(channel_id~)),
+    ],
+    content=(
+      #|[
+      #|  "Get /guilds/10/scheduled-events?with_user_count=true | GET:/guilds/10/scheduled-events | reason=false",
+      #|  "Post /guilds/10/scheduled-events | POST:/guilds/10/scheduled-events | reason=true",
+      #|  "Get /guilds/10/scheduled-events/60?with_user_count=true | GET:/guilds/10/scheduled-events/{} | reason=false",
+      #|  "Patch /guilds/10/scheduled-events/60 | PATCH:/guilds/10/scheduled-events/{} | reason=true",
+      #|  "Delete /guilds/10/scheduled-events/60 | DELETE:/guilds/10/scheduled-events/{} | reason=true",
+      #|  "Get /guilds/10/scheduled-events/60/users?limit=25 | GET:/guilds/10/scheduled-events/{}/users | reason=false",
+      #|  "Post /stage-instances | POST:/stage-instances | reason=true",
+      #|  "Get /stage-instances/20 | GET:/stage-instances/20 | reason=false",
+      #|  "Patch /stage-instances/20 | PATCH:/stage-instances/20 | reason=true",
+      #|  "Delete /stage-instances/20 | DELETE:/stage-instances/20 | reason=true",
+      #|]
+    ),
+  )
+}
+
+///|
+test "poll and soundboard REST route metadata" {
+  let guild_id : @model.GuildId = @model.Id(10UL)
+  let channel_id : @model.ChannelId = @model.Id(20UL)
+  let message_id : @model.MessageId = @model.Id(30UL)
+  let sound_id : @model.SoundboardSoundId = @model.Id(70UL)
+  debug_inspect(
+    [
+      route_signature(
+        @http.Route::GetPollAnswerVoters(
+          channel_id~,
+          message_id~,
+          answer_id=2,
+          query="?limit=25",
+        ),
+      ),
+      route_signature(@http.Route::ExpirePoll(channel_id~, message_id~)),
+      route_signature(@http.Route::SendSoundboardSound(channel_id~)),
+      route_signature(@http.Route::ListDefaultSoundboardSounds),
+      route_signature(@http.Route::ListGuildSoundboardSounds(guild_id~)),
+      route_signature(@http.Route::CreateGuildSoundboardSound(guild_id~)),
+      route_signature(
+        @http.Route::GetGuildSoundboardSound(guild_id~, sound_id~),
+      ),
+      route_signature(
+        @http.Route::ModifyGuildSoundboardSound(guild_id~, sound_id~),
+      ),
+      route_signature(
+        @http.Route::DeleteGuildSoundboardSound(guild_id~, sound_id~),
+      ),
+    ],
+    content=(
+      #|[
+      #|  "Get /channels/20/polls/30/answers/2?limit=25 | GET:/channels/20/polls/{}/answers/{} | reason=false",
+      #|  "Post /channels/20/polls/30/expire | POST:/channels/20/polls/{}/expire | reason=false",
+      #|  "Post /channels/20/send-soundboard-sound | POST:/channels/20/send-soundboard-sound | reason=false",
+      #|  "Get /soundboard-default-sounds | GET:/soundboard-default-sounds | reason=false",
+      #|  "Get /guilds/10/soundboard-sounds | GET:/guilds/10/soundboard-sounds | reason=false",
+      #|  "Post /guilds/10/soundboard-sounds | POST:/guilds/10/soundboard-sounds | reason=true",
+      #|  "Get /guilds/10/soundboard-sounds/70 | GET:/guilds/10/soundboard-sounds/{} | reason=false",
+      #|  "Patch /guilds/10/soundboard-sounds/70 | PATCH:/guilds/10/soundboard-sounds/{} | reason=true",
+      #|  "Delete /guilds/10/soundboard-sounds/70 | DELETE:/guilds/10/soundboard-sounds/{} | reason=true",
+      #|]
+    ),
+  )
+}
+
+///|
+test "new route buckets preserve majors and squash minor resources" {
+  let guild_a : @model.GuildId = @model.Id(10UL)
+  let guild_b : @model.GuildId = @model.Id(11UL)
+  let rule_a : @model.AutoModerationRuleId = @model.Id(40UL)
+  let rule_b : @model.AutoModerationRuleId = @model.Id(41UL)
+  let first = @http.Route::ModifyAutoModerationRule(
+    guild_id=guild_a,
+    rule_id=rule_a,
+  )
+  let same_major = @http.Route::ModifyAutoModerationRule(
+    guild_id=guild_a,
+    rule_id=rule_b,
+  )
+  let other_major = @http.Route::ModifyAutoModerationRule(
+    guild_id=guild_b,
+    rule_id=rule_a,
+  )
+  assert_true(first.bucket() == same_major.bucket())
+  assert_false(first.bucket() == other_major.bucket())
+  assert_false(
+    first.bucket() == @http.Route::ModifyGuild(guild_id=guild_a).bucket(),
+  )
+}
+
+///|
 test "route paths and buckets" {
   let channel_id : @model.ChannelId = @model.Id(100UL)
   let message_id : @model.MessageId = @model.Id(200UL)

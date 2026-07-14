@@ -14,6 +14,179 @@ pub async fn Client::get_guild(
 }
 
 ///|
+/// Modify guild settings. Nullable fields use a matching `clear_*` flag so
+/// omission remains distinct from sending JSON null.
+pub async fn Client::modify_guild(
+  self : Client,
+  guild_id : @model.GuildId,
+  name? : String,
+  verification_level? : @model.VerificationLevel,
+  default_message_notifications? : @model.DefaultMessageNotifications,
+  explicit_content_filter? : @model.ExplicitContentFilter,
+  afk_channel_id? : @model.ChannelId,
+  clear_afk_channel_id? : Bool = false,
+  afk_timeout? : Int,
+  icon? : String,
+  clear_icon? : Bool = false,
+  owner_id? : @model.UserId,
+  splash? : String,
+  clear_splash? : Bool = false,
+  discovery_splash? : String,
+  clear_discovery_splash? : Bool = false,
+  banner? : String,
+  clear_banner? : Bool = false,
+  system_channel_id? : @model.ChannelId,
+  clear_system_channel_id? : Bool = false,
+  system_channel_flags? : @model.SystemChannelFlags,
+  rules_channel_id? : @model.ChannelId,
+  clear_rules_channel_id? : Bool = false,
+  public_updates_channel_id? : @model.ChannelId,
+  clear_public_updates_channel_id? : Bool = false,
+  preferred_locale? : String,
+  features? : Array[@model.GuildFeature],
+  description? : String,
+  clear_description? : Bool = false,
+  premium_progress_bar_enabled? : Bool,
+  safety_alerts_channel_id? : @model.ChannelId,
+  clear_safety_alerts_channel_id? : Bool = false,
+  audit_reason? : String,
+) -> @model.Guild raise DiscordHttpError {
+  if name is Some(value) && (value.length() < 2 || value.length() > 100) {
+    raise DiscordHttpError::Validation(
+      message="guild name must be between 2 and 100 characters",
+    )
+  }
+  if description is Some(value) && value.length() > 120 {
+    raise DiscordHttpError::Validation(
+      message="guild description exceeds 120 characters",
+    )
+  }
+  let body = @model.ObjBuilder::new()
+    .opt("name", name)
+    .opt("verification_level", verification_level)
+    .opt("default_message_notifications", default_message_notifications)
+    .opt("explicit_content_filter", explicit_content_filter)
+    .und(
+      "afk_channel_id",
+      patch_nullable("afk_channel_id", afk_channel_id, clear_afk_channel_id),
+    )
+    .opt("afk_timeout", afk_timeout)
+    .und("icon", patch_nullable("icon", icon, clear_icon))
+    .opt("owner_id", owner_id)
+    .und("splash", patch_nullable("splash", splash, clear_splash))
+    .und(
+      "discovery_splash",
+      patch_nullable(
+        "discovery_splash", discovery_splash, clear_discovery_splash,
+      ),
+    )
+    .und("banner", patch_nullable("banner", banner, clear_banner))
+    .und(
+      "system_channel_id",
+      patch_nullable(
+        "system_channel_id", system_channel_id, clear_system_channel_id,
+      ),
+    )
+    .opt("system_channel_flags", system_channel_flags)
+    .und(
+      "rules_channel_id",
+      patch_nullable(
+        "rules_channel_id", rules_channel_id, clear_rules_channel_id,
+      ),
+    )
+    .und(
+      "public_updates_channel_id",
+      patch_nullable(
+        "public_updates_channel_id", public_updates_channel_id, clear_public_updates_channel_id,
+      ),
+    )
+    .opt("preferred_locale", preferred_locale)
+    .opt("features", features)
+    .und(
+      "description",
+      patch_nullable("description", description, clear_description),
+    )
+    .opt("premium_progress_bar_enabled", premium_progress_bar_enabled)
+    .und(
+      "safety_alerts_channel_id",
+      patch_nullable(
+        "safety_alerts_channel_id", safety_alerts_channel_id, clear_safety_alerts_channel_id,
+      ),
+    )
+    .build()
+  decode(self.request(Route::ModifyGuild(guild_id~), body~, audit_reason?))
+}
+
+///|
+/// Fetch a guild audit log with optional actor, action, and snowflake filters.
+pub async fn Client::get_guild_audit_log(
+  self : Client,
+  guild_id : @model.GuildId,
+  user_id? : @model.UserId,
+  action_type? : @model.AuditLogEvent,
+  before? : @model.AuditLogEntryId,
+  after? : @model.AuditLogEntryId,
+  limit? : Int,
+) -> @model.AuditLog raise DiscordHttpError {
+  if limit is Some(value) && (value < 1 || value > 100) {
+    raise DiscordHttpError::Validation(
+      message="audit log limit must be 1 through 100",
+    )
+  }
+  let params : Array[String] = []
+  if user_id is Some(value) {
+    params.push("user_id=\{value}")
+  }
+  if action_type is Some(value) {
+    params.push("action_type=\{value.to_int()}")
+  }
+  if before is Some(value) {
+    params.push("before=\{value}")
+  }
+  if after is Some(value) {
+    params.push("after=\{value}")
+  }
+  if limit is Some(value) {
+    params.push("limit=\{value}")
+  }
+  let query = if params.length() == 0 { "" } else { "?" + params.join("&") }
+  decode(self.request(Route::GetGuildAuditLog(guild_id~, query~)))
+}
+
+///|
+/// List bans in a guild using before/after snowflake pagination.
+pub async fn Client::get_guild_bans(
+  self : Client,
+  guild_id : @model.GuildId,
+  limit? : Int,
+  before? : @model.UserId,
+  after? : @model.UserId,
+) -> Array[@model.GuildBan] raise DiscordHttpError {
+  if limit is Some(value) && (value < 1 || value > 1000) {
+    raise DiscordHttpError::Validation(
+      message="guild ban limit must be 1 through 1000",
+    )
+  }
+  if before is Some(_) && after is Some(_) {
+    raise DiscordHttpError::Validation(
+      message="guild ban pagination cannot use before and after together",
+    )
+  }
+  let params : Array[String] = []
+  if limit is Some(value) {
+    params.push("limit=\{value}")
+  }
+  if before is Some(value) {
+    params.push("before=\{value}")
+  }
+  if after is Some(value) {
+    params.push("after=\{value}")
+  }
+  let query = if params.length() == 0 { "" } else { "?" + params.join("&") }
+  decode(self.request(Route::GetGuildBans(guild_id~, query~)))
+}
+
+///|
 /// List the channels in a guild.
 pub async fn Client::get_guild_channels(
   self : Client,

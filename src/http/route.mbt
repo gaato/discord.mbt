@@ -66,6 +66,14 @@ pub(all) enum Route {
     emoji~ : String,
     query~ : String
   )
+  GetPollAnswerVoters(
+    channel_id~ : @model.ChannelId,
+    message_id~ : @model.MessageId,
+    answer_id~ : Int,
+    query~ : String
+  )
+  ExpirePoll(channel_id~ : @model.ChannelId, message_id~ : @model.MessageId)
+  SendSoundboardSound(channel_id~ : @model.ChannelId)
   TriggerTypingIndicator(channel_id~ : @model.ChannelId)
   // TODO(pins-v2): Discord added /channels/{id}/messages/pins; these legacy
   // /channels/{id}/pins routes still work but should migrate eventually.
@@ -121,12 +129,73 @@ pub(all) enum Route {
   RemoveGuildBan(guild_id~ : @model.GuildId, user_id~ : @model.UserId)
   GetGuildBans(guild_id~ : @model.GuildId, query~ : String)
   GetGuildAuditLog(guild_id~ : @model.GuildId, query~ : String)
+  ListAutoModerationRules(guild_id~ : @model.GuildId)
+  GetAutoModerationRule(
+    guild_id~ : @model.GuildId,
+    rule_id~ : @model.AutoModerationRuleId
+  )
+  CreateAutoModerationRule(guild_id~ : @model.GuildId)
+  ModifyAutoModerationRule(
+    guild_id~ : @model.GuildId,
+    rule_id~ : @model.AutoModerationRuleId
+  )
+  DeleteAutoModerationRule(
+    guild_id~ : @model.GuildId,
+    rule_id~ : @model.AutoModerationRuleId
+  )
+  ListGuildStickers(guild_id~ : @model.GuildId)
+  GetGuildSticker(guild_id~ : @model.GuildId, sticker_id~ : @model.StickerId)
+  CreateGuildSticker(guild_id~ : @model.GuildId)
+  ModifyGuildSticker(guild_id~ : @model.GuildId, sticker_id~ : @model.StickerId)
+  DeleteGuildSticker(guild_id~ : @model.GuildId, sticker_id~ : @model.StickerId)
+  ListGuildScheduledEvents(guild_id~ : @model.GuildId, query~ : String)
+  CreateGuildScheduledEvent(guild_id~ : @model.GuildId)
+  GetGuildScheduledEvent(
+    guild_id~ : @model.GuildId,
+    event_id~ : @model.ScheduledEventId,
+    query~ : String
+  )
+  ModifyGuildScheduledEvent(
+    guild_id~ : @model.GuildId,
+    event_id~ : @model.ScheduledEventId
+  )
+  DeleteGuildScheduledEvent(
+    guild_id~ : @model.GuildId,
+    event_id~ : @model.ScheduledEventId
+  )
+  ListGuildScheduledEventUsers(
+    guild_id~ : @model.GuildId,
+    event_id~ : @model.ScheduledEventId,
+    query~ : String
+  )
+  ListGuildSoundboardSounds(guild_id~ : @model.GuildId)
+  CreateGuildSoundboardSound(guild_id~ : @model.GuildId)
+  GetGuildSoundboardSound(
+    guild_id~ : @model.GuildId,
+    sound_id~ : @model.SoundboardSoundId
+  )
+  ModifyGuildSoundboardSound(
+    guild_id~ : @model.GuildId,
+    sound_id~ : @model.SoundboardSoundId
+  )
+  DeleteGuildSoundboardSound(
+    guild_id~ : @model.GuildId,
+    sound_id~ : @model.SoundboardSoundId
+  )
   GetGuildWebhooks(guild_id~ : @model.GuildId)
   ListGuildEmojis(guild_id~ : @model.GuildId)
   GetGuildEmoji(guild_id~ : @model.GuildId, emoji_id~ : @model.EmojiId)
   CreateGuildEmoji(guild_id~ : @model.GuildId)
   ModifyGuildEmoji(guild_id~ : @model.GuildId, emoji_id~ : @model.EmojiId)
   DeleteGuildEmoji(guild_id~ : @model.GuildId, emoji_id~ : @model.EmojiId)
+  GetSticker(sticker_id~ : @model.StickerId)
+  ListStickerPacks
+  GetStickerPack(pack_id~ : @model.StickerPackId)
+  ListDefaultSoundboardSounds
+  CreateStageInstance
+  GetStageInstance(channel_id~ : @model.ChannelId)
+  ModifyStageInstance(channel_id~ : @model.ChannelId)
+  DeleteStageInstance(channel_id~ : @model.ChannelId)
   GetInvite(code~ : String, query~ : String)
   DeleteInvite(code~ : String)
   GetWebhook(webhook_id~ : @model.WebhookId)
@@ -278,6 +347,7 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | GetChannelMessages(..)
     | GetChannelMessage(..)
     | GetReactions(..)
+    | GetPollAnswerVoters(..)
     | GetPinnedMessages(..)
     | GetChannelInvites(..)
     | GetChannelWebhooks(..)
@@ -290,9 +360,23 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | GetGuildRoles(..)
     | GetGuildBans(..)
     | GetGuildAuditLog(..)
+    | ListAutoModerationRules(..)
+    | GetAutoModerationRule(..)
+    | ListGuildStickers(..)
+    | GetGuildSticker(..)
+    | ListGuildScheduledEvents(..)
+    | GetGuildScheduledEvent(..)
+    | ListGuildScheduledEventUsers(..)
+    | ListGuildSoundboardSounds(..)
+    | GetGuildSoundboardSound(..)
     | GetGuildWebhooks(..)
     | ListGuildEmojis(..)
     | GetGuildEmoji(..)
+    | GetSticker(..)
+    | ListStickerPacks
+    | GetStickerPack(..)
+    | ListDefaultSoundboardSounds
+    | GetStageInstance(..)
     | GetInvite(..)
     | GetWebhook(..)
     | GetWebhookMessage(..)
@@ -304,6 +388,8 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | GetGuildCommand(..) => Get
     CreateDm
     | CreateMessage(..)
+    | ExpirePoll(..)
+    | SendSoundboardSound(..)
     | BulkDeleteMessages(..)
     | TriggerTypingIndicator(..)
     | StartThreadFromMessage(..)
@@ -313,6 +399,11 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | CreateChannelInvite(..)
     | CreateWebhook(..)
     | CreateGuildEmoji(..)
+    | CreateAutoModerationRule(..)
+    | CreateGuildSticker(..)
+    | CreateGuildScheduledEvent(..)
+    | CreateGuildSoundboardSound(..)
+    | CreateStageInstance
     | ExecuteWebhook(..)
     | CreateInteractionResponse(..)
     | CreateFollowupMessage(..)
@@ -329,6 +420,11 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | ModifyWebhook(..)
     | EditWebhookMessage(..)
     | ModifyGuildEmoji(..)
+    | ModifyAutoModerationRule(..)
+    | ModifyGuildSticker(..)
+    | ModifyGuildScheduledEvent(..)
+    | ModifyGuildSoundboardSound(..)
+    | ModifyStageInstance(..)
     | EditOriginalInteractionResponse(..)
     | EditFollowupMessage(..)
     | EditGlobalCommand(..)
@@ -349,6 +445,11 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | DeleteWebhook(..)
     | DeleteWebhookMessage(..)
     | DeleteGuildEmoji(..)
+    | DeleteAutoModerationRule(..)
+    | DeleteGuildSticker(..)
+    | DeleteGuildScheduledEvent(..)
+    | DeleteGuildSoundboardSound(..)
+    | DeleteStageInstance(..)
     | DeleteOriginalInteractionResponse(..)
     | DeleteFollowupMessage(..)
     | DeleteGlobalCommand(..)
@@ -395,6 +496,12 @@ pub fn Route::path(self : Route) -> String {
       "/channels/\{channel_id}/messages/\{message_id}/reactions"
     GetReactions(channel_id~, message_id~, emoji~, query~) =>
       "/channels/\{channel_id}/messages/\{message_id}/reactions/\{emoji}\{query}"
+    GetPollAnswerVoters(channel_id~, message_id~, answer_id~, query~) =>
+      "/channels/\{channel_id}/polls/\{message_id}/answers/\{answer_id}\{query}"
+    ExpirePoll(channel_id~, message_id~) =>
+      "/channels/\{channel_id}/polls/\{message_id}/expire"
+    SendSoundboardSound(channel_id~) =>
+      "/channels/\{channel_id}/send-soundboard-sound"
     TriggerTypingIndicator(channel_id~) => "/channels/\{channel_id}/typing"
     PinMessage(channel_id~, message_id~)
     | UnpinMessage(channel_id~, message_id~) =>
@@ -439,6 +546,36 @@ pub fn Route::path(self : Route) -> String {
     GetGuildBans(guild_id~, query~) => "/guilds/\{guild_id}/bans\{query}"
     GetGuildAuditLog(guild_id~, query~) =>
       "/guilds/\{guild_id}/audit-logs\{query}"
+    ListAutoModerationRules(guild_id~) | CreateAutoModerationRule(guild_id~) =>
+      "/guilds/\{guild_id}/auto-moderation/rules"
+    GetAutoModerationRule(guild_id~, rule_id~)
+    | ModifyAutoModerationRule(guild_id~, rule_id~)
+    | DeleteAutoModerationRule(guild_id~, rule_id~) =>
+      "/guilds/\{guild_id}/auto-moderation/rules/\{rule_id}"
+    ListGuildStickers(guild_id~) | CreateGuildSticker(guild_id~) =>
+      "/guilds/\{guild_id}/stickers"
+    GetGuildSticker(guild_id~, sticker_id~)
+    | ModifyGuildSticker(guild_id~, sticker_id~)
+    | DeleteGuildSticker(guild_id~, sticker_id~) =>
+      "/guilds/\{guild_id}/stickers/\{sticker_id}"
+    ListGuildScheduledEvents(guild_id~, query~) =>
+      "/guilds/\{guild_id}/scheduled-events\{query}"
+    CreateGuildScheduledEvent(guild_id~) =>
+      "/guilds/\{guild_id}/scheduled-events"
+    GetGuildScheduledEvent(guild_id~, event_id~, query~) =>
+      "/guilds/\{guild_id}/scheduled-events/\{event_id}\{query}"
+    ModifyGuildScheduledEvent(guild_id~, event_id~)
+    | DeleteGuildScheduledEvent(guild_id~, event_id~) =>
+      "/guilds/\{guild_id}/scheduled-events/\{event_id}"
+    ListGuildScheduledEventUsers(guild_id~, event_id~, query~) =>
+      "/guilds/\{guild_id}/scheduled-events/\{event_id}/users\{query}"
+    ListGuildSoundboardSounds(guild_id~)
+    | CreateGuildSoundboardSound(guild_id~) =>
+      "/guilds/\{guild_id}/soundboard-sounds"
+    GetGuildSoundboardSound(guild_id~, sound_id~)
+    | ModifyGuildSoundboardSound(guild_id~, sound_id~)
+    | DeleteGuildSoundboardSound(guild_id~, sound_id~) =>
+      "/guilds/\{guild_id}/soundboard-sounds/\{sound_id}"
     GetGuildWebhooks(guild_id~) => "/guilds/\{guild_id}/webhooks"
     ListGuildEmojis(guild_id~) | CreateGuildEmoji(guild_id~) =>
       "/guilds/\{guild_id}/emojis"
@@ -446,6 +583,14 @@ pub fn Route::path(self : Route) -> String {
     | ModifyGuildEmoji(guild_id~, emoji_id~)
     | DeleteGuildEmoji(guild_id~, emoji_id~) =>
       "/guilds/\{guild_id}/emojis/\{emoji_id}"
+    GetSticker(sticker_id~) => "/stickers/\{sticker_id}"
+    ListStickerPacks => "/sticker-packs"
+    GetStickerPack(pack_id~) => "/sticker-packs/\{pack_id}"
+    ListDefaultSoundboardSounds => "/soundboard-default-sounds"
+    CreateStageInstance => "/stage-instances"
+    GetStageInstance(channel_id~)
+    | ModifyStageInstance(channel_id~)
+    | DeleteStageInstance(channel_id~) => "/stage-instances/\{channel_id}"
     GetInvite(code~, query~) => "/invites/\{code}\{query}"
     DeleteInvite(code~) => "/invites/\{code}"
     GetWebhook(webhook_id~)
@@ -524,6 +669,12 @@ pub fn Route::bucket(self : Route) -> String {
       "DELETE:/channels/\{channel_id}/messages/{}/reactions"
     GetReactions(channel_id~, ..) =>
       "GET:/channels/\{channel_id}/messages/{}/reactions/{}"
+    GetPollAnswerVoters(channel_id~, ..) =>
+      "GET:/channels/\{channel_id}/polls/{}/answers/{}"
+    ExpirePoll(channel_id~, ..) =>
+      "POST:/channels/\{channel_id}/polls/{}/expire"
+    SendSoundboardSound(channel_id~) =>
+      "POST:/channels/\{channel_id}/send-soundboard-sound"
     TriggerTypingIndicator(channel_id~) => "POST:/channels/\{channel_id}/typing"
     PinMessage(channel_id~, ..) => "PUT:/channels/\{channel_id}/pins/{}"
     UnpinMessage(channel_id~, ..) => "DELETE:/channels/\{channel_id}/pins/{}"
@@ -569,12 +720,58 @@ pub fn Route::bucket(self : Route) -> String {
     RemoveGuildBan(guild_id~, ..) => "DELETE:/guilds/\{guild_id}/bans/{}"
     GetGuildBans(guild_id~, ..) => "GET:/guilds/\{guild_id}/bans"
     GetGuildAuditLog(guild_id~, ..) => "GET:/guilds/\{guild_id}/audit-logs"
+    ListAutoModerationRules(guild_id~) =>
+      "GET:/guilds/\{guild_id}/auto-moderation/rules"
+    GetAutoModerationRule(guild_id~, ..) =>
+      "GET:/guilds/\{guild_id}/auto-moderation/rules/{}"
+    CreateAutoModerationRule(guild_id~) =>
+      "POST:/guilds/\{guild_id}/auto-moderation/rules"
+    ModifyAutoModerationRule(guild_id~, ..) =>
+      "PATCH:/guilds/\{guild_id}/auto-moderation/rules/{}"
+    DeleteAutoModerationRule(guild_id~, ..) =>
+      "DELETE:/guilds/\{guild_id}/auto-moderation/rules/{}"
+    ListGuildStickers(guild_id~) => "GET:/guilds/\{guild_id}/stickers"
+    GetGuildSticker(guild_id~, ..) => "GET:/guilds/\{guild_id}/stickers/{}"
+    CreateGuildSticker(guild_id~) => "POST:/guilds/\{guild_id}/stickers"
+    ModifyGuildSticker(guild_id~, ..) => "PATCH:/guilds/\{guild_id}/stickers/{}"
+    DeleteGuildSticker(guild_id~, ..) =>
+      "DELETE:/guilds/\{guild_id}/stickers/{}"
+    ListGuildScheduledEvents(guild_id~, ..) =>
+      "GET:/guilds/\{guild_id}/scheduled-events"
+    CreateGuildScheduledEvent(guild_id~) =>
+      "POST:/guilds/\{guild_id}/scheduled-events"
+    GetGuildScheduledEvent(guild_id~, ..) =>
+      "GET:/guilds/\{guild_id}/scheduled-events/{}"
+    ModifyGuildScheduledEvent(guild_id~, ..) =>
+      "PATCH:/guilds/\{guild_id}/scheduled-events/{}"
+    DeleteGuildScheduledEvent(guild_id~, ..) =>
+      "DELETE:/guilds/\{guild_id}/scheduled-events/{}"
+    ListGuildScheduledEventUsers(guild_id~, ..) =>
+      "GET:/guilds/\{guild_id}/scheduled-events/{}/users"
+    ListGuildSoundboardSounds(guild_id~) =>
+      "GET:/guilds/\{guild_id}/soundboard-sounds"
+    CreateGuildSoundboardSound(guild_id~) =>
+      "POST:/guilds/\{guild_id}/soundboard-sounds"
+    GetGuildSoundboardSound(guild_id~, ..) =>
+      "GET:/guilds/\{guild_id}/soundboard-sounds/{}"
+    ModifyGuildSoundboardSound(guild_id~, ..) =>
+      "PATCH:/guilds/\{guild_id}/soundboard-sounds/{}"
+    DeleteGuildSoundboardSound(guild_id~, ..) =>
+      "DELETE:/guilds/\{guild_id}/soundboard-sounds/{}"
     GetGuildWebhooks(guild_id~) => "GET:/guilds/\{guild_id}/webhooks"
     ListGuildEmojis(guild_id~) => "GET:/guilds/\{guild_id}/emojis"
     GetGuildEmoji(guild_id~, ..) => "GET:/guilds/\{guild_id}/emojis/{}"
     CreateGuildEmoji(guild_id~) => "POST:/guilds/\{guild_id}/emojis"
     ModifyGuildEmoji(guild_id~, ..) => "PATCH:/guilds/\{guild_id}/emojis/{}"
     DeleteGuildEmoji(guild_id~, ..) => "DELETE:/guilds/\{guild_id}/emojis/{}"
+    GetSticker(..) => "GET:/stickers/{}"
+    ListStickerPacks => "GET:/sticker-packs"
+    GetStickerPack(..) => "GET:/sticker-packs/{}"
+    ListDefaultSoundboardSounds => "GET:/soundboard-default-sounds"
+    CreateStageInstance => "POST:/stage-instances"
+    GetStageInstance(channel_id~) => "GET:/stage-instances/\{channel_id}"
+    ModifyStageInstance(channel_id~) => "PATCH:/stage-instances/\{channel_id}"
+    DeleteStageInstance(channel_id~) => "DELETE:/stage-instances/\{channel_id}"
     GetInvite(code~, ..) => "GET:/invites/\{code}"
     DeleteInvite(code~) => "DELETE:/invites/\{code}"
     GetWebhook(webhook_id~) => "GET:/webhooks/\{webhook_id}"
@@ -686,7 +883,22 @@ pub fn Route::supports_reason(self : Route) -> Bool {
     | CreateGuildBan(..)
     | RemoveGuildBan(..)
     | ModifyGuildMember(..)
-    | ModifyCurrentMember(..) => true
+    | ModifyCurrentMember(..)
+    | CreateAutoModerationRule(..)
+    | ModifyAutoModerationRule(..)
+    | DeleteAutoModerationRule(..)
+    | CreateGuildSticker(..)
+    | ModifyGuildSticker(..)
+    | DeleteGuildSticker(..)
+    | CreateGuildScheduledEvent(..)
+    | ModifyGuildScheduledEvent(..)
+    | DeleteGuildScheduledEvent(..)
+    | CreateStageInstance
+    | ModifyStageInstance(..)
+    | DeleteStageInstance(..)
+    | CreateGuildSoundboardSound(..)
+    | ModifyGuildSoundboardSound(..)
+    | DeleteGuildSoundboardSound(..) => true
     _ => false
   }
 }

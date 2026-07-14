@@ -21,7 +21,13 @@ test "guild scheduled event decodes a realistic fixture" {
     #|  },
     #|  "user_count": 42,
     #|  "image": null,
-    #|  "recurrence_rule": {"frequency":2,"interval":1,"future":true},
+    #|  "recurrence_rule": {
+    #|    "start":"2026-08-01T10:00:00Z","end":null,
+    #|    "frequency":2,"interval":1,"by_weekday":[0,2],
+    #|    "by_n_weekday":[{"n":1,"day":0}],"by_month":[8],
+    #|    "by_month_day":[1],"by_year_day":[213],"count":4,
+    #|    "future":true
+    #|  },
     #|  "brand_new_field_from_discord": true
     #|}
   let event : @model.GuildScheduledEvent = @json.from_json(@json.parse(fixture))
@@ -66,7 +72,20 @@ test "guild scheduled event decodes a realistic fixture" {
       #|  ),
       #|  user_count: Some(42),
       #|  image: Some(Null),
-      #|  recurrence_rule: Value(Object({ "frequency": Number(2), "interval": Number(1), "future": True })),
+      #|  recurrence_rule: Value(
+      #|    {
+      #|      start: "2026-08-01T10:00:00Z",
+      #|      end: Some(Null),
+      #|      frequency: Weekly,
+      #|      interval: 1,
+      #|      by_weekday: Some([Monday, Wednesday]),
+      #|      by_n_weekday: Some([{ n: 1, day: Monday }]),
+      #|      by_month: Some([August]),
+      #|      by_month_day: Some([1]),
+      #|      by_year_day: Some([213]),
+      #|      count: Some(4),
+      #|    },
+      #|  ),
       #|}
     ),
   )

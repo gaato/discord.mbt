@@ -124,3 +124,9 @@ pub(all) struct StickerPack {
   description : String
   banner_asset_id : GenericId?
 } derive(ToJson, FromJson, Debug)
+
+///|
+/// The envelope returned by the sticker-packs listing endpoint.
+pub(all) struct StickerPacksResponse {
+  sticker_packs : Array[StickerPack]
+} derive(ToJson, FromJson, Debug)

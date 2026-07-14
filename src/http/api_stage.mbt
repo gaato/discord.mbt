@@ -1,0 +1,68 @@
+///|
+fn validate_stage_topic(topic : String?) -> Unit raise DiscordHttpError {
+  if topic is Some(value) && (value.length() < 1 || value.length() > 120) {
+    raise DiscordHttpError::Validation(
+      message="stage topic must be 1 through 120 characters",
+    )
+  }
+}
+
+///|
+/// Create a stage instance for a stage channel.
+pub async fn Client::create_stage_instance(
+  self : Client,
+  channel_id : @model.ChannelId,
+  topic : String,
+  privacy_level? : @model.StagePrivacyLevel,
+  send_start_notification? : Bool,
+  guild_scheduled_event_id? : @model.ScheduledEventId,
+  audit_reason? : String,
+) -> @model.StageInstance raise DiscordHttpError {
+  validate_stage_topic(Some(topic))
+  let body = @model.ObjBuilder::new()
+    .field("channel_id", channel_id)
+    .field("topic", topic)
+    .opt("privacy_level", privacy_level)
+    .opt("send_start_notification", send_start_notification)
+    .opt("guild_scheduled_event_id", guild_scheduled_event_id)
+    .build()
+  decode(self.request(Route::CreateStageInstance, body~, audit_reason?))
+}
+
+///|
+/// Fetch the stage instance associated with a channel.
+pub async fn Client::get_stage_instance(
+  self : Client,
+  channel_id : @model.ChannelId,
+) -> @model.StageInstance raise DiscordHttpError {
+  decode(self.request(Route::GetStageInstance(channel_id~)))
+}
+
+///|
+/// Modify a stage instance.
+pub async fn Client::modify_stage_instance(
+  self : Client,
+  channel_id : @model.ChannelId,
+  topic? : String,
+  privacy_level? : @model.StagePrivacyLevel,
+  audit_reason? : String,
+) -> @model.StageInstance raise DiscordHttpError {
+  validate_stage_topic(topic)
+  let body = @model.ObjBuilder::new()
+    .opt("topic", topic)
+    .opt("privacy_level", privacy_level)
+    .build()
+  decode(
+    self.request(Route::ModifyStageInstance(channel_id~), body~, audit_reason?),
+  )
+}
+
+///|
+/// Delete a stage instance.
+pub async fn Client::delete_stage_instance(
+  self : Client,
+  channel_id : @model.ChannelId,
+  audit_reason? : String,
+) -> Unit raise DiscordHttpError {
+  self.request(Route::DeleteStageInstance(channel_id~), audit_reason?) |> ignore
+}
