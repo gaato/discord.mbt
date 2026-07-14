@@ -1,11 +1,10 @@
 ///|
 /// A gateway dispatch event decoded by its wire event name.
 ///
-/// Presence, subscription, application-command-permission, and guild-create
-/// payloads remain raw until their complete domains are modeled. Unknown event
-/// names retain both the name and payload for forward compatibility.
+/// Unknown event names retain both the name and payload for forward
+/// compatibility.
 pub(all) enum Event {
-  ApplicationCommandPermissionsUpdate(Json)
+  ApplicationCommandPermissionsUpdate(GuildApplicationCommandPermissions)
   AutoModerationActionExecution(AutoModerationActionExecutionEvent)
   AutoModerationRuleCreate(AutoModerationRule)
   AutoModerationRuleDelete(AutoModerationRule)
@@ -21,7 +20,7 @@ pub(all) enum Event {
   GuildAuditLogEntryCreate(GuildAuditLogEntryCreateEvent)
   GuildBanAdd(GuildBanEvent)
   GuildBanRemove(GuildBanEvent)
-  GuildCreate(Json)
+  GuildCreate(GuildCreateEvent)
   GuildDelete(UnavailableGuild)
   GuildEmojisUpdate(GuildEmojisUpdateEvent)
   GuildIntegrationsUpdate(GuildIntegrationsUpdateEvent)
@@ -60,16 +59,16 @@ pub(all) enum Event {
   MessageReactionRemoveAll(MessageReactionRemoveAllEvent)
   MessageReactionRemoveEmoji(MessageReactionRemoveEmojiEvent)
   MessageUpdate(Message)
-  PresenceUpdate(Json)
+  PresenceUpdate(PresenceUpdateEvent)
   RateLimited(GatewayRateLimitedEvent)
   Ready(Ready)
   Resumed
   StageInstanceCreate(StageInstance)
   StageInstanceDelete(StageInstance)
   StageInstanceUpdate(StageInstance)
-  SubscriptionCreate(Json)
-  SubscriptionDelete(Json)
-  SubscriptionUpdate(Json)
+  SubscriptionCreate(Subscription)
+  SubscriptionDelete(Subscription)
+  SubscriptionUpdate(Subscription)
   ThreadCreate(Channel)
   ThreadDelete(ThreadDeleteEvent)
   ThreadListSync(ThreadListSyncEvent)
@@ -268,7 +267,7 @@ pub fn EventKind::of_name(t : String) -> EventKind {
 pub fn dispatch_event(t : String, d : Json) -> Event raise {
   match t {
     "APPLICATION_COMMAND_PERMISSIONS_UPDATE" =>
-      ApplicationCommandPermissionsUpdate(d)
+      ApplicationCommandPermissionsUpdate(@json.from_json(d))
     "AUTO_MODERATION_ACTION_EXECUTION" =>
       AutoModerationActionExecution(@json.from_json(d))
     "AUTO_MODERATION_RULE_CREATE" =>
@@ -289,8 +288,7 @@ pub fn dispatch_event(t : String, d : Json) -> Event raise {
       GuildAuditLogEntryCreate(@json.from_json(d))
     "GUILD_BAN_ADD" => GuildBanAdd(@json.from_json(d))
     "GUILD_BAN_REMOVE" => GuildBanRemove(@json.from_json(d))
-    // GUILD_CREATE includes members, channels, voice states, and presences.
-    "GUILD_CREATE" => GuildCreate(d)
+    "GUILD_CREATE" => GuildCreate(@json.from_json(d))
     "GUILD_DELETE" => GuildDelete(@json.from_json(d))
     "GUILD_EMOJIS_UPDATE" => GuildEmojisUpdate(@json.from_json(d))
     "GUILD_INTEGRATIONS_UPDATE" => GuildIntegrationsUpdate(@json.from_json(d))
@@ -340,16 +338,16 @@ pub fn dispatch_event(t : String, d : Json) -> Event raise {
     "MESSAGE_REACTION_REMOVE_EMOJI" =>
       MessageReactionRemoveEmoji(@json.from_json(d))
     "MESSAGE_UPDATE" => MessageUpdate(@json.from_json(d))
-    "PRESENCE_UPDATE" => PresenceUpdate(d)
+    "PRESENCE_UPDATE" => PresenceUpdate(@json.from_json(d))
     "RATE_LIMITED" => RateLimited(@json.from_json(d))
     "READY" => Ready(@json.from_json(d))
     "RESUMED" => Resumed
     "STAGE_INSTANCE_CREATE" => StageInstanceCreate(@json.from_json(d))
     "STAGE_INSTANCE_DELETE" => StageInstanceDelete(@json.from_json(d))
     "STAGE_INSTANCE_UPDATE" => StageInstanceUpdate(@json.from_json(d))
-    "SUBSCRIPTION_CREATE" => SubscriptionCreate(d)
-    "SUBSCRIPTION_DELETE" => SubscriptionDelete(d)
-    "SUBSCRIPTION_UPDATE" => SubscriptionUpdate(d)
+    "SUBSCRIPTION_CREATE" => SubscriptionCreate(@json.from_json(d))
+    "SUBSCRIPTION_DELETE" => SubscriptionDelete(@json.from_json(d))
+    "SUBSCRIPTION_UPDATE" => SubscriptionUpdate(@json.from_json(d))
     "THREAD_CREATE" => ThreadCreate(@json.from_json(d))
     "THREAD_DELETE" => ThreadDelete(@json.from_json(d))
     "THREAD_LIST_SYNC" => ThreadListSync(@json.from_json(d))

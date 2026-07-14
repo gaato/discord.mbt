@@ -9,7 +9,7 @@
 // Skipped blocks from this page: none.
 // Page: developers/resources/subscription.mdx
 // Skipped blocks from this page:
-// - line 33, Subscription Example — subscription objects are not modeled.
+// - line 33, Subscription Example — covered by the gateway subscription dispatch fixture.
 
 ///|
 test "discord docs: entitlement example (line 36)" {

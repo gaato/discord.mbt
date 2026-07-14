@@ -71,7 +71,8 @@ pub(all) struct GuildMembersChunkEvent {
   chunk_index : Int
   chunk_count : Int
   not_found : Array[Json]?
-  // Presence payloads remain raw until the presence domain is modeled.
+  // Member-chunk presence entries remain raw; typing that auxiliary response
+  // is separate from the PRESENCE_UPDATE dispatch modeled by this package.
   presences : Array[Json]?
   nonce : String?
 } derive(ToJson, FromJson, Debug)

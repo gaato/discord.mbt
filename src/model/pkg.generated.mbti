@@ -26,6 +26,34 @@ pub(all) struct ActionRow {
   components : Array[Component]
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
+pub(all) struct Activity {
+  name : String
+  typ : ActivityType
+  url : Nullable[String]?
+  created_at : Int64
+  application_id : Id[ApplicationMarker]?
+  details : Nullable[String]?
+  state : Nullable[String]?
+  instance : Bool?
+} derive(ToJson, @debug.Debug)
+pub impl @json.FromJson for Activity
+
+pub(all) enum ActivityType {
+  Playing
+  Streaming
+  Listening
+  Watching
+  Custom
+  Competing
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn ActivityType::from_int(Int) -> Self
+pub fn ActivityType::to_int(Self) -> Int
+pub impl ToJson for ActivityType
+pub impl @json.FromJson for ActivityType
+
+type ActivityWire derive(@json.FromJson)
+
 pub(all) struct Application {
   id : Id[ApplicationMarker]
   name : String
@@ -62,6 +90,23 @@ pub(all) struct ApplicationCommand {
   contexts : Nullable[Array[InteractionContextType]]?
   version : Id[CommandVersionMarker]
 } derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ApplicationCommandPermission {
+  id : Id[GenericMarker]
+  typ : ApplicationCommandPermissionType
+  permission : Bool
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum ApplicationCommandPermissionType {
+  Role
+  User
+  Channel
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn ApplicationCommandPermissionType::from_int(Int) -> Self
+pub fn ApplicationCommandPermissionType::to_int(Self) -> Int
+pub impl ToJson for ApplicationCommandPermissionType
+pub impl @json.FromJson for ApplicationCommandPermissionType
 
 pub(all) enum ApplicationCommandType {
   ChatInput
@@ -350,6 +395,23 @@ pub fn AutoModerationTriggerType::to_int(Self) -> Int
 pub impl ToJson for AutoModerationTriggerType
 pub impl @json.FromJson for AutoModerationTriggerType
 
+pub(all) struct AvailableGuildCreateEvent {
+  guild : Guild
+  joined_at : Timestamp
+  large : Bool
+  unavailable : Bool?
+  member_count : Int
+  voice_states : Array[VoiceState]
+  members : Array[GuildMember]
+  channels : Array[Channel]
+  threads : Array[Channel]
+  presences : Array[PresenceUpdateEvent]
+  stage_instances : Array[StageInstance]
+  guild_scheduled_events : Array[GuildScheduledEvent]
+  soundboard_sounds : Array[SoundboardSound]
+} derive(@debug.Debug)
+pub impl @json.FromJson for AvailableGuildCreateEvent
+
 pub(all) struct AvatarDecorationData {
   asset : ImageHash
   sku_id : Id[SkuMarker]
@@ -502,6 +564,13 @@ pub(all) struct CheckboxGroup {
   required : Bool?
   values : Array[String]?
 } derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ClientStatus {
+  desktop : PresenceStatus?
+  mobile : PresenceStatus?
+  web : PresenceStatus?
+} derive(ToJson, @debug.Debug)
+pub impl @json.FromJson for ClientStatus
 
 pub(all) struct CommandData {
   id : Id[CommandMarker]
@@ -799,7 +868,7 @@ pub(all) struct EntityMetadata {
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) enum Event {
-  ApplicationCommandPermissionsUpdate(Json)
+  ApplicationCommandPermissionsUpdate(GuildApplicationCommandPermissions)
   AutoModerationActionExecution(AutoModerationActionExecutionEvent)
   AutoModerationRuleCreate(AutoModerationRule)
   AutoModerationRuleDelete(AutoModerationRule)
@@ -815,7 +884,7 @@ pub(all) enum Event {
   GuildAuditLogEntryCreate(GuildAuditLogEntryCreateEvent)
   GuildBanAdd(GuildBanEvent)
   GuildBanRemove(GuildBanEvent)
-  GuildCreate(Json)
+  GuildCreate(GuildCreateEvent)
   GuildDelete(UnavailableGuild)
   GuildEmojisUpdate(GuildEmojisUpdateEvent)
   GuildIntegrationsUpdate(GuildIntegrationsUpdateEvent)
@@ -854,16 +923,16 @@ pub(all) enum Event {
   MessageReactionRemoveAll(MessageReactionRemoveAllEvent)
   MessageReactionRemoveEmoji(MessageReactionRemoveEmojiEvent)
   MessageUpdate(Message)
-  PresenceUpdate(Json)
+  PresenceUpdate(PresenceUpdateEvent)
   RateLimited(GatewayRateLimitedEvent)
   Ready(Ready)
   Resumed
   StageInstanceCreate(StageInstance)
   StageInstanceDelete(StageInstance)
   StageInstanceUpdate(StageInstance)
-  SubscriptionCreate(Json)
-  SubscriptionDelete(Json)
-  SubscriptionUpdate(Json)
+  SubscriptionCreate(Subscription)
+  SubscriptionDelete(Subscription)
+  SubscriptionUpdate(Subscription)
   ThreadCreate(Channel)
   ThreadDelete(ThreadDeleteEvent)
   ThreadListSync(ThreadListSyncEvent)
@@ -1112,6 +1181,13 @@ pub(all) struct Guild {
   safety_alerts_channel_id : Nullable[Id[ChannelMarker]]
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
+pub(all) struct GuildApplicationCommandPermissions {
+  id : Id[CommandMarker]
+  application_id : Id[ApplicationMarker]
+  guild_id : Id[GuildMarker]
+  permissions : Array[ApplicationCommandPermission]
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) struct GuildAuditLogEntryCreateEvent {
   guild_id : Id[GuildMarker]
   entry : AuditLogEntry
@@ -1127,6 +1203,12 @@ pub(all) struct GuildBanEvent {
   guild_id : Id[GuildMarker]
   user : User
 } derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum GuildCreateEvent {
+  Available(AvailableGuildCreateEvent)
+  Unavailable(UnavailableGuild)
+} derive(@debug.Debug)
+pub impl @json.FromJson for GuildCreateEvent
 
 pub(all) struct GuildEmojisUpdateEvent {
   guild_id : Id[GuildMarker]
@@ -2006,6 +2088,32 @@ pub fn PremiumType::to_int(Self) -> Int
 pub impl ToJson for PremiumType
 pub impl @json.FromJson for PremiumType
 
+pub(all) enum PresenceStatus {
+  Idle
+  Dnd
+  Online
+  Offline
+  Unknown(String)
+} derive(Eq, @debug.Debug)
+pub fn PresenceStatus::from_string(String) -> Self
+pub fn PresenceStatus::to_string(Self) -> String
+pub impl ToJson for PresenceStatus
+pub impl @json.FromJson for PresenceStatus
+
+pub(all) struct PresenceUpdateEvent {
+  user : PresenceUser?
+  guild_id : Id[GuildMarker]?
+  status : PresenceStatus?
+  activities : Array[Activity]?
+  client_status : ClientStatus?
+} derive(ToJson, @debug.Debug)
+pub impl @json.FromJson for PresenceUpdateEvent
+
+pub(all) struct PresenceUser {
+  id : Id[UserMarker]?
+} derive(ToJson, @debug.Debug)
+pub impl @json.FromJson for PresenceUser
+
 pub(all) struct RadioGroup {
   id : Int?
   custom_id : String
@@ -2302,6 +2410,30 @@ pub fn StickerType::from_int(Int) -> Self
 pub fn StickerType::to_int(Self) -> Int
 pub impl ToJson for StickerType
 pub impl @json.FromJson for StickerType
+
+pub(all) struct Subscription {
+  id : Id[GenericMarker]
+  user_id : Id[UserMarker]
+  sku_ids : Array[Id[SkuMarker]]
+  entitlement_ids : Array[Id[EntitlementMarker]]
+  renewal_sku_ids : Nullable[Array[Id[SkuMarker]]]
+  current_period_start : Timestamp
+  current_period_end : Timestamp
+  status : SubscriptionStatus
+  canceled_at : Nullable[Timestamp]
+  country : String?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum SubscriptionStatus {
+  Active
+  Ending
+  Inactive
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn SubscriptionStatus::from_int(Int) -> Self
+pub fn SubscriptionStatus::to_int(Self) -> Int
+pub impl ToJson for SubscriptionStatus
+pub impl @json.FromJson for SubscriptionStatus
 
 pub(all) struct SystemChannelFlags(UInt64) derive(Eq)
 pub fn SystemChannelFlags::bits(Self) -> UInt64

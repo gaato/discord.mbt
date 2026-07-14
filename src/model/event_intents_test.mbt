@@ -74,6 +74,21 @@ test "event intent table covers every intent group" {
 }
 
 ///|
+test "application scoped typed events require no gateway intent" {
+  debug_inspect(
+    [
+      @model.EventKind::KApplicationCommandPermissionsUpdate
+      .required_intents()
+      .bits(),
+      @model.EventKind::KSubscriptionCreate.required_intents().bits(),
+      @model.EventKind::KSubscriptionUpdate.required_intents().bits(),
+      @model.EventKind::KSubscriptionDelete.required_intents().bits(),
+    ],
+    content="[0, 0, 0, 0]",
+  )
+}
+
+///|
 test "event intents union contexts and omit field visibility intents" {
   debug_inspect(
     [

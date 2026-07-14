@@ -66,8 +66,12 @@ pub fn EventKind::required_intents(self : EventKind) -> Intents {
     KAutoModerationActionExecution => Intents::auto_moderation_execution()
     KMessagePollVoteAdd | KMessagePollVoteRemove =>
       Intents::guild_message_polls() | Intents::direct_message_polls()
+    // These application-scoped dispatches are not gated by gateway intents.
     KApplicationCommandPermissionsUpdate
-    | KChannelInfo
+    | KSubscriptionCreate
+    | KSubscriptionDelete
+    | KSubscriptionUpdate => Intents::none()
+    KChannelInfo
     | KEntitlementCreate
     | KEntitlementDelete
     | KEntitlementUpdate
@@ -77,9 +81,6 @@ pub fn EventKind::required_intents(self : EventKind) -> Intents {
     | KReady
     | KResumed
     | KSoundboardSounds
-    | KSubscriptionCreate
-    | KSubscriptionDelete
-    | KSubscriptionUpdate
     | KUserUpdate
     | KVoiceServerUpdate
     | KUnknown => Intents::none()

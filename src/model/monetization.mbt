@@ -217,3 +217,63 @@ pub fn SkuFlags::guild_subscription() -> SkuFlags {
 pub fn SkuFlags::user_subscription() -> SkuFlags {
   SkuFlags(1UL << 8)
 }
+
+///|
+/// A user's recurring subscription to one or more application SKUs.
+pub(all) struct Subscription {
+  id : GenericId
+  user_id : UserId
+  sku_ids : Array[SkuId]
+  entitlement_ids : Array[EntitlementId]
+  renewal_sku_ids : Nullable[Array[SkuId]]
+  current_period_start : Timestamp
+  current_period_end : Timestamp
+  status : SubscriptionStatus
+  canceled_at : Nullable[Timestamp]
+  country : String?
+} derive(ToJson, FromJson, Debug)
+
+///|
+/// The renewal state of a Discord application subscription.
+pub(all) enum SubscriptionStatus {
+  Active
+  Ending
+  Inactive
+  Unknown(Int)
+} derive(Eq, Debug)
+
+///|
+pub fn SubscriptionStatus::to_int(self : SubscriptionStatus) -> Int {
+  match self {
+    Active => 0
+    Ending => 1
+    Inactive => 2
+    Unknown(value) => value
+  }
+}
+
+///|
+pub fn SubscriptionStatus::from_int(value : Int) -> SubscriptionStatus {
+  match value {
+    0 => Active
+    1 => Ending
+    2 => Inactive
+    value => Unknown(value)
+  }
+}
+
+///|
+pub impl ToJson for SubscriptionStatus with fn to_json(self) {
+  Json::number(self.to_int().to_double())
+}
+
+///|
+pub impl @json.FromJson for SubscriptionStatus with fn from_json(json, path) {
+  match json {
+    Number(value, ..) => SubscriptionStatus::from_int(value.to_int())
+    _ =>
+      raise @json.JsonDecodeError(
+        (path, "expected subscription status (number)"),
+      )
+  }
+}

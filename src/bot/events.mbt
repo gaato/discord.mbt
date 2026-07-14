@@ -26,12 +26,25 @@ pub fn[T] EventType::project(self : EventType[T], event : @model.Event) -> T? {
 ///|
 /// Namespace for typed gateway event descriptors.
 ///
-/// Variants whose payload is still raw `Json` are intentionally omitted:
-/// application-command permissions, guild create, presence update, and
-/// subscription events. The payload-free `Resumed` event and `Unknown` are
-/// likewise available only through the low-level event stream.
+/// The payload-free `Resumed` event and `Unknown` are available only through
+/// the low-level event stream.
 #warnings("-struct_never_constructed")
 pub struct Events {}
+
+///|
+pub fn Events::application_command_permissions_update() -> EventType[
+  @model.GuildApplicationCommandPermissions,
+] {
+  {
+    kind_: KApplicationCommandPermissionsUpdate,
+    project_: event => {
+      match event {
+        ApplicationCommandPermissionsUpdate(value) => Some(value)
+        _ => None
+      }
+    },
+  }
+}
 
 ///|
 pub fn Events::auto_moderation_action_execution() -> EventType[
@@ -232,6 +245,19 @@ pub fn Events::guild_ban_remove() -> EventType[@model.GuildBanEvent] {
     project_: event => {
       match event {
         GuildBanRemove(value) => Some(value)
+        _ => None
+      }
+    },
+  }
+}
+
+///|
+pub fn Events::guild_create() -> EventType[@model.GuildCreateEvent] {
+  {
+    kind_: KGuildCreate,
+    project_: event => {
+      match event {
+        GuildCreate(value) => Some(value)
         _ => None
       }
     },
@@ -765,6 +791,19 @@ pub fn Events::message_update() -> EventType[@model.Message] {
 }
 
 ///|
+pub fn Events::presence_update() -> EventType[@model.PresenceUpdateEvent] {
+  {
+    kind_: KPresenceUpdate,
+    project_: event => {
+      match event {
+        PresenceUpdate(value) => Some(value)
+        _ => None
+      }
+    },
+  }
+}
+
+///|
 pub fn Events::rate_limited() -> EventType[@model.GatewayRateLimitedEvent] {
   {
     kind_: KRateLimited,
@@ -823,6 +862,45 @@ pub fn Events::stage_instance_update() -> EventType[@model.StageInstance] {
     project_: event => {
       match event {
         StageInstanceUpdate(value) => Some(value)
+        _ => None
+      }
+    },
+  }
+}
+
+///|
+pub fn Events::subscription_create() -> EventType[@model.Subscription] {
+  {
+    kind_: KSubscriptionCreate,
+    project_: event => {
+      match event {
+        SubscriptionCreate(value) => Some(value)
+        _ => None
+      }
+    },
+  }
+}
+
+///|
+pub fn Events::subscription_delete() -> EventType[@model.Subscription] {
+  {
+    kind_: KSubscriptionDelete,
+    project_: event => {
+      match event {
+        SubscriptionDelete(value) => Some(value)
+        _ => None
+      }
+    },
+  }
+}
+
+///|
+pub fn Events::subscription_update() -> EventType[@model.Subscription] {
+  {
+    kind_: KSubscriptionUpdate,
+    project_: event => {
+      match event {
+        SubscriptionUpdate(value) => Some(value)
         _ => None
       }
     },

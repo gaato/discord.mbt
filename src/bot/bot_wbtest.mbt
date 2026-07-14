@@ -5,6 +5,18 @@ fn typed_event(name : String, fixture : String) -> @model.Event raise {
 
 ///|
 test "typed event descriptors project representative payloads" {
+  let command_permissions = typed_event(
+    "APPLICATION_COMMAND_PERMISSIONS_UPDATE",
+    (
+      #|{"id":"800","application_id":"900","guild_id":"100","permissions":[]}
+    ),
+  )
+  guard Events::application_command_permissions_update().project(
+      command_permissions,
+    )
+    is Some(command_permissions_payload) else {
+    fail("expected command permissions payload")
+  }
   let pins = typed_event(
     "CHANNEL_PINS_UPDATE",
     (
@@ -78,6 +90,48 @@ test "typed event descriptors project representative payloads" {
   guard Events::guild_delete().project(guild) is Some(guild_payload) else {
     fail("expected guild delete payload")
   }
+  let guild_create = typed_event(
+    "GUILD_CREATE",
+    (
+      #|{"id":"100","unavailable":true}
+    ),
+  )
+  guard Events::guild_create().project(guild_create)
+    is Some(@model.GuildCreateEvent::Unavailable(guild_create_payload)) else {
+    fail("expected guild create payload")
+  }
+  let presence = typed_event(
+    "PRESENCE_UPDATE",
+    (
+      #|{"user":{"id":"200"},"guild_id":false,"status":"online"}
+    ),
+  )
+  guard Events::presence_update().project(presence) is Some(presence_payload) else {
+    fail("expected presence payload")
+  }
+  let subscription_fixture =
+    #|{"id":"600","user_id":"200","sku_ids":["610"],"entitlement_ids":["620"],"renewal_sku_ids":null,"current_period_start":"2025-06-01T00:00:00Z","current_period_end":"2025-07-01T00:00:00Z","status":0,"canceled_at":null}
+  let subscription_create = typed_event(
+    "SUBSCRIPTION_CREATE", subscription_fixture,
+  )
+  let subscription_update = typed_event(
+    "SUBSCRIPTION_UPDATE", subscription_fixture,
+  )
+  let subscription_delete = typed_event(
+    "SUBSCRIPTION_DELETE", subscription_fixture,
+  )
+  guard Events::subscription_create().project(subscription_create)
+    is Some(subscription_create_payload) else {
+    fail("expected subscription create payload")
+  }
+  guard Events::subscription_update().project(subscription_update)
+    is Some(subscription_update_payload) else {
+    fail("expected subscription update payload")
+  }
+  guard Events::subscription_delete().project(subscription_delete)
+    is Some(subscription_delete_payload) else {
+    fail("expected subscription delete payload")
+  }
   let webhooks = typed_event(
     "WEBHOOKS_UPDATE",
     (
@@ -107,6 +161,12 @@ test "typed event descriptors project representative payloads" {
       invite_payload.code,
       thread_payload.id.to_string(),
       guild_payload.id.to_string(),
+      command_permissions_payload.application_id.to_string(),
+      guild_create_payload.id.to_string(),
+      presence_payload.status.map(status => status.to_string()).unwrap_or(""),
+      subscription_create_payload.id.to_string(),
+      subscription_update_payload.id.to_string(),
+      subscription_delete_payload.id.to_string(),
       webhooks_payload.channel_id.to_string(),
       integrations_payload.guild_id.to_string(),
     ],
@@ -120,6 +180,12 @@ test "typed event descriptors project representative payloads" {
       #|  "moon",
       #|  "700",
       #|  "100",
+      #|  "900",
+      #|  "100",
+      #|  "online",
+      #|  "600",
+      #|  "600",
+      #|  "600",
       #|  "400",
       #|  "100",
       #|]
@@ -145,6 +211,7 @@ test "event descriptors delegate required intents" {
 ///|
 test "all typed event descriptors report their matching kind" {
   let actual = [
+    Events::application_command_permissions_update().kind(),
     Events::auto_moderation_action_execution().kind(),
     Events::auto_moderation_rule_create().kind(),
     Events::auto_moderation_rule_delete().kind(),
@@ -160,6 +227,7 @@ test "all typed event descriptors report their matching kind" {
     Events::guild_audit_log_entry_create().kind(),
     Events::guild_ban_add().kind(),
     Events::guild_ban_remove().kind(),
+    Events::guild_create().kind(),
     Events::guild_delete().kind(),
     Events::guild_emojis_update().kind(),
     Events::guild_integrations_update().kind(),
@@ -198,11 +266,15 @@ test "all typed event descriptors report their matching kind" {
     Events::message_reaction_remove_all().kind(),
     Events::message_reaction_remove_emoji().kind(),
     Events::message_update().kind(),
+    Events::presence_update().kind(),
     Events::rate_limited().kind(),
     Events::ready().kind(),
     Events::stage_instance_create().kind(),
     Events::stage_instance_delete().kind(),
     Events::stage_instance_update().kind(),
+    Events::subscription_create().kind(),
+    Events::subscription_delete().kind(),
+    Events::subscription_update().kind(),
     Events::thread_create().kind(),
     Events::thread_delete().kind(),
     Events::thread_list_sync().kind(),
@@ -219,7 +291,8 @@ test "all typed event descriptors report their matching kind" {
     Events::webhooks_update().kind(),
   ]
   let expected = [
-    @model.EventKind::KAutoModerationActionExecution,
+    @model.EventKind::KApplicationCommandPermissionsUpdate,
+    KAutoModerationActionExecution,
     KAutoModerationRuleCreate,
     KAutoModerationRuleDelete,
     KAutoModerationRuleUpdate,
@@ -234,6 +307,7 @@ test "all typed event descriptors report their matching kind" {
     KGuildAuditLogEntryCreate,
     KGuildBanAdd,
     KGuildBanRemove,
+    KGuildCreate,
     KGuildDelete,
     KGuildEmojisUpdate,
     KGuildIntegrationsUpdate,
@@ -272,11 +346,15 @@ test "all typed event descriptors report their matching kind" {
     KMessageReactionRemoveAll,
     KMessageReactionRemoveEmoji,
     KMessageUpdate,
+    KPresenceUpdate,
     KRateLimited,
     KReady,
     KStageInstanceCreate,
     KStageInstanceDelete,
     KStageInstanceUpdate,
+    KSubscriptionCreate,
+    KSubscriptionDelete,
+    KSubscriptionUpdate,
     KThreadCreate,
     KThreadDelete,
     KThreadListSync,
