@@ -1,8 +1,8 @@
 # discord.mbt
 
-A Discord application library for [MoonBit](https://www.moonbit-lang.com/)
-(native backend): typed interaction declarations, API models, a rate-limited
-REST client, and a WebSocket gateway shard.
+A Discord application library for [MoonBit](https://www.moonbit-lang.com/):
+typed interaction declarations, API models, a rate-limited REST client,
+JS/serverless HTTP interactions, and a native WebSocket gateway shard.
 
 The design follows [twilight](https://github.com/twilight-rs/twilight):
 loosely coupled packages that model the Discord API, plus an App layer for
@@ -18,7 +18,8 @@ typed interaction declarations.
 moon add gaato/discord
 ```
 
-The library targets the **native** backend and is built on
+The interaction App, REST client, and data packages support **native** and
+**JavaScript**. The gateway Bot executor is native-only. Both are built on
 [moonbitlang/async](https://github.com/moonbitlang/async).
 
 ## Quickstart
@@ -27,7 +28,7 @@ Build the interaction `App`, then pass it to the gateway `Bot` executor. This
 example registers and answers a `/echo` command. See
 `src/examples/slash_echo` for the runnable version.
 
-```mbt check
+```mbt nocheck
 ///|
 struct QuickstartEchoArgs {
   text : String

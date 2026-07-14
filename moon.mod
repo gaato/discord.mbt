@@ -10,7 +10,7 @@ license = "Apache-2.0"
 
 keywords = [ "discord", "bot", "gateway", "api" ]
 
-description = "A low-level Discord bot library for MoonBit (native): typed API models, REST client, and WebSocket gateway."
+description = "A Discord library for MoonBit with typed APIs, a native gateway, and JS/serverless HTTP interactions."
 
 source = "src"
 

@@ -40,3 +40,28 @@ jobs:
         run: |
           moon info --target native
           git diff --exit-code -- '*.mbti'
+
+  js:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install MoonBit
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+
+      - name: Version
+        run: moon version
+
+      - name: Install dependencies
+        run: moon update && moon install
+
+      - name: Type check
+        run: moon check --target js
+
+      - name: Test
+        run: moon test --target js

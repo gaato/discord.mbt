@@ -16,3 +16,18 @@ import {
   "moonbitlang/core/json",
   "moonbitlang/async/aqueue",
 } for "wbtest"
+
+// This package is intentionally empty on non-native targets.
+
+warnings = "-29"
+
+options(
+  targets: {
+    "bot.mbt": [ "native" ],
+    "bot_wbtest.mbt": [ "native" ],
+    "ctx.mbt": [ "native" ],
+    "events.mbt": [ "native" ],
+    "pkg.generated.mbti": [ "native" ],
+    "runtime_wbtest.mbt": [ "native" ],
+  },
+)

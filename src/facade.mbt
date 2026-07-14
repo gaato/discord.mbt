@@ -10,9 +10,6 @@ pub using @dhttp {type Client, type FileUpload}
 pub using @model {type Intents, type Event}
 
 ///|
-pub using @gateway {type Shard, type ShardEvent}
-
-///|
 pub using @interaction {
   type Arg,
   type Args,
@@ -78,16 +75,6 @@ pub using @app {
   text_field,
   select_field,
   modal,
-}
-
-///|
-/// Native gateway executor and typed event descriptors.
-pub using @bot {
-  type Bot,
-  type GatewayCtx,
-  type EventType,
-  type Events,
-  type BotError,
 }
 
 ///|
