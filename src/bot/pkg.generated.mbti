@@ -1,0 +1,173 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "gaato/discord/bot"
+
+import {
+  "gaato/discord/framework",
+  "gaato/discord/gateway",
+  "gaato/discord/http",
+  "gaato/discord/interaction",
+  "gaato/discord/model",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn[A] slash(name~ : String, description~ : String, args~ : @interaction.Args[A], handler~ : InteractionHandler[A]) -> Command[A]
+
+// Errors
+pub(all) suberror BotDispatchError {
+  Failure(command~ : String, phase~ : ResponsePhase, source~ : Error)
+} derive(@debug.Debug)
+
+pub(all) suberror HandlerError {
+  UserMessage(message~ : String, ephemeral~ : Bool)
+  GuildOnly
+  MissingPermission(@model.Permissions)
+  InvalidArgument(String)
+} derive(@debug.Debug)
+
+// Types and methods
+pub struct BotCtx {
+  // private fields
+}
+pub fn BotCtx::application_id(Self) -> @model.Id[@model.ApplicationMarker]
+pub fn BotCtx::framework_raw(Self) -> @framework.Framework
+pub fn BotCtx::http(Self) -> @http.Client
+pub fn BotCtx::ready(Self) -> @model.Ready
+pub fn BotCtx::shard_raw(Self) -> @gateway.Shard
+pub async fn BotCtx::wait_for_component(Self, custom_id~ : String, timeout_ms? : Int) -> @framework.ComponentCtx?
+
+pub struct Command[A] {
+  // private fields
+}
+pub fn[A] Command::erase(Self[A]) -> RegisteredCommand
+pub fn[A] Command::spec(Self[A]) -> @interaction.CommandSpec
+
+pub struct DeferredCtx {
+  // private fields
+}
+pub fn DeferredCtx::bot(Self) -> BotCtx
+pub async fn DeferredCtx::edit_original(Self, content? : @model.Undefinable[String], embeds? : @model.Undefinable[Array[@model.Embed]], components? : @model.Undefinable[Array[@model.Component]], files? : Array[@http.FileUpload]) -> @model.Message
+pub async fn DeferredCtx::followup(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], ephemeral? : Bool) -> @model.Message
+pub fn DeferredCtx::guild_id(Self) -> @model.Id[@model.GuildMarker]?
+pub fn DeferredCtx::interaction(Self) -> @model.Interaction
+pub fn DeferredCtx::raw(Self) -> @framework.CommandCtx
+pub fn DeferredCtx::user(Self) -> @model.User?
+pub async fn DeferredCtx::wait_for_component(Self, custom_id~ : String, timeout_ms? : Int) -> @framework.ComponentCtx?
+
+pub struct EventType[T] {
+  // private fields
+}
+pub fn[T] EventType::kind(Self[T]) -> @model.EventKind
+pub fn[T] EventType::project(Self[T], @model.Event) -> T?
+pub fn[T] EventType::required_intents(Self[T]) -> @model.Intents
+
+pub struct Events {
+}
+pub fn Events::auto_moderation_action_execution() -> EventType[@model.AutoModerationActionExecutionEvent]
+pub fn Events::auto_moderation_rule_create() -> EventType[@model.AutoModerationRule]
+pub fn Events::auto_moderation_rule_delete() -> EventType[@model.AutoModerationRule]
+pub fn Events::auto_moderation_rule_update() -> EventType[@model.AutoModerationRule]
+pub fn Events::channel_create() -> EventType[@model.Channel]
+pub fn Events::channel_delete() -> EventType[@model.Channel]
+pub fn Events::channel_info() -> EventType[@model.ChannelInfoEvent]
+pub fn Events::channel_pins_update() -> EventType[@model.ChannelPinsUpdateEvent]
+pub fn Events::channel_update() -> EventType[@model.Channel]
+pub fn Events::entitlement_create() -> EventType[@model.Entitlement]
+pub fn Events::entitlement_delete() -> EventType[@model.Entitlement]
+pub fn Events::entitlement_update() -> EventType[@model.Entitlement]
+pub fn Events::guild_audit_log_entry_create() -> EventType[@model.GuildAuditLogEntryCreateEvent]
+pub fn Events::guild_ban_add() -> EventType[@model.GuildBanEvent]
+pub fn Events::guild_ban_remove() -> EventType[@model.GuildBanEvent]
+pub fn Events::guild_delete() -> EventType[@model.UnavailableGuild]
+pub fn Events::guild_emojis_update() -> EventType[@model.GuildEmojisUpdateEvent]
+pub fn Events::guild_integrations_update() -> EventType[@model.GuildIntegrationsUpdateEvent]
+pub fn Events::guild_member_add() -> EventType[@model.GuildMemberAddEvent]
+pub fn Events::guild_member_remove() -> EventType[@model.GuildMemberRemoveEvent]
+pub fn Events::guild_member_update() -> EventType[@model.GuildMemberUpdateEvent]
+pub fn Events::guild_members_chunk() -> EventType[@model.GuildMembersChunkEvent]
+pub fn Events::guild_role_create() -> EventType[@model.GuildRoleEvent]
+pub fn Events::guild_role_delete() -> EventType[@model.GuildRoleDeleteEvent]
+pub fn Events::guild_role_update() -> EventType[@model.GuildRoleEvent]
+pub fn Events::guild_scheduled_event_create() -> EventType[@model.GuildScheduledEvent]
+pub fn Events::guild_scheduled_event_delete() -> EventType[@model.GuildScheduledEvent]
+pub fn Events::guild_scheduled_event_update() -> EventType[@model.GuildScheduledEvent]
+pub fn Events::guild_scheduled_event_user_add() -> EventType[@model.GuildScheduledEventUserEvent]
+pub fn Events::guild_scheduled_event_user_remove() -> EventType[@model.GuildScheduledEventUserEvent]
+pub fn Events::guild_soundboard_sound_create() -> EventType[@model.SoundboardSound]
+pub fn Events::guild_soundboard_sound_delete() -> EventType[@model.GuildSoundboardSoundDeleteEvent]
+pub fn Events::guild_soundboard_sound_update() -> EventType[@model.SoundboardSound]
+pub fn Events::guild_soundboard_sounds_update() -> EventType[@model.SoundboardSoundsEvent]
+pub fn Events::guild_stickers_update() -> EventType[@model.GuildStickersUpdateEvent]
+pub fn Events::guild_update() -> EventType[@model.Guild]
+pub fn Events::integration_create() -> EventType[@model.IntegrationEvent]
+pub fn Events::integration_delete() -> EventType[@model.IntegrationDeleteEvent]
+pub fn Events::integration_update() -> EventType[@model.IntegrationEvent]
+pub fn Events::interaction_create() -> EventType[@model.Interaction]
+pub fn Events::invite_create() -> EventType[@model.InviteCreateEvent]
+pub fn Events::invite_delete() -> EventType[@model.InviteDeleteEvent]
+pub fn Events::message_create() -> EventType[@model.Message]
+pub fn Events::message_delete() -> EventType[@model.MessageDeleteEvent]
+pub fn Events::message_delete_bulk() -> EventType[@model.MessageDeleteBulkEvent]
+pub fn Events::message_poll_vote_add() -> EventType[@model.MessagePollVoteEvent]
+pub fn Events::message_poll_vote_remove() -> EventType[@model.MessagePollVoteEvent]
+pub fn Events::message_reaction_add() -> EventType[@model.MessageReactionAddEvent]
+pub fn Events::message_reaction_remove() -> EventType[@model.MessageReactionRemoveEvent]
+pub fn Events::message_reaction_remove_all() -> EventType[@model.MessageReactionRemoveAllEvent]
+pub fn Events::message_reaction_remove_emoji() -> EventType[@model.MessageReactionRemoveEmojiEvent]
+pub fn Events::message_update() -> EventType[@model.Message]
+pub fn Events::rate_limited() -> EventType[@model.GatewayRateLimitedEvent]
+pub fn Events::ready() -> EventType[@model.Ready]
+pub fn Events::soundboard_sounds() -> EventType[@model.SoundboardSoundsEvent]
+pub fn Events::stage_instance_create() -> EventType[@model.StageInstance]
+pub fn Events::stage_instance_delete() -> EventType[@model.StageInstance]
+pub fn Events::stage_instance_update() -> EventType[@model.StageInstance]
+pub fn Events::thread_create() -> EventType[@model.Channel]
+pub fn Events::thread_delete() -> EventType[@model.ThreadDeleteEvent]
+pub fn Events::thread_list_sync() -> EventType[@model.ThreadListSyncEvent]
+pub fn Events::thread_member_update() -> EventType[@model.ThreadMemberUpdateEvent]
+pub fn Events::thread_members_update() -> EventType[@model.ThreadMembersUpdateEvent]
+pub fn Events::thread_update() -> EventType[@model.Channel]
+pub fn Events::typing_start() -> EventType[@model.TypingStartEvent]
+pub fn Events::user_update() -> EventType[@model.User]
+pub fn Events::voice_channel_effect_send() -> EventType[@model.VoiceChannelEffectSendEvent]
+pub fn Events::voice_channel_start_time_update() -> EventType[@model.VoiceChannelStartTimeUpdateEvent]
+pub fn Events::voice_channel_status_update() -> EventType[@model.VoiceChannelStatusUpdateEvent]
+pub fn Events::voice_server_update() -> EventType[@model.VoiceServerUpdateEvent]
+pub fn Events::voice_state_update() -> EventType[@model.VoiceState]
+pub fn Events::webhooks_update() -> EventType[@model.WebhooksUpdateEvent]
+
+pub struct ImmediateCtx {
+  // private fields
+}
+pub fn ImmediateCtx::bot(Self) -> BotCtx
+pub fn ImmediateCtx::guild_id(Self) -> @model.Id[@model.GuildMarker]?
+pub fn ImmediateCtx::interaction(Self) -> @model.Interaction
+pub fn ImmediateCtx::raw(Self) -> @framework.CommandCtx
+pub fn ImmediateCtx::user(Self) -> @model.User?
+
+pub struct InitialResponse {
+  // private fields
+}
+pub fn InitialResponse::message(content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], ephemeral? : Bool) -> Self
+
+pub(all) enum InteractionHandler[A] {
+  Immediate(async (ImmediateCtx, A) -> InitialResponse)
+  Deferred(ephemeral~ : Bool, async (DeferredCtx, A) -> Unit)
+  Raw(async (@framework.CommandCtx) -> Unit)
+}
+
+pub struct RegisteredCommand {
+  // private fields
+}
+pub fn RegisteredCommand::name(Self) -> String
+
+pub(all) enum ResponsePhase {
+  BeforeInitial
+  AfterDeferred
+  AfterInitial
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits
+
