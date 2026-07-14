@@ -8,12 +8,13 @@ pub struct Client {
   priv default_allowed_mentions : @model.AllowedMentions
   priv request_timeout_ms_ : Int
   priv max_retries_ : Int
+  priv middleware_ : Array[HttpMiddleware]
   priv telemetry_ : Array[(@telemetry.TelemetryEvent) -> Unit raise]
   priv warn_ : Ref[(String) -> Unit]
   // Whitebox tests intercept prepared requests here; production always uses
   // the pooled transport through `perform`.
   priv perform_override_ : Ref[
-    (async (Route, String, Map[String, String], Json?, Array[FileUpload]?) -> RawResponse)?,
+    (async (Route, String, Map[String, String], Json?, Array[FileUpload]?) -> HttpResponse)?,
   ]
 }
 
@@ -47,10 +48,19 @@ pub fn Client::new(
     ),
     request_timeout_ms_: request_timeout_ms,
     max_retries_: max_retries,
+    middleware_: [],
     telemetry_: [],
     warn_: Ref(message => println(message)),
     perform_override_: Ref(None),
   }
+}
+
+///|
+/// Install middleware around each logical REST call. The first installed
+/// middleware is outermost. `next` performs rate limiting, the wire
+/// exchange, and bounded 429 retries.
+pub fn Client::middleware(self : Client, middleware : HttpMiddleware) -> Unit {
+  self.middleware_.push(middleware)
 }
 
 ///|

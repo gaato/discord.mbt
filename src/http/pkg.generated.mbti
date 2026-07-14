@@ -150,6 +150,7 @@ pub async fn Client::list_guild_stickers(Self, @model.Id[@model.GuildMarker]) ->
 pub async fn Client::list_sticker_packs(Self) -> @model.StickerPacksResponse raise DiscordHttpError
 pub fn Client::member_ref(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker]) -> MemberRef
 pub fn Client::message_ref(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker]) -> MessageRef
+pub fn Client::middleware(Self, async (HttpRequest, async (HttpRequest) -> HttpResponse) -> HttpResponse) -> Unit
 pub async fn Client::modify_auto_moderation_rule(Self, @model.Id[@model.GuildMarker], @model.Id[@model.AutoModerationRuleMarker], name? : String, event_type? : @model.AutoModerationEventType, trigger_metadata? : @model.TriggerMetadata, actions? : Array[@model.AutoModerationAction], enabled? : Bool, exempt_roles? : Array[@model.Id[@model.RoleMarker]], exempt_channels? : Array[@model.Id[@model.ChannelMarker]], audit_reason? : String) -> @model.AutoModerationRule raise DiscordHttpError
 pub async fn Client::modify_channel(Self, @model.Id[@model.ChannelMarker], name? : String, topic? : String, clear_topic? : Bool, nsfw? : Bool, parent_id? : @model.Id[@model.ChannelMarker], clear_parent_id? : Bool, rate_limit_per_user? : Int, position? : Int, audit_reason? : String) -> @model.Channel raise DiscordHttpError
 pub async fn Client::modify_current_user(Self, username? : String, avatar? : String, clear_avatar? : Bool) -> @model.User raise DiscordHttpError
@@ -191,6 +192,20 @@ pub struct FileUpload {
 }
 pub fn FileUpload::new(String, Bytes, content_type? : String, description? : String) -> Self
 pub impl @debug.Debug for FileUpload
+
+pub(all) struct HttpRequest {
+  route : Route
+  body : Json?
+  audit_reason : String?
+  files : Array[FileUpload]?
+  headers : Map[String, String]
+}
+
+pub(all) struct HttpResponse {
+  status : Int
+  headers : Map[String, String]
+  body : Json
+}
 
 pub struct MemberRef {
   // private fields
@@ -361,6 +376,8 @@ pub struct UserRef {
 pub async fn UserRef::dm(Self) -> ChannelRef raise DiscordHttpError
 
 // Type aliases
+pub type HttpMiddleware = async (HttpRequest, async (HttpRequest) -> HttpResponse) -> HttpResponse
+
 pub using @moonbitlang/async/http {type RequestMethod}
 
 // Traits
