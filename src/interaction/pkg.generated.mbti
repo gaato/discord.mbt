@@ -7,11 +7,31 @@ import {
 }
 
 // Values
+pub fn arg_attachment(name~ : String, description~ : String) -> Arg[@model.Attachment]
+
+pub fn arg_bool(name~ : String, description~ : String) -> Arg[Bool]
+
+pub fn arg_channel(name~ : String, description~ : String, channel_types? : Array[@model.ChannelType]) -> Arg[@model.Id[@model.ChannelMarker]]
+
+pub fn arg_int(name~ : String, description~ : String, min? : Int64, max? : Int64, choices? : Array[@model.CommandOptionChoice]) -> Arg[Int64]
+
+pub fn arg_mentionable(name~ : String, description~ : String) -> Arg[@model.Id[@model.GenericMarker]]
+
+pub fn arg_number(name~ : String, description~ : String, min? : Double, max? : Double, choices? : Array[@model.CommandOptionChoice]) -> Arg[Double]
+
+pub fn arg_role(name~ : String, description~ : String) -> Arg[@model.Id[@model.RoleMarker]]
+
+pub fn arg_string(name~ : String, description~ : String, choices? : Array[@model.CommandOptionChoice], min_length? : Int, max_length? : Int) -> Arg[String]
+
+pub fn arg_user(name~ : String, description~ : String) -> Arg[@model.Id[@model.UserMarker]]
+
 pub fn attachment_option(String, String, required? : Bool) -> @model.CommandOption
 
 pub fn boolean_option(String, String, required? : Bool) -> @model.CommandOption
 
 pub fn channel_option(String, String, required? : Bool, channel_types? : Array[@model.ChannelType]) -> @model.CommandOption
+
+pub fn[A] default(Arg[A], A) -> Arg[A]
 
 pub fn int_choice(String, Int64) -> @model.CommandOptionChoice
 
@@ -22,6 +42,8 @@ pub fn mentionable_option(String, String, required? : Bool) -> @model.CommandOpt
 pub fn number_choice(String, Double) -> @model.CommandOptionChoice
 
 pub fn number_option(String, String, required? : Bool, choices? : Array[@model.CommandOptionChoice], min_value? : Double, max_value? : Double, autocomplete? : Bool) -> @model.CommandOption
+
+pub fn[A] optional(Arg[A]) -> Arg[A?]
 
 pub fn role_option(String, String, required? : Bool) -> @model.CommandOption
 
@@ -35,7 +57,13 @@ pub fn sub_command_group(String, String, Array[@model.CommandOption]) -> @model.
 
 pub fn user_option(String, String, required? : Bool) -> @model.CommandOption
 
+pub fn[A] validate(Arg[A], (A) -> String?) -> Arg[A]
+
 // Errors
+pub(all) suberror ArgsDecodeError {
+  Validation(name~ : String, message~ : String)
+} derive(@debug.Debug)
+
 pub(all) suberror OptionError {
   MissingOption(name~ : String)
   WrongType(name~ : String, expected~ : String)
@@ -43,6 +71,30 @@ pub(all) suberror OptionError {
 } derive(@debug.Debug)
 
 // Types and methods
+pub struct Arg[A] {
+  // private fields
+}
+pub fn[A, B] Arg::map(Self[A], (A) -> B) -> Self[B]
+
+pub struct Args[A] {
+  // private fields
+}
+pub fn[A] Args::custom(definitions~ : Array[@model.CommandOption], decode~ : (CommandOptions) -> A raise) -> Self[A]
+pub fn[A] Args::decode(Self[A], CommandOptions) -> A raise
+pub fn[A] Args::definitions(Self[A]) -> Array[@model.CommandOption]
+pub fn[A, B] Args::map(Self[A], (A) -> B) -> Self[B]
+pub fn[A, Z] Args::map1(Arg[A], (A) -> Z) -> Self[Z]
+pub fn[A, B, Z] Args::map2(Arg[A], Arg[B], (A, B) -> Z) -> Self[Z]
+pub fn[A, B, C, Z] Args::map3(Arg[A], Arg[B], Arg[C], (A, B, C) -> Z) -> Self[Z]
+pub fn[A, B, C, D, Z] Args::map4(Arg[A], Arg[B], Arg[C], Arg[D], (A, B, C, D) -> Z) -> Self[Z]
+pub fn[A, B, C, D, E, Z] Args::map5(Arg[A], Arg[B], Arg[C], Arg[D], Arg[E], (A, B, C, D, E) -> Z) -> Self[Z]
+pub fn[A, B, C, D, E, F, Z] Args::map6(Arg[A], Arg[B], Arg[C], Arg[D], Arg[E], Arg[F], (A, B, C, D, E, F) -> Z) -> Self[Z]
+pub fn[A, B, C, D, E, F, G, Z] Args::map7(Arg[A], Arg[B], Arg[C], Arg[D], Arg[E], Arg[F], Arg[G], (A, B, C, D, E, F, G) -> Z) -> Self[Z]
+pub fn[A, B, C, D, E, F, G, H, Z] Args::map8(Arg[A], Arg[B], Arg[C], Arg[D], Arg[E], Arg[F], Arg[G], Arg[H], (A, B, C, D, E, F, G, H) -> Z) -> Self[Z]
+pub fn[A] Args::of(Arg[A]) -> Self[A]
+pub fn Args::unit() -> Self[Unit]
+pub fn[A, B] Args::zip(Self[A], Self[B]) -> Self[(A, B)]
+
 pub struct CommandOptions {
   // private fields
 }
