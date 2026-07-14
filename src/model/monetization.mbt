@@ -7,8 +7,8 @@ pub(all) struct Entitlement {
   user_id : UserId?
   typ : EntitlementType
   deleted : Bool
-  starts_at : Nullable[Timestamp]
-  ends_at : Nullable[Timestamp]
+  starts_at : Nullable[Timestamp]?
+  ends_at : Nullable[Timestamp]?
   guild_id : GuildId?
   consumed : Bool?
 } derive (

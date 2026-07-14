@@ -38,6 +38,13 @@ pub(all) struct Application {
   approximate_user_install_count : Int?
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
+pub(all) struct ApplicationAuthorizedEvent {
+  integration_type : ApplicationIntegrationType?
+  user : User
+  scopes : Array[String]
+  guild : Guild?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) struct ApplicationCommand {
   id : Id[CommandMarker]
   typ : ApplicationCommandType?
@@ -67,6 +74,10 @@ pub fn ApplicationCommandType::from_int(Int) -> Self
 pub fn ApplicationCommandType::to_int(Self) -> Int
 pub impl ToJson for ApplicationCommandType
 pub impl @json.FromJson for ApplicationCommandType
+
+pub(all) struct ApplicationDeauthorizedEvent {
+  user : User
+} derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct ApplicationFlags(UInt64) derive(Eq)
 pub fn ApplicationFlags::application_auto_moderation_rule_create_badge() -> Self
@@ -758,8 +769,8 @@ pub(all) struct Entitlement {
   user_id : Id[UserMarker]?
   typ : EntitlementType
   deleted : Bool
-  starts_at : Nullable[Timestamp]
-  ends_at : Nullable[Timestamp]
+  starts_at : Nullable[Timestamp]?
+  ends_at : Nullable[Timestamp]?
   guild_id : Id[GuildMarker]?
   consumed : Bool?
 } derive(ToJson, @debug.Debug, @json.FromJson)
@@ -1001,6 +1012,27 @@ pub(all) struct ForumTag {
   emoji_id : Nullable[Id[EmojiMarker]]
   emoji_name : Nullable[String]
 } derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct GameDirectMessage {
+  id : Id[MessageMarker]
+  typ : MessageType?
+  content : String?
+  channel_id : Id[ChannelMarker]?
+  channel : Channel?
+  author : User?
+  recipient_id : Id[UserMarker]?
+  timestamp : Timestamp?
+  edited_timestamp : Nullable[Timestamp]?
+  flags : MessageFlags?
+  application_id : Id[ApplicationMarker]?
+  attachments : Array[Attachment]?
+  components : Array[Component]?
+  activity : MessageActivity?
+  application : Json?
+  raw : Json
+} derive(@debug.Debug)
+pub impl ToJson for GameDirectMessage
+pub impl @json.FromJson for GameDirectMessage
 
 pub(all) struct GatewayBotInfo {
   url : String
@@ -1540,6 +1572,31 @@ pub(all) struct Label {
   description : String?
   component : Component
 } derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct LobbyMessage {
+  id : Id[MessageMarker]
+  typ : MessageType
+  content : String
+  lobby_id : Id[GenericMarker]
+  channel_id : Id[ChannelMarker]
+  author : User
+  metadata : Json?
+  flags : MessageFlags
+  application_id : Id[ApplicationMarker]?
+  timestamp : Timestamp?
+  edited_timestamp : Nullable[Timestamp]?
+  raw : Json
+} derive(@debug.Debug)
+pub impl ToJson for LobbyMessage
+pub impl @json.FromJson for LobbyMessage
+
+pub(all) struct LobbyMessageDeleteEvent {
+  id : Id[MessageMarker]
+  lobby_id : Id[GenericMarker]
+  raw : Json
+} derive(@debug.Debug)
+pub impl ToJson for LobbyMessageDeleteEvent
+pub impl @json.FromJson for LobbyMessageDeleteEvent
 
 pub(all) struct MediaGallery {
   id : Int?
@@ -2579,8 +2636,68 @@ pub(all) struct Webhook {
   url : String?
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
+pub(all) enum WebhookEvent {
+  ApplicationAuthorized(ApplicationAuthorizedEvent)
+  ApplicationDeauthorized(ApplicationDeauthorizedEvent)
+  EntitlementCreate(Entitlement)
+  EntitlementUpdate(Entitlement)
+  EntitlementDelete(Entitlement)
+  LobbyMessageCreate(LobbyMessage)
+  LobbyMessageUpdate(LobbyMessage)
+  LobbyMessageDelete(LobbyMessageDeleteEvent)
+  GameDirectMessageCreate(GameDirectMessage)
+  GameDirectMessageUpdate(GameDirectMessage)
+  GameDirectMessageDelete(GameDirectMessage)
+  QuestUserEnrollment
+  Unknown(typ~ : String, data~ : Json?)
+} derive(@debug.Debug)
+
+pub(all) struct WebhookEventBody {
+  typ : WebhookEventType
+  timestamp : Timestamp
+  data : Json?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+pub fn WebhookEventBody::project(Self) -> WebhookEvent raise
+
+pub(all) struct WebhookEventPayload {
+  version : Int
+  application_id : Id[ApplicationMarker]
+  typ : WebhookPayloadType
+  event : WebhookEventBody?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum WebhookEventType {
+  ApplicationAuthorized
+  ApplicationDeauthorized
+  EntitlementCreate
+  EntitlementUpdate
+  EntitlementDelete
+  LobbyMessageCreate
+  LobbyMessageUpdate
+  LobbyMessageDelete
+  GameDirectMessageCreate
+  GameDirectMessageUpdate
+  GameDirectMessageDelete
+  QuestUserEnrollment
+  Unknown(String)
+} derive(Eq, @debug.Debug)
+pub fn WebhookEventType::from_string(String) -> Self
+pub fn WebhookEventType::to_string(Self) -> String
+pub impl ToJson for WebhookEventType
+pub impl @json.FromJson for WebhookEventType
+
 pub enum WebhookMarker {
 }
+
+pub(all) enum WebhookPayloadType {
+  Ping
+  Event
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn WebhookPayloadType::from_int(Int) -> Self
+pub fn WebhookPayloadType::to_int(Self) -> Int
+pub impl ToJson for WebhookPayloadType
+pub impl @json.FromJson for WebhookPayloadType
 
 pub(all) enum WebhookType {
   Incoming
