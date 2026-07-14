@@ -6,6 +6,7 @@ import {
   "gaato/discord/framework",
   "gaato/discord/app",
   "gaato/discord/bot",
+  "gaato/discord/verify",
 }
 
 import {
@@ -23,6 +24,7 @@ options(
   targets: {
     "README.mbt.md": [ "native" ],
     "facade_native.mbt": [ "native" ],
+    "facade_js.mbt": [ "js" ],
     "readme_native_test.mbt": [ "native" ],
   },
 )

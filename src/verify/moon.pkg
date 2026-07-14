@@ -1,0 +1,20 @@
+import {
+  "moonbitlang/async/js_async",
+  "moonbitlang/core/encoding/utf8",
+}
+
+import {
+  "moonbitlang/async",
+} for "test"
+
+// This package is intentionally empty on non-JavaScript targets.
+
+warnings = "-29"
+
+options(
+  targets: {
+    "pkg.generated.mbti": [ "js" ],
+    "verify.mbt": [ "js" ],
+    "verify_test.mbt": [ "js" ],
+  },
+)

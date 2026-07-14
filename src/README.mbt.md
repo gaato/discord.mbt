@@ -297,12 +297,14 @@ multipart files or explicit outcomes should decode an `@model.Interaction` and
 call `handle_interaction`.
 
 The executor split treats serverless deployments such as Cloudflare Workers as
-a first-class target. The current library does not include an HTTP server,
-Workers adapter, or signature verification helper. Those adapters must read
-the raw request body and verify `X-Signature-Ed25519` with
-`X-Signature-Timestamp` before parsing or dispatching the interaction. Discord
-requires Ed25519 verification. Later phases will add a WebCrypto verification
-helper and Workers example.
+a first-class target. JavaScript adapters can verify the raw request with
+`@discord/verify.verify_signature` before parsing or dispatching it. The helper
+uses WebCrypto Ed25519 and works on Cloudflare Workers and Node 19+. It is also
+re-exported as `@discord.verify_signature` on the JavaScript target. Native
+adapters still bring their own Ed25519 implementation, such as libsodium.
+
+The library does not yet include an HTTP server or Workers adapter. A Workers
+example is planned for the next phase.
 
 After verification, pass the decoded body to `endpoint.handle(body)`. A Discord
 Ping produces the Pong callback.
