@@ -62,6 +62,7 @@ pub struct Bot {
   priv identify_queue_ : &@queue.IdentifyQueue?
   priv typed_events_ : Array[TypedEventHandler]
   priv raw_events_ : Array[async (GatewayCtx, @model.Event) -> Unit]
+  priv event_middleware_ : Array[EventMiddleware]
   priv mut cache_ : @cache.InMemoryCache?
   priv decode_errors_ : Array[(String, Json) -> Unit]
   priv telemetry_ : Array[(@telemetry.TelemetryEvent) -> Unit raise]
@@ -98,6 +99,7 @@ pub fn Bot::new(
     identify_queue_: identify_queue,
     typed_events_: [],
     raw_events_: [],
+    event_middleware_: [],
     cache_: None,
     decode_errors_: [],
     telemetry_: [],
@@ -546,7 +548,7 @@ pub async fn Bot::run(self : Bot) -> Unit {
             self.spawn_services(group, ctx)
           }
           self.collector_.dispatch(event)
-          self.spawn_event_handlers(spawner, ctx, event)
+          self.dispatch_event(spawner, ctx, event)
         }
         Dispatch(InteractionCreate(interaction) as event) => {
           if self.cache_ is Some(cache) {
@@ -558,7 +560,7 @@ pub async fn Bot::run(self : Bot) -> Unit {
               // Processing is another bounded child task. Awaiting it here
               // would deadlock handlers waiting for a later component event.
               self.spawn_interaction(spawner, router, interaction)
-              self.spawn_event_handlers(spawner, ctx, event)
+              self.dispatch_event(spawner, ctx, event)
             }
             _ =>
               self.app_.warn(
@@ -574,7 +576,7 @@ pub async fn Bot::run(self : Bot) -> Unit {
           match owner.context {
             Some(ctx) => {
               self.collector_.dispatch(event)
-              self.spawn_event_handlers(spawner, ctx, event)
+              self.dispatch_event(spawner, ctx, event)
             }
             None =>
               self.app_.warn(

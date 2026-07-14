@@ -34,6 +34,7 @@ options(
     "bot_wbtest.mbt": [ "native" ],
     "ctx.mbt": [ "native" ],
     "events.mbt": [ "native" ],
+    "middleware.mbt": [ "native" ],
     "pkg.generated.mbti": [ "native" ],
     "runtime_wbtest.mbt": [ "native" ],
     "shard_manager.mbt": [ "native" ],

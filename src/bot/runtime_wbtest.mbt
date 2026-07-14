@@ -362,6 +362,254 @@ fn message_create_frame(sequence : Int, id : String) -> String {
 }
 
 ///|
+fn middleware_runtime_bot(app : @app.App, transport : BotFakeTransport) -> Bot {
+  let bot = Bot::new(
+    app,
+    token="test-token",
+    intents=@model.Intents::guild_messages(),
+    client=@dhttp.Client::new("test-token"),
+    gateway_url="wss://gateway.example",
+  )
+  bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  bot
+}
+
+///|
+async test "event middleware drops handlers after wire-level cache updates" {
+  let transport = BotFakeTransport::new()
+  let app = @app.App::new(sync=Disabled)
+  let bot = middleware_runtime_bot(app, transport)
+  let cache = @cache.InMemoryCache::new(
+    resources=@cache.CacheResources::new(messages=true),
+  )
+  bot.attach_cache(cache)
+  bot.middleware((_, event, next) => {
+    match event {
+      MessageCreate(_) => ()
+      _ => next(event)
+    }
+  })
+  let ready_contexts : @aqueue.Queue[GatewayCtx] = @aqueue.Queue::new(
+    kind=Unbounded,
+  )
+  bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
+  let handler_events : @aqueue.Queue[Unit] = @aqueue.Queue::new(kind=Unbounded)
+  bot.on(Events::message_create(), (_, _) => handler_events.put(()))
+  let message_dispatches = Ref(0)
+  bot.on_telemetry(event => {
+    match event {
+      EventDispatched(kind="KMessageCreate", ..) => message_dispatches.val += 1
+      _ => ()
+    }
+  })
+  @async.with_task_group(group => {
+    let running = group.spawn(no_wait=true, () => bot.run())
+    transport.incoming.put(BOT_HELLO)
+    guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
+      fail("expected identify")
+    }
+    transport.incoming.put(bot_ready_frame())
+    let ctx = ready_contexts.get()
+    transport.incoming.put(message_create_frame(2, "701"))
+    let channel_id : @model.ChannelId = @model.Id::parse("6")
+    let message_id : @model.MessageId = @model.Id::parse("701")
+    let cache_updated = Ref(false)
+    for _ in 0..<50 {
+      if cache.message(channel_id, message_id) is Some(message) {
+        inspect(message.content, content="cached")
+        cache_updated.val = true
+        break
+      }
+      @async.sleep(1)
+    }
+    assert_true(cache_updated.val)
+    assert_true(
+      @async.with_timeout_opt(100, () => handler_events.get()) is None,
+    )
+    inspect(message_dispatches.val, content="0")
+    ctx.shutdown()
+    running.wait()
+  })
+}
+
+///|
+async test "event middleware transforms events for typed handlers" {
+  let transport = BotFakeTransport::new()
+  let app = @app.App::new(sync=Disabled)
+  let bot = middleware_runtime_bot(app, transport)
+  bot.middleware((_, event, next) => {
+    match event {
+      MessageCreate(payload) => {
+        let message = { ..payload.message, content: "transformed" }
+        next(MessageCreate({ ..payload, message, }))
+      }
+      _ => next(event)
+    }
+  })
+  let ready_contexts : @aqueue.Queue[GatewayCtx] = @aqueue.Queue::new(
+    kind=Unbounded,
+  )
+  bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
+  let contents : @aqueue.Queue[String] = @aqueue.Queue::new(kind=Unbounded)
+  bot.on(Events::message_create(), (_, event) => {
+    contents.put(event.message.content)
+  })
+  @async.with_task_group(group => {
+    let running = group.spawn(no_wait=true, () => bot.run())
+    transport.incoming.put(BOT_HELLO)
+    guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
+      fail("expected identify")
+    }
+    transport.incoming.put(bot_ready_frame())
+    let ctx = ready_contexts.get()
+    transport.incoming.put(message_create_frame(2, "702"))
+    inspect(contents.get(), content="transformed")
+    ctx.shutdown()
+    running.wait()
+  })
+}
+
+///|
+async test "event middleware order is onion-style" {
+  let transport = BotFakeTransport::new()
+  let app = @app.App::new(sync=Disabled)
+  let bot = middleware_runtime_bot(app, transport)
+  let trace : Array[String] = []
+  let first : EventMiddleware = (_, event, next) => {
+    match event {
+      MessageDelete(_) => {
+        trace.push("a-in")
+        next(event)
+        trace.push("a-out")
+      }
+      _ => next(event)
+    }
+  }
+  let second : EventMiddleware = (_, event, next) => {
+    match event {
+      MessageDelete(_) => {
+        trace.push("b-in")
+        next(event)
+        trace.push("b-out")
+      }
+      _ => next(event)
+    }
+  }
+  bot..middleware(first).middleware(second)
+  let ready_contexts : @aqueue.Queue[GatewayCtx] = @aqueue.Queue::new(
+    kind=Unbounded,
+  )
+  bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
+  let handled : @aqueue.Queue[Unit] = @aqueue.Queue::new(kind=Unbounded)
+  bot.on(Events::message_delete(), (_, _) => handled.put(()))
+  @async.with_task_group(group => {
+    let running = group.spawn(no_wait=true, () => bot.run())
+    transport.incoming.put(BOT_HELLO)
+    guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
+      fail("expected identify")
+    }
+    transport.incoming.put(bot_ready_frame())
+    let ctx = ready_contexts.get()
+    transport.incoming.put(message_delete_frame(2, "703"))
+    handled.get()
+    for _ in 0..<50 {
+      if trace.length() == 4 {
+        break
+      }
+      @async.sleep(1)
+    }
+    inspect(trace.join(", "), content="a-in, b-in, b-out, a-out")
+    ctx.shutdown()
+    running.wait()
+  })
+}
+
+///|
+async test "interaction routing survives dropped gateway events" {
+  let transport = BotFakeTransport::new()
+  let app = @app.App::new(sync=Disabled)
+  let commands : @aqueue.Queue[Unit] = @aqueue.Queue::new(kind=Unbounded)
+  app.command(
+    @app.slash(
+      name="raw",
+      description="Raw command",
+      args=@interaction.Args::unit(),
+      handler=Raw(_ => commands.put(())),
+    ),
+  )
+  let bot = middleware_runtime_bot(app, transport)
+  bot.middleware((_, _, _) => ())
+  let service_contexts : @aqueue.Queue[GatewayCtx] = @aqueue.Queue::new(
+    kind=Unbounded,
+  )
+  bot.service(name="capture-context", ctx => service_contexts.put(ctx))
+  @async.with_task_group(group => {
+    let running = group.spawn(no_wait=true, () => bot.run())
+    transport.incoming.put(BOT_HELLO)
+    guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
+      fail("expected identify")
+    }
+    transport.incoming.put(bot_ready_frame())
+    let ctx = service_contexts.get()
+    transport.incoming.put(command_frame(2, "500000000000000701"))
+    guard @async.with_timeout_opt(500, () => commands.get()) is Some(_) else {
+      fail("interaction routing was dropped by event middleware")
+    }
+    ctx.shutdown()
+    running.wait()
+  })
+}
+
+///|
+async test "event middleware failures warn and preserve later dispatch" {
+  let transport = BotFakeTransport::new()
+  let app = @app.App::new(sync=Disabled)
+  let warnings : Array[String] = []
+  app.on_warn(message => warnings.push(message))
+  let bot = middleware_runtime_bot(app, transport)
+  let failed = Ref(false)
+  bot.middleware((_, event, next) => {
+    match event {
+      MessageDelete(_) if !failed.val => {
+        failed.val = true
+        raise RuntimeTestFailure
+      }
+      _ => next(event)
+    }
+  })
+  let ready_contexts : @aqueue.Queue[GatewayCtx] = @aqueue.Queue::new(
+    kind=Unbounded,
+  )
+  bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
+  let handled : @aqueue.Queue[String] = @aqueue.Queue::new(kind=Unbounded)
+  bot.on(Events::message_delete(), (_, event) => {
+    handled.put(event.id.to_string())
+  })
+  @async.with_task_group(group => {
+    let running = group.spawn(no_wait=true, () => bot.run())
+    transport.incoming.put(BOT_HELLO)
+    guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
+      fail("expected identify")
+    }
+    transport.incoming.put(bot_ready_frame())
+    let ctx = ready_contexts.get()
+    transport.incoming.put(message_delete_frame(2, "704"))
+    for _ in 0..<50 {
+      if warnings.length() == 1 {
+        break
+      }
+      @async.sleep(1)
+    }
+    inspect(warnings.length(), content="1")
+    assert_true(warnings[0].contains("event middleware failed"))
+    transport.incoming.put(message_delete_frame(3, "705"))
+    inspect(handled.get(), content="705")
+    ctx.shutdown()
+    running.wait()
+  })
+}
+
+///|
 async test "bot updates cache before typed event handlers" {
   let transport = BotFakeTransport::new()
   let app = @app.App::new(sync=@app.CommandSync::Disabled)
