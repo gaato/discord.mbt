@@ -129,6 +129,7 @@ pub fn GatewayCtx::ready(Self) -> @model.Ready
 pub fn GatewayCtx::ref_of_message(Self, @model.Message) -> @http.MessageRef
 pub fn GatewayCtx::shard_raw(Self) -> @gateway.Shard
 pub async fn GatewayCtx::shutdown(Self) -> Unit
+pub async fn[T] GatewayCtx::wait_for(Self, EventType[T], (T) -> Bool, timeout_ms? : Int) -> T?
 pub async fn GatewayCtx::wait_for_component(Self, custom_id~ : String, timeout_ms? : Int) -> @framework.ComponentCtx?
 
 // Type aliases

@@ -57,6 +57,9 @@ pub using @app {
   type Spawner,
   type ComponentWaiter,
   type Command,
+  type CheckCtx,
+  type CommandCheck,
+  type CooldownBucket,
   type RegisteredCommand,
   type InteractionHandler,
   type CommandReply,
@@ -92,6 +95,9 @@ pub using @app {
   text_field,
   select_field,
   modal,
+  guild_only,
+  dm_only,
+  required_permissions,
 }
 
 ///|

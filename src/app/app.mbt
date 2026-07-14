@@ -17,6 +17,7 @@ pub(all) suberror AppConfigError {
   ChoicesWithAutocomplete(command~ : String, path~ : String)
   RequiredOptionAfterOptional(command~ : String, path~ : String)
   InvalidModalFieldCount(custom_id~ : String, count~ : Int)
+  InvalidCooldown(command~ : String, seconds~ : Int)
 } derive(Debug)
 
 ///|
@@ -52,6 +53,7 @@ pub struct App {
   priv autocompletes_ : Array[AutocompleteHandler]
   priv mut policy_ : ErrorPolicy?
   priv mut warn_ : (String) -> Unit
+  priv mut now_ : () -> Int64
 }
 
 ///|
@@ -65,6 +67,7 @@ pub fn App::new(sync? : CommandSync = Global, max_in_flight? : Int = 64) -> App 
     autocompletes_: [],
     policy_: None,
     warn_: message => println(message),
+    now_: @async.now,
   }
 }
 
@@ -136,6 +139,13 @@ pub fn App::on_warn(self : App, hook : (String) -> Unit) -> Unit {
 }
 
 ///|
+/// Internal clock seam used by deterministic command-dispatch tests.
+#warnings("-unused_value")
+fn App::set_clock(self : App, clock : () -> Int64) -> Unit {
+  self.now_ = clock
+}
+
+///|
 fn App::current_policy(self : App) -> ErrorPolicy {
   self.policy_.unwrap_or_else(() => default_error_policy(self.warn_))
 }
@@ -189,6 +199,9 @@ pub fn App::validate(self : App) -> Unit raise AppConfigError {
       paths.add(key)
     }
     validate_command_options(command.name_, [], command.definition.options)
+    if command.cooldown_ is Some(config) && config.seconds <= 0 {
+      raise InvalidCooldown(command=command.name_, seconds=config.seconds)
+    }
   }
   for modal in self.modals_ {
     if modal.field_count is Some(count) && (count < 1 || count > 5) {
@@ -244,6 +257,25 @@ async fn App::run_registered_command(
   command : RegisteredCommand,
   raw : @framework.CommandCtx,
 ) -> Unit {
+  let guards_passed = try {
+    command.run_checks_and_cooldown(raw, (self.now_)())
+    true
+  } catch {
+    error => {
+      invoke_error_policy(
+        self.current_policy(),
+        failure_context(
+          Command(name=command.name_),
+          Some(BeforeInitial),
+          Some(RawCommand(raw)),
+          self.warn_,
+        ),
+        error,
+      )
+      false
+    }
+  }
+  guard guards_passed else { return }
   (command.dispatch)(bot, waiter, self.warn_, raw) catch {
     error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
       raise error

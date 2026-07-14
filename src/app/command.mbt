@@ -52,6 +52,8 @@ pub struct Command[A] {
   priv node_paths : Array[Array[String]]
   priv nested_group_paths : Array[Array[String]]
   priv suggest_routes : Array[SuggestRoute]
+  priv checks : Array[CommandCheck]
+  priv mut cooldown : CooldownConfig?
 }
 
 ///|
@@ -104,6 +106,8 @@ pub fn[A] slash(
     node_paths: [],
     nested_group_paths: [],
     suggest_routes: suggest_routes([], args),
+    checks: [],
+    cooldown: None,
   }
 }
 
@@ -172,6 +176,8 @@ pub fn user_command(
     node_paths: [],
     nested_group_paths: [],
     suggest_routes: [],
+    checks: [],
+    cooldown: None,
   }
 }
 
@@ -199,6 +205,8 @@ pub fn message_command(
     node_paths: [],
     nested_group_paths: [],
     suggest_routes: [],
+    checks: [],
+    cooldown: None,
   }
 }
 
@@ -333,7 +341,29 @@ pub fn slash_group(
     node_paths,
     nested_group_paths,
     suggest_routes,
+    checks: [],
+    cooldown: None,
   }
+}
+
+///|
+/// Add a pre-execution check. Checks run in registration order before argument
+/// decoding. Returning false is equivalent to `HandlerError::CheckFailed`.
+pub fn[A] Command::check(self : Command[A], check : CommandCheck) -> Command[A] {
+  self.checks.push(check)
+  self
+}
+
+///|
+/// Apply a fixed-window cooldown to this command. The window starts when all
+/// checks pass, before argument decoding and handler execution.
+pub fn[A] Command::cooldown(
+  self : Command[A],
+  seconds~ : Int,
+  bucket? : CooldownBucket = User,
+) -> Command[A] {
+  self.cooldown = Some({ seconds, bucket })
+  self
 }
 
 ///|
@@ -471,6 +501,10 @@ pub struct RegisteredCommand {
   priv node_paths_ : Array[Array[String]]
   priv nested_group_paths_ : Array[Array[String]]
   priv suggest_routes_ : Array[SuggestRoute]
+  priv checks_ : Array[CommandCheck]
+  priv cooldown_ : CooldownConfig?
+  priv cooldowns_ : Map[String, Int64]
+  priv mut cooldown_cleanup_after_ : Int64
   priv dispatch : async (
     AppCtx,
     ComponentWaiter?,
@@ -494,6 +528,10 @@ pub fn[A] Command::erase(self : Command[A]) -> RegisteredCommand {
     node_paths_: self.node_paths,
     nested_group_paths_: self.nested_group_paths,
     suggest_routes_: self.suggest_routes,
+    checks_: self.checks,
+    cooldown_: self.cooldown,
+    cooldowns_: {},
+    cooldown_cleanup_after_: 0L,
     dispatch: (bot, waiter, warn, raw) => {
       self.dispatch_typed(bot, waiter, warn, raw)
     },

@@ -48,6 +48,7 @@ pub struct Bot {
   priv mut cache_ : @cache.InMemoryCache?
   priv decode_errors_ : Array[(String, Json) -> Unit]
   priv services_ : Array[ServiceHandler]
+  priv collector_ : EventCollector
   // Production uses Shard::start's WebSocket connector. Whitebox tests inject
   // the same in-memory GatewayTransport seam used by gateway_test.mbt.
   priv connector_ : Ref[(async (String) -> &@gateway.GatewayTransport)?]
@@ -76,6 +77,7 @@ pub fn Bot::new(
     cache_: None,
     decode_errors_: [],
     services_: [],
+    collector_: EventCollector::new(),
     connector_: Ref(None),
   }
 }
@@ -292,6 +294,9 @@ fn Bot::event_filter(self : Bot) -> (@model.EventKind) -> Bool {
     return _ => true
   }
   kind => {
+    if self.collector_.waits_for(kind) {
+      return true
+    }
     if kind == KReady || kind == KInteractionCreate {
       return true
     }
@@ -443,6 +448,7 @@ pub async fn Bot::run(self : Bot) -> Unit {
               ready_: ready,
               shard_: shard,
               framework_: router,
+              collector_: self.collector_,
               shutdown_requested_: false,
             }
             gateway_ctx = Some(created)
@@ -452,6 +458,7 @@ pub async fn Bot::run(self : Bot) -> Unit {
           }
           guard gateway_ctx is Some(ctx)
           ctx.ready_ = ready
+          self.collector_.dispatch(event)
           self.spawn_event_handlers(spawner, ctx, event)
         }
         Dispatch(InteractionCreate(interaction) as event) => {
@@ -460,6 +467,7 @@ pub async fn Bot::run(self : Bot) -> Unit {
           }
           match (gateway_ctx, framework) {
             (Some(ctx), Some(router)) => {
+              self.collector_.dispatch(event)
               // Processing is another bounded child task. Awaiting it here
               // would deadlock handlers waiting for a later component event.
               self.spawn_interaction(spawner, router, interaction)
@@ -477,7 +485,10 @@ pub async fn Bot::run(self : Bot) -> Unit {
           }
           self.observe_decode_error(event)
           match gateway_ctx {
-            Some(ctx) => self.spawn_event_handlers(spawner, ctx, event)
+            Some(ctx) => {
+              self.collector_.dispatch(event)
+              self.spawn_event_handlers(spawner, ctx, event)
+            }
             None =>
               self.app_.warn(
                 "dropping \{to_repr(event_kind(event))} received before READY",

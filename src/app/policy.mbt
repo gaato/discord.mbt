@@ -78,9 +78,17 @@ fn default_error_policy(warn : (String) -> Unit) -> ErrorPolicy {
         ctx.respond_error(message, ephemeral~)
       HandlerError::GuildOnly =>
         ctx.respond_error("This command can only be used in a server.")
+      HandlerError::DmOnly =>
+        ctx.respond_error("This command can only be used in a direct message.")
+      HandlerError::CheckFailed =>
+        ctx.respond_error("You cannot use this command.")
       HandlerError::MissingPermission(permissions) =>
         ctx.respond_error(
           "Missing required permission: \{to_repr(permissions)}",
+        )
+      HandlerError::OnCooldown(retry_after_ms~) =>
+        ctx.respond_error(
+          "This command is on cooldown. Try again in \{retry_after_ms} ms.",
         )
       HandlerError::InvalidArgument(message) =>
         ctx.respond_error("Invalid argument: \{message}")

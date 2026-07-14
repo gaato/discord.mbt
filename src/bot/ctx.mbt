@@ -5,6 +5,7 @@ pub struct GatewayCtx {
   priv mut ready_ : @model.Ready
   priv shard_ : @gateway.Shard
   priv framework_ : @framework.Framework
+  priv collector_ : EventCollector
   priv mut shutdown_requested_ : Bool
 }
 
@@ -58,6 +59,20 @@ pub async fn GatewayCtx::wait_for_component(
   timeout_ms? : Int,
 ) -> @framework.ComponentCtx? {
   self.framework_.wait_for_component(custom_id~, timeout_ms?)
+}
+
+///|
+/// Wait for the next gateway event of `event_type` that satisfies `predicate`.
+/// The event remains visible to other collectors and registered handlers.
+/// Returns `None` on timeout. The caller must enable an intent capable of
+/// delivering the requested event when it is not already subscribed.
+pub async fn[T] GatewayCtx::wait_for(
+  self : GatewayCtx,
+  event_type : EventType[T],
+  predicate : (T) -> Bool,
+  timeout_ms? : Int,
+) -> T? {
+  self.collector_.wait_for(event_type, predicate, timeout_ms?)
 }
 
 ///|

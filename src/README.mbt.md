@@ -143,6 +143,12 @@ Gateway handlers receive `GatewayCtx`. Its `app()` method returns the same
 executor-neutral `AppCtx`; READY data, shard access, shutdown, and component
 waiting stay on `GatewayCtx`.
 
+Use `ctx.wait_for(Events::message_create(), predicate, timeout_ms=30_000)` for
+a one-shot typed gateway-event observation. Multiple collectors can observe
+the same event, and normal event handlers still receive it. Waiting does not
+add gateway intents dynamically; configure the required intent when it is not
+already implied by a registered handler.
+
 If you omit `intents`, `Bot` derives non-privileged intents from typed event
 subscriptions. Pass privileged intents for member or presence events and for
 message content visibility. Raw event handlers cannot imply an intent set, so
@@ -168,8 +174,38 @@ deletes commands registered outside this App from the selected scope.** Use
 
 Install `app.error_policy(...)` to map failures to logs or interaction
 responses. Handlers can raise `HandlerError::UserMessage`, `GuildOnly`,
-`MissingPermission`, or `InvalidArgument` for expected failures. The gateway
-executor routes event and service failures through the same policy.
+`DmOnly`, `MissingPermission`, `OnCooldown`, or `InvalidArgument` for expected
+failures. The gateway executor routes event and service failures through the
+same policy.
+
+Commands accept ordered pre-execution checks and fixed-window cooldowns:
+
+```mbt check
+///|
+fn guarded_command() -> @discord.Command[Unit] {
+  @discord.slash(
+    name="moderate",
+    description="Run a moderation action",
+    args=@discord.Args::unit(),
+    handler=Immediate((_, _) => {
+      @discord.CommandReply::message(content="done", ephemeral=true)
+    }),
+  )
+  .check(@discord.guild_only())
+  .check(@discord.required_permissions(@model.Permissions::moderate_members()))
+  .cooldown(seconds=10, bucket=User)
+}
+
+///|
+test "checked command declaration is typed" {
+  guarded_command() |> ignore
+}
+```
+
+Checks run in registration order before argument decoding. A false result
+becomes `CheckFailed`; a check can raise a more specific `HandlerError`.
+Cooldown buckets are `User`, `Guild`, and `Global`, and denials use the normal
+error policy with an ephemeral response by default.
 
 For lower-level work, `client.request(...)` exposes route-level JSON, and
 `src/examples/low_level` shows manual gateway and framework wiring.

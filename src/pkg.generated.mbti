@@ -46,6 +46,10 @@ pub fn channel_select(custom_id~ : String, placeholder? : String, min_values? : 
 
 pub fn container(components~ : Array[@model.Component], accent_color? : Int, spoiler? : Bool) -> @model.Component
 
+pub fn dm_only() -> (@app.CheckCtx) -> Bool raise @app.HandlerError
+
+pub fn guild_only() -> (@app.CheckCtx) -> Bool raise @app.HandlerError
+
 pub fn int_choice(String, Int64) -> @model.CommandOptionChoice
 
 pub fn integer_option(String, String, required? : Bool, choices? : Array[@model.CommandOptionChoice], min_value? : Int64, max_value? : Int64, autocomplete? : Bool) -> @model.CommandOption
@@ -69,6 +73,8 @@ pub fn[A] modal(custom_id~ : String, title~ : String, fields~ : @app.ModalFields
 pub fn number_choice(String, Double) -> @model.CommandOptionChoice
 
 pub fn number_option(String, String, required? : Bool, choices? : Array[@model.CommandOptionChoice], min_value? : Double, max_value? : Double, autocomplete? : Bool) -> @model.CommandOption
+
+pub fn required_permissions(@model.Permissions) -> (@app.CheckCtx) -> Bool raise @app.HandlerError
 
 pub fn role_option(String, String, required? : Bool) -> @model.CommandOption
 
@@ -145,9 +151,13 @@ pub using @bot {type BotError}
 
 pub using @http {type ChannelRef}
 
+pub using @app {type CheckCtx}
+
 pub using @http {type Client}
 
 pub using @app {type Command}
+
+pub type CommandCheck = (@app.CheckCtx) -> Bool raise @app.HandlerError
 
 pub using @framework {type CommandCtx}
 
@@ -170,6 +180,8 @@ pub using @app {type ComponentImmediateCtx}
 pub using @app {type ComponentReply}
 
 pub type ComponentWaiter = async (String, Int?) -> @framework.ComponentCtx?
+
+pub using @app {type CooldownBucket}
 
 pub using @app {type DeferredCtx}
 

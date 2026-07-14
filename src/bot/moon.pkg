@@ -6,6 +6,7 @@ import {
   "gaato/discord/framework",
   "gaato/discord/app",
   "moonbitlang/async",
+  "moonbitlang/async/aqueue",
 }
 
 import {
@@ -25,6 +26,8 @@ warnings = "-29"
 options(
   targets: {
     "bot.mbt": [ "native" ],
+    "collector.mbt": [ "native" ],
+    "collector_wbtest.mbt": [ "native" ],
     "bot_wbtest.mbt": [ "native" ],
     "ctx.mbt": [ "native" ],
     "events.mbt": [ "native" ],

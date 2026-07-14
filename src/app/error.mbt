@@ -3,7 +3,10 @@
 pub(all) suberror HandlerError {
   UserMessage(message~ : String, ephemeral~ : Bool)
   GuildOnly
+  DmOnly
+  CheckFailed
   MissingPermission(@model.Permissions)
+  OnCooldown(retry_after_ms~ : Int64)
   InvalidArgument(String)
 } derive(Debug)
 

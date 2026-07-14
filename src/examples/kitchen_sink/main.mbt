@@ -101,6 +101,8 @@ fn demo_command() -> @discord.Command[Unit] {
       }),
     ),
   ])
+  .check(@discord.guild_only())
+  .cooldown(seconds=2, bucket=User)
 }
 
 ///|

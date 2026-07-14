@@ -13,9 +13,15 @@ import {
 // Values
 pub fn commands_in_sync(Array[@interaction.CommandSpec], Array[@model.ApplicationCommand]) -> Bool
 
+pub fn dm_only() -> (CheckCtx) -> Bool raise HandlerError
+
+pub fn guild_only() -> (CheckCtx) -> Bool raise HandlerError
+
 pub fn message_command(name~ : String, handler~ : InteractionHandler[@model.Message], default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType]) -> Command[@model.Message]
 
 pub fn[A] modal(custom_id~ : String, title~ : String, fields~ : ModalFields[A]) -> Modal[A]
+
+pub fn required_permissions(@model.Permissions) -> (CheckCtx) -> Bool raise HandlerError
 
 pub fn select_field(custom_id~ : String, label~ : String, options~ : Array[@model.SelectOption], description? : String, placeholder? : String, min_values? : Int, max_values? : Int) -> ModalField[Array[String]]
 
@@ -40,6 +46,7 @@ pub(all) suberror AppConfigError {
   ChoicesWithAutocomplete(command~ : String, path~ : String)
   RequiredOptionAfterOptional(command~ : String, path~ : String)
   InvalidModalFieldCount(custom_id~ : String, count~ : Int)
+  InvalidCooldown(command~ : String, seconds~ : Int)
 } derive(@debug.Debug)
 
 pub(all) suberror AppDispatchError {
@@ -49,7 +56,10 @@ pub(all) suberror AppDispatchError {
 pub(all) suberror HandlerError {
   UserMessage(message~ : String, ephemeral~ : Bool)
   GuildOnly
+  DmOnly
+  CheckFailed
   MissingPermission(@model.Permissions)
+  OnCooldown(retry_after_ms~ : Int64)
   InvalidArgument(String)
 } derive(@debug.Debug)
 
@@ -80,9 +90,19 @@ pub struct AppCtx {
 pub fn AppCtx::application_id(Self) -> @model.Id[@model.ApplicationMarker]
 pub fn AppCtx::http(Self) -> @http.Client
 
+pub struct CheckCtx {
+  // private fields
+}
+pub fn CheckCtx::guild_id(Self) -> @model.Id[@model.GuildMarker]?
+pub fn CheckCtx::interaction(Self) -> @model.Interaction
+pub fn CheckCtx::scope(Self) -> @framework.InvocationScope
+pub fn CheckCtx::user(Self) -> @model.User
+
 pub struct Command[A] {
   // private fields
 }
+pub fn[A] Command::check(Self[A], (CheckCtx) -> Bool raise HandlerError) -> Self[A]
+pub fn[A] Command::cooldown(Self[A], seconds~ : Int, bucket? : CooldownBucket) -> Self[A]
 pub fn[A] Command::erase(Self[A]) -> RegisteredCommand
 pub fn[A] Command::spec(Self[A]) -> @interaction.CommandSpec
 
@@ -150,6 +170,12 @@ pub(all) enum ComponentReply {
 }
 pub fn ComponentReply::message(content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, ephemeral? : Bool) -> Self
 pub fn ComponentReply::update_message(content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], allowed_mentions? : @model.AllowedMentions) -> Self
+
+pub(all) enum CooldownBucket {
+  User
+  Guild
+  Global
+} derive(Eq, @debug.Debug)
 
 pub struct DeferredCtx {
   // private fields
@@ -296,6 +322,8 @@ pub(all) struct TargetUser {
 }
 
 // Type aliases
+pub type CommandCheck = (CheckCtx) -> Bool raise HandlerError
+
 pub type ComponentWaiter = async (String, Int?) -> @framework.ComponentCtx?
 
 pub type ErrorPolicy = async (FailureCtx, Error) -> Unit
