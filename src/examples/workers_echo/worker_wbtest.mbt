@@ -7,6 +7,13 @@ async test "exported two-promise flow returns echo then completes background" {
     #|  "type": 2,
     #|  "token": "interaction-token",
     #|  "version": 1,
+    #|  "user": {
+    #|    "id": "200000000000000001",
+    #|    "username": "nelly",
+    #|    "discriminator": "0",
+    #|    "global_name": "Nelly",
+    #|    "avatar": null
+    #|  },
     #|  "data": {
     #|    "id": "600000000000000201",
     #|    "name": "echo",
