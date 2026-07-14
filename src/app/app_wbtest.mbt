@@ -89,6 +89,18 @@ test "initial response data matches framework message response shape" {
 }
 
 ///|
+test "initial response emits explicit typed allowed mentions" {
+  let response = InitialResponse::message(
+    content="quiet",
+    allowed_mentions=@model.AllowedMentions::none(),
+  )
+  json_inspect(response.message_data(), content={
+    "content": "quiet",
+    "allowed_mentions": { "parse": [] },
+  })
+}
+
+///|
 test "app validates command type names and slash child structure" {
   let duplicate = App::new(sync=Disabled)
   let command = slash(

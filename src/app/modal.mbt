@@ -457,9 +457,16 @@ pub async fn ModalDeferredCtx::edit_original(
   content? : @model.Undefinable[String] = Missing,
   embeds? : @model.Undefinable[Array[@model.Embed]] = Missing,
   components? : @model.Undefinable[Array[@model.Component]] = Missing,
+  allowed_mentions? : @model.AllowedMentions,
   files? : Array[@dhttp.FileUpload],
 ) -> @model.Message {
-  self.raw_.edit_response(content~, embeds~, components~, files?)
+  self.raw_.edit_response(
+    content~,
+    embeds~,
+    components~,
+    allowed_mentions?,
+    files?,
+  )
 }
 
 ///|
@@ -469,9 +476,17 @@ pub async fn ModalDeferredCtx::followup(
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
   files? : Array[@dhttp.FileUpload],
+  allowed_mentions? : @model.AllowedMentions,
   ephemeral? : Bool = false,
 ) -> @model.Message {
-  self.raw_.followup(content?, embeds?, components?, files?, ephemeral~)
+  self.raw_.followup(
+    content?,
+    embeds?,
+    components?,
+    files?,
+    allowed_mentions?,
+    ephemeral~,
+  )
 }
 
 ///|
@@ -484,6 +499,7 @@ async fn InitialResponse::send_modal(
     embeds?=self.embeds_,
     components?=self.components_,
     files?=self.files_,
+    allowed_mentions?=self.allowed_mentions_,
     ephemeral=self.ephemeral_,
   )
 }

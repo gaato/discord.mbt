@@ -499,6 +499,24 @@ let message = client.create_message(channel_id, content="hello")
 client.create_message(channel_id, content="with reply", reply_to=message.id) |> ignore
 ```
 
+Ordinary channel messages suppress `@everyone` and `@here` by default while
+still parsing user and role mentions. Override this per client or per request:
+
+```mbt nocheck
+let quiet = @model.AllowedMentions::none()
+let client = @dhttp.Client::new(token, default_allowed_mentions=quiet)
+client.create_message(
+  channel_id,
+  content="No notifications",
+  allowed_mentions=@model.AllowedMentions::none(),
+)
+|> ignore
+```
+
+Interaction responses, followups, and webhook messages omit
+`allowed_mentions` unless explicitly supplied, preserving Discord's safer
+users-only default for those endpoints.
+
 Endpoints without a typed wrapper can still use the same authentication,
 rate limiter, and retry path through a custom route:
 

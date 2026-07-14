@@ -41,10 +41,10 @@ pub(all) struct CommandCtx {
   // private fields
 }
 pub async fn CommandCtx::defer_response(Self, ephemeral? : Bool) -> Unit
-pub async fn CommandCtx::edit_response(Self, content? : @model.Undefinable[String], embeds? : @model.Undefinable[Array[@model.Embed]], components? : @model.Undefinable[Array[@model.Component]], files? : Array[@http.FileUpload]) -> @model.Message
-pub async fn CommandCtx::followup(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], ephemeral? : Bool) -> @model.Message
+pub async fn CommandCtx::edit_response(Self, content? : @model.Undefinable[String], embeds? : @model.Undefinable[Array[@model.Embed]], components? : @model.Undefinable[Array[@model.Component]], allowed_mentions? : @model.AllowedMentions, files? : Array[@http.FileUpload]) -> @model.Message
+pub async fn CommandCtx::followup(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, ephemeral? : Bool) -> @model.Message
 pub fn[T : @interaction.CommandModel] CommandCtx::model(Self) -> T raise
-pub async fn CommandCtx::respond(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], ephemeral? : Bool) -> Unit
+pub async fn CommandCtx::respond(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, ephemeral? : Bool) -> Unit
 pub async fn CommandCtx::show_modal(Self, custom_id~ : String, title~ : String, components~ : Array[@model.Component]) -> Unit
 pub fn CommandCtx::user(Self) -> @model.User?
 
@@ -57,11 +57,11 @@ pub(all) struct ComponentCtx {
 }
 pub async fn ComponentCtx::defer_response(Self, ephemeral? : Bool) -> Unit
 pub async fn ComponentCtx::defer_update(Self) -> Unit
-pub async fn ComponentCtx::edit_response(Self, content? : @model.Undefinable[String], embeds? : @model.Undefinable[Array[@model.Embed]], components? : @model.Undefinable[Array[@model.Component]], files? : Array[@http.FileUpload]) -> @model.Message
-pub async fn ComponentCtx::followup(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], ephemeral? : Bool) -> @model.Message
-pub async fn ComponentCtx::respond(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], ephemeral? : Bool) -> Unit
+pub async fn ComponentCtx::edit_response(Self, content? : @model.Undefinable[String], embeds? : @model.Undefinable[Array[@model.Embed]], components? : @model.Undefinable[Array[@model.Component]], allowed_mentions? : @model.AllowedMentions, files? : Array[@http.FileUpload]) -> @model.Message
+pub async fn ComponentCtx::followup(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, ephemeral? : Bool) -> @model.Message
+pub async fn ComponentCtx::respond(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, ephemeral? : Bool) -> Unit
 pub async fn ComponentCtx::show_modal(Self, custom_id~ : String, title~ : String, components~ : Array[@model.Component]) -> Unit
-pub async fn ComponentCtx::update_message(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component]) -> Unit
+pub async fn ComponentCtx::update_message(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], allowed_mentions? : @model.AllowedMentions) -> Unit
 pub fn ComponentCtx::user(Self) -> @model.User?
 
 pub struct Framework {
@@ -88,9 +88,9 @@ pub(all) struct ModalCtx {
   // private fields
 }
 pub async fn ModalCtx::defer_response(Self, ephemeral? : Bool) -> Unit
-pub async fn ModalCtx::edit_response(Self, content? : @model.Undefinable[String], embeds? : @model.Undefinable[Array[@model.Embed]], components? : @model.Undefinable[Array[@model.Component]], files? : Array[@http.FileUpload]) -> @model.Message
-pub async fn ModalCtx::followup(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], ephemeral? : Bool) -> @model.Message
-pub async fn ModalCtx::respond(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], ephemeral? : Bool) -> Unit
+pub async fn ModalCtx::edit_response(Self, content? : @model.Undefinable[String], embeds? : @model.Undefinable[Array[@model.Embed]], components? : @model.Undefinable[Array[@model.Component]], allowed_mentions? : @model.AllowedMentions, files? : Array[@http.FileUpload]) -> @model.Message
+pub async fn ModalCtx::followup(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, ephemeral? : Bool) -> @model.Message
+pub async fn ModalCtx::respond(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, ephemeral? : Bool) -> Unit
 pub fn ModalCtx::text_value(Self, String) -> String?
 pub fn ModalCtx::user(Self) -> @model.User?
 

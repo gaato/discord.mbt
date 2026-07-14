@@ -7,7 +7,13 @@
 pub using @dhttp {type Client, type FileUpload}
 
 ///|
-pub using @model {type Intents, type Event}
+pub using @model {
+  type Intents,
+  type Event,
+  type AllowedMentions,
+  type AllowedMentionType,
+  type AllowedMentionsError,
+}
 
 ///|
 pub using @interaction {

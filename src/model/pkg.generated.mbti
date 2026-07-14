@@ -10,6 +10,12 @@ import {
 pub fn dispatch_event(String, Json) -> Event raise
 
 // Errors
+pub(all) suberror AllowedMentionsError {
+  ParseAndExplicit(typ~ : AllowedMentionType)
+  TooManyRoles(count~ : Int)
+  TooManyUsers(count~ : Int)
+} derive(Eq, @debug.Debug)
+
 pub suberror TimestampError {
   InvalidTimestamp(String)
 } derive(@debug.Debug)
@@ -53,6 +59,21 @@ pub impl ToJson for ActivityType
 pub impl @json.FromJson for ActivityType
 
 type ActivityWire derive(@json.FromJson)
+
+pub(all) enum AllowedMentionType {
+  Roles
+  Users
+  Everyone
+} derive(Eq, @debug.Debug)
+pub impl ToJson for AllowedMentionType
+
+pub struct AllowedMentions {
+  // private fields
+} derive(@debug.Debug)
+pub fn AllowedMentions::new(parse? : Array[AllowedMentionType], roles? : Array[Id[RoleMarker]], users? : Array[Id[UserMarker]], replied_user? : Bool) -> Self raise AllowedMentionsError
+pub fn AllowedMentions::none() -> Self
+pub fn AllowedMentions::safe_default() -> Self
+pub impl ToJson for AllowedMentions
 
 pub(all) struct Application {
   id : Id[ApplicationMarker]

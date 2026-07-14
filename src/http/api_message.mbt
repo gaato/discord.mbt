@@ -1,4 +1,16 @@
 ///|
+fn Client::with_channel_allowed_mentions(
+  self : Client,
+  builder : @model.ObjBuilder,
+  allowed_mentions : @model.AllowedMentions?,
+) -> @model.ObjBuilder {
+  builder.field(
+    "allowed_mentions",
+    allowed_mentions.unwrap_or(self.default_allowed_mentions),
+  )
+}
+
+///|
 /// Post a message to a channel. Labeled optional arguments replace the
 /// builder pattern; at least one of `content`, `embeds`, `components`,
 /// `sticker_ids`, or `files` must be provided.
@@ -13,7 +25,7 @@ pub async fn Client::create_message(
   reply_to? : @model.MessageId,
   tts? : Bool,
   flags? : @model.MessageFlags,
-  allowed_mentions? : Json,
+  allowed_mentions? : @model.AllowedMentions,
   nonce? : @model.Nonce,
   enforce_nonce? : Bool,
 ) -> @model.Message raise DiscordHttpError {
@@ -31,14 +43,17 @@ pub async fn Client::create_message(
       message="one of content/embeds/components/sticker_ids/files is required",
     )
   }
-  let body = @model.ObjBuilder::new()
-    .opt("content", content)
-    .opt("embeds", embeds)
-    .opt("components", components)
-    .opt("sticker_ids", sticker_ids)
-    .opt("tts", tts)
-    .opt("flags", flags)
-    .opt("allowed_mentions", allowed_mentions)
+  let body = self
+    .with_channel_allowed_mentions(
+      @model.ObjBuilder::new()
+      .opt("content", content)
+      .opt("embeds", embeds)
+      .opt("components", components)
+      .opt("sticker_ids", sticker_ids)
+      .opt("tts", tts)
+      .opt("flags", flags),
+      allowed_mentions,
+    )
     .opt("nonce", nonce)
     .opt("enforce_nonce", enforce_nonce)
   if reply_to is Some(message_id) {
@@ -67,13 +82,17 @@ pub async fn Client::edit_message(
   embeds? : @model.Undefinable[Array[@model.Embed]] = Missing,
   components? : @model.Undefinable[Array[@model.Component]] = Missing,
   flags? : @model.Undefinable[@model.MessageFlags] = Missing,
+  allowed_mentions? : @model.AllowedMentions,
   files? : Array[FileUpload],
 ) -> @model.Message raise DiscordHttpError {
-  let builder = @model.ObjBuilder::new()
+  let builder = self.with_channel_allowed_mentions(
+    @model.ObjBuilder::new()
     .und("content", content)
     .und("embeds", embeds)
     .und("components", components)
-    .und("flags", flags)
+    .und("flags", flags),
+    allowed_mentions,
+  )
   if files is Some(fs) && fs.length() > 0 {
     builder.field("attachments", attachments_json(fs)) |> ignore
   }

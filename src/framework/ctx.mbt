@@ -5,12 +5,14 @@ fn message_response_data(
   embeds : Array[@model.Embed]?,
   components : Array[@model.Component]?,
   files : Array[@dhttp.FileUpload]?,
+  allowed_mentions : @model.AllowedMentions?,
   ephemeral : Bool,
 ) -> Json {
   let builder = @model.ObjBuilder::new()
     .opt("content", content)
     .opt("embeds", embeds)
     .opt("components", components)
+    .opt("allowed_mentions", allowed_mentions)
   if files is Some(fs) && fs.length() > 0 {
     builder.field("attachments", @dhttp.attachments_json(fs)) |> ignore
   }
@@ -28,13 +30,16 @@ async fn respond_message(
   embeds : Array[@model.Embed]?,
   components : Array[@model.Component]?,
   files : Array[@dhttp.FileUpload]?,
+  allowed_mentions : @model.AllowedMentions?,
   ephemeral : Bool,
 ) -> Unit {
   gate.send(
     {
       typ,
       data: Some(
-        message_response_data(content, embeds, components, files, ephemeral),
+        message_response_data(
+          content, embeds, components, files, allowed_mentions, ephemeral,
+        ),
       ),
     },
     files?,
@@ -103,6 +108,7 @@ pub async fn CommandCtx::respond(
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
   files? : Array[@dhttp.FileUpload],
+  allowed_mentions? : @model.AllowedMentions,
   ephemeral? : Bool = false,
 ) -> Unit {
   respond_message(
@@ -112,6 +118,7 @@ pub async fn CommandCtx::respond(
     embeds,
     components,
     files,
+    allowed_mentions,
     ephemeral,
   )
 }
@@ -125,6 +132,7 @@ pub async fn CommandCtx::defer_response(
   respond_message(
     self.gate,
     DeferredChannelMessageWithSource,
+    None,
     None,
     None,
     None,
@@ -151,6 +159,7 @@ pub async fn CommandCtx::edit_response(
   content? : @model.Undefinable[String] = Missing,
   embeds? : @model.Undefinable[Array[@model.Embed]] = Missing,
   components? : @model.Undefinable[Array[@model.Component]] = Missing,
+  allowed_mentions? : @model.AllowedMentions,
   files? : Array[@dhttp.FileUpload],
 ) -> @model.Message {
   self.client.edit_original_response(
@@ -159,6 +168,7 @@ pub async fn CommandCtx::edit_response(
     content~,
     embeds~,
     components~,
+    allowed_mentions?,
     files?,
   )
 }
@@ -171,6 +181,7 @@ pub async fn CommandCtx::followup(
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
   files? : Array[@dhttp.FileUpload],
+  allowed_mentions? : @model.AllowedMentions,
   ephemeral? : Bool = false,
 ) -> @model.Message {
   self.client.create_followup(
@@ -180,6 +191,7 @@ pub async fn CommandCtx::followup(
     embeds?,
     components?,
     files?,
+    allowed_mentions?,
     flags=if ephemeral {
       @model.MessageFlags::ephemeral()
     } else {
@@ -212,6 +224,7 @@ pub async fn ComponentCtx::respond(
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
   files? : Array[@dhttp.FileUpload],
+  allowed_mentions? : @model.AllowedMentions,
   ephemeral? : Bool = false,
 ) -> Unit {
   respond_message(
@@ -221,6 +234,7 @@ pub async fn ComponentCtx::respond(
     embeds,
     components,
     files,
+    allowed_mentions,
     ephemeral,
   )
 }
@@ -232,6 +246,7 @@ pub async fn ComponentCtx::update_message(
   content? : String,
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
+  allowed_mentions? : @model.AllowedMentions,
 ) -> Unit {
   respond_message(
     self.gate,
@@ -240,6 +255,7 @@ pub async fn ComponentCtx::update_message(
     embeds,
     components,
     None,
+    allowed_mentions,
     false,
   )
 }
@@ -268,6 +284,7 @@ pub async fn ComponentCtx::defer_response(
     None,
     None,
     None,
+    None,
     ephemeral,
   )
 }
@@ -285,6 +302,7 @@ pub async fn ComponentCtx::edit_response(
   content? : @model.Undefinable[String] = Missing,
   embeds? : @model.Undefinable[Array[@model.Embed]] = Missing,
   components? : @model.Undefinable[Array[@model.Component]] = Missing,
+  allowed_mentions? : @model.AllowedMentions,
   files? : Array[@dhttp.FileUpload],
 ) -> @model.Message {
   self.client.edit_original_response(
@@ -293,6 +311,7 @@ pub async fn ComponentCtx::edit_response(
     content~,
     embeds~,
     components~,
+    allowed_mentions?,
     files?,
   )
 }
@@ -305,6 +324,7 @@ pub async fn ComponentCtx::followup(
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
   files? : Array[@dhttp.FileUpload],
+  allowed_mentions? : @model.AllowedMentions,
   ephemeral? : Bool = false,
 ) -> @model.Message {
   self.client.create_followup(
@@ -314,6 +334,7 @@ pub async fn ComponentCtx::followup(
     embeds?,
     components?,
     files?,
+    allowed_mentions?,
     flags=if ephemeral {
       @model.MessageFlags::ephemeral()
     } else {
@@ -373,6 +394,7 @@ pub async fn ModalCtx::respond(
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
   files? : Array[@dhttp.FileUpload],
+  allowed_mentions? : @model.AllowedMentions,
   ephemeral? : Bool = false,
 ) -> Unit {
   respond_message(
@@ -382,6 +404,7 @@ pub async fn ModalCtx::respond(
     embeds,
     components,
     files,
+    allowed_mentions,
     ephemeral,
   )
 }
@@ -399,6 +422,7 @@ pub async fn ModalCtx::defer_response(
     None,
     None,
     None,
+    None,
     ephemeral,
   )
 }
@@ -410,6 +434,7 @@ pub async fn ModalCtx::edit_response(
   content? : @model.Undefinable[String] = Missing,
   embeds? : @model.Undefinable[Array[@model.Embed]] = Missing,
   components? : @model.Undefinable[Array[@model.Component]] = Missing,
+  allowed_mentions? : @model.AllowedMentions,
   files? : Array[@dhttp.FileUpload],
 ) -> @model.Message {
   self.client.edit_original_response(
@@ -418,6 +443,7 @@ pub async fn ModalCtx::edit_response(
     content~,
     embeds~,
     components~,
+    allowed_mentions?,
     files?,
   )
 }
@@ -430,6 +456,7 @@ pub async fn ModalCtx::followup(
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
   files? : Array[@dhttp.FileUpload],
+  allowed_mentions? : @model.AllowedMentions,
   ephemeral? : Bool = false,
 ) -> @model.Message {
   self.client.create_followup(
@@ -439,6 +466,7 @@ pub async fn ModalCtx::followup(
     embeds?,
     components?,
     files?,
+    allowed_mentions?,
     flags=if ephemeral {
       @model.MessageFlags::ephemeral()
     } else {

@@ -4,12 +4,7 @@
 // Skipped blocks from this page:
 // - line 736, Default Settings for Allowed Mentions — allowed-mentions request defaults.
 // - line 744, Default Settings for Allowed Mentions — allowed-mentions request defaults.
-// - line 765, Allowed Mentions Examples — message request body.
-// - line 773, Allowed Mentions Examples — message request body.
-// - line 785, Allowed Mentions Examples — message request body.
-// - line 798, Allowed Mentions Examples — message request body.
-// - line 811, Allowed Mentions Examples — message request body.
-// - line 823, Allowed Mentions Examples — message request body.
+// - lines 765-823, Allowed Mentions Examples — covered by allowed_mentions_test.mbt.
 // - line 882, Example Shared Client Theme — shared client themes are not modeled.
 // - line 928, Search Guild Messages — search-index error response rather than a message.
 // - line 1103, Example Request Body (application/json) — message request body.

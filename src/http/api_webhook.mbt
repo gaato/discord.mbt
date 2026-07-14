@@ -115,6 +115,7 @@ pub async fn Client::execute_webhook(
   username? : String,
   avatar_url? : String,
   tts? : Bool,
+  allowed_mentions? : @model.AllowedMentions,
 ) -> @model.Message raise DiscordHttpError {
   validate_execute_webhook(content, embeds, components, files)
   let builder = @model.ObjBuilder::new()
@@ -124,6 +125,7 @@ pub async fn Client::execute_webhook(
     .opt("username", username)
     .opt("avatar_url", avatar_url)
     .opt("tts", tts)
+    .opt("allowed_mentions", allowed_mentions)
   if files is Some(fs) && fs.length() > 0 {
     builder.field("attachments", attachments_json(fs)) |> ignore
   }
@@ -160,6 +162,7 @@ pub async fn Client::edit_webhook_message(
   content? : @model.Undefinable[String] = Missing,
   embeds? : @model.Undefinable[Array[@model.Embed]] = Missing,
   components? : @model.Undefinable[Array[@model.Component]] = Missing,
+  allowed_mentions? : @model.AllowedMentions,
   files? : Array[FileUpload],
 ) -> @model.Message raise DiscordHttpError {
   if content is Value(value) && value.length() > 4000 {
@@ -171,6 +174,7 @@ pub async fn Client::edit_webhook_message(
     .und("content", content)
     .und("embeds", embeds)
     .und("components", components)
+    .opt("allowed_mentions", allowed_mentions)
   if files is Some(fs) && fs.length() > 0 {
     builder.field("attachments", attachments_json(fs)) |> ignore
   }

@@ -39,6 +39,7 @@ pub async fn Client::edit_original_response(
   content? : @model.Undefinable[String] = Missing,
   embeds? : @model.Undefinable[Array[@model.Embed]] = Missing,
   components? : @model.Undefinable[Array[@model.Component]] = Missing,
+  allowed_mentions? : @model.AllowedMentions,
   files? : Array[FileUpload],
 ) -> @model.Message raise DiscordHttpError {
   if content is Value(value) && value.length() > 4000 {
@@ -50,6 +51,7 @@ pub async fn Client::edit_original_response(
     .und("content", content)
     .und("embeds", embeds)
     .und("components", components)
+    .opt("allowed_mentions", allowed_mentions)
   if files is Some(fs) && fs.length() > 0 {
     builder.field("attachments", attachments_json(fs)) |> ignore
   }
@@ -86,6 +88,7 @@ pub async fn Client::create_followup(
   components? : Array[@model.Component],
   files? : Array[FileUpload],
   flags? : @model.MessageFlags,
+  allowed_mentions? : @model.AllowedMentions,
 ) -> @model.Message raise DiscordHttpError {
   if content is Some(value) && value.length() > 4000 {
     raise DiscordHttpError::Validation(
@@ -102,6 +105,7 @@ pub async fn Client::create_followup(
     .opt("embeds", embeds)
     .opt("components", components)
     .opt("flags", flags)
+    .opt("allowed_mentions", allowed_mentions)
   if files is Some(fs) && fs.length() > 0 {
     builder.field("attachments", attachments_json(fs)) |> ignore
   }
@@ -140,6 +144,7 @@ pub async fn Client::edit_followup(
   content? : @model.Undefinable[String] = Missing,
   embeds? : @model.Undefinable[Array[@model.Embed]] = Missing,
   components? : @model.Undefinable[Array[@model.Component]] = Missing,
+  allowed_mentions? : @model.AllowedMentions,
   files? : Array[FileUpload],
 ) -> @model.Message raise DiscordHttpError {
   if content is Value(value) && value.length() > 4000 {
@@ -151,6 +156,7 @@ pub async fn Client::edit_followup(
     .und("content", content)
     .und("embeds", embeds)
     .und("components", components)
+    .opt("allowed_mentions", allowed_mentions)
   if files is Some(fs) && fs.length() > 0 {
     builder.field("attachments", attachments_json(fs)) |> ignore
   }

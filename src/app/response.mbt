@@ -5,6 +5,7 @@ pub struct InitialResponse {
   priv embeds_ : Array[@model.Embed]?
   priv components_ : Array[@model.Component]?
   priv files_ : Array[@dhttp.FileUpload]?
+  priv allowed_mentions_ : @model.AllowedMentions?
   priv ephemeral_ : Bool
 }
 
@@ -22,10 +23,18 @@ pub fn CommandReply::message(
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
   files? : Array[@dhttp.FileUpload],
+  allowed_mentions? : @model.AllowedMentions,
   ephemeral? : Bool = false,
 ) -> CommandReply {
   Message(
-    InitialResponse::message(content?, embeds?, components?, files?, ephemeral~),
+    InitialResponse::message(
+      content?,
+      embeds?,
+      components?,
+      files?,
+      allowed_mentions?,
+      ephemeral~,
+    ),
   )
 }
 
@@ -36,6 +45,7 @@ pub fn InitialResponse::message(
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
   files? : Array[@dhttp.FileUpload],
+  allowed_mentions? : @model.AllowedMentions,
   ephemeral? : Bool = false,
 ) -> InitialResponse {
   {
@@ -43,6 +53,7 @@ pub fn InitialResponse::message(
     embeds_: embeds,
     components_: components,
     files_: files,
+    allowed_mentions_: allowed_mentions,
     ephemeral_: ephemeral,
   }
 }
@@ -55,6 +66,7 @@ fn InitialResponse::message_data(self : InitialResponse) -> Json {
     .opt("content", self.content_)
     .opt("embeds", self.embeds_)
     .opt("components", self.components_)
+    .opt("allowed_mentions", self.allowed_mentions_)
   if self.files_ is Some(files) && files.length() > 0 {
     builder.field("attachments", @dhttp.attachments_json(files)) |> ignore
   }
@@ -74,6 +86,7 @@ async fn InitialResponse::send(
     embeds?=self.embeds_,
     components?=self.components_,
     files?=self.files_,
+    allowed_mentions?=self.allowed_mentions_,
     ephemeral=self.ephemeral_,
   )
 }
