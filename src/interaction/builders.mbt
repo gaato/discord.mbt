@@ -201,3 +201,281 @@ pub fn number_choice(
 ) -> @model.CommandOptionChoice {
   { name, name_localizations: None, value: Json::number(value) }
 }
+
+///|
+/// Build a message component row.
+pub fn action_row(components : Array[@model.Component]) -> @model.Component {
+  ActionRow({ id: None, components })
+}
+
+///|
+/// Build an interactive button.
+pub fn button(
+  custom_id~ : String,
+  label? : String,
+  style? : @model.ButtonStyle = Primary,
+  emoji? : @model.Emoji,
+  disabled? : Bool,
+) -> @model.Component {
+  Button({
+    id: None,
+    style,
+    label,
+    emoji,
+    custom_id: Some(custom_id),
+    sku_id: None,
+    url: None,
+    disabled,
+  })
+}
+
+///|
+/// Build a link button.
+pub fn link_button(
+  url~ : String,
+  label? : String,
+  emoji? : @model.Emoji,
+  disabled? : Bool,
+) -> @model.Component {
+  Button({
+    id: None,
+    style: Link,
+    label,
+    emoji,
+    custom_id: None,
+    sku_id: None,
+    url: Some(url),
+    disabled,
+  })
+}
+
+///|
+/// Build an option for a string select menu.
+pub fn select_option(
+  label~ : String,
+  value~ : String,
+  description? : String,
+  emoji? : @model.Emoji,
+  default? : Bool,
+) -> @model.SelectOption {
+  { label, value, description, emoji, default }
+}
+
+///|
+/// Build a string select menu.
+pub fn string_select(
+  custom_id~ : String,
+  options~ : Array[@model.SelectOption],
+  placeholder? : String,
+  min_values? : Int,
+  max_values? : Int,
+  disabled? : Bool,
+) -> @model.Component {
+  StringSelect({
+    id: None,
+    custom_id,
+    placeholder,
+    min_values,
+    max_values,
+    disabled,
+    options: Some(options),
+    channel_types: None,
+    default_values: None,
+    values: None,
+  })
+}
+
+///|
+fn auto_select(
+  typ : Int,
+  custom_id : String,
+  placeholder : String?,
+  min_values : Int?,
+  max_values : Int?,
+  disabled : Bool?,
+  channel_types : Array[@model.ChannelType]?,
+) -> @model.Component {
+  let menu : @model.SelectMenu = {
+    id: None,
+    custom_id,
+    placeholder,
+    min_values,
+    max_values,
+    disabled,
+    options: None,
+    channel_types,
+    default_values: None,
+    values: None,
+  }
+  match typ {
+    5 => UserSelect(menu)
+    6 => RoleSelect(menu)
+    7 => MentionableSelect(menu)
+    _ => ChannelSelect(menu)
+  }
+}
+
+///|
+pub fn user_select(
+  custom_id~ : String,
+  placeholder? : String,
+  min_values? : Int,
+  max_values? : Int,
+  disabled? : Bool,
+) -> @model.Component {
+  auto_select(5, custom_id, placeholder, min_values, max_values, disabled, None)
+}
+
+///|
+pub fn role_select(
+  custom_id~ : String,
+  placeholder? : String,
+  min_values? : Int,
+  max_values? : Int,
+  disabled? : Bool,
+) -> @model.Component {
+  auto_select(6, custom_id, placeholder, min_values, max_values, disabled, None)
+}
+
+///|
+pub fn mentionable_select(
+  custom_id~ : String,
+  placeholder? : String,
+  min_values? : Int,
+  max_values? : Int,
+  disabled? : Bool,
+) -> @model.Component {
+  auto_select(7, custom_id, placeholder, min_values, max_values, disabled, None)
+}
+
+///|
+pub fn channel_select(
+  custom_id~ : String,
+  placeholder? : String,
+  min_values? : Int,
+  max_values? : Int,
+  disabled? : Bool,
+  channel_types? : Array[@model.ChannelType],
+) -> @model.Component {
+  auto_select(
+    8, custom_id, placeholder, min_values, max_values, disabled, channel_types,
+  )
+}
+
+///|
+pub fn text_display(content : String) -> @model.Component {
+  TextDisplay({ id: None, content })
+}
+
+///|
+pub fn section(
+  components~ : Array[@model.Component],
+  accessory~ : @model.Component,
+) -> @model.Component {
+  Section({ id: None, components, accessory })
+}
+
+///|
+pub fn thumbnail(
+  url~ : String,
+  description? : String,
+  spoiler? : Bool,
+) -> @model.Component {
+  Thumbnail({
+    id: None,
+    media: {
+      url,
+      proxy_url: None,
+      height: None,
+      width: None,
+      placeholder: None,
+      placeholder_version: None,
+      content_type: None,
+      flags: None,
+      attachment_id: None,
+    },
+    description,
+    spoiler,
+  })
+}
+
+///|
+pub fn container(
+  components~ : Array[@model.Component],
+  accent_color? : Int,
+  spoiler? : Bool,
+) -> @model.Component {
+  Container({
+    id: None,
+    components,
+    accent_color: accent_color.map(value => @model.Nullable::Value(value)),
+    spoiler,
+  })
+}
+
+///|
+pub fn separator(divider? : Bool, spacing? : Int) -> @model.Component {
+  Separator({ id: None, divider, spacing })
+}
+
+///|
+pub fn media_item(
+  url~ : String,
+  description? : String,
+  spoiler? : Bool,
+) -> @model.MediaGalleryItem {
+  {
+    media: {
+      url,
+      proxy_url: None,
+      height: None,
+      width: None,
+      placeholder: None,
+      placeholder_version: None,
+      content_type: None,
+      flags: None,
+      attachment_id: None,
+    },
+    description,
+    spoiler,
+  }
+}
+
+///|
+pub fn media_gallery(
+  items : Array[@model.MediaGalleryItem],
+) -> @model.Component {
+  MediaGallery({ id: None, items })
+}
+
+///|
+pub fn label(
+  label~ : String,
+  component~ : @model.Component,
+  description? : String,
+) -> @model.Component {
+  Label({ id: None, label, description, component })
+}
+
+///|
+pub fn text_input(
+  custom_id~ : String,
+  style? : @model.TextInputStyle = Short,
+  placeholder? : String,
+  min_length? : Int,
+  max_length? : Int,
+  required? : Bool,
+  value? : String,
+) -> @model.Component {
+  TextInput({
+    id: None,
+    custom_id,
+    style,
+    label: None,
+    min_length,
+    max_length,
+    required,
+    value,
+    placeholder,
+  })
+}

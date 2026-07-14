@@ -208,15 +208,15 @@ pub fn arg_attachment(
 
 ///|
 /// Make an argument optional. A missing submitted option decodes to `None`.
-pub fn[A] optional(arg : Arg[A]) -> Arg[A?] {
-  let definition = { ..arg.definition, required: Some(false) }
+pub fn[A] Arg::optional(self : Arg[A]) -> Arg[A?] {
+  let definition = { ..self.definition, required: Some(false) }
   let name = definition.name
   {
     definition,
-    suggest: arg.suggest,
+    suggest: self.suggest,
     read: options => {
       if options.has(name) {
-        Some(arg.read_value(options))
+        Some(self.read_value(options))
       } else {
         None
       }
@@ -227,15 +227,15 @@ pub fn[A] optional(arg : Arg[A]) -> Arg[A?] {
 ///|
 /// Make an argument optional in the registration payload and use a default
 /// value when it is absent from a submitted command.
-pub fn[A] default(arg : Arg[A], value : A) -> Arg[A] {
-  let definition = { ..arg.definition, required: Some(false) }
+pub fn[A] Arg::with_default(self : Arg[A], value : A) -> Arg[A] {
+  let definition = { ..self.definition, required: Some(false) }
   let name = definition.name
   {
     definition,
-    suggest: arg.suggest,
+    suggest: self.suggest,
     read: options => {
       if options.has(name) {
-        arg.read_value(options)
+        self.read_value(options)
       } else {
         value
       }
@@ -245,13 +245,13 @@ pub fn[A] default(arg : Arg[A], value : A) -> Arg[A] {
 
 ///|
 /// Validate a decoded argument. Returning `Some(message)` rejects the value.
-pub fn[A] validate(arg : Arg[A], check : (A) -> String?) -> Arg[A] {
-  let name = arg.definition.name
+pub fn[A] Arg::validate(self : Arg[A], check : (A) -> String?) -> Arg[A] {
+  let name = self.definition.name
   {
-    definition: arg.definition,
-    suggest: arg.suggest,
+    definition: self.definition,
+    suggest: self.suggest,
     read: options => {
-      let value = arg.read_value(options)
+      let value = self.read_value(options)
       match check(value) {
         Some(message) => raise ArgsDecodeError::Validation(name~, message~)
         None => value

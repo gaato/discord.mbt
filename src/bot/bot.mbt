@@ -16,6 +16,7 @@ pub(all) suberror BotConfigError {
   NestedSubcommandGroup(command~ : String, path~ : String)
   ChoicesWithAutocomplete(command~ : String, path~ : String)
   RequiredOptionAfterOptional(command~ : String, path~ : String)
+  InvalidModalFieldCount(custom_id~ : String, count~ : Int)
 } derive(Debug)
 
 ///|
@@ -48,15 +49,16 @@ priv struct TypedEventHandler {
 }
 
 ///|
-priv struct ComponentHandler {
+priv struct RegisteredComponent {
   prefix : String
-  dispatch : async (@framework.ComponentCtx) -> Unit
+  handler : ComponentHandler
 }
 
 ///|
-priv struct ModalHandler {
+priv struct RegisteredModal {
   prefix : String
-  dispatch : async (@framework.ModalCtx) -> Unit
+  field_count : Int?
+  dispatch : async (BotCtx, @framework.ModalCtx) -> Unit
 }
 
 ///|
@@ -90,8 +92,8 @@ pub struct Bot {
   priv commands_ : Array[RegisteredCommand]
   priv typed_events_ : Array[TypedEventHandler]
   priv raw_events_ : Array[async (GatewayCtx, @model.Event) -> Unit]
-  priv components_ : Array[ComponentHandler]
-  priv modals_ : Array[ModalHandler]
+  priv components_ : Array[RegisteredComponent]
+  priv modals_ : Array[RegisteredModal]
   priv autocompletes_ : Array[AutocompleteHandler]
   priv services_ : Array[ServiceHandler]
   priv mut policy_ : ErrorPolicy?
@@ -170,21 +172,39 @@ pub fn Bot::on_event(
 }
 
 ///|
-pub fn Bot::component(
+pub fn Bot::on_component(
   self : Bot,
-  prefix : String,
-  handler : async (@framework.ComponentCtx) -> Unit,
+  prefix~ : String,
+  handler : ComponentHandler,
 ) -> Unit {
-  self.components_.push({ prefix, dispatch: handler })
+  self.components_.push({ prefix, handler })
 }
 
 ///|
-pub fn Bot::modal(
+pub fn[A] Bot::on_modal(
   self : Bot,
-  prefix : String,
+  modal : Modal[A],
+  handler : ModalSubmitHandler[A],
+) -> Unit {
+  self.modals_.push({
+    prefix: modal.custom_id_,
+    field_count: Some(modal.fields_.definitions_.length()),
+    dispatch: (bot, raw) => dispatch_modal_handler(modal, handler, bot, raw),
+  })
+}
+
+///|
+/// Register a fully raw modal route without a typed modal definition.
+pub fn Bot::on_modal_raw(
+  self : Bot,
+  prefix~ : String,
   handler : async (@framework.ModalCtx) -> Unit,
 ) -> Unit {
-  self.modals_.push({ prefix, dispatch: handler })
+  self.modals_.push({
+    prefix,
+    field_count: None,
+    dispatch: (_, raw) => handler(raw),
+  })
 }
 
 ///|
@@ -274,6 +294,11 @@ fn Bot::validate(self : Bot) -> Unit raise BotConfigError {
       paths.add(key)
     }
     validate_command_options(command.name_, [], command.definition.options)
+  }
+  for modal in self.modals_ {
+    if modal.field_count is Some(count) && (count < 1 || count > 5) {
+      raise InvalidModalFieldCount(custom_id=modal.prefix, count~)
+    }
   }
 }
 
@@ -458,7 +483,7 @@ fn bounded_spawner(
 fn failure_context(
   origin : FailureOrigin,
   phase : ResponsePhase?,
-  raw : @framework.CommandCtx?,
+  raw : FailureRaw?,
   warn : (String) -> Unit,
 ) -> FailureCtx {
   { origin_: origin, phase_: phase, raw_: raw, warn_: warn }
@@ -478,7 +503,12 @@ async fn Bot::run_registered_command(
     BotDispatchError::Failure(command=name, phase~, source~) =>
       invoke_error_policy(
         self.current_policy(),
-        failure_context(Command(name~), Some(phase), Some(raw), self.warn_),
+        failure_context(
+          Command(name~),
+          Some(phase),
+          Some(RawCommand(raw)),
+          self.warn_,
+        ),
         source,
       )
     error =>
@@ -487,7 +517,85 @@ async fn Bot::run_registered_command(
         failure_context(
           Command(name=command.name_),
           Some(BeforeInitial),
-          Some(raw),
+          Some(RawCommand(raw)),
+          self.warn_,
+        ),
+        error,
+      )
+  }
+}
+
+///|
+async fn Bot::run_registered_component(
+  self : Bot,
+  bot : BotCtx,
+  waiter : ComponentWaiter?,
+  entry : RegisteredComponent,
+  raw : @framework.ComponentCtx,
+) -> Unit {
+  dispatch_component_handler(
+    entry.prefix,
+    entry.handler,
+    bot,
+    waiter,
+    self.warn_,
+    raw,
+  ) catch {
+    error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
+      raise error
+    BotDispatchError::Failure(command=_, phase~, source~) =>
+      invoke_error_policy(
+        self.current_policy(),
+        failure_context(
+          Component(custom_id=raw.data.custom_id),
+          Some(phase),
+          Some(RawComponent(raw)),
+          self.warn_,
+        ),
+        source,
+      )
+    error =>
+      invoke_error_policy(
+        self.current_policy(),
+        failure_context(
+          Component(custom_id=raw.data.custom_id),
+          Some(BeforeInitial),
+          Some(RawComponent(raw)),
+          self.warn_,
+        ),
+        error,
+      )
+  }
+}
+
+///|
+async fn Bot::run_registered_modal(
+  self : Bot,
+  bot : BotCtx,
+  entry : RegisteredModal,
+  raw : @framework.ModalCtx,
+) -> Unit {
+  (entry.dispatch)(bot, raw) catch {
+    error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
+      raise error
+    BotDispatchError::Failure(command=_, phase~, source~) =>
+      invoke_error_policy(
+        self.current_policy(),
+        failure_context(
+          Modal(custom_id=raw.data.custom_id),
+          Some(phase),
+          Some(RawModal(raw)),
+          self.warn_,
+        ),
+        source,
+      )
+    error =>
+      invoke_error_policy(
+        self.current_policy(),
+        failure_context(
+          Modal(custom_id=raw.data.custom_id),
+          Some(BeforeInitial),
+          Some(RawModal(raw)),
           self.warn_,
         ),
         error,
@@ -542,10 +650,16 @@ fn Bot::populate_framework(
     }
   }
   for entry in self.components_ {
-    framework.component(entry.prefix, entry.dispatch) |> ignore
+    framework.component(entry.prefix, raw => {
+      self.run_registered_component(bot, waiter, entry, raw)
+    })
+    |> ignore
   }
   for entry in self.modals_ {
-    framework.modal(entry.prefix, entry.dispatch) |> ignore
+    framework.modal(entry.prefix, raw => {
+      self.run_registered_modal(bot, entry, raw)
+    })
+    |> ignore
   }
   // Registered last so explicitly configured raw handlers win by name.
   for entry in self.autocompletes_ {

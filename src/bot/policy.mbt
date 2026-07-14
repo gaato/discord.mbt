@@ -3,18 +3,27 @@
 pub(all) enum FailureOrigin {
   Command(name~ : String)
   Autocomplete(name~ : String)
+  Component(custom_id~ : String)
+  Modal(custom_id~ : String)
   Event(kind~ : @model.EventKind)
   Service(name~ : String)
 } derive(Debug)
 
 ///|
-/// Error-policy context. A raw command context is present only while handling
-/// an application command, so event and service failures cannot accidentally
-/// send an interaction response.
+/// Error-policy context. A raw interaction context is present for command,
+/// component, and modal failures; event and service failures cannot
+/// accidentally send an interaction response.
+priv enum FailureRaw {
+  RawCommand(@framework.CommandCtx)
+  RawComponent(@framework.ComponentCtx)
+  RawModal(@framework.ModalCtx)
+}
+
+///|
 pub struct FailureCtx {
   priv origin_ : FailureOrigin
   priv phase_ : ResponsePhase?
-  priv raw_ : @framework.CommandCtx?
+  priv raw_ : FailureRaw?
   priv warn_ : (String) -> Unit
 }
 
@@ -38,18 +47,27 @@ pub async fn FailureCtx::respond_error(
   ephemeral? : Bool = true,
 ) -> Unit {
   guard self.raw_ is Some(raw) else {
-    (self.warn_)("cannot respond to a non-command failure: \{message}")
+    (self.warn_)("cannot respond to a non-interaction failure: \{message}")
     return
   }
   match self.phase_ {
-    Some(BeforeInitial) | None => raw.respond(content=message, ephemeral~)
+    Some(BeforeInitial) | None =>
+      match raw {
+        RawCommand(ctx) => ctx.respond(content=message, ephemeral~)
+        RawComponent(ctx) => ctx.respond(content=message, ephemeral~)
+        RawModal(ctx) => ctx.respond(content=message, ephemeral~)
+      }
     Some(AfterDeferred) | Some(AfterInitial) =>
-      raw.followup(content=message, ephemeral~) |> ignore
+      match raw {
+        RawCommand(ctx) => ctx.followup(content=message, ephemeral~) |> ignore
+        RawComponent(ctx) => ctx.followup(content=message, ephemeral~) |> ignore
+        RawModal(ctx) => ctx.followup(content=message, ephemeral~) |> ignore
+      }
   }
 }
 
 ///|
-/// Policy invoked for command, event, and service failures.
+/// Policy invoked for interaction, event, and service failures.
 pub type ErrorPolicy = async (FailureCtx, Error) -> Unit
 
 ///|

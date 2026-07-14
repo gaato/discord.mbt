@@ -8,15 +8,13 @@ fn typed_options(fixture : String) -> @interaction.CommandOptions raise {
 fn setup_args() -> @interaction.Args[(String, String?, Int64)] {
   @interaction.Args::map3(
     @interaction.arg_user(name="user", description="Target user"),
-    @interaction.arg_string(name="note", description="Optional note")
-    |> @interaction.optional,
+    @interaction.arg_string(name="note", description="Optional note").optional(),
     @interaction.arg_int(
       name="days",
       description="Number of days",
       min=0L,
       max=7L,
-    )
-    |> @interaction.default(0L),
+    ).with_default(0L),
     (user, note, days) => (user.to_string(), note, days),
   )
 }
@@ -47,13 +45,9 @@ test "typed suggestions set autocomplete and survive Arg combinators" {
     },
   ])
   assert_suggest_preserved(@interaction.Args::of(base))
-  assert_suggest_preserved(@interaction.Args::of(@interaction.optional(base)))
-  assert_suggest_preserved(
-    @interaction.Args::of(@interaction.default(base, "all")),
-  )
-  assert_suggest_preserved(
-    @interaction.Args::of(@interaction.validate(base, _ => None)),
-  )
+  assert_suggest_preserved(@interaction.Args::of(base.optional()))
+  assert_suggest_preserved(@interaction.Args::of(base.with_default("all")))
+  assert_suggest_preserved(@interaction.Args::of(base.validate(_ => None)))
   assert_suggest_preserved(
     @interaction.Args::of(base.map(value => value.length())),
   )
@@ -137,8 +131,7 @@ test "typed arg validation reports its option name and message" {
     #|  ]
     #|}
   let args = @interaction.Args::of(
-    @interaction.arg_int(name="level", description="Level")
-    |> @interaction.validate(value => {
+    @interaction.arg_int(name="level", description="Level").validate(value => {
       if value <= 7L {
         None
       } else {

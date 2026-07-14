@@ -7,6 +7,8 @@ import {
 }
 
 // Values
+pub fn action_row(Array[@model.Component]) -> @model.Component
+
 pub fn arg_attachment(name~ : String, description~ : String) -> Arg[@model.Attachment]
 
 pub fn arg_bool(name~ : String, description~ : String) -> Arg[Bool]
@@ -29,35 +31,63 @@ pub fn attachment_option(String, String, required? : Bool) -> @model.CommandOpti
 
 pub fn boolean_option(String, String, required? : Bool) -> @model.CommandOption
 
+pub fn button(custom_id~ : String, label? : String, style? : @model.ButtonStyle, emoji? : @model.Emoji, disabled? : Bool) -> @model.Component
+
 pub fn channel_option(String, String, required? : Bool, channel_types? : Array[@model.ChannelType]) -> @model.CommandOption
 
-pub fn[A] default(Arg[A], A) -> Arg[A]
+pub fn channel_select(custom_id~ : String, placeholder? : String, min_values? : Int, max_values? : Int, disabled? : Bool, channel_types? : Array[@model.ChannelType]) -> @model.Component
+
+pub fn container(components~ : Array[@model.Component], accent_color? : Int, spoiler? : Bool) -> @model.Component
 
 pub fn int_choice(String, Int64) -> @model.CommandOptionChoice
 
 pub fn integer_option(String, String, required? : Bool, choices? : Array[@model.CommandOptionChoice], min_value? : Int64, max_value? : Int64, autocomplete? : Bool) -> @model.CommandOption
 
+pub fn label(label~ : String, component~ : @model.Component, description? : String) -> @model.Component
+
+pub fn link_button(url~ : String, label? : String, emoji? : @model.Emoji, disabled? : Bool) -> @model.Component
+
+pub fn media_gallery(Array[@model.MediaGalleryItem]) -> @model.Component
+
+pub fn media_item(url~ : String, description? : String, spoiler? : Bool) -> @model.MediaGalleryItem
+
 pub fn mentionable_option(String, String, required? : Bool) -> @model.CommandOption
+
+pub fn mentionable_select(custom_id~ : String, placeholder? : String, min_values? : Int, max_values? : Int, disabled? : Bool) -> @model.Component
 
 pub fn number_choice(String, Double) -> @model.CommandOptionChoice
 
 pub fn number_option(String, String, required? : Bool, choices? : Array[@model.CommandOptionChoice], min_value? : Double, max_value? : Double, autocomplete? : Bool) -> @model.CommandOption
 
-pub fn[A] optional(Arg[A]) -> Arg[A?]
-
 pub fn role_option(String, String, required? : Bool) -> @model.CommandOption
+
+pub fn role_select(custom_id~ : String, placeholder? : String, min_values? : Int, max_values? : Int, disabled? : Bool) -> @model.Component
+
+pub fn section(components~ : Array[@model.Component], accessory~ : @model.Component) -> @model.Component
+
+pub fn select_option(label~ : String, value~ : String, description? : String, emoji? : @model.Emoji, default? : Bool) -> @model.SelectOption
+
+pub fn separator(divider? : Bool, spacing? : Int) -> @model.Component
 
 pub fn string_choice(String, String) -> @model.CommandOptionChoice
 
 pub fn string_option(String, String, required? : Bool, choices? : Array[@model.CommandOptionChoice], min_length? : Int, max_length? : Int, autocomplete? : Bool) -> @model.CommandOption
 
+pub fn string_select(custom_id~ : String, options~ : Array[@model.SelectOption], placeholder? : String, min_values? : Int, max_values? : Int, disabled? : Bool) -> @model.Component
+
 pub fn sub_command(String, String, options? : Array[@model.CommandOption]) -> @model.CommandOption
 
 pub fn sub_command_group(String, String, Array[@model.CommandOption]) -> @model.CommandOption
 
+pub fn text_display(String) -> @model.Component
+
+pub fn text_input(custom_id~ : String, style? : @model.TextInputStyle, placeholder? : String, min_length? : Int, max_length? : Int, required? : Bool, value? : String) -> @model.Component
+
+pub fn thumbnail(url~ : String, description? : String, spoiler? : Bool) -> @model.Component
+
 pub fn user_option(String, String, required? : Bool) -> @model.CommandOption
 
-pub fn[A] validate(Arg[A], (A) -> String?) -> Arg[A]
+pub fn user_select(custom_id~ : String, placeholder? : String, min_values? : Int, max_values? : Int, disabled? : Bool) -> @model.Component
 
 // Errors
 pub(all) suberror ArgsDecodeError {
@@ -75,6 +105,9 @@ pub struct Arg[A] {
   // private fields
 }
 pub fn[A, B] Arg::map(Self[A], (A) -> B) -> Self[B]
+pub fn[A] Arg::optional(Self[A]) -> Self[A?]
+pub fn[A] Arg::validate(Self[A], (A) -> String?) -> Self[A]
+pub fn[A] Arg::with_default(Self[A], A) -> Self[A]
 
 pub struct Args[A] {
   // private fields

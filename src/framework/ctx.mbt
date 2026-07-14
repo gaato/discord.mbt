@@ -42,6 +42,25 @@ async fn respond_message(
 }
 
 ///|
+async fn respond_modal(
+  gate : ResponseGate,
+  custom_id : String,
+  title : String,
+  components : Array[@model.Component],
+) -> Unit {
+  gate.send({
+    typ: Modal,
+    data: Some(
+      @model.ObjBuilder::new()
+      .field("custom_id", custom_id)
+      .field("title", title)
+      .field("components", components)
+      .build(),
+    ),
+  })
+}
+
+///|
 /// The user who triggered an interaction, whether it arrived from a guild
 /// (via the member object) or a DM.
 fn invoking_user(interaction : @model.Interaction) -> @model.User? {
@@ -112,6 +131,17 @@ pub async fn CommandCtx::defer_response(
     None,
     ephemeral,
   )
+}
+
+///|
+/// Display a modal as the initial command response.
+pub async fn CommandCtx::show_modal(
+  self : CommandCtx,
+  custom_id~ : String,
+  title~ : String,
+  components~ : Array[@model.Component],
+) -> Unit {
+  respond_modal(self.gate, custom_id, title, components)
 }
 
 ///|
@@ -215,9 +245,81 @@ pub async fn ComponentCtx::update_message(
 }
 
 ///|
+/// Display a modal as the initial component response.
+pub async fn ComponentCtx::show_modal(
+  self : ComponentCtx,
+  custom_id~ : String,
+  title~ : String,
+  components~ : Array[@model.Component],
+) -> Unit {
+  respond_modal(self.gate, custom_id, title, components)
+}
+
+///|
+/// Acknowledge now and send a message later through webhook methods.
+pub async fn ComponentCtx::defer_response(
+  self : ComponentCtx,
+  ephemeral? : Bool = false,
+) -> Unit {
+  respond_message(
+    self.gate,
+    DeferredChannelMessageWithSource,
+    None,
+    None,
+    None,
+    None,
+    ephemeral,
+  )
+}
+
+///|
 /// Acknowledge without any visible change (edit later if needed).
 pub async fn ComponentCtx::defer_update(self : ComponentCtx) -> Unit {
   self.gate.send({ typ: DeferredUpdateMessage, data: None })
+}
+
+///|
+/// Edit the original interaction response after deferring.
+pub async fn ComponentCtx::edit_response(
+  self : ComponentCtx,
+  content? : @model.Undefinable[String] = Missing,
+  embeds? : @model.Undefinable[Array[@model.Embed]] = Missing,
+  components? : @model.Undefinable[Array[@model.Component]] = Missing,
+  files? : Array[@dhttp.FileUpload],
+) -> @model.Message {
+  self.client.edit_original_response(
+    self.application_id,
+    self.interaction.token,
+    content~,
+    embeds~,
+    components~,
+    files?,
+  )
+}
+
+///|
+/// Send a component-interaction followup message.
+pub async fn ComponentCtx::followup(
+  self : ComponentCtx,
+  content? : String,
+  embeds? : Array[@model.Embed],
+  components? : Array[@model.Component],
+  files? : Array[@dhttp.FileUpload],
+  ephemeral? : Bool = false,
+) -> @model.Message {
+  self.client.create_followup(
+    self.application_id,
+    self.interaction.token,
+    content?,
+    embeds?,
+    components?,
+    files?,
+    flags=if ephemeral {
+      @model.MessageFlags::ephemeral()
+    } else {
+      @model.MessageFlags::from_bits(0)
+    },
+  )
 }
 
 ///|
@@ -244,6 +346,10 @@ pub fn ModalCtx::text_value(self : ModalCtx, custom_id : String) -> String? {
       match component {
         ActionRow(row) =>
           if walk(row.components) is Some(value) {
+            return Some(value)
+          }
+        Label(label) =>
+          if walk([label.component]) is Some(value) {
             return Some(value)
           }
         TextInput(input) =>
@@ -294,6 +400,50 @@ pub async fn ModalCtx::defer_response(
     None,
     None,
     ephemeral,
+  )
+}
+
+///|
+/// Edit the original modal interaction response after deferring.
+pub async fn ModalCtx::edit_response(
+  self : ModalCtx,
+  content? : @model.Undefinable[String] = Missing,
+  embeds? : @model.Undefinable[Array[@model.Embed]] = Missing,
+  components? : @model.Undefinable[Array[@model.Component]] = Missing,
+  files? : Array[@dhttp.FileUpload],
+) -> @model.Message {
+  self.client.edit_original_response(
+    self.application_id,
+    self.interaction.token,
+    content~,
+    embeds~,
+    components~,
+    files?,
+  )
+}
+
+///|
+/// Send a modal-interaction followup message.
+pub async fn ModalCtx::followup(
+  self : ModalCtx,
+  content? : String,
+  embeds? : Array[@model.Embed],
+  components? : Array[@model.Component],
+  files? : Array[@dhttp.FileUpload],
+  ephemeral? : Bool = false,
+) -> @model.Message {
+  self.client.create_followup(
+    self.application_id,
+    self.interaction.token,
+    content?,
+    embeds?,
+    components?,
+    files?,
+    flags=if ephemeral {
+      @model.MessageFlags::ephemeral()
+    } else {
+      @model.MessageFlags::from_bits(0)
+    },
   )
 }
 

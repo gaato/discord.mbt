@@ -41,6 +41,33 @@ fn app_command(name : String, id : String) -> @model.Interaction raise {
 }
 
 ///|
+fn app_component(custom_id : String, id : String) -> @model.Interaction raise {
+  app_interaction(
+    (
+      #|{"id":"INTERACTION_ID","application_id":"400000000000000001","type":3,"token":"interaction-token","version":1,"data":{"custom_id":"CUSTOM_ID","component_type":2}}
+    )
+    .replace(old="INTERACTION_ID", new=id)
+    .replace(old="CUSTOM_ID", new=custom_id),
+  )
+}
+
+///|
+fn app_modal_submit(
+  custom_id : String,
+  note : String,
+  id : String,
+) -> @model.Interaction raise {
+  app_interaction(
+    (
+      #|{"id":"INTERACTION_ID","application_id":"400000000000000001","type":5,"token":"interaction-token","version":1,"data":{"custom_id":"CUSTOM_ID","components":[{"type":18,"label":"Note","component":{"type":4,"custom_id":"note","style":1,"value":"NOTE"}}]}}
+    )
+    .replace(old="INTERACTION_ID", new=id)
+    .replace(old="CUSTOM_ID", new=custom_id)
+    .replace(old="NOTE", new=note),
+  )
+}
+
+///|
 fn autocomplete_choices(
   response : @model.InteractionResponse,
 ) -> Array[@model.CommandOptionChoice] raise {
@@ -179,6 +206,129 @@ async test "interaction app dispatches captured responses and completion outcome
         #|{"type":4,"data":{"content":"hello from http"}}
       ),
     )
+  })
+}
+
+///|
+async test "interaction app dispatches component and typed modal handlers" {
+  let bot = @bot.Bot::new(token="test-token", sync=Disabled)
+  let feedback = @bot.modal(
+    custom_id="feedback",
+    title="Feedback",
+    fields=@bot.ModalFields::of(@bot.text_field(custom_id="note", label="Note")),
+  )
+  bot.command(
+    @bot.slash(
+      name="open-form",
+      description="Open the feedback form",
+      args=@interaction.Args::unit(),
+      handler=Immediate((_, _) => {
+        CommandReply::ShowModal(feedback.show(state="from-command"))
+      }),
+    ),
+  )
+  bot.on_component(
+    prefix="update:",
+    Immediate(ctx => {
+      @bot.ComponentReply::update_message(content="updated:\{ctx.suffix()}")
+    }),
+  )
+  bot.on_component(
+    prefix="open:",
+    Immediate(ctx => {
+      ComponentReply::ShowModal(feedback.show(state=ctx.suffix()))
+    }),
+  )
+  bot.on_component(prefix="defer:", DeferredUpdate(_ => ()))
+  bot.on_modal(
+    feedback,
+    Immediate((ctx, note) => {
+      @bot.InitialResponse::message(
+        content="saved:\{note}:\{ctx.state().unwrap_or("none")}",
+      )
+    }),
+  )
+  let client = @dhttp.Client::new(
+    "test-token",
+    base_url="http://127.0.0.1:1",
+    max_connections=1,
+  )
+  defer client.close()
+  @async.with_task_group(group => {
+    let app = bot.start_interaction_app(
+      group,
+      client~,
+      application_id=@model.Id::parse("400000000000000001"),
+      sync=false,
+    )
+    match
+      app.handle_interaction(app_command("open-form", "500000000000000400")) {
+      Reply(response~, files=_) => {
+        assert_true(response.typ == Modal)
+        guard response.data is Some(Object(data)) else {
+          fail("command modal response is missing data")
+        }
+        inspect(
+          data["custom_id"].stringify(),
+          content="\"feedback:from-command\"",
+        )
+      }
+      outcome => fail("expected command modal reply, got \{to_repr(outcome)}")
+    }
+    match
+      app.handle_interaction(
+        app_component("update:item-1", "500000000000000401"),
+      ) {
+      Reply(response~, files=_) => {
+        assert_true(response.typ == UpdateMessage)
+        inspect(
+          response.to_json().stringify(),
+          content=(
+            #|{"type":7,"data":{"content":"updated:item-1"}}
+          ),
+        )
+      }
+      outcome => fail("expected update reply, got \{to_repr(outcome)}")
+    }
+    match
+      app.handle_interaction(
+        app_component("open:ticket-7", "500000000000000402"),
+      ) {
+      Reply(response~, files=_) => {
+        assert_true(response.typ == Modal)
+        guard response.data is Some(Object(data)) else {
+          fail("modal response is missing data")
+        }
+        inspect(data["custom_id"].stringify(), content="\"feedback:ticket-7\"")
+        inspect(data["title"].stringify(), content="\"Feedback\"")
+      }
+      outcome => fail("expected modal reply, got \{to_repr(outcome)}")
+    }
+    match
+      app.handle_interaction(
+        app_modal_submit(
+          "feedback:ticket-7", "looks good", "500000000000000403",
+        ),
+      ) {
+      Reply(response~, files=_) => {
+        assert_true(response.typ == ChannelMessageWithSource)
+        inspect(
+          response.to_json().stringify(),
+          content=(
+            #|{"type":4,"data":{"content":"saved:looks good:ticket-7"}}
+          ),
+        )
+      }
+      outcome => fail("expected modal submit reply, got \{to_repr(outcome)}")
+    }
+    match
+      app.handle_interaction(
+        app_component("defer:item-2", "500000000000000404"),
+      ) {
+      Reply(response~, files=_) =>
+        assert_true(response.typ == DeferredUpdateMessage)
+      outcome => fail("expected deferred update, got \{to_repr(outcome)}")
+    }
   })
 }
 

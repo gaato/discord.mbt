@@ -42,8 +42,7 @@ async fn run_echo_bot(token : String) -> Unit {
       description="How many times (1-5)",
       min=1,
       max=5,
-    )
-    |> @discord.default(1L),
+    ).with_default(1L),
     (text, times) => { text, times: times.to_int() },
   )
   let echo = @discord.slash(

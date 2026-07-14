@@ -12,6 +12,7 @@ pub struct InitialResponse {
 /// An initial response returned by an immediate command handler.
 pub(all) enum CommandReply {
   Message(InitialResponse)
+  ShowModal(ModalHandle)
 }
 
 ///|
@@ -84,5 +85,6 @@ async fn CommandReply::send(
 ) -> Unit {
   match self {
     Message(response) => response.send(ctx)
+    ShowModal(handle) => handle.send_command(ctx)
   }
 }

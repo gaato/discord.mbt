@@ -18,8 +18,7 @@ test "typed command spec derives options from Args" {
       description="Repeat count",
       min=1L,
       max=5L,
-    )
-    |> @interaction.default(1L),
+    ).with_default(1L),
     (text, times) => (text, times),
   )
   let command = slash(

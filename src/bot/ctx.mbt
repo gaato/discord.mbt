@@ -77,7 +77,7 @@ pub async fn GatewayCtx::shutdown(self : GatewayCtx) -> Unit {
 type ComponentWaiter = async (String, Int?) -> @framework.ComponentCtx?
 
 ///|
-/// The response state when a command handler failed.
+/// The response state when an interaction handler failed.
 pub(all) enum ResponsePhase {
   BeforeInitial
   AfterDeferred

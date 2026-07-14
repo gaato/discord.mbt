@@ -23,8 +23,7 @@ fn echo_args() -> @discord.Args[EchoArgs] {
       description="How many times (1-5)",
       min=1,
       max=5,
-    )
-    |> @discord.default(1L),
+    ).with_default(1L),
     (text, times) => { text, times: times.to_int() },
   )
 }

@@ -81,16 +81,14 @@ fn modal_interaction() -> @model.Interaction raise {
         #|    "custom_id": "feedback:42",
         #|    "components": [
         #|      {
-        #|        "type": 1,
-        #|        "components": [
-        #|          {
-        #|            "type": 4,
-        #|            "custom_id": "note",
-        #|            "style": 2,
-        #|            "label": "Note",
-        #|            "value": "hello from modal"
-        #|          }
-        #|        ]
+        #|        "type": 18,
+        #|        "label": "Note",
+        #|        "component": {
+        #|          "type": 4,
+        #|          "custom_id": "note",
+        #|          "style": 2,
+        #|          "value": "hello from modal"
+        #|        }
         #|      }
         #|    ]
         #|  }

@@ -348,8 +348,7 @@ test "bot validates command type names and slash child structure" {
       name="ordered",
       description="Option ordering",
       args=@interaction.Args::map2(
-        @interaction.arg_string(name="optional", description="Optional")
-        |> @interaction.optional,
+        @interaction.arg_string(name="optional", description="Optional").optional(),
         @interaction.arg_string(name="required", description="Required"),
         (_, _) => (),
       ),

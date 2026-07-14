@@ -13,6 +13,8 @@ import {
 // Values
 pub const API_VERSION : Int = 10
 
+pub fn action_row(Array[@model.Component]) -> @model.Component
+
 pub fn arg_attachment(name~ : String, description~ : String) -> @interaction.Arg[@model.Attachment]
 
 pub fn arg_bool(name~ : String, description~ : String) -> @interaction.Arg[Bool]
@@ -31,23 +33,57 @@ pub fn arg_string(name~ : String, description~ : String, choices? : Array[@model
 
 pub fn arg_user(name~ : String, description~ : String) -> @interaction.Arg[@model.Id[@model.UserMarker]]
 
-pub fn[A] default(@interaction.Arg[A], A) -> @interaction.Arg[A]
+pub fn button(custom_id~ : String, label? : String, style? : @model.ButtonStyle, emoji? : @model.Emoji, disabled? : Bool) -> @model.Component
+
+pub fn channel_select(custom_id~ : String, placeholder? : String, min_values? : Int, max_values? : Int, disabled? : Bool, channel_types? : Array[@model.ChannelType]) -> @model.Component
+
+pub fn container(components~ : Array[@model.Component], accent_color? : Int, spoiler? : Bool) -> @model.Component
+
+pub fn label(label~ : String, component~ : @model.Component, description? : String) -> @model.Component
+
+pub fn link_button(url~ : String, label? : String, emoji? : @model.Emoji, disabled? : Bool) -> @model.Component
+
+pub fn media_gallery(Array[@model.MediaGalleryItem]) -> @model.Component
+
+pub fn media_item(url~ : String, description? : String, spoiler? : Bool) -> @model.MediaGalleryItem
+
+pub fn mentionable_select(custom_id~ : String, placeholder? : String, min_values? : Int, max_values? : Int, disabled? : Bool) -> @model.Component
 
 pub fn message_command(name~ : String, handler~ : @bot.InteractionHandler[@model.Message], default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType]) -> @bot.Command[@model.Message]
 
-pub fn[A] optional(@interaction.Arg[A]) -> @interaction.Arg[A?]
+pub fn[A] modal(custom_id~ : String, title~ : String, fields~ : @bot.ModalFields[A]) -> @bot.Modal[A]
+
+pub fn role_select(custom_id~ : String, placeholder? : String, min_values? : Int, max_values? : Int, disabled? : Bool) -> @model.Component
+
+pub fn section(components~ : Array[@model.Component], accessory~ : @model.Component) -> @model.Component
+
+pub fn select_field(custom_id~ : String, label~ : String, options~ : Array[@model.SelectOption], description? : String, placeholder? : String, min_values? : Int, max_values? : Int) -> @bot.ModalField[Array[String]]
+
+pub fn select_option(label~ : String, value~ : String, description? : String, emoji? : @model.Emoji, default? : Bool) -> @model.SelectOption
+
+pub fn separator(divider? : Bool, spacing? : Int) -> @model.Component
 
 pub fn[A] slash(name~ : String, description~ : String, args~ : @interaction.Args[A], handler~ : @bot.InteractionHandler[A], default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType]) -> @bot.Command[A]
 
 pub fn slash_group(name~ : String, description~ : String, children~ : Array[@bot.SlashChild], default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType]) -> @bot.Command[Unit]
 
+pub fn string_select(custom_id~ : String, options~ : Array[@model.SelectOption], placeholder? : String, min_values? : Int, max_values? : Int, disabled? : Bool) -> @model.Component
+
 pub fn[A] subcommand(name~ : String, description~ : String, args~ : @interaction.Args[A], handler~ : @bot.InteractionHandler[A]) -> @bot.SlashChild
 
 pub fn subcommand_group(name~ : String, description~ : String, children~ : Array[@bot.SlashChild]) -> @bot.SlashChild
 
+pub fn text_display(String) -> @model.Component
+
+pub fn text_field(custom_id~ : String, label~ : String, style? : @model.TextInputStyle, description? : String, placeholder? : String, min_length? : Int, max_length? : Int) -> @bot.ModalField[String]
+
+pub fn text_input(custom_id~ : String, style? : @model.TextInputStyle, placeholder? : String, min_length? : Int, max_length? : Int, required? : Bool, value? : String) -> @model.Component
+
+pub fn thumbnail(url~ : String, description? : String, spoiler? : Bool) -> @model.Component
+
 pub fn user_command(name~ : String, handler~ : @bot.InteractionHandler[@bot.TargetUser], default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType]) -> @bot.Command[@bot.TargetUser]
 
-pub fn[A] validate(@interaction.Arg[A], (A) -> String?) -> @interaction.Arg[A]
+pub fn user_select(custom_id~ : String, placeholder? : String, min_values? : Int, max_values? : Int, disabled? : Bool) -> @model.Component
 
 // Errors
 
@@ -86,6 +122,14 @@ pub using @bot {type CommandSync}
 
 pub using @framework {type ComponentCtx}
 
+pub using @bot {type ComponentDeferredCtx}
+
+pub using @bot {type ComponentHandler}
+
+pub using @bot {type ComponentImmediateCtx}
+
+pub using @bot {type ComponentReply}
+
 pub using @bot {type DeferredCtx}
 
 pub using @model {type Event}
@@ -118,7 +162,21 @@ pub using @bot {type InteractionHandler}
 
 pub using @bot {type InteractionOutcome}
 
+pub using @bot {type Modal}
+
 pub using @framework {type ModalCtx}
+
+pub using @bot {type ModalDeferredCtx}
+
+pub using @bot {type ModalField}
+
+pub using @bot {type ModalFields}
+
+pub using @bot {type ModalHandle}
+
+pub using @bot {type ModalImmediateCtx}
+
+pub using @bot {type ModalSubmitHandler}
 
 pub using @bot {type RegisteredCommand}
 
