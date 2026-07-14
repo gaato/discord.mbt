@@ -47,6 +47,8 @@ test "emoji decodes a full fixture" {
       #|      public_flags: None,
       #|      avatar_decoration: None,
       #|      avatar_decoration_data: None,
+      #|      collectibles: None,
+      #|      primary_guild: None,
       #|    },
       #|  ),
       #|  require_colons: Some(true),

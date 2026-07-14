@@ -15,7 +15,8 @@
 // - line 486, Example Gateway Reconnect — Reconnect control envelope is not modeled.
 // - line 506, Example Gateway Invalid Session — Invalid Session control envelope is not modeled.
 // - line 1423, Example Activity — standalone activity block, covered through PRESENCE_UPDATE below.
-// - line 1436, Example Activity with Rich Presence — rich-presence-only fields are intentionally deferred.
+// - line 1436, Example Activity with Rich Presence — covered with its omitted
+//   required created_at field reconstructed in model_todo_docs_test.mbt.
 
 ///|
 test "discord docs: example voice server update payload (line 1539)" {

@@ -44,4 +44,12 @@ test "discord docs: example user (line 61)" {
   assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
   inspect(first.id.to_string(), content="80351110224678912")
   assert_eq(first.username, "Nelly")
+  guard first.collectibles is Some(@model.Nullable::Value(collectibles)) else {
+    fail("expected user collectibles")
+  }
+  assert_eq(collectibles.nameplate.unwrap().palette, "cobalt")
+  guard first.primary_guild is Some(@model.Nullable::Value(primary_guild)) else {
+    fail("expected primary guild")
+  }
+  assert_true(primary_guild.tag == Some(@model.Nullable::Value("DISC")))
 }

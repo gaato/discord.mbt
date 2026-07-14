@@ -4,8 +4,7 @@ pub(all) struct AuditLog {
   audit_log_entries : Array[AuditLogEntry]
   users : Array[User]
   webhooks : Array[Webhook]
-  // TODO(integration): Replace raw partial guild integrations when that domain is ported.
-  integrations : Array[Json]
+  integrations : Array[Integration]
   application_commands : Array[ApplicationCommand]
   auto_moderation_rules : Array[AutoModerationRule]
   threads : Array[Channel]

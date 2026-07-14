@@ -14,14 +14,57 @@ pub(all) struct Embed {
   provider : EmbedProvider?
   author : EmbedAuthor?
   fields : Array[EmbedField]?
-  // TODO(embed-flags): Add flags (embed flag bitfield) when that surface is needed.
-  // TODO(embed-components): components (an array of CV2 Containers) appears in
-  // the OpenAPI spec but is undocumented; add once the docs list it.
+  flags : EmbedFlags?
+  // Not modeled: embed components appear in OpenAPI but not in the public documentation.
 } derive (
   ToJson(fields(typ(rename="type"))),
   FromJson(fields(typ(rename="type"))),
   Debug,
 )
+
+///|
+/// Bit flags describing special rendering behavior of an embed.
+pub(all) struct EmbedFlags(UInt64) derive(Eq)
+
+///|
+pub fn EmbedFlags::from_bits(bits : UInt64) -> EmbedFlags {
+  EmbedFlags(bits)
+}
+
+///|
+pub fn EmbedFlags::bits(self : EmbedFlags) -> UInt64 {
+  self.0
+}
+
+///|
+pub impl Debug for EmbedFlags with fn to_repr(self) {
+  to_repr(self.0)
+}
+
+///|
+pub impl ToJson for EmbedFlags with fn to_json(self) {
+  Json::number(self.0.to_double(), repr=self.0.to_string())
+}
+
+///|
+pub impl @json.FromJson for EmbedFlags with fn from_json(json, path) {
+  match json {
+    Number(_, repr=Some(repr)) =>
+      EmbedFlags(
+        @string.parse_uint64(repr.to_string()) catch {
+          _ =>
+            raise @json.JsonDecodeError((path, "expected embed flags (number)"))
+        },
+      )
+    Number(value, repr=None) => EmbedFlags(value.to_uint64())
+    _ => raise @json.JsonDecodeError((path, "expected embed flags (number)"))
+  }
+}
+
+///|
+pub fn EmbedFlags::is_content_inventory_entry() -> EmbedFlags {
+  EmbedFlags(1UL << 5)
+}
 
 ///|
 /// The string discriminator describing an embed's rendering category.

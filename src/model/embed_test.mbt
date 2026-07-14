@@ -100,6 +100,7 @@ test "embed decodes a rich fixture with every sub-object" {
       #|    },
       #|  ),
       #|  fields: Some([{ name: "Status", value: "Operational", inline: Some(true) }]),
+      #|  flags: None,
       #|}
     ),
   )
@@ -125,6 +126,7 @@ test "embed decodes an empty object" {
       #|  provider: None,
       #|  author: None,
       #|  fields: None,
+      #|  flags: None,
       #|}
     ),
   )
@@ -146,6 +148,7 @@ test "embed encode omits absent optional fields" {
     provider: None,
     author: None,
     fields: None,
+    flags: None,
   }
   inspect(
     embed.to_json().stringify(),

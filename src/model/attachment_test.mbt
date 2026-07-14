@@ -37,6 +37,11 @@ test "attachment decodes a full fixture" {
       #|  duration_secs: Some(3.5),
       #|  waveform: Some("AQAFAAoPEA=="),
       #|  flags: Some(39),
+      #|  placeholder: None,
+      #|  placeholder_version: None,
+      #|  clip_participants: None,
+      #|  clip_created_at: None,
+      #|  application: None,
       #|}
     ),
   )
@@ -71,6 +76,11 @@ test "attachment decodes required fields only" {
       #|  duration_secs: None,
       #|  waveform: None,
       #|  flags: None,
+      #|  placeholder: None,
+      #|  placeholder_version: None,
+      #|  clip_participants: None,
+      #|  clip_created_at: None,
+      #|  application: None,
       #|}
     ),
   )
@@ -93,6 +103,11 @@ test "attachment encode omits absent optional fields" {
     duration_secs: None,
     waveform: None,
     flags: None,
+    placeholder: None,
+    placeholder_version: None,
+    clip_participants: None,
+    clip_created_at: None,
+    application: None,
   }
   inspect(
     attachment.to_json().stringify(),

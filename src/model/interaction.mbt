@@ -5,6 +5,7 @@ pub(all) struct Interaction {
   application_id : ApplicationId
   typ : InteractionType
   data : InteractionData?
+  guild : PartialGuild?
   guild_id : GuildId?
   channel : Channel?
   channel_id : ChannelId?
@@ -17,8 +18,9 @@ pub(all) struct Interaction {
   locale : String?
   guild_locale : String?
   entitlements : Array[Entitlement]?
+  authorizing_integration_owners : Map[String, String]?
   context : InteractionContextType?
-  // TODO(interaction-full): Port guild summary, authorization owners, and attachment size metadata later.
+  attachment_size_limit : Int?
 } derive(Debug)
 
 ///|
@@ -97,6 +99,7 @@ priv struct InteractionFields {
   id : InteractionId
   application_id : ApplicationId
   typ : InteractionType
+  guild : PartialGuild?
   guild_id : GuildId?
   channel : Channel?
   channel_id : ChannelId?
@@ -109,7 +112,9 @@ priv struct InteractionFields {
   locale : String?
   guild_locale : String?
   entitlements : Array[Entitlement]?
+  authorizing_integration_owners : Map[String, String]?
   context : InteractionContextType?
+  attachment_size_limit : Int?
 } derive (
   ToJson(fields(typ(rename="type"), guild_member(rename="member"))),
   FromJson(fields(typ(rename="type"), guild_member(rename="member"))),
@@ -121,6 +126,7 @@ fn Interaction::fields(self : Interaction) -> InteractionFields {
     id: self.id,
     application_id: self.application_id,
     typ: self.typ,
+    guild: self.guild,
     guild_id: self.guild_id,
     channel: self.channel,
     channel_id: self.channel_id,
@@ -133,7 +139,9 @@ fn Interaction::fields(self : Interaction) -> InteractionFields {
     locale: self.locale,
     guild_locale: self.guild_locale,
     entitlements: self.entitlements,
+    authorizing_integration_owners: self.authorizing_integration_owners,
     context: self.context,
+    attachment_size_limit: self.attachment_size_limit,
   }
 }
 
@@ -182,6 +190,7 @@ pub impl @json.FromJson for Interaction with fn from_json(json, path) {
     application_id: base.application_id,
     typ: base.typ,
     data,
+    guild: base.guild,
     guild_id: base.guild_id,
     channel: base.channel,
     channel_id: base.channel_id,
@@ -194,7 +203,9 @@ pub impl @json.FromJson for Interaction with fn from_json(json, path) {
     locale: base.locale,
     guild_locale: base.guild_locale,
     entitlements: base.entitlements,
+    authorizing_integration_owners: base.authorizing_integration_owners,
     context: base.context,
+    attachment_size_limit: base.attachment_size_limit,
   }
 }
 

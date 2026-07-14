@@ -63,6 +63,11 @@ test "discord docs: example channel follower webhook (line 78)" {
   assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
   inspect(first.id.to_string(), content="752831914402115456")
   inspect(first.typ.to_int(), content="2")
+  assert_eq(first.source_guild.unwrap().name.unwrap(), "Guildy name")
+  assert_true(
+    first.source_channel.unwrap().name ==
+    Some(@model.Nullable::Value("announcements")),
+  )
 }
 
 ///|

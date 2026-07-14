@@ -31,18 +31,122 @@ pub(all) struct Message {
   role_subscription_data : RoleSubscriptionData?
   poll : Poll?
   call : MessageCall?
-  // TODO(application): Add the partial application payload with its domain.
-  // TODO(interaction): Add interaction and interaction_metadata later.
-  // TODO(resolved): Add resolved interaction data with the interaction domain.
-  // TODO(message_snapshots): Add forwarded message snapshots later.
-  // TODO(soundboard_sounds): Add message soundboard payloads later.
-  // TODO(deprecated-stickers): Add only if the deprecated full sticker field is needed.
-  // TODO(shared-client-theme): Add the newer shared client theme payload later.
+  application : Application?
+  interaction_metadata : MessageInteractionMetadata?
+  // Not modeled: the legacy message interaction field is deprecated in favor of interaction_metadata.
+  resolved : ResolvedData?
+  message_snapshots : Array[MessageSnapshot]?
+  // Not modeled: message soundboard_sounds is not in the public documentation.
+  // Not modeled: full message stickers are deprecated in favor of sticker_items.
+  shared_client_theme : SharedClientTheme?
 } derive (
   ToJson(fields(typ(rename="type"))),
   FromJson(fields(typ(rename="type"))),
   Debug,
 )
+
+///|
+/// Metadata identifying the interaction that produced a message.
+///
+/// The optional fields cover the documented command, component, and modal
+/// variants. `type` determines which subset is present.
+pub(all) struct MessageInteractionMetadata {
+  id : InteractionId
+  typ : InteractionType
+  user : User
+  authorizing_integration_owners : Map[String, String]
+  original_response_message_id : MessageId?
+  target_user : User?
+  target_message_id : MessageId?
+  interacted_message_id : MessageId?
+  triggering_interaction_metadata : MessageInteractionMetadata?
+} derive (
+  ToJson(fields(typ(rename="type"))),
+  FromJson(fields(typ(rename="type"))),
+  Debug,
+)
+
+///|
+/// A forwarded message snapshot.
+pub(all) struct MessageSnapshot {
+  message : MessageSnapshotContent
+} derive(ToJson, FromJson, Debug)
+
+///|
+/// The documented subset of a message retained in a forwarded snapshot.
+pub(all) struct MessageSnapshotContent {
+  typ : MessageType?
+  content : String?
+  embeds : Array[Embed]?
+  attachments : Array[Attachment]?
+  timestamp : Timestamp?
+  edited_timestamp : Nullable[Timestamp]?
+  flags : MessageFlags?
+  mentions : Array[User]?
+  mention_roles : Array[RoleId]?
+  sticker_items : Array[StickerItem]?
+  components : Array[Component]?
+} derive (
+  ToJson(fields(typ(rename="type"))),
+  FromJson(fields(typ(rename="type"))),
+  Debug,
+)
+
+///|
+/// Theme colors shared by an activity-card message.
+pub(all) struct SharedClientTheme {
+  colors : Array[String]
+  gradient_angle : Int
+  base_mix : Int
+  base_theme : Nullable[BaseTheme]?
+} derive(ToJson, FromJson, Debug)
+
+///|
+pub(all) enum BaseTheme {
+  Unset
+  Dark
+  Light
+  Darker
+  Midnight
+  Unknown(Int)
+} derive(Eq, Debug)
+
+///|
+pub fn BaseTheme::to_int(self : BaseTheme) -> Int {
+  match self {
+    Unset => 0
+    Dark => 1
+    Light => 2
+    Darker => 3
+    Midnight => 4
+    Unknown(value) => value
+  }
+}
+
+///|
+pub fn BaseTheme::from_int(value : Int) -> BaseTheme {
+  match value {
+    0 => Unset
+    1 => Dark
+    2 => Light
+    3 => Darker
+    4 => Midnight
+    value => Unknown(value)
+  }
+}
+
+///|
+pub impl ToJson for BaseTheme with fn to_json(self) {
+  Json::number(self.to_int().to_double())
+}
+
+///|
+pub impl @json.FromJson for BaseTheme with fn from_json(json, path) {
+  match json {
+    Number(value, ..) => BaseTheme::from_int(value.to_int())
+    _ => raise @json.JsonDecodeError((path, "expected base theme (number)"))
+  }
+}
 
 ///|
 /// A client nonce represented as either its string or integer wire form.

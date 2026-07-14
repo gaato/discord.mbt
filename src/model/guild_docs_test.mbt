@@ -7,7 +7,8 @@
 // - line 343, Example Guild Widget — guild widget objects are not modeled.
 // - line 412, Example Guild Member — the illustrative member contains an empty placeholder user object.
 // - line 660, Example Guild Onboarding — guild onboarding objects are not modeled.
-// - line 739, Example Incidents Data — guild incidents data is not modeled.
+// - line 739, Example Incidents Data — standalone fragment covered in
+//   model_todo_docs_test.mbt.
 // - line 1222, Example Response — the channel-position map response has no model.
 
 ///|

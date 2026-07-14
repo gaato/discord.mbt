@@ -98,6 +98,8 @@ test "slash command autocomplete dispatches command data with resolved users" {
       #|                  public_flags: None,
       #|                  avatar_decoration: None,
       #|                  avatar_decoration_data: None,
+      #|                  collectibles: None,
+      #|                  primary_guild: None,
       #|                },
       #|              },
       #|            ),
@@ -124,6 +126,7 @@ test "slash command autocomplete dispatches command data with resolved users" {
       #|      },
       #|    ),
       #|  ),
+      #|  guild: None,
       #|  guild_id: Some(81384788765712384),
       #|  channel: Some(
       #|    {
@@ -186,6 +189,8 @@ test "slash command autocomplete dispatches command data with resolved users" {
       #|      public_flags: None,
       #|      avatar_decoration: None,
       #|      avatar_decoration_data: None,
+      #|      collectibles: None,
+      #|      primary_guild: None,
       #|    },
       #|  ),
       #|  token: "interaction-token",
@@ -210,7 +215,9 @@ test "slash command autocomplete dispatches command data with resolved users" {
       #|      },
       #|    ],
       #|  ),
+      #|  authorizing_integration_owners: None,
       #|  context: Some(Guild),
+      #|  attachment_size_limit: None,
       #|}
     ),
   )
@@ -257,6 +264,7 @@ test "button interaction dispatches component data" {
       #|      },
       #|    ),
       #|  ),
+      #|  guild: None,
       #|  guild_id: None,
       #|  channel: None,
       #|  channel_id: Some(41771983423143937),
@@ -269,7 +277,9 @@ test "button interaction dispatches component data" {
       #|  locale: Some("en-US"),
       #|  guild_locale: None,
       #|  entitlements: None,
+      #|  authorizing_integration_owners: None,
       #|  context: None,
+      #|  attachment_size_limit: None,
       #|}
     ),
   )
@@ -345,6 +355,7 @@ test "modal submit dispatches recursive components" {
       #|      },
       #|    ),
       #|  ),
+      #|  guild: None,
       #|  guild_id: None,
       #|  channel: None,
       #|  channel_id: None,
@@ -357,7 +368,9 @@ test "modal submit dispatches recursive components" {
       #|  locale: Some("en-US"),
       #|  guild_locale: None,
       #|  entitlements: None,
+      #|  authorizing_integration_owners: None,
       #|  context: None,
+      #|  attachment_size_limit: None,
       #|}
     ),
   )
@@ -404,6 +417,7 @@ test "unknown interaction type preserves raw data" {
       #|      ),
       #|    ),
       #|  ),
+      #|  guild: None,
       #|  guild_id: None,
       #|  channel: None,
       #|  channel_id: None,
@@ -416,7 +430,9 @@ test "unknown interaction type preserves raw data" {
       #|  locale: None,
       #|  guild_locale: None,
       #|  entitlements: None,
+      #|  authorizing_integration_owners: None,
       #|  context: None,
+      #|  attachment_size_limit: None,
       #|}
     ),
   )
@@ -460,6 +476,7 @@ test "ping interaction decodes without data" {
       #|  application_id: 172150183260323840,
       #|  typ: Ping,
       #|  data: None,
+      #|  guild: None,
       #|  guild_id: None,
       #|  channel: None,
       #|  channel_id: None,
@@ -472,7 +489,9 @@ test "ping interaction decodes without data" {
       #|  locale: None,
       #|  guild_locale: None,
       #|  entitlements: None,
+      #|  authorizing_integration_owners: None,
       #|  context: None,
+      #|  attachment_size_limit: None,
       #|}
     ),
   )

@@ -5,8 +5,7 @@ pub(all) struct Connection {
   name : String
   typ : ConnectionService
   revoked : Bool?
-  // TODO(integration): Replace raw partial integrations when that domain is ported.
-  integrations : Json?
+  integrations : Array[Integration]?
   verified : Bool
   friend_sync : Bool
   show_activity : Bool

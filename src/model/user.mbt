@@ -19,8 +19,32 @@ pub(all) struct User {
   public_flags : UserFlags?
   avatar_decoration : Nullable[ImageHash]?
   avatar_decoration_data : Nullable[AvatarDecorationData]?
-  // TODO(collectibles): Port collectible and nameplate wire types together.
-  // TODO(primary_guild): Port the user primary-guild object with its domain.
+  collectibles : Nullable[Collectibles]?
+  primary_guild : Nullable[UserPrimaryGuild]?
+} derive(ToJson, FromJson, Debug)
+
+///|
+/// Collectible profile cosmetics owned by a user or guild member.
+pub(all) struct Collectibles {
+  nameplate : Nameplate?
+} derive(ToJson, FromJson, Debug)
+
+///|
+/// A profile nameplate collectible.
+pub(all) struct Nameplate {
+  sku_id : SkuId
+  asset : String
+  label : String
+  palette : String
+} derive(ToJson, FromJson, Debug)
+
+///|
+/// The primary-guild identity displayed on a user's profile.
+pub(all) struct UserPrimaryGuild {
+  identity_guild_id : Nullable[GuildId]?
+  identity_enabled : Nullable[Bool]?
+  tag : Nullable[String]?
+  badge : Nullable[ImageHash]?
 } derive(ToJson, FromJson, Debug)
 
 ///|

@@ -41,6 +41,7 @@ test "voice state decodes a full fixture" {
       #|      permissions: None,
       #|      communication_disabled_until: None,
       #|      avatar_decoration_data: None,
+      #|      collectibles: None,
       #|    },
       #|  ),
       #|  session_id: "my-session",

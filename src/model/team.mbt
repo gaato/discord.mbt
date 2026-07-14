@@ -14,7 +14,7 @@ pub(all) struct TeamMember {
   membership_state : TeamMembershipState
   team_id : TeamId
   user : User
-  role : String
+  role : String?
 } derive(ToJson, FromJson, Debug)
 
 ///|

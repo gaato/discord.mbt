@@ -10,8 +10,8 @@ pub(all) struct Webhook {
   avatar : Nullable[ImageHash]
   token : String?
   application_id : Nullable[ApplicationId]
-  // TODO(partial-guild): Port source_guild with the partial guild surface.
-  // TODO(partial-channel): Port source_channel with its partial channel surface.
+  source_guild : PartialGuild?
+  source_channel : PartialChannel?
   url : String?
 } derive (
   ToJson(fields(typ(rename="type"))),

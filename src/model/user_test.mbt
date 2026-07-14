@@ -55,6 +55,8 @@ test "user decodes a full fixture" {
       #|      },
       #|    ),
       #|  ),
+      #|  collectibles: None,
+      #|  primary_guild: None,
       #|}
     ),
   )
@@ -93,6 +95,8 @@ test "user decodes required fields only" {
       #|  public_flags: None,
       #|  avatar_decoration: None,
       #|  avatar_decoration_data: None,
+      #|  collectibles: None,
+      #|  primary_guild: None,
       #|}
     ),
   )
@@ -119,6 +123,8 @@ test "user encode omits absent optional fields" {
     public_flags: None,
     avatar_decoration: None,
     avatar_decoration_data: None,
+    collectibles: None,
+    primary_guild: None,
   }
   inspect(
     user.to_json().stringify(),

@@ -5,7 +5,8 @@
 // - line 736, Default Settings for Allowed Mentions — allowed-mentions request defaults.
 // - line 744, Default Settings for Allowed Mentions — allowed-mentions request defaults.
 // - lines 765-823, Allowed Mentions Examples — covered by allowed_mentions_test.mbt.
-// - line 882, Example Shared Client Theme — shared client themes are not modeled.
+// - line 882, Example Shared Client Theme — standalone fragment covered in
+//   model_todo_docs_test.mbt.
 // - line 928, Search Guild Messages — search-index error response rather than a message.
 // - line 1103, Example Request Body (application/json) — message request body.
 

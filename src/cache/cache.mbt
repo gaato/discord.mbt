@@ -430,6 +430,7 @@ fn InMemoryCache::update_member(
       update.avatar_decoration_data,
       previous.bind(value => value.avatar_decoration_data),
     ),
+    collectibles: previous.bind(value => value.collectibles),
   }
   self.store_member(update.guild_id, cached_member)
 }

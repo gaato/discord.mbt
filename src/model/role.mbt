@@ -4,7 +4,7 @@ pub(all) struct Role {
   id : RoleId
   name : String
   color : Int
-  // TODO(role_colors): Port APIRoleColors when it joins the requested surface.
+  colors : RoleColors?
   hoist : Bool
   icon : Nullable[ImageHash]?
   unicode_emoji : Nullable[String]?
@@ -14,6 +14,14 @@ pub(all) struct Role {
   mentionable : Bool
   tags : RoleTags?
   flags : RoleFlags?
+} derive(ToJson, FromJson, Debug)
+
+///|
+/// Primary and optional enhanced gradient colors of a role.
+pub(all) struct RoleColors {
+  primary_color : Int
+  secondary_color : Nullable[Int]
+  tertiary_color : Nullable[Int]
 } derive(ToJson, FromJson, Debug)
 
 ///|

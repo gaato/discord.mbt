@@ -1,5 +1,6 @@
 ///|
-/// A minimal Discord application record used by interaction payloads.
+/// A Discord application record. Fields that are absent from partial
+/// application payloads remain optional on receipt.
 pub(all) struct Application {
   id : ApplicationId
   name : String
@@ -10,8 +11,97 @@ pub(all) struct Application {
   flags : ApplicationFlags?
   approximate_guild_count : Int?
   approximate_user_install_count : Int?
-  // TODO(application-full): Port RPC, verification, team, installation, and remaining application metadata.
+  rpc_origins : Array[String]?
+  bot_public : Bool?
+  bot_require_code_grant : Bool?
+  terms_of_service_url : String?
+  privacy_policy_url : String?
+  verify_key : String?
+  team : Nullable[Team]?
+  guild_id : GuildId?
+  guild : PartialGuild?
+  primary_sku_id : SkuId?
+  slug : String?
+  cover_image : ImageHash?
+  approximate_user_authorization_count : Int?
+  redirect_uris : Array[String]?
+  interactions_endpoint_url : Nullable[String]?
+  role_connections_verification_url : Nullable[String]?
+  event_webhooks_url : Nullable[String]?
+  event_webhooks_status : ApplicationEventWebhookStatus?
+  event_webhooks_types : Array[String]?
+  tags : Array[String]?
+  install_params : InstallParams?
+  integration_types_config : Map[
+    String,
+    ApplicationIntegrationTypeConfiguration,
+  ]?
+  custom_install_url : String?
 } derive(ToJson, FromJson, Debug)
+
+///|
+/// Default OAuth2 installation scopes and bot permissions for an application.
+pub(all) struct InstallParams {
+  scopes : Array[String]
+  permissions : Permissions
+} derive(ToJson, FromJson, Debug)
+
+///|
+/// Installation settings for one application integration context.
+pub(all) struct ApplicationIntegrationTypeConfiguration {
+  oauth2_install_params : InstallParams?
+} derive(ToJson, FromJson, Debug)
+
+///|
+pub(all) enum ApplicationEventWebhookStatus {
+  Disabled
+  Enabled
+  DisabledByDiscord
+  Unknown(Int)
+} derive(Eq, Debug)
+
+///|
+pub fn ApplicationEventWebhookStatus::to_int(
+  self : ApplicationEventWebhookStatus,
+) -> Int {
+  match self {
+    Disabled => 1
+    Enabled => 2
+    DisabledByDiscord => 3
+    Unknown(value) => value
+  }
+}
+
+///|
+pub fn ApplicationEventWebhookStatus::from_int(
+  value : Int,
+) -> ApplicationEventWebhookStatus {
+  match value {
+    1 => Disabled
+    2 => Enabled
+    3 => DisabledByDiscord
+    value => Unknown(value)
+  }
+}
+
+///|
+pub impl ToJson for ApplicationEventWebhookStatus with fn to_json(self) {
+  Json::number(self.to_int().to_double())
+}
+
+///|
+pub impl @json.FromJson for ApplicationEventWebhookStatus with fn from_json(
+  json,
+  path,
+) {
+  match json {
+    Number(value, ..) => ApplicationEventWebhookStatus::from_int(value.to_int())
+    _ =>
+      raise @json.JsonDecodeError(
+        (path, "expected application event webhook status (number)"),
+      )
+  }
+}
 
 ///|
 /// Bit flags describing capabilities and privileged access for an application.

@@ -76,4 +76,10 @@ test "discord docs: example application object (line 56)" {
   assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
   inspect(first.id.to_string(), content="172150183260323840")
   assert_eq(first.name, "Baba O-Riley")
+  assert_true(first.bot_public == Some(true))
+  guard first.team is Some(@model.Nullable::Value(team)) else {
+    fail("expected application team")
+  }
+  assert_eq(team.name, "A team")
+  assert_true(first.integration_types_config.unwrap().length() == 2)
 }

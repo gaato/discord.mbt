@@ -11,8 +11,7 @@ pub(all) struct Entitlement {
   ends_at : Nullable[Timestamp]?
   guild_id : GuildId?
   consumed : Bool?
-  // TODO(fulfillment): fulfilled_at/fulfillment_status/gifter_user_id appear in
-  // the OpenAPI spec but are not documented yet; add once the docs list them.
+  // Not modeled: fulfillment fields appear in OpenAPI but not in the public documentation.
 } derive (
   ToJson(fields(typ(rename="type"))),
   FromJson(fields(typ(rename="type"))),

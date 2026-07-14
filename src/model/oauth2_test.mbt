@@ -3,7 +3,7 @@ test "external connection decodes a realistic fixture" {
   let fixture =
     #|{
     #|  "id":"nelly","name":"Nelly","type":"github","revoked":false,
-    #|  "integrations":[{"id":"raw","future":true}],
+    #|  "integrations":[{"id":"33590653072239123","future":true}],
     #|  "verified":true,"friend_sync":false,"show_activity":true,
     #|  "two_way_link":false,"visibility":1,
     #|  "brand_new_field_from_discord":true
@@ -17,7 +17,29 @@ test "external connection decodes a realistic fixture" {
       #|  name: "Nelly",
       #|  typ: Github,
       #|  revoked: Some(false),
-      #|  integrations: Some(Array([Object({ "id": String("raw"), "future": True })])),
+      #|  integrations: Some(
+      #|    [
+      #|      {
+      #|        id: Some(33590653072239123),
+      #|        name: None,
+      #|        typ: None,
+      #|        enabled: None,
+      #|        syncing: None,
+      #|        role_id: None,
+      #|        enable_emoticons: None,
+      #|        expire_behavior: None,
+      #|        expire_grace_period: None,
+      #|        user: None,
+      #|        account: None,
+      #|        synced_at: None,
+      #|        subscriber_count: None,
+      #|        revoked: None,
+      #|        application: None,
+      #|        application_id: None,
+      #|        scopes: None,
+      #|      },
+      #|    ],
+      #|  ),
       #|  verified: true,
       #|  friend_sync: false,
       #|  show_activity: true,

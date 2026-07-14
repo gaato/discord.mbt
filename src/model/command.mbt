@@ -16,13 +16,63 @@ pub(all) struct ApplicationCommand {
   integration_types : Array[ApplicationIntegrationType]?
   contexts : Nullable[Array[InteractionContextType]]?
   version : CommandVersionId
-  // TODO(entry-point): Add handler (entry point command handler type).
-  // TODO(localized): Add name_localized/description_localized from with_localizations responses.
+  handler : EntryPointCommandHandlerType?
+  name_localized : String?
+  description_localized : String?
 } derive (
   ToJson(fields(typ(rename="type"))),
   FromJson(fields(typ(rename="type"))),
   Debug,
 )
+
+///|
+/// The handler used for a primary entry-point command.
+pub(all) enum EntryPointCommandHandlerType {
+  AppHandler
+  DiscordLaunchActivity
+  Unknown(Int)
+} derive(Eq, Debug)
+
+///|
+pub fn EntryPointCommandHandlerType::to_int(
+  self : EntryPointCommandHandlerType,
+) -> Int {
+  match self {
+    AppHandler => 1
+    DiscordLaunchActivity => 2
+    Unknown(value) => value
+  }
+}
+
+///|
+pub fn EntryPointCommandHandlerType::from_int(
+  value : Int,
+) -> EntryPointCommandHandlerType {
+  match value {
+    1 => AppHandler
+    2 => DiscordLaunchActivity
+    value => Unknown(value)
+  }
+}
+
+///|
+pub impl ToJson for EntryPointCommandHandlerType with fn to_json(self) {
+  Json::number(self.to_int().to_double())
+}
+
+///|
+pub impl @json.FromJson for EntryPointCommandHandlerType with fn from_json(
+  json,
+  path,
+) {
+  match json {
+    Number(value, ..) => EntryPointCommandHandlerType::from_int(value.to_int())
+    _ =>
+      raise @json.JsonDecodeError(
+        (path, "expected entry-point command handler type (number)"),
+      )
+  }
+}
 
 ///|
 /// The invocation category of an application command.

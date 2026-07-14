@@ -148,6 +148,9 @@ test "application command decodes nested slash options" {
       #|  integration_types: Some([GuildInstall, UserInstall]),
       #|  contexts: Some(Value([Guild, BotDm, PrivateChannel])),
       #|  version: 107000000000000002,
+      #|  handler: None,
+      #|  name_localized: None,
+      #|  description_localized: None,
       #|}
     ),
   )

@@ -53,6 +53,8 @@ test "guild member decodes a full fixture" {
       #|      public_flags: None,
       #|      avatar_decoration: None,
       #|      avatar_decoration_data: None,
+      #|      collectibles: None,
+      #|      primary_guild: None,
       #|    },
       #|  ),
       #|  nick: Some(Value("Nel")),
@@ -75,6 +77,7 @@ test "guild member decodes a full fixture" {
       #|      },
       #|    ),
       #|  ),
+      #|  collectibles: Some(Value({ nameplate: None })),
       #|}
     ),
   )
@@ -109,6 +112,7 @@ test "guild member decodes required fields only" {
       #|  permissions: None,
       #|  communication_disabled_until: None,
       #|  avatar_decoration_data: None,
+      #|  collectibles: None,
       #|}
     ),
   )
@@ -154,6 +158,7 @@ test "guild member encode omits absent optional fields" {
     permissions: None,
     communication_disabled_until: None,
     avatar_decoration_data: None,
+    collectibles: None,
   }
   inspect(
     guild_member.to_json().stringify(),

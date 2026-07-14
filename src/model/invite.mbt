@@ -3,18 +3,19 @@
 pub(all) struct Invite {
   typ : InviteType?
   code : String
-  // TODO(partial-guild): Port guild with the invite partial guild surface.
-  channel : Nullable[Channel]?
+  guild : PartialGuild?
+  channel : Nullable[PartialChannel]?
   inviter : User?
   target_type : InviteTargetType?
   target_user : User?
-  // TODO(application): Port target_application with the application domain.
+  target_application : Application?
   approximate_presence_count : Int?
   approximate_member_count : Int?
   expires_at : Nullable[Timestamp]?
-  // TODO(stage-instance): Port stage_instance with the stage instance domain.
-  // TODO(scheduled-event): Port guild_scheduled_event with that domain.
-  // TODO(invite-role): Port the partial roles and invite flags surface together.
+  // Not modeled: invite stage_instance is deprecated by Discord.
+  guild_scheduled_event : GuildScheduledEvent?
+  flags : InviteFlags?
+  roles : Array[PartialRole]?
   uses : Int?
   max_uses : Int?
   max_age : Int?
@@ -25,6 +26,52 @@ pub(all) struct Invite {
   FromJson(fields(typ(rename="type"))),
   Debug,
 )
+
+///|
+/// Bit flags describing a guild invite.
+pub(all) struct InviteFlags(UInt64) derive(Eq)
+
+///|
+pub fn InviteFlags::from_bits(bits : UInt64) -> InviteFlags {
+  InviteFlags(bits)
+}
+
+///|
+pub fn InviteFlags::bits(self : InviteFlags) -> UInt64 {
+  self.0
+}
+
+///|
+pub impl Debug for InviteFlags with fn to_repr(self) {
+  to_repr(self.0)
+}
+
+///|
+pub impl ToJson for InviteFlags with fn to_json(self) {
+  Json::number(self.0.to_double(), repr=self.0.to_string())
+}
+
+///|
+pub impl @json.FromJson for InviteFlags with fn from_json(json, path) {
+  match json {
+    Number(_, repr=Some(repr)) =>
+      InviteFlags(
+        @string.parse_uint64(repr.to_string()) catch {
+          _ =>
+            raise @json.JsonDecodeError(
+              (path, "expected invite flags (number)"),
+            )
+        },
+      )
+    Number(value, repr=None) => InviteFlags(value.to_uint64())
+    _ => raise @json.JsonDecodeError((path, "expected invite flags (number)"))
+  }
+}
+
+///|
+pub fn InviteFlags::is_guest_invite() -> InviteFlags {
+  InviteFlags(1UL << 0)
+}
 
 ///|
 /// The destination category of a Discord invite.

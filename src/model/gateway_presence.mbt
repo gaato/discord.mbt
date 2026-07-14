@@ -114,19 +114,26 @@ pub impl @json.FromJson for ActivityType with fn from_json(json, path) {
 }
 
 ///|
-/// Stable core fields of a Discord presence activity.
-///
-/// TODO(rich-presence): Model timestamps, emoji, party, assets, secrets,
-/// flags, and buttons when the richer activity surface is needed.
+/// A Discord presence activity, including the documented Rich Presence fields.
 pub(all) struct Activity {
   name : String
   typ : ActivityType
   url : Nullable[String]?
   created_at : Int64
+  timestamps : ActivityTimestamps?
   application_id : ApplicationId?
+  status_display_type : Nullable[Int]?
   details : Nullable[String]?
+  details_url : Nullable[String]?
   state : Nullable[String]?
+  state_url : Nullable[String]?
+  emoji : Nullable[ActivityEmoji]?
+  party : ActivityParty?
+  assets : ActivityAssets?
+  secrets : ActivitySecrets?
   instance : Bool?
+  flags : ActivityFlags?
+  buttons : Array[ActivityButton]?
 } derive(ToJson(fields(typ(rename="type"))), Debug)
 
 ///|
@@ -135,10 +142,20 @@ struct ActivityWire {
   typ : ActivityType
   url : Nullable[String]?
   created_at : Double
+  timestamps : ActivityTimestamps?
   application_id : ApplicationId?
+  status_display_type : Nullable[Int]?
   details : Nullable[String]?
+  details_url : Nullable[String]?
   state : Nullable[String]?
+  state_url : Nullable[String]?
+  emoji : Nullable[ActivityEmoji]?
+  party : ActivityParty?
+  assets : ActivityAssets?
+  secrets : ActivitySecrets?
   instance : Bool?
+  flags : ActivityFlags?
+  buttons : Array[ActivityButton]?
 } derive(FromJson(fields(typ(rename="type"))))
 
 ///|
@@ -149,10 +166,134 @@ pub impl @json.FromJson for Activity with fn from_json(json, path) {
     typ: wire.typ,
     url: wire.url,
     created_at: wire.created_at.to_int64(),
+    timestamps: wire.timestamps,
     application_id: wire.application_id,
+    status_display_type: wire.status_display_type,
     details: wire.details,
+    details_url: wire.details_url,
     state: wire.state,
+    state_url: wire.state_url,
+    emoji: wire.emoji,
+    party: wire.party,
+    assets: wire.assets,
+    secrets: wire.secrets,
     instance: wire.instance,
+    flags: wire.flags,
+    buttons: wire.buttons,
+  }
+}
+
+///|
+pub(all) struct ActivityTimestamps {
+  start : Int64?
+  end : Int64?
+} derive(Debug)
+
+///|
+struct ActivityTimestampsWire {
+  start : Double?
+  end : Double?
+} derive(FromJson)
+
+///|
+pub impl ToJson for ActivityTimestamps with fn to_json(self) {
+  let fields : Map[String, Json] = {}
+  if self.start is Some(value) {
+    fields["start"] = Json::number(value.to_double(), repr=value.to_string())
+  }
+  if self.end is Some(value) {
+    fields["end"] = Json::number(value.to_double(), repr=value.to_string())
+  }
+  Json::object(fields)
+}
+
+///|
+pub impl @json.FromJson for ActivityTimestamps with fn from_json(json, path) {
+  let wire : ActivityTimestampsWire = @json.from_json(json, path~)
+  {
+    start: wire.start.map(value => value.to_int64()),
+    end: wire.end.map(value => value.to_int64()),
+  }
+}
+
+///|
+pub(all) struct ActivityEmoji {
+  name : String
+  id : EmojiId?
+  animated : Bool?
+} derive(ToJson, FromJson, Debug)
+
+///|
+pub(all) struct ActivityParty {
+  id : String?
+  size : Array[Int]?
+} derive(ToJson, FromJson, Debug)
+
+///|
+pub(all) struct ActivityAssets {
+  large_image : String?
+  large_text : String?
+  large_url : String?
+  small_image : String?
+  small_text : String?
+  small_url : String?
+  invite_cover_image : String?
+} derive(ToJson, FromJson, Debug)
+
+///|
+pub(all) struct ActivitySecrets {
+  join : String?
+  spectate : String?
+  match_ : String?
+} derive (
+  ToJson(fields(match_(rename="match"))),
+  FromJson(fields(match_(rename="match"))),
+  Debug,
+)
+
+///|
+pub(all) struct ActivityButton {
+  label : String
+  url : String
+} derive(ToJson, FromJson, Debug)
+
+///|
+pub(all) struct ActivityFlags(UInt64) derive(Eq)
+
+///|
+pub fn ActivityFlags::from_bits(bits : UInt64) -> ActivityFlags {
+  ActivityFlags(bits)
+}
+
+///|
+pub fn ActivityFlags::bits(self : ActivityFlags) -> UInt64 {
+  self.0
+}
+
+///|
+pub impl Debug for ActivityFlags with fn to_repr(self) {
+  to_repr(self.0)
+}
+
+///|
+pub impl ToJson for ActivityFlags with fn to_json(self) {
+  Json::number(self.0.to_double(), repr=self.0.to_string())
+}
+
+///|
+pub impl @json.FromJson for ActivityFlags with fn from_json(json, path) {
+  match json {
+    Number(_, repr=Some(repr)) =>
+      ActivityFlags(
+        @string.parse_uint64(repr.to_string()) catch {
+          _ =>
+            raise @json.JsonDecodeError(
+              (path, "expected activity flags (number)"),
+            )
+        },
+      )
+    Number(value, repr=None) => ActivityFlags(value.to_uint64())
+    _ => raise @json.JsonDecodeError((path, "expected activity flags (number)"))
   }
 }
 

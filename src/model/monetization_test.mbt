@@ -67,6 +67,7 @@ test "interaction decodes typed entitlements" {
       #|  application_id: 172150183260323840,
       #|  typ: Ping,
       #|  data: None,
+      #|  guild: None,
       #|  guild_id: None,
       #|  channel: None,
       #|  channel_id: None,
@@ -94,7 +95,9 @@ test "interaction decodes typed entitlements" {
       #|      },
       #|    ],
       #|  ),
+      #|  authorizing_integration_owners: None,
       #|  context: None,
+      #|  attachment_size_limit: None,
       #|}
     ),
   )

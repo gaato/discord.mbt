@@ -171,6 +171,7 @@ test "channel decodes a thread fixture with metadata and membership" {
       #|          permissions: None,
       #|          communication_disabled_until: None,
       #|          avatar_decoration_data: None,
+      #|          collectibles: None,
       #|        },
       #|      ),
       #|    },

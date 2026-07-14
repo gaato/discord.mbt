@@ -16,7 +16,7 @@ pub(all) struct GuildMember {
   permissions : Permissions?
   communication_disabled_until : Nullable[Timestamp]?
   avatar_decoration_data : Nullable[AvatarDecorationData]?
-  // TODO(collectibles): Reuse collectible types when that domain is ported.
+  collectibles : Nullable[Collectibles]?
 } derive(ToJson, FromJson, Debug)
 
 ///|

@@ -43,7 +43,16 @@ pub(all) struct Guild {
   stickers : Array[Sticker]?
   premium_progress_bar_enabled : Bool?
   safety_alerts_channel_id : Nullable[ChannelId]
-  // TODO(incidents): Port incidents_data with the incidents domain.
+  incidents_data : Nullable[IncidentsData]?
+} derive(ToJson, FromJson, Debug)
+
+///|
+/// Temporary safety restrictions and detection timestamps for a guild.
+pub(all) struct IncidentsData {
+  invites_disabled_until : Nullable[Timestamp]?
+  dms_disabled_until : Nullable[Timestamp]?
+  dm_spam_detected_at : Nullable[Timestamp]?
+  raid_detected_at : Nullable[Timestamp]?
 } derive(ToJson, FromJson, Debug)
 
 ///|

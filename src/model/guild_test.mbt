@@ -96,6 +96,7 @@ test "guild decodes a full fixture with future features" {
       #|      id: 81384788765712384,
       #|      name: "@everyone",
       #|      color: 0,
+      #|      colors: None,
       #|      hoist: false,
       #|      icon: None,
       #|      unicode_emoji: None,
@@ -155,6 +156,16 @@ test "guild decodes a full fixture with future features" {
       #|  stickers: Some([]),
       #|  premium_progress_bar_enabled: Some(true),
       #|  safety_alerts_channel_id: Null,
+      #|  incidents_data: Some(
+      #|    Value(
+      #|      {
+      #|        invites_disabled_until: Some(Null),
+      #|        dms_disabled_until: None,
+      #|        dm_spam_detected_at: None,
+      #|        raid_detected_at: None,
+      #|      },
+      #|    ),
+      #|  ),
       #|}
     ),
   )
@@ -234,6 +245,7 @@ test "guild decodes required fields only" {
       #|  stickers: None,
       #|  premium_progress_bar_enabled: Some(false),
       #|  safety_alerts_channel_id: Null,
+      #|  incidents_data: None,
       #|}
     ),
   )
