@@ -18,6 +18,8 @@ executor for native and JavaScript adapters.
   routes.
 - [HTTP interactions](guide/06-http-interactions.md): gateway-free dispatch and
   serverless adapters.
+- [Structuring bots](guide/07-structuring-bots.md): feature installers,
+  configuration, and state ownership.
 - [Cookbook](cookbook/dm-user.md): focused examples for common tasks.
 - [API reference](reference.md): package map and `moon doc` commands.
 
@@ -47,3 +49,5 @@ executors.
 - `src/examples/ping_gateway`: low-level Gateway and REST use.
 - `src/examples/low_level`: manual Framework and Shard wiring.
 - `src/examples/workers_echo`: Cloudflare Workers adapter.
+- `src/examples/plugin_demo`: a stateful feedback feature installed as a
+  separate package.

@@ -669,6 +669,15 @@ let base = @util.base_permissions(
 )
 ```
 
+### Feature installers (plugins)
+
+Group a feature behind `pub fn install_<feature>(app : App, config~) -> Unit`.
+Pass `Bot` too when the feature subscribes to Gateway events, and keep state in
+a captured struct or closure. discord.mbt does not add a plugin trait or reload
+lifecycle. The [structuring bots guide](docs/guide/07-structuring-bots.md) and
+`src/examples/plugin_demo` show the package layout, configuration injection,
+and checks/cooldowns used by this pattern.
+
 ## Development
 
 ```bash

@@ -1,0 +1,13 @@
+import {
+  "gaato/discord",
+  "gaato/discord/model",
+  "gaato/discord/examples/plugin_demo/feedback",
+  "moonbitlang/async",
+  "moonbitlang/core/env",
+}
+
+supported_targets = "native"
+
+options(
+  "is-main": true,
+)
