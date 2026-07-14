@@ -913,7 +913,7 @@ pub(all) enum Event {
   InteractionCreate(Interaction)
   InviteCreate(InviteCreateEvent)
   InviteDelete(InviteDeleteEvent)
-  MessageCreate(Message)
+  MessageCreate(MessageCreateEvent)
   MessageDelete(MessageDeleteEvent)
   MessageDeleteBulk(MessageDeleteBulkEvent)
   MessagePollVoteAdd(MessagePollVoteEvent)
@@ -922,7 +922,7 @@ pub(all) enum Event {
   MessageReactionRemove(MessageReactionRemoveEvent)
   MessageReactionRemoveAll(MessageReactionRemoveAllEvent)
   MessageReactionRemoveEmoji(MessageReactionRemoveEmojiEvent)
-  MessageUpdate(Message)
+  MessageUpdate(MessageUpdateEvent)
   PresenceUpdate(PresenceUpdateEvent)
   RateLimited(GatewayRateLimitedEvent)
   Ready(Ready)
@@ -1746,6 +1746,15 @@ pub(all) struct MessageCall {
   ended_timestamp : Nullable[Timestamp]?
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
+pub(all) struct MessageCreateEvent {
+  message : Message
+  guild_id : Id[GuildMarker]?
+  guild_member : GuildMember?
+  mention_members : Map[Id[UserMarker], GuildMember]
+  channel_type : ChannelType?
+} derive(@debug.Debug)
+pub impl @json.FromJson for MessageCreateEvent
+
 pub(all) struct MessageDeleteBulkEvent {
   ids : Array[Id[MessageMarker]]
   channel_id : Id[ChannelMarker]
@@ -1893,6 +1902,15 @@ pub fn MessageType::from_int(Int) -> Self
 pub fn MessageType::to_int(Self) -> Int
 pub impl ToJson for MessageType
 pub impl @json.FromJson for MessageType
+
+pub(all) struct MessageUpdateEvent {
+  message : Message
+  guild_id : Id[GuildMarker]?
+  guild_member : GuildMember?
+  mention_members : Map[Id[UserMarker], GuildMember]
+  channel_type : ChannelType?
+} derive(@debug.Debug)
+pub impl @json.FromJson for MessageUpdateEvent
 
 pub(all) enum MfaLevel {
   None

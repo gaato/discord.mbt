@@ -92,12 +92,30 @@ test "discord docs: MESSAGE_UPDATE guild payload with MESSAGE_CREATE extra field
     #|}
   let event = @model.dispatch_event("MESSAGE_UPDATE", @json.parse(fixture))
   match event {
-    @model.Event::MessageUpdate(message) => {
+    @model.Event::MessageUpdate(update) => {
+      let message = update.message
       inspect(message.id.to_string(), content="120000000000000001")
       inspect(message.mentions.length(), content="1")
       inspect(message.mentions[0].username, content="ada")
       assert_eq(message.content, "edited: hello <@200000000000000002>")
       assert_false(message.tts)
+      guard update.guild_id is Some(guild_id) else {
+        fail("expected guild id from MESSAGE_UPDATE")
+      }
+      inspect(guild_id.to_string(), content="100000000000000001")
+      guard update.guild_member is Some(guild_member) else {
+        fail("expected author member from MESSAGE_UPDATE")
+      }
+      inspect(guild_member.roles.length(), content="1")
+      guard update.mention_members.get(message.mentions[0].id)
+        is Some(mention_member) else {
+        fail("expected mentioned user's partial member")
+      }
+      inspect(mention_member.roles[0].to_string(), content="300000000000000002")
+      guard update.channel_type is Some(channel_type) else {
+        fail("expected gateway channel type")
+      }
+      inspect(channel_type.to_int(), content="0")
     }
     _ => fail("expected MESSAGE_UPDATE to decode as MessageUpdate")
   }
@@ -131,11 +149,15 @@ test "discord docs: MESSAGE_UPDATE payload without guild-only extra fields" {
     #|}
   let event = @model.dispatch_event("MESSAGE_UPDATE", @json.parse(fixture))
   match event {
-    @model.Event::MessageUpdate(message) => {
+    @model.Event::MessageUpdate(update) => {
+      let message = update.message
       inspect(message.id.to_string(), content="120000000000000002")
       inspect(message.content, content="edited in a DM")
       inspect(message.mentions.length(), content="0")
       assert_false(message.tts)
+      assert_true(update.guild_id is None)
+      assert_true(update.guild_member is None)
+      inspect(update.mention_members.length(), content="0")
     }
     _ => fail("expected MESSAGE_UPDATE to decode as MessageUpdate")
   }
@@ -196,12 +218,26 @@ test "discord docs: MESSAGE_CREATE guild payload with gateway extra fields" {
     #|}
   let event = @model.dispatch_event("MESSAGE_CREATE", @json.parse(fixture))
   match event {
-    @model.Event::MessageCreate(message) => {
+    @model.Event::MessageCreate(create) => {
+      let message = create.message
       inspect(message.id.to_string(), content="120000000000000003")
       inspect(message.mentions.length(), content="1")
       inspect(message.mentions[0].username, content="ada")
       assert_eq(message.content, "hello <@200000000000000002>")
       assert_false(message.tts)
+      guard create.guild_id is Some(guild_id) else {
+        fail("expected guild id from MESSAGE_CREATE")
+      }
+      inspect(guild_id.to_string(), content="100000000000000001")
+      guard create.guild_member is Some(guild_member) else {
+        fail("expected author member from MESSAGE_CREATE")
+      }
+      inspect(guild_member.roles[0].to_string(), content="300000000000000001")
+      guard create.mention_members.get(message.mentions[0].id)
+        is Some(mention_member) else {
+        fail("expected mentioned user's partial member")
+      }
+      inspect(mention_member.roles[0].to_string(), content="300000000000000002")
     }
     _ => fail("expected MESSAGE_CREATE to decode as MessageCreate")
   }

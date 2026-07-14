@@ -651,7 +651,7 @@ pub fn Events::invite_delete() -> EventType[@model.InviteDeleteEvent] {
 }
 
 ///|
-pub fn Events::message_create() -> EventType[@model.Message] {
+pub fn Events::message_create() -> EventType[@model.MessageCreateEvent] {
   {
     kind_: KMessageCreate,
     project_: event => {
@@ -778,7 +778,7 @@ pub fn Events::message_reaction_remove_emoji() -> EventType[
 }
 
 ///|
-pub fn Events::message_update() -> EventType[@model.Message] {
+pub fn Events::message_update() -> EventType[@model.MessageUpdateEvent] {
   {
     kind_: KMessageUpdate,
     project_: event => {

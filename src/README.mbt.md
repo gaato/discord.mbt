@@ -127,7 +127,8 @@ the application id.
 event descriptors:
 
 ```mbt nocheck
-bot.on(@discord.Events::message_create(), (ctx, message) => {
+bot.on(@discord.Events::message_create(), (ctx, event) => {
+  let message = event.message
   println("\{message.author.username}: \{message.content}")
   let client = ctx.app().http()
 })

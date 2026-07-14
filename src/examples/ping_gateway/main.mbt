@@ -33,7 +33,8 @@ async fn main {
             println(
               "[shard] ready as \{ready.user.username} in \{ready.guilds.length()} guilds",
             )
-          Dispatch(MessageCreate(message)) => {
+          Dispatch(MessageCreate(event)) => {
+            let message = event.message
             println(
               "[shard] #\{message.channel_id} <\{message.author.username}> \{message.content}",
             )
