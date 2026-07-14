@@ -15,6 +15,11 @@ pub async fn connect_websocket(String) -> &GatewayTransport
 pub fn on_close(Int?, Bool) -> ReconnectPolicy
 
 // Errors
+pub(all) suberror InflateError {
+  InflateError(status~ : Int)
+  InvalidUtf8
+} derive(@debug.Debug)
+
 pub(all) suberror TransportClosed {
   TransportClosed(code~ : Int?, reason~ : String)
 } derive(@debug.Debug)
@@ -25,6 +30,11 @@ pub struct CommandLimiter {
 }
 pub async fn CommandLimiter::acquire(Self) -> Unit
 pub fn CommandLimiter::new(limit? : Int) -> Self
+
+pub(all) enum GatewayFrame {
+  Text(String)
+  Binary(Bytes)
+} derive(@debug.Debug)
 
 pub(all) enum ReconnectPolicy {
   Resume
@@ -45,7 +55,7 @@ pub async fn Shard::close(Self) -> Unit noraise
 pub fn Shard::latency_ms(Self) -> Int64?
 pub async fn Shard::next(Self) -> ShardEvent
 pub async fn Shard::send(Self, Json) -> Unit
-pub fn[X] Shard::start(@async.TaskGroup[X], token~ : String, intents~ : @model.Intents, gateway_url? : String, shard_id? : Int, shard_count? : Int, identify_queue? : &@queue.IdentifyQueue, event_filter? : (@model.EventKind) -> Bool, connector? : async (String) -> &GatewayTransport, queue_capacity? : Int, telemetry? : (@telemetry.TelemetryEvent) -> Unit) -> Self
+pub fn[X] Shard::start(@async.TaskGroup[X], token~ : String, intents~ : @model.Intents, gateway_url? : String, shard_id? : Int, shard_count? : Int, identify_queue? : &@queue.IdentifyQueue, event_filter? : (@model.EventKind) -> Bool, connector? : async (String) -> &GatewayTransport, compress? : Bool, inflater_factory? : () -> &Inflater raise, queue_capacity? : Int, telemetry? : (@telemetry.TelemetryEvent) -> Unit) -> Self
 pub fn Shard::state(Self) -> ShardState
 
 pub(all) enum ShardEvent {
@@ -68,8 +78,12 @@ pub(all) enum ShardState {
 
 // Traits
 pub(open) trait GatewayTransport {
-  async fn recv(Self) -> String
+  async fn recv(Self) -> GatewayFrame
   async fn send(Self, String) -> Unit
   async fn close(Self, code~ : Int) -> Unit
+}
+
+pub(open) trait Inflater {
+  fn push(Self, Bytes) -> String? raise
 }
 

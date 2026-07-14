@@ -22,9 +22,7 @@ fn FakeTransport::server_close(self : FakeTransport, code : Int?) -> Unit {
 
 ///|
 impl @gateway.GatewayTransport for FakeTransport with fn recv(self) {
-  self.incoming.get() catch {
-    e => raise e
-  }
+  @gateway.GatewayFrame::Text(self.incoming.get() catch { e => raise e })
 }
 
 ///|
@@ -48,6 +46,125 @@ fn ready_frame() -> String {
   (
     #|{"op":0,"s":1,"t":"READY","d":{"v":10,"user":{"id":"1","username":"bot","discriminator":"0","global_name":null,"avatar":null},"guilds":[],"session_id":"sess-1","resume_gateway_url":"wss://resume.example","application":{"id":"42"},"shard":[0,1]}}
   )
+}
+
+///|
+struct FakeInflater {
+  messages : Array[String]
+  chunks : Array[Bytes]
+  pending : Array[Byte]
+}
+
+///|
+impl @gateway.Inflater for FakeInflater with fn push(self, bytes) {
+  self.chunks.push(bytes)
+  for byte in bytes {
+    self.pending.push(byte)
+  }
+  let len = self.pending.length()
+  if len >= 4 &&
+    self.pending[len - 4] == 0x00 &&
+    self.pending[len - 3] == 0x00 &&
+    self.pending[len - 2] == 0xff &&
+    self.pending[len - 1] == 0xff {
+    self.pending.clear()
+    self.messages.pop()
+  } else {
+    None
+  }
+}
+
+///|
+struct BinaryFakeTransport {
+  incoming : @aqueue.Queue[@gateway.GatewayFrame]
+  outgoing : @aqueue.Queue[Json]
+}
+
+///|
+fn BinaryFakeTransport::new() -> BinaryFakeTransport {
+  {
+    incoming: @aqueue.Queue::new(kind=Unbounded),
+    outgoing: @aqueue.Queue::new(kind=Unbounded),
+  }
+}
+
+///|
+impl @gateway.GatewayTransport for BinaryFakeTransport with fn recv(self) {
+  self.incoming.get()
+}
+
+///|
+impl @gateway.GatewayTransport for BinaryFakeTransport with fn send(self, text) {
+  self.outgoing.put(@json.parse(text))
+}
+
+///|
+impl @gateway.GatewayTransport for BinaryFakeTransport with fn close(
+  self,
+  code~,
+) {
+  self.incoming.close(
+    error=@gateway.TransportClosed(code=Some(code), reason="client closed"),
+  )
+}
+
+///|
+async test "compressed shard buffers suffix fragments and decodes messages" {
+  let transport = BinaryFakeTransport::new()
+  let inflater : FakeInflater = {
+    // pop() consumes from the end: Hello, Ready, then dispatch.
+    messages: [
+      (
+        #|{"op":0,"s":2,"t":"MESSAGE_DELETE","d":{"id":"5","channel_id":"6"}}
+      ),
+      ready_frame(),
+      HELLO,
+    ],
+    chunks: [],
+    pending: [],
+  }
+  let connected_url = Ref("")
+  let telemetry : Array[@telemetry.TelemetryEvent] = []
+  @async.with_task_group(group => {
+    let shard = @gateway.Shard::start(
+      group,
+      token="tok",
+      intents=@model.Intents::guild_messages(),
+      compress=true,
+      connector=url => {
+        connected_url.val = url
+        (transport : &@gateway.GatewayTransport)
+      },
+      inflater_factory=() => (inflater : &@gateway.Inflater),
+      telemetry=event => telemetry.push(event),
+    )
+    transport.incoming.put(Binary(b"\x78\x9c\x00\x00"))
+    @async.sleep(1)
+    assert_eq(inflater.chunks.length(), 1)
+    assert_eq(inflater.messages.length(), 3)
+    transport.incoming.put(Binary(b"\xff\xff"))
+    guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
+      fail("expected an uncompressed identify payload")
+    }
+    transport.incoming.put(Binary(b"\x01\x00\x00\xff\xff"))
+    guard shard.next() is Connected(resumed=false)
+    guard shard.next() is Dispatch(Ready(_))
+    transport.incoming.put(Binary(b"\x02\x00\x00\xff\xff"))
+    guard shard.next() is Dispatch(MessageDelete(deleted)) else {
+      fail("expected decoded message delete")
+    }
+    inspect(deleted.id, content="5")
+    assert_true(connected_url.val.has_suffix("&compress=zlib-stream"))
+    assert_eq(inflater.chunks.length(), 4)
+    let saw_compression = Ref(false)
+    for event in telemetry {
+      if event is @telemetry.TelemetryEvent::ShardCompressionEnabled(shard_id=0) {
+        saw_compression.val = true
+      }
+    }
+    assert_true(saw_compression.val)
+    shard.close()
+  })
 }
 
 ///|

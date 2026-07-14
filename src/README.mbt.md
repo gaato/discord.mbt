@@ -9,8 +9,7 @@ loosely coupled packages that model the Discord API, plus an App layer for
 typed interaction declarations.
 
 > **Status**: pre-1.0. The App and executor APIs may still change. Gateway
-> compression and sharding coordination across processes are not implemented
-> yet.
+> sharding coordination across processes is not implemented yet.
 
 Long-form guides and task-focused recipes are in
 [`docs/`](docs/index.md). Generate the complete API reference with
@@ -181,6 +180,27 @@ calls are serialized through an `IdentifyQueue` honoring the
 `SessionStartLimitExceeded` when the selected shards would exhaust the
 remaining session allowance. Coordinating shards **across** processes still
 requires an external `IdentifyQueue` implementation.
+
+#### Gateway compression
+
+Gateway `zlib-stream` compression is opt-in on native builds. Pass
+`compress=true` to `Bot::new` (or `Shard::start` at the lower level):
+
+```mbt nocheck
+///|
+let bot = @discord.Bot::new(app, token~, compress=true)
+```
+
+The client adds `compress=zlib-stream` to each Gateway connection and retains
+one inflate context for that connection, including across consecutive Gateway
+messages. Only server-to-client binary messages are decompressed; identify,
+heartbeat, and other client-to-server payloads remain uncompressed text.
+The zlib shared library is loaded at runtime (like the async runtime loads
+OpenSSL), so neither this library nor applications using it need extra link
+flags; building only requires the zlib header. If the shared library is
+missing at runtime, enabling compression raises before any connection is
+attempted. A successful compressed connection emits
+`ShardCompressionEnabled` telemetry.
 
 When a known gateway event fails typed decoding, `Bot` always reports a
 `DECODE_ERROR:<event-name>:<decode-error>` summary through the `App` warning

@@ -92,6 +92,7 @@ fn[X] Bot::start_managed_shard(
         identify_queue~,
         event_filter~,
         connector~,
+        compress=self.compress_,
         telemetry=event => self.emit_telemetry(event),
       )
     None =>
@@ -104,6 +105,7 @@ fn[X] Bot::start_managed_shard(
         shard_count~,
         identify_queue~,
         event_filter~,
+        compress=self.compress_,
         telemetry=event => self.emit_telemetry(event),
       )
   }

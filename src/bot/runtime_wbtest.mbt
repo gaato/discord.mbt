@@ -296,9 +296,11 @@ fn BotFakeTransport::new() -> BotFakeTransport {
 
 ///|
 impl @gateway.GatewayTransport for BotFakeTransport with fn recv(self) {
-  self.incoming.get() catch {
-    error => raise error
-  }
+  @gateway.GatewayFrame::Text(
+    self.incoming.get() catch {
+      error => raise error
+    },
+  )
 }
 
 ///|

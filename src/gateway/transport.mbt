@@ -1,8 +1,15 @@
 ///|
+/// A complete WebSocket message received from the Gateway.
+pub(all) enum GatewayFrame {
+  Text(String)
+  Binary(Bytes)
+} derive(Debug)
+
+///|
 /// The seam between the shard driver and the network: implemented by the
 /// real WebSocket connection in production and by an in-memory fake in tests.
 pub(open) trait GatewayTransport {
-  async fn recv(Self) -> String
+  async fn recv(Self) -> GatewayFrame
   async fn send(Self, String) -> Unit
   async fn close(Self, code~ : Int) -> Unit
 }
@@ -30,8 +37,17 @@ impl GatewayTransport for WsTransport with fn recv(self) {
       )
     e => raise TransportClosed(code=None, reason="\{e}")
   }
-  message.read_all().text() catch {
+  let data = message.read_all() catch {
     e => raise TransportClosed(code=None, reason="\{e}")
+  }
+  match message.kind {
+    Text =>
+      Text(
+        data.text() catch {
+          e => raise TransportClosed(code=None, reason="\{e}")
+        },
+      )
+    Binary => Binary(data.binary())
   }
 }
 

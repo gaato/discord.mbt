@@ -17,6 +17,8 @@ import {
 // Errors
 pub(all) suberror BotError {
   FatallyClosed(code~ : Int)
+  InvalidShardConfig(message~ : String)
+  SessionStartLimitExceeded(required~ : Int, remaining~ : Int, reset_after_ms~ : Int64)
 } derive(@debug.Debug)
 pub impl Show for BotError
 
@@ -25,7 +27,7 @@ pub struct Bot {
   // private fields
 }
 pub fn Bot::attach_cache(Self, @cache.InMemoryCache) -> Unit
-pub fn Bot::new(@app.App, token~ : String, intents? : @model.Intents, client? : @http.Client, gateway_url? : String, shard_id? : Int, shard_count? : Int) -> Self
+pub fn Bot::new(@app.App, token~ : String, intents? : @model.Intents, client? : @http.Client, gateway_url? : String, shards? : ShardConfig, compress? : Bool) -> Self
 pub fn[T] Bot::on(Self, EventType[T], async (GatewayCtx, T) -> Unit) -> Unit
 pub fn Bot::on_decode_error(Self, (String, Json) -> Unit) -> Unit
 pub fn Bot::on_event(Self, async (GatewayCtx, @model.Event) -> Unit) -> Unit
@@ -133,6 +135,13 @@ pub fn GatewayCtx::shard_raw(Self) -> @gateway.Shard
 pub async fn GatewayCtx::shutdown(Self) -> Unit
 pub async fn[T] GatewayCtx::wait_for(Self, EventType[T], (T) -> Bool, timeout_ms? : Int) -> T?
 pub async fn GatewayCtx::wait_for_component(Self, custom_id~ : String, timeout_ms? : Int) -> @framework.ComponentCtx?
+
+pub(all) enum ShardConfig {
+  Auto
+  Single(id~ : Int, count~ : Int)
+  Fixed(count~ : Int)
+  Range(ids~ : Array[Int], count~ : Int)
+} derive(@debug.Debug)
 
 // Type aliases
 

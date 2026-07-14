@@ -58,6 +58,7 @@ pub struct Bot {
   priv client_ : @dhttp.Client?
   priv gateway_url_ : String?
   priv shards_ : ShardConfig
+  priv compress_ : Bool
   priv typed_events_ : Array[TypedEventHandler]
   priv raw_events_ : Array[async (GatewayCtx, @model.Event) -> Unit]
   priv mut cache_ : @cache.InMemoryCache?
@@ -82,6 +83,7 @@ pub fn Bot::new(
   client? : @dhttp.Client,
   gateway_url? : String,
   shards? : ShardConfig = Single(id=0, count=1),
+  compress? : Bool = false,
 ) -> Bot {
   {
     app_: app,
@@ -90,6 +92,7 @@ pub fn Bot::new(
     client_: client,
     gateway_url_: gateway_url,
     shards_: shards,
+    compress_: compress,
     typed_events_: [],
     raw_events_: [],
     cache_: None,

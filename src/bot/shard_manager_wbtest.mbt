@@ -26,9 +26,11 @@ fn ManagerFakeTransport::server_close(
 
 ///|
 impl @gateway.GatewayTransport for ManagerFakeTransport with fn recv(self) {
-  self.incoming.get() catch {
-    error => raise error
-  }
+  @gateway.GatewayFrame::Text(
+    self.incoming.get() catch {
+      error => raise error
+    },
+  )
 }
 
 ///|
@@ -120,6 +122,7 @@ async test "shard config resolves auto fixed and range selections" {
   let client = @dhttp.Client::new("test-token")
   let app = @app.App::new(sync=@app.CommandSync::Disabled)
   let auto = Bot::new(app, token="test-token", shards=Auto)
+  assert_false(auto.compress_)
   auto.gateway_bot_info_.val = Some(manager_gateway_info(shards=3))
   let auto_config = auto.resolve_shards(client)
   debug_inspect(
@@ -131,6 +134,9 @@ async test "shard config resolves auto fixed and range selections" {
   fixed.gateway_bot_info_.val = Some(manager_gateway_info())
   let fixed_config = fixed.resolve_shards(client)
   debug_inspect((fixed_config.ids, fixed_config.count), content="([0, 1], 2)")
+
+  let compressed = Bot::new(app, token="test-token", compress=true)
+  assert_true(compressed.compress_)
 
   let ranged = Bot::new(
     app,

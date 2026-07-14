@@ -252,6 +252,8 @@ pub using @app {type ResponsePhase}
 
 pub using @gateway {type Shard}
 
+pub using @bot {type ShardConfig}
+
 pub using @gateway {type ShardEvent}
 
 pub using @app {type SlashChild}

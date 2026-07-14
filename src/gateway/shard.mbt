@@ -85,6 +85,8 @@ pub fn[X] Shard::start(
   identify_queue? : &@queue.IdentifyQueue,
   event_filter? : (@model.EventKind) -> Bool = _ => true,
   connector? : async (String) -> &GatewayTransport = connect_websocket,
+  compress? : Bool = false,
+  inflater_factory? : () -> &Inflater raise = new_zlib_stream_inflater,
   queue_capacity? : Int = 256,
   telemetry? : (@telemetry.TelemetryEvent) -> Unit = _ => (),
 ) -> Shard {
@@ -109,6 +111,8 @@ pub fn[X] Shard::start(
       identify_queue?,
       event_filter~,
       connector~,
+      compress~,
+      inflater_factory~,
     )
   })
   shard
@@ -140,6 +144,8 @@ async fn Shard::run(
   identify_queue? : &@queue.IdentifyQueue,
   event_filter~ : (@model.EventKind) -> Bool,
   connector~ : async (String) -> &GatewayTransport,
+  compress~ : Bool,
+  inflater_factory~ : () -> &Inflater raise,
 ) -> Unit noraise {
   let rand = @random.Rand::chacha8()
   let mut attempts = 0
@@ -158,7 +164,8 @@ async fn Shard::run(
       Some(session) => session.resume_url
       None => gateway_url
     }
-    let transport = connector("\{base}/?v=10&encoding=json") catch {
+    let compression_query = if compress { "&compress=zlib-stream" } else { "" }
+    let transport = connector("\{base}/?v=10&encoding=json\{compression_query}") catch {
       error if @async.is_being_cancelled() ||
         @async.is_cancellation_error(error) => return
       _ => {
@@ -176,8 +183,15 @@ async fn Shard::run(
     }
     self.transport = Some(transport)
     let ended = try {
+      let inflater = if compress { Some(inflater_factory()) } else { None }
+      if compress {
+        self.emit_telemetry(
+          @telemetry.TelemetryEvent::ShardCompressionEnabled(shard_id~),
+        )
+      }
       self.run_connection(
         transport,
+        inflater~,
         token~,
         intents~,
         shard_id~,
@@ -268,6 +282,7 @@ async fn Shard::run(
 async fn Shard::run_connection(
   self : Shard,
   transport : &GatewayTransport,
+  inflater~ : &Inflater?,
   token~ : String,
   intents~ : @model.Intents,
   shard_id~ : Int,
@@ -277,7 +292,7 @@ async fn Shard::run_connection(
   rand : @random.Rand,
 ) -> Unit {
   // --- Hello ---
-  let hello_frame = @json.parse(transport.recv())
+  let hello_frame = @json.parse(recv_payload(transport, inflater~))
   guard hello_frame
     is {
       "op": Number(10, ..),
@@ -351,7 +366,7 @@ async fn Shard::run_connection(
 
     // --- read loop ---
     for ;; {
-      let frame = @json.parse(transport.recv()) catch {
+      let frame = @json.parse(recv_payload(transport, inflater~)) catch {
         TransportClosed(code~, reason~) => raise ConnectionEnded(code~, reason~)
         e => raise ConnectionEnded(code=None, reason="bad frame: \{e}")
       }
@@ -444,6 +459,38 @@ async fn Shard::run_connection(
       }
     }
   })
+}
+
+///|
+async fn recv_payload(
+  transport : &GatewayTransport,
+  inflater~ : &Inflater?,
+) -> String {
+  for ;; {
+    match transport.recv() {
+      Text(text) => {
+        if inflater is Some(_) {
+          raise ConnectionEnded(
+            code=None,
+            reason="received text while zlib-stream compression is enabled",
+          )
+        }
+        return text
+      }
+      Binary(bytes) => {
+        guard inflater is Some(decoder) else {
+          raise ConnectionEnded(
+            code=None,
+            reason="received binary without a configured Gateway inflater",
+          )
+        }
+        match decoder.push(bytes) {
+          Some(text) => return text
+          None => continue
+        }
+      }
+    }
+  }
 }
 
 ///|

@@ -7,6 +7,7 @@ import {
   "moonbitlang/async/websocket",
   "moonbitlang/core/json",
   "moonbitlang/core/random",
+  "moonbitlang/core/encoding/utf8",
 }
 
 import {
@@ -23,8 +24,11 @@ import {
 warnings = "-29"
 
 options(
+  "native-stub": [ "zlib_stream.c" ],
   targets: {
     "command_limit.mbt": [ "native" ],
+    "compression.mbt": [ "native" ],
+    "compression_wbtest.mbt": [ "native" ],
     "gateway_test.mbt": [ "native" ],
     "pkg.generated.mbti": [ "native" ],
     "shard.mbt": [ "native" ],
