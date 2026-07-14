@@ -143,6 +143,8 @@ pub using @bot {type Bot}
 
 pub using @bot {type BotError}
 
+pub using @http {type ChannelRef}
+
 pub using @http {type Client}
 
 pub using @app {type Command}
@@ -207,6 +209,10 @@ pub using @app {type InteractionOutcome}
 
 pub using @framework {type InvocationScope}
 
+pub using @http {type MemberRef}
+
+pub using @http {type MessageRef}
+
 pub using @app {type Modal}
 
 pub using @framework {type ModalCtx}
@@ -242,6 +248,8 @@ pub type Spawner = async (async () -> Unit) -> Unit
 pub using @interaction {type SuggestCtx}
 
 pub using @app {type TargetUser}
+
+pub using @http {type UserRef}
 
 pub using @interaction {trait CommandModel}
 

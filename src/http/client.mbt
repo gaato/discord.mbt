@@ -6,6 +6,11 @@ pub struct Client {
   priv limiter : &@ratelimit.RateLimiter
   priv base_path : String
   priv default_allowed_mentions : @model.AllowedMentions
+  // Whitebox tests intercept prepared requests here; production always uses
+  // the pooled transport through `perform`.
+  priv perform_override_ : Ref[
+    (async (Route, String, Map[String, String], Json?, Array[FileUpload]?) -> RawResponse)?,
+  ]
 }
 
 ///|
@@ -34,6 +39,7 @@ pub fn Client::new(
     default_allowed_mentions: default_allowed_mentions.unwrap_or_else(
       @model.AllowedMentions::safe_default,
     ),
+    perform_override_: Ref(None),
   }
 }
 

@@ -4,7 +4,15 @@
 /// entity models, REST wrappers, gateway internals, option builders —
 /// lives in the focused packages: `@discord/model`, `@discord/http`,
 /// `@discord/gateway`, `@discord/interaction`, `@discord/framework`.
-pub using @dhttp {type Client, type FileUpload, type Paginator}
+pub using @dhttp {
+  type Client,
+  type FileUpload,
+  type Paginator,
+  type ChannelRef,
+  type MessageRef,
+  type MemberRef,
+  type UserRef,
+}
 
 ///|
 pub using @model {

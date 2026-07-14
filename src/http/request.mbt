@@ -6,6 +6,25 @@ priv struct RawResponse {
 }
 
 ///|
+fn Client::request_headers(
+  self : Client,
+  route : Route,
+  audit_reason : String?,
+) -> Map[String, String] {
+  let headers : Map[String, String] = {
+    "user-agent": "DiscordBot (https://github.com/gaato/discord.mbt, \{VERSION})",
+    "accept": "application/json",
+  }
+  if route.needs_auth() {
+    headers["authorization"] = "Bot \{self.token}"
+  }
+  if audit_reason is Some(reason) {
+    headers["x-audit-log-reason"] = reason
+  }
+  headers
+}
+
+///|
 /// Execute one HTTP exchange on a pooled connection. The response body is
 /// fully consumed before the connection returns to the pool.
 async fn Client::perform(
@@ -15,18 +34,12 @@ async fn Client::perform(
   audit_reason? : String,
   files? : Array[FileUpload],
 ) -> RawResponse {
+  let headers = self.request_headers(route, audit_reason)
+  let path = self.base_path + route.path()
+  if self.perform_override_.val is Some(perform) {
+    return perform(route, path, headers, body, files)
+  }
   self.pool.with_conn(conn => {
-    let headers : Map[String, String] = {
-      "user-agent": "DiscordBot (https://github.com/gaato/discord.mbt, \{VERSION})",
-      "accept": "application/json",
-    }
-    if route.needs_auth() {
-      headers["authorization"] = "Bot \{self.token}"
-    }
-    if audit_reason is Some(reason) {
-      headers["x-audit-log-reason"] = reason
-    }
-    let path = self.base_path + route.path()
     let response = match (route, files, body) {
       (CreateGuildSticker(..), Some([file]), Some(json)) => {
         let payload = json.stringify()

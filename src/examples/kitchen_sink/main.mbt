@@ -196,11 +196,17 @@ async fn main {
   bot.on(@discord.Events::ready(), (_ctx, ready) => {
     println("[bot] ready as \{ready.user.username}")
   })
+  bot.on(@discord.Events::message_create(), (ctx, event) => {
+    if event.guild_id is None && event.message.content == "!ping" {
+      ctx.message_ref(event).reply(content="pong") |> ignore
+    }
+  })
   println("[try] /demo greet name:<autocomplete>")
   println("[try] /demo add a:2 b:3")
   println("[try] Apps → Wave on a user")
   println("[try] Apps → Quote on a message")
   println("[try] use both buttons on the /demo greet response")
+  println("[try] DM the bot !ping")
   try @async.with_timeout_opt(run_seconds() * 1000, () => bot.run()) catch {
     @discord.AppConfigError::EmptyToken =>
       println("[error] EmptyToken: set DISCORD_TOKEN to run the bot")

@@ -549,6 +549,29 @@ Request failures use `DiscordHttpError`: `Api` (Discord error object),
 before any I/O). Cancellation propagates unchanged, so structured concurrency
 stays intact.
 
+### Client-bound handles
+
+Lightweight handles bind common Discord ids to a `Client` while keeping model
+values as pure data. Their methods delegate to the same typed wrappers, rate
+limiter, and validation path as direct client calls.
+
+```mbt nocheck
+let channel = client.channel_ref(channel_id)
+let sent = channel.send(content="hello")
+client.ref_of_message(sent).edit(content="hello again") |> ignore
+```
+
+Gateway handlers can derive a message handle directly from a message-create
+event:
+
+```mbt nocheck
+bot.on(@discord.Events::message_create(), (ctx, event) => {
+  if event.message.content == "!ping" {
+    ctx.message_ref(event).reply(content="pong") |> ignore
+  }
+})
+```
+
 ### Pagination
 
 List endpoints expose stateful `Paginator[T]` values. `next_page` returns

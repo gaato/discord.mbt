@@ -33,6 +33,24 @@ pub fn GatewayCtx::framework_raw(self : GatewayCtx) -> @framework.Framework {
 }
 
 ///|
+/// Bind a message-create event's message to the gateway REST client.
+pub fn GatewayCtx::message_ref(
+  self : GatewayCtx,
+  event : @model.MessageCreateEvent,
+) -> @dhttp.MessageRef {
+  self.app_.http().ref_of_message(event.message)
+}
+
+///|
+/// Bind a message model to the gateway REST client.
+pub fn GatewayCtx::ref_of_message(
+  self : GatewayCtx,
+  message : @model.Message,
+) -> @dhttp.MessageRef {
+  self.app_.http().ref_of_message(message)
+}
+
+///|
 /// Wait for the next component interaction with an exact custom id.
 pub async fn GatewayCtx::wait_for_component(
   self : GatewayCtx,

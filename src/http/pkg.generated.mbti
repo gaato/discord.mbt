@@ -34,6 +34,13 @@ pub(all) struct ApiError {
   errors : Json?
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
+pub struct ChannelRef {
+  // private fields
+}
+pub fn ChannelRef::messages(Self, before? : @model.Id[@model.MessageMarker], after? : @model.Id[@model.MessageMarker], around? : @model.Id[@model.MessageMarker], page_size? : Int) -> Paginator[@model.Message] raise DiscordHttpError
+pub async fn ChannelRef::send(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], allowed_mentions? : @model.AllowedMentions, files? : Array[FileUpload], reply_to? : @model.Id[@model.MessageMarker]) -> @model.Message raise DiscordHttpError
+pub async fn ChannelRef::typing(Self) -> Unit raise DiscordHttpError
+
 pub struct Client {
   // private fields
 }
@@ -41,6 +48,7 @@ pub async fn Client::add_member_role(Self, @model.Id[@model.GuildMarker], @model
 pub async fn Client::bulk_delete_messages(Self, @model.Id[@model.ChannelMarker], Array[@model.Id[@model.MessageMarker]], audit_reason? : String) -> Unit raise DiscordHttpError
 pub async fn Client::bulk_overwrite_global_commands(Self, @model.Id[@model.ApplicationMarker], Json) -> Array[@model.ApplicationCommand] raise DiscordHttpError
 pub async fn Client::bulk_overwrite_guild_commands(Self, @model.Id[@model.ApplicationMarker], @model.Id[@model.GuildMarker], Json) -> Array[@model.ApplicationCommand] raise DiscordHttpError
+pub fn Client::channel_ref(Self, @model.Id[@model.ChannelMarker]) -> ChannelRef
 pub fn Client::close(Self) -> Unit
 pub async fn Client::create_auto_moderation_rule(Self, @model.Id[@model.GuildMarker], String, @model.AutoModerationEventType, @model.AutoModerationTriggerType, @model.TriggerMetadata, Array[@model.AutoModerationAction], enabled? : Bool, exempt_roles? : Array[@model.Id[@model.RoleMarker]], exempt_channels? : Array[@model.Id[@model.ChannelMarker]], audit_reason? : String) -> @model.AutoModerationRule raise DiscordHttpError
 pub async fn Client::create_channel_invite(Self, @model.Id[@model.ChannelMarker], max_age? : Int, max_uses? : Int, temporary? : Bool, unique? : Bool, audit_reason? : String) -> @model.Invite raise DiscordHttpError
@@ -138,6 +146,8 @@ pub async fn Client::list_guild_scheduled_events(Self, @model.Id[@model.GuildMar
 pub async fn Client::list_guild_soundboard_sounds(Self, @model.Id[@model.GuildMarker]) -> Array[@model.SoundboardSound] raise DiscordHttpError
 pub async fn Client::list_guild_stickers(Self, @model.Id[@model.GuildMarker]) -> Array[@model.Sticker] raise DiscordHttpError
 pub async fn Client::list_sticker_packs(Self) -> @model.StickerPacksResponse raise DiscordHttpError
+pub fn Client::member_ref(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker]) -> MemberRef
+pub fn Client::message_ref(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker]) -> MessageRef
 pub async fn Client::modify_auto_moderation_rule(Self, @model.Id[@model.GuildMarker], @model.Id[@model.AutoModerationRuleMarker], name? : String, event_type? : @model.AutoModerationEventType, trigger_metadata? : @model.TriggerMetadata, actions? : Array[@model.AutoModerationAction], enabled? : Bool, exempt_roles? : Array[@model.Id[@model.RoleMarker]], exempt_channels? : Array[@model.Id[@model.ChannelMarker]], audit_reason? : String) -> @model.AutoModerationRule raise DiscordHttpError
 pub async fn Client::modify_channel(Self, @model.Id[@model.ChannelMarker], name? : String, topic? : String, clear_topic? : Bool, nsfw? : Bool, parent_id? : @model.Id[@model.ChannelMarker], clear_parent_id? : Bool, rate_limit_per_user? : Int, position? : Int, audit_reason? : String) -> @model.Channel raise DiscordHttpError
 pub async fn Client::modify_current_user(Self, username? : String, avatar? : String, clear_avatar? : Bool) -> @model.User raise DiscordHttpError
@@ -159,6 +169,7 @@ pub fn Client::paginate_guild_scheduled_event_users(Self, @model.Id[@model.Guild
 pub fn Client::paginate_messages(Self, @model.Id[@model.ChannelMarker], before? : @model.Id[@model.MessageMarker], after? : @model.Id[@model.MessageMarker], around? : @model.Id[@model.MessageMarker], page_size? : Int) -> Paginator[@model.Message] raise DiscordHttpError
 pub fn Client::paginate_poll_answer_voters(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], Int, after? : @model.Id[@model.UserMarker], page_size? : Int) -> Paginator[@model.User] raise DiscordHttpError
 pub async fn Client::pin_message(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], audit_reason? : String) -> Unit raise DiscordHttpError
+pub fn Client::ref_of_message(Self, @model.Message) -> MessageRef
 pub async fn Client::remove_guild_ban(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker], audit_reason? : String) -> Unit raise DiscordHttpError
 pub async fn Client::remove_guild_member(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker], audit_reason? : String) -> Unit raise DiscordHttpError
 pub async fn Client::remove_member_role(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker], @model.Id[@model.RoleMarker], audit_reason? : String) -> Unit raise DiscordHttpError
@@ -168,6 +179,7 @@ pub async fn Client::send_soundboard_sound(Self, @model.Id[@model.ChannelMarker]
 pub async fn Client::start_thread_from_message(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], String, auto_archive_duration? : @model.ThreadAutoArchiveDuration, rate_limit_per_user? : Int, audit_reason? : String) -> @model.Channel raise DiscordHttpError
 pub async fn Client::trigger_typing(Self, @model.Id[@model.ChannelMarker]) -> Unit raise DiscordHttpError
 pub async fn Client::unpin_message(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], audit_reason? : String) -> Unit raise DiscordHttpError
+pub fn Client::user_ref(Self, @model.Id[@model.UserMarker]) -> UserRef
 pub impl Show for Client
 
 pub struct FileUpload {
@@ -175,6 +187,26 @@ pub struct FileUpload {
 }
 pub fn FileUpload::new(String, Bytes, content_type? : String, description? : String) -> Self
 pub impl @debug.Debug for FileUpload
+
+pub struct MemberRef {
+  // private fields
+}
+pub async fn MemberRef::add_role(Self, @model.Id[@model.RoleMarker], reason? : String) -> Unit raise DiscordHttpError
+pub async fn MemberRef::ban(Self, delete_message_seconds? : Int, reason? : String) -> Unit raise DiscordHttpError
+pub async fn MemberRef::kick(Self, reason? : String) -> Unit raise DiscordHttpError
+pub async fn MemberRef::remove_role(Self, @model.Id[@model.RoleMarker], reason? : String) -> Unit raise DiscordHttpError
+pub async fn MemberRef::timeout(Self, @model.Timestamp?, reason? : String) -> @model.GuildMember raise DiscordHttpError
+
+pub struct MessageRef {
+  // private fields
+}
+pub async fn MessageRef::delete(Self) -> Unit raise DiscordHttpError
+pub async fn MessageRef::delete_reactions(Self) -> Unit raise DiscordHttpError
+pub async fn MessageRef::edit(Self, content? : String, clear_content? : Bool, embeds? : Array[@model.Embed], components? : Array[@model.Component], flags? : @model.MessageFlags, allowed_mentions? : @model.AllowedMentions, files? : Array[FileUpload]) -> @model.Message raise DiscordHttpError
+pub async fn MessageRef::pin(Self) -> Unit raise DiscordHttpError
+pub async fn MessageRef::react(Self, String) -> Unit raise DiscordHttpError
+pub async fn MessageRef::reply(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], allowed_mentions? : @model.AllowedMentions, files? : Array[FileUpload]) -> @model.Message raise DiscordHttpError
+pub async fn MessageRef::unpin(Self) -> Unit raise DiscordHttpError
 
 pub struct Paginator[T] {
   // private fields
@@ -318,6 +350,11 @@ pub fn Route::method_(Self) -> @moonbitlang/async/http.RequestMethod
 pub fn Route::needs_auth(Self) -> Bool
 pub fn Route::path(Self) -> String
 pub fn Route::supports_reason(Self) -> Bool
+
+pub struct UserRef {
+  // private fields
+}
+pub async fn UserRef::dm(Self) -> ChannelRef raise DiscordHttpError
 
 // Type aliases
 pub using @moonbitlang/async/http {type RequestMethod}
