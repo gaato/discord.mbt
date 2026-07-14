@@ -142,6 +142,13 @@ subscriptions. Pass privileged intents for member or presence events and for
 message content visibility. Raw event handlers cannot imply an intent set, so
 applications using them must pass `intents`.
 
+When a known gateway event fails typed decoding, `Bot` always reports a
+`DECODE_ERROR:<event-name>:<decode-error>` summary through the `App` warning
+hook without including the payload. The event still reaches raw event handlers.
+Register `bot.on_decode_error((marker, payload) => ...)` to inspect the full
+marker and raw payload; these callbacks run synchronously and should return
+promptly. Decode-error observers do not imply gateway intents.
+
 ### Synchronization and failures
 
 `CommandSync` belongs to `App` and defaults to `Global`. The gateway executor

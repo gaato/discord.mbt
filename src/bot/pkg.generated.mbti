@@ -24,6 +24,7 @@ pub struct Bot {
 }
 pub fn Bot::new(@app.App, token~ : String, intents? : @model.Intents, client? : @http.Client, gateway_url? : String, shard_id? : Int, shard_count? : Int) -> Self
 pub fn[T] Bot::on(Self, EventType[T], async (GatewayCtx, T) -> Unit) -> Unit
+pub fn Bot::on_decode_error(Self, (String, Json) -> Unit) -> Unit
 pub fn Bot::on_event(Self, async (GatewayCtx, @model.Event) -> Unit) -> Unit
 pub async fn Bot::run(Self) -> Unit
 pub fn Bot::service(Self, name~ : String, async (GatewayCtx) -> Unit) -> Unit

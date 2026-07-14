@@ -45,6 +45,7 @@ pub struct Bot {
   priv shard_count_ : Int
   priv typed_events_ : Array[TypedEventHandler]
   priv raw_events_ : Array[async (GatewayCtx, @model.Event) -> Unit]
+  priv decode_errors_ : Array[(String, Json) -> Unit]
   priv services_ : Array[ServiceHandler]
   // Production uses Shard::start's WebSocket connector. Whitebox tests inject
   // the same in-memory GatewayTransport seam used by gateway_test.mbt.
@@ -71,6 +72,7 @@ pub fn Bot::new(
     shard_count_: shard_count,
     typed_events_: [],
     raw_events_: [],
+    decode_errors_: [],
     services_: [],
     connector_: Ref(None),
   }
@@ -102,12 +104,41 @@ pub fn Bot::on_event(
 }
 
 ///|
+/// Observe gateway events whose known payload failed typed decoding.
+///
+/// `marker` is the full synthetic event type
+/// `DECODE_ERROR:<event-name>:<decode-error>`, and `payload` is Discord's raw
+/// event data. Handlers run synchronously in the dispatch loop and should
+/// return promptly. Registering a handler does not add gateway intents or
+/// widen the event filter.
+pub fn Bot::on_decode_error(
+  self : Bot,
+  handler : (String, Json) -> Unit,
+) -> Unit {
+  self.decode_errors_.push(handler)
+}
+
+///|
 pub fn Bot::service(
   self : Bot,
   name~ : String,
   handler : async (GatewayCtx) -> Unit,
 ) -> Unit {
   self.services_.push({ name, dispatch: handler })
+}
+
+///|
+fn Bot::observe_decode_error(self : Bot, event : @model.Event) -> Unit {
+  match event {
+    Unknown(t~, d~) if t.has_prefix("DECODE_ERROR:") => {
+      // Never include `d`: payloads can contain user content and credentials.
+      self.app_.warn("gateway event decode failure: \{t}")
+      for handler in self.decode_errors_ {
+        handler(t, d)
+      }
+    }
+    _ => ()
+  }
 }
 
 ///|
@@ -424,7 +455,8 @@ pub async fn Bot::run(self : Bot) -> Unit {
                 "dropping INTERACTION_CREATE received before READY",
               )
           }
-        Dispatch(event) =>
+        Dispatch(event) => {
+          self.observe_decode_error(event)
           match gateway_ctx {
             Some(ctx) => self.spawn_event_handlers(spawner, ctx, event)
             None =>
@@ -432,6 +464,7 @@ pub async fn Bot::run(self : Bot) -> Unit {
                 "dropping \{to_repr(event_kind(event))} received before READY",
               )
           }
+        }
         Connected(..) => ()
         Disconnected(..) =>
           if gateway_ctx is Some(ctx) && ctx.shutdown_requested_ {

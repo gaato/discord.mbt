@@ -302,6 +302,13 @@ fn command_frame(sequence : Int, id : String, name? : String = "raw") -> String 
 }
 
 ///|
+fn malformed_interaction_frame(sequence : Int) -> String {
+  (
+    #|{"op":0,"s":SEQUENCE_PLACEHOLDER,"t":"INTERACTION_CREATE","d":{"id":"500000000000000099","application_id":"42","type":"not-a-number","token":"payload-must-stay-private","version":1}}
+  ).replace(old="SEQUENCE_PLACEHOLDER", new=sequence.to_string())
+}
+
+///|
 fn message_delete_frame(sequence : Int, id : String) -> String {
   (
     #|{"op":0,"s":SEQUENCE_PLACEHOLDER,"t":"MESSAGE_DELETE","d":{"id":"ID_PLACEHOLDER","channel_id":"6"}}
@@ -411,4 +418,79 @@ async test "bot run dispatches concurrently, survives handlers, and shuts down" 
     running.wait()
   })
   inspect(command_count.val, content="2")
+}
+
+///|
+async test "bot reports gateway decode errors and preserves dispatch" {
+  // Decode-error observers do not request any additional event kinds.
+  let filter_app = @app.App::new(sync=@app.CommandSync::Disabled)
+  let filter_bot = Bot::new(filter_app, token="test-token")
+  filter_bot.on_decode_error((_, _) => ())
+  let filter = filter_bot.event_filter()
+  assert_true(filter(KReady))
+  assert_true(filter(KInteractionCreate))
+  assert_false(filter(KMessageDelete))
+  assert_false(filter(KInviteDelete))
+
+  let transport = BotFakeTransport::new()
+  let app = @app.App::new(sync=@app.CommandSync::Disabled)
+  let warnings : Array[String] = []
+  app.on_warn(message => warnings.push(message))
+  let bot = Bot::new(
+    app,
+    token="test-token",
+    intents=@model.Intents::guild_messages(),
+    client=@dhttp.Client::new("test-token"),
+    gateway_url="wss://gateway.example",
+  )
+  bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  let ready_contexts : @aqueue.Queue[GatewayCtx] = @aqueue.Queue::new(
+    kind=Unbounded,
+  )
+  bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
+  let decode_errors : Array[(String, Json)] = []
+  bot.on_decode_error((marker, payload) => decode_errors.push((marker, payload)))
+  let raw_decode_errors : @aqueue.Queue[(String, Json)] = @aqueue.Queue::new(
+    kind=Unbounded,
+  )
+  bot.on_event((_, event) => {
+    match event {
+      Unknown(t~, d~) if t.has_prefix("DECODE_ERROR:") =>
+        raw_decode_errors.put((t, d))
+      _ => ()
+    }
+  })
+  let normal_events : @aqueue.Queue[Unit] = @aqueue.Queue::new(kind=Unbounded)
+  bot.on(Events::message_delete(), (_, _) => normal_events.put(()))
+  @async.with_task_group(group => {
+    let running = group.spawn(no_wait=true, () => bot.run())
+    transport.incoming.put(BOT_HELLO)
+    guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
+      fail("expected identify")
+    }
+    transport.incoming.put(bot_ready_frame())
+    let ctx = ready_contexts.get()
+    transport.incoming.put(malformed_interaction_frame(2))
+    let (raw_marker, raw_payload) = raw_decode_errors.get()
+    assert_true(raw_marker.has_prefix("DECODE_ERROR:INTERACTION_CREATE:"))
+    guard raw_payload is { "token": String("payload-must-stay-private"), .. } else {
+      fail("expected the undecoded interaction payload")
+    }
+    inspect(decode_errors.length(), content="1")
+    let (marker, payload) = decode_errors[0]
+    assert_eq(marker, raw_marker)
+    assert_eq(payload.stringify(), raw_payload.stringify())
+    inspect(warnings.length(), content="1")
+    assert_true(warnings[0].contains("DECODE_ERROR:INTERACTION_CREATE:"))
+    assert_false(warnings[0].contains("payload-must-stay-private"))
+
+    // An ordinary dispatch proves the loop continues and does not notify the
+    // decode-error observers.
+    transport.incoming.put(message_delete_frame(3, "700000000000000099"))
+    normal_events.get()
+    inspect(decode_errors.length(), content="1")
+    inspect(warnings.length(), content="1")
+    ctx.shutdown()
+    running.wait()
+  })
 }
