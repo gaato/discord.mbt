@@ -75,18 +75,19 @@ pub async fn Client::get_webhook(
 pub async fn Client::modify_webhook(
   self : Client,
   webhook_id : @model.WebhookId,
-  name? : @model.Undefinable[String] = Missing,
-  avatar? : @model.Undefinable[String] = Missing,
-  channel_id? : @model.Undefinable[@model.ChannelId] = Missing,
+  name? : String,
+  avatar? : String,
+  clear_avatar? : Bool = false,
+  channel_id? : @model.ChannelId,
   audit_reason? : String,
 ) -> @model.Webhook raise DiscordHttpError {
-  if name is Value(value) {
+  if name is Some(value) {
     validate_webhook_name(value)
   }
   let body = @model.ObjBuilder::new()
-    .und("name", name)
-    .und("avatar", avatar)
-    .und("channel_id", channel_id)
+    .opt("name", name)
+    .und("avatar", patch_nullable("avatar", avatar, clear_avatar))
+    .opt("channel_id", channel_id)
     .build()
   decode(self.request(Route::ModifyWebhook(webhook_id~), body~, audit_reason?))
 }
@@ -159,22 +160,20 @@ pub async fn Client::edit_webhook_message(
   webhook_id : @model.WebhookId,
   token : String,
   message_id : @model.MessageId,
-  content? : @model.Undefinable[String] = Missing,
-  embeds? : @model.Undefinable[Array[@model.Embed]] = Missing,
-  components? : @model.Undefinable[Array[@model.Component]] = Missing,
+  content? : String,
+  clear_content? : Bool = false,
+  embeds? : Array[@model.Embed],
+  components? : Array[@model.Component],
   allowed_mentions? : @model.AllowedMentions,
   files? : Array[FileUpload],
 ) -> @model.Message raise DiscordHttpError {
-  if content is Value(value) && value.length() > 4000 {
-    raise DiscordHttpError::Validation(
-      message="content exceeds 4000 UTF-16 units",
-    )
-  }
-  let builder = @model.ObjBuilder::new()
-    .und("content", content)
-    .und("embeds", embeds)
-    .und("components", components)
-    .opt("allowed_mentions", allowed_mentions)
+  let builder = message_patch_builder(
+    content,
+    clear_content,
+    embeds,
+    components,
+    None,
+  ).opt("allowed_mentions", allowed_mentions)
   if files is Some(fs) && fs.length() > 0 {
     builder.field("attachments", attachments_json(fs)) |> ignore
   }

@@ -57,10 +57,7 @@ fn slow_command() -> @discord.Command[Unit] {
     args=@discord.Args::unit(),
     handler=Deferred(ephemeral=false, (ctx, _) => {
       @async.sleep(500)
-      ctx.edit_original(
-        content=@model.Undefinable::Value("Finished in the background."),
-      )
-      |> ignore
+      ctx.edit_original(content="Finished in the background.") |> ignore
     }),
   )
 }

@@ -103,16 +103,18 @@ pub fn DeferredCtx::raw(self : DeferredCtx) -> @framework.CommandCtx {
 /// Edit the original response after deferring.
 pub async fn DeferredCtx::edit_original(
   self : DeferredCtx,
-  content? : @model.Undefinable[String] = Missing,
-  embeds? : @model.Undefinable[Array[@model.Embed]] = Missing,
-  components? : @model.Undefinable[Array[@model.Component]] = Missing,
+  content? : String,
+  clear_content? : Bool = false,
+  embeds? : Array[@model.Embed],
+  components? : Array[@model.Component],
   allowed_mentions? : @model.AllowedMentions,
   files? : Array[@dhttp.FileUpload],
 ) -> @model.Message {
   self.raw_.edit_response(
-    content~,
-    embeds~,
-    components~,
+    content?,
+    clear_content~,
+    embeds?,
+    components?,
     allowed_mentions?,
     files?,
   )

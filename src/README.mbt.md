@@ -368,9 +368,10 @@ test "snowflakes are typed and precise" {
 }
 ```
 
-Discord's three field states are modeled explicitly: `T?` for optional,
-`Nullable[T]` for nullable, and `Undefinable[T]` for PATCH arguments that
-distinguish "leave unchanged" / "clear" / "set".
+Discord's wire models use `T?` for optional fields and `Nullable[T]` for
+nullable fields. PATCH methods expose plain optional arguments: omit one to
+leave it unchanged, pass `[]` to clear an array, or use the corresponding
+`clear_<field>=true` flag to clear a nullable scalar.
 
 ## Slash commands
 

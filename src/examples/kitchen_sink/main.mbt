@@ -174,10 +174,8 @@ async fn main {
     prefix="demo:done:",
     DeferredUpdate(ctx => {
       ctx.edit_original(
-        content=@model.Undefinable::Value(
-          "✅ \{ctx.suffix()} marked this greeting as done.",
-        ),
-        components=@model.Undefinable::Value([]),
+        content="✅ \{ctx.suffix()} marked this greeting as done.",
+        components=[],
       )
       |> ignore
     }),

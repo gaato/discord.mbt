@@ -13,10 +13,12 @@ pub async fn Client::modify_channel(
   self : Client,
   channel_id : @model.ChannelId,
   name? : String,
-  topic? : @model.Undefinable[String] = Missing,
+  topic? : String,
+  clear_topic? : Bool = false,
   nsfw? : Bool,
-  parent_id? : @model.Undefinable[@model.ChannelId] = Missing,
-  rate_limit_per_user? : @model.Undefinable[Int] = Missing,
+  parent_id? : @model.ChannelId,
+  clear_parent_id? : Bool = false,
+  rate_limit_per_user? : Int,
   position? : Int,
   audit_reason? : String,
 ) -> @model.Channel raise DiscordHttpError {
@@ -25,22 +27,22 @@ pub async fn Client::modify_channel(
       message="channel name must be between 1 and 100 characters",
     )
   }
-  if topic is Value(value) && value.length() > 4096 {
+  if topic is Some(value) && value.length() > 4096 {
     raise DiscordHttpError::Validation(
       message="channel topic exceeds 4096 characters",
     )
   }
-  if rate_limit_per_user is Value(value) && (value < 0 || value > 21600) {
+  if rate_limit_per_user is Some(value) && (value < 0 || value > 21600) {
     raise DiscordHttpError::Validation(
       message="rate_limit_per_user must be between 0 and 21600",
     )
   }
   let body = @model.ObjBuilder::new()
     .opt("name", name)
-    .und("topic", topic)
+    .und("topic", patch_nullable("topic", topic, clear_topic))
     .opt("nsfw", nsfw)
-    .und("parent_id", parent_id)
-    .und("rate_limit_per_user", rate_limit_per_user)
+    .und("parent_id", patch_nullable("parent_id", parent_id, clear_parent_id))
+    .opt("rate_limit_per_user", rate_limit_per_user)
     .opt("position", position)
     .build()
   decode(self.request(Route::ModifyChannel(channel_id~), body~, audit_reason?))

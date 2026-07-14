@@ -156,18 +156,20 @@ pub async fn CommandCtx::show_modal(
 /// Edit the original response (typically after `defer`).
 pub async fn CommandCtx::edit_response(
   self : CommandCtx,
-  content? : @model.Undefinable[String] = Missing,
-  embeds? : @model.Undefinable[Array[@model.Embed]] = Missing,
-  components? : @model.Undefinable[Array[@model.Component]] = Missing,
+  content? : String,
+  clear_content? : Bool = false,
+  embeds? : Array[@model.Embed],
+  components? : Array[@model.Component],
   allowed_mentions? : @model.AllowedMentions,
   files? : Array[@dhttp.FileUpload],
 ) -> @model.Message {
   self.client.edit_original_response(
     self.application_id,
     self.interaction.token,
-    content~,
-    embeds~,
-    components~,
+    content?,
+    clear_content~,
+    embeds?,
+    components?,
     allowed_mentions?,
     files?,
   )
@@ -299,18 +301,20 @@ pub async fn ComponentCtx::defer_update(self : ComponentCtx) -> Unit {
 /// Edit the original interaction response after deferring.
 pub async fn ComponentCtx::edit_response(
   self : ComponentCtx,
-  content? : @model.Undefinable[String] = Missing,
-  embeds? : @model.Undefinable[Array[@model.Embed]] = Missing,
-  components? : @model.Undefinable[Array[@model.Component]] = Missing,
+  content? : String,
+  clear_content? : Bool = false,
+  embeds? : Array[@model.Embed],
+  components? : Array[@model.Component],
   allowed_mentions? : @model.AllowedMentions,
   files? : Array[@dhttp.FileUpload],
 ) -> @model.Message {
   self.client.edit_original_response(
     self.application_id,
     self.interaction.token,
-    content~,
-    embeds~,
-    components~,
+    content?,
+    clear_content~,
+    embeds?,
+    components?,
     allowed_mentions?,
     files?,
   )
@@ -431,18 +435,20 @@ pub async fn ModalCtx::defer_response(
 /// Edit the original modal interaction response after deferring.
 pub async fn ModalCtx::edit_response(
   self : ModalCtx,
-  content? : @model.Undefinable[String] = Missing,
-  embeds? : @model.Undefinable[Array[@model.Embed]] = Missing,
-  components? : @model.Undefinable[Array[@model.Component]] = Missing,
+  content? : String,
+  clear_content? : Bool = false,
+  embeds? : Array[@model.Embed],
+  components? : Array[@model.Component],
   allowed_mentions? : @model.AllowedMentions,
   files? : Array[@dhttp.FileUpload],
 ) -> @model.Message {
   self.client.edit_original_response(
     self.application_id,
     self.interaction.token,
-    content~,
-    embeds~,
-    components~,
+    content?,
+    clear_content~,
+    embeds?,
+    components?,
     allowed_mentions?,
     files?,
   )

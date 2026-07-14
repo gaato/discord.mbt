@@ -104,7 +104,7 @@ pub struct ComponentDeferredCtx {
 }
 pub fn ComponentDeferredCtx::app(Self) -> AppCtx
 pub fn ComponentDeferredCtx::custom_id(Self) -> String
-pub async fn ComponentDeferredCtx::edit_original(Self, content? : @model.Undefinable[String], embeds? : @model.Undefinable[Array[@model.Embed]], components? : @model.Undefinable[Array[@model.Component]], allowed_mentions? : @model.AllowedMentions, files? : Array[@http.FileUpload]) -> @model.Message
+pub async fn ComponentDeferredCtx::edit_original(Self, content? : String, clear_content? : Bool, embeds? : Array[@model.Embed], components? : Array[@model.Component], allowed_mentions? : @model.AllowedMentions, files? : Array[@http.FileUpload]) -> @model.Message
 pub async fn ComponentDeferredCtx::followup(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, ephemeral? : Bool) -> @model.Message
 pub fn ComponentDeferredCtx::guild_id(Self) -> @model.Id[@model.GuildMarker]?
 pub fn ComponentDeferredCtx::interaction(Self) -> @model.Interaction
@@ -153,7 +153,7 @@ pub struct DeferredCtx {
   // private fields
 }
 pub fn DeferredCtx::app(Self) -> AppCtx
-pub async fn DeferredCtx::edit_original(Self, content? : @model.Undefinable[String], embeds? : @model.Undefinable[Array[@model.Embed]], components? : @model.Undefinable[Array[@model.Component]], allowed_mentions? : @model.AllowedMentions, files? : Array[@http.FileUpload]) -> @model.Message
+pub async fn DeferredCtx::edit_original(Self, content? : String, clear_content? : Bool, embeds? : Array[@model.Embed], components? : Array[@model.Component], allowed_mentions? : @model.AllowedMentions, files? : Array[@http.FileUpload]) -> @model.Message
 pub async fn DeferredCtx::followup(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, ephemeral? : Bool) -> @model.Message
 pub fn DeferredCtx::guild_id(Self) -> @model.Id[@model.GuildMarker]?
 pub fn DeferredCtx::interaction(Self) -> @model.Interaction
@@ -219,7 +219,7 @@ pub struct ModalDeferredCtx {
   // private fields
 }
 pub fn ModalDeferredCtx::app(Self) -> AppCtx
-pub async fn ModalDeferredCtx::edit_original(Self, content? : @model.Undefinable[String], embeds? : @model.Undefinable[Array[@model.Embed]], components? : @model.Undefinable[Array[@model.Component]], allowed_mentions? : @model.AllowedMentions, files? : Array[@http.FileUpload]) -> @model.Message
+pub async fn ModalDeferredCtx::edit_original(Self, content? : String, clear_content? : Bool, embeds? : Array[@model.Embed], components? : Array[@model.Component], allowed_mentions? : @model.AllowedMentions, files? : Array[@http.FileUpload]) -> @model.Message
 pub async fn ModalDeferredCtx::followup(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, ephemeral? : Bool) -> @model.Message
 pub fn ModalDeferredCtx::guild_id(Self) -> @model.Id[@model.GuildMarker]?
 pub fn ModalDeferredCtx::interaction(Self) -> @model.Interaction

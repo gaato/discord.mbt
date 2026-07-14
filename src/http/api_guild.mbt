@@ -129,26 +129,37 @@ pub async fn Client::search_guild_members(
 }
 
 ///|
-/// Modify a guild member, preserving omit-versus-null PATCH semantics.
+/// Modify a guild member.
 pub async fn Client::modify_guild_member(
   self : Client,
   guild_id : @model.GuildId,
   user_id : @model.UserId,
-  nick? : @model.Undefinable[String] = Missing,
-  roles? : @model.Undefinable[Array[@model.RoleId]] = Missing,
-  mute? : @model.Undefinable[Bool] = Missing,
-  deaf? : @model.Undefinable[Bool] = Missing,
-  channel_id? : @model.Undefinable[@model.ChannelId] = Missing,
-  communication_disabled_until? : @model.Undefinable[@model.Timestamp] = Missing,
+  nick? : String,
+  clear_nick? : Bool = false,
+  roles? : Array[@model.RoleId],
+  mute? : Bool,
+  deaf? : Bool,
+  channel_id? : @model.ChannelId,
+  clear_channel_id? : Bool = false,
+  communication_disabled_until? : @model.Timestamp,
+  clear_communication_disabled_until? : Bool = false,
   audit_reason? : String,
 ) -> @model.GuildMember raise DiscordHttpError {
   let body = @model.ObjBuilder::new()
-    .und("nick", nick)
-    .und("roles", roles)
-    .und("mute", mute)
-    .und("deaf", deaf)
-    .und("channel_id", channel_id)
-    .und("communication_disabled_until", communication_disabled_until)
+    .und("nick", patch_nullable("nick", nick, clear_nick))
+    .und("roles", patch_value(roles))
+    .opt("mute", mute)
+    .opt("deaf", deaf)
+    .und(
+      "channel_id",
+      patch_nullable("channel_id", channel_id, clear_channel_id),
+    )
+    .und(
+      "communication_disabled_until",
+      patch_nullable(
+        "communication_disabled_until", communication_disabled_until, clear_communication_disabled_until,
+      ),
+    )
     .build()
   decode(
     self.request(
@@ -273,29 +284,29 @@ pub async fn Client::create_guild_role(
 }
 
 ///|
-/// Modify a guild role, preserving omit-versus-null PATCH semantics.
+/// Modify a guild role.
 pub async fn Client::modify_guild_role(
   self : Client,
   guild_id : @model.GuildId,
   role_id : @model.RoleId,
-  name? : @model.Undefinable[String] = Missing,
-  permissions? : @model.Undefinable[@model.Permissions] = Missing,
-  color? : @model.Undefinable[Int] = Missing,
-  hoist? : @model.Undefinable[Bool] = Missing,
-  mentionable? : @model.Undefinable[Bool] = Missing,
+  name? : String,
+  permissions? : @model.Permissions,
+  color? : Int,
+  hoist? : Bool,
+  mentionable? : Bool,
   audit_reason? : String,
 ) -> @model.Role raise DiscordHttpError {
-  if name is Value(value) && (value.length() < 1 || value.length() > 100) {
+  if name is Some(value) && (value.length() < 1 || value.length() > 100) {
     raise DiscordHttpError::Validation(
       message="role name must be between 1 and 100 characters",
     )
   }
   let body = @model.ObjBuilder::new()
-    .und("name", name)
-    .und("permissions", permissions)
-    .und("color", color)
-    .und("hoist", hoist)
-    .und("mentionable", mentionable)
+    .opt("name", name)
+    .opt("permissions", permissions)
+    .opt("color", color)
+    .opt("hoist", hoist)
+    .opt("mentionable", mentionable)
     .build()
   decode(
     self.request(

@@ -78,19 +78,16 @@ pub async fn Client::edit_message(
   self : Client,
   channel_id : @model.ChannelId,
   message_id : @model.MessageId,
-  content? : @model.Undefinable[String] = Missing,
-  embeds? : @model.Undefinable[Array[@model.Embed]] = Missing,
-  components? : @model.Undefinable[Array[@model.Component]] = Missing,
-  flags? : @model.Undefinable[@model.MessageFlags] = Missing,
+  content? : String,
+  clear_content? : Bool = false,
+  embeds? : Array[@model.Embed],
+  components? : Array[@model.Component],
+  flags? : @model.MessageFlags,
   allowed_mentions? : @model.AllowedMentions,
   files? : Array[FileUpload],
 ) -> @model.Message raise DiscordHttpError {
   let builder = self.with_channel_allowed_mentions(
-    @model.ObjBuilder::new()
-    .und("content", content)
-    .und("embeds", embeds)
-    .und("components", components)
-    .und("flags", flags),
+    message_patch_builder(content, clear_content, embeds, components, flags),
     allowed_mentions,
   )
   if files is Some(fs) && fs.length() > 0 {

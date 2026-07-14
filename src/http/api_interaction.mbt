@@ -36,22 +36,20 @@ pub async fn Client::edit_original_response(
   self : Client,
   application_id : @model.ApplicationId,
   token : String,
-  content? : @model.Undefinable[String] = Missing,
-  embeds? : @model.Undefinable[Array[@model.Embed]] = Missing,
-  components? : @model.Undefinable[Array[@model.Component]] = Missing,
+  content? : String,
+  clear_content? : Bool = false,
+  embeds? : Array[@model.Embed],
+  components? : Array[@model.Component],
   allowed_mentions? : @model.AllowedMentions,
   files? : Array[FileUpload],
 ) -> @model.Message raise DiscordHttpError {
-  if content is Value(value) && value.length() > 4000 {
-    raise DiscordHttpError::Validation(
-      message="content exceeds 4000 UTF-16 units",
-    )
-  }
-  let builder = @model.ObjBuilder::new()
-    .und("content", content)
-    .und("embeds", embeds)
-    .und("components", components)
-    .opt("allowed_mentions", allowed_mentions)
+  let builder = message_patch_builder(
+    content,
+    clear_content,
+    embeds,
+    components,
+    None,
+  ).opt("allowed_mentions", allowed_mentions)
   if files is Some(fs) && fs.length() > 0 {
     builder.field("attachments", attachments_json(fs)) |> ignore
   }
@@ -141,22 +139,20 @@ pub async fn Client::edit_followup(
   application_id : @model.ApplicationId,
   token : String,
   message_id : @model.MessageId,
-  content? : @model.Undefinable[String] = Missing,
-  embeds? : @model.Undefinable[Array[@model.Embed]] = Missing,
-  components? : @model.Undefinable[Array[@model.Component]] = Missing,
+  content? : String,
+  clear_content? : Bool = false,
+  embeds? : Array[@model.Embed],
+  components? : Array[@model.Component],
   allowed_mentions? : @model.AllowedMentions,
   files? : Array[FileUpload],
 ) -> @model.Message raise DiscordHttpError {
-  if content is Value(value) && value.length() > 4000 {
-    raise DiscordHttpError::Validation(
-      message="content exceeds 4000 UTF-16 units",
-    )
-  }
-  let builder = @model.ObjBuilder::new()
-    .und("content", content)
-    .und("embeds", embeds)
-    .und("components", components)
-    .opt("allowed_mentions", allowed_mentions)
+  let builder = message_patch_builder(
+    content,
+    clear_content,
+    embeds,
+    components,
+    None,
+  ).opt("allowed_mentions", allowed_mentions)
   if files is Some(fs) && fs.length() > 0 {
     builder.field("attachments", attachments_json(fs)) |> ignore
   }

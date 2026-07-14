@@ -38,15 +38,21 @@ fn command_body(
   description : String,
   options : Array[@model.CommandOption]?,
   typ : @model.ApplicationCommandType?,
-  default_member_permissions : @model.Undefinable[@model.Permissions],
+  default_member_permissions : @model.Permissions?,
+  clear_default_member_permissions : Bool,
   nsfw : Bool?,
-) -> Json {
+) -> Json raise DiscordHttpError {
   @model.ObjBuilder::new()
   .field("name", name)
   .field("description", description)
   .opt("options", options)
   .opt("type", typ)
-  .und("default_member_permissions", default_member_permissions)
+  .und(
+    "default_member_permissions",
+    patch_nullable(
+      "default_member_permissions", default_member_permissions, clear_default_member_permissions,
+    ),
+  )
   .opt("nsfw", nsfw)
   .build()
 }
@@ -55,15 +61,21 @@ fn command_body(
 fn command_patch_body(
   name : String?,
   description : String?,
-  options : @model.Undefinable[Array[@model.CommandOption]],
-  default_member_permissions : @model.Undefinable[@model.Permissions],
+  options : Array[@model.CommandOption]?,
+  default_member_permissions : @model.Permissions?,
+  clear_default_member_permissions : Bool,
   nsfw : Bool?,
-) -> Json {
+) -> Json raise DiscordHttpError {
   @model.ObjBuilder::new()
   .opt("name", name)
   .opt("description", description)
-  .und("options", options)
-  .und("default_member_permissions", default_member_permissions)
+  .und("options", patch_value(options))
+  .und(
+    "default_member_permissions",
+    patch_nullable(
+      "default_member_permissions", default_member_permissions, clear_default_member_permissions,
+    ),
+  )
   .opt("nsfw", nsfw)
   .build()
 }
@@ -105,12 +117,14 @@ pub async fn Client::create_global_command(
   description : String,
   options? : Array[@model.CommandOption],
   typ? : @model.ApplicationCommandType,
-  default_member_permissions? : @model.Undefinable[@model.Permissions] = Missing,
+  default_member_permissions? : @model.Permissions,
+  clear_default_member_permissions? : Bool = false,
   nsfw? : Bool,
 ) -> @model.ApplicationCommand raise DiscordHttpError {
   validate_command_text(name, description)
   let body = command_body(
-    name, description, options, typ, default_member_permissions, nsfw,
+    name, description, options, typ, default_member_permissions, clear_default_member_permissions,
+    nsfw,
   )
   decode(self.request(Route::CreateGlobalCommand(application_id~), body~))
 }
@@ -123,13 +137,15 @@ pub async fn Client::edit_global_command(
   command_id : @model.CommandId,
   name? : String,
   description? : String,
-  options? : @model.Undefinable[Array[@model.CommandOption]] = Missing,
-  default_member_permissions? : @model.Undefinable[@model.Permissions] = Missing,
+  options? : Array[@model.CommandOption],
+  default_member_permissions? : @model.Permissions,
+  clear_default_member_permissions? : Bool = false,
   nsfw? : Bool,
 ) -> @model.ApplicationCommand raise DiscordHttpError {
   validate_command_patch(name, description)
   let body = command_patch_body(
-    name, description, options, default_member_permissions, nsfw,
+    name, description, options, default_member_permissions, clear_default_member_permissions,
+    nsfw,
   )
   decode(
     self.request(Route::EditGlobalCommand(application_id~, command_id~), body~),
@@ -198,12 +214,14 @@ pub async fn Client::create_guild_command(
   description : String,
   options? : Array[@model.CommandOption],
   typ? : @model.ApplicationCommandType,
-  default_member_permissions? : @model.Undefinable[@model.Permissions] = Missing,
+  default_member_permissions? : @model.Permissions,
+  clear_default_member_permissions? : Bool = false,
   nsfw? : Bool,
 ) -> @model.ApplicationCommand raise DiscordHttpError {
   validate_command_text(name, description)
   let body = command_body(
-    name, description, options, typ, default_member_permissions, nsfw,
+    name, description, options, typ, default_member_permissions, clear_default_member_permissions,
+    nsfw,
   )
   decode(
     self.request(Route::CreateGuildCommand(application_id~, guild_id~), body~),
@@ -219,13 +237,15 @@ pub async fn Client::edit_guild_command(
   command_id : @model.CommandId,
   name? : String,
   description? : String,
-  options? : @model.Undefinable[Array[@model.CommandOption]] = Missing,
-  default_member_permissions? : @model.Undefinable[@model.Permissions] = Missing,
+  options? : Array[@model.CommandOption],
+  default_member_permissions? : @model.Permissions,
+  clear_default_member_permissions? : Bool = false,
   nsfw? : Bool,
 ) -> @model.ApplicationCommand raise DiscordHttpError {
   validate_command_patch(name, description)
   let body = command_patch_body(
-    name, description, options, default_member_permissions, nsfw,
+    name, description, options, default_member_permissions, clear_default_member_permissions,
+    nsfw,
   )
   decode(
     self.request(

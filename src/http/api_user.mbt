@@ -20,7 +20,8 @@ pub async fn Client::get_user(
 pub async fn Client::modify_current_user(
   self : Client,
   username? : String,
-  avatar? : @model.Undefinable[String] = Missing,
+  avatar? : String,
+  clear_avatar? : Bool = false,
 ) -> @model.User raise DiscordHttpError {
   if username is Some(value) && (value.length() < 2 || value.length() > 32) {
     raise DiscordHttpError::Validation(
@@ -29,7 +30,7 @@ pub async fn Client::modify_current_user(
   }
   let body = @model.ObjBuilder::new()
     .opt("username", username)
-    .und("avatar", avatar)
+    .und("avatar", patch_nullable("avatar", avatar, clear_avatar))
     .build()
   decode(self.request(Route::ModifyCurrentUser, body~))
 }
