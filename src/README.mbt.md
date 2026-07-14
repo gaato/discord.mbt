@@ -78,9 +78,9 @@ test "quickstart is wired" {
 | `gaato/discord/model` | Pure data: ~24 entity domains, gateway payloads, zero IO |
 | `gaato/discord/http` | REST `Client`, routes, rate limiting, multipart uploads |
 | `gaato/discord/gateway` | `Shard`: connection state machine, heartbeat, resume |
-| `gaato/discord/interaction` | Command specs, option builders, typed option decoding |
-| `gaato/discord/framework` | Routing interactions to handlers, response contexts |
-| `gaato/discord/bot` | Managed run loop, typed commands/events, sync and error policy |
+| `gaato/discord/interaction` | Command/component builders, typed args and autocomplete data |
+| `gaato/discord/framework` | Interaction routing, response gates, low-level response contexts |
+| `gaato/discord/bot` | Typed commands/components/modals, gateway run loop, HTTP app, sync and policy |
 | `gaato/discord/ratelimit` | Rate limiter trait + in-memory implementation |
 | `gaato/discord/queue` | Identify queue trait + in-memory implementation |
 
@@ -128,15 +128,11 @@ overwrite endpoints: commands registered outside this code are deleted from
 the selected scope when a PUT is needed.** Use `Disabled` when another process
 owns registration.
 
-For HTTP interaction endpoints without a gateway, construct an
-`InteractionApp` with `Bot::start_interaction_app`. It uses the same command
-framework and error policy, returning `Reply`, `NoRoute`, `NoResponse`, or
-`TimedOut`; timed-out handlers continue in the supplied task group.
-
 Install an `error_policy` to map failures to logs or interaction responses.
 Handlers can raise `HandlerError::UserMessage`, `GuildOnly`,
 `MissingPermission`, or `InvalidArgument` for expected failures; unexpected
-errors reach the same policy with their command, event, or service origin.
+errors reach the same policy with their command, autocomplete, component,
+modal, event, or service origin.
 
 Escape hatches are layered rather than hidden:
 
@@ -145,6 +141,159 @@ Escape hatches are layered rather than hidden:
 2. `client.request(...)` exposes route-level raw JSON for unsupported payloads.
 3. Fully manual gateway/framework wiring remains documented in
    `src/examples/low_level`.
+
+## v3 high-level APIs
+
+Subcommands carry their own typed `Args`, and autocomplete is attached directly
+to the focused argument. User and message context-menu commands can coexist
+with slash commands of the same name because routing uses `(type, name)`.
+Components route by `custom_id` prefix; a handler can update the message,
+reply, defer, or show a typed modal.
+
+```mbt check
+///|
+struct ReadmeFeedback {
+  topic : String
+  details : String?
+}
+
+///|
+fn readme_feedback_modal() -> @discord.Modal[ReadmeFeedback] {
+  @discord.modal(
+    custom_id="readme-feedback",
+    title="Feedback",
+    fields=@discord.ModalFields::map2(
+      @discord.text_field(custom_id="topic", label="Topic"),
+      @discord.text_field(custom_id="details", label="Details").optional(),
+      (topic, details) => { topic, details },
+    ),
+  )
+}
+
+///|
+fn readme_v3_bot(token : String) -> @discord.Bot {
+  let feedback = readme_feedback_modal()
+  let bot = @discord.Bot::new(token~, sync=Disabled)
+  bot
+  ..command(
+    @discord.slash_group(name="demo", description="v3 demo", children=[
+      @discord.subcommand(
+        name="greet",
+        description="Greet somebody",
+        args=@discord.Args::of(
+          @discord.arg_string(name="name", description="Who to greet", suggest=(
+            _,
+            input,
+          ) => [@discord.string_choice("Use \{input}", input)]),
+        ),
+        handler=Immediate((_, name) => {
+          @discord.CommandReply::message(content="Hello, \{name}!", components=[
+            @discord.action_row([
+              @discord.button(
+                custom_id="readme:feedback:\{name}",
+                label="Feedback",
+              ),
+            ]),
+          ])
+        }),
+      ),
+    ]),
+  )
+  ..command(
+    @discord.user_command(
+      name="Wave",
+      handler=Immediate((_, target) => {
+        @discord.CommandReply::message(
+          content="👋 <@\{target.user.id}>",
+          ephemeral=true,
+        )
+      }),
+    ),
+  )
+  ..command(
+    @discord.message_command(
+      name="Quote",
+      handler=Immediate((_, message) => {
+        @discord.CommandReply::message(content="> \{message.content}")
+      }),
+    ),
+  )
+  ..on_component(
+    prefix="readme:feedback:",
+    Immediate(ctx => {
+      @discord.ComponentReply::ShowModal(feedback.show(state=ctx.suffix()))
+    }),
+  )
+  .on_modal(
+    feedback,
+    Immediate((ctx, form) => {
+      @discord.InitialResponse::message(
+        content="state=\{ctx.state().unwrap_or("none")}; " +
+          "topic=\{form.topic}; details=\{form.details.unwrap_or("none")}",
+        ephemeral=true,
+      )
+    }),
+  )
+  bot
+}
+
+///|
+test "v3 high-level declarations are wired without network access" {
+  readme_v3_bot("test-token") |> ignore
+}
+```
+
+The complete runnable version is `src/examples/kitchen_sink`; it also shows a
+second subcommand, `DeferredUpdate`, guild-scoped synchronization, and the
+gateway lifecycle.
+
+## HTTP interactions (experimental)
+
+`InteractionApp` dispatches the same declarations without opening a gateway.
+The caller owns the task group; handlers that defer or exceed the initial
+response deadline continue on that group after `handle` returns.
+
+```mbt check
+///|
+async fn dispatch_http_interaction(
+  bot : @discord.Bot,
+  group : @async.TaskGroup[Unit],
+  body : Json,
+) -> Json? {
+  let app = bot.start_interaction_app(group, sync=false)
+  app.handle(body, deadline_ms=2500)
+}
+
+///|
+test "HTTP adapter entry point is typed" {
+  ignore(dispatch_http_interaction)
+}
+```
+
+`handle` is the thin JSON form: it returns callback JSON only for `Reply`.
+Adapters that need multipart files or explicit status decisions should decode
+the body as `@model.Interaction` and call `handle_interaction`.
+
+The HTTP server/Workers adapter is responsible for accepting Discord's Ping
+handshake request, reading the raw request body, and validating
+`X-Signature-Ed25519` plus `X-Signature-Timestamp` **before** dispatch. Ed25519
+verification is mandatory. Workers can use WebCrypto
+`crypto.subtle.verify`; a native adapter will need a suitable implementation
+such as libsodium when one is integrated. A verified Ping passed to the app
+produces the Pong callback.
+
+A typical status mapping is:
+
+| Outcome | Suggested HTTP response |
+|---|---|
+| `Reply` | `200` with callback JSON, or multipart when files are present |
+| `NoRoute` | `404` |
+| `NoResponse` | `202` if intentional, otherwise `500` |
+| `TimedOut` | `202` if background continuation is supported, otherwise `500` |
+
+The last two are operational choices: returning `202` does not create a
+Discord initial response, so handlers should normally defer before doing slow
+work.
 
 ## Typed models
 

@@ -1,0 +1,18 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "gaato/discord/examples/kitchen_sink"
+
+// Values
+
+// Errors
+
+// Types and methods
+type AddArgs
+
+type Feedback
+
+type GreetArgs
+
+// Type aliases
+
+// Traits
+

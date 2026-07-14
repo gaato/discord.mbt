@@ -9,6 +9,7 @@ import {
 
 import {
   "moonbitlang/core/json",
+  "moonbitlang/async",
   "gaato/discord/model",
   "gaato/discord/interaction",
 } for "test"
