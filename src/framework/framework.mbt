@@ -187,12 +187,14 @@ pub async fn Framework::process_with(
       guard self.commands.get(command_key(data.typ, data.name)) is Some(entry) else {
         return false
       }
+      let scope = interaction_scope(interaction)
       let ctx : CommandCtx = {
         client: self.client,
         application_id: self.application_id,
         interaction,
         data,
         options: @interaction.CommandOptions::from_data(data),
+        scope_: scope,
         gate,
       }
       self.guard_errors("command:\{data.name}", () => (entry.handler)(ctx))
@@ -216,11 +218,17 @@ pub async fn Framework::process_with(
     }
     MessageComponent => {
       guard interaction.data is Some(Component(data)) else { return false }
+      // Validate the guarantees of ComponentCtx before waiters or registered
+      // routes can observe this interaction.
+      let scope = interaction_scope(interaction)
+      let message = component_message(interaction)
       let ctx : ComponentCtx = {
         client: self.client,
         application_id: self.application_id,
         interaction,
         data,
+        scope_: scope,
+        message_: message,
         gate,
       }
       for i, waiter in self.waiters {
@@ -241,6 +249,8 @@ pub async fn Framework::process_with(
     }
     ModalSubmit => {
       guard interaction.data is Some(Modal(data)) else { return false }
+      let scope = interaction_scope(interaction)
+      let origin = modal_origin(interaction)
       for entry in self.modals {
         let (prefix, handler) = entry
         if data.custom_id.has_prefix(prefix) {
@@ -249,6 +259,8 @@ pub async fn Framework::process_with(
             application_id: self.application_id,
             interaction,
             data,
+            scope_: scope,
+            origin_: origin,
             gate,
           }
           self.guard_errors("modal:\{data.custom_id}", () => handler(ctx))

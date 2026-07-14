@@ -11,6 +11,12 @@ import {
 // Values
 
 // Errors
+pub(all) suberror InteractionContextError {
+  MissingInvoker
+  MissingGuildMemberUser
+  MissingComponentMessage
+} derive(@debug.Debug)
+
 pub(all) suberror ResponseGateError {
   AlreadyResponded
   InvalidCallback(kind~ : @model.InteractionType, typ~ : @model.InteractionResponseType)
@@ -45,8 +51,9 @@ pub async fn CommandCtx::edit_response(Self, content? : String, clear_content? :
 pub async fn CommandCtx::followup(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, ephemeral? : Bool) -> @model.Message
 pub fn[T : @interaction.CommandModel] CommandCtx::model(Self) -> T raise
 pub async fn CommandCtx::respond(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, ephemeral? : Bool) -> Unit
+pub fn CommandCtx::scope(Self) -> InvocationScope
 pub async fn CommandCtx::show_modal(Self, custom_id~ : String, title~ : String, components~ : Array[@model.Component]) -> Unit
-pub fn CommandCtx::user(Self) -> @model.User?
+pub fn CommandCtx::user(Self) -> @model.User
 
 pub(all) struct ComponentCtx {
   client : @http.Client
@@ -59,10 +66,12 @@ pub async fn ComponentCtx::defer_response(Self, ephemeral? : Bool) -> Unit
 pub async fn ComponentCtx::defer_update(Self) -> Unit
 pub async fn ComponentCtx::edit_response(Self, content? : String, clear_content? : Bool, embeds? : Array[@model.Embed], components? : Array[@model.Component], allowed_mentions? : @model.AllowedMentions, files? : Array[@http.FileUpload]) -> @model.Message
 pub async fn ComponentCtx::followup(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, ephemeral? : Bool) -> @model.Message
+pub fn ComponentCtx::message(Self) -> @model.Message
 pub async fn ComponentCtx::respond(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, ephemeral? : Bool) -> Unit
+pub fn ComponentCtx::scope(Self) -> InvocationScope
 pub async fn ComponentCtx::show_modal(Self, custom_id~ : String, title~ : String, components~ : Array[@model.Component]) -> Unit
 pub async fn ComponentCtx::update_message(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], allowed_mentions? : @model.AllowedMentions) -> Unit
-pub fn ComponentCtx::user(Self) -> @model.User?
+pub fn ComponentCtx::user(Self) -> @model.User
 
 pub struct Framework {
   // private fields
@@ -80,6 +89,11 @@ pub async fn Framework::sync_global(Self) -> Array[@model.ApplicationCommand]
 pub async fn Framework::sync_guild(Self, @model.Id[@model.GuildMarker]) -> Array[@model.ApplicationCommand]
 pub async fn Framework::wait_for_component(Self, custom_id~ : String, timeout_ms? : Int) -> ComponentCtx?
 
+pub(all) enum InvocationScope {
+  Guild(@model.GuildMember)
+  Dm(@model.User)
+} derive(@debug.Debug)
+
 pub(all) struct ModalCtx {
   client : @http.Client
   application_id : @model.Id[@model.ApplicationMarker]
@@ -90,9 +104,16 @@ pub(all) struct ModalCtx {
 pub async fn ModalCtx::defer_response(Self, ephemeral? : Bool) -> Unit
 pub async fn ModalCtx::edit_response(Self, content? : String, clear_content? : Bool, embeds? : Array[@model.Embed], components? : Array[@model.Component], allowed_mentions? : @model.AllowedMentions, files? : Array[@http.FileUpload]) -> @model.Message
 pub async fn ModalCtx::followup(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, ephemeral? : Bool) -> @model.Message
+pub fn ModalCtx::origin(Self) -> ModalOrigin
 pub async fn ModalCtx::respond(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, ephemeral? : Bool) -> Unit
+pub fn ModalCtx::scope(Self) -> InvocationScope
 pub fn ModalCtx::text_value(Self, String) -> String?
-pub fn ModalCtx::user(Self) -> @model.User?
+pub fn ModalCtx::user(Self) -> @model.User
+
+pub(all) enum ModalOrigin {
+  FromComponent(@model.Message)
+  FromCommand
+} derive(@debug.Debug)
 
 pub struct ResponseCapture {
   // private fields

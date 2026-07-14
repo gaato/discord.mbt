@@ -66,12 +66,72 @@ async fn respond_modal(
 }
 
 ///|
-/// The user who triggered an interaction, whether it arrived from a guild
-/// (via the member object) or a DM.
-fn invoking_user(interaction : @model.Interaction) -> @model.User? {
-  match interaction.user {
-    Some(user) => Some(user)
-    None => interaction.guild_member.bind(m => m.user)
+/// The context in which an interaction was invoked.
+pub(all) enum InvocationScope {
+  Guild(@model.GuildMember)
+  Dm(@model.User)
+} derive(Debug)
+
+///|
+/// The interaction that opened a submitted modal.
+pub(all) enum ModalOrigin {
+  FromComponent(@model.Message)
+  FromCommand
+} derive(Debug)
+
+///|
+/// A malformed interaction that cannot satisfy the guarantees exposed by a
+/// typed handler context.
+pub(all) suberror InteractionContextError {
+  MissingInvoker
+  MissingGuildMemberUser
+  MissingComponentMessage
+} derive(Debug)
+
+///|
+/// Prefer the guild member when both `member` and `user` are present: the
+/// documented contract is exactly-one, but an interpretable payload should
+/// never make the interaction unanswerable.
+fn interaction_scope(
+  interaction : @model.Interaction,
+) -> InvocationScope raise InteractionContextError {
+  match (interaction.guild_member, interaction.user) {
+    (Some(guild_member), _) => {
+      guard guild_member.user is Some(_) else { raise MissingGuildMemberUser }
+      Guild(guild_member)
+    }
+    (None, Some(user)) => Dm(user)
+    (None, None) => raise MissingInvoker
+  }
+}
+
+///|
+fn InvocationScope::invoking_user(self : InvocationScope) -> @model.User {
+  match self {
+    Guild(guild_member) =>
+      match guild_member.user {
+        Some(user) => user
+        None => abort("validated guild invocation has no member user")
+      }
+    Dm(user) => user
+  }
+}
+
+///|
+fn component_message(
+  interaction : @model.Interaction,
+) -> @model.Message raise InteractionContextError {
+  match interaction.message {
+    Some(message) => message
+    None => raise MissingComponentMessage
+  }
+}
+
+///|
+fn modal_origin(interaction : @model.Interaction) -> ModalOrigin {
+  match interaction.message {
+    Some(message) => FromComponent(message)
+    None => FromCommand
   }
 }
 
@@ -83,13 +143,20 @@ pub(all) struct CommandCtx {
   interaction : @model.Interaction
   data : @model.CommandData
   options : @interaction.CommandOptions
+  priv scope_ : InvocationScope
   priv gate : ResponseGate
 }
 
 ///|
-/// The invoking user, from either the guild member or the DM user field.
-pub fn CommandCtx::user(self : CommandCtx) -> @model.User? {
-  invoking_user(self.interaction)
+/// Whether the command was invoked in a guild or a DM.
+pub fn CommandCtx::scope(self : CommandCtx) -> InvocationScope {
+  self.scope_
+}
+
+///|
+/// The invoking user.
+pub fn CommandCtx::user(self : CommandCtx) -> @model.User {
+  self.scope_.invoking_user()
 }
 
 ///|
@@ -209,13 +276,27 @@ pub(all) struct ComponentCtx {
   application_id : @model.ApplicationId
   interaction : @model.Interaction
   data : @model.ComponentData
+  priv scope_ : InvocationScope
+  priv message_ : @model.Message
   priv gate : ResponseGate
 }
 
 ///|
-/// The invoking user, from either the guild member or the DM user field.
-pub fn ComponentCtx::user(self : ComponentCtx) -> @model.User? {
-  invoking_user(self.interaction)
+/// Whether the component was invoked in a guild or a DM.
+pub fn ComponentCtx::scope(self : ComponentCtx) -> InvocationScope {
+  self.scope_
+}
+
+///|
+/// The invoking user.
+pub fn ComponentCtx::user(self : ComponentCtx) -> @model.User {
+  self.scope_.invoking_user()
+}
+
+///|
+/// The message to which the component was attached.
+pub fn ComponentCtx::message(self : ComponentCtx) -> @model.Message {
+  self.message_
 }
 
 ///|
@@ -354,13 +435,27 @@ pub(all) struct ModalCtx {
   application_id : @model.ApplicationId
   interaction : @model.Interaction
   data : @model.ModalData
+  priv scope_ : InvocationScope
+  priv origin_ : ModalOrigin
   priv gate : ResponseGate
 }
 
 ///|
-/// The invoking user, from either the guild member or the DM user field.
-pub fn ModalCtx::user(self : ModalCtx) -> @model.User? {
-  invoking_user(self.interaction)
+/// Whether the modal was submitted in a guild or a DM.
+pub fn ModalCtx::scope(self : ModalCtx) -> InvocationScope {
+  self.scope_
+}
+
+///|
+/// The invoking user.
+pub fn ModalCtx::user(self : ModalCtx) -> @model.User {
+  self.scope_.invoking_user()
+}
+
+///|
+/// Whether the modal was opened from a component or from a command.
+pub fn ModalCtx::origin(self : ModalCtx) -> ModalOrigin {
+  self.origin_
 }
 
 ///|

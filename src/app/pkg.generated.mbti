@@ -108,13 +108,14 @@ pub async fn ComponentDeferredCtx::edit_original(Self, content? : String, clear_
 pub async fn ComponentDeferredCtx::followup(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, ephemeral? : Bool) -> @model.Message
 pub fn ComponentDeferredCtx::guild_id(Self) -> @model.Id[@model.GuildMarker]?
 pub fn ComponentDeferredCtx::interaction(Self) -> @model.Interaction
-pub fn ComponentDeferredCtx::message(Self) -> @model.Message?
+pub fn ComponentDeferredCtx::message(Self) -> @model.Message
 pub fn ComponentDeferredCtx::raw(Self) -> @framework.ComponentCtx
+pub fn ComponentDeferredCtx::scope(Self) -> @framework.InvocationScope
 pub fn ComponentDeferredCtx::selected_channels(Self) -> Array[@model.Channel]
 pub fn ComponentDeferredCtx::selected_roles(Self) -> Array[@model.Role]
 pub fn ComponentDeferredCtx::selected_users(Self) -> Array[@model.User]
 pub fn ComponentDeferredCtx::suffix(Self) -> String
-pub fn ComponentDeferredCtx::user(Self) -> @model.User?
+pub fn ComponentDeferredCtx::user(Self) -> @model.User
 pub fn ComponentDeferredCtx::values(Self) -> Array[String]
 pub async fn ComponentDeferredCtx::wait_for_component(Self, custom_id~ : String, timeout_ms? : Int) -> @framework.ComponentCtx?
 
@@ -132,13 +133,14 @@ pub fn ComponentImmediateCtx::app(Self) -> AppCtx
 pub fn ComponentImmediateCtx::custom_id(Self) -> String
 pub fn ComponentImmediateCtx::guild_id(Self) -> @model.Id[@model.GuildMarker]?
 pub fn ComponentImmediateCtx::interaction(Self) -> @model.Interaction
-pub fn ComponentImmediateCtx::message(Self) -> @model.Message?
+pub fn ComponentImmediateCtx::message(Self) -> @model.Message
 pub fn ComponentImmediateCtx::raw(Self) -> @framework.ComponentCtx
+pub fn ComponentImmediateCtx::scope(Self) -> @framework.InvocationScope
 pub fn ComponentImmediateCtx::selected_channels(Self) -> Array[@model.Channel]
 pub fn ComponentImmediateCtx::selected_roles(Self) -> Array[@model.Role]
 pub fn ComponentImmediateCtx::selected_users(Self) -> Array[@model.User]
 pub fn ComponentImmediateCtx::suffix(Self) -> String
-pub fn ComponentImmediateCtx::user(Self) -> @model.User?
+pub fn ComponentImmediateCtx::user(Self) -> @model.User
 pub fn ComponentImmediateCtx::values(Self) -> Array[String]
 
 pub(all) enum ComponentReply {
@@ -158,7 +160,8 @@ pub async fn DeferredCtx::followup(Self, content? : String, embeds? : Array[@mod
 pub fn DeferredCtx::guild_id(Self) -> @model.Id[@model.GuildMarker]?
 pub fn DeferredCtx::interaction(Self) -> @model.Interaction
 pub fn DeferredCtx::raw(Self) -> @framework.CommandCtx
-pub fn DeferredCtx::user(Self) -> @model.User?
+pub fn DeferredCtx::scope(Self) -> @framework.InvocationScope
+pub fn DeferredCtx::user(Self) -> @model.User
 pub async fn DeferredCtx::wait_for_component(Self, custom_id~ : String, timeout_ms? : Int) -> @framework.ComponentCtx?
 
 pub struct FailureCtx {
@@ -184,7 +187,8 @@ pub fn ImmediateCtx::app(Self) -> AppCtx
 pub fn ImmediateCtx::guild_id(Self) -> @model.Id[@model.GuildMarker]?
 pub fn ImmediateCtx::interaction(Self) -> @model.Interaction
 pub fn ImmediateCtx::raw(Self) -> @framework.CommandCtx
-pub fn ImmediateCtx::user(Self) -> @model.User?
+pub fn ImmediateCtx::scope(Self) -> @framework.InvocationScope
+pub fn ImmediateCtx::user(Self) -> @model.User
 
 pub struct InitialResponse {
   // private fields
@@ -223,9 +227,11 @@ pub async fn ModalDeferredCtx::edit_original(Self, content? : String, clear_cont
 pub async fn ModalDeferredCtx::followup(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, ephemeral? : Bool) -> @model.Message
 pub fn ModalDeferredCtx::guild_id(Self) -> @model.Id[@model.GuildMarker]?
 pub fn ModalDeferredCtx::interaction(Self) -> @model.Interaction
+pub fn ModalDeferredCtx::origin(Self) -> @framework.ModalOrigin
 pub fn ModalDeferredCtx::raw(Self) -> @framework.ModalCtx
+pub fn ModalDeferredCtx::scope(Self) -> @framework.InvocationScope
 pub fn ModalDeferredCtx::state(Self) -> String?
-pub fn ModalDeferredCtx::user(Self) -> @model.User?
+pub fn ModalDeferredCtx::user(Self) -> @model.User
 
 pub struct ModalField[A] {
   // private fields
@@ -257,9 +263,11 @@ pub struct ModalImmediateCtx {
 pub fn ModalImmediateCtx::app(Self) -> AppCtx
 pub fn ModalImmediateCtx::guild_id(Self) -> @model.Id[@model.GuildMarker]?
 pub fn ModalImmediateCtx::interaction(Self) -> @model.Interaction
+pub fn ModalImmediateCtx::origin(Self) -> @framework.ModalOrigin
 pub fn ModalImmediateCtx::raw(Self) -> @framework.ModalCtx
+pub fn ModalImmediateCtx::scope(Self) -> @framework.InvocationScope
 pub fn ModalImmediateCtx::state(Self) -> String?
-pub fn ModalImmediateCtx::user(Self) -> @model.User?
+pub fn ModalImmediateCtx::user(Self) -> @model.User
 
 pub(all) enum ModalSubmitHandler[A] {
   Immediate(async (ModalImmediateCtx, A) -> InitialResponse)

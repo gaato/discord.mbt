@@ -294,7 +294,7 @@ fn bot_ready_frame() -> String {
 ///|
 fn command_frame(sequence : Int, id : String, name? : String = "raw") -> String {
   (
-    #|{"op":0,"s":SEQUENCE_PLACEHOLDER,"t":"INTERACTION_CREATE","d":{"id":"ID_PLACEHOLDER","application_id":"42","type":2,"token":"interaction-token","version":1,"data":{"id":"600000000000000001","name":"NAME_PLACEHOLDER","type":1}}}
+    #|{"op":0,"s":SEQUENCE_PLACEHOLDER,"t":"INTERACTION_CREATE","d":{"id":"ID_PLACEHOLDER","application_id":"42","type":2,"token":"interaction-token","version":1,"user":{"id":"200000000000000001","username":"nelly","discriminator":"0","global_name":"Nelly","avatar":null},"data":{"id":"600000000000000001","name":"NAME_PLACEHOLDER","type":1}}}
   )
   .replace(old="SEQUENCE_PLACEHOLDER", new=sequence.to_string())
   .replace(old="ID_PLACEHOLDER", new=id)

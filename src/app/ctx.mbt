@@ -44,7 +44,12 @@ pub fn ImmediateCtx::app(self : ImmediateCtx) -> AppCtx {
 }
 
 ///|
-pub fn ImmediateCtx::user(self : ImmediateCtx) -> @model.User? {
+pub fn ImmediateCtx::scope(self : ImmediateCtx) -> @framework.InvocationScope {
+  self.raw_.scope()
+}
+
+///|
+pub fn ImmediateCtx::user(self : ImmediateCtx) -> @model.User {
   self.raw_.user()
 }
 
@@ -80,7 +85,12 @@ pub fn DeferredCtx::app(self : DeferredCtx) -> AppCtx {
 }
 
 ///|
-pub fn DeferredCtx::user(self : DeferredCtx) -> @model.User? {
+pub fn DeferredCtx::scope(self : DeferredCtx) -> @framework.InvocationScope {
+  self.raw_.scope()
+}
+
+///|
+pub fn DeferredCtx::user(self : DeferredCtx) -> @model.User {
   self.raw_.user()
 }
 

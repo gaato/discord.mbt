@@ -33,6 +33,9 @@ pub using @framework {
   type ComponentCtx,
   type ModalCtx,
   type AutocompleteCtx,
+  type InvocationScope,
+  type ModalOrigin,
+  type InteractionContextError,
 }
 
 ///|

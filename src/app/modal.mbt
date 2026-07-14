@@ -393,8 +393,22 @@ pub fn ModalImmediateCtx::app(self : ModalImmediateCtx) -> AppCtx {
 }
 
 ///|
-pub fn ModalImmediateCtx::user(self : ModalImmediateCtx) -> @model.User? {
+pub fn ModalImmediateCtx::scope(
+  self : ModalImmediateCtx,
+) -> @framework.InvocationScope {
+  self.raw_.scope()
+}
+
+///|
+pub fn ModalImmediateCtx::user(self : ModalImmediateCtx) -> @model.User {
   self.raw_.user()
+}
+
+///|
+pub fn ModalImmediateCtx::origin(
+  self : ModalImmediateCtx,
+) -> @framework.ModalOrigin {
+  self.raw_.origin()
 }
 
 ///|
@@ -425,8 +439,22 @@ pub fn ModalDeferredCtx::app(self : ModalDeferredCtx) -> AppCtx {
 }
 
 ///|
-pub fn ModalDeferredCtx::user(self : ModalDeferredCtx) -> @model.User? {
+pub fn ModalDeferredCtx::scope(
+  self : ModalDeferredCtx,
+) -> @framework.InvocationScope {
+  self.raw_.scope()
+}
+
+///|
+pub fn ModalDeferredCtx::user(self : ModalDeferredCtx) -> @model.User {
   self.raw_.user()
+}
+
+///|
+pub fn ModalDeferredCtx::origin(
+  self : ModalDeferredCtx,
+) -> @framework.ModalOrigin {
+  self.raw_.origin()
 }
 
 ///|

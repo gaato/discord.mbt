@@ -197,11 +197,15 @@ pub using @app {type InitialResponse}
 
 pub using @model {type Intents}
 
+pub using @framework {type InteractionContextError}
+
 pub using @app {type InteractionEndpoint}
 
 pub using @app {type InteractionHandler}
 
 pub using @app {type InteractionOutcome}
+
+pub using @framework {type InvocationScope}
 
 pub using @app {type Modal}
 
@@ -216,6 +220,8 @@ pub using @app {type ModalFields}
 pub using @app {type ModalHandle}
 
 pub using @app {type ModalImmediateCtx}
+
+pub using @framework {type ModalOrigin}
 
 pub using @app {type ModalSubmitHandler}
 

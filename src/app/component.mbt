@@ -159,10 +159,15 @@ pub fn ComponentImmediateCtx::app(self : ComponentImmediateCtx) -> AppCtx {
 }
 
 ///|
-pub fn ComponentImmediateCtx::user(
-  self : ComponentImmediateCtx,
-) -> @model.User? {
+pub fn ComponentImmediateCtx::user(self : ComponentImmediateCtx) -> @model.User {
   self.raw_.user()
+}
+
+///|
+pub fn ComponentImmediateCtx::scope(
+  self : ComponentImmediateCtx,
+) -> @framework.InvocationScope {
+  self.raw_.scope()
 }
 
 ///|
@@ -220,8 +225,8 @@ pub fn ComponentImmediateCtx::selected_channels(
 ///|
 pub fn ComponentImmediateCtx::message(
   self : ComponentImmediateCtx,
-) -> @model.Message? {
-  self.raw_.interaction.message
+) -> @model.Message {
+  self.raw_.message()
 }
 
 ///|
@@ -237,8 +242,15 @@ pub fn ComponentDeferredCtx::app(self : ComponentDeferredCtx) -> AppCtx {
 }
 
 ///|
-pub fn ComponentDeferredCtx::user(self : ComponentDeferredCtx) -> @model.User? {
+pub fn ComponentDeferredCtx::user(self : ComponentDeferredCtx) -> @model.User {
   self.raw_.user()
+}
+
+///|
+pub fn ComponentDeferredCtx::scope(
+  self : ComponentDeferredCtx,
+) -> @framework.InvocationScope {
+  self.raw_.scope()
 }
 
 ///|
@@ -296,8 +308,8 @@ pub fn ComponentDeferredCtx::selected_channels(
 ///|
 pub fn ComponentDeferredCtx::message(
   self : ComponentDeferredCtx,
-) -> @model.Message? {
-  self.raw_.interaction.message
+) -> @model.Message {
+  self.raw_.message()
 }
 
 ///|

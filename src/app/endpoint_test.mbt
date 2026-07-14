@@ -1,6 +1,33 @@
 ///|
 fn app_interaction(fixture : String) -> @model.Interaction raise {
-  @json.from_json(@json.parse(fixture))
+  let interaction : @model.Interaction = @json.from_json(@json.parse(fixture))
+  if interaction.typ == Ping {
+    interaction
+  } else {
+    { ..interaction, user: Some(app_test_user()) }
+  }
+}
+
+///|
+fn app_test_user() -> @model.User raise {
+  @json.from_json(
+    @json.parse(
+      (
+        #|{"id":"200000000000000001","username":"nelly","discriminator":"0","global_name":"Nelly","avatar":null}
+      ),
+    ),
+  )
+}
+
+///|
+fn app_test_message() -> @model.Message raise {
+  @json.from_json(
+    @json.parse(
+      (
+        #|{"id":"700000000000000001","channel_id":"800000000000000001","author":{"id":"200000000000000002","username":"bot","discriminator":"0","global_name":null,"avatar":null},"content":"component host","timestamp":"2025-06-01T10:00:00.000000+00:00","edited_timestamp":null,"tts":false,"mention_everyone":false,"mentions":[],"mention_roles":[],"attachments":[],"embeds":[],"pinned":false,"type":0}
+      ),
+    ),
+  )
 }
 
 ///|
@@ -20,7 +47,7 @@ fn app_ping() -> @model.Interaction raise {
 
 ///|
 fn app_command(name : String, id : String) -> @model.Interaction raise {
-  app_interaction(
+  let interaction = app_interaction(
     (
       #|{
       #|  "id": "INTERACTION_ID",
@@ -38,17 +65,23 @@ fn app_command(name : String, id : String) -> @model.Interaction raise {
     .replace(old="INTERACTION_ID", new=id)
     .replace(old="COMMAND_NAME", new=name),
   )
+  { ..interaction, user: Some(app_test_user()) }
 }
 
 ///|
 fn app_component(custom_id : String, id : String) -> @model.Interaction raise {
-  app_interaction(
+  let interaction = app_interaction(
     (
       #|{"id":"INTERACTION_ID","application_id":"400000000000000001","type":3,"token":"interaction-token","version":1,"data":{"custom_id":"CUSTOM_ID","component_type":2}}
     )
     .replace(old="INTERACTION_ID", new=id)
     .replace(old="CUSTOM_ID", new=custom_id),
   )
+  {
+    ..interaction,
+    user: Some(app_test_user()),
+    message: Some(app_test_message()),
+  }
 }
 
 ///|
@@ -57,7 +90,7 @@ fn app_modal_submit(
   note : String,
   id : String,
 ) -> @model.Interaction raise {
-  app_interaction(
+  let interaction = app_interaction(
     (
       #|{"id":"INTERACTION_ID","application_id":"400000000000000001","type":5,"token":"interaction-token","version":1,"data":{"custom_id":"CUSTOM_ID","components":[{"type":18,"label":"Note","component":{"type":4,"custom_id":"note","style":1,"value":"NOTE"}}]}}
     )
@@ -65,6 +98,7 @@ fn app_modal_submit(
     .replace(old="CUSTOM_ID", new=custom_id)
     .replace(old="NOTE", new=note),
   )
+  { ..interaction, user: Some(app_test_user()) }
 }
 
 ///|
@@ -90,7 +124,11 @@ async test "interaction endpoint dispatches captured responses and completion ou
       name="immediate",
       description="Immediate response",
       args=@interaction.Args::unit(),
-      handler=Immediate((_, _) => {
+      handler=Immediate((ctx, _) => {
+        guard ctx.scope() is @framework.InvocationScope::Dm(user) else {
+          fail("expected a DM command invocation")
+        }
+        assert_true(user.id == ctx.user().id)
         @app.CommandReply::message(content="hello from http")
       }),
     ),
@@ -109,6 +147,8 @@ async test "interaction endpoint dispatches captured responses and completion ou
       description="Deferred without gateway waiter",
       args=@interaction.Args::unit(),
       handler=Deferred(ephemeral=false, (ctx, _) => {
+        assert_true(ctx.scope() is @framework.InvocationScope::Dm(_))
+        assert_true(ctx.user().id.to_string() == "200000000000000001")
         waiter_results.put(
           ctx.wait_for_component(custom_id="never", timeout_ms=1) is None,
         )
@@ -238,6 +278,9 @@ async test "interaction endpoint dispatches component and typed modal handlers" 
   app.on_component(
     prefix="update:",
     Immediate(ctx => {
+      assert_true(ctx.scope() is @framework.InvocationScope::Dm(_))
+      assert_true(ctx.user().id.to_string() == "200000000000000001")
+      assert_true(ctx.message().content == "component host")
       @app.ComponentReply::update_message(content="updated:\{ctx.suffix()}")
     }),
   )
@@ -247,13 +290,37 @@ async test "interaction endpoint dispatches component and typed modal handlers" 
       ComponentReply::ShowModal(feedback.show(state=ctx.suffix()))
     }),
   )
-  app.on_component(prefix="defer:", DeferredUpdate(_ => ()))
+  app.on_component(
+    prefix="defer:",
+    DeferredUpdate(ctx => {
+      assert_true(ctx.scope() is @framework.InvocationScope::Dm(_))
+      assert_true(ctx.message().content == "component host")
+    }),
+  )
   app.on_modal(
     feedback,
     Immediate((ctx, note) => {
+      assert_true(ctx.scope() is @framework.InvocationScope::Dm(_))
+      assert_true(ctx.user().id.to_string() == "200000000000000001")
+      assert_true(ctx.origin() is @framework.ModalOrigin::FromCommand)
       @app.InitialResponse::message(
         content="saved:\{note}:\{ctx.state().unwrap_or("none")}",
       )
+    }),
+  )
+  let deferred_feedback = @app.modal(
+    custom_id="deferred-feedback",
+    title="Deferred feedback",
+    fields=@app.ModalFields::of(@app.text_field(custom_id="note", label="Note")),
+  )
+  app.on_modal(
+    deferred_feedback,
+    Deferred(ephemeral=false, (ctx, _) => {
+      assert_true(ctx.scope() is @framework.InvocationScope::Dm(_))
+      guard ctx.origin() is @framework.ModalOrigin::FromComponent(message) else {
+        fail("expected a component-origin modal")
+      }
+      assert_true(message.content == "component host")
     }),
   )
   let client = @dhttp.Client::new(
@@ -336,6 +403,15 @@ async test "interaction endpoint dispatches component and typed modal handlers" 
       Reply(response~, files=_) =>
         assert_true(response.typ == DeferredUpdateMessage)
       outcome => fail("expected deferred update, got \{to_repr(outcome)}")
+    }
+    let component_modal = {
+      ..app_modal_submit("deferred-feedback", "later", "500000000000000405"),
+      message: Some(app_test_message()),
+    }
+    match app.handle_interaction(component_modal) {
+      Reply(response~, files=_) =>
+        assert_true(response.typ == DeferredChannelMessageWithSource)
+      outcome => fail("expected deferred modal reply, got \{to_repr(outcome)}")
     }
   })
 }
