@@ -101,6 +101,6 @@ let bot = @discord.Bot::new(app, token~, shards=Range(ids=[0, 1], count=8))
 Every shard feeds the same handlers, cache, and collectors. Identify calls are
 serialized according to the `max_concurrency` rules Discord returns from
 `GET /gateway/bot`, and startup fails early if the remaining session-start
-allowance cannot cover the selected shards. Running shards across multiple
-processes additionally needs an external `IdentifyQueue`/`RateLimiter`
-implementation shared by those processes.
+allowance cannot cover the selected shards. For multiple processes, use the
+bundled coordinator described in
+[Scaling across processes](08-scaling-processes.md).

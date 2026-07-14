@@ -4,6 +4,7 @@ package "gaato/discord"
 import {
   "gaato/discord/app",
   "gaato/discord/bot",
+  "gaato/discord/coordinator",
   "gaato/discord/framework",
   "gaato/discord/gateway",
   "gaato/discord/http",
@@ -184,6 +185,10 @@ pub type ComponentWaiter = async (String, Int?) -> @framework.ComponentCtx?
 
 pub using @app {type CooldownBucket}
 
+pub using @coordinator {type Coordinator}
+
+pub using @coordinator {type CoordinatorError}
+
 pub using @app {type DeferredCtx}
 
 pub type ErrorPolicy = async (@app.FailureCtx, Error) -> Unit
@@ -247,6 +252,10 @@ pub using @app {type ModalSubmitHandler}
 pub using @http {type Paginator}
 
 pub using @app {type RegisteredCommand}
+
+pub using @coordinator {type RemoteIdentifyQueue}
+
+pub using @coordinator {type RemoteRateLimiter}
 
 pub using @app {type ResponsePhase}
 

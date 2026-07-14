@@ -21,6 +21,6 @@ pub impl RateLimiter for InMemoryRateLimiter
 // Traits
 pub(open) trait RateLimiter {
   async fn acquire(Self, String, global_exempt~ : Bool) -> Unit
-  fn release(Self, String, status~ : Int, headers~ : Map[String, String]) -> Unit
+  async fn release(Self, String, status~ : Int, headers~ : Map[String, String]) -> Unit
 }
 

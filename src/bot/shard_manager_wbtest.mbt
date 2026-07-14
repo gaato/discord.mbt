@@ -138,6 +138,16 @@ async test "shard config resolves auto fixed and range selections" {
   let compressed = Bot::new(app, token="test-token", compress=true)
   assert_true(compressed.compress_)
 
+  let injected_queue = @queue.InMemoryQueue::new()
+  let coordinated = Bot::new(
+    app,
+    token="test-token",
+    identify_queue=(injected_queue : &@queue.IdentifyQueue),
+  )
+  guard coordinated.identify_queue_ is Some(_) else {
+    fail("expected injected identify queue")
+  }
+
   let ranged = Bot::new(
     app,
     token="test-token",

@@ -8,8 +8,7 @@ The design follows [twilight](https://github.com/twilight-rs/twilight):
 loosely coupled packages that model the Discord API, plus an App layer for
 typed interaction declarations.
 
-> **Status**: pre-1.0. The App and executor APIs may still change. Gateway
-> sharding coordination across processes is not implemented yet.
+> **Status**: pre-1.0. The App and executor APIs may still change.
 
 Long-form guides and task-focused recipes are in
 [`docs/`](docs/index.md). Generate the complete API reference with
@@ -91,6 +90,7 @@ test "quickstart is wired" {
 | `gaato/discord/bot` | Native gateway executor and typed gateway event descriptors |
 | `gaato/discord/ratelimit` | Rate limiter trait + in-memory implementation |
 | `gaato/discord/queue` | Identify queue trait + in-memory implementation |
+| `gaato/discord/coordinator` | Native TCP coordinator for multi-process Identify and REST limits |
 
 Packages remain usable on their own. A REST-only tool needs `http` and `model`.
 
@@ -178,8 +178,9 @@ telemetry observe every shard; telemetry events carry the shard id. Identify
 calls are serialized through an `IdentifyQueue` honoring the
 `max_concurrency` bucket rules from `GET /gateway/bot`, and startup fails with
 `SessionStartLimitExceeded` when the selected shards would exhaust the
-remaining session allowance. Coordinating shards **across** processes still
-requires an external `IdentifyQueue` implementation.
+remaining session allowance. Multi-process deployments can use the bundled
+TCP coordinator with `RemoteIdentifyQueue` and `RemoteRateLimiter`; see
+[`docs/guide/08-scaling-processes.md`](docs/guide/08-scaling-processes.md).
 
 #### Gateway compression
 

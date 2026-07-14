@@ -42,6 +42,7 @@ are useful when checking API drift.
 | `gaato/discord/gateway` | Native low-level Shard transport and connection state. |
 | `gaato/discord/ratelimit` | Rate-limiter interface and in-memory implementation. |
 | `gaato/discord/queue` | Identify queue interface and in-memory implementation. |
+| `gaato/discord/coordinator` | Native JSON-lines coordinator and remote queue/limiter implementations. |
 | `gaato/discord/util` | Pure permission calculations, mention/timestamp formatting, and CDN URLs. |
 | `gaato/discord/verify` | JavaScript WebCrypto Ed25519 verification. |
 

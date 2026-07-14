@@ -20,6 +20,8 @@ executor for native and JavaScript adapters.
   serverless adapters.
 - [Structuring bots](guide/07-structuring-bots.md): feature installers,
   configuration, and state ownership.
+- [Scaling across processes](guide/08-scaling-processes.md): run the bundled
+  coordinator and share Identify and REST rate limits between workers.
 - [Cookbook](cookbook/dm-user.md): focused examples for common tasks.
 - [API reference](reference.md): package map and `moon doc` commands.
 
@@ -36,6 +38,7 @@ and method documentation is generated from the source with `moon doc`.
 | `http`, `ratelimit`, `queue` | Yes | Yes | Async REST and supporting services. |
 | `util` | Yes | Yes | Pure permission and formatting helpers. |
 | `gateway`, `bot` | Yes | No | Native WebSocket Gateway transport and executor. |
+| `coordinator` | Yes | No | Native TCP coordination for multi-process bots. |
 | `verify` | No | Yes | WebCrypto Ed25519 verification. |
 
 WebAssembly is not a supported application target for the current async

@@ -1,0 +1,49 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "gaato/discord/coordinator"
+
+import {
+  "gaato/discord/queue",
+  "gaato/discord/ratelimit",
+  "moonbitlang/async",
+  "moonbitlang/core/debug",
+}
+
+// Values
+
+// Errors
+pub(all) suberror CoordinatorError {
+  InvalidConfig(message~ : String)
+  Transport(message~ : String)
+  Disconnected
+  InvalidResponse(message~ : String)
+  Remote(message~ : String)
+} derive(@debug.Debug)
+
+// Types and methods
+pub struct Coordinator {
+  // private fields
+}
+pub fn Coordinator::addr(Self) -> String
+pub fn Coordinator::close(Self) -> Unit
+pub fn[X] Coordinator::serve(@async.TaskGroup[X], addr~ : String, max_concurrency? : Int, identify_spacing_ms? : Int, global_limit? : Int) -> Self raise
+
+pub struct RemoteIdentifyQueue {
+  // private fields
+}
+pub fn RemoteIdentifyQueue::close(Self) -> Unit
+pub async fn RemoteIdentifyQueue::connect(String) -> Self
+pub async fn RemoteIdentifyQueue::ping(Self) -> Unit
+pub impl @queue.IdentifyQueue for RemoteIdentifyQueue
+
+pub struct RemoteRateLimiter {
+  // private fields
+}
+pub fn RemoteRateLimiter::close(Self) -> Unit
+pub async fn RemoteRateLimiter::connect(String) -> Self
+pub async fn RemoteRateLimiter::ping(Self) -> Unit
+pub impl @ratelimit.RateLimiter for RemoteRateLimiter
+
+// Type aliases
+
+// Traits
+

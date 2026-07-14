@@ -1,0 +1,27 @@
+import {
+  "gaato/discord/queue",
+  "gaato/discord/ratelimit",
+  "moonbitlang/async",
+  "moonbitlang/async/socket",
+  "moonbitlang/core/json",
+}
+
+import {
+  "gaato/discord/queue",
+  "gaato/discord/ratelimit",
+  "moonbitlang/async",
+} for "wbtest"
+
+// This package is intentionally empty on non-native targets.
+
+warnings = "-29"
+
+options(
+  targets: {
+    "coordinator_wbtest.mbt": [ "native" ],
+    "pkg.generated.mbti": [ "native" ],
+    "protocol.mbt": [ "native" ],
+    "remote.mbt": [ "native" ],
+    "server.mbt": [ "native" ],
+  },
+)

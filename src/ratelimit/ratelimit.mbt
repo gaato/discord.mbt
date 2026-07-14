@@ -19,7 +19,7 @@ pub(open) trait RateLimiter {
   /// Report the outcome of the request admitted by the matching `acquire`.
   /// `headers` must have lowercase header names; pass an empty map when the
   /// request failed before a response arrived (`status=0`).
-  fn release(
+  async fn release(
     Self,
     bucket_key : String,
     status~ : Int,

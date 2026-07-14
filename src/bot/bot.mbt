@@ -59,6 +59,7 @@ pub struct Bot {
   priv gateway_url_ : String?
   priv shards_ : ShardConfig
   priv compress_ : Bool
+  priv identify_queue_ : &@queue.IdentifyQueue?
   priv typed_events_ : Array[TypedEventHandler]
   priv raw_events_ : Array[async (GatewayCtx, @model.Event) -> Unit]
   priv mut cache_ : @cache.InMemoryCache?
@@ -84,6 +85,7 @@ pub fn Bot::new(
   gateway_url? : String,
   shards? : ShardConfig = Single(id=0, count=1),
   compress? : Bool = false,
+  identify_queue? : &@queue.IdentifyQueue,
 ) -> Bot {
   {
     app_: app,
@@ -93,6 +95,7 @@ pub fn Bot::new(
     gateway_url_: gateway_url,
     shards_: shards,
     compress_: compress,
+    identify_queue_: identify_queue,
     typed_events_: [],
     raw_events_: [],
     cache_: None,
@@ -454,10 +457,14 @@ pub async fn Bot::run(self : Bot) -> Unit {
   let resolved = self.resolve_shards(client)
   @async.with_task_group(group => {
     let filter = self.event_filter()
-    let identify_queue : &@queue.IdentifyQueue = @queue.InMemoryQueue::new(
-      max_concurrency=resolved.max_concurrency,
-      spacing_ms=self.identify_spacing_ms_.val,
-    )
+    let identify_queue : &@queue.IdentifyQueue = match self.identify_queue_ {
+      Some(queue) => queue
+      None =>
+        @queue.InMemoryQueue::new(
+          max_concurrency=resolved.max_concurrency,
+          spacing_ms=self.identify_spacing_ms_.val,
+        )
+    }
     let managed_shards : Array[ManagedShard] = []
     let shard_handles : Array[@gateway.Shard] = []
     for shard_id in resolved.ids {
