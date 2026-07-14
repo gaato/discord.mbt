@@ -86,7 +86,7 @@ fn default_error_policy(warn : (String) -> Unit) -> ErrorPolicy {
         ctx.respond_error("Invalid argument: \{message}")
       _ =>
         warn(
-          "unhandled bot failure (\{to_repr(ctx.origin())}): \{to_repr(error)}",
+          "unhandled app failure (\{to_repr(ctx.origin())}): \{to_repr(error)}",
         )
     }
   }

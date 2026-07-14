@@ -66,7 +66,7 @@ fn[A] suggest_routes(
 
 ///|
 /// Decode slash arguments and translate reader errors into a stable handler
-/// error understood by the bot error policy.
+/// error understood by the App error policy.
 fn[A] decode_command_args(
   args : @interaction.Args[A],
   options : @interaction.CommandOptions,
@@ -464,7 +464,7 @@ async fn dispatch_suggest(
 }
 
 ///|
-/// A type-erased command consumed by the bot runtime.
+/// A type-erased command consumed by an App executor.
 pub struct RegisteredCommand {
   priv name_ : String
   priv definition : @interaction.CommandSpec

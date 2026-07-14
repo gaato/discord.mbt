@@ -203,7 +203,7 @@ async fn spawn_limited(
   limiter : @async.Semaphore,
   body : async () -> Unit,
 ) -> Unit {
-  // Acquire in the pull loop: at capacity, gateway delivery applies bounded
+  // Acquire before spawning: at capacity, the executor applies bounded
   // backpressure instead of allocating an unbounded list of pending tasks.
   limiter.acquire()
   group.spawn_bg(allow_failure=true, () => {

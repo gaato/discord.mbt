@@ -1,15 +1,15 @@
 ///|
 /// Transport-neutral services available to interaction handlers.
 ///
-/// Values are constructed by the bot runtime; the public API intentionally
-/// exposes read-only accessors only.
+/// Executors construct these values; the public API exposes read-only
+/// accessors.
 pub struct AppCtx {
   priv client_ : @dhttp.Client
   priv application_id_ : @model.ApplicationId
 }
 
 ///|
-/// The Discord REST client used by this bot.
+/// The Discord REST client used by this application.
 pub fn AppCtx::http(self : AppCtx) -> @dhttp.Client {
   self.client_
 }

@@ -1,6 +1,6 @@
 ///|
-/// High-level /echo bot using typed Args, Command, event descriptors, command
-/// synchronization, and the managed gateway run loop.
+/// Interaction-first /echo example. App owns the command and synchronization
+/// policy; Bot adds the gateway event and managed run loop.
 ///
 /// Run: DISCORD_TOKEN=... GUILD_ID=... moon run --release src/examples/slash_echo
 /// With GUILD_ID the command syncs to that guild (instant); without it the
@@ -70,6 +70,7 @@ async fn main {
   }
   let app = @discord.App::new(sync=command_sync())
   app.command(echo_command())
+
   let bot = @discord.Bot::new(app, token~)
   bot.on(@discord.Events::ready(), (_ctx, ready) => {
     println("[bot] ready as \{ready.user.username}")

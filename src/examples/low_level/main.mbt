@@ -1,7 +1,7 @@
 ///|
-/// Low-level reference wiring that deliberately does not use the bot layer:
-/// it connects a gateway Shard, constructs Framework after READY, synchronizes
-/// commands, and routes InteractionCreate by hand.
+/// Low-level reference wiring without App or Bot: it connects a gateway Shard,
+/// constructs Framework after READY, synchronizes commands, and routes
+/// InteractionCreate by hand.
 ///
 /// Run: DISCORD_TOKEN=... GUILD_ID=... moon run --release src/examples/low_level
 /// With GUILD_ID the command syncs to that guild (instant); without it the

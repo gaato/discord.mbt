@@ -1,16 +1,16 @@
 # discord.mbt
 
-A Discord bot library for [MoonBit](https://www.moonbit-lang.com/) (native
-backend): typed API models, a rate-limited REST client, a WebSocket gateway
-shard, and a high-level typed bot layer.
+A Discord application library for [MoonBit](https://www.moonbit-lang.com/)
+(native backend): typed interaction declarations, API models, a rate-limited
+REST client, and a WebSocket gateway shard.
 
 The design follows [twilight](https://github.com/twilight-rs/twilight):
-loosely coupled packages that are accurate to the Discord API first, with an
-ergonomic layer added on top rather than baked in.
+loosely coupled packages that model the Discord API, plus an App layer for
+typed interaction declarations.
 
-> **Status**: pre-1.0. The high-level bot layer is available, but the API
-> surface may still change. Gateway compression and sharding coordination
-> across processes are not implemented yet.
+> **Status**: pre-1.0. The App and executor APIs may still change. Gateway
+> compression and sharding coordination across processes are not implemented
+> yet.
 
 ## Install
 
@@ -23,8 +23,9 @@ The library targets the **native** backend and is built on
 
 ## Quickstart
 
-A bot that registers a `/echo` slash command and answers it
-(see `src/examples/slash_echo` for the full version):
+Build the interaction `App`, then pass it to the gateway `Bot` executor. This
+example registers and answers a `/echo` command. See
+`src/examples/slash_echo` for the runnable version.
 
 ```mbt check
 ///|
@@ -74,7 +75,7 @@ test "quickstart is wired" {
 
 | Package | What it is |
 |---|---|
-| `gaato/discord` | Facade: aliases for the types a typical bot names directly |
+| `gaato/discord` | Facade: aliases for the types a typical application names directly |
 | `gaato/discord/model` | Pure data: ~24 entity domains, gateway payloads, zero IO |
 | `gaato/discord/http` | REST `Client`, routes, rate limiting, multipart uploads |
 | `gaato/discord/gateway` | `Shard`: connection state machine, heartbeat, resume |
@@ -85,26 +86,44 @@ test "quickstart is wired" {
 | `gaato/discord/ratelimit` | Rate limiter trait + in-memory implementation |
 | `gaato/discord/queue` | Identify queue trait + in-memory implementation |
 
-Everything below `framework` is usable on its own — a REST-only tool needs
-nothing but `http` and `model`.
+Packages remain usable on their own. A REST-only tool needs `http` and `model`.
 
-## High-level bot layer
+## App core and executors
 
-`Command[A]` pairs one handler with `Args[A]`. The argument value is the single
-source of truth for both Discord's option registration payload and interaction
-decoding. Build records with `Args::map1` through `Args::map8`; for nine or
-more fields, compose smaller values with `zip` and `map`. `Args::custom`
-remains available when a command needs a specialized decoder.
+`App` owns the interaction declaration: commands, components, modals,
+autocomplete routes, command synchronization, and the error policy. It has no
+gateway dependency. After building an App, choose an executor:
 
-Choose a handler mode according to Discord's three-second initial-response
+- `Bot::new(app, token~)` connects to the gateway and routes
+  `InteractionCreate` events through the App.
+- `app.serve(group, token~)` creates an `InteractionEndpoint` for an HTTP
+  adapter.
+
+Both executors use the same handlers. You can move an application between a
+persistent gateway process and an HTTP or serverless deployment without
+rewriting its interaction declarations.
+
+`Command[A]` pairs one handler with `Args[A]`. The argument value drives both
+Discord's registration payload and interaction decoding. Build records with
+`Args::map1` through `Args::map8`; for nine or more fields, compose smaller
+values with `zip` and `map`. Use `Args::custom` for a specialized decoder.
+
+Choose a handler mode based on Discord's three-second initial-response
 deadline:
 
 - `Immediate` computes and returns a `CommandReply` before the deadline.
-- `Deferred` acknowledges first, then receives a `DeferredCtx` exposing only
+- `Deferred` acknowledges first, then receives a `DeferredCtx` with
   `edit_original`, `followup`, and component waiting.
-- `Raw` receives the underlying `CommandCtx` for imperative or unusual flows.
+- `Raw` receives the underlying `CommandCtx` for imperative flows.
 
-Typed gateway subscriptions use descriptors:
+Interaction contexts expose the executor-neutral `AppCtx` through `app()`.
+`AppCtx::http()` returns the REST client, and `AppCtx::application_id()` returns
+the application id.
+
+### Gateway executor
+
+`Bot` adds gateway event and service registration. Typed subscriptions use
+event descriptors:
 
 ```mbt nocheck
 bot.on(@discord.Events::message_create(), (ctx, message) => {
@@ -113,37 +132,35 @@ bot.on(@discord.Events::message_create(), (ctx, message) => {
 })
 ```
 
-Gateway event and service handlers receive `GatewayCtx`. Its `app()` method
-returns the transport-neutral `AppCtx`; READY, shard, shutdown, and component
-waiting remain gateway-only, with no reverse reference from `AppCtx`.
+Gateway handlers receive `GatewayCtx`. Its `app()` method returns the same
+executor-neutral `AppCtx`; READY data, shard access, shutdown, and component
+waiting stay on `GatewayCtx`.
 
-When `intents` is omitted, `Bot` derives non-privileged intents from these
-descriptors. Privileged intents are never enabled automatically; pass them
-explicitly when subscribing to member or presence events, or when message
-content visibility is required.
+If you omit `intents`, `Bot` derives non-privileged intents from typed event
+subscriptions. Pass privileged intents for member or presence events and for
+message content visibility. Raw event handlers cannot imply an intent set, so
+applications using them must pass `intents`.
 
-`CommandSync` defaults to `Global`. On the first READY, the bot fetches current
-commands and skips the bulk PUT when declarations already match. Guild and
-multi-guild targets are also available. **Synchronization uses Discord's bulk
-overwrite endpoints: commands registered outside this code are deleted from
-the selected scope when a PUT is needed.** Use `Disabled` when another process
-owns registration.
+### Synchronization and failures
 
-Install an `error_policy` to map failures to logs or interaction responses.
-Handlers can raise `HandlerError::UserMessage`, `GuildOnly`,
-`MissingPermission`, or `InvalidArgument` for expected failures; unexpected
-errors reach the same policy with their command, autocomplete, component,
-modal, event, or service origin.
+`CommandSync` belongs to `App` and defaults to `Global`. The gateway executor
+synchronizes after its first READY. `App::serve` synchronizes during startup
+when you pass `sync=true`; its default is `false`. Guild and multi-guild targets
+are available.
 
-Escape hatches are layered rather than hidden:
+**Synchronization uses Discord's bulk overwrite endpoints. A required PUT
+deletes commands registered outside this App from the selected scope.** Use
+`Disabled` when another process owns registration.
 
-1. `AppCtx::http()` returns the typed REST `Client`; gateway handlers obtain it
-   through `GatewayCtx::app()`.
-2. `client.request(...)` exposes route-level raw JSON for unsupported payloads.
-3. Fully manual gateway/framework wiring remains documented in
-   `src/examples/low_level`.
+Install `app.error_policy(...)` to map failures to logs or interaction
+responses. Handlers can raise `HandlerError::UserMessage`, `GuildOnly`,
+`MissingPermission`, or `InvalidArgument` for expected failures. The gateway
+executor routes event and service failures through the same policy.
 
-## v3 high-level APIs
+For lower-level work, `client.request(...)` exposes route-level JSON, and
+`src/examples/low_level` shows manual gateway and framework wiring.
+
+## Typed interaction APIs
 
 Subcommands carry their own typed `Args`, and autocomplete is attached directly
 to the focused argument. User and message context-menu commands can coexist
@@ -172,7 +189,7 @@ fn readme_feedback_modal() -> @discord.Modal[ReadmeFeedback] {
 }
 
 ///|
-fn readme_v3_bot(token : String) -> @discord.Bot {
+fn readme_v3_app() -> @discord.App {
   let feedback = readme_feedback_modal()
   let app = @discord.App::new(sync=Disabled)
   app
@@ -235,24 +252,24 @@ fn readme_v3_bot(token : String) -> @discord.Bot {
       )
     }),
   )
-  @discord.Bot::new(app, token~)
+  app
 }
 
 ///|
 test "v3 high-level declarations are wired without network access" {
-  readme_v3_bot("test-token") |> ignore
+  readme_v3_app() |> ignore
 }
 ```
 
-The complete runnable version is `src/examples/kitchen_sink`; it also shows a
-second subcommand, `DeferredUpdate`, guild-scoped synchronization, and the
-gateway lifecycle.
+The App above can run behind either executor. The complete gateway version in
+`src/examples/kitchen_sink` adds `Bot`, a READY subscription, a second
+subcommand, and `DeferredUpdate`.
 
 ## HTTP interactions (experimental)
 
-`InteractionEndpoint` dispatches the same declarations without opening a gateway.
-The caller owns the task group; handlers that defer or exceed the initial
-response deadline continue on that group after `handle` returns.
+`App::serve(group, token~)` starts the HTTP interaction executor and returns an
+`InteractionEndpoint`. It uses the App's commands, components, modals,
+autocomplete routes, and error policy without opening a gateway.
 
 ```mbt check
 ///|
@@ -262,8 +279,8 @@ async fn dispatch_http_interaction(
   token : String,
   body : Json,
 ) -> Json? {
-  let endpoint = app.serve(group, token~, sync=false)
-  endpoint.handle(body, deadline_ms=2500)
+  let endpoint = app.serve(group, token~)
+  endpoint.handle(body)
 }
 
 ///|
@@ -272,17 +289,22 @@ test "HTTP adapter entry point is typed" {
 }
 ```
 
-`handle` is the thin JSON form: it returns callback JSON only for `Reply`.
-Adapters that need multipart files or explicit status decisions should decode
-the body as `@model.Interaction` and call `handle_interaction`.
+The caller owns the task group. A handler that defers or exceeds the initial
+response deadline stays on that group after `handle` returns. `handle` accepts
+decoded JSON and returns callback JSON for `Reply`. Adapters that need
+multipart files or explicit outcomes should decode an `@model.Interaction` and
+call `handle_interaction`.
 
-The HTTP server/Workers adapter is responsible for accepting Discord's Ping
-handshake request, reading the raw request body, and validating
-`X-Signature-Ed25519` plus `X-Signature-Timestamp` **before** dispatch. Ed25519
-verification is mandatory. Workers can use WebCrypto
-`crypto.subtle.verify`; a native adapter will need a suitable implementation
-such as libsodium when one is integrated. A verified Ping passed to the app
-produces the Pong callback.
+The executor split treats serverless deployments such as Cloudflare Workers as
+a first-class target. The current library does not include an HTTP server,
+Workers adapter, or signature verification helper. Those adapters must read
+the raw request body and verify `X-Signature-Ed25519` with
+`X-Signature-Timestamp` before parsing or dispatching the interaction. Discord
+requires Ed25519 verification. Later phases will add a WebCrypto verification
+helper and Workers example.
+
+After verification, pass the decoded body to `endpoint.handle(body)`. A Discord
+Ping produces the Pong callback.
 
 A typical status mapping is:
 
@@ -293,15 +315,14 @@ A typical status mapping is:
 | `NoResponse` | `202` if intentional, otherwise `500` |
 | `TimedOut` | `202` if background continuation is supported, otherwise `500` |
 
-The last two are operational choices: returning `202` does not create a
-Discord initial response, so handlers should normally defer before doing slow
-work.
+The adapter chooses how to map `NoResponse` and `TimedOut`. Returning `202`
+does not create a Discord initial response, so slow handlers should defer first.
 
 ## Typed models
 
 Every entity decodes from real API payloads. Unknown enum values and unknown
-JSON keys never fail — they round-trip through `Unknown(...)` variants so a
-new Discord feature cannot break your bot:
+JSON keys round-trip through `Unknown(...)` variants, so a new Discord feature
+does not break your application:
 
 ```mbt check
 ///|
@@ -374,9 +395,8 @@ test "command registration payload" {
 }
 ```
 
-Submitted options decode through typed accessors — required accessors raise,
-`_opt` accessors return `None` when absent, and subcommand paths flatten
-automatically:
+Submitted options decode through typed accessors. Required accessors raise,
+`_opt` accessors return `None` when absent, and subcommand paths flatten:
 
 ```mbt check
 ///|
@@ -422,8 +442,8 @@ async fn handle_echo(ctx : @discord.CommandCtx) -> Unit {
 
 ## Components and waiters
 
-Handlers can register for `custom_id` prefixes, or wait inline for the next
-click — waiters take precedence, which keeps multi-step flows in one place:
+Handlers can register for `custom_id` prefixes or wait inline for the next
+click. Waiters take precedence, which keeps multi-step flows in one place:
 
 ```mbt nocheck
 ///|
@@ -441,8 +461,8 @@ async fn handle_confirm(
 
 ## File uploads
 
-Attachments go through `multipart/form-data` transparently — pass `files` to
-any message-shaped call:
+The client sends attachments as `multipart/form-data`. Pass `files` to any
+message-shaped call:
 
 ```mbt nocheck
 let report = @fs.read_file("report.png").binary()
@@ -465,7 +485,8 @@ client.create_message(channel_id, content="with reply", reply_to=message.id) |> 
 
 Errors are one suberror: `Api` (Discord error object), `RateLimited`,
 `Deserialize`, `Transport`, and `Validation` (cheap checks made before any
-IO). Cancellation is never wrapped, so structured concurrency stays intact.
+IO). Cancellation propagates unchanged, so structured concurrency stays
+intact.
 
 ## Development
 

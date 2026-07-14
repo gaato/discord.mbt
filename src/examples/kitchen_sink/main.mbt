@@ -1,6 +1,7 @@
 ///|
-/// v3 kitchen-sink bot: slash subcommands, autocomplete, context menus,
-/// components, and typed modals in one runnable example.
+/// Interaction-first kitchen sink: App declares slash subcommands,
+/// autocomplete, context menus, components, and typed modals. Bot supplies the
+/// gateway lifecycle and READY subscription.
 ///
 /// Run:
 ///   DISCORD_TOKEN=... GUILD_ID=... moon run --release src/examples/kitchen_sink
@@ -192,6 +193,7 @@ async fn main {
       )
     }),
   )
+
   let bot = @discord.Bot::new(app, token~)
   bot.on(@discord.Events::ready(), (_ctx, ready) => {
     println("[bot] ready as \{ready.user.username}")
