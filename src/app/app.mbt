@@ -51,6 +51,7 @@ pub struct App {
   priv components_ : Array[RegisteredComponent]
   priv modals_ : Array[RegisteredModal]
   priv autocompletes_ : Array[AutocompleteHandler]
+  priv middleware_ : Array[InteractionMiddleware]
   priv mut policy_ : ErrorPolicy?
   priv mut warn_ : (String) -> Unit
   priv mut now_ : () -> Int64
@@ -65,10 +66,19 @@ pub fn App::new(sync? : CommandSync = Global, max_in_flight? : Int = 64) -> App 
     components_: [],
     modals_: [],
     autocompletes_: [],
+    middleware_: [],
     policy_: None,
     warn_: message => println(message),
     now_: @async.now,
   }
+}
+
+///|
+/// Install middleware around every command, component, and modal handler
+/// (not autocomplete). First installed is outermost. Runs inside the error
+/// policy: raising HandlerError behaves exactly like a failing check.
+pub fn App::middleware(self : App, middleware : InteractionMiddleware) -> Unit {
+  self.middleware_.push(middleware)
 }
 
 ///|
@@ -257,26 +267,15 @@ async fn App::run_registered_command(
   command : RegisteredCommand,
   raw : @framework.CommandCtx,
 ) -> Unit {
-  let guards_passed = try {
-    command.run_checks_and_cooldown(raw, (self.now_)())
-    true
-  } catch {
-    error => {
-      invoke_error_policy(
-        self.current_policy(),
-        failure_context(
-          Command(name=command.name_),
-          Some(BeforeInitial),
-          Some(RawCommand(raw)),
-          self.warn_,
-        ),
-        error,
-      )
-      false
-    }
+  let failure_raw = RawCommand(raw)
+  let ctx : InteractionCtx = {
+    target_: Command(name=command.name_),
+    raw_: failure_raw,
   }
-  guard guards_passed else { return }
-  (command.dispatch)(bot, waiter, self.warn_, raw) catch {
+  self.run_middleware(ctx, 0, () => {
+    command.run_checks_and_cooldown(raw, (self.now_)())
+    (command.dispatch)(bot, waiter, self.warn_, raw)
+  }) catch {
     error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
       raise error
     AppDispatchError::Failure(command=name, phase~, source~) =>
@@ -285,7 +284,7 @@ async fn App::run_registered_command(
         failure_context(
           Command(name~),
           Some(phase),
-          Some(RawCommand(raw)),
+          Some(failure_raw),
           self.warn_,
         ),
         source,
@@ -296,7 +295,7 @@ async fn App::run_registered_command(
         failure_context(
           Command(name=command.name_),
           Some(BeforeInitial),
-          Some(RawCommand(raw)),
+          Some(failure_raw),
           self.warn_,
         ),
         error,
@@ -312,14 +311,21 @@ async fn App::run_registered_component(
   entry : RegisteredComponent,
   raw : @framework.ComponentCtx,
 ) -> Unit {
-  dispatch_component_handler(
-    entry.prefix,
-    entry.handler,
-    bot,
-    waiter,
-    self.warn_,
-    raw,
-  ) catch {
+  let failure_raw = RawComponent(raw)
+  let ctx : InteractionCtx = {
+    target_: Component(custom_id=raw.data.custom_id),
+    raw_: failure_raw,
+  }
+  self.run_middleware(ctx, 0, () => {
+    dispatch_component_handler(
+      entry.prefix,
+      entry.handler,
+      bot,
+      waiter,
+      self.warn_,
+      raw,
+    )
+  }) catch {
     error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
       raise error
     AppDispatchError::Failure(command=_, phase~, source~) =>
@@ -328,7 +334,7 @@ async fn App::run_registered_component(
         failure_context(
           Component(custom_id=raw.data.custom_id),
           Some(phase),
-          Some(RawComponent(raw)),
+          Some(failure_raw),
           self.warn_,
         ),
         source,
@@ -339,7 +345,7 @@ async fn App::run_registered_component(
         failure_context(
           Component(custom_id=raw.data.custom_id),
           Some(BeforeInitial),
-          Some(RawComponent(raw)),
+          Some(failure_raw),
           self.warn_,
         ),
         error,
@@ -354,7 +360,12 @@ async fn App::run_registered_modal(
   entry : RegisteredModal,
   raw : @framework.ModalCtx,
 ) -> Unit {
-  (entry.dispatch)(bot, raw) catch {
+  let failure_raw = RawModal(raw)
+  let ctx : InteractionCtx = {
+    target_: Modal(custom_id=raw.data.custom_id),
+    raw_: failure_raw,
+  }
+  self.run_middleware(ctx, 0, () => (entry.dispatch)(bot, raw)) catch {
     error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
       raise error
     AppDispatchError::Failure(command=_, phase~, source~) =>
@@ -363,7 +374,7 @@ async fn App::run_registered_modal(
         failure_context(
           Modal(custom_id=raw.data.custom_id),
           Some(phase),
-          Some(RawModal(raw)),
+          Some(failure_raw),
           self.warn_,
         ),
         source,
@@ -374,7 +385,7 @@ async fn App::run_registered_modal(
         failure_context(
           Modal(custom_id=raw.data.custom_id),
           Some(BeforeInitial),
-          Some(RawModal(raw)),
+          Some(failure_raw),
           self.warn_,
         ),
         error,

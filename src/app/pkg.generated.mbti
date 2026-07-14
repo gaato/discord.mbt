@@ -71,6 +71,7 @@ pub fn App::attach(Self, @framework.Framework, client~ : @http.Client, applicati
 pub fn App::autocomplete(Self, String, async (@framework.AutocompleteCtx) -> Unit) -> Unit
 pub fn[A] App::command(Self, Command[A]) -> Unit
 pub fn App::error_policy(Self, async (FailureCtx, Error) -> Unit) -> Unit
+pub fn App::middleware(Self, async (InteractionCtx, async () -> Unit) -> Unit) -> Unit
 pub fn App::new(sync? : CommandSync, max_in_flight? : Int) -> Self
 pub fn App::on_component(Self, prefix~ : String, ComponentHandler) -> Unit
 pub fn[A] App::on_modal(Self, Modal[A], ModalSubmitHandler[A]) -> Unit
@@ -221,6 +222,16 @@ pub struct InitialResponse {
 }
 pub fn InitialResponse::message(content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, ephemeral? : Bool) -> Self
 
+pub struct InteractionCtx {
+  // private fields
+}
+pub fn InteractionCtx::guild_id(Self) -> @model.Id[@model.GuildMarker]?
+pub fn InteractionCtx::interaction(Self) -> @model.Interaction
+pub async fn InteractionCtx::respond(Self, String, ephemeral? : Bool) -> Unit
+pub fn InteractionCtx::scope(Self) -> @framework.InvocationScope
+pub fn InteractionCtx::target(Self) -> InteractionTarget
+pub fn InteractionCtx::user(Self) -> @model.User
+
 pub struct InteractionEndpoint {
   // private fields
 }
@@ -238,6 +249,12 @@ pub(all) enum InteractionOutcome {
   NoRoute
   NoResponse
   TimedOut
+} derive(@debug.Debug)
+
+pub(all) enum InteractionTarget {
+  Command(name~ : String)
+  Component(custom_id~ : String)
+  Modal(custom_id~ : String)
 } derive(@debug.Debug)
 
 pub struct Modal[A] {
@@ -327,6 +344,8 @@ pub type CommandCheck = (CheckCtx) -> Bool raise HandlerError
 pub type ComponentWaiter = async (String, Int?) -> @framework.ComponentCtx?
 
 pub type ErrorPolicy = async (FailureCtx, Error) -> Unit
+
+pub type InteractionMiddleware = async (InteractionCtx, async () -> Unit) -> Unit
 
 pub type Spawner = async (async () -> Unit) -> Unit
 
