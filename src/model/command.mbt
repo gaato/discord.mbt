@@ -16,6 +16,8 @@ pub(all) struct ApplicationCommand {
   integration_types : Array[ApplicationIntegrationType]?
   contexts : Nullable[Array[InteractionContextType]]?
   version : CommandVersionId
+  // TODO(entry-point): Add handler (entry point command handler type).
+  // TODO(localized): Add name_localized/description_localized from with_localizations responses.
 } derive (
   ToJson(fields(typ(rename="type"))),
   FromJson(fields(typ(rename="type"))),

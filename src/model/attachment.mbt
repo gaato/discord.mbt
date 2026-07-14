@@ -15,6 +15,8 @@ pub(all) struct Attachment {
   duration_secs : Double?
   waveform : String?
   flags : AttachmentFlags?
+  // TODO(placeholder): Add the thumbhash placeholder and placeholder_version fields.
+  // TODO(clips): Add clip_participants, clip_created_at, and application for stream Clips.
 } derive(ToJson, FromJson, Debug)
 
 ///|

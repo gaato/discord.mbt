@@ -14,6 +14,9 @@ pub(all) struct Embed {
   provider : EmbedProvider?
   author : EmbedAuthor?
   fields : Array[EmbedField]?
+  // TODO(embed-flags): Add flags (embed flag bitfield) when that surface is needed.
+  // TODO(embed-components): components (an array of CV2 Containers) appears in
+  // the OpenAPI spec but is undocumented; add once the docs list it.
 } derive (
   ToJson(fields(typ(rename="type"))),
   FromJson(fields(typ(rename="type"))),

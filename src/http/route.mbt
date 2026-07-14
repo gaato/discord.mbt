@@ -49,6 +49,8 @@ pub(all) enum Route {
     query~ : String
   )
   TriggerTypingIndicator(channel_id~ : @model.ChannelId)
+  // TODO(pins-v2): Discord added /channels/{id}/messages/pins; these legacy
+  // /channels/{id}/pins routes still work but should migrate eventually.
   PinMessage(channel_id~ : @model.ChannelId, message_id~ : @model.MessageId)
   UnpinMessage(channel_id~ : @model.ChannelId, message_id~ : @model.MessageId)
   GetPinnedMessages(channel_id~ : @model.ChannelId)
