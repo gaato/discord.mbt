@@ -17,6 +17,7 @@ pub using @interaction {
   type Arg,
   type Args,
   type ArgsDecodeError,
+  type SuggestCtx,
   type CommandSpec,
   type CommandOptions,
   trait CommandModel,

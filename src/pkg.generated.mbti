@@ -19,15 +19,15 @@ pub fn arg_bool(name~ : String, description~ : String) -> @interaction.Arg[Bool]
 
 pub fn arg_channel(name~ : String, description~ : String, channel_types? : Array[@model.ChannelType]) -> @interaction.Arg[@model.Id[@model.ChannelMarker]]
 
-pub fn arg_int(name~ : String, description~ : String, min? : Int64, max? : Int64, choices? : Array[@model.CommandOptionChoice]) -> @interaction.Arg[Int64]
+pub fn arg_int(name~ : String, description~ : String, min? : Int64, max? : Int64, choices? : Array[@model.CommandOptionChoice], suggest? : async (@interaction.SuggestCtx, Int64) -> Array[@model.CommandOptionChoice]) -> @interaction.Arg[Int64]
 
 pub fn arg_mentionable(name~ : String, description~ : String) -> @interaction.Arg[@model.Id[@model.GenericMarker]]
 
-pub fn arg_number(name~ : String, description~ : String, min? : Double, max? : Double, choices? : Array[@model.CommandOptionChoice]) -> @interaction.Arg[Double]
+pub fn arg_number(name~ : String, description~ : String, min? : Double, max? : Double, choices? : Array[@model.CommandOptionChoice], suggest? : async (@interaction.SuggestCtx, Double) -> Array[@model.CommandOptionChoice]) -> @interaction.Arg[Double]
 
 pub fn arg_role(name~ : String, description~ : String) -> @interaction.Arg[@model.Id[@model.RoleMarker]]
 
-pub fn arg_string(name~ : String, description~ : String, choices? : Array[@model.CommandOptionChoice], min_length? : Int, max_length? : Int) -> @interaction.Arg[String]
+pub fn arg_string(name~ : String, description~ : String, choices? : Array[@model.CommandOptionChoice], min_length? : Int, max_length? : Int, suggest? : async (@interaction.SuggestCtx, String) -> Array[@model.CommandOptionChoice]) -> @interaction.Arg[String]
 
 pub fn arg_user(name~ : String, description~ : String) -> @interaction.Arg[@model.Id[@model.UserMarker]]
 
@@ -129,6 +129,8 @@ pub using @gateway {type Shard}
 pub using @gateway {type ShardEvent}
 
 pub using @bot {type SlashChild}
+
+pub using @interaction {type SuggestCtx}
 
 pub using @bot {type TargetUser}
 

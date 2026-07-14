@@ -13,15 +13,15 @@ pub fn arg_bool(name~ : String, description~ : String) -> Arg[Bool]
 
 pub fn arg_channel(name~ : String, description~ : String, channel_types? : Array[@model.ChannelType]) -> Arg[@model.Id[@model.ChannelMarker]]
 
-pub fn arg_int(name~ : String, description~ : String, min? : Int64, max? : Int64, choices? : Array[@model.CommandOptionChoice]) -> Arg[Int64]
+pub fn arg_int(name~ : String, description~ : String, min? : Int64, max? : Int64, choices? : Array[@model.CommandOptionChoice], suggest? : async (SuggestCtx, Int64) -> Array[@model.CommandOptionChoice]) -> Arg[Int64]
 
 pub fn arg_mentionable(name~ : String, description~ : String) -> Arg[@model.Id[@model.GenericMarker]]
 
-pub fn arg_number(name~ : String, description~ : String, min? : Double, max? : Double, choices? : Array[@model.CommandOptionChoice]) -> Arg[Double]
+pub fn arg_number(name~ : String, description~ : String, min? : Double, max? : Double, choices? : Array[@model.CommandOptionChoice], suggest? : async (SuggestCtx, Double) -> Array[@model.CommandOptionChoice]) -> Arg[Double]
 
 pub fn arg_role(name~ : String, description~ : String) -> Arg[@model.Id[@model.RoleMarker]]
 
-pub fn arg_string(name~ : String, description~ : String, choices? : Array[@model.CommandOptionChoice], min_length? : Int, max_length? : Int) -> Arg[String]
+pub fn arg_string(name~ : String, description~ : String, choices? : Array[@model.CommandOptionChoice], min_length? : Int, max_length? : Int, suggest? : async (SuggestCtx, String) -> Array[@model.CommandOptionChoice]) -> Arg[String]
 
 pub fn arg_user(name~ : String, description~ : String) -> Arg[@model.Id[@model.UserMarker]]
 
@@ -92,6 +92,7 @@ pub fn[A, B, C, D, E, F, Z] Args::map6(Arg[A], Arg[B], Arg[C], Arg[D], Arg[E], A
 pub fn[A, B, C, D, E, F, G, Z] Args::map7(Arg[A], Arg[B], Arg[C], Arg[D], Arg[E], Arg[F], Arg[G], (A, B, C, D, E, F, G) -> Z) -> Self[Z]
 pub fn[A, B, C, D, E, F, G, H, Z] Args::map8(Arg[A], Arg[B], Arg[C], Arg[D], Arg[E], Arg[F], Arg[G], Arg[H], (A, B, C, D, E, F, G, H) -> Z) -> Self[Z]
 pub fn[A] Args::of(Arg[A]) -> Self[A]
+pub fn[A] Args::suggestions(Self[A]) -> Array[SuggestHandler]
 pub fn Args::unit() -> Self[Unit]
 pub fn[A, B] Args::zip(Self[A], Self[B]) -> Self[(A, B)]
 
@@ -104,6 +105,7 @@ pub fn CommandOptions::bool_opt(Self, String) -> Bool? raise OptionError
 pub fn CommandOptions::channel(Self, String) -> @model.Id[@model.ChannelMarker] raise OptionError
 pub fn CommandOptions::channel_opt(Self, String) -> @model.Id[@model.ChannelMarker]? raise OptionError
 pub fn CommandOptions::focused(Self) -> String?
+pub fn CommandOptions::focused_input(Self) -> SuggestInput?
 pub fn CommandOptions::from_data(@model.CommandData) -> Self
 pub fn CommandOptions::has(Self, String) -> Bool
 pub fn CommandOptions::int(Self, String) -> Int64 raise OptionError
@@ -138,6 +140,24 @@ pub fn CommandSpec::message(String, default_member_permissions? : @model.Permiss
 pub fn CommandSpec::slash(String, String, options? : Array[@model.CommandOption], default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType]) -> Self
 pub fn CommandSpec::user(String, default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType]) -> Self
 pub impl ToJson for CommandSpec
+
+pub(all) struct SuggestCtx {
+  interaction : @model.Interaction
+  options : CommandOptions
+  guild_id : @model.Id[@model.GuildMarker]?
+  locale : String?
+}
+
+pub struct SuggestHandler {
+  // private fields
+}
+pub fn SuggestHandler::name(Self) -> String
+pub async fn SuggestHandler::suggest(Self, SuggestCtx, SuggestInput) -> Array[@model.CommandOptionChoice]
+
+pub struct SuggestInput {
+  // private fields
+}
+pub fn SuggestInput::name(Self) -> String
 
 // Type aliases
 

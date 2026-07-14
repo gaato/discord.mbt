@@ -32,6 +32,8 @@ pub(all) suberror BotConfigError {
   DuplicateCommand(name~ : String)
   DuplicateCommandPath(command~ : String, path~ : String)
   NestedSubcommandGroup(command~ : String, path~ : String)
+  ChoicesWithAutocomplete(command~ : String, path~ : String)
+  RequiredOptionAfterOptional(command~ : String, path~ : String)
 } derive(@debug.Debug)
 
 pub(all) suberror BotDispatchError {
@@ -195,6 +197,7 @@ pub async fn FailureCtx::respond_error(Self, String, ephemeral? : Bool) -> Unit
 
 pub(all) enum FailureOrigin {
   Command(name~ : String)
+  Autocomplete(name~ : String)
   Event(kind~ : @model.EventKind)
   Service(name~ : String)
 } derive(@debug.Debug)

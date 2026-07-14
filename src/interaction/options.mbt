@@ -66,6 +66,20 @@ pub fn CommandOptions::focused(self : CommandOptions) -> String? {
 }
 
 ///|
+/// The focused option and its raw partial value, when present.
+pub fn CommandOptions::focused_input(self : CommandOptions) -> SuggestInput? {
+  for name, opt in self.leaves {
+    if opt.focused is Some(true) {
+      return Some({
+        name_: name,
+        value_: opt.value.unwrap_or_else(() => Json::null()),
+      })
+    }
+  }
+  None
+}
+
+///|
 fn CommandOptions::raw_value(
   self : CommandOptions,
   name : String,

@@ -22,6 +22,44 @@ fn setup_args() -> @interaction.Args[(String, String?, Int64)] {
 }
 
 ///|
+fn[A] assert_suggest_preserved(args : @interaction.Args[A]) -> Unit raise {
+  let definitions = args.definitions()
+  inspect(definitions.length(), content="1")
+  assert_true(definitions[0].autocomplete is Some(true))
+  let suggestions = args.suggestions()
+  inspect(suggestions.length(), content="1")
+  inspect(suggestions[0].name(), content="query")
+}
+
+///|
+test "typed suggestions set autocomplete and survive Arg combinators" {
+  let base = @interaction.arg_string(name="query", description="Search query", suggest=(
+    _,
+    value,
+  ) => [@interaction.string_choice(value, value)])
+  json_inspect(@interaction.Args::of(base).definitions(), content=[
+    {
+      "type": 3,
+      "name": "query",
+      "description": "Search query",
+      "required": true,
+      "autocomplete": true,
+    },
+  ])
+  assert_suggest_preserved(@interaction.Args::of(base))
+  assert_suggest_preserved(@interaction.Args::of(@interaction.optional(base)))
+  assert_suggest_preserved(
+    @interaction.Args::of(@interaction.default(base, "all")),
+  )
+  assert_suggest_preserved(
+    @interaction.Args::of(@interaction.validate(base, _ => None)),
+  )
+  assert_suggest_preserved(
+    @interaction.Args::of(base.map(value => value.length())),
+  )
+}
+
+///|
 test "typed args definitions are the command registration payload" {
   json_inspect(setup_args().definitions(), content=[
     {

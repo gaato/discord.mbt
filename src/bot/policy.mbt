@@ -2,6 +2,7 @@
 /// The operation whose handler failed.
 pub(all) enum FailureOrigin {
   Command(name~ : String)
+  Autocomplete(name~ : String)
   Event(kind~ : @model.EventKind)
   Service(name~ : String)
 } derive(Debug)

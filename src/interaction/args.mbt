@@ -9,6 +9,7 @@ pub(all) suberror ArgsDecodeError {
 pub struct Arg[A] {
   priv definition : @model.CommandOption
   priv read : (CommandOptions) -> A raise
+  priv suggest : SuggestHandler?
 }
 
 ///|
@@ -16,14 +17,34 @@ pub struct Arg[A] {
 pub struct Args[A] {
   priv definitions_ : Array[@model.CommandOption]
   priv decode_ : (CommandOptions) -> A raise
+  priv suggests_ : Array[SuggestHandler]
 }
 
 ///|
 fn[A] required_arg(
   definition : @model.CommandOption,
   read : (CommandOptions) -> A raise,
+  suggest? : SuggestHandler,
 ) -> Arg[A] {
-  { definition, read }
+  { definition, read, suggest }
+}
+
+///|
+fn[A] typed_suggest(
+  name : String,
+  decode : (SuggestInput) -> A raise,
+  suggest : (async (SuggestCtx, A) -> Array[@model.CommandOptionChoice])?,
+) -> SuggestHandler? {
+  match suggest {
+    Some(run) =>
+      Some({ name_: name, run_: (ctx, input) => run(ctx, decode(input)) })
+    None => None
+  }
+}
+
+///|
+fn collect_suggests(suggests : Array[SuggestHandler?]) -> Array[SuggestHandler] {
+  suggests.filter_map(value => value)
 }
 
 ///|
@@ -44,7 +65,13 @@ pub fn arg_string(
   choices? : Array[@model.CommandOptionChoice],
   min_length? : Int,
   max_length? : Int,
+  suggest? : async (SuggestCtx, String) -> Array[@model.CommandOptionChoice],
 ) -> Arg[String] {
+  let suggest_handler = typed_suggest(
+    name,
+    input => json_string(input.value_, name, "string"),
+    suggest,
+  )
   required_arg(
     string_option(
       name,
@@ -53,8 +80,10 @@ pub fn arg_string(
       choices?,
       min_length?,
       max_length?,
+      autocomplete?=suggest_handler.map(_ => true),
     ),
     options => options.string(name),
+    suggest?=suggest_handler,
   )
 }
 
@@ -66,7 +95,13 @@ pub fn arg_int(
   min? : Int64,
   max? : Int64,
   choices? : Array[@model.CommandOptionChoice],
+  suggest? : async (SuggestCtx, Int64) -> Array[@model.CommandOptionChoice],
 ) -> Arg[Int64] {
+  let suggest_handler = typed_suggest(
+    name,
+    input => json_int64(input.value_, name, "integer"),
+    suggest,
+  )
   required_arg(
     integer_option(
       name,
@@ -75,8 +110,10 @@ pub fn arg_int(
       choices?,
       min_value?=min,
       max_value?=max,
+      autocomplete?=suggest_handler.map(_ => true),
     ),
     options => options.int(name),
+    suggest?=suggest_handler,
   )
 }
 
@@ -88,7 +125,13 @@ pub fn arg_number(
   min? : Double,
   max? : Double,
   choices? : Array[@model.CommandOptionChoice],
+  suggest? : async (SuggestCtx, Double) -> Array[@model.CommandOptionChoice],
 ) -> Arg[Double] {
+  let suggest_handler = typed_suggest(
+    name,
+    input => json_double(input.value_, name, "number"),
+    suggest,
+  )
   required_arg(
     number_option(
       name,
@@ -97,8 +140,10 @@ pub fn arg_number(
       choices?,
       min_value?=min,
       max_value?=max,
+      autocomplete?=suggest_handler.map(_ => true),
     ),
     options => options.number(name),
+    suggest?=suggest_handler,
   )
 }
 
@@ -168,6 +213,7 @@ pub fn[A] optional(arg : Arg[A]) -> Arg[A?] {
   let name = definition.name
   {
     definition,
+    suggest: arg.suggest,
     read: options => {
       if options.has(name) {
         Some(arg.read_value(options))
@@ -186,6 +232,7 @@ pub fn[A] default(arg : Arg[A], value : A) -> Arg[A] {
   let name = definition.name
   {
     definition,
+    suggest: arg.suggest,
     read: options => {
       if options.has(name) {
         arg.read_value(options)
@@ -202,6 +249,7 @@ pub fn[A] validate(arg : Arg[A], check : (A) -> String?) -> Arg[A] {
   let name = arg.definition.name
   {
     definition: arg.definition,
+    suggest: arg.suggest,
     read: options => {
       let value = arg.read_value(options)
       match check(value) {
@@ -215,13 +263,23 @@ pub fn[A] validate(arg : Arg[A], check : (A) -> String?) -> Arg[A] {
 ///|
 /// Transform one decoded argument without changing its registration definition.
 pub fn[A, B] Arg::map(self : Arg[A], f : (A) -> B) -> Arg[B] {
-  { definition: self.definition, read: options => f(self.read_value(options)) }
+  {
+    definition: self.definition,
+    read: options => f(self.read_value(options)),
+    suggest: self.suggest,
+  }
 }
 
 ///|
 /// Return the option definitions in registration order.
 pub fn[A] Args::definitions(self : Args[A]) -> Array[@model.CommandOption] {
   self.definitions_.copy()
+}
+
+///|
+/// Return the type-erased autocomplete handlers carried by these arguments.
+pub fn[A] Args::suggestions(self : Args[A]) -> Array[SuggestHandler] {
+  self.suggests_.copy()
 }
 
 ///|
@@ -233,7 +291,11 @@ pub fn[A] Args::decode(self : Args[A], input : CommandOptions) -> A raise {
 ///|
 /// Lift one argument into a composable argument collection.
 pub fn[A] Args::of(arg : Arg[A]) -> Args[A] {
-  { definitions_: [arg.definition], decode_: arg.read }
+  {
+    definitions_: [arg.definition],
+    decode_: arg.read,
+    suggests_: collect_suggests([arg.suggest]),
+  }
 }
 
 ///|
@@ -242,6 +304,7 @@ pub fn[A, B] Args::map(self : Args[A], f : (A) -> B) -> Args[B] {
   {
     definitions_: self.definitions_,
     decode_: options => f(self.decode_value(options)),
+    suggests_: self.suggests_,
   }
 }
 
@@ -251,6 +314,8 @@ pub fn[A, B] Args::map(self : Args[A], f : (A) -> B) -> Args[B] {
 pub fn[A, B] Args::zip(self : Args[A], other : Args[B]) -> Args[(A, B)] {
   let definitions = self.definitions_.copy()
   definitions.push_iter(other.definitions_.iter())
+  let suggests = self.suggests_.copy()
+  suggests.push_iter(other.suggests_.iter())
   {
     definitions_: definitions,
     decode_: options => {
@@ -258,13 +323,14 @@ pub fn[A, B] Args::zip(self : Args[A], other : Args[B]) -> Args[(A, B)] {
       let right = other.decode_value(options)
       (left, right)
     },
+    suggests_: suggests,
   }
 }
 
 ///|
 /// Define a command with no options.
 pub fn Args::unit() -> Args[Unit] {
-  { definitions_: [], decode_: _ => () }
+  { definitions_: [], decode_: _ => (), suggests_: [] }
 }
 
 ///|
@@ -273,7 +339,7 @@ pub fn[A] Args::custom(
   definitions~ : Array[@model.CommandOption],
   decode~ : (CommandOptions) -> A raise,
 ) -> Args[A] {
-  { definitions_: definitions.copy(), decode_: decode }
+  { definitions_: definitions.copy(), decode_: decode, suggests_: [] }
 }
 
 ///|
@@ -285,6 +351,7 @@ pub fn[A, Z] Args::map1(a : Arg[A], f : (A) -> Z) -> Args[Z] {
 pub fn[A, B, Z] Args::map2(a : Arg[A], b : Arg[B], f : (A, B) -> Z) -> Args[Z] {
   {
     definitions_: [a.definition, b.definition],
+    suggests_: collect_suggests([a.suggest, b.suggest]),
     decode_: options => {
       let av = a.read_value(options)
       let bv = b.read_value(options)
@@ -302,6 +369,7 @@ pub fn[A, B, C, Z] Args::map3(
 ) -> Args[Z] {
   {
     definitions_: [a.definition, b.definition, c.definition],
+    suggests_: collect_suggests([a.suggest, b.suggest, c.suggest]),
     decode_: options => {
       let av = a.read_value(options)
       let bv = b.read_value(options)
@@ -321,6 +389,7 @@ pub fn[A, B, C, D, Z] Args::map4(
 ) -> Args[Z] {
   {
     definitions_: [a.definition, b.definition, c.definition, d.definition],
+    suggests_: collect_suggests([a.suggest, b.suggest, c.suggest, d.suggest]),
     decode_: options => {
       let av = a.read_value(options)
       let bv = b.read_value(options)
@@ -348,6 +417,13 @@ pub fn[A, B, C, D, E, Z] Args::map5(
       d.definition,
       e.definition,
     ],
+    suggests_: collect_suggests([
+      a.suggest,
+      b.suggest,
+      c.suggest,
+      d.suggest,
+      e.suggest,
+    ]),
     decode_: options => {
       let av = a.read_value(options)
       let bv = b.read_value(options)
@@ -378,6 +454,14 @@ pub fn[A, B, C, D, E, F, Z] Args::map6(
       e.definition,
       f.definition,
     ],
+    suggests_: collect_suggests([
+      a.suggest,
+      b.suggest,
+      c.suggest,
+      d.suggest,
+      e.suggest,
+      f.suggest,
+    ]),
     decode_: options => {
       let av = a.read_value(options)
       let bv = b.read_value(options)
@@ -411,6 +495,15 @@ pub fn[A, B, C, D, E, F, G, Z] Args::map7(
       f.definition,
       g.definition,
     ],
+    suggests_: collect_suggests([
+      a.suggest,
+      b.suggest,
+      c.suggest,
+      d.suggest,
+      e.suggest,
+      f.suggest,
+      g.suggest,
+    ]),
     decode_: options => {
       let av = a.read_value(options)
       let bv = b.read_value(options)
@@ -447,6 +540,16 @@ pub fn[A, B, C, D, E, F, G, H, Z] Args::map8(
       g.definition,
       h.definition,
     ],
+    suggests_: collect_suggests([
+      a.suggest,
+      b.suggest,
+      c.suggest,
+      d.suggest,
+      e.suggest,
+      f.suggest,
+      g.suggest,
+      h.suggest,
+    ]),
     decode_: options => {
       let av = a.read_value(options)
       let bv = b.read_value(options)

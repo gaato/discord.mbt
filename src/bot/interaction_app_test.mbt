@@ -41,6 +41,17 @@ fn app_command(name : String, id : String) -> @model.Interaction raise {
 }
 
 ///|
+fn autocomplete_choices(
+  response : @model.InteractionResponse,
+) -> Array[@model.CommandOptionChoice] raise {
+  guard response.data is Some(Object(data)) &&
+    data.get("choices") is Some(value) else {
+    fail("autocomplete response is missing choices")
+  }
+  @json.from_json(value)
+}
+
+///|
 async test "interaction app dispatches captured responses and completion outcomes" {
   let bot = @bot.Bot::new(token="test-token", sync=Disabled)
   let warnings : Array[String] = []
@@ -168,6 +179,130 @@ async test "interaction app dispatches captured responses and completion outcome
         #|{"type":4,"data":{"content":"hello from http"}}
       ),
     )
+  })
+}
+
+///|
+async test "typed autocomplete dispatches partial and nested focused options" {
+  let bot = @bot.Bot::new(token="test-token", sync=Disabled)
+  bot.command(
+    @bot.slash(
+      name="search",
+      description="Search documents",
+      args=@interaction.Args::map2(
+        @interaction.arg_string(name="scope", description="Required scope"),
+        @interaction.arg_string(name="query", description="Search query", suggest=(
+          ctx,
+          value,
+        ) => {
+          assert_true(ctx.locale is Some("ja"))
+          assert_true(
+            ctx.guild_id is Some(id) && id.to_string() == "800000000000000001",
+          )
+          // Autocomplete payloads are partial: the other required option is
+          // intentionally absent and command decoding must not run.
+          assert_false(ctx.options.has("scope"))
+          let choices = []
+          for i in 0..<26 {
+            choices.push(
+              @interaction.string_choice("\{value}-\{i}", "\{value}-\{i}"),
+            )
+          }
+          choices
+        }),
+        (_, _) => (),
+      ),
+      handler=Raw(_ => ()),
+    ),
+  )
+  bot.command(
+    @bot.slash_group(name="tools", description="Tool commands", children=[
+      @bot.subcommand_group(name="catalog", description="Catalog tools", children=[
+        @bot.subcommand(
+          name="lookup",
+          description="Look up an item",
+          args=@interaction.Args::of(
+            @interaction.arg_int(name="code", description="Item code", suggest=(
+              _,
+              value,
+            ) => [@interaction.int_choice("code \{value}", value)]),
+          ),
+          handler=Raw(_ => ()),
+        ),
+      ]),
+    ]),
+  )
+  bot.command(
+    @bot.slash(
+      name="manual",
+      description="Manual override",
+      args=@interaction.Args::of(
+        @interaction.arg_string(name="query", description="Query", suggest=(
+          _,
+          value,
+        ) => [@interaction.string_choice("generated", value)]),
+      ),
+      handler=Raw(_ => ()),
+    ),
+  )
+  bot.autocomplete("manual", raw => {
+    raw.suggest([@interaction.string_choice("raw", "raw")])
+  })
+  let top = app_interaction(
+    (
+      #|{"id":"500000000000000301","application_id":"400000000000000001","type":4,"guild_id":"800000000000000001","locale":"ja","token":"interaction-token","version":1,"data":{"id":"600000000000000301","name":"search","type":1,"options":[{"name":"query","type":3,"value":"mo","focused":true}]}}
+    ),
+  )
+  let nested = app_interaction(
+    (
+      #|{"id":"500000000000000302","application_id":"400000000000000001","type":4,"token":"interaction-token","version":1,"data":{"id":"600000000000000302","name":"tools","type":1,"options":[{"name":"catalog","type":2,"options":[{"name":"lookup","type":1,"options":[{"name":"code","type":4,"value":12,"focused":true}]}]}]}}
+    ),
+  )
+  let manual = app_interaction(
+    (
+      #|{"id":"500000000000000303","application_id":"400000000000000001","type":4,"token":"interaction-token","version":1,"data":{"id":"600000000000000303","name":"manual","type":1,"options":[{"name":"query","type":3,"value":"m","focused":true}]}}
+    ),
+  )
+  let client = @dhttp.Client::new(
+    "test-token",
+    base_url="http://127.0.0.1:1",
+    max_connections=1,
+  )
+  defer client.close()
+  @async.with_task_group(group => {
+    let app = bot.start_interaction_app(
+      group,
+      client~,
+      application_id=@model.Id::parse("400000000000000001"),
+      sync=false,
+    )
+    match app.handle_interaction(top) {
+      Reply(response~, files=_) => {
+        assert_true(response.typ == Autocomplete)
+        let choices = autocomplete_choices(response)
+        inspect(choices.length(), content="25")
+        inspect(choices[0].name, content="mo-0")
+        inspect(choices[24].name, content="mo-24")
+      }
+      outcome =>
+        fail("expected top-level autocomplete, got \{to_repr(outcome)}")
+    }
+    match app.handle_interaction(nested) {
+      Reply(response~, files=_) => {
+        let choices = autocomplete_choices(response)
+        inspect(choices.length(), content="1")
+        inspect(choices[0].name, content="code 12")
+        inspect(choices[0].value.stringify(), content="12")
+      }
+      outcome => fail("expected nested autocomplete, got \{to_repr(outcome)}")
+    }
+    match app.handle_interaction(manual) {
+      Reply(response~, files=_) => {
+        let choices = autocomplete_choices(response)
+        inspect(choices[0].name, content="raw")
+      }
+      outcome => fail("expected raw autocomplete, got \{to_repr(outcome)}")
+    }
   })
 }
 

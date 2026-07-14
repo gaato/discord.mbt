@@ -14,6 +14,8 @@ pub(all) suberror BotConfigError {
   DuplicateCommand(name~ : String)
   DuplicateCommandPath(command~ : String, path~ : String)
   NestedSubcommandGroup(command~ : String, path~ : String)
+  ChoicesWithAutocomplete(command~ : String, path~ : String)
+  RequiredOptionAfterOptional(command~ : String, path~ : String)
 } derive(Debug)
 
 ///|
@@ -186,6 +188,8 @@ pub fn Bot::modal(
 }
 
 ///|
+/// Register a raw autocomplete handler. A raw handler takes precedence over
+/// Arg-level `suggest` handlers registered for the same command name.
 pub fn Bot::autocomplete(
   self : Bot,
   name : String,
@@ -219,6 +223,34 @@ fn Bot::current_policy(self : Bot) -> ErrorPolicy {
 }
 
 ///|
+fn validate_command_options(
+  command : String,
+  parent_path : Array[String],
+  options : Array[@model.CommandOption],
+) -> Unit raise BotConfigError {
+  let mut saw_optional = false
+  for option in options {
+    let path = parent_path.copy()
+    path.push(option.name)
+    if option.autocomplete is Some(true) && option.choices is Some(_) {
+      raise ChoicesWithAutocomplete(command~, path=path.join("/"))
+    }
+    if !(option.typ is (SubCommand | SubCommandGroup)) {
+      if option.required is Some(true) {
+        if saw_optional {
+          raise RequiredOptionAfterOptional(command~, path=path.join("/"))
+        }
+      } else {
+        saw_optional = true
+      }
+    }
+    if option.options is Some(children) {
+      validate_command_options(command, path, children)
+    }
+  }
+}
+
+///|
 fn Bot::validate(self : Bot) -> Unit raise BotConfigError {
   if self.token_.is_empty() {
     raise EmptyToken
@@ -241,6 +273,7 @@ fn Bot::validate(self : Bot) -> Unit raise BotConfigError {
       }
       paths.add(key)
     }
+    validate_command_options(command.name_, [], command.definition.options)
   }
 }
 
@@ -463,6 +496,33 @@ async fn Bot::run_registered_command(
 }
 
 ///|
+async fn Bot::run_registered_autocomplete(
+  self : Bot,
+  command : RegisteredCommand,
+  raw : @framework.AutocompleteCtx,
+) -> Unit {
+  dispatch_suggest(command.suggest_routes_, raw) catch {
+    error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
+      raise error
+    error => {
+      invoke_error_policy(
+        self.current_policy(),
+        failure_context(
+          Autocomplete(name=command.name_),
+          None,
+          None,
+          self.warn_,
+        ),
+        error,
+      )
+      // ErrorPolicy is transport-neutral and cannot construct an autocomplete
+      // callback, so complete the interaction with a safe empty result.
+      raw.suggest([])
+    }
+  }
+}
+
+///|
 fn Bot::populate_framework(
   self : Bot,
   framework : @framework.Framework,
@@ -474,6 +534,12 @@ fn Bot::populate_framework(
       self.run_registered_command(bot, waiter, command, raw)
     })
     |> ignore
+    if !command.suggest_routes_.is_empty() {
+      framework.autocomplete(command.name_, raw => {
+        self.run_registered_autocomplete(command, raw)
+      })
+      |> ignore
+    }
   }
   for entry in self.components_ {
     framework.component(entry.prefix, entry.dispatch) |> ignore
@@ -481,6 +547,7 @@ fn Bot::populate_framework(
   for entry in self.modals_ {
     framework.modal(entry.prefix, entry.dispatch) |> ignore
   }
+  // Registered last so explicitly configured raw handlers win by name.
   for entry in self.autocompletes_ {
     framework.autocomplete(entry.name, entry.dispatch) |> ignore
   }

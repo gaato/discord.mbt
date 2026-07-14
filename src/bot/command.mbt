@@ -25,12 +25,20 @@ priv struct SlashRoute {
 }
 
 ///|
+priv struct SuggestRoute {
+  path : Array[String]
+  option_name : String
+  handler : @interaction.SuggestHandler
+}
+
+///|
 /// A type-erased slash subcommand or subcommand group.
 pub struct SlashChild {
   priv definition_ : @model.CommandOption
   priv routes_ : Array[SlashRoute]
   priv node_paths_ : Array[Array[String]]
   priv nested_group_paths_ : Array[Array[String]]
+  priv suggest_routes_ : Array[SuggestRoute]
   priv is_group_ : Bool
 }
 
@@ -43,6 +51,17 @@ pub struct Command[A] {
   priv routes : Array[SlashRoute]?
   priv node_paths : Array[Array[String]]
   priv nested_group_paths : Array[Array[String]]
+  priv suggest_routes : Array[SuggestRoute]
+}
+
+///|
+fn[A] suggest_routes(
+  path : Array[String],
+  args : @interaction.Args[A],
+) -> Array[SuggestRoute] {
+  args
+  .suggestions()
+  .map(handler => { path: path.copy(), option_name: handler.name(), handler })
 }
 
 ///|
@@ -84,6 +103,7 @@ pub fn[A] slash(
     routes: None,
     node_paths: [],
     nested_group_paths: [],
+    suggest_routes: suggest_routes([], args),
   }
 }
 
@@ -151,6 +171,7 @@ pub fn user_command(
     routes: None,
     node_paths: [],
     nested_group_paths: [],
+    suggest_routes: [],
   }
 }
 
@@ -177,6 +198,7 @@ pub fn message_command(
     routes: None,
     node_paths: [],
     nested_group_paths: [],
+    suggest_routes: [],
   }
 }
 
@@ -229,6 +251,7 @@ pub fn[A] subcommand(
     ],
     node_paths_: [[name]],
     nested_group_paths_: [],
+    suggest_routes_: suggest_routes([name], args),
     is_group_: false,
   }
 }
@@ -245,6 +268,7 @@ pub fn subcommand_group(
   let routes = []
   let node_paths = [[name]]
   let nested_group_paths = []
+  let suggest_routes = []
   for child in children {
     for route in child.routes_ {
       routes.push({ ..route, path: prefixed_path(name, route.path) })
@@ -258,12 +282,16 @@ pub fn subcommand_group(
     for path in child.nested_group_paths_ {
       nested_group_paths.push(prefixed_path(name, path))
     }
+    for route in child.suggest_routes_ {
+      suggest_routes.push({ ..route, path: prefixed_path(name, route.path) })
+    }
   }
   {
     definition_: @interaction.sub_command_group(name, description, definitions),
     routes_: routes,
     node_paths_: node_paths,
     nested_group_paths_: nested_group_paths,
+    suggest_routes_: suggest_routes,
     is_group_: true,
   }
 }
@@ -282,10 +310,12 @@ pub fn slash_group(
   let routes = []
   let node_paths = []
   let nested_group_paths = []
+  let suggest_routes = []
   for child in children {
     routes.append(child.routes_)
     node_paths.append(child.node_paths_)
     nested_group_paths.append(child.nested_group_paths_)
+    suggest_routes.append(child.suggest_routes_)
   }
   {
     definition: @interaction.CommandSpec::slash(
@@ -302,6 +332,7 @@ pub fn slash_group(
     routes: Some(routes),
     node_paths,
     nested_group_paths,
+    suggest_routes,
   }
 }
 
@@ -397,12 +428,49 @@ async fn[A] Command::dispatch_typed(
 }
 
 ///|
+async fn dispatch_suggest(
+  routes : Array[SuggestRoute],
+  raw : @framework.AutocompleteCtx,
+) -> Unit {
+  let path = raw.options.path()
+  guard raw.options.focused_input() is Some(input) else {
+    raise HandlerError::InvalidArgument(
+      "autocomplete payload has no focused option",
+    )
+  }
+  for route in routes {
+    if path_key(route.path) == path_key(path) &&
+      route.option_name == input.name() {
+      let ctx : @interaction.SuggestCtx = {
+        interaction: raw.interaction,
+        options: raw.options,
+        guild_id: raw.interaction.guild_id,
+        locale: raw.interaction.locale,
+      }
+      let choices = route.handler.suggest(ctx, input)
+      let choices = if choices.length() > 25 {
+        choices[:25].to_owned()
+      } else {
+        choices
+      }
+      raw.suggest(choices)
+      return
+    }
+  }
+  let display_path = if path.is_empty() { "<root>" } else { path.join("/") }
+  raise HandlerError::InvalidArgument(
+    "no autocomplete route for \{display_path}:\{input.name()}",
+  )
+}
+
+///|
 /// A type-erased command consumed by the bot runtime.
 pub struct RegisteredCommand {
   priv name_ : String
   priv definition : @interaction.CommandSpec
   priv node_paths_ : Array[Array[String]]
   priv nested_group_paths_ : Array[Array[String]]
+  priv suggest_routes_ : Array[SuggestRoute]
   priv dispatch : async (
     BotCtx,
     ComponentWaiter?,
@@ -425,6 +493,7 @@ pub fn[A] Command::erase(self : Command[A]) -> RegisteredCommand {
     definition: self.definition,
     node_paths_: self.node_paths,
     nested_group_paths_: self.nested_group_paths,
+    suggest_routes_: self.suggest_routes,
     dispatch: (bot, waiter, warn, raw) => {
       self.dispatch_typed(bot, waiter, warn, raw)
     },

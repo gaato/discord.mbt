@@ -317,6 +317,54 @@ test "bot validates command type names and slash child structure" {
   } noraise {
     _ => fail("expected nested group error")
   }
+  let choices_and_suggest = Bot::new(token="token", sync=Disabled)
+  choices_and_suggest.command(
+    slash(
+      name="search",
+      description="Search",
+      args=@interaction.Args::of(
+        @interaction.arg_string(
+          name="query",
+          description="Query",
+          choices=[@interaction.string_choice("Moon", "moon")],
+          suggest=(_, value) => [@interaction.string_choice(value, value)],
+        ),
+      ),
+      handler=Raw(_ => ()),
+    ),
+  )
+  try choices_and_suggest.validate() catch {
+    BotConfigError::ChoicesWithAutocomplete(command~, path~) => {
+      inspect(command, content="search")
+      inspect(path, content="query")
+    }
+    error => fail("unexpected error: \{to_repr(error)}")
+  } noraise {
+    _ => fail("expected choices and autocomplete error")
+  }
+  let invalid_order = Bot::new(token="token", sync=Disabled)
+  invalid_order.command(
+    slash(
+      name="ordered",
+      description="Option ordering",
+      args=@interaction.Args::map2(
+        @interaction.arg_string(name="optional", description="Optional")
+        |> @interaction.optional,
+        @interaction.arg_string(name="required", description="Required"),
+        (_, _) => (),
+      ),
+      handler=Raw(_ => ()),
+    ),
+  )
+  try invalid_order.validate() catch {
+    BotConfigError::RequiredOptionAfterOptional(command~, path~) => {
+      inspect(command, content="ordered")
+      inspect(path, content="required")
+    }
+    error => fail("unexpected error: \{to_repr(error)}")
+  } noraise {
+    _ => fail("expected required-after-optional error")
+  }
 }
 
 ///|
