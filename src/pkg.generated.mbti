@@ -122,6 +122,8 @@ pub fn user_option(String, String, required? : Bool) -> @model.CommandOption
 
 pub fn user_select(custom_id~ : String, placeholder? : String, min_values? : Int, max_values? : Int, disabled? : Bool) -> @model.Component
 
+pub async fn verify_signature(public_key~ : String, signature~ : String, timestamp~ : String, body~ : String) -> Bool
+
 // Errors
 
 // Types and methods

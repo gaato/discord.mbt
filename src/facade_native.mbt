@@ -1,4 +1,8 @@
 ///|
+/// Verify Discord HTTP interaction signatures with libcrypto Ed25519.
+pub using @verify {verify_signature}
+
+///|
 /// Native Discord Gateway transport primitives.
 pub using @gateway {type Shard, type ShardEvent}
 

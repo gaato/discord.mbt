@@ -2,6 +2,7 @@
 package "gaato/discord/verify"
 
 // Values
+pub async fn verify_signature(public_key~ : String, signature~ : String, timestamp~ : String, body~ : String) -> Bool
 
 // Errors
 

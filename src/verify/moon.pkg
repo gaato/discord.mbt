@@ -7,14 +7,21 @@ import {
   "moonbitlang/async",
 } for "test"
 
-// This package is intentionally empty on non-JavaScript targets.
+import {
+  "moonbitlang/async",
+} for "wbtest"
+
+// js_async is only used by the js implementation; moon has no
+// target-conditional imports, so other targets see it as unused.
 
 warnings = "-29"
 
 options(
+  "native-stub": [ "ed25519_stub.c" ],
   targets: {
-    "pkg.generated.mbti": [ "js" ],
     "verify.mbt": [ "js" ],
+    "verify_native.mbt": [ "native" ],
+    "verify_native_wbtest.mbt": [ "native" ],
     "verify_test.mbt": [ "js" ],
   },
 )
