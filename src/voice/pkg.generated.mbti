@@ -48,7 +48,7 @@ pub fn parse_text_frame(String) -> (VoiceMessage, Int?) raise VoiceEnvelopeError
 
 pub fn rtpsize_header_len(Bytes) -> Int
 
-pub async fn run_send_loop(&AudioSource, TransportCipher, &VoiceUdp, VoiceGateway, ssrc~ : UInt, initial_sequence? : UInt16, initial_timestamp? : UInt, stop? : @ref.Ref[Bool], frame_duration_ms? : Int, dave? : DaveMachine) -> Unit
+pub async fn run_send_loop(&AudioSource, TransportCipher, &VoiceUdp, VoiceGateway, ssrc~ : UInt, initial_sequence? : UInt16, initial_timestamp? : UInt, stop? : @ref.Ref[Bool], frame_duration_ms? : Int, dave? : DaveMachine, on_dave_error? : (String) -> Unit) -> Unit
 
 pub fn shim_available() -> Bool
 
@@ -86,6 +86,15 @@ pub(all) suberror VoiceEnvelopeError {
   InvalidTextFrame(reason~ : String)
   InvalidBinaryFrame(reason~ : String)
 } derive(Eq, @debug.Debug)
+
+pub(all) suberror VoiceError {
+  JoinTimeout
+  ShimUnavailable(reason~ : String)
+  NoCompatibleMode(offered~ : Array[String])
+  GatewayClosed(code~ : Int?)
+  IpDiscoveryFailed(reason~ : String)
+  Disconnected
+} derive(@debug.Debug)
 
 pub(all) suberror VoiceTransportClosed {
   VoiceTransportClosed(code~ : Int?, reason~ : String)
@@ -138,6 +147,17 @@ pub fn OggPacketReader::new() -> Self
 pub fn OggPacketReader::next_packet(Self) -> Bytes? raise OggOpusError
 pub fn OggPacketReader::push(Self, Bytes) -> Unit
 
+pub struct ReorderBuffer[T] {
+  // private fields
+}
+pub fn[T] ReorderBuffer::new(hold_ms? : Int) -> Self[T]
+pub fn[T] ReorderBuffer::push(Self[T], seq~ : Int, arrival_ms~ : Int64, T) -> Array[ReorderOutput[T]]
+
+pub(all) enum ReorderOutput[T] {
+  Deliver(T)
+  Lost(count~ : Int)
+} derive(Eq, @debug.Debug)
+
 pub(all) struct RtpPacket {
   sequence : UInt16
   timestamp : UInt
@@ -153,6 +173,44 @@ pub struct TransportCipher {
 pub fn TransportCipher::new(EncryptionMode, Bytes) -> Self raise VoiceCryptoError
 pub fn TransportCipher::open(Self, Bytes, header_len~ : Int) -> Bytes raise VoiceCryptoError
 pub fn TransportCipher::seal(Self, header~ : Bytes, Bytes) -> Bytes raise VoiceCryptoError
+
+pub struct VoiceConnection {
+  // private fields
+}
+pub async fn VoiceConnection::disconnect(Self) -> Unit
+pub fn VoiceConnection::latency_ms(Self) -> Int64?
+pub async fn VoiceConnection::next_event(Self) -> VoiceEvent
+pub async fn VoiceConnection::play(Self, &AudioSource) -> Unit
+pub async fn VoiceConnection::set_speaking(Self, Int) -> Unit
+pub fn[X] VoiceConnection::start(@async.TaskGroup[X], VoiceCredentials, user_id~ : String, channel_id~ : UInt64, leave~ : async () -> Unit, rejoin~ : async () -> VoiceCredentials, connector? : async (String) -> &VoiceTransport, udp_opener? : async (String, Int) -> &VoiceUdp, dave_factory? : (Int, String, UInt64) -> &DaveProvider raise, receive? : Bool, telemetry? : (VoiceTelemetry) -> Unit) -> Self
+pub fn VoiceConnection::state(Self) -> VoiceConnectionState
+pub async fn VoiceConnection::stop(Self) -> Unit
+pub async fn VoiceConnection::wait_ready(Self, timeout_ms? : Int) -> Unit raise VoiceError
+
+pub(all) enum VoiceConnectionState {
+  Connecting
+  Ready
+  Reconnecting
+  Rejoining
+  Closed(code~ : Int?)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct VoiceCredentials {
+  server_id : String
+  session_id : String
+  token : String
+  endpoint : String
+} derive(Eq, @debug.Debug)
+
+pub(all) enum VoiceEvent {
+  OpusReceived(user_id~ : String?, ssrc~ : UInt, sequence~ : Int, timestamp~ : UInt, opus~ : Bytes)
+  PacketsLost(user_id~ : String?, ssrc~ : UInt, count~ : Int)
+  SpeakingChanged(user_id~ : String, ssrc~ : UInt, flags~ : Int)
+  UserConnected(user_id~ : String)
+  UserDisconnected(user_id~ : String)
+  ConnectionReady
+  ConnectionResumed
+} derive(Eq, @debug.Debug)
 
 pub(all) enum VoiceFrame {
   Text(String)
@@ -213,6 +271,13 @@ pub(all) enum VoiceReconnectPolicy {
   Resume
   Rejoin
   Fatal
+} derive(Eq, @debug.Debug)
+
+pub(all) enum VoiceTelemetry {
+  GatewayEvent(VoiceGatewayEvent)
+  PacketDropped(reason~ : String)
+  DaveEncryptDropped(reason~ : String)
+  DaveDecryptDropped(user_id~ : String?, ssrc~ : UInt, count~ : Int, reason~ : String)
 } derive(Eq, @debug.Debug)
 
 // Type aliases

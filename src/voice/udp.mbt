@@ -118,7 +118,7 @@ pub async fn discover_external_address(
   timeout_ms? : Int = 1000,
 ) -> (String, Int) {
   if retries <= 0 || timeout_ms <= 0 {
-    raise IpDiscoveryFailed(
+    raise VoiceUdpError::IpDiscoveryFailed(
       attempts=0,
       reason="retries and timeout_ms must be positive",
     )
@@ -137,7 +137,7 @@ pub async fn discover_external_address(
     }
     if received < 0 {
       if attempt + 1 == retries {
-        raise IpDiscoveryFailed(
+        raise VoiceUdpError::IpDiscoveryFailed(
           attempts=retries,
           reason="timed out waiting for discovery response",
         )
@@ -147,5 +147,8 @@ pub async fn discover_external_address(
     let response = Bytes::from_array(buffer[:received])
     return parse_ip_discovery_response(response, expected_ssrc=ssrc)
   }
-  raise IpDiscoveryFailed(attempts=retries, reason="discovery exhausted")
+  raise VoiceUdpError::IpDiscoveryFailed(
+    attempts=retries,
+    reason="discovery exhausted",
+  )
 }

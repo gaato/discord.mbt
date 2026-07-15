@@ -372,3 +372,17 @@ pub fn DaveMachine::encrypt_opus_frame(
     self.provider.encrypt_frame(frame)
   }
 }
+
+///|
+/// Decrypt an Opus frame only while a DAVE media context is selected.
+fn DaveMachine::decrypt_opus_frame(
+  self : DaveMachine,
+  user_id~ : String,
+  frame : Bytes,
+) -> Bytes raise {
+  if self.protocol_version == 0 {
+    frame
+  } else {
+    self.provider.decrypt_frame(user_id~, frame)
+  }
+}

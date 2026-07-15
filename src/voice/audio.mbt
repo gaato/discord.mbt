@@ -25,13 +25,35 @@ async fn send_opus_packet(
   timestamp : UInt,
   ssrc : UInt,
   frame : Bytes,
-) -> Unit {
+  on_dave_error : (String) -> Unit,
+) -> Bool {
   let header = build_rtp_header(sequence~, timestamp~, ssrc~)
   let encrypted_frame = match dave {
-    Some(machine) => machine.encrypt_opus_frame(frame)
-    None => frame
+    Some(machine) =>
+      Some(machine.encrypt_opus_frame(frame)) catch {
+        DaveInvalid(reason~) => {
+          on_dave_error(reason)
+          None
+        }
+        DaveStale(reason~) => {
+          on_dave_error(reason)
+          None
+        }
+        DaveUnavailable(reason~) => {
+          on_dave_error(reason)
+          None
+        }
+        DaveInternal(status~, reason~) => {
+          on_dave_error("DAVE status \{status}: \{reason}")
+          None
+        }
+        error => raise error
+      }
+    None => Some(frame)
   }
-  udp.send(cipher.seal(header~, encrypted_frame))
+  guard encrypted_frame is Some(encrypted) else { return false }
+  udp.send(cipher.seal(header~, encrypted))
+  true
 }
 
 ///|
@@ -54,6 +76,7 @@ pub async fn run_send_loop(
   stop? : Ref[Bool],
   frame_duration_ms? : Int = 20,
   dave? : DaveMachine,
+  on_dave_error? : (String) -> Unit = _ => (),
 ) -> Unit {
   let state : SendLoopState = {
     sequence: initial_sequence,
@@ -66,7 +89,7 @@ pub async fn run_send_loop(
       break
     }
     guard source.next_frame() is Some(frame) else { break }
-    send_opus_packet(
+    let sent = send_opus_packet(
       cipher,
       udp,
       dave,
@@ -74,15 +97,18 @@ pub async fn run_send_loop(
       state.timestamp,
       ssrc,
       frame,
+      on_dave_error,
     )
-    state.sequence += 1
+    if sent {
+      state.sequence += 1
+    }
     state.timestamp += 960
     state.deadline += frame_duration_ms.to_int64()
     pace_until(state.deadline)
   }
   // Discord recommends five silence frames to flush decoder state on stop.
   for _ in 0..<5 {
-    send_opus_packet(
+    let sent = send_opus_packet(
       cipher,
       udp,
       dave,
@@ -90,8 +116,11 @@ pub async fn run_send_loop(
       state.timestamp,
       ssrc,
       SILENCE_FRAME,
+      on_dave_error,
     )
-    state.sequence += 1
+    if sent {
+      state.sequence += 1
+    }
     state.timestamp += 960
     state.deadline += frame_duration_ms.to_int64()
     pace_until(state.deadline)

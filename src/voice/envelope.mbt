@@ -128,7 +128,7 @@ pub fn parse_text_frame(
         is { "ssrc": ssrc, "ip": String(ip), "port": port, "modes": modes, .. } else {
         raise invalid_text("invalid Ready payload")
       }
-      Ready(
+      VoiceMessage::Ready(
         ssrc=uint_field(ssrc, "ssrc"),
         ip~,
         port=int_field(port, "port"),
