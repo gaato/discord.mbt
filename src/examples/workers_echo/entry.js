@@ -1,12 +1,21 @@
 // From this directory, run `moon build --target js .` first. Wrangler bundles
 // the generated ESM artifact imported below when it deploys entry.js.
-import {
-  start_interaction,
-  verify_signature,
-} from "../../../_build/js/debug/build/examples/workers_echo/workers_echo.js";
+//
+// The import is dynamic because MoonBit's generated module seeds its hasher
+// with crypto.getRandomValues at module scope, which Workers forbids during
+// startup. Evaluating the module inside the first fetch invocation runs that
+// code in a request context, where random generation is allowed.
+let workerModule;
+function loadWorkerModule() {
+  workerModule ??= import(
+    "../../../_build/js/debug/build/examples/workers_echo/workers_echo.js"
+  );
+  return workerModule;
+}
 
 export default {
   async fetch(request, env, ctx) {
+    const { start_interaction, verify_signature } = await loadWorkerModule();
     if (request.method !== "POST") {
       return new Response("Method Not Allowed", { status: 405 });
     }

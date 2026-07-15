@@ -5,3 +5,5 @@ target/
 .moonagent/
 .repos/
 .env
+.dev.vars
+.wrangler/
