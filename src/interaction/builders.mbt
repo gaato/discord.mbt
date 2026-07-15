@@ -316,6 +316,8 @@ fn auto_select(
 }
 
 ///|
+/// Build a user select menu; the chosen users arrive in
+/// `resolved` and via the component context's `selected_users`.
 pub fn user_select(
   custom_id~ : String,
   placeholder? : String,
@@ -327,6 +329,8 @@ pub fn user_select(
 }
 
 ///|
+/// Build a role select menu; the chosen roles arrive via the component
+/// context's `selected_roles`.
 pub fn role_select(
   custom_id~ : String,
   placeholder? : String,
@@ -338,6 +342,7 @@ pub fn role_select(
 }
 
 ///|
+/// Build a mentionable select menu accepting both users and roles.
 pub fn mentionable_select(
   custom_id~ : String,
   placeholder? : String,
@@ -349,6 +354,9 @@ pub fn mentionable_select(
 }
 
 ///|
+/// Build a channel select menu, optionally restricted to `channel_types`;
+/// the chosen channels arrive via the component context's
+/// `selected_channels`.
 pub fn channel_select(
   custom_id~ : String,
   placeholder? : String,
@@ -363,11 +371,15 @@ pub fn channel_select(
 }
 
 ///|
+/// Build a text display block (components v2): markdown `content` rendered
+/// in the message body. Requires the `IS_COMPONENTS_V2` message flag.
 pub fn text_display(content : String) -> @model.Component {
   TextDisplay({ id: None, content })
 }
 
 ///|
+/// Build a section (components v2): up to three text displays laid out next
+/// to an `accessory` (a thumbnail or button).
 pub fn section(
   components~ : Array[@model.Component],
   accessory~ : @model.Component,
@@ -376,6 +388,8 @@ pub fn section(
 }
 
 ///|
+/// Build a thumbnail accessory (components v2) from an image `url`
+/// (`https://...` or `attachment://<filename>`).
 pub fn thumbnail(
   url~ : String,
   description? : String,
@@ -400,6 +414,9 @@ pub fn thumbnail(
 }
 
 ///|
+/// Build a container (components v2): groups child components in a rounded
+/// box with an optional `accent_color` (`0xRRGGBB`) stripe, similar to an
+/// embed.
 pub fn container(
   components~ : Array[@model.Component],
   accent_color? : Int,
@@ -414,11 +431,17 @@ pub fn container(
 }
 
 ///|
+/// Build a separator (components v2): vertical padding between components,
+/// with an optional visible `divider` line and `spacing` size (1 = small,
+/// 2 = large).
 pub fn separator(divider? : Bool, spacing? : Int) -> @model.Component {
   Separator({ id: None, divider, spacing })
 }
 
 ///|
+/// Build one media gallery entry from an image or video `url`
+/// (`https://...` or `attachment://<filename>`), for use with
+/// `media_gallery`.
 pub fn media_item(
   url~ : String,
   description? : String,
@@ -442,6 +465,7 @@ pub fn media_item(
 }
 
 ///|
+/// Build a media gallery (components v2): a grid of 1–10 media items.
 pub fn media_gallery(
   items : Array[@model.MediaGalleryItem],
 ) -> @model.Component {
@@ -449,6 +473,9 @@ pub fn media_gallery(
 }
 
 ///|
+/// Wrap a modal component with a `label` and optional `description`. Modals
+/// require every input to be wrapped in a label; the typed `ModalField`
+/// builders do this automatically.
 pub fn label(
   label~ : String,
   component~ : @model.Component,
@@ -458,6 +485,10 @@ pub fn label(
 }
 
 ///|
+/// Build a modal text input. `style` picks single-line `Short` (default) or
+/// multi-line `Paragraph`; `value` prefills the field. Wrap it with `label`
+/// before placing it in a modal (the typed `ModalField` builders handle
+/// this).
 pub fn text_input(
   custom_id~ : String,
   style? : @model.TextInputStyle = Short,

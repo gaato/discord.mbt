@@ -384,11 +384,16 @@ pub fn[A] Args::custom(
 }
 
 ///|
+/// Build a command's argument decoder from one option. The option is
+/// registered from `a`'s definition and `f` maps its decoded value
+/// into the handler's argument type.
 pub fn[A, Z] Args::map1(a : Arg[A], f : (A) -> Z) -> Args[Z] {
   Args::of(a).map(f)
 }
 
 ///|
+/// Build a command's argument decoder from two options, combining
+/// their decoded values with the final function argument.
 pub fn[A, B, Z] Args::map2(a : Arg[A], b : Arg[B], f : (A, B) -> Z) -> Args[Z] {
   {
     definitions_: [a.definition, b.definition],
@@ -402,6 +407,8 @@ pub fn[A, B, Z] Args::map2(a : Arg[A], b : Arg[B], f : (A, B) -> Z) -> Args[Z] {
 }
 
 ///|
+/// Build a command's argument decoder from three options, combining
+/// their decoded values with the final function argument.
 pub fn[A, B, C, Z] Args::map3(
   a : Arg[A],
   b : Arg[B],
@@ -421,6 +428,8 @@ pub fn[A, B, C, Z] Args::map3(
 }
 
 ///|
+/// Build a command's argument decoder from four options, combining
+/// their decoded values with the final function argument.
 pub fn[A, B, C, D, Z] Args::map4(
   a : Arg[A],
   b : Arg[B],
@@ -442,6 +451,8 @@ pub fn[A, B, C, D, Z] Args::map4(
 }
 
 ///|
+/// Build a command's argument decoder from five options, combining
+/// their decoded values with the final function argument.
 pub fn[A, B, C, D, E, Z] Args::map5(
   a : Arg[A],
   b : Arg[B],
@@ -477,6 +488,8 @@ pub fn[A, B, C, D, E, Z] Args::map5(
 }
 
 ///|
+/// Build a command's argument decoder from six options, combining
+/// their decoded values with the final function argument.
 pub fn[A, B, C, D, E, F, Z] Args::map6(
   a : Arg[A],
   b : Arg[B],
@@ -516,6 +529,8 @@ pub fn[A, B, C, D, E, F, Z] Args::map6(
 }
 
 ///|
+/// Build a command's argument decoder from seven options, combining
+/// their decoded values with the final function argument.
 pub fn[A, B, C, D, E, F, G, Z] Args::map7(
   a : Arg[A],
   b : Arg[B],
@@ -559,6 +574,8 @@ pub fn[A, B, C, D, E, F, G, Z] Args::map7(
 }
 
 ///|
+/// Build a command's argument decoder from eight options, combining
+/// their decoded values with the final function argument.
 pub fn[A, B, C, D, E, F, G, H, Z] Args::map8(
   a : Arg[A],
   b : Arg[B],

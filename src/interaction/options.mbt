@@ -21,6 +21,8 @@ pub struct CommandOptions {
 }
 
 ///|
+/// Build a typed reader from submitted command data, flattening any
+/// subcommand / subcommand-group nesting into `path()`.
 pub fn CommandOptions::from_data(data : @model.CommandData) -> CommandOptions {
   let path = []
   let mut options = data.options
@@ -50,6 +52,7 @@ pub fn CommandOptions::path(self : CommandOptions) -> Array[String] {
 }
 
 ///|
+/// Whether an option named `name` was submitted.
 pub fn CommandOptions::has(self : CommandOptions, name : String) -> Bool {
   self.leaves.contains(name)
 }
@@ -164,6 +167,8 @@ fn[M] json_id(
 }
 
 ///|
+/// The required STRING option `name`; raises `OptionError` when absent
+/// or not a string.
 pub fn CommandOptions::string(
   self : CommandOptions,
   name : String,
@@ -172,6 +177,7 @@ pub fn CommandOptions::string(
 }
 
 ///|
+/// The optional STRING option `name`, or `None` when absent.
 pub fn CommandOptions::string_opt(
   self : CommandOptions,
   name : String,
@@ -183,6 +189,8 @@ pub fn CommandOptions::string_opt(
 }
 
 ///|
+/// The required INTEGER option `name`; raises `OptionError` when absent
+/// or not an integer.
 pub fn CommandOptions::int(
   self : CommandOptions,
   name : String,
@@ -191,6 +199,7 @@ pub fn CommandOptions::int(
 }
 
 ///|
+/// The optional INTEGER option `name`, or `None` when absent.
 pub fn CommandOptions::int_opt(
   self : CommandOptions,
   name : String,
@@ -202,6 +211,8 @@ pub fn CommandOptions::int_opt(
 }
 
 ///|
+/// The required NUMBER option `name`; raises `OptionError` when absent
+/// or not a number.
 pub fn CommandOptions::number(
   self : CommandOptions,
   name : String,
@@ -210,6 +221,7 @@ pub fn CommandOptions::number(
 }
 
 ///|
+/// The optional NUMBER option `name`, or `None` when absent.
 pub fn CommandOptions::number_opt(
   self : CommandOptions,
   name : String,
@@ -221,6 +233,8 @@ pub fn CommandOptions::number_opt(
 }
 
 ///|
+/// The required BOOLEAN option `name`; raises `OptionError` when absent
+/// or not a boolean.
 pub fn CommandOptions::bool(
   self : CommandOptions,
   name : String,
@@ -229,6 +243,7 @@ pub fn CommandOptions::bool(
 }
 
 ///|
+/// The optional BOOLEAN option `name`, or `None` when absent.
 pub fn CommandOptions::bool_opt(
   self : CommandOptions,
   name : String,
@@ -240,6 +255,8 @@ pub fn CommandOptions::bool_opt(
 }
 
 ///|
+/// The required USER option `name` as a `UserId`; pass it to
+/// `resolved_user` / `resolved_member` for the full objects.
 pub fn CommandOptions::user(
   self : CommandOptions,
   name : String,
@@ -248,6 +265,7 @@ pub fn CommandOptions::user(
 }
 
 ///|
+/// The optional USER option `name` as a `UserId`, or `None` when absent.
 pub fn CommandOptions::user_opt(
   self : CommandOptions,
   name : String,
@@ -259,6 +277,8 @@ pub fn CommandOptions::user_opt(
 }
 
 ///|
+/// The required CHANNEL option `name` as a `ChannelId`; pass it to
+/// `resolved_channel` for the partial channel object.
 pub fn CommandOptions::channel(
   self : CommandOptions,
   name : String,
@@ -267,6 +287,8 @@ pub fn CommandOptions::channel(
 }
 
 ///|
+/// The optional CHANNEL option `name` as a `ChannelId`, or `None` when
+/// absent.
 pub fn CommandOptions::channel_opt(
   self : CommandOptions,
   name : String,
@@ -278,6 +300,8 @@ pub fn CommandOptions::channel_opt(
 }
 
 ///|
+/// The required ROLE option `name` as a `RoleId`; pass it to
+/// `resolved_role` for the full role object.
 pub fn CommandOptions::role(
   self : CommandOptions,
   name : String,
@@ -286,6 +310,7 @@ pub fn CommandOptions::role(
 }
 
 ///|
+/// The optional ROLE option `name` as a `RoleId`, or `None` when absent.
 pub fn CommandOptions::role_opt(
   self : CommandOptions,
   name : String,
@@ -297,6 +322,8 @@ pub fn CommandOptions::role_opt(
 }
 
 ///|
+/// The required MENTIONABLE option `name` as an untyped snowflake; check
+/// `resolved_user` / `resolved_role` to learn which kind it is.
 pub fn CommandOptions::mentionable(
   self : CommandOptions,
   name : String,
@@ -305,6 +332,7 @@ pub fn CommandOptions::mentionable(
 }
 
 ///|
+/// The optional MENTIONABLE option `name`, or `None` when absent.
 pub fn CommandOptions::mentionable_opt(
   self : CommandOptions,
   name : String,
