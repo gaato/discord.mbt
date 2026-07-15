@@ -1,0 +1,26 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "gaato/discord/endpoint_http"
+
+import {
+  "gaato/discord/app",
+  "gaato/discord/http",
+  "gaato/discord/model",
+  "moonbitlang/async",
+}
+
+// Values
+pub async fn[X] serve_interactions(@async.TaskGroup[X], @app.App, addr~ : String, public_key~ : String, client? : @http.Client, token? : String, application_id? : @model.Id[@model.ApplicationMarker], sync? : Bool, path? : String, deadline_ms? : Int) -> InteractionsServer
+
+// Errors
+
+// Types and methods
+pub struct InteractionsServer {
+  // private fields
+}
+pub fn InteractionsServer::addr(Self) -> String
+pub fn InteractionsServer::close(Self) -> Unit
+
+// Type aliases
+
+// Traits
+

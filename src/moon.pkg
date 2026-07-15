@@ -8,6 +8,7 @@ import {
   "gaato/discord/app",
   "gaato/discord/bot",
   "gaato/discord/coordinator",
+  "gaato/discord/endpoint_http",
   "gaato/discord/verify",
 }
 

@@ -1,7 +1,7 @@
 ///|
 /// Render body chunks with CR/LF and non-printable bytes made visible, so
 /// the snapshot stays faithful (`#|` strings cannot hold raw `\r`).
-fn render_parts(parts : Array[Part]) -> String {
+fn render_parts(parts : Array[MultipartChunk]) -> String {
   let out = StringBuilder()
   fn put(code : Int) {
     if code == 13 {

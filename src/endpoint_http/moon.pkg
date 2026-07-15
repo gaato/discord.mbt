@@ -1,0 +1,30 @@
+import {
+  "gaato/discord/app",
+  "gaato/discord/verify",
+  "gaato/discord/http" @dhttp,
+  "gaato/discord/model",
+  "moonbitlang/async",
+  "moonbitlang/async/aqueue",
+  "moonbitlang/async/http" @ahttp,
+  "moonbitlang/async/io",
+  "moonbitlang/async/socket",
+  "moonbitlang/core/json",
+  "moonbitlang/core/encoding/utf8",
+}
+
+import {
+  "gaato/discord/interaction",
+  "moonbitlang/async",
+} for "wbtest"
+
+// This package is intentionally empty on non-native targets.
+
+warnings = "-29"
+
+options(
+  targets: {
+    "endpoint_http.mbt": [ "native" ],
+    "endpoint_http_wbtest.mbt": [ "native" ],
+    "pkg.generated.mbti": [ "native" ],
+  },
+)

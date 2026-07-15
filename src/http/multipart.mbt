@@ -129,9 +129,9 @@ fn fresh_boundary(
 }
 
 ///|
-/// One chunk of the multipart body, written to the wire in order. File
+/// One chunk of a multipart body, written to the wire in order. File
 /// contents stay as their original `Bytes` (no copying or concatenation).
-priv enum Part {
+pub enum MultipartChunk {
   Text(String)
   Blob(Bytes)
 }
@@ -143,8 +143,8 @@ fn multipart_parts(
   boundary : String,
   payload : String,
   files : Array[FileUpload],
-) -> Array[Part] {
-  let parts : Array[Part] = []
+) -> Array[MultipartChunk] {
+  let parts : Array[MultipartChunk] = []
   parts.push(
     Text(
       "--\{boundary}\r\n" +
@@ -178,8 +178,8 @@ fn multipart_form_parts(
   fields : Array[(String, String)],
   file_field : String,
   file : FileUpload,
-) -> Array[Part] {
-  let parts : Array[Part] = []
+) -> Array[MultipartChunk] {
+  let parts : Array[MultipartChunk] = []
   for field in fields {
     let (name, value) = field
     parts.push(
@@ -212,4 +212,23 @@ let multipart_seq : Ref[Int] = Ref(0)
 fn next_multipart_seq() -> Int {
   multipart_seq.val += 1
   multipart_seq.val
+}
+
+///|
+/// Encode an interaction-callback `multipart/form-data` body: the
+/// `payload_json` part followed by one `files[n]` part per file, in the same
+/// wire format as the REST upload path. Returns the `Content-Type` value
+/// (including the boundary) and the ordered wire chunks. Filenames are
+/// validated like the REST upload path.
+pub fn encode_multipart_body(
+  payload_json : String,
+  files : Array[FileUpload],
+) -> (String, Array[MultipartChunk]) raise DiscordHttpError {
+  validate_files(files)
+  let seed = "\{@clock.now_ms()}-\{next_multipart_seq()}"
+  let boundary = fresh_boundary(seed, payload_json, files)
+  (
+    "multipart/form-data; boundary=\{boundary}",
+    multipart_parts(boundary, payload_json, files),
+  )
 }

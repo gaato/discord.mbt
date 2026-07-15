@@ -3,6 +3,10 @@
 pub using @verify {verify_signature}
 
 ///|
+/// Native Discord HTTP-interactions server.
+pub using @endpoint_http {type InteractionsServer, serve_interactions}
+
+///|
 /// Native Discord Gateway transport primitives.
 pub using @gateway {type Shard, type ShardEvent}
 

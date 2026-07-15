@@ -5,12 +5,14 @@ import {
   "gaato/discord/app",
   "gaato/discord/bot",
   "gaato/discord/coordinator",
+  "gaato/discord/endpoint_http",
   "gaato/discord/framework",
   "gaato/discord/gateway",
   "gaato/discord/http",
   "gaato/discord/interaction",
   "gaato/discord/model",
   "gaato/discord/telemetry",
+  "moonbitlang/async",
 }
 
 // Values
@@ -89,6 +91,8 @@ pub fn select_field(custom_id~ : String, label~ : String, options~ : Array[@mode
 pub fn select_option(label~ : String, value~ : String, description? : String, emoji? : @model.Emoji, default? : Bool) -> @model.SelectOption
 
 pub fn separator(divider? : Bool, spacing? : Int) -> @model.Component
+
+pub async fn[X] serve_interactions(@async.TaskGroup[X], @app.App, addr~ : String, public_key~ : String, client? : @http.Client, token? : String, application_id? : @model.Id[@model.ApplicationMarker], sync? : Bool, path? : String, deadline_ms? : Int) -> @endpoint_http.InteractionsServer
 
 pub fn[A] slash(name~ : String, description~ : String, args~ : @interaction.Args[A], handler~ : @app.InteractionHandler[A], default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType]) -> @app.Command[A]
 
@@ -226,6 +230,8 @@ pub using @app {type InteractionEndpoint}
 pub using @app {type InteractionHandler}
 
 pub using @app {type InteractionOutcome}
+
+pub using @endpoint_http {type InteractionsServer}
 
 pub using @framework {type InvocationScope}
 

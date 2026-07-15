@@ -62,8 +62,8 @@ handler mode.
 
 ## Verify before decoding
 
-Discord signs the exact raw request body. On JavaScript, verify it before JSON
-parsing or dispatch:
+Discord signs the exact raw request body. Verify it before JSON parsing or
+dispatch:
 
 ```moonbit
 ///|
@@ -79,10 +79,33 @@ if !verified {
 let json = @json.parse(raw_body)
 ```
 
-`verify_signature` uses WebCrypto Ed25519 and returns `false` for malformed
-hex input or verification failures. It is available through the JavaScript
-facade and the `gaato/discord/verify` package. Native HTTP adapters must provide
-their own Ed25519 verification implementation.
+`verify_signature` uses WebCrypto on JavaScript and runtime-loaded libcrypto on
+native. It returns `false` for malformed hex input or verification failures.
+
+## Native HTTP server
+
+The native facade includes a complete signed-interactions server:
+
+```moonbit
+///|
+async fn run_server(app : @discord.App, public_key : String, token : String) {
+  @async.with_task_group(group => {
+    let server = @discord.serve_interactions(
+      group,
+      app,
+      addr="127.0.0.1:8080",
+      public_key~,
+      token~,
+      sync=true,
+    )
+    println("listening on \{server.addr()}")
+  })
+}
+```
+
+The server verifies signatures against the raw body, handles Discord PINGs,
+dispatches through `App::serve`, returns 404 for `NoRoute`, and returns 202 for
+`NoResponse` or `TimedOut`. Use a reverse proxy for public HTTPS termination.
 
 ## Cloudflare Workers
 
