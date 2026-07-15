@@ -160,6 +160,40 @@ fn[T, C] paginator_from_cursor(
 ///|
 /// Page through channel messages. Without a cursor, pagination starts at the
 /// newest messages and continues backward. `around` produces one page only.
+///
+/// Start before or after a known message by supplying one cursor. `before`,
+/// `after`, and `around` are mutually exclusive. All paginator methods
+/// (`next_page`, `collect`, `each`) consume the same mutable cursor state;
+/// do not call them concurrently. Empty pages and pages shorter than the
+/// configured page size mark the end.
+///
+/// ```mbt check
+/// test "walk message history newest-first" {
+///   async fn print_history(
+///     client : @http.Client,
+///     channel_id : @model.ChannelId,
+///     newest_known : @model.MessageId,
+///   ) -> Unit {
+///     let pages = client.paginate_messages(channel_id, page_size=100)
+///     for ;; {
+///       match pages.next_page() {
+///         Some(messages) =>
+///           for message in messages {
+///             println("\{message.id}: \{message.content}")
+///           }
+///         None => break
+///       }
+///     }
+///     // `collect` bounds the walk instead of draining the full history.
+///     let recent = client
+///       .paginate_messages(channel_id, before=newest_known, page_size=100)
+///       .collect(max=250)
+///     ignore(recent)
+///   }
+///
+///   ignore(print_history)
+/// }
+/// ```
 pub fn Client::paginate_messages(
   self : Client,
   channel_id : @model.ChannelId,
@@ -211,6 +245,26 @@ pub fn Client::paginate_messages(
 
 ///|
 /// Page through guild members in ascending user-id order.
+///
+/// Use `each` when the item callback is synchronous. Available paginator
+/// constructors cover messages, guild members, bans, audit-log entries,
+/// scheduled-event users, poll-answer voters, and current-user guilds;
+/// cursor direction and endpoint maximums are encoded by each constructor.
+///
+/// ```mbt check
+/// test "visit every guild member" {
+///   async fn print_members(
+///     client : @http.Client,
+///     guild_id : @model.GuildId,
+///   ) -> Unit {
+///     client
+///     .paginate_guild_members(guild_id)
+///     .each(guild_member => println("\{to_repr(guild_member.user)}"))
+///   }
+///
+///   ignore(print_members)
+/// }
+/// ```
 pub fn Client::paginate_guild_members(
   self : Client,
   guild_id : @model.GuildId,

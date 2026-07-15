@@ -63,6 +63,33 @@ pub async fn Client::modify_current_user(
 
 ///|
 /// Create or reuse a direct-message channel with one recipient.
+///
+/// `create_dm` is idempotent for an existing one-to-one DM. Sending a message
+/// can still fail when the recipient does not accept DMs from the bot.
+///
+/// # Example
+///
+/// Send a direct message by creating the DM channel first, then sending
+/// through its channel ID:
+///
+/// ```mbt check
+/// test "dm helper compiles" {
+///   async fn dm_user(
+///     client : @http.Client,
+///     user_id : @model.UserId,
+///     content : String,
+///   ) -> @model.Message {
+///     let channel = client.create_dm(user_id)
+///     client.create_message(
+///       channel.id,
+///       content~,
+///       allowed_mentions=@model.AllowedMentions::none(),
+///     )
+///   }
+///
+///   ignore(dm_user)
+/// }
+/// ```
 pub async fn Client::create_dm(
   self : Client,
   recipient_id : @model.UserId,

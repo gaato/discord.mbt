@@ -11,6 +11,7 @@ import {
 
 import {
   "moonbitlang/core/json",
+  "gaato/discord/model",
 } for "test"
 
 // `member` is part of the public TargetUser API, but MoonBit currently marks

@@ -1,5 +1,47 @@
 ///|
 /// Rich content embedded in a Discord message.
+///
+/// Embed models are public records. Set fields that Discord should receive
+/// and use `None` for the rest, then pass the value to
+/// `Client::create_message(embeds=[...])`, `CommandReply::message(embeds=[...])`,
+/// `ctx.respond`, or a followup method. Discord applies its documented embed
+/// count and text-length limits.
+///
+/// ```mbt check
+/// test "set only the fields discord should receive" {
+///   let embed : @model.Embed = {
+///     title: Some("Build complete"),
+///     typ: None,
+///     url: Some("https://example.com/builds/42"),
+///     description: Some("All checks passed."),
+///     timestamp: Some(@model.Timestamp("2026-07-15T00:00:00Z")),
+///     color: Some(0x57F287),
+///     footer: Some({ text: "build 42", icon_url: None, proxy_icon_url: None }),
+///     image: None,
+///     thumbnail: None,
+///     video: None,
+///     provider: None,
+///     author: None,
+///     fields: Some([
+///       { name: "Target", value: "native", inline: Some(true) },
+///       { name: "Tests", value: "325 passed", inline: Some(true) },
+///     ]),
+///     flags: None,
+///   }
+///   json_inspect(embed, content={
+///     "title": "Build complete",
+///     "url": "https://example.com/builds/42",
+///     "description": "All checks passed.",
+///     "timestamp": "2026-07-15T00:00:00Z",
+///     "color": 5763719,
+///     "footer": { "text": "build 42" },
+///     "fields": [
+///       { "name": "Target", "value": "native", "inline": true },
+///       { "name": "Tests", "value": "325 passed", "inline": true },
+///     ],
+///   })
+/// }
+/// ```
 pub(all) struct Embed {
   title : String?
   typ : EmbedType?

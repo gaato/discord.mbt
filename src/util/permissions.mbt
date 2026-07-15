@@ -24,6 +24,48 @@ pub fn all_permissions() -> @model.Permissions {
 ///   assert_true(permissions.contains(@model.Permissions::send_messages()))
 /// }
 /// ```
+///
+/// Chain it with `channel_permissions` to compute a member's effective
+/// permissions in a channel without a cache; supply role and overwrite data
+/// from the event, REST client, or your own cache:
+///
+/// ```mbt check
+/// test "guard a handler with effective channel permissions" {
+///   fn effective_channel_permissions(
+///     guild_id : @model.GuildId,
+///     owner_id : @model.UserId,
+///     member_id : @model.UserId,
+///     role_ids : Array[@model.RoleId],
+///     everyone_permissions : @model.Permissions,
+///     role_permissions : Array[@model.Permissions],
+///     overwrites : Array[@model.Overwrite],
+///   ) -> @model.Permissions {
+///     let base = @util.base_permissions(
+///       is_owner=member_id == owner_id,
+///       everyone_permissions~,
+///       role_permissions~,
+///     )
+///     @util.channel_permissions(
+///       base~,
+///       guild_id~,
+///       member_id~,
+///       role_ids~,
+///       overwrites~,
+///     )
+///   }
+///
+///   let effective = effective_channel_permissions(
+///     Id(1UL),
+///     Id(2UL),
+///     Id(3UL),
+///     [],
+///     @model.Permissions::view_channel(),
+///     [@model.Permissions::send_messages()],
+///     [],
+///   )
+///   assert_true(effective.contains(@model.Permissions::send_messages()))
+/// }
+/// ```
 pub fn base_permissions(
   is_owner~ : Bool,
   everyone_permissions~ : @model.Permissions,
@@ -149,8 +191,23 @@ pub fn channel_permissions(
 ///
 /// This is deliberately separate from `channel_permissions`: it is an
 /// opt-in post-processing rule rather than part of Discord's published
-/// `compute_overwrites` pseudocode. Active timeouts retain only
-/// `VIEW_CHANNEL` and `READ_MESSAGE_HISTORY`; administrators are exempt.
+/// `compute_overwrites` pseudocode. Call it only when
+/// `communication_disabled_until` has a timestamp. Active timeouts retain
+/// only `VIEW_CHANNEL` and `READ_MESSAGE_HISTORY`; administrators are exempt.
+///
+/// ```mbt check
+/// test "an active timeout suppresses send permissions" {
+///   let permissions = @model.Permissions::view_channel() |
+///     @model.Permissions::send_messages()
+///   let effective = @util.apply_communication_timeout(
+///     permissions~,
+///     communication_disabled_until=@model.Timestamp("2100-01-01T00:00:00Z"),
+///     now_unix_ms=0L,
+///   )
+///   assert_true(effective.contains(@model.Permissions::view_channel()))
+///   assert_false(effective.contains(@model.Permissions::send_messages()))
+/// }
+/// ```
 pub fn apply_communication_timeout(
   permissions~ : @model.Permissions,
   communication_disabled_until~ : @model.Timestamp,

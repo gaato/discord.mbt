@@ -14,6 +14,33 @@ fn Client::with_channel_allowed_mentions(
 /// Post a message to a channel. Labeled optional arguments replace the
 /// builder pattern; at least one of `content`, `embeds`, `components`,
 /// `sticker_ids`, or `files` must be provided.
+///
+/// Message-shaped endpoints switch to multipart automatically when `files`
+/// is present (see `FileUpload` and `attachments_json` for the wire format).
+/// The same `files` argument is available on interaction responses,
+/// followups, and edit methods. On edit, the supplied files replace the
+/// attachment list sent in that request; preserve any attachments that
+/// should remain.
+///
+/// ```mbt check
+/// test "upload a file alongside message content" {
+///   async fn send_report(
+///     client : @http.Client,
+///     channel_id : @model.ChannelId,
+///     report : Bytes,
+///   ) -> @model.Message {
+///     let file = @http.FileUpload(
+///       "report.csv",
+///       report,
+///       content_type="text/csv",
+///       description="Daily report",
+///     )
+///     client.create_message(channel_id, content="Report attached", files=[file])
+///   }
+///
+///   ignore(send_report)
+/// }
+/// ```
 pub async fn Client::create_message(
   self : Client,
   channel_id : @model.ChannelId,
