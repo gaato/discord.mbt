@@ -184,6 +184,11 @@ pub fn OggPacketReader::next_packet(
 }
 
 ///|
+fn OggPacketReader::has_incomplete_input(self : OggPacketReader) -> Bool {
+  self.cursor < self.buffer.length() || !self.partial_packet.is_empty()
+}
+
+///|
 fn has_magic(bytes : Bytes, magic : Bytes) -> Bool {
   bytes.length() >= magic.length() && bytes[:magic.length()] == magic[:]
 }
@@ -193,17 +198,17 @@ fn has_magic(bytes : Bytes, magic : Bytes) -> Bool {
 /// frames; this demuxer does not decode or resample them.
 pub struct OggOpusSource {
   priv reader : OggPacketReader
+  priv input : &@io.Reader?
   priv channels_ : Int
   priv pre_skip_ : Int
 }
 
 ///|
-pub fn OggOpusSource::from_bytes(
-  bytes : Bytes,
-) -> OggOpusSource raise OggOpusError {
-  let reader = OggPacketReader::new()
-  reader.push(bytes)
-  guard reader.next_packet() is Some(head) else {
+fn validate_opus_headers(
+  head : Bytes?,
+  tags : Bytes?,
+) -> (Int, Int) raise OggOpusError {
+  guard head is Some(head) else {
     raise InvalidOpusStream(reason="missing OpusHead packet")
   }
   if !has_magic(head, b"OpusHead") || head.length() < 19 {
@@ -217,13 +222,67 @@ pub fn OggOpusSource::from_bytes(
     raise InvalidOpusStream(reason="OpusHead channel count is zero")
   }
   let pre_skip = head[10].to_int() | (head[11].to_int() << 8)
-  guard reader.next_packet() is Some(tags) else {
+  guard tags is Some(tags) else {
     raise InvalidOpusStream(reason="missing OpusTags packet")
   }
   if !has_magic(tags, b"OpusTags") {
     raise InvalidOpusStream(reason="invalid OpusTags packet")
   }
-  { reader, channels_: channels, pre_skip_: pre_skip }
+  (channels, pre_skip)
+}
+
+///|
+pub fn OggOpusSource::from_bytes(
+  bytes : Bytes,
+) -> OggOpusSource raise OggOpusError {
+  let reader = OggPacketReader::new()
+  reader.push(bytes)
+  let head = reader.next_packet()
+  let tags = reader.next_packet()
+  let (channels, pre_skip) = validate_opus_headers(head, tags)
+  { reader, input: None, channels_: channels, pre_skip_: pre_skip }
+}
+
+///|
+/// Open an Ogg/Opus source backed by an asynchronous reader. The constructor
+/// consumes and validates the `OpusHead` and `OpusTags` packets; audio packets
+/// are read lazily by `AudioSource::next_frame`.
+///
+/// # Example
+/// ```mbt nocheck
+/// async test {
+///   let file = @fs.open("voice.ogg")
+///   defer file.close()
+///   let source = @voice.OggOpusSource::from_reader(file)
+///   let audio : &@voice.AudioSource = source
+///   while audio.next_frame() is Some(frame) {
+///     play_opus_frame(frame)
+///   }
+/// }
+/// ```
+pub async fn OggOpusSource::from_reader(input : &@io.Reader) -> OggOpusSource {
+  let reader = OggPacketReader::new()
+  let mut head : Bytes? = None
+  let mut tags : Bytes? = None
+  for ;; {
+    while reader.next_packet() is Some(packet) {
+      if head is None {
+        head = Some(packet)
+      } else {
+        tags = Some(packet)
+        break
+      }
+    }
+    if tags is Some(_) {
+      break
+    }
+    match input.read_some(max_len=8192) {
+      Some(chunk) => reader.push(chunk)
+      None => break
+    }
+  }
+  let (channels, pre_skip) = validate_opus_headers(head, tags)
+  { reader, input: Some(input), channels_: channels, pre_skip_: pre_skip }
 }
 
 ///|
@@ -238,5 +297,234 @@ pub fn OggOpusSource::pre_skip(self : OggOpusSource) -> Int {
 
 ///|
 pub impl AudioSource for OggOpusSource with fn next_frame(self) {
-  self.reader.next_packet()
+  for ;; {
+    if self.reader.next_packet() is Some(packet) {
+      return Some(packet)
+    }
+    guard self.input is Some(input) else { return None }
+    match input.read_some(max_len=8192) {
+      Some(chunk) => self.reader.push(chunk)
+      None => {
+        if self.reader.has_incomplete_input() {
+          raise InvalidOpusStream(reason="truncated ogg stream")
+        }
+        return None
+      }
+    }
+  }
+}
+
+///|
+fn push_u16_le(output : Array[Byte], value : Int) -> Unit {
+  output.push(value.to_byte())
+  output.push((value >> 8).to_byte())
+}
+
+///|
+fn push_u32_le(output : Array[Byte], value : UInt) -> Unit {
+  output.push(value.to_byte())
+  output.push((value >> 8).to_byte())
+  output.push((value >> 16).to_byte())
+  output.push((value >> 24).to_byte())
+}
+
+///|
+fn push_u64_le(output : Array[Byte], value : UInt64) -> Unit {
+  for shift in 0..<8 {
+    output.push((value >> (shift * 8)).to_byte())
+  }
+}
+
+///|
+fn opus_packet_segment_count(packet : Bytes) -> Int {
+  packet.length() / 255 + 1
+}
+
+///|
+fn append_opus_packet_lacing(laces : Array[Byte], packet : Bytes) -> Unit {
+  let mut remaining = packet.length()
+  while remaining >= 255 {
+    laces.push(b'\xFF')
+    remaining -= 255
+  }
+  laces.push(remaining.to_byte())
+}
+
+///|
+/// Pure in-memory Ogg/Opus muxer. Header pages are available immediately from
+/// `take_output`; audio pages become available as packet or lacing limits are
+/// reached, and `finish` emits the final EOS page.
+pub struct OggOpusWriter {
+  priv serial : UInt
+  priv max_packets_per_page : Int
+  priv mut page_sequence : UInt
+  priv mut granule : UInt64
+  priv audio_packets : Array[Bytes]
+  priv mut audio_segments : Int
+  priv output : Array[Byte]
+  priv mut finished : Bool
+}
+
+///|
+fn OggOpusWriter::emit_page(
+  self : OggOpusWriter,
+  header_type : Byte,
+  granule : UInt64,
+  packets : Array[Bytes],
+) -> Unit {
+  let laces : Array[Byte] = []
+  for packet in packets {
+    append_opus_packet_lacing(laces, packet)
+  }
+  let page : Array[Byte] = [b'O', b'g', b'g', b'S', 0, header_type]
+  push_u64_le(page, granule)
+  push_u32_le(page, self.serial)
+  push_u32_le(page, self.page_sequence)
+  push_u32_le(page, 0U)
+  page.push(laces.length().to_byte())
+  page.append(laces[:])
+  for packet in packets {
+    for byte in packet {
+      page.push(byte)
+    }
+  }
+  let checksum = ogg_page_crc(page[:])
+  page[22] = checksum.to_byte()
+  page[23] = (checksum >> 8).to_byte()
+  page[24] = (checksum >> 16).to_byte()
+  page[25] = (checksum >> 24).to_byte()
+  self.output.append(page[:])
+  self.page_sequence += 1
+}
+
+///|
+fn OggOpusWriter::flush_audio_page(self : OggOpusWriter, eos~ : Bool) -> Unit {
+  if self.audio_packets.is_empty() {
+    if eos {
+      self.emit_page(b'\x04', self.granule, [])
+    }
+    return
+  }
+  self.emit_page(
+    if eos {
+      b'\x04'
+    } else {
+      0
+    },
+    self.granule,
+    self.audio_packets,
+  )
+  self.audio_packets.clear()
+  self.audio_segments = 0
+}
+
+///|
+/// Create an Ogg/Opus muxer and queue its `OpusHead` and `OpusTags` pages.
+///
+/// # Example
+/// ```mbt nocheck
+/// async test {
+///   let writer = @voice.OggOpusWriter::new(channels=2, pre_skip=312)
+///   for frame in recorded_opus_frames() {
+///     writer.write_frame(frame)
+///   }
+///   writer.finish()
+///   let file = @fs.create("recording.ogg")
+///   defer file.close()
+///   file.write(writer.take_output())
+/// }
+/// ```
+///
+/// # Panics
+/// Panics if `channels` or `pre_skip` cannot be represented in an Opus header,
+/// or if `max_packets_per_page` is not positive.
+pub fn OggOpusWriter::new(
+  channels? : Int = 2,
+  pre_skip? : Int = 0,
+  serial? : UInt = 0U,
+  max_packets_per_page? : Int = 50,
+) -> OggOpusWriter {
+  if channels <= 0 || channels > 255 {
+    abort("OggOpusWriter channels must be between 1 and 255")
+  }
+  if pre_skip < 0 || pre_skip > 65535 {
+    abort("OggOpusWriter pre_skip must be between 0 and 65535")
+  }
+  if max_packets_per_page <= 0 {
+    abort("OggOpusWriter max_packets_per_page must be positive")
+  }
+  let writer : OggOpusWriter = {
+    serial,
+    max_packets_per_page,
+    page_sequence: 0U,
+    granule: 0UL,
+    audio_packets: [],
+    audio_segments: 0,
+    output: [],
+    finished: false,
+  }
+  let head : Array[Byte] = [
+    b'O',
+    b'p',
+    b'u',
+    b's',
+    b'H',
+    b'e',
+    b'a',
+    b'd',
+    1,
+    channels.to_byte(),
+  ]
+  push_u16_le(head, pre_skip)
+  push_u32_le(head, 48000U)
+  push_u16_le(head, 0)
+  head.push(0)
+  writer.emit_page(b'\x02', 0UL, [Bytes::from_array(head)])
+  let tags = b"OpusTags\x0B\x00\x00\x00discord.mbt\x00\x00\x00\x00"
+  writer.emit_page(0, 0UL, [tags])
+  writer
+}
+
+///|
+/// Queue one complete Opus packet and advance the 48 kHz granule position.
+pub fn OggOpusWriter::write_frame(
+  self : OggOpusWriter,
+  opus : Bytes,
+  samples? : Int = 960,
+) -> Unit raise OggOpusError {
+  if self.finished {
+    raise InvalidOpusStream(reason="cannot write an Opus frame after finish")
+  }
+  if samples < 0 {
+    raise InvalidOpusStream(reason="Opus frame sample count is negative")
+  }
+  let segments = opus_packet_segment_count(opus)
+  if segments > 255 {
+    raise InvalidOpusStream(reason="Opus packet exceeds one Ogg page")
+  }
+  if !self.audio_packets.is_empty() && self.audio_segments + segments > 255 {
+    self.flush_audio_page(eos=false)
+  }
+  self.audio_packets.push(opus)
+  self.audio_segments += segments
+  self.granule += samples.to_uint64()
+  if self.audio_packets.length() >= self.max_packets_per_page {
+    self.flush_audio_page(eos=false)
+  }
+}
+
+///|
+/// Flush remaining packets in a final EOS page. Repeated calls are no-ops.
+pub fn OggOpusWriter::finish(self : OggOpusWriter) -> Unit {
+  guard !self.finished else { return }
+  self.flush_audio_page(eos=true)
+  self.finished = true
+}
+
+///|
+/// Drain all complete Ogg pages generated so far.
+pub fn OggOpusWriter::take_output(self : OggOpusWriter) -> Bytes {
+  let result = Bytes::from_array(self.output)
+  self.output.clear()
+  result
 }

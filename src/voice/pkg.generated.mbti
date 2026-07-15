@@ -3,6 +3,7 @@ package "gaato/discord/voice"
 
 import {
   "moonbitlang/async",
+  "moonbitlang/async/io",
   "moonbitlang/core/debug",
   "moonbitlang/core/ref",
 }
@@ -138,8 +139,17 @@ pub struct OggOpusSource {
 }
 pub fn OggOpusSource::channels(Self) -> Int
 pub fn OggOpusSource::from_bytes(Bytes) -> Self raise OggOpusError
+pub async fn OggOpusSource::from_reader(&@io.Reader) -> Self
 pub fn OggOpusSource::pre_skip(Self) -> Int
 pub impl AudioSource for OggOpusSource
+
+pub struct OggOpusWriter {
+  // private fields
+}
+pub fn OggOpusWriter::finish(Self) -> Unit
+pub fn OggOpusWriter::new(channels? : Int, pre_skip? : Int, serial? : UInt, max_packets_per_page? : Int) -> Self
+pub fn OggOpusWriter::take_output(Self) -> Bytes
+pub fn OggOpusWriter::write_frame(Self, Bytes, samples? : Int) -> Unit raise OggOpusError
 
 pub struct OggPacketReader {
   // private fields

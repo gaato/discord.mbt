@@ -2,6 +2,7 @@ import {
   "gaato/discord/internal/clock",
   "moonbitlang/async",
   "moonbitlang/async/aqueue",
+  "moonbitlang/async/io",
   "moonbitlang/async/websocket",
   "moonbitlang/async/socket",
   "moonbitlang/core/encoding/utf8",
@@ -12,6 +13,7 @@ import {
 import {
   "moonbitlang/async",
   "moonbitlang/async/aqueue",
+  "moonbitlang/async/pipe",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/json",
 } for "test"

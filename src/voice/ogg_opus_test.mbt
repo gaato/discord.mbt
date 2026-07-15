@@ -130,3 +130,188 @@ test "Ogg packet reader reconstructs a packet across continued pages" {
   reader.push(second)
   assert_eq(reader.next_packet(), Some(packet))
 }
+
+///|
+async fn collect_ogg_source(source : @voice.OggOpusSource) -> Array[Bytes] {
+  let audio : &@voice.AudioSource = source
+  let frames : Array[Bytes] = []
+  while audio.next_frame() is Some(frame) {
+    frames.push(frame)
+  }
+  frames
+}
+
+///|
+async fn read_pipe_fixture(
+  fixture : Bytes,
+  chunk_size : Int,
+) -> (Int, Int, Array[Bytes]) {
+  @async.with_task_group(group => {
+    let (read_end, write_end) = @pipe.pipe()
+    defer read_end.close()
+    group.spawn_bg(() => {
+      defer write_end.close()
+      for offset = 0; offset < fixture.length(); {
+        let next = offset + chunk_size
+        let end = if next < fixture.length() { next } else { fixture.length() }
+        write_end.write(fixture[offset:end])
+        continue end
+      }
+    })
+    let source = @voice.OggOpusSource::from_reader(read_end)
+    (source.channels(), source.pre_skip(), collect_ogg_source(source))
+  })
+}
+
+///|
+async test "Ogg Opus reader streams the golden fixture in small chunks" {
+  let (fixture, frames) = test_opus_fixture()
+  let expected_source = @voice.OggOpusSource::from_bytes(fixture)
+  let expected = collect_ogg_source(expected_source)
+  let (channels, pre_skip, actual) = read_pipe_fixture(fixture, 7)
+  assert_eq(channels, 2)
+  assert_eq(pre_skip, 312)
+  assert_eq(expected, frames)
+  assert_eq(actual, expected)
+}
+
+///|
+async test "Ogg Opus reader accepts headers straddling input chunks" {
+  let writer = @voice.OggOpusWriter::new(channels=1, pre_skip=80)
+  writer.write_frame(b"audio")
+  writer.finish()
+  let (channels, pre_skip, frames) = read_pipe_fixture(writer.take_output(), 11)
+  assert_eq(channels, 1)
+  assert_eq(pre_skip, 80)
+  assert_eq(frames, [b"audio"])
+}
+
+///|
+async test "Ogg Opus reader rejects a stream truncated mid-page" {
+  let writer = @voice.OggOpusWriter::new()
+  writer.write_frame(b"truncated-frame")
+  writer.finish()
+  let complete = writer.take_output()
+  let truncated = complete[:complete.length() - 1].to_owned()
+  @async.with_task_group(group => {
+    let (read_end, write_end) = @pipe.pipe()
+    defer read_end.close()
+    group.spawn_bg(() => {
+      defer write_end.close()
+      write_end.write(truncated)
+    })
+    let source = @voice.OggOpusSource::from_reader(read_end)
+    let audio : &@voice.AudioSource = source
+    try audio.next_frame() catch {
+      @voice.OggOpusError::InvalidOpusStream(reason~) =>
+        assert_true(reason.contains("truncated"))
+      _ => fail("unexpected Ogg/Opus error")
+    } noraise {
+      _ => fail("expected truncated stream rejection")
+    }
+  })
+}
+
+///|
+fn writer_test_frames() -> Array[Bytes] {
+  [
+    b"a",
+    Bytes::makei(255, index => (index % 251).to_byte()),
+    Bytes::makei(300, index => ((index + 17) % 251).to_byte()),
+    b"last-frame",
+  ]
+}
+
+///|
+async test "Ogg Opus writer round-trips varied packet lengths" {
+  let frames = writer_test_frames()
+  let writer = @voice.OggOpusWriter::new(
+    channels=1,
+    pre_skip=312,
+    serial=0x11223344U,
+  )
+  for frame in frames {
+    writer.write_frame(frame)
+  }
+  writer.finish()
+  let source = @voice.OggOpusSource::from_bytes(writer.take_output())
+  assert_eq(source.channels(), 1)
+  assert_eq(source.pre_skip(), 312)
+  assert_eq(collect_ogg_source(source), frames)
+}
+
+///|
+async test "Ogg Opus writer emits contiguous multi-page audio" {
+  let frames = writer_test_frames()
+  let writer = @voice.OggOpusWriter::new(max_packets_per_page=2)
+  for frame in frames {
+    writer.write_frame(frame)
+  }
+  writer.finish()
+  let source = @voice.OggOpusSource::from_bytes(writer.take_output())
+  assert_eq(collect_ogg_source(source), frames)
+}
+
+///|
+fn last_ogg_page_header_type(ogg : Bytes) -> Byte {
+  let mut cursor = 0
+  let mut header_type = b'\x00'
+  while cursor < ogg.length() {
+    header_type = ogg[cursor + 5]
+    let segment_count = ogg[cursor + 26].to_int()
+    let mut body_length = 0
+    for index in 0..<segment_count {
+      body_length += ogg[cursor + 27 + index].to_int()
+    }
+    cursor += 27 + segment_count + body_length
+  }
+  header_type
+}
+
+///|
+test "Ogg Opus writer marks its final page EOS" {
+  let writer = @voice.OggOpusWriter::new(max_packets_per_page=2)
+  writer.write_frame(b"one")
+  writer.write_frame(b"two")
+  writer.finish()
+  let header_type = last_ogg_page_header_type(writer.take_output())
+  assert_true((header_type.to_int() & 0x04) != 0)
+}
+
+///|
+test "Ogg Opus writer incremental output matches one final drain" {
+  let frames = writer_test_frames()
+  let incremental_writer = @voice.OggOpusWriter::new(
+    serial=7U,
+    max_packets_per_page=2,
+  )
+  let mut incremental = incremental_writer.take_output()
+  for frame in frames {
+    incremental_writer.write_frame(frame)
+    incremental = incremental + incremental_writer.take_output()
+  }
+  incremental_writer.finish()
+  incremental = incremental + incremental_writer.take_output()
+
+  let final_writer = @voice.OggOpusWriter::new(
+    serial=7U,
+    max_packets_per_page=2,
+  )
+  for frame in frames {
+    final_writer.write_frame(frame)
+  }
+  final_writer.finish()
+  assert_eq(incremental, final_writer.take_output())
+}
+
+///|
+test "Ogg Opus writer rejects frames after finish" {
+  let writer = @voice.OggOpusWriter::new()
+  writer.finish()
+  try writer.write_frame(b"late") catch {
+    InvalidOpusStream(reason~) => assert_true(reason.contains("after finish"))
+    _ => fail("unexpected Ogg/Opus error")
+  } noraise {
+    _ => fail("expected write-after-finish rejection")
+  }
+}
