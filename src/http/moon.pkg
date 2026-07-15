@@ -15,3 +15,7 @@ import {
   "moonbitlang/core/debug",
   "gaato/discord/model",
 } for "test"
+
+// REST transport depends on async HTTP, available on native and JavaScript.
+
+supported_targets = "js + native"

@@ -115,10 +115,17 @@ pub async fn Client::execute_webhook(
   allowed_mentions? : @model.AllowedMentions,
 ) -> @model.Message raise DiscordHttpError {
   validate_execute_webhook(content, embeds, components, files)
+  let flags = message_flags_with_components_v2(
+    None,
+    content,
+    embeds,
+    components,
+  )
   let builder = @model.ObjBuilder()
     .opt("content", content)
     .opt("embeds", embeds)
     .opt("components", components)
+    .opt("flags", flags)
     .opt("username", username)
     .opt("avatar_url", avatar_url)
     .opt("tts", tts)

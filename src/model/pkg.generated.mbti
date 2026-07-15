@@ -9,6 +9,8 @@ import {
 // Values
 pub fn dispatch_event(String, Json) -> Event raise
 
+pub fn requires_components_v2(Array[Component]) -> Bool
+
 // Errors
 pub(all) suberror AllowedMentionsError {
   ParseAndExplicit(typ~ : AllowedMentionType)

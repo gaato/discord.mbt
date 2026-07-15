@@ -92,6 +92,9 @@ pub async fn Client::create_followup(
       message="one of content/embeds/components/files is required",
     )
   }
+  let flags = message_flags_with_components_v2(
+    flags, content, embeds, components,
+  )
   let builder = @model.ObjBuilder()
     .opt("content", content)
     .opt("embeds", embeds)

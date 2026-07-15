@@ -25,6 +25,8 @@ import {
 
 warnings = "-29"
 
+supported_targets = "js + native"
+
 options(
   targets: {
     "README.mbt.md": [ "native" ],

@@ -7,7 +7,17 @@ fn message_response_data(
   files : Array[@dhttp.FileUpload]?,
   allowed_mentions : @model.AllowedMentions?,
   ephemeral : Bool,
-) -> Json {
+) -> Json raise @dhttp.DiscordHttpError {
+  let flags = @dhttp.message_flags_with_components_v2(
+    if ephemeral {
+      Some(@model.MessageFlags::ephemeral())
+    } else {
+      None
+    },
+    content,
+    embeds,
+    components,
+  )
   let builder = @model.ObjBuilder()
     .opt("content", content)
     .opt("embeds", embeds)
@@ -16,9 +26,7 @@ fn message_response_data(
   if files is Some(fs) && fs.length() > 0 {
     builder.field("attachments", @dhttp.attachments_json(fs)) |> ignore
   }
-  if ephemeral {
-    builder.field("flags", @model.MessageFlags::ephemeral()) |> ignore
-  }
+  builder.opt("flags", flags) |> ignore
   builder.build()
 }
 

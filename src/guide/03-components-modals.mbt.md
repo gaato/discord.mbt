@@ -68,6 +68,56 @@ fn register_ticket_handlers(app : @discord.App) -> Unit {
 Component interaction contexts expose a non-optional `message()`, plus
 `scope()` and `user()` for the invoker.
 
+## Components V2
+
+Components V2 lets components provide the message's layout and content instead
+of using the legacy `content` and `embeds` fields. When a top-level V2
+component is present, discord.mbt sets `IS_COMPONENTS_V2` automatically on
+initial replies, followups, ordinary sends, and edits.
+
+```mbt check
+///|
+let components_v2 : Array[@model.Component] = [
+  @discord.container(
+    components=[
+      @discord.text_display("## Deployment ready\nChoose the next action."),
+      @discord.separator(divider=true, spacing=1),
+      @discord.action_row([
+        @discord.button(
+          custom_id="deploy:approve",
+          label="Approve",
+          style=Success,
+        ),
+        @discord.button(custom_id="deploy:cancel", label="Cancel", style=Danger),
+      ]),
+    ],
+    accent_color=0x5865F2,
+  ),
+]
+```
+
+Do not pass `content` or non-empty `embeds` with these components; the library
+raises `DiscordHttpError::Validation` before sending the request. Discord also
+does not allow a message that has been sent as Components V2 to return to a V1
+layout.
+
+Deferring first is supported. The edit path detects the V2 layout and adds the
+flag to the original-response PATCH:
+
+```mbt check
+///|
+async fn edit_to_components_v2(ctx : @discord.CommandCtx) -> Unit {
+  ctx.defer_response()
+  ctx.edit_response(components=components_v2) |> ignore
+}
+
+///|
+test "Components V2 declarations compile" {
+  ignore(components_v2)
+  ignore(edit_to_components_v2)
+}
+```
+
 ## Typed modals
 
 Define modal fields once, then use the same `Modal[A]` for display and typed

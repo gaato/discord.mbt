@@ -68,6 +68,13 @@ pub async fn Client::create_message(
       message="one of content/embeds/components/sticker_ids/files is required",
     )
   }
+  let flags = message_flags_with_components_v2(
+    flags,
+    content,
+    embeds,
+    components,
+    sticker_ids?,
+  )
   let body = self
     .with_channel_allowed_mentions(
       @model.ObjBuilder()

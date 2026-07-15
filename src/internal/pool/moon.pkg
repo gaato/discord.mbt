@@ -2,3 +2,7 @@ import {
   "moonbitlang/async",
   "moonbitlang/async/http",
 }
+
+// The async HTTP client is implemented by the native and JavaScript runtimes.
+
+supported_targets = "js + native"

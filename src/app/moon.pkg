@@ -18,3 +18,5 @@ import {
 // it as a possible future keyword before local warning attributes take effect.
 
 warnings = "-35"
+
+supported_targets = "js + native"

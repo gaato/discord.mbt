@@ -14,6 +14,27 @@ test "patch fields omit missing values and preserve empty arrays" {
 }
 
 ///|
+test "message patch adds and combines the Components V2 flag" {
+  let components : Array[@model.Component] = [
+    Container({ id: None, components: [], accent_color: None, spoiler: None }),
+  ]
+  json_inspect(
+    message_patch_builder(None, false, None, Some(components), None).build(),
+    content={ "components": [{ "components": [], "type": 17 }], "flags": 32768 },
+  )
+  json_inspect(
+    message_patch_builder(
+      None,
+      false,
+      None,
+      Some(components),
+      Some(@model.MessageFlags::ephemeral()),
+    ).build(),
+    content={ "components": [{ "components": [], "type": 17 }], "flags": 32832 },
+  )
+}
+
+///|
 test "nullable patch fields distinguish set and clear" {
   json_inspect(
     message_patch_builder(Some("updated"), false, None, None, None).build(),

@@ -61,7 +61,19 @@ pub fn InitialResponse::message(
 ///|
 /// Build the same message data object used by `CommandCtx::respond`.
 #warnings("-unused_value")
-fn InitialResponse::message_data(self : InitialResponse) -> Json {
+fn InitialResponse::message_data(
+  self : InitialResponse,
+) -> Json raise @dhttp.DiscordHttpError {
+  let flags = @dhttp.message_flags_with_components_v2(
+    if self.ephemeral_ {
+      Some(@model.MessageFlags::ephemeral())
+    } else {
+      None
+    },
+    self.content_,
+    self.embeds_,
+    self.components_,
+  )
   let builder = @model.ObjBuilder()
     .opt("content", self.content_)
     .opt("embeds", self.embeds_)
@@ -70,9 +82,7 @@ fn InitialResponse::message_data(self : InitialResponse) -> Json {
   if self.files_ is Some(files) && files.length() > 0 {
     builder.field("attachments", @dhttp.attachments_json(files)) |> ignore
   }
-  if self.ephemeral_ {
-    builder.field("flags", @model.MessageFlags::ephemeral()) |> ignore
-  }
+  builder.opt("flags", flags) |> ignore
   builder.build()
 }
 

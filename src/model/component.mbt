@@ -25,6 +25,37 @@ pub(all) enum Component {
 } derive(Debug)
 
 ///|
+/// Whether any top-level component requires Discord's Components V2 message
+/// flag.
+///
+/// ```mbt check
+/// test "detect top-level Components V2 layouts" {
+///   let row : @model.Component = ActionRow({ id: None, components: [] })
+///   let container : @model.Component = Container({
+///     id: None,
+///     components: [],
+///     accent_color: None,
+///     spoiler: None,
+///   })
+///   assert_false(@model.requires_components_v2([row]))
+///   assert_true(@model.requires_components_v2([row, container]))
+/// }
+/// ```
+pub fn requires_components_v2(components : Array[Component]) -> Bool {
+  components.any(component => {
+    match component {
+      Section(_)
+      | TextDisplay(_)
+      | MediaGallery(_)
+      | File(_)
+      | Separator(_)
+      | Container(_) => true
+      _ => false
+    }
+  })
+}
+
+///|
 fn component_payload(payload : Json, typ : Int) -> Json {
   match payload {
     Object(fields) => {

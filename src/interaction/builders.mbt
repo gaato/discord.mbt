@@ -372,14 +372,16 @@ pub fn channel_select(
 
 ///|
 /// Build a text display block (components v2): markdown `content` rendered
-/// in the message body. Requires the `IS_COMPONENTS_V2` message flag.
+/// in the message body. Reply and send layers set the required
+/// `IS_COMPONENTS_V2` message flag automatically.
 pub fn text_display(content : String) -> @model.Component {
   TextDisplay({ id: None, content })
 }
 
 ///|
 /// Build a section (components v2): up to three text displays laid out next
-/// to an `accessory` (a thumbnail or button).
+/// to an `accessory` (a thumbnail or button). Reply and send layers set the
+/// required `IS_COMPONENTS_V2` message flag automatically.
 pub fn section(
   components~ : Array[@model.Component],
   accessory~ : @model.Component,
@@ -416,7 +418,8 @@ pub fn thumbnail(
 ///|
 /// Build a container (components v2): groups child components in a rounded
 /// box with an optional `accent_color` (`0xRRGGBB`) stripe, similar to an
-/// embed.
+/// embed. Reply and send layers set the required `IS_COMPONENTS_V2` message
+/// flag automatically.
 pub fn container(
   components~ : Array[@model.Component],
   accent_color? : Int,
@@ -433,7 +436,8 @@ pub fn container(
 ///|
 /// Build a separator (components v2): vertical padding between components,
 /// with an optional visible `divider` line and `spacing` size (1 = small,
-/// 2 = large).
+/// 2 = large). Reply and send layers set the required `IS_COMPONENTS_V2`
+/// message flag automatically.
 pub fn separator(divider? : Bool, spacing? : Int) -> @model.Component {
   Separator({ id: None, divider, spacing })
 }
@@ -465,7 +469,9 @@ pub fn media_item(
 }
 
 ///|
-/// Build a media gallery (components v2): a grid of 1–10 media items.
+/// Build a media gallery (components v2): a grid of 1–10 media items. Reply
+/// and send layers set the required `IS_COMPONENTS_V2` message flag
+/// automatically.
 pub fn media_gallery(
   items : Array[@model.MediaGalleryItem],
 ) -> @model.Component {

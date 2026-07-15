@@ -33,6 +33,9 @@ fn message_patch_builder(
   if content is Some(value) && value.length() > 4000 {
     raise Validation(message="content exceeds 4000 UTF-16 units")
   }
+  let flags = message_flags_with_components_v2(
+    flags, content, embeds, components,
+  )
   @model.ObjBuilder()
   .und("content", patch_nullable("content", content, clear_content))
   .und("embeds", patch_value(embeds))
