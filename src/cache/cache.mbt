@@ -16,6 +16,8 @@ pub struct CacheResources {
 }
 
 ///|
+/// Select the retained resources individually; unspecified flags keep
+/// their defaults (all on except presences and messages).
 pub fn CacheResources::CacheResources(
   guilds? : Bool = true,
   channels? : Bool = true,
@@ -39,11 +41,14 @@ pub fn CacheResources::CacheResources(
 }
 
 ///|
+/// Retain every resource, including high-churn presences and messages.
 pub fn CacheResources::all() -> CacheResources {
   CacheResources(presences=true, messages=true)
 }
 
 ///|
+/// Retain nothing; enable resources from this baseline for a minimal
+/// cache.
 pub fn CacheResources::none() -> CacheResources {
   CacheResources(
     guilds=false,
@@ -56,6 +61,7 @@ pub fn CacheResources::none() -> CacheResources {
 }
 
 ///|
+/// The default selection (see `CacheResources`).
 pub fn CacheResources::default() -> CacheResources {
   CacheResources()
 }
@@ -106,6 +112,10 @@ pub struct InMemoryCache {
 }
 
 ///|
+/// Create an empty cache retaining the selected `resources`. When
+/// message caching is enabled, each channel keeps at most
+/// `max_messages_per_channel` recent messages. Feed it gateway events
+/// via `Bot::attach_cache` (or call `update` manually).
 pub fn InMemoryCache::InMemoryCache(
   resources~ : CacheResources,
   max_messages_per_channel? : Int = 100,
@@ -572,6 +582,7 @@ pub fn InMemoryCache::update(
 }
 
 ///|
+/// The cached guild, if retained.
 pub fn InMemoryCache::guild(
   self : InMemoryCache,
   id : @model.GuildId,
@@ -580,11 +591,14 @@ pub fn InMemoryCache::guild(
 }
 
 ///|
+/// All cached guilds.
 pub fn InMemoryCache::guilds(self : InMemoryCache) -> Array[@model.Guild] {
   self.guilds_.values().to_array()
 }
 
 ///|
+/// Whether the guild is currently marked unavailable by a `GUILD_DELETE`
+/// outage notice.
 pub fn InMemoryCache::is_guild_unavailable(
   self : InMemoryCache,
   id : @model.GuildId,
@@ -593,6 +607,7 @@ pub fn InMemoryCache::is_guild_unavailable(
 }
 
 ///|
+/// Ids of guilds currently marked unavailable.
 pub fn InMemoryCache::unavailable_guilds(
   self : InMemoryCache,
 ) -> Array[@model.GuildId] {
@@ -600,6 +615,7 @@ pub fn InMemoryCache::unavailable_guilds(
 }
 
 ///|
+/// The cached channel or thread, if retained.
 pub fn InMemoryCache::channel(
   self : InMemoryCache,
   id : @model.ChannelId,
@@ -608,11 +624,13 @@ pub fn InMemoryCache::channel(
 }
 
 ///|
+/// All cached channels and threads.
 pub fn InMemoryCache::channels(self : InMemoryCache) -> Array[@model.Channel] {
   self.channels_.values().to_array()
 }
 
 ///|
+/// The cached role, if retained.
 pub fn InMemoryCache::role(
   self : InMemoryCache,
   guild_id : @model.GuildId,
@@ -622,6 +640,7 @@ pub fn InMemoryCache::role(
 }
 
 ///|
+/// All cached roles of a guild.
 pub fn InMemoryCache::roles(
   self : InMemoryCache,
   guild_id : @model.GuildId,
@@ -633,6 +652,7 @@ pub fn InMemoryCache::roles(
 }
 
 ///|
+/// The cached guild member, if retained.
 pub fn InMemoryCache::member(
   self : InMemoryCache,
   guild_id : @model.GuildId,
@@ -642,6 +662,8 @@ pub fn InMemoryCache::member(
 }
 
 ///|
+/// All cached members of a guild (only members seen in events unless
+/// the privileged `GUILD_MEMBERS` intent fills the cache).
 pub fn InMemoryCache::members(
   self : InMemoryCache,
   guild_id : @model.GuildId,
@@ -653,6 +675,7 @@ pub fn InMemoryCache::members(
 }
 
 ///|
+/// The cached user, if retained.
 pub fn InMemoryCache::user(
   self : InMemoryCache,
   id : @model.UserId,
@@ -661,11 +684,13 @@ pub fn InMemoryCache::user(
 }
 
 ///|
+/// All cached users.
 pub fn InMemoryCache::users(self : InMemoryCache) -> Array[@model.User] {
   self.users_.values().to_array()
 }
 
 ///|
+/// The cached voice state of a user in a guild, if any.
 pub fn InMemoryCache::voice_state(
   self : InMemoryCache,
   guild_id : @model.GuildId,
@@ -675,6 +700,7 @@ pub fn InMemoryCache::voice_state(
 }
 
 ///|
+/// All cached voice states of a guild.
 pub fn InMemoryCache::voice_states(
   self : InMemoryCache,
   guild_id : @model.GuildId,
@@ -686,6 +712,7 @@ pub fn InMemoryCache::voice_states(
 }
 
 ///|
+/// The cached presence of a user in a guild, if presences are retained.
 pub fn InMemoryCache::presence(
   self : InMemoryCache,
   guild_id : @model.GuildId,
@@ -695,6 +722,7 @@ pub fn InMemoryCache::presence(
 }
 
 ///|
+/// All cached presences of a guild.
 pub fn InMemoryCache::presences(
   self : InMemoryCache,
   guild_id : @model.GuildId,
@@ -706,6 +734,7 @@ pub fn InMemoryCache::presences(
 }
 
 ///|
+/// The cached message, if still retained.
 pub fn InMemoryCache::message(
   self : InMemoryCache,
   channel_id : @model.ChannelId,
@@ -715,6 +744,8 @@ pub fn InMemoryCache::message(
 }
 
 ///|
+/// Cached messages of a channel, oldest first, capped at
+/// `max_messages_per_channel`.
 pub fn InMemoryCache::messages(
   self : InMemoryCache,
   channel_id : @model.ChannelId,
