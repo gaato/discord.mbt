@@ -10,10 +10,11 @@ typed interaction declarations.
 
 > **Status**: experimental, pre-1.0. APIs may change between releases.
 
-Long-form guides and task-focused recipes are in
-[`docs/`](docs/index.md). Generate the complete API reference with
-`moon doc`; package roles and reference commands are listed in
-[`docs/reference.md`](docs/reference.md).
+Long-form guides live in [`src/guide/`](src/guide/README.md); their code
+blocks compile and run as part of the test suite, so the examples cannot
+drift from the library. Task-focused recipes are docstring examples on the
+relevant symbols — look anything up with `moon ide doc` (see
+[Development](#development)).
 
 ## Install
 
@@ -77,27 +78,46 @@ test "quickstart is wired" {
 
 ## Packages
 
-| Package | What it is |
-|---|---|
-| `gaato/discord` | Facade: aliases for the types a typical application names directly |
-| `gaato/discord/model` | Pure data: ~24 entity domains, gateway payloads, zero IO |
-| `gaato/discord/telemetry` | Structured REST, gateway, and dispatch observability values |
-| `gaato/discord/http` | REST `Client`, routes, rate limiting, multipart uploads |
-| `gaato/discord/gateway` | `Shard`: connection state machine, heartbeat, resume |
-| `gaato/discord/voice` | Experimental native voice gateway v8, DAVE, RTP, and Opus send/receive |
-| `gaato/discord/interaction` | Command/component builders, typed args and autocomplete data |
-| `gaato/discord/framework` | Interaction routing, response gates, low-level response contexts |
-| `gaato/discord/app` | Gateway-free typed commands/components/modals, HTTP endpoint, sync and policy |
-| `gaato/discord/bot` | Native gateway executor and typed gateway event descriptors |
-| `gaato/discord/endpoint_http` | Native signed-interactions HTTP server (`serve_interactions`) |
-| `gaato/discord/cache` | Opt-in, gateway-driven in-memory cache |
-| `gaato/discord/util` | Pure helpers: permissions, mentions, timestamps, CDN URLs |
-| `gaato/discord/verify` | Ed25519 request verification (WebCrypto on JS, libcrypto on native) |
-| `gaato/discord/ratelimit` | Rate limiter trait + in-memory implementation |
-| `gaato/discord/queue` | Identify queue trait + in-memory implementation |
-| `gaato/discord/coordinator` | Native TCP coordinator for multi-process Identify and REST limits |
+| Package | What it is | Native | JS |
+|---|---|---:|---:|
+| `gaato/discord` | Facade: aliases for the types a typical application names directly | Yes | Yes* |
+| `gaato/discord/model` | Pure data: ~24 entity domains, gateway payloads, zero IO | Yes | Yes |
+| `gaato/discord/telemetry` | Structured REST, gateway, and dispatch observability values | Yes | Yes |
+| `gaato/discord/http` | REST `Client`, routes, rate limiting, multipart uploads | Yes | Yes |
+| `gaato/discord/gateway` | `Shard`: connection state machine, heartbeat, resume | Yes | No |
+| `gaato/discord/voice` | Experimental native voice gateway v8, DAVE, RTP, and Opus send/receive | Yes | No |
+| `gaato/discord/interaction` | Command/component builders, typed args and autocomplete data | Yes | Yes |
+| `gaato/discord/framework` | Interaction routing, response gates, low-level response contexts | Yes | Yes |
+| `gaato/discord/app` | Gateway-free typed commands/components/modals, HTTP endpoint, sync and policy | Yes | Yes |
+| `gaato/discord/bot` | Native gateway executor and typed gateway event descriptors | Yes | No |
+| `gaato/discord/endpoint_http` | Native signed-interactions HTTP server (`serve_interactions`) | Yes | No |
+| `gaato/discord/cache` | Opt-in, gateway-driven in-memory cache | Yes | Yes |
+| `gaato/discord/util` | Pure helpers: permissions, mentions, timestamps, CDN URLs | Yes | Yes |
+| `gaato/discord/verify` | Ed25519 request verification (WebCrypto on JS, libcrypto on native) | Yes | Yes |
+| `gaato/discord/ratelimit` | Rate limiter trait + in-memory implementation | Yes | Yes |
+| `gaato/discord/queue` | Identify queue trait + in-memory implementation | Yes | Yes |
+| `gaato/discord/coordinator` | Native TCP coordinator for multi-process Identify and REST limits | Yes | No |
+
+\* The facade's gateway and HTTP-server exports exist only on native.
+WebAssembly is not a supported application target for the current async
+executors.
 
 Packages remain usable on their own. A REST-only tool needs `http` and `model`.
+
+## Examples
+
+Runnable programs live under `src/examples/`:
+
+- `slash_echo`: minimal typed Gateway bot.
+- `kitchen_sink`: subcommands, autocomplete, context menus, components, and
+  modals.
+- `ping_gateway`: low-level Gateway and REST use.
+- `low_level`: manual Framework and Shard wiring.
+- `workers_echo`: Cloudflare Workers adapter.
+- `interactions_http`: native signed-interactions HTTP server.
+- `plugin_demo`: a stateful feedback feature installed as a separate package.
+- `voice_player`: join a voice channel and play an Ogg/Opus file.
+- `voice_recorder`: record a user's voice to an Ogg/Opus file.
 
 ## App core and executors
 
@@ -117,7 +137,7 @@ rewriting its interaction declarations.
 `Client`, `App`, and `Bot` each accept onion-style middleware: around one
 logical REST call, around routed interaction dispatch, and around decoded
 gateway event fan-out. The first registered middleware is outermost. See the
-[middleware guide](docs/guide/09-middleware.md).
+[middleware guide](src/guide/09-middleware.mbt.md).
 
 `Command[A]` pairs one handler with `Args[A]`. The argument value drives both
 Discord's registration payload and interaction decoding. Build records with
@@ -190,7 +210,7 @@ calls are serialized through an `IdentifyQueue` honoring the
 `SessionStartLimitExceeded` when the selected shards would exhaust the
 remaining session allowance. Multi-process deployments can use the bundled
 TCP coordinator with `RemoteIdentifyQueue` and `RemoteRateLimiter`; see
-[`docs/guide/08-scaling-processes.md`](docs/guide/08-scaling-processes.md).
+the [scaling guide](src/guide/08-scaling-processes.mbt.md).
 
 #### Gateway compression
 
@@ -239,9 +259,11 @@ then pass an `AudioSource` to `connection.play`. `OggOpusSource::from_bytes`
 accepts an Ogg stream containing pre-encoded 48 kHz Opus packets, and
 `OggOpusSource::from_reader` streams from a pipe such as ffmpeg. For
 receiving, `connection.subscribe(user_id~)` returns a per-user
-`VoiceReceiveStream`. See the [voice guide](docs/guide/10-voice.md) and the
+`VoiceReceiveStream`. See the [voice guide](src/guide/10-voice.mbt.md) and the
 `src/examples/voice_player` and `src/examples/voice_recorder` examples for
-shim filenames, ffmpeg settings, receive events, and cleanup.
+shim filenames, ffmpeg settings, receive events, and cleanup. The accepted
+voice/DAVE design and its milestones are recorded in
+[`src/voice/DESIGN.md`](src/voice/DESIGN.md).
 
 ### Synchronization and failures
 
@@ -436,7 +458,7 @@ On native, `@discord.serve_interactions(group, app, addr~, public_key~, token~)`
 starts a complete signed-interactions HTTP server (package
 `gaato/discord/endpoint_http`): it verifies signatures against the raw body,
 answers Discord PINGs, and maps outcomes to HTTP statuses. See
-[`docs/guide/06-http-interactions.md`](docs/guide/06-http-interactions.md) and
+the [HTTP interactions guide](src/guide/06-http-interactions.mbt.md) and
 `src/examples/interactions_http`. A Workers adapter example is available at
 `src/examples/workers_echo`.
 
@@ -801,7 +823,7 @@ let base = @util.base_permissions(
 Group a feature behind `pub fn install_<feature>(app : App, config~) -> Unit`.
 Pass `Bot` too when the feature subscribes to Gateway events, and keep state in
 a captured struct or closure. discord.mbt does not add a plugin trait or reload
-lifecycle. The [structuring bots guide](docs/guide/07-structuring-bots.md) and
+lifecycle. The [structuring bots guide](src/guide/07-structuring-bots.mbt.md) and
 `src/examples/plugin_demo` show the package layout, configuration injection,
 and checks/cooldowns used by this pattern.
 
@@ -814,8 +836,22 @@ moon fmt
 moon info                             # regenerate pkg.generated.mbti (API review signal)
 ```
 
-Code blocks marked `mbt check` in this README compile and run as part of the
-test suite.
+Look up any package, type, or symbol — including its docstring examples —
+from the terminal:
+
+```bash
+moon ide doc "@discord"
+moon ide doc "@http.Client::create_message"
+moon ide doc "@model.Message"
+moon ide doc "@util.channel_permissions"
+```
+
+Each package's `pkg.generated.mbti` is a concise public-interface snapshot;
+review its diff when checking API drift.
+
+Code blocks marked `mbt check` in this README, in the
+[guides](src/guide/README.md), and in docstrings compile and run as part of
+the test suite.
 
 ## License
 
