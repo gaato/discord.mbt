@@ -1,6 +1,6 @@
 # discord.mbt
 
-A Discord application library for [MoonBit](https://www.moonbit-lang.com/):
+A Discord application library for [MoonBit](https://www.moonbitlang.com/):
 typed interaction declarations, API models, a rate-limited REST client,
 JS/serverless HTTP interactions, and a native WebSocket gateway shard.
 
@@ -8,7 +8,7 @@ The design follows [twilight](https://github.com/twilight-rs/twilight):
 loosely coupled packages that model the Discord API, plus an App layer for
 typed interaction declarations.
 
-> **Status**: pre-1.0. The App and executor APIs may still change.
+> **Status**: experimental, pre-1.0. APIs may change between releases.
 
 Long-form guides and task-focused recipes are in
 [`docs/`](docs/index.md). Generate the complete API reference with
@@ -89,6 +89,10 @@ test "quickstart is wired" {
 | `gaato/discord/framework` | Interaction routing, response gates, low-level response contexts |
 | `gaato/discord/app` | Gateway-free typed commands/components/modals, HTTP endpoint, sync and policy |
 | `gaato/discord/bot` | Native gateway executor and typed gateway event descriptors |
+| `gaato/discord/endpoint_http` | Native signed-interactions HTTP server (`serve_interactions`) |
+| `gaato/discord/cache` | Opt-in, gateway-driven in-memory cache |
+| `gaato/discord/util` | Pure helpers: permissions, mentions, timestamps, CDN URLs |
+| `gaato/discord/verify` | Ed25519 request verification (WebCrypto on JS, libcrypto on native) |
 | `gaato/discord/ratelimit` | Rate limiter trait + in-memory implementation |
 | `gaato/discord/queue` | Identify queue trait + in-memory implementation |
 | `gaato/discord/coordinator` | Native TCP coordinator for multi-process Identify and REST limits |
@@ -109,6 +113,11 @@ gateway dependency. After building an App, choose an executor:
 Both executors use the same handlers. You can move an application between a
 persistent gateway process and an HTTP or serverless deployment without
 rewriting its interaction declarations.
+
+`Client`, `App`, and `Bot` each accept onion-style middleware: around one
+logical REST call, around routed interaction dispatch, and around decoded
+gateway event fan-out. The first registered middleware is outermost. See the
+[middleware guide](docs/guide/09-middleware.md).
 
 `Command[A]` pairs one handler with `Args[A]`. The argument value drives both
 Discord's registration payload and interaction decoding. Build records with
@@ -215,9 +224,9 @@ promptly. Decode-error observers do not imply gateway intents.
 
 Native builds can join voice gateway v8 calls, play 20 ms Opus frames, and
 receive encoded Opus through `VoiceEvent`. Discord requires DAVE encryption,
-so voice applications also need the Rust shim. Download a prebuilt library
-from [GitHub Releases](https://github.com/gaato/discord.mbt/releases), or build
-it from this repository:
+so voice applications also need the Rust shim from `voice-shim/` and must
+point `DISCORD_VOICE_SHIM_PATH` at the built library. Build it with cargo
+(prebuilt libraries will be attached to GitHub Releases once releases start):
 
 ```sh
 cd voice-shim
@@ -227,8 +236,11 @@ set -x DISCORD_VOICE_SHIM_PATH "$PWD/target/release/libdiscord_voice_shim.so"
 
 Call `ctx.join_voice(guild_id, channel_id)` from a READY handler or service,
 then pass an `AudioSource` to `connection.play`. `OggOpusSource::from_bytes`
-accepts an Ogg stream containing pre-encoded 48 kHz Opus packets. See the
-[voice guide](../docs/guide/10-voice.md) and `src/examples/voice_player` for
+accepts an Ogg stream containing pre-encoded 48 kHz Opus packets, and
+`OggOpusSource::from_reader` streams from a pipe such as ffmpeg. For
+receiving, `connection.subscribe(user_id~)` returns a per-user
+`VoiceReceiveStream`. See the [voice guide](docs/guide/10-voice.md) and the
+`src/examples/voice_player` and `src/examples/voice_recorder` examples for
 shim filenames, ffmpeg settings, receive events, and cleanup.
 
 ### Synchronization and failures
@@ -414,19 +426,31 @@ multipart files or explicit outcomes should decode an `@model.Interaction` and
 call `handle_interaction`.
 
 The executor split treats serverless deployments such as Cloudflare Workers as
-a first-class target. JavaScript adapters can verify the raw request with
-`@discord/verify.verify_signature` before parsing or dispatching it. The helper
-uses WebCrypto Ed25519 and works on Cloudflare Workers and Node 19+. It is also
-re-exported as `@discord.verify_signature` on the JavaScript target. Native
-adapters still bring their own Ed25519 implementation, such as libsodium.
+a first-class target. Adapters can verify the raw request with
+`@discord/verify.verify_signature` (re-exported as `@discord.verify_signature`)
+before parsing or dispatching it. The helper uses WebCrypto Ed25519 on
+JavaScript, where it works on Cloudflare Workers and Node 19+, and
+runtime-loaded libcrypto on native.
 
-The core library does not include an HTTP server. A Workers adapter example is
-available at `src/examples/workers_echo`.
+On native, `@discord.serve_interactions(group, app, addr~, public_key~, token~)`
+starts a complete signed-interactions HTTP server (package
+`gaato/discord/endpoint_http`): it verifies signatures against the raw body,
+answers Discord PINGs, and maps outcomes to HTTP statuses. See
+[`docs/guide/06-http-interactions.md`](docs/guide/06-http-interactions.md) and
+`src/examples/interactions_http`. A Workers adapter example is available at
+`src/examples/workers_echo`.
 
 ### Serverless (Cloudflare Workers) quickstart
 
 See `src/examples/workers_echo` for request verification, the two-promise
 `ctx.waitUntil` integration, build instructions, and manual deployment steps.
+
+> **Known issue**: on the JavaScript target, `moonbitlang/async` can stop
+> running scheduler rounds after `Promise::from_async` resolves, so pending
+> tasks may never resume. The upstream fix is
+> [moonbitlang/async#500](https://github.com/moonbitlang/async/pull/500)
+> (not yet merged); until it is released, Workers deployments need that patch
+> applied to the vendored dependency.
 
 After verification, pass the decoded body to `endpoint.handle(body)`. A Discord
 Ping produces the Pong callback.

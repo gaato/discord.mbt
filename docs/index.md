@@ -37,14 +37,16 @@ and method documentation is generated from the source with `moon doc`.
 
 | Surface | Native | JavaScript | Notes |
 |---|---:|---:|---|
-| `gaato/discord` facade | Yes | Yes | Gateway exports exist only on native; signature verification exists only on JavaScript. |
+| `gaato/discord` facade | Yes | Yes | Gateway and HTTP-server exports exist only on native. |
 | `model`, `interaction`, `app`, `framework` | Yes | Yes | Typed data and interaction routing. |
 | `http`, `ratelimit`, `queue` | Yes | Yes | Async REST and supporting services. |
 | `util` | Yes | Yes | Pure permission and formatting helpers. |
+| `cache` | Yes | Yes | Opt-in, gateway-driven in-memory cache. |
 | `gateway`, `bot` | Yes | No | Native WebSocket Gateway transport and executor. |
 | `voice` | Yes | No | Experimental voice gateway v8, DAVE, Opus send and receive. |
 | `coordinator` | Yes | No | Native TCP coordination for multi-process bots. |
-| `verify` | No | Yes | WebCrypto Ed25519 verification. |
+| `endpoint_http` | Yes | No | Native signed-interactions HTTP server. |
+| `verify` | Yes | Yes | Ed25519 verification: WebCrypto on JavaScript, libcrypto on native. |
 
 WebAssembly is not a supported application target for the current async
 executors.
@@ -57,9 +59,11 @@ executors.
 - `src/examples/ping_gateway`: low-level Gateway and REST use.
 - `src/examples/low_level`: manual Framework and Shard wiring.
 - `src/examples/workers_echo`: Cloudflare Workers adapter.
+- `src/examples/interactions_http`: native signed-interactions HTTP server.
 - `src/examples/plugin_demo`: a stateful feedback feature installed as a
   separate package.
 - `src/examples/voice_player`: join a voice channel and play an Ogg/Opus file.
+- `src/examples/voice_recorder`: record a user's voice to an Ogg/Opus file.
 
 ## Design documents
 

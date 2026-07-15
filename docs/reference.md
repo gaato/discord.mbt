@@ -39,13 +39,15 @@ are useful when checking API drift.
 | `gaato/discord/framework` | Lower-level interaction contexts, routing, response gates, and waiters. |
 | `gaato/discord/http` | REST client, typed endpoints, routes, multipart uploads, and paginators. |
 | `gaato/discord/bot` | Native `Bot`, `GatewayCtx`, and typed `Events` descriptors. |
+| `gaato/discord/endpoint_http` | Native signed-interactions HTTP server (`serve_interactions`). |
+| `gaato/discord/cache` | Opt-in, gateway-driven in-memory cache. |
 | `gaato/discord/gateway` | Native low-level Shard transport and connection state. |
 | `gaato/discord/voice` | Experimental native voice gateway, DAVE, RTP, and Opus APIs. |
 | `gaato/discord/ratelimit` | Rate-limiter interface and in-memory implementation. |
 | `gaato/discord/queue` | Identify queue interface and in-memory implementation. |
 | `gaato/discord/coordinator` | Native JSON-lines coordinator and remote queue/limiter implementations. |
 | `gaato/discord/util` | Pure permission calculations, mention/timestamp formatting, and CDN URLs. |
-| `gaato/discord/verify` | JavaScript WebCrypto Ed25519 verification. |
+| `gaato/discord/verify` | Ed25519 request verification: WebCrypto on JavaScript, libcrypto on native. |
 
 Start with the facade for normal applications. Import `model`, `http`, or
 `util` directly when the focused package is clearer or the facade intentionally

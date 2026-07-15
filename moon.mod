@@ -8,9 +8,9 @@ repository = "https://github.com/gaato/discord.mbt"
 
 license = "Apache-2.0"
 
-keywords = [ "discord", "bot", "gateway", "api" ]
+keywords = [ "discord", "bot", "gateway", "api", "voice", "interactions" ]
 
-description = "A Discord library for MoonBit with typed APIs, a native gateway, and JS/serverless HTTP interactions."
+description = "An experimental Discord library for MoonBit: typed APIs, a native gateway with voice (DAVE E2EE), and JS/serverless HTTP interactions."
 
 source = "src"
 

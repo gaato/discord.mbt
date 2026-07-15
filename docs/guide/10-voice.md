@@ -6,8 +6,9 @@ events.
 
 ## Install the native shim
 
-Download a prebuilt voice shim from the project's
-[GitHub Releases](https://github.com/gaato/discord.mbt/releases), or build it:
+Build the voice shim with cargo (prebuilt libraries will be attached to
+[GitHub Releases](https://github.com/gaato/discord.mbt/releases) once
+releases start):
 
 ```sh
 cd voice-shim

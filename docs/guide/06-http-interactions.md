@@ -118,3 +118,10 @@ The `src/examples/workers_echo` adapter exports two promises:
 The adapter should preserve the raw body for verification, answer Discord
 PING requests through the endpoint, return a JSON callback with HTTP 200, and
 map `NoRoute`, `NoResponse`, and `TimedOut` according to its deployment policy.
+
+> **Known issue**: on the JavaScript target, `moonbitlang/async` can stop
+> running scheduler rounds after `Promise::from_async` resolves, so pending
+> tasks may never resume. The upstream fix is
+> [moonbitlang/async#500](https://github.com/moonbitlang/async/pull/500)
+> (not yet merged); until it is released, Workers deployments need that patch
+> applied to the vendored dependency.
