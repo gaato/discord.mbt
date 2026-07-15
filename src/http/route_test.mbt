@@ -26,6 +26,19 @@ fn route_signature(route : @http.Route) -> String {
 }
 
 ///|
+test "edit current application REST route metadata" {
+  let route = @http.Route::EditCurrentApplication
+  inspect(
+    route_signature(route),
+    content=(
+      #|Patch /applications/@me | PATCH:/applications/@me | reason=false
+    ),
+  )
+  assert_true(route.needs_auth())
+  assert_false(route.is_interaction())
+}
+
+///|
 test "current user guild REST route metadata" {
   let route = @http.Route::GetCurrentUserGuilds(query="?limit=200&before=10")
   inspect(

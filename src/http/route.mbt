@@ -24,6 +24,7 @@ pub(all) enum Route {
   GetGateway
   GetGatewayBot
   GetCurrentApplication
+  EditCurrentApplication
   GetCurrentUser
   GetCurrentUserGuilds(query~ : String)
   GetUser(user_id~ : @model.UserId)
@@ -425,6 +426,7 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | CreateGlobalCommand(..)
     | CreateGuildCommand(..) => Post
     ModifyCurrentUser
+    | EditCurrentApplication
     | ModifyChannel(..)
     | EditMessage(..)
     | ModifyGuild(..)
@@ -488,7 +490,7 @@ pub fn Route::path(self : Route) -> String {
     Custom(path~, ..) => path
     GetGateway => "/gateway"
     GetGatewayBot => "/gateway/bot"
-    GetCurrentApplication => "/applications/@me"
+    GetCurrentApplication | EditCurrentApplication => "/applications/@me"
     GetCurrentUser | ModifyCurrentUser => "/users/@me"
     GetCurrentUserGuilds(query~) => "/users/@me/guilds\{query}"
     GetUser(user_id~) => "/users/\{user_id}"
@@ -660,6 +662,7 @@ pub fn Route::bucket(self : Route) -> String {
     GetGateway => "GET:/gateway"
     GetGatewayBot => "GET:/gateway/bot"
     GetCurrentApplication => "GET:/applications/@me"
+    EditCurrentApplication => "PATCH:/applications/@me"
     GetCurrentUser => "GET:/users/@me"
     GetCurrentUserGuilds(..) => "GET:/users/@me/guilds"
     ModifyCurrentUser => "PATCH:/users/@me"

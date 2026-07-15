@@ -1,4 +1,87 @@
 ///|
+test "edit current application body includes provided values" {
+  let install_params : @model.InstallParams = {
+    scopes: ["bot", "applications.commands"],
+    permissions: @model.Permissions::none(),
+  }
+  let integration_types_config : Map[
+    String,
+    @model.ApplicationIntegrationTypeConfiguration,
+  ] = { "0": { oauth2_install_params: Some(install_params) } }
+  json_inspect(
+    edit_current_application_body(
+      custom_install_url="https://example.com/install",
+      description="MoonBit bot",
+      role_connections_verification_url="https://example.com/roles",
+      install_params~,
+      integration_types_config~,
+      flags=@model.ApplicationFlags::gateway_presence_limited(),
+      icon="data:image/png;base64,aWNvbg==",
+      cover_image="data:image/png;base64,Y292ZXI=",
+      interactions_endpoint_url="https://example.com/interactions",
+      tags=["moonbit", "discord"],
+      event_webhooks_url="https://example.com/events",
+      event_webhooks_status=Enabled,
+      event_webhooks_types=["APPLICATION_AUTHORIZED"],
+    ),
+    content={
+      "custom_install_url": "https://example.com/install",
+      "description": "MoonBit bot",
+      "role_connections_verification_url": "https://example.com/roles",
+      "install_params": {
+        "scopes": ["bot", "applications.commands"],
+        "permissions": "0",
+      },
+      "integration_types_config": {
+        "0": {
+          "oauth2_install_params": {
+            "scopes": ["bot", "applications.commands"],
+            "permissions": "0",
+          },
+        },
+      },
+      "flags": 8192,
+      "icon": "data:image/png;base64,aWNvbg==",
+      "cover_image": "data:image/png;base64,Y292ZXI=",
+      "interactions_endpoint_url": "https://example.com/interactions",
+      "tags": ["moonbit", "discord"],
+      "event_webhooks_url": "https://example.com/events",
+      "event_webhooks_status": 2,
+      "event_webhooks_types": ["APPLICATION_AUTHORIZED"],
+    },
+  )
+}
+
+///|
+test "edit current application body distinguishes clear and omission" {
+  json_inspect(
+    edit_current_application_body(
+      clear_custom_install_url=true,
+      clear_description=true,
+      clear_role_connections_verification_url=true,
+      clear_install_params=true,
+      clear_icon=true,
+      clear_cover_image=true,
+      clear_interactions_endpoint_url=true,
+      clear_tags=true,
+      clear_event_webhooks_url=true,
+    ),
+    content={
+      "custom_install_url": null,
+      "description": null,
+      "role_connections_verification_url": null,
+      "install_params": null,
+      "icon": null,
+      "cover_image": null,
+      "interactions_endpoint_url": null,
+      "tags": null,
+      "event_webhooks_url": null,
+    },
+  )
+  json_inspect(edit_current_application_body(), content=Json::empty_object())
+}
+
+///|
 test "auto moderation create and patch bodies preserve arrays" {
   let metadata : @model.TriggerMetadata = {
     keyword_filter: Some(["moonbit"]),

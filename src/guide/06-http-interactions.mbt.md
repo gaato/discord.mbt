@@ -41,6 +41,33 @@ Set `sync=true` only when this process should perform the configured
 `CommandSync`. Synchronization uses bulk overwrite and can remove commands not
 declared by this `App`.
 
+## Configure the Discord endpoint
+
+Set the public interactions URL on the current application, then fetch the
+`verify_key` used to validate signed requests. Discord verifies the URL with a
+PING while setting it; interactions are no longer delivered over the Gateway
+while the endpoint remains configured.
+
+```mbt check
+///|
+async fn configure_interactions_endpoint(client : @dhttp.Client) -> String? {
+  ignore(
+    client.edit_current_application(
+      interactions_endpoint_url="https://bot.example.com/interactions",
+    ),
+  )
+  client.get_current_application().verify_key
+}
+
+///|
+async fn restore_gateway_interactions(client : @dhttp.Client) -> Unit {
+  ignore(client.edit_current_application(clear_interactions_endpoint_url=true))
+}
+```
+
+Clearing `interactions_endpoint_url` removes the HTTP endpoint and restores
+interaction delivery over the Gateway.
+
 ## Dispatch outcomes
 
 `endpoint.handle(body)` decodes JSON and returns callback JSON only for a
@@ -127,6 +154,8 @@ async fn run_server(
 test "http interaction declarations compile" {
   ignore(dispatch_interaction)
   ignore(serve_with_existing_client)
+  ignore(configure_interactions_endpoint)
+  ignore(restore_gateway_interactions)
   ignore(route_outcome)
   ignore(parse_verified)
   ignore(run_server)
