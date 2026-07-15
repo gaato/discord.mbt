@@ -20,6 +20,7 @@
 pub(all) struct Id[M](UInt64)
 
 ///|
+/// The raw snowflake value.
 pub fn[M] Id::value(self : Id[M]) -> UInt64 {
   self.0
 }
@@ -38,6 +39,7 @@ pub fn[M] Id::timestamp_ms(self : Id[M]) -> Int64 {
 }
 
 ///|
+/// Parse a decimal snowflake string.
 pub fn[M] Id::parse(s : StringView) -> Id[M] raise {
   Id(@string.parse_uint64(s))
 }

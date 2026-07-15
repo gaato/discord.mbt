@@ -7,6 +7,8 @@ pub(all) struct GatewayBotInfo {
 } derive(ToJson, FromJson, Debug)
 
 ///|
+/// Identify session allowance: how many session starts remain in the current
+/// window and how many shards may identify concurrently.
 pub(all) struct SessionStartLimit {
   total : Int
   remaining : Int

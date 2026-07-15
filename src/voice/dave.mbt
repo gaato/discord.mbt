@@ -206,6 +206,8 @@ pub struct DaveMachine {
 }
 
 ///|
+/// Create a machine for `self_user_id` backed by `provider`, seeded with the
+/// user ids already present in the voice channel.
 pub fn DaveMachine::new(
   provider : &DaveProvider,
   self_user_id~ : String,

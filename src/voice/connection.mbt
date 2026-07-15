@@ -625,6 +625,9 @@ pub async fn VoiceConnection::stop(self : VoiceConnection) -> Unit {
 }
 
 ///|
+/// Send a Speaking (opcode 5) frame with the given flag bits. The playback
+/// loop manages this automatically; call it directly only for custom
+/// speaking indicators.
 pub async fn VoiceConnection::set_speaking(
   self : VoiceConnection,
   flags : Int,
@@ -642,11 +645,13 @@ pub async fn VoiceConnection::next_event(self : VoiceConnection) -> VoiceEvent {
 }
 
 ///|
+/// The current lifecycle state of this voice connection.
 pub fn VoiceConnection::state(self : VoiceConnection) -> VoiceConnectionState {
   self.state_
 }
 
 ///|
+/// Latest voice gateway heartbeat round-trip in milliseconds, if measured.
 pub fn VoiceConnection::latency_ms(self : VoiceConnection) -> Int64? {
   match self.gateway {
     Some(gateway) => gateway.latency_ms()

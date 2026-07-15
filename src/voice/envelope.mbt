@@ -258,6 +258,8 @@ pub fn parse_binary_frame(
 }
 
 ///|
+/// Voice gateway Identify (opcode 0) payload, offering DAVE protocol
+/// version 1.
 pub fn encode_identify(
   server_id~ : String,
   user_id~ : String,
@@ -277,6 +279,8 @@ pub fn encode_identify(
 }
 
 ///|
+/// Voice gateway Heartbeat (opcode 3) payload carrying the nonce and
+/// last acknowledged server sequence.
 pub fn encode_heartbeat(t~ : Int64, seq_ack~ : Int) -> Json {
   {
     "op": 3,
@@ -288,6 +292,8 @@ pub fn encode_heartbeat(t~ : Int64, seq_ack~ : Int) -> Json {
 }
 
 ///|
+/// Voice gateway Select Protocol (opcode 1) payload announcing the
+/// discovered UDP address and chosen encryption mode.
 pub fn encode_select_protocol(
   address~ : String,
   port~ : Int,
@@ -307,6 +313,7 @@ pub fn encode_select_protocol(
 }
 
 ///|
+/// Voice gateway Speaking (opcode 5) payload for the sender's SSRC.
 pub fn encode_speaking(ssrc~ : UInt, flags~ : Int, delay? : Int = 0) -> Json {
   {
     "op": 5,
@@ -319,6 +326,8 @@ pub fn encode_speaking(ssrc~ : UInt, flags~ : Int, delay? : Int = 0) -> Json {
 }
 
 ///|
+/// Voice gateway Resume (opcode 7) payload for reattaching to an
+/// existing session.
 pub fn encode_resume(
   server_id~ : String,
   session_id~ : String,
@@ -337,11 +346,15 @@ pub fn encode_resume(
 }
 
 ///|
+/// DAVE Transition Ready (opcode 23) payload acknowledging an announced
+/// protocol transition.
 pub fn encode_transition_ready(transition_id~ : Int) -> Json {
   { "op": 23, "d": { "transition_id": transition_id } }
 }
 
 ///|
+/// DAVE Invalid Commit/Welcome (opcode 31) payload asking the server to
+/// reset the group after a rejected MLS message.
 pub fn encode_invalid_commit_welcome(transition_id~ : Int) -> Json {
   { "op": 31, "d": { "transition_id": transition_id } }
 }

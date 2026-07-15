@@ -7,6 +7,8 @@ pub(all) struct ApiError {
 } derive(FromJson, ToJson, Debug)
 
 ///|
+/// Everything a REST call can raise, from client-side validation to decoded
+/// Discord API errors.
 pub(all) suberror DiscordHttpError {
   /// Discord answered with an error status; `error` is the decoded body.
   Api(status~ : Int, error~ : ApiError)

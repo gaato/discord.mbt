@@ -140,16 +140,19 @@ pub async fn RemoteIdentifyQueue::connect(addr : String) -> RemoteIdentifyQueue 
 }
 
 ///|
+/// Close the coordinator connection; in-flight and later requests fail.
 pub fn RemoteIdentifyQueue::close(self : RemoteIdentifyQueue) -> Unit {
   self.client.close()
 }
 
 ///|
+/// Round-trip a ping through the coordinator to verify connectivity.
 pub async fn RemoteIdentifyQueue::ping(self : RemoteIdentifyQueue) -> Unit {
   self.client.request({ "op": "ping" })
 }
 
 ///|
+/// Acquire the shard's identify slot from the coordinator process.
 pub impl @queue.IdentifyQueue for RemoteIdentifyQueue with fn wait_for_identify(
   self,
   shard_id,
@@ -180,17 +183,20 @@ pub async fn RemoteRateLimiter::connect(addr : String) -> RemoteRateLimiter {
 }
 
 ///|
+/// Close both coordinator connections; in-flight and later requests fail.
 pub fn RemoteRateLimiter::close(self : RemoteRateLimiter) -> Unit {
   self.acquire_client.close()
   self.release_client.close()
 }
 
 ///|
+/// Round-trip a ping through the coordinator to verify connectivity.
 pub async fn RemoteRateLimiter::ping(self : RemoteRateLimiter) -> Unit {
   self.acquire_client.request({ "op": "ping" })
 }
 
 ///|
+/// Acquire the HTTP bucket slot from the coordinator's shared accounting.
 pub impl @ratelimit.RateLimiter for RemoteRateLimiter with fn acquire(
   self,
   bucket_key,
@@ -204,6 +210,7 @@ pub impl @ratelimit.RateLimiter for RemoteRateLimiter with fn acquire(
 }
 
 ///|
+/// Report the response's rate-limit headers back to the coordinator.
 pub impl @ratelimit.RateLimiter for RemoteRateLimiter with fn release(
   self,
   bucket_key,

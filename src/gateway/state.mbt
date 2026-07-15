@@ -10,6 +10,8 @@ pub(all) enum ShardState {
 } derive(Eq, Debug)
 
 ///|
+/// Action after a gateway close: resume the session, identify from scratch,
+/// or give up because reconnecting cannot succeed.
 pub(all) enum ReconnectPolicy {
   Resume
   Reidentify

@@ -26,12 +26,14 @@ pub(all) struct Integration {
 )
 
 ///|
+/// The provider-side account an integration is linked to.
 pub(all) struct IntegrationAccount {
   id : String
   name : String
 } derive(ToJson, FromJson, Debug)
 
 ///|
+/// The OAuth2 application backing a Discord-app integration.
 pub(all) struct IntegrationApplication {
   id : ApplicationId
   name : String
@@ -41,6 +43,7 @@ pub(all) struct IntegrationApplication {
 } derive(ToJson, FromJson, Debug)
 
 ///|
+/// What happens to a subscriber when their integration expires.
 pub(all) enum IntegrationExpireBehavior {
   RemoveRole
   Kick

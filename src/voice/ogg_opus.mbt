@@ -54,6 +54,8 @@ pub struct OggPacketReader {
 }
 
 ///|
+/// Create an empty reader; feed it Ogg data with `push` and drain packets
+/// with `next_packet`.
 pub fn OggPacketReader::new() -> OggPacketReader {
   {
     buffer: [],
@@ -232,6 +234,8 @@ fn validate_opus_headers(
 }
 
 ///|
+/// Parse a complete in-memory Ogg Opus file into an audio source, validating
+/// its `OpusHead`/`OpusTags` headers.
 pub fn OggOpusSource::from_bytes(
   bytes : Bytes,
 ) -> OggOpusSource raise OggOpusError {
@@ -286,16 +290,20 @@ pub async fn OggOpusSource::from_reader(input : &@io.Reader) -> OggOpusSource {
 }
 
 ///|
+/// The channel count declared by the stream's `OpusHead` header.
 pub fn OggOpusSource::channels(self : OggOpusSource) -> Int {
   self.channels_
 }
 
 ///|
+/// Samples (at 48 kHz) to drop before playback, from the `OpusHead` header.
 pub fn OggOpusSource::pre_skip(self : OggOpusSource) -> Int {
   self.pre_skip_
 }
 
 ///|
+/// Yield the next raw Opus packet, pulling more input on demand for
+/// streaming sources; `None` at end of stream.
 pub impl AudioSource for OggOpusSource with fn next_frame(self) {
   for ;; {
     if self.reader.next_packet() is Some(packet) {

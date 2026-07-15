@@ -22,6 +22,9 @@ pub struct InMemoryQueue {
 }
 
 ///|
+/// Create a queue with `max_concurrency` identify buckets (the value Discord
+/// reports in `GET /gateway/bot`), spacing identifies within each bucket by
+/// `spacing_ms`.
 pub fn InMemoryQueue::InMemoryQueue(
   max_concurrency? : Int = 1,
   spacing_ms? : Int = 5250,
@@ -34,6 +37,8 @@ pub fn InMemoryQueue::InMemoryQueue(
 }
 
 ///|
+/// Wait until the shard's bucket (`shard_id % max_concurrency`) allows the
+/// next identify.
 pub impl IdentifyQueue for InMemoryQueue with fn wait_for_identify(
   self,
   shard_id,

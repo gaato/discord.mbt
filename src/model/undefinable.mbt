@@ -26,6 +26,7 @@ pub(all) enum Nullable[T] {
 } derive(Eq, Debug)
 
 ///|
+/// `Some` for a value, `None` for JSON `null`.
 pub fn[T] Nullable::to_option(self : Nullable[T]) -> T? {
   match self {
     Null => None
@@ -34,6 +35,7 @@ pub fn[T] Nullable::to_option(self : Nullable[T]) -> T? {
 }
 
 ///|
+/// `Value` for `Some`, `Null` for `None`.
 pub fn[T] Nullable::from_option(opt : T?) -> Nullable[T] {
   match opt {
     None => Null
@@ -74,6 +76,7 @@ pub(all) enum Undefinable[T] {
 } derive(Eq, Debug)
 
 ///|
+/// `Some` for a value; `None` for both JSON `null` and an absent field.
 pub fn[T] Undefinable::to_option(self : Undefinable[T]) -> T? {
   match self {
     Value(v) => Some(v)

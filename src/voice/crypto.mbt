@@ -120,6 +120,8 @@ pub struct TransportCipher {
 }
 
 ///|
+/// Create a cipher for `mode` from the 32-byte session `secret_key`
+/// delivered by the voice gateway.
 pub fn TransportCipher::new(
   mode : EncryptionMode,
   secret_key : Bytes,

@@ -25,11 +25,13 @@ pub struct ObjBuilder {
 }
 
 ///|
+/// Create an empty builder.
 pub fn ObjBuilder::ObjBuilder() -> ObjBuilder {
   { fields: Map([]) }
 }
 
 ///|
+/// Set `key` to `value` unconditionally.
 pub fn[T : ToJson] ObjBuilder::field(
   self : ObjBuilder,
   key : String,
@@ -40,6 +42,7 @@ pub fn[T : ToJson] ObjBuilder::field(
 }
 
 ///|
+/// Set `key` when `value` is present; omit the field otherwise.
 pub fn[T : ToJson] ObjBuilder::opt(
   self : ObjBuilder,
   key : String,
@@ -52,6 +55,8 @@ pub fn[T : ToJson] ObjBuilder::opt(
 }
 
 ///|
+/// Set `key` from an `Undefinable`: a value, an explicit JSON `null`, or
+/// omitted entirely when `Missing`.
 pub fn[T : ToJson] ObjBuilder::und(
   self : ObjBuilder,
   key : String,
@@ -66,6 +71,7 @@ pub fn[T : ToJson] ObjBuilder::und(
 }
 
 ///|
+/// The accumulated JSON object.
 pub fn ObjBuilder::build(self : ObjBuilder) -> Json {
   Json::object(self.fields)
 }

@@ -23,6 +23,8 @@ pub struct ReorderBuffer[T] {
 }
 
 ///|
+/// Create an empty window that holds packets behind a sequence gap for up to
+/// `hold_ms` milliseconds.
 pub fn[T] ReorderBuffer::new(hold_ms? : Int = 60) -> ReorderBuffer[T] {
   { entries: [], expected: None, hold_ms: hold_ms.to_int64() }
 }

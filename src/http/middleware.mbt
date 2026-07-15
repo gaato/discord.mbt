@@ -21,6 +21,10 @@ pub(all) struct HttpResponse {
 }
 
 ///|
+/// Middleware around each HTTP request: receives the outgoing request and a
+/// `next` continuation. Call `next` (with the request, possibly modified) to
+/// proceed, and return the response, possibly modified. First installed is
+/// outermost.
 pub type HttpMiddleware = async (
   HttpRequest,
   async (HttpRequest) -> HttpResponse,

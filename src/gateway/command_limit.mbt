@@ -8,11 +8,13 @@ pub struct CommandLimiter {
 }
 
 ///|
+/// Create a limiter allowing `limit` sends per 60-second sliding window.
 pub fn CommandLimiter::CommandLimiter(limit? : Int = 115) -> CommandLimiter {
   { timestamps: [], limit }
 }
 
 ///|
+/// Wait until a send slot is available within the window, then consume it.
 pub async fn CommandLimiter::acquire(self : CommandLimiter) -> Unit {
   for ;; {
     let now = @clock.now_ms()

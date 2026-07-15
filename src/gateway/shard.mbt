@@ -24,6 +24,7 @@ pub struct Shard {
 }
 
 ///|
+/// The current lifecycle state of this shard.
 pub fn Shard::state(self : Shard) -> ShardState {
   self.state
 }

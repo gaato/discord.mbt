@@ -35,6 +35,9 @@ pub struct Framework {
 }
 
 ///|
+/// Create an empty interaction router bound to a REST client and application
+/// id. Most bots configure routes through `@app.App` and let an executor
+/// call `App::attach` instead of registering here directly.
 pub fn Framework::Framework(
   client : @dhttp.Client,
   application_id : @model.ApplicationId,

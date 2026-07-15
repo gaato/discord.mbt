@@ -51,6 +51,8 @@ pub struct InMemoryRateLimiter {
 }
 
 ///|
+/// Create a limiter with empty bucket accounting and a global window of
+/// `global_limit` requests per second.
 pub fn InMemoryRateLimiter::InMemoryRateLimiter(
   global_limit? : Int = 50,
 ) -> InMemoryRateLimiter {
@@ -87,6 +89,8 @@ async fn InMemoryRateLimiter::wait_for_global(
 }
 
 ///|
+/// Wait for bucket capacity — and the global window unless `global_exempt` —
+/// before the request is sent.
 pub impl RateLimiter for InMemoryRateLimiter with fn acquire(
   self,
   bucket_key,
@@ -129,6 +133,8 @@ pub impl RateLimiter for InMemoryRateLimiter with fn acquire(
 }
 
 ///|
+/// Feed the response's `x-ratelimit-*` headers back into the bucket
+/// accounting.
 pub impl RateLimiter for InMemoryRateLimiter with fn release(
   self,
   bucket_key,

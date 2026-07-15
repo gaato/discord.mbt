@@ -94,6 +94,8 @@ pub fn VoiceReceiveStream::close(self : VoiceReceiveStream) -> Unit {
 }
 
 ///|
+/// Yield the next Opus packet received from the subscribed user; `None`
+/// after `close` or once the configured trailing silence elapses.
 pub impl AudioSource for VoiceReceiveStream with fn next_frame(self) {
   guard !self.closed else { return None }
   let next : Bytes? = match (self.started, self.end_after_silence_ms) {

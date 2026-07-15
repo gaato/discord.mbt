@@ -183,6 +183,7 @@ pub impl @json.FromJson for Activity with fn from_json(json, path) {
 }
 
 ///|
+/// Unix millisecond start and end times of an activity.
 pub(all) struct ActivityTimestamps {
   start : Int64?
   end : Int64?
@@ -216,6 +217,7 @@ pub impl @json.FromJson for ActivityTimestamps with fn from_json(json, path) {
 }
 
 ///|
+/// The custom or unicode emoji attached to a custom status.
 pub(all) struct ActivityEmoji {
   name : String
   id : EmojiId?
@@ -223,12 +225,14 @@ pub(all) struct ActivityEmoji {
 } derive(ToJson, FromJson, Debug)
 
 ///|
+/// The rich-presence party, with `size` as `[current, max]` when present.
 pub(all) struct ActivityParty {
   id : String?
   size : Array[Int]?
 } derive(ToJson, FromJson, Debug)
 
 ///|
+/// Rich-presence artwork references and their hover texts.
 pub(all) struct ActivityAssets {
   large_image : String?
   large_text : String?
@@ -240,6 +244,7 @@ pub(all) struct ActivityAssets {
 } derive(ToJson, FromJson, Debug)
 
 ///|
+/// Secrets for joining or spectating a rich-presence session.
 pub(all) struct ActivitySecrets {
   join : String?
   spectate : String?
@@ -251,12 +256,14 @@ pub(all) struct ActivitySecrets {
 )
 
 ///|
+/// A custom label/url button shown on a rich presence.
 pub(all) struct ActivityButton {
   label : String
   url : String
 } derive(ToJson, FromJson, Debug)
 
 ///|
+/// Bit set describing which rich-presence interactions an activity supports.
 pub(all) struct ActivityFlags(UInt64) derive(Eq)
 
 ///|

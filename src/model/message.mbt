@@ -102,6 +102,7 @@ pub(all) struct SharedClientTheme {
 } derive(ToJson, FromJson, Debug)
 
 ///|
+/// The base client theme a `SharedClientTheme` gradient is mixed against.
 pub(all) enum BaseTheme {
   Unset
   Dark

@@ -348,6 +348,7 @@ pub fn Route::custom(
 }
 
 ///|
+/// The HTTP method this route is requested with.
 pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
   match self {
     Custom(request_method~, ..) => request_method
@@ -480,6 +481,8 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
 }
 
 ///|
+/// The request path relative to the API base URL, with all route parameters
+/// substituted.
 pub fn Route::path(self : Route) -> String {
   match self {
     Custom(path~, ..) => path

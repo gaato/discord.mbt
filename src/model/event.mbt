@@ -172,6 +172,8 @@ pub(all) enum EventKind {
 } derive(Eq, Debug)
 
 ///|
+/// Map a gateway dispatch name (e.g. `"MESSAGE_CREATE"`) to its kind;
+/// unrecognized names map to `KUnknown`.
 pub fn EventKind::of_name(t : String) -> EventKind {
   match t {
     "APPLICATION_COMMAND_PERMISSIONS_UPDATE" =>

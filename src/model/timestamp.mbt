@@ -27,6 +27,7 @@ pub impl @json.FromJson for Timestamp with fn from_json(json, path) {
 }
 
 ///|
+/// Raised when a string is not a valid ISO 8601 timestamp.
 pub suberror TimestampError {
   InvalidTimestamp(String)
 } derive(Debug)

@@ -11,6 +11,8 @@ pub(all) enum VoiceGatewayState {
 } derive(Debug, Eq)
 
 ///|
+/// Action after a voice WebSocket close: resume the session, rejoin from
+/// scratch, or give up because reconnecting cannot succeed.
 pub(all) enum VoiceReconnectPolicy {
   Resume
   Rejoin
