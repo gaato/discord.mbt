@@ -446,7 +446,7 @@ pub async fn Bot::run(self : Bot) -> Unit {
   defer (if owns_client { client.close() })
   client.on_telemetry(event => self.emit_telemetry(event))
   let resolved = self.resolve_shards(client)
-  @async.with_task_group(group => {
+  @async.with_task_group((group : @async.TaskGroup[Unit]) => {
     let filter = self.event_filter()
     let identify_queue : &@queue.IdentifyQueue = match self.identify_queue_ {
       Some(queue) => queue
@@ -524,6 +524,8 @@ pub async fn Bot::run(self : Bot) -> Unit {
                 shards_: shard_handles,
                 framework_: router,
                 collector_: self.collector_,
+                group_: group,
+                voice_connections_: Map([]),
                 shutdown_requested_: shutdown_requested,
               }
               owner.context = Some(created)

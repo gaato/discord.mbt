@@ -19,6 +19,16 @@ priv struct EventCollector {
 }
 
 ///|
+/// A synchronously registered event observation. Registration is separate
+/// from waiting so callers can install collectors before sending the command
+/// that causes Discord to dispatch the matching event.
+priv struct EventRegistration[T] {
+  collector : EventCollector
+  waiter : EventWaiter
+  event_type : EventType[T]
+}
+
+///|
 fn EventCollector::EventCollector() -> EventCollector {
   { waiters: [] }
 }
@@ -63,23 +73,44 @@ fn EventCollector::waits_for(
 }
 
 ///|
-async fn[T] EventCollector::wait_for(
+fn[T] EventCollector::register(
   self : EventCollector,
   event_type : EventType[T],
   predicate : (T) -> Bool,
-  timeout_ms? : Int,
-) -> T? {
+) -> EventRegistration[T] {
   let waiter : EventWaiter = {
     kind: event_type.kind(),
     matches: event => event_type.project(event).map(predicate).unwrap_or(false),
     queue: Queue(kind=Unbounded),
   }
   self.waiters.push(waiter)
-  // Runs on normal delivery, timeout, and structured-concurrency cancellation.
-  defer self.remove(waiter)
+  { collector: self, waiter, event_type }
+}
+
+///|
+fn[T] EventRegistration::cancel(self : EventRegistration[T]) -> Unit {
+  self.collector.remove(self.waiter)
+}
+
+///|
+async fn[T] EventRegistration::wait(
+  self : EventRegistration[T],
+  timeout_ms? : Int,
+) -> T? {
+  defer self.cancel()
   let raw = match timeout_ms {
-    Some(ms) => @async.with_timeout_opt(ms, () => waiter.queue.get())
-    None => Some(waiter.queue.get())
+    Some(ms) => @async.with_timeout_opt(ms, () => self.waiter.queue.get())
+    None => Some(self.waiter.queue.get())
   }
-  raw.bind(raw_event => event_type.project(raw_event))
+  raw.bind(raw_event => self.event_type.project(raw_event))
+}
+
+///|
+async fn[T] EventCollector::wait_for(
+  self : EventCollector,
+  event_type : EventType[T],
+  predicate : (T) -> Bool,
+  timeout_ms? : Int,
+) -> T? {
+  self.register(event_type, predicate).wait(timeout_ms?)
 }

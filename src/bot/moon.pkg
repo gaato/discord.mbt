@@ -7,6 +7,7 @@ import {
   "gaato/discord/queue",
   "gaato/discord/framework",
   "gaato/discord/app",
+  "gaato/discord/voice",
   "moonbitlang/async",
   "moonbitlang/async/aqueue",
 }
@@ -36,6 +37,7 @@ options(
     "ctx.mbt": [ "native" ],
     "events.mbt": [ "native" ],
     "middleware.mbt": [ "native" ],
+    "voice.mbt": [ "native" ],
     "pkg.generated.mbti": [ "native" ],
     "runtime_wbtest.mbt": [ "native" ],
     "shard_manager.mbt": [ "native" ],

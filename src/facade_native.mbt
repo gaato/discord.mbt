@@ -11,6 +11,20 @@ pub using @endpoint_http {type InteractionsServer, serve_interactions}
 pub using @gateway {type Shard, type ShardEvent}
 
 ///|
+/// Experimental native voice connection, playback, and receive APIs.
+pub using @voice {
+  type VoiceConnection,
+  type VoiceEvent,
+  type VoiceError,
+  type VoiceConnectionState,
+  type VoiceTelemetry,
+  trait AudioSource,
+  type OggOpusSource,
+  type OggOpusError,
+  SILENCE_FRAME,
+}
+
+///|
 /// Native cross-process Identify and REST rate-limit coordination.
 pub using @coordinator {
   type Coordinator,

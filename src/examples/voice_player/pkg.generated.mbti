@@ -1,0 +1,19 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "gaato/discord/examples/voice_player"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+
+// Errors
+type VoicePlayerError derive(@debug.Debug)
+
+// Types and methods
+type TrackedOggSource
+
+// Type aliases
+
+// Traits
+

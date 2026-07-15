@@ -24,6 +24,8 @@ executor for native and JavaScript adapters.
   coordinator and share Identify and REST rate limits between workers.
 - [Middleware](guide/09-middleware.md): wrap REST calls, routed interactions,
   and Gateway handler fan-out.
+- [Voice](guide/10-voice.md): join channels, play and receive Opus, and install
+  the native DAVE shim.
 - [Cookbook](cookbook/dm-user.md): focused examples for common tasks.
 - [API reference](reference.md): package map and `moon doc` commands.
 
@@ -40,6 +42,7 @@ and method documentation is generated from the source with `moon doc`.
 | `http`, `ratelimit`, `queue` | Yes | Yes | Async REST and supporting services. |
 | `util` | Yes | Yes | Pure permission and formatting helpers. |
 | `gateway`, `bot` | Yes | No | Native WebSocket Gateway transport and executor. |
+| `voice` | Yes | No | Experimental voice gateway v8, DAVE, Opus send and receive. |
 | `coordinator` | Yes | No | Native TCP coordination for multi-process bots. |
 | `verify` | No | Yes | WebCrypto Ed25519 verification. |
 
@@ -56,9 +59,10 @@ executors.
 - `src/examples/workers_echo`: Cloudflare Workers adapter.
 - `src/examples/plugin_demo`: a stateful feedback feature installed as a
   separate package.
+- `src/examples/voice_player`: join a voice channel and play an Ogg/Opus file.
 
 ## Design documents
 
 - [`design/voice-dave.md`](design/voice-dave.md): accepted design for voice
   support (voice gateway v8 + the DAVE end-to-end encryption protocol) and
-  its milestone plan. Voice is not implemented yet.
+  the decisions implemented across M1-M4.

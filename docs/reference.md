@@ -40,6 +40,7 @@ are useful when checking API drift.
 | `gaato/discord/http` | REST client, typed endpoints, routes, multipart uploads, and paginators. |
 | `gaato/discord/bot` | Native `Bot`, `GatewayCtx`, and typed `Events` descriptors. |
 | `gaato/discord/gateway` | Native low-level Shard transport and connection state. |
+| `gaato/discord/voice` | Experimental native voice gateway, DAVE, RTP, and Opus APIs. |
 | `gaato/discord/ratelimit` | Rate-limiter interface and in-memory implementation. |
 | `gaato/discord/queue` | Identify queue interface and in-memory implementation. |
 | `gaato/discord/coordinator` | Native JSON-lines coordinator and remote queue/limiter implementations. |

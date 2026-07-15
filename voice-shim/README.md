@@ -1,7 +1,8 @@
 # discord.mbt voice shim
 
 This crate builds the native cryptographic shim used by `gaato/discord/voice`.
-Milestone 2 provides transport AEAD only; DAVE exports are added in Milestone 3.
+It provides transport AEAD and the davey-based DAVE session API through one C
+ABI-compatible dynamic library.
 
 Build it with:
 

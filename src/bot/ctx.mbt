@@ -7,6 +7,11 @@ pub struct GatewayCtx {
   priv shards_ : Array[@gateway.Shard]
   priv framework_ : @framework.Framework
   priv collector_ : EventCollector
+  priv group_ : @async.TaskGroup[Unit]
+  priv voice_connections_ : Map[
+    @model.Id[@model.GuildMarker],
+    @voice.VoiceConnection,
+  ]
   priv shutdown_requested_ : Ref[Bool]
 }
 

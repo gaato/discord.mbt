@@ -12,11 +12,14 @@ import {
   "gaato/discord/interaction",
   "gaato/discord/model",
   "gaato/discord/telemetry",
+  "gaato/discord/voice",
   "moonbitlang/async",
 }
 
 // Values
 pub const API_VERSION : Int = 10
+
+pub const SILENCE_FRAME : Bytes = b"\xF8\xFF\xFE"
 
 pub fn action_row(Array[@model.Component]) -> @model.Component
 
@@ -257,6 +260,10 @@ pub using @framework {type ModalOrigin}
 
 pub using @app {type ModalSubmitHandler}
 
+pub using @voice {type OggOpusError}
+
+pub using @voice {type OggOpusSource}
+
 pub using @http {type Paginator}
 
 pub using @app {type RegisteredCommand}
@@ -284,6 +291,18 @@ pub using @app {type TargetUser}
 pub using @telemetry {type TelemetryEvent}
 
 pub using @http {type UserRef}
+
+pub using @voice {type VoiceConnection}
+
+pub using @voice {type VoiceConnectionState}
+
+pub using @voice {type VoiceError}
+
+pub using @voice {type VoiceEvent}
+
+pub using @voice {type VoiceTelemetry}
+
+pub using @voice {trait AudioSource}
 
 pub using @interaction {trait CommandModel}
 

@@ -351,6 +351,33 @@ fn message_create_frame(sequence : Int, id : String) -> String {
 }
 
 ///|
+fn voice_state_frame(sequence : Int, endpoint_session : String) -> String {
+  (
+    #|{"op":0,"s":SEQUENCE_PLACEHOLDER,"t":"VOICE_STATE_UPDATE","d":{"guild_id":"100","channel_id":"200","user_id":"1","session_id":"SESSION_PLACEHOLDER","deaf":false,"mute":false,"self_deaf":false,"self_mute":false,"suppress":false,"request_to_speak_timestamp":null}}
+  )
+  .replace(old="SEQUENCE_PLACEHOLDER", new=sequence.to_string())
+  .replace(old="SESSION_PLACEHOLDER", new=endpoint_session)
+}
+
+///|
+fn voice_server_frame(
+  sequence : Int,
+  endpoint : String?,
+  token : String,
+) -> String {
+  let endpoint_json = match endpoint {
+    Some(value) => "\"\{value}\""
+    None => "null"
+  }
+  (
+    #|{"op":0,"s":SEQUENCE_PLACEHOLDER,"t":"VOICE_SERVER_UPDATE","d":{"token":"TOKEN_PLACEHOLDER","guild_id":"100","endpoint":ENDPOINT_PLACEHOLDER}}
+  )
+  .replace(old="SEQUENCE_PLACEHOLDER", new=sequence.to_string())
+  .replace(old="TOKEN_PLACEHOLDER", new=token)
+  .replace(old="ENDPOINT_PLACEHOLDER", new=endpoint_json)
+}
+
+///|
 fn middleware_runtime_bot(app : @app.App, transport : BotFakeTransport) -> Bot {
   let bot = Bot(
     app,
@@ -361,6 +388,63 @@ fn middleware_runtime_bot(app : @app.App, transport : BotFakeTransport) -> Bot {
   )
   bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
   bot
+}
+
+///|
+async test "voice credentials register both collectors before opcode 4" {
+  let transport = BotFakeTransport()
+  let app = @app.App(sync=Disabled)
+  let bot = middleware_runtime_bot(app, transport)
+  let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
+  bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
+  @async.with_task_group(group => {
+    let running = group.spawn(no_wait=true, () => bot.run())
+    transport.incoming.put(BOT_HELLO)
+    guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
+      fail("expected identify")
+    }
+    transport.incoming.put(bot_ready_frame())
+    let ctx = ready_contexts.get()
+    let guild_id : @model.GuildId = @model.Id::parse("100")
+    let channel_id : @model.ChannelId = @model.Id::parse("200")
+    let credentials = group.spawn(no_wait=true, () => {
+      ctx.request_voice_credentials(guild_id, channel_id, false, true, 500)
+    })
+    guard transport.outgoing.get()
+      is {
+        "op": Number(4, ..),
+        "d": {
+          "guild_id": String("100"),
+          "channel_id": String("200"),
+          "self_mute": False,
+          "self_deaf": True,
+          ..
+        },
+        ..
+      } else {
+      fail("expected voice state update")
+    }
+    // Deliver both events as soon as opcode 4 is observed. A null endpoint
+    // must not consume the server waiter.
+    transport.incoming.put(voice_server_frame(2, None, "stale-token"))
+    transport.incoming.put(voice_state_frame(3, "voice-session"))
+    transport.incoming.put(
+      voice_server_frame(4, Some("voice.example"), "voice-token"),
+    )
+    debug_inspect(
+      credentials.wait(),
+      content=(
+        #|{
+        #|  server_id: "100",
+        #|  session_id: "voice-session",
+        #|  token: "voice-token",
+        #|  endpoint: "voice.example",
+        #|}
+      ),
+    )
+    ctx.shutdown()
+    running.wait()
+  })
 }
 
 ///|

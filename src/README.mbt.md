@@ -84,6 +84,7 @@ test "quickstart is wired" {
 | `gaato/discord/telemetry` | Structured REST, gateway, and dispatch observability values |
 | `gaato/discord/http` | REST `Client`, routes, rate limiting, multipart uploads |
 | `gaato/discord/gateway` | `Shard`: connection state machine, heartbeat, resume |
+| `gaato/discord/voice` | Experimental native voice gateway v8, DAVE, RTP, and Opus send/receive |
 | `gaato/discord/interaction` | Command/component builders, typed args and autocomplete data |
 | `gaato/discord/framework` | Interaction routing, response gates, low-level response contexts |
 | `gaato/discord/app` | Gateway-free typed commands/components/modals, HTTP endpoint, sync and policy |
@@ -209,6 +210,26 @@ hook without including the payload. The event still reaches raw event handlers.
 Register `bot.on_decode_error((marker, payload) => ...)` to inspect the full
 marker and raw payload; these callbacks run synchronously and should return
 promptly. Decode-error observers do not imply gateway intents.
+
+### Voice (experimental)
+
+Native builds can join voice gateway v8 calls, play 20 ms Opus frames, and
+receive encoded Opus through `VoiceEvent`. Discord requires DAVE encryption,
+so voice applications also need the Rust shim. Download a prebuilt library
+from [GitHub Releases](https://github.com/gaato/discord.mbt/releases), or build
+it from this repository:
+
+```sh
+cd voice-shim
+cargo build --release
+set -x DISCORD_VOICE_SHIM_PATH "$PWD/target/release/libdiscord_voice_shim.so"
+```
+
+Call `ctx.join_voice(guild_id, channel_id)` from a READY handler or service,
+then pass an `AudioSource` to `connection.play`. `OggOpusSource::from_bytes`
+accepts an Ogg stream containing pre-encoded 48 kHz Opus packets. See the
+[voice guide](../docs/guide/10-voice.md) and `src/examples/voice_player` for
+shim filenames, ffmpeg settings, receive events, and cleanup.
 
 ### Synchronization and failures
 
