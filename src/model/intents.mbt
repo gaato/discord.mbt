@@ -1,6 +1,21 @@
 ///|
 /// Gateway intents: the server-side event subscription bitfield sent in
 /// Identify. Unknown bits are preserved. Wire format: JSON number.
+///
+/// ```mbt check
+/// test "compose the gateway event subscriptions a bot needs" {
+///   let intents = @model.Intents::guilds() |
+///     @model.Intents::guild_messages() |
+///     @model.Intents::message_content()
+///   inspect(
+///     intents.bits(),
+///     content=(
+///       #|33281
+///     ),
+///   )
+///   assert_true(intents.contains(@model.Intents::message_content()))
+/// }
+/// ```
 pub(all) struct Intents(UInt) derive(Eq)
 
 ///|

@@ -80,6 +80,31 @@ fn[A] decode_command_args(
 
 ///|
 /// Define a typed slash command.
+///
+/// ```mbt check
+/// test "inspect a slash-command registration spec" {
+///   let command = @app.slash(
+///     name="echo",
+///     description="Echo text",
+///     args=@interaction.Args::of(
+///       @interaction.arg_string(name="text", description="Text to echo"),
+///     ),
+///     handler=Raw(_ => ()),
+///   )
+///   json_inspect(command.spec().to_json(), content={
+///     "name": "echo",
+///     "description": "Echo text",
+///     "options": [
+///       {
+///         "type": 3,
+///         "name": "text",
+///         "description": "Text to echo",
+///         "required": true,
+///       },
+///     ],
+///   })
+/// }
+/// ```
 pub fn[A] slash(
   name~ : String,
   description~ : String,
@@ -154,6 +179,26 @@ fn decode_target_message(
 
 ///|
 /// Define a USER context-menu command.
+///
+/// ```mbt check
+/// test "inspect context-menu command kinds" {
+///   let user = @app.user_command(name="Inspect user", handler=Raw(_ => ()))
+///   let message = @app.message_command(
+///     name="Inspect message",
+///     handler=Raw(_ => ()),
+///   )
+///   json_inspect(user.spec().to_json(), content={
+///     "name": "Inspect user",
+///     "description": "",
+///     "type": 2,
+///   })
+///   json_inspect(message.spec().to_json(), content={
+///     "name": "Inspect message",
+///     "description": "",
+///     "type": 3,
+///   })
+/// }
+/// ```
 pub fn user_command(
   name~ : String,
   handler~ : InteractionHandler[TargetUser],

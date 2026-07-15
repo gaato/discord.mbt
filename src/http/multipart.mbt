@@ -1,6 +1,6 @@
 ///|
 /// One file to upload in a `multipart/form-data` request, next to the
-/// `payload_json` part. Construct with `FileUpload::new`.
+/// `payload_json` part. Construct with `FileUpload(...)`.
 pub struct FileUpload {
   priv filename : String
   priv content : Bytes
@@ -20,6 +20,22 @@ pub impl Debug for FileUpload with fn to_repr(self) {
 ///|
 /// Describe one file to upload. `description` becomes the attachment's
 /// alt text where the endpoint supports it.
+///
+/// ```mbt check
+/// test "describe attachments in payload_json" {
+///   let files = [
+///     @http.FileUpload(
+///       "cat.png",
+///       b"PNG",
+///       content_type="image/png",
+///       description="a cat",
+///     ),
+///   ]
+///   json_inspect(@http.attachments_json(files), content=[
+///     { "id": 0, "filename": "cat.png", "description": "a cat" },
+///   ])
+/// }
+/// ```
 pub fn FileUpload::FileUpload(
   filename : String,
   content : Bytes,
@@ -220,6 +236,23 @@ fn next_multipart_seq() -> Int {
 /// wire format as the REST upload path. Returns the `Content-Type` value
 /// (including the boundary) and the ordered wire chunks. Filenames are
 /// validated like the REST upload path.
+///
+/// ```mbt check
+/// test "keep uploaded bytes as a multipart blob chunk" {
+///   let (content_type, chunks) = @http.encode_multipart_body("{\"type\":4}", [
+///     FileUpload("hello.txt", b"hello", content_type="text/plain"),
+///   ])
+///   assert_true(content_type.has_prefix("multipart/form-data; boundary="))
+///   match chunks {
+///     [Text(payload), Text(file_header), Blob(content), ..] => {
+///       assert_true(payload.contains("payload_json"))
+///       assert_true(file_header.contains("files[0]"))
+///       assert_eq(content, b"hello")
+///     }
+///     _ => fail("unexpected multipart chunk layout")
+///   }
+/// }
+/// ```
 pub fn encode_multipart_body(
   payload_json : String,
   files : Array[FileUpload],

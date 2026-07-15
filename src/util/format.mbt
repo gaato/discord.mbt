@@ -1,5 +1,19 @@
 ///|
 /// Format a user mention.
+///
+/// ```mbt check
+/// test "format Discord mentions" {
+///   let user_id : @model.UserId = Id(10UL)
+///   let channel_id : @model.ChannelId = Id(20UL)
+///   let command_id : @model.CommandId = Id(30UL)
+///   inspect(@util.user_mention(user_id), content="<@10>")
+///   inspect(@util.channel_mention(channel_id), content="<#20>")
+///   inspect(
+///     @util.slash_command_mention(name="echo text", command_id~),
+///     content="</echo text:30>",
+///   )
+/// }
+/// ```
 pub fn user_mention(user_id : @model.UserId) -> String {
   "<@\{user_id}>"
 }
@@ -67,6 +81,19 @@ fn TimestampStyle::code(self : TimestampStyle) -> String {
 
 ///|
 /// Format Unix seconds as a Discord timestamp.
+///
+/// ```mbt check
+/// test "format absolute and model timestamps" {
+///   inspect(@util.timestamp(0L, style=Relative), content="<t:0:R>")
+///   inspect(
+///     @util.timestamp_from_model(
+///       Timestamp("1970-01-01T00:00:01Z"),
+///       style=LongTime,
+///     ),
+///     content="<t:1:T>",
+///   )
+/// }
+/// ```
 pub fn timestamp(unix_seconds : Int64, style? : TimestampStyle) -> String {
   match style {
     None => "<t:\{unix_seconds}>"

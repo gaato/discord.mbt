@@ -29,7 +29,7 @@ pub(all) suberror AllowedMentionsError {
 /// Controls which mentions Discord resolves and notifies for an outgoing
 /// message.
 ///
-/// Use `AllowedMentions::new` so parse categories and explicit ID lists cannot
+/// Use `AllowedMentions(...)` so parse categories and explicit ID lists cannot
 /// conflict. The stored arrays are copied during construction to preserve that
 /// invariant if callers later mutate their input arrays.
 pub struct AllowedMentions {
@@ -41,6 +41,22 @@ pub struct AllowedMentions {
 
 ///|
 /// Construct a validated allowed-mentions object.
+///
+/// ```mbt check
+/// test "allow selected users without parsing every user mention" {
+///   let user_id : @model.UserId = Id(42UL)
+///   let mentions = @model.AllowedMentions(
+///     parse=[Roles],
+///     users=[user_id],
+///     replied_user=false,
+///   )
+///   json_inspect(mentions, content={
+///     "parse": ["roles"],
+///     "users": ["42"],
+///     "replied_user": false,
+///   })
+/// }
+/// ```
 pub fn AllowedMentions::AllowedMentions(
   parse? : Array[AllowedMentionType],
   roles? : Array[RoleId],

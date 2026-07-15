@@ -208,6 +208,22 @@ pub fn arg_attachment(
 
 ///|
 /// Make an argument optional. A missing submitted option decodes to `None`.
+///
+/// ```mbt check
+/// test "make a command option optional" {
+///   let args = @interaction.Args::of(
+///     @interaction.arg_string(name="note", description="Optional note").optional(),
+///   )
+///   json_inspect(args.definitions(), content=[
+///     {
+///       "type": 3,
+///       "name": "note",
+///       "description": "Optional note",
+///       "required": false,
+///     },
+///   ])
+/// }
+/// ```
 pub fn[A] Arg::optional(self : Arg[A]) -> Arg[A?] {
   let definition = { ..self.definition, required: Some(false) }
   let name = definition.name
@@ -290,6 +306,31 @@ pub fn[A] Args::decode(self : Args[A], input : CommandOptions) -> A raise {
 
 ///|
 /// Lift one argument into a composable argument collection.
+///
+/// ```mbt check
+/// test "compose defaulting and validation into an argument spec" {
+///   let args = @interaction.Args::of(
+///     @interaction.arg_int(
+///       name="times",
+///       description="Repeat count",
+///       min=1L,
+///       max=5L,
+///     )
+///     .with_default(1L)
+///     .validate(value => if value <= 5L { None } else { Some("too large") }),
+///   )
+///   json_inspect(args.definitions(), content=[
+///     {
+///       "type": 4,
+///       "name": "times",
+///       "description": "Repeat count",
+///       "required": false,
+///       "min_value": 1,
+///       "max_value": 5,
+///     },
+///   ])
+/// }
+/// ```
 pub fn[A] Args::of(arg : Arg[A]) -> Args[A] {
   {
     definitions_: [arg.definition],

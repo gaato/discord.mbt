@@ -6,6 +6,16 @@
 /// historically as integers in a few places). We accept both on decode and
 /// always emit a string, going through the string representation so values
 /// above 2^53 never pass through a `Double`.
+///
+/// ```mbt check
+/// test "parse and explicitly retag a snowflake" {
+///   let user_id : @model.UserId = @model.Id::parse("175928847299117063")
+///   inspect(user_id.to_string(), content="175928847299117063")
+///   inspect(user_id.timestamp_ms(), content="1462015105796")
+///   let guild_id : @model.GuildId = user_id.cast()
+///   assert_eq(guild_id.value(), user_id.value())
+/// }
+/// ```
 #warnings("-unused_type_variable")
 pub(all) struct Id[M](UInt64)
 

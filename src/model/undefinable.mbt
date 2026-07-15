@@ -4,6 +4,22 @@
 /// Use as a struct field type: `Nullable[T]` for "present, maybe null",
 /// `Nullable[T]?` for "maybe absent, maybe null" (composes with the derived
 /// `FromJson`/`ToJson` optional-field handling).
+///
+/// ```mbt check
+/// test "convert nullable and PATCH values to options" {
+///   let nickname = @model.Nullable::from_option(Some("Moon"))
+///   debug_inspect(
+///     nickname.to_option(),
+///     content=(
+///       #|Some("Moon")
+///     ),
+///   )
+///   let missing : @model.Undefinable[String] = Missing
+///   let cleared : @model.Undefinable[String] = Null
+///   assert_true(missing.to_option() is None)
+///   assert_true(cleared.to_option() is None)
+/// }
+/// ```
 pub(all) enum Nullable[T] {
   Null
   Value(T)

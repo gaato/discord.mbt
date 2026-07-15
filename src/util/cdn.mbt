@@ -57,6 +57,21 @@ fn asset_format(
 ///|
 /// Build a user avatar CDN URL. Animated hashes default to GIF; other hashes
 /// default to PNG.
+///
+/// ```mbt check
+/// test "build avatar and emoji CDN URLs" {
+///   let user_id : @model.UserId = Id(42UL)
+///   inspect(
+///     @util.user_avatar_url(user_id, ImageHash("a_deadbeef"), size=128),
+///     content="https://cdn.discordapp.com/avatars/42/a_deadbeef.gif?size=128",
+///   )
+///   let emoji_id : @model.EmojiId = Id(7UL)
+///   inspect(
+///     @util.emoji_url(emoji_id, format=Webp, size=64),
+///     content="https://cdn.discordapp.com/emojis/7.webp?size=64",
+///   )
+/// }
+/// ```
 pub fn user_avatar_url(
   user_id : @model.UserId,
   avatar : @model.ImageHash,
@@ -74,6 +89,16 @@ pub fn user_avatar_url(
 /// Build a default avatar URL for Discord's username system.
 ///
 /// The avatar index is `(user_id >> 22) % 6`.
+///
+/// ```mbt check
+/// test "derive the default avatar from a snowflake" {
+///   let user_id : @model.UserId = Id(1UL << 22)
+///   inspect(
+///     @util.default_user_avatar_url(user_id),
+///     content="https://cdn.discordapp.com/embed/avatars/1.png",
+///   )
+/// }
+/// ```
 pub fn default_user_avatar_url(user_id : @model.UserId) -> String {
   let index = (user_id.value() >> 22) % 6UL
   "\{cdn_base}/embed/avatars/\{index}.png"

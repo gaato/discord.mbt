@@ -309,6 +309,18 @@ pub(all) enum Route {
 ///
 /// Set `is_interaction=true` only for interaction or webhook-token endpoints:
 /// these skip the global rate limit and omit bot-token authentication.
+///
+/// ```mbt check
+/// test "derive stable metadata for a custom route" {
+///   let route = @http.Route::custom(
+///     request_method=Get,
+///     path="/guilds/100/stickers?limit=25",
+///   )
+///   inspect(route.path(), content="/guilds/100/stickers?limit=25")
+///   inspect(route.bucket(), content="CUSTOM:GET:/guilds/100/stickers")
+///   assert_true(route.needs_auth())
+/// }
+/// ```
 pub fn Route::custom(
   request_method~ : @ahttp.RequestMethod,
   path~ : String,

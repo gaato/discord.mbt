@@ -5,6 +5,21 @@
 /// - `field`: always emitted
 /// - `opt`: emitted only when `Some`
 /// - `und`: `Missing` omitted, `Null` emitted as JSON `null`, `Value` emitted
+///
+/// ```mbt check
+/// test "build a PATCH object with omitted and cleared fields" {
+///   let nickname : String? = None
+///   let avatar : @model.Undefinable[String] = Null
+///   json_inspect(
+///     @model.ObjBuilder()
+///     .field("name", "discord.mbt")
+///     .opt("nickname", nickname)
+///     .und("avatar", avatar)
+///     .build(),
+///     content={ "name": "discord.mbt", "avatar": null },
+///   )
+/// }
+/// ```
 pub struct ObjBuilder {
   priv fields : Map[String, Json]
 }

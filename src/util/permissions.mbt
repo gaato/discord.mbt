@@ -12,6 +12,18 @@ pub fn all_permissions() -> @model.Permissions {
 /// This follows Discord's official `compute_base_permissions` pseudocode:
 /// guild owners and administrators receive all known permissions; otherwise
 /// the `@everyone` permissions are combined with every member role.
+///
+/// ```mbt check
+/// test "combine everyone and member-role permissions" {
+///   let permissions = @util.base_permissions(
+///     is_owner=false,
+///     everyone_permissions=@model.Permissions::view_channel(),
+///     role_permissions=[@model.Permissions::send_messages()],
+///   )
+///   assert_true(permissions.contains(@model.Permissions::view_channel()))
+///   assert_true(permissions.contains(@model.Permissions::send_messages()))
+/// }
+/// ```
 pub fn base_permissions(
   is_owner~ : Bool,
   everyone_permissions~ : @model.Permissions,
@@ -58,6 +70,36 @@ fn has_role(role_ids : Array[@model.RoleId], target : UInt64) -> Bool {
 /// `@everyone`, all member roles as one aggregated deny/allow pair, then the
 /// member overwrite. Unknown overwrite types are ignored for forward
 /// compatibility.
+///
+/// ```mbt check
+/// test "a member overwrite wins after the everyone overwrite" {
+///   let guild_id : @model.GuildId = Id(1UL)
+///   let member_id : @model.UserId = Id(2UL)
+///   let send = @model.Permissions::send_messages()
+///   let overwrites : Array[@model.Overwrite] = [
+///     {
+///       id: guild_id.cast(),
+///       typ: Role,
+///       allow: @model.Permissions::none(),
+///       deny: send,
+///     },
+///     {
+///       id: member_id.cast(),
+///       typ: Member,
+///       allow: send,
+///       deny: @model.Permissions::none(),
+///     },
+///   ]
+///   let permissions = @util.channel_permissions(
+///     base=send,
+///     guild_id~,
+///     member_id~,
+///     role_ids=[],
+///     overwrites~,
+///   )
+///   assert_true(permissions.contains(send))
+/// }
+/// ```
 pub fn channel_permissions(
   base~ : @model.Permissions,
   guild_id~ : @model.GuildId,

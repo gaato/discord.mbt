@@ -35,6 +35,14 @@ pub suberror TimestampError {
 /// Parse the timestamp into milliseconds since the Unix epoch.
 ///
 /// Supports the shapes Discord emits: `YYYY-MM-DDTHH:MM:SS[.f...](Z|±HH:MM)`.
+///
+/// ```mbt check
+/// test "parse a Discord timestamp without losing its source text" {
+///   let timestamp = @model.Timestamp("2021-03-11T18:15:37.907000+00:00")
+///   inspect(timestamp.to_string(), content="2021-03-11T18:15:37.907000+00:00")
+///   inspect(timestamp.unix_ms(), content="1615486537907")
+/// }
+/// ```
 pub fn Timestamp::unix_ms(self : Timestamp) -> Int64 raise TimestampError {
   let s = self.0
   let len = s.length()

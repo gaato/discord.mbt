@@ -298,6 +298,22 @@ pub fn[A, B, C, D, E, Z] ModalFields::map5(
 
 ///|
 /// Define a typed modal.
+///
+/// ```mbt check
+/// test "construct and validate a typed modal" {
+///   let feedback = @app.modal(
+///     custom_id="feedback",
+///     title="Feedback",
+///     fields=@app.ModalFields::of(
+///       @app.text_field(custom_id="details", label="Details").optional(),
+///     ),
+///   )
+///   let app = @app.App(sync=Disabled)
+///   app.on_modal(feedback, Raw(_ => ()))
+///   app.validate()
+///   let _ : @app.ModalHandle = feedback.show(state="draft")
+/// }
+/// ```
 pub fn[A] modal(
   custom_id~ : String,
   title~ : String,
