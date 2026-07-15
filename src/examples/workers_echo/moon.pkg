@@ -22,9 +22,5 @@ options(
       "format": "esm",
     },
   },
-  targets: {
-    "pkg.generated.mbti": [ "js" ],
-    "worker.mbt": [ "js" ],
-    "worker_wbtest.mbt": [ "js" ],
-  },
+  targets: { "worker.mbt": [ "js" ], "worker_wbtest.mbt": [ "js" ] },
 )

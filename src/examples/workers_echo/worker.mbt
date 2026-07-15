@@ -41,38 +41,6 @@ pub extern "js" fn WorkerDispatch::background(
   #| (dispatch) => dispatch.background
 
 ///|
-fn echo_command() -> @discord.Command[String] {
-  @discord.slash(
-    name="echo",
-    description="Echo text from a Cloudflare Worker",
-    args=@discord.Args::of(
-      @discord.arg_string(name="text", description="What to echo"),
-    ),
-    handler=Immediate((_, text) => @discord.CommandReply::message(content=text)),
-  )
-}
-
-///|
-fn slow_command() -> @discord.Command[Unit] {
-  @discord.slash(
-    name="slow",
-    description="Defer, then finish in waitUntil",
-    args=@discord.Args::unit(),
-    handler=Deferred(ephemeral=false, (ctx, _) => {
-      @async.sleep(500)
-      ctx.edit_original(content="Finished in the background.") |> ignore
-    }),
-  )
-}
-
-///|
-fn worker_app() -> @discord.App {
-  let app = @discord.App(sync=Disabled)
-  app..command(echo_command()).command(slow_command())
-  app
-}
-
-///|
 fn encode_outcome(outcome : @discord.InteractionOutcome) -> WorkerResponse {
   match outcome {
     Reply(response~, files=_) =>

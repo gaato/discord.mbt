@@ -23,5 +23,17 @@ Set the deployed Worker's URL as the Interactions Endpoint URL in the Discord
 developer portal. Discord sends a signed PING request while validating the URL;
 the App answers it with a Pong callback.
 
+## Register commands
+
+Workers have no startup phase, so command synchronization runs as a separate
+one-shot: `register/` builds the same `App` as the Worker (one definition in
+`app.mbt`, no drift possible) and diff-syncs it — nothing is sent when the
+registered commands already match. Run it after `wrangler deploy` (or from CI):
+
+```sh
+DISCORD_TOKEN=... moon run --target native src/examples/workers_echo/register
+GUILD_ID=... DISCORD_TOKEN=... moon run --target native src/examples/workers_echo/register  # one guild only
+```
+
 Deployment and configuring the Discord developer portal are manual steps. The
 example does not deploy automatically from this repository.
