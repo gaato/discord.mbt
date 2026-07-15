@@ -9,7 +9,7 @@ async fn CoordinatorClient::connect(addr : String) -> CoordinatorClient {
   let conn = @socket.Tcp::connect(@socket.Addr::parse(addr)) catch {
     error => raise CoordinatorError::Transport(message="\{error}")
   }
-  { conn, gate: @async.Semaphore::new(1) }
+  { conn, gate: Semaphore(1) }
 }
 
 ///|

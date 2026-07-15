@@ -24,13 +24,13 @@ priv struct ConnectionState {
 ///
 /// Use port zero in `addr` to let the OS choose a free port, then pass
 /// `coordinator.addr()` to remote clients.
-pub fn[X] Coordinator::serve(
+pub async fn[X] Coordinator::serve(
   group : @async.TaskGroup[X],
   addr~ : String,
   max_concurrency? : Int = 1,
   identify_spacing_ms? : Int = 5250,
   global_limit? : Int = 50,
-) -> Coordinator raise {
+) -> Coordinator {
   if max_concurrency <= 0 {
     raise CoordinatorError::InvalidConfig(
       message="max_concurrency must be positive",
@@ -46,14 +46,11 @@ pub fn[X] Coordinator::serve(
       message="global_limit must be positive",
     )
   }
-  let server = @socket.TcpServer::new(@socket.Addr::parse(addr))
+  let server = @socket.TcpServer(@socket.Addr::parse(addr))
   let state : CoordinatorState = {
-    identify: @queue.InMemoryQueue::new(
-      max_concurrency~,
-      spacing_ms=identify_spacing_ms,
-    ),
-    limiter: @ratelimit.InMemoryRateLimiter::new(global_limit~),
-    owners: {},
+    identify: InMemoryQueue(max_concurrency~, spacing_ms=identify_spacing_ms),
+    limiter: InMemoryRateLimiter(global_limit~),
+    owners: Map([]),
     next_connection_id: Ref(0),
   }
   let runner : Ref[@async.TaskGroup[Unit]?] = Ref(None)
@@ -67,7 +64,7 @@ pub fn[X] Coordinator::serve(
       })
     })
   })
-  { address: server.addr().to_string(), runner }
+  { address: server.addr.to_string(), runner }
 }
 
 ///|
@@ -95,7 +92,7 @@ pub fn Coordinator::close(self : Coordinator) -> Unit {
 async fn serve_connection(conn : @socket.Tcp, state : CoordinatorState) -> Unit {
   let connection : ConnectionState = {
     id: state.next_connection_id.val,
-    held_buckets: {},
+    held_buckets: Map([]),
   }
   state.next_connection_id.val += 1
   try {
@@ -132,7 +129,7 @@ async fn cleanup_connection(
   for bucket in held {
     if state.owners.get(bucket) is Some(owner) && owner.id == connection.id {
       state.owners.remove(bucket)
-      state.limiter.release(bucket, status=0, headers={})
+      state.limiter.release(bucket, status=0, headers=Map([]))
     }
     connection.held_buckets.remove(bucket)
   }

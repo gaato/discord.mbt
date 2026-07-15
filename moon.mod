@@ -17,5 +17,5 @@ source = "src"
 preferred_target = "native"
 
 import {
-  "moonbitlang/async@0.16.8",
+  "moonbitlang/async@0.20.2",
 }
