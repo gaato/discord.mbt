@@ -1,48 +1,84 @@
 ///|
 priv struct CoordinatorClient {
-  conn : @socket.Tcp
+  addr : @socket.Addr
+  conn : Ref[@socket.Tcp?]
   gate : @async.Semaphore
 }
 
 ///|
 async fn CoordinatorClient::connect(addr : String) -> CoordinatorClient {
-  let conn = @socket.Tcp::connect(@socket.Addr::parse(addr)) catch {
+  let addr = @socket.Addr::parse(addr) catch {
     error => raise CoordinatorError::Transport(message="\{error}")
   }
-  { conn, gate: Semaphore(1) }
+  let conn = CoordinatorClient::dial(addr)
+  { addr, conn: Ref(Some(conn)), gate: Semaphore(1) }
 }
 
 ///|
 fn CoordinatorClient::close(self : CoordinatorClient) -> Unit {
-  self.conn.close()
+  self.drop_connection()
 }
 
 ///|
-async fn CoordinatorClient::request(
+async fn CoordinatorClient::dial(addr : @socket.Addr) -> @socket.Tcp {
+  @socket.Tcp::connect(addr) catch {
+    error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
+      raise error
+    error => raise CoordinatorError::Transport(message="\{error}")
+  }
+}
+
+///|
+async fn CoordinatorClient::connection(self : CoordinatorClient) -> @socket.Tcp {
+  match self.conn.val {
+    Some(conn) => conn
+    None => {
+      let conn = CoordinatorClient::dial(self.addr)
+      self.conn.val = Some(conn)
+      conn
+    }
+  }
+}
+
+///|
+fn CoordinatorClient::drop_connection(self : CoordinatorClient) -> Unit {
+  if self.conn.val is Some(conn) {
+    self.conn.val = None
+    conn.close()
+  }
+}
+
+///|
+fn coordinator_retryable(error : Error) -> Bool {
+  error is (CoordinatorError::Transport(..) | CoordinatorError::Disconnected)
+}
+
+///|
+fn coordinator_fatal(error : Error) -> Bool {
+  @async.is_being_cancelled() ||
+  @async.is_cancellation_error(error) ||
+  !coordinator_retryable(error)
+}
+
+///|
+async fn CoordinatorClient::request_once(
   self : CoordinatorClient,
   request : Json,
 ) -> Unit {
-  self.gate.acquire()
+  let conn = self.connection()
   let response_line = try {
-    self.conn.write(request.stringify() + "\n")
-    match self.conn.read_until("\n") {
+    conn.write(request.stringify() + "\n")
+    match conn.read_until("\n") {
       Some(line) => line
       None => raise CoordinatorError::Disconnected
     }
   } catch {
-    CoordinatorError::Disconnected => {
-      self.gate.release()
-      raise CoordinatorError::Disconnected
-    }
-    error => {
-      self.gate.release()
-      raise CoordinatorError::Transport(message="\{error}")
-    }
+    error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
+      raise error
+    CoordinatorError::Disconnected => raise CoordinatorError::Disconnected
+    error => raise CoordinatorError::Transport(message="\{error}")
   } noraise {
-    line => {
-      self.gate.release()
-      line
-    }
+    line => line
   }
   let response = @json.parse(response_line) catch {
     error =>
@@ -58,13 +94,47 @@ async fn CoordinatorClient::request(
 }
 
 ///|
+async fn CoordinatorClient::request(
+  self : CoordinatorClient,
+  request : Json,
+) -> Unit {
+  self.gate.acquire()
+  defer self.gate.release()
+  // Replaying is safe: identify requests hold no connection-owned state,
+  // disconnect cleanup releases acquired HTTP buckets, and releasing an
+  // already-cleaned bucket is a server-side no-op. A lost identify response
+  // can repeat the spacing wait, but cannot leak a slot.
+  @async.retry(
+    ExponentialDelay(initial=200, factor=2.0, maximum=5000),
+    max_retry=5,
+    fatal_error=coordinator_fatal,
+    () => {
+      self.request_once(request) catch {
+        error if @async.is_being_cancelled() ||
+          @async.is_cancellation_error(error) => {
+          self.drop_connection()
+          raise error
+        }
+        error if coordinator_retryable(error) => {
+          self.drop_connection()
+          raise error
+        }
+        error => raise error
+      }
+    },
+  )
+}
+
+///|
 /// Cross-process implementation of `IdentifyQueue`.
 pub struct RemoteIdentifyQueue {
   priv client : CoordinatorClient
 }
 
 ///|
-/// Open one persistent connection to a coordinator.
+/// Open the initial coordinator connection.
+///
+/// Later transport failures reconnect automatically with bounded backoff.
 pub async fn RemoteIdentifyQueue::connect(addr : String) -> RemoteIdentifyQueue {
   { client: CoordinatorClient::connect(addr) }
 }
@@ -95,7 +165,9 @@ pub struct RemoteRateLimiter {
 }
 
 ///|
-/// Open one persistent connection to a coordinator.
+/// Open the initial coordinator connections.
+///
+/// Later transport failures reconnect automatically with bounded backoff.
 pub async fn RemoteRateLimiter::connect(addr : String) -> RemoteRateLimiter {
   let acquire_client = CoordinatorClient::connect(addr)
   let release_client = CoordinatorClient::connect(addr) catch {

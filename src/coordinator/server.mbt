@@ -46,7 +46,7 @@ pub async fn[X] Coordinator::serve(
       message="global_limit must be positive",
     )
   }
-  let server = @socket.TcpServer(@socket.Addr::parse(addr))
+  let server = @socket.TcpServer(@socket.Addr::parse(addr), reuse_addr=true)
   let state : CoordinatorState = {
     identify: InMemoryQueue(max_concurrency~, spacing_ms=identify_spacing_ms),
     limiter: InMemoryRateLimiter(global_limit~),

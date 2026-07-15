@@ -62,11 +62,11 @@ Give every process a non-overlapping shard range while keeping the same total
 count. All workers that use the same bot token should also use the same
 coordinator-backed REST limiter.
 
-Connections are persistent and requests on one connection are ordered. A
-disconnect raises `CoordinatorError`; version 1 does not reconnect
-automatically, so recreate the remote client according to the application's
-restart policy. If a process disconnects after acquiring a REST bucket, the
-server releases that bucket during connection cleanup.
+Connections are persistent and requests on one connection are ordered. After
+a transport failure, an in-flight request reconnects with bounded exponential
+backoff. Protocol errors from the server remain fatal and are not retried. If
+a process disconnects after acquiring a REST bucket, the server releases that
+bucket during connection cleanup.
 
 ## Wire protocol
 
@@ -82,4 +82,4 @@ line. A client sends only one in-flight request per connection.
 
 Unknown or malformed operations return `{"ok":false,"error":"..."}`. The
 server keeps the connection open after these protocol-level errors. Transport
-failure closes the connection and is reported by the remote client.
+failures close the connection and trigger the bounded reconnect policy.

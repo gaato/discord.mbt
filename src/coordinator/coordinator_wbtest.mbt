@@ -72,3 +72,41 @@ async test "coordinator serializes identify and HTTP limits across clients" {
     }
   })
 }
+
+///|
+async test "remote client reconnects after coordinator restart" {
+  let address : Ref[String?] = Ref(None)
+  let remote : Ref[RemoteIdentifyQueue?] = Ref(None)
+  @async.with_task_group(first_group => {
+    let first = Coordinator::serve(
+      first_group,
+      addr="127.0.0.1:0",
+      identify_spacing_ms=0,
+    )
+    defer first.close()
+    let first_remote = RemoteIdentifyQueue::connect(first.addr())
+    first_remote.ping()
+    address.val = Some(first.addr())
+    remote.val = Some(first_remote)
+  })
+  guard address.val is Some(address) && remote.val is Some(remote) else {
+    fail("coordinator restart fixture did not initialize")
+  }
+  defer remote.close()
+  @async.with_task_group(second_group => {
+    let second = Coordinator::serve(
+      second_group,
+      addr=address,
+      identify_spacing_ms=0,
+    )
+    defer second.close()
+    remote.ping()
+    try remote.client.request({ "op": "not_a_real_operation" }) catch {
+      CoordinatorError::Remote(message~) =>
+        assert_true(message.contains("unknown op"))
+      error => fail("unexpected error: \{error}")
+    } noraise {
+      _ => fail("server error should be fatal")
+    }
+  })
+}
