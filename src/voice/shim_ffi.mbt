@@ -31,7 +31,88 @@ extern "c" fn voice_shim_aead_open(
 ) -> Bytes = "discord_voice_shim_aead_open"
 
 ///|
-/// Whether a compatible ABI v1 voice shim is available in this process.
+type DaveSession
+
+///|
+extern "c" fn voice_shim_dave_max_protocol_version() -> Int = "discord_voice_dave_max_protocol_version"
+
+///|
+#borrow(user_id)
+extern "c" fn voice_shim_dave_session_create(
+  protocol_version : Int,
+  user_id : Bytes,
+  channel_id : UInt64,
+) -> DaveSession = "discord_voice_dave_session_create"
+
+///|
+#borrow(session)
+extern "c" fn voice_shim_dave_session_reinit(
+  session : DaveSession,
+  protocol_version : Int,
+) -> Int = "discord_voice_dave_session_reinit"
+
+///|
+#borrow(session, payload)
+extern "c" fn voice_shim_dave_set_external_sender(
+  session : DaveSession,
+  payload : Bytes,
+) -> Int = "discord_voice_dave_set_external_sender"
+
+///|
+#borrow(session)
+extern "c" fn voice_shim_dave_get_key_package(session : DaveSession) -> Bytes = "discord_voice_dave_get_key_package"
+
+///|
+#borrow(session, payload, recognized_user_ids)
+extern "c" fn voice_shim_dave_process_proposals(
+  session : DaveSession,
+  op_type : Int,
+  payload : Bytes,
+  recognized_user_ids : Array[Bytes],
+) -> Array[Bytes] = "discord_voice_dave_process_proposals"
+
+///|
+#borrow(session, payload)
+extern "c" fn voice_shim_dave_process_commit(
+  session : DaveSession,
+  payload : Bytes,
+) -> Int = "discord_voice_dave_process_commit"
+
+///|
+#borrow(session, payload)
+extern "c" fn voice_shim_dave_process_welcome(
+  session : DaveSession,
+  payload : Bytes,
+) -> Int = "discord_voice_dave_process_welcome"
+
+///|
+#borrow(session, frame)
+extern "c" fn voice_shim_dave_encrypt_opus(
+  session : DaveSession,
+  frame : Bytes,
+) -> Bytes = "discord_voice_dave_encrypt_opus"
+
+///|
+#borrow(session, user_id, frame)
+extern "c" fn voice_shim_dave_decrypt(
+  session : DaveSession,
+  user_id : Bytes,
+  frame : Bytes,
+) -> Bytes = "discord_voice_dave_decrypt"
+
+///|
+#borrow(session)
+extern "c" fn voice_shim_dave_session_status(session : DaveSession) -> Int = "discord_voice_dave_session_status"
+
+///|
+#borrow(session, user_id)
+extern "c" fn voice_shim_dave_get_verification_code(
+  session : DaveSession,
+  user_id : Bytes,
+) -> Bytes = "discord_voice_dave_get_verification_code"
+
+///|
+/// Whether a compatible ABI v2 voice shim is available in this process.
 pub fn shim_available() -> Bool {
   voice_shim_status() == 0
 }

@@ -48,8 +48,8 @@ test "text envelopes decode v8 voice and DAVE opcodes" {
       DaveExecuteTransition(transition_id=5),
     ),
     (
-      "{\"op\":24,\"d\":{\"transition_id\":6,\"epoch\":2}}",
-      DavePrepareEpoch(transition_id=6, epoch=2),
+      "{\"op\":24,\"d\":{\"epoch\":2,\"protocol_version\":1}}",
+      DavePrepareEpoch(epoch=2, protocol_version=1),
     ),
     ("{\"op\":99,\"d\":{}}", Unknown(op=99)),
   ]

@@ -34,6 +34,8 @@ pub fn encode_speaking(ssrc~ : UInt, flags~ : Int, delay? : Int) -> Json
 
 pub fn encode_transition_ready(transition_id~ : Int) -> Json
 
+pub fn new_dave_provider(protocol_version~ : Int, user_id~ : String, channel_id~ : UInt64) -> &DaveProvider raise DaveError
+
 pub async fn open_voice_udp(String, Int) -> &VoiceUdp
 
 pub fn parse_binary_frame(Bytes) -> (VoiceMessage, Int?) raise VoiceEnvelopeError
@@ -46,7 +48,7 @@ pub fn parse_text_frame(String) -> (VoiceMessage, Int?) raise VoiceEnvelopeError
 
 pub fn rtpsize_header_len(Bytes) -> Int
 
-pub async fn run_send_loop(&AudioSource, TransportCipher, &VoiceUdp, VoiceGateway, ssrc~ : UInt, initial_sequence? : UInt16, initial_timestamp? : UInt, stop? : @ref.Ref[Bool], frame_duration_ms? : Int) -> Unit
+pub async fn run_send_loop(&AudioSource, TransportCipher, &VoiceUdp, VoiceGateway, ssrc~ : UInt, initial_sequence? : UInt16, initial_timestamp? : UInt, stop? : @ref.Ref[Bool], frame_duration_ms? : Int, dave? : DaveMachine) -> Unit
 
 pub fn shim_available() -> Bool
 
@@ -55,6 +57,13 @@ pub fn shim_unavailable_reason() -> String?
 pub fn voice_on_close(Int?, Bool) -> VoiceReconnectPolicy
 
 // Errors
+pub(all) suberror DaveError {
+  DaveInvalid(reason~ : String)
+  DaveStale(reason~ : String)
+  DaveUnavailable(reason~ : String)
+  DaveInternal(status~ : Int, reason~ : String)
+} derive(Eq, @debug.Debug)
+
 pub(all) suberror OggOpusError {
   InvalidOggPage(reason~ : String)
   InvalidOpusStream(reason~ : String)
@@ -88,11 +97,31 @@ pub(all) suberror VoiceUdpError {
 } derive(Eq, @debug.Debug)
 
 // Types and methods
+pub(all) enum DaveAction {
+  SendJson(Json)
+  SendBinary(op~ : Int, payload~ : Bytes)
+  SwitchMediaContext(protocol_version~ : Int)
+} derive(Eq, @debug.Debug)
+
+pub struct DaveMachine {
+  // private fields
+}
+pub fn DaveMachine::encrypt_opus_frame(Self, Bytes) -> Bytes raise
+pub fn DaveMachine::handle(Self, VoiceMessage) -> Array[DaveAction] raise
+pub fn DaveMachine::new(&DaveProvider, self_user_id~ : String) -> Self
+
+type DaveSession
+
 pub(all) enum EncryptionMode {
   AeadAes256GcmRtpsize
   AeadXChaCha20Poly1305Rtpsize
 } derive(Eq, @debug.Debug)
 pub fn EncryptionMode::negotiate(Array[String]) -> Self raise VoiceCryptoError
+
+pub struct LibdaveProvider {
+  // private fields
+}
+pub fn LibdaveProvider::verification_code(Self, user_id~ : String) -> String raise DaveError
 
 pub struct OggOpusSource {
   // private fields
@@ -172,7 +201,7 @@ pub(all) enum VoiceMessage {
   Resumed
   DavePrepareTransition(transition_id~ : Int, protocol_version~ : Int)
   DaveExecuteTransition(transition_id~ : Int)
-  DavePrepareEpoch(transition_id~ : Int, epoch~ : Int)
+  DavePrepareEpoch(epoch~ : Int, protocol_version~ : Int)
   DaveMlsExternalSender(payload~ : Bytes)
   DaveMlsProposals(payload~ : Bytes)
   DaveMlsAnnounceCommitTransition(transition_id~ : Int, commit~ : Bytes)
@@ -191,6 +220,19 @@ pub(all) enum VoiceReconnectPolicy {
 // Traits
 pub(open) trait AudioSource {
   async fn next_frame(Self) -> Bytes?
+}
+
+pub(open) trait DaveProvider {
+  fn max_protocol_version(Self) -> Int
+  fn reinit(Self, protocol_version~ : Int) -> Unit raise
+  fn set_external_sender(Self, Bytes) -> Unit raise
+  fn key_package(Self) -> Bytes raise
+  fn process_proposals(Self, op_type~ : Int, Bytes, recognized~ : Array[String]) -> (Bytes?, Bytes?) raise
+  fn process_commit(Self, Bytes) -> Unit raise
+  fn process_welcome(Self, Bytes) -> Unit raise
+  fn encrypt_frame(Self, Bytes) -> Bytes raise
+  fn decrypt_frame(Self, user_id~ : String, Bytes) -> Bytes raise
+  fn status(Self) -> Int
 }
 
 pub(open) trait VoiceTransport {

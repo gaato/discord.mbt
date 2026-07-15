@@ -15,7 +15,7 @@ pub(all) enum VoiceMessage {
   Resumed
   DavePrepareTransition(transition_id~ : Int, protocol_version~ : Int)
   DaveExecuteTransition(transition_id~ : Int)
-  DavePrepareEpoch(transition_id~ : Int, epoch~ : Int)
+  DavePrepareEpoch(epoch~ : Int, protocol_version~ : Int)
   DaveMlsExternalSender(payload~ : Bytes)
   DaveMlsProposals(payload~ : Bytes)
   DaveMlsAnnounceCommitTransition(transition_id~ : Int, commit~ : Bytes)
@@ -210,12 +210,12 @@ pub fn parse_text_frame(
       )
     }
     24 => {
-      guard data is { "transition_id": transition_id, "epoch": epoch, .. } else {
+      guard data is { "epoch": epoch, "protocol_version": protocol_version, .. } else {
         raise invalid_text("invalid DAVE Prepare Epoch payload")
       }
       DavePrepareEpoch(
-        transition_id=int_field(transition_id, "transition_id"),
         epoch=int_field(epoch, "epoch"),
+        protocol_version=int_field(protocol_version, "protocol_version"),
       )
     }
     other => Unknown(op=other)

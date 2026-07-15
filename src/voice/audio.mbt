@@ -20,13 +20,18 @@ async fn pace_until(deadline : Int64) -> Unit {
 async fn send_opus_packet(
   cipher : TransportCipher,
   udp : &VoiceUdp,
+  dave : DaveMachine?,
   sequence : UInt16,
   timestamp : UInt,
   ssrc : UInt,
   frame : Bytes,
 ) -> Unit {
   let header = build_rtp_header(sequence~, timestamp~, ssrc~)
-  udp.send(cipher.seal(header~, frame))
+  let encrypted_frame = match dave {
+    Some(machine) => machine.encrypt_opus_frame(frame)
+    None => frame
+  }
+  udp.send(cipher.seal(header~, encrypted_frame))
 }
 
 ///|
@@ -48,6 +53,7 @@ pub async fn run_send_loop(
   initial_timestamp? : UInt = 0,
   stop? : Ref[Bool],
   frame_duration_ms? : Int = 20,
+  dave? : DaveMachine,
 ) -> Unit {
   let state : SendLoopState = {
     sequence: initial_sequence,
@@ -60,7 +66,15 @@ pub async fn run_send_loop(
       break
     }
     guard source.next_frame() is Some(frame) else { break }
-    send_opus_packet(cipher, udp, state.sequence, state.timestamp, ssrc, frame)
+    send_opus_packet(
+      cipher,
+      udp,
+      dave,
+      state.sequence,
+      state.timestamp,
+      ssrc,
+      frame,
+    )
     state.sequence += 1
     state.timestamp += 960
     state.deadline += frame_duration_ms.to_int64()
@@ -71,6 +85,7 @@ pub async fn run_send_loop(
     send_opus_packet(
       cipher,
       udp,
+      dave,
       state.sequence,
       state.timestamp,
       ssrc,
