@@ -23,7 +23,8 @@ async test "exported two-promise flow returns echo then completes background" {
     #|    ]
     #|  }
     #|}
-  let dispatch = start_interaction("test-token", body)
+  let controller = @js_async.AbortController::new()
+  let dispatch = start_interaction("test-token", body, controller.signal())
   let response = dispatch.response().wait()
   inspect(response.kind(), content="Reply")
   inspect(

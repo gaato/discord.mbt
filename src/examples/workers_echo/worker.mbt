@@ -118,12 +118,22 @@ async fn run_interaction(
 /// The `response` property resolves with `{ kind, body }` as soon as the
 /// initial Discord callback is known. The `background` property resolves only
 /// after the endpoint's task group and every deferred handler have completed.
-pub fn start_interaction(token : String, body : String) -> WorkerDispatch {
+pub fn start_interaction(
+  token : String,
+  body : String,
+  abort_signal : @js_async.AbortSignal,
+) -> WorkerDispatch {
   let responses : @aqueue.Queue[WorkerResponse] = Queue(kind=Unbounded)
   let background = @js_async.Promise::from_async(() => {
     run_interaction(token, body, responses)
   })
-  let response = @js_async.Promise::from_async(() => responses.get())
+  // A client disconnect only cancels the initial-response waiter. The task
+  // group belongs to the waitUntil background promise and must keep running
+  // so deferred handlers can finish after the HTTP request ends.
+  let response = @js_async.Promise::from_async(
+    () => responses.get(),
+    abort_signal~,
+  )
   WorkerDispatch(response, background)
 }
 

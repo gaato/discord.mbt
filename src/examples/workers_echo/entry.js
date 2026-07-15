@@ -42,6 +42,7 @@ export default {
     const { response, background } = start_interaction(
       env.DISCORD_TOKEN ?? "",
       body,
+      request.signal,
     );
     ctx.waitUntil(background);
 
