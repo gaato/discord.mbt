@@ -32,6 +32,9 @@ pub fn[T] EventType::project(self : EventType[T], event : @model.Event) -> T? {
 pub struct Events {}
 
 ///|
+/// Typed descriptor for `APPLICATION_COMMAND_PERMISSIONS_UPDATE` — the
+/// permission overwrites of an application command were updated.
+/// Not gated by a gateway intent.
 pub fn Events::application_command_permissions_update() -> EventType[
   @model.GuildApplicationCommandPermissions,
 ] {
@@ -47,6 +50,9 @@ pub fn Events::application_command_permissions_update() -> EventType[
 }
 
 ///|
+/// Typed descriptor for `AUTO_MODERATION_ACTION_EXECUTION` — an auto
+/// moderation rule triggered and its action was executed. Delivered under
+/// the `AUTO_MODERATION_EXECUTION` intent.
 pub fn Events::auto_moderation_action_execution() -> EventType[
   @model.AutoModerationActionExecutionEvent,
 ] {
@@ -62,6 +68,9 @@ pub fn Events::auto_moderation_action_execution() -> EventType[
 }
 
 ///|
+/// Typed descriptor for `AUTO_MODERATION_RULE_CREATE` — an auto moderation
+/// rule was created. Delivered under the `AUTO_MODERATION_CONFIGURATION`
+/// intent.
 pub fn Events::auto_moderation_rule_create() -> EventType[
   @model.AutoModerationRule,
 ] {
@@ -77,6 +86,9 @@ pub fn Events::auto_moderation_rule_create() -> EventType[
 }
 
 ///|
+/// Typed descriptor for `AUTO_MODERATION_RULE_DELETE` — an auto moderation
+/// rule was deleted. Delivered under the `AUTO_MODERATION_CONFIGURATION`
+/// intent.
 pub fn Events::auto_moderation_rule_delete() -> EventType[
   @model.AutoModerationRule,
 ] {
@@ -92,6 +104,9 @@ pub fn Events::auto_moderation_rule_delete() -> EventType[
 }
 
 ///|
+/// Typed descriptor for `AUTO_MODERATION_RULE_UPDATE` — an auto moderation
+/// rule was updated. Delivered under the `AUTO_MODERATION_CONFIGURATION`
+/// intent.
 pub fn Events::auto_moderation_rule_update() -> EventType[
   @model.AutoModerationRule,
 ] {
@@ -107,6 +122,8 @@ pub fn Events::auto_moderation_rule_update() -> EventType[
 }
 
 ///|
+/// Typed descriptor for `CHANNEL_CREATE` — a guild channel was created.
+/// Delivered under the `GUILDS` intent.
 pub fn Events::channel_create() -> EventType[@model.Channel] {
   {
     kind_: KChannelCreate,
@@ -120,6 +137,8 @@ pub fn Events::channel_create() -> EventType[@model.Channel] {
 }
 
 ///|
+/// Typed descriptor for `CHANNEL_DELETE` — a guild channel was deleted.
+/// Delivered under the `GUILDS` intent.
 pub fn Events::channel_delete() -> EventType[@model.Channel] {
   {
     kind_: KChannelDelete,
@@ -133,6 +152,9 @@ pub fn Events::channel_delete() -> EventType[@model.Channel] {
 }
 
 ///|
+/// Typed descriptor for `CHANNEL_INFO` — ephemeral voice-channel status
+/// and session data for a guild's channels. Not gated by a gateway
+/// intent.
 pub fn Events::channel_info() -> EventType[@model.ChannelInfoEvent] {
   {
     kind_: KChannelInfo,
@@ -146,6 +168,9 @@ pub fn Events::channel_info() -> EventType[@model.ChannelInfoEvent] {
 }
 
 ///|
+/// Typed descriptor for `CHANNEL_PINS_UPDATE` — a message was pinned or
+/// unpinned (not fired when a pinned message is deleted). Delivered under
+/// the `GUILDS` or `DIRECT_MESSAGES` intent.
 pub fn Events::channel_pins_update() -> EventType[@model.ChannelPinsUpdateEvent] {
   {
     kind_: KChannelPinsUpdate,
@@ -159,6 +184,8 @@ pub fn Events::channel_pins_update() -> EventType[@model.ChannelPinsUpdateEvent]
 }
 
 ///|
+/// Typed descriptor for `CHANNEL_UPDATE` — a guild channel was updated.
+/// Delivered under the `GUILDS` intent.
 pub fn Events::channel_update() -> EventType[@model.Channel] {
   {
     kind_: KChannelUpdate,
@@ -172,6 +199,9 @@ pub fn Events::channel_update() -> EventType[@model.Channel] {
 }
 
 ///|
+/// Typed descriptor for `ENTITLEMENT_CREATE` — an entitlement was created,
+/// e.g. a user purchased or was granted a premium offering. Not gated by
+/// a gateway intent.
 pub fn Events::entitlement_create() -> EventType[@model.Entitlement] {
   {
     kind_: KEntitlementCreate,
@@ -185,6 +215,9 @@ pub fn Events::entitlement_create() -> EventType[@model.Entitlement] {
 }
 
 ///|
+/// Typed descriptor for `ENTITLEMENT_DELETE` — an entitlement was deleted,
+/// e.g. Discord refunded or revoked it (not fired on normal expiry). Not
+/// gated by a gateway intent.
 pub fn Events::entitlement_delete() -> EventType[@model.Entitlement] {
   {
     kind_: KEntitlementDelete,
@@ -198,6 +231,8 @@ pub fn Events::entitlement_delete() -> EventType[@model.Entitlement] {
 }
 
 ///|
+/// Typed descriptor for `ENTITLEMENT_UPDATE` — an entitlement was renewed
+/// or ended. Not gated by a gateway intent.
 pub fn Events::entitlement_update() -> EventType[@model.Entitlement] {
   {
     kind_: KEntitlementUpdate,
@@ -211,6 +246,9 @@ pub fn Events::entitlement_update() -> EventType[@model.Entitlement] {
 }
 
 ///|
+/// Typed descriptor for `GUILD_AUDIT_LOG_ENTRY_CREATE` — an audit log
+/// entry was created. Delivered under the `GUILD_MODERATION` intent; the
+/// bot also needs the `View Audit Log` permission.
 pub fn Events::guild_audit_log_entry_create() -> EventType[
   @model.GuildAuditLogEntryCreateEvent,
 ] {
@@ -226,6 +264,8 @@ pub fn Events::guild_audit_log_entry_create() -> EventType[
 }
 
 ///|
+/// Typed descriptor for `GUILD_BAN_ADD` — a user was banned from a guild.
+/// Delivered under the `GUILD_MODERATION` intent.
 pub fn Events::guild_ban_add() -> EventType[@model.GuildBanEvent] {
   {
     kind_: KGuildBanAdd,
@@ -239,6 +279,8 @@ pub fn Events::guild_ban_add() -> EventType[@model.GuildBanEvent] {
 }
 
 ///|
+/// Typed descriptor for `GUILD_BAN_REMOVE` — a user was unbanned from a
+/// guild. Delivered under the `GUILD_MODERATION` intent.
 pub fn Events::guild_ban_remove() -> EventType[@model.GuildBanEvent] {
   {
     kind_: KGuildBanRemove,
@@ -252,6 +294,9 @@ pub fn Events::guild_ban_remove() -> EventType[@model.GuildBanEvent] {
 }
 
 ///|
+/// Typed descriptor for `GUILD_CREATE` — the initial lazy-load of each
+/// guild after `READY`, a guild becoming available again, or the bot
+/// joining a new guild. Delivered under the `GUILDS` intent.
 pub fn Events::guild_create() -> EventType[@model.GuildCreateEvent] {
   {
     kind_: KGuildCreate,
@@ -265,6 +310,10 @@ pub fn Events::guild_create() -> EventType[@model.GuildCreateEvent] {
 }
 
 ///|
+/// Typed descriptor for `GUILD_DELETE` — the bot was removed from a guild,
+/// or the guild became unavailable during an outage (check the
+/// `unavailable` field to tell the two apart). Delivered under the
+/// `GUILDS` intent.
 pub fn Events::guild_delete() -> EventType[@model.UnavailableGuild] {
   {
     kind_: KGuildDelete,
@@ -278,6 +327,8 @@ pub fn Events::guild_delete() -> EventType[@model.UnavailableGuild] {
 }
 
 ///|
+/// Typed descriptor for `GUILD_EMOJIS_UPDATE` — a guild's custom emoji
+/// set changed. Delivered under the `GUILD_EXPRESSIONS` intent.
 pub fn Events::guild_emojis_update() -> EventType[@model.GuildEmojisUpdateEvent] {
   {
     kind_: KGuildEmojisUpdate,
@@ -291,6 +342,9 @@ pub fn Events::guild_emojis_update() -> EventType[@model.GuildEmojisUpdateEvent]
 }
 
 ///|
+/// Typed descriptor for `GUILD_INTEGRATIONS_UPDATE` — a guild integration
+/// was created, updated, or deleted. Delivered under the
+/// `GUILD_INTEGRATIONS` intent.
 pub fn Events::guild_integrations_update() -> EventType[
   @model.GuildIntegrationsUpdateEvent,
 ] {
@@ -306,6 +360,8 @@ pub fn Events::guild_integrations_update() -> EventType[
 }
 
 ///|
+/// Typed descriptor for `GUILD_MEMBER_ADD` — a user joined a guild.
+/// Delivered under the privileged `GUILD_MEMBERS` intent.
 pub fn Events::guild_member_add() -> EventType[@model.GuildMemberAddEvent] {
   {
     kind_: KGuildMemberAdd,
@@ -319,6 +375,9 @@ pub fn Events::guild_member_add() -> EventType[@model.GuildMemberAddEvent] {
 }
 
 ///|
+/// Typed descriptor for `GUILD_MEMBER_REMOVE` — a user left a guild, or
+/// was kicked or banned. Delivered under the privileged `GUILD_MEMBERS`
+/// intent.
 pub fn Events::guild_member_remove() -> EventType[@model.GuildMemberRemoveEvent] {
   {
     kind_: KGuildMemberRemove,
@@ -332,6 +391,9 @@ pub fn Events::guild_member_remove() -> EventType[@model.GuildMemberRemoveEvent]
 }
 
 ///|
+/// Typed descriptor for `GUILD_MEMBERS_CHUNK` — one page of the response
+/// to a Request Guild Members gateway command. Not gated by a gateway
+/// intent.
 pub fn Events::guild_members_chunk() -> EventType[@model.GuildMembersChunkEvent] {
   {
     kind_: KGuildMembersChunk,
@@ -345,6 +407,9 @@ pub fn Events::guild_members_chunk() -> EventType[@model.GuildMembersChunkEvent]
 }
 
 ///|
+/// Typed descriptor for `GUILD_MEMBER_UPDATE` — a guild member was
+/// updated (roles, nick, timeout, ...). Delivered under the privileged
+/// `GUILD_MEMBERS` intent.
 pub fn Events::guild_member_update() -> EventType[@model.GuildMemberUpdateEvent] {
   {
     kind_: KGuildMemberUpdate,
@@ -358,6 +423,8 @@ pub fn Events::guild_member_update() -> EventType[@model.GuildMemberUpdateEvent]
 }
 
 ///|
+/// Typed descriptor for `GUILD_ROLE_CREATE` — a role was created.
+/// Delivered under the `GUILDS` intent.
 pub fn Events::guild_role_create() -> EventType[@model.GuildRoleEvent] {
   {
     kind_: KGuildRoleCreate,
@@ -371,6 +438,8 @@ pub fn Events::guild_role_create() -> EventType[@model.GuildRoleEvent] {
 }
 
 ///|
+/// Typed descriptor for `GUILD_ROLE_DELETE` — a role was deleted.
+/// Delivered under the `GUILDS` intent.
 pub fn Events::guild_role_delete() -> EventType[@model.GuildRoleDeleteEvent] {
   {
     kind_: KGuildRoleDelete,
@@ -384,6 +453,8 @@ pub fn Events::guild_role_delete() -> EventType[@model.GuildRoleDeleteEvent] {
 }
 
 ///|
+/// Typed descriptor for `GUILD_ROLE_UPDATE` — a role was updated.
+/// Delivered under the `GUILDS` intent.
 pub fn Events::guild_role_update() -> EventType[@model.GuildRoleEvent] {
   {
     kind_: KGuildRoleUpdate,
@@ -397,6 +468,9 @@ pub fn Events::guild_role_update() -> EventType[@model.GuildRoleEvent] {
 }
 
 ///|
+/// Typed descriptor for `GUILD_SCHEDULED_EVENT_CREATE` — a scheduled
+/// event was created. Delivered under the `GUILD_SCHEDULED_EVENTS`
+/// intent.
 pub fn Events::guild_scheduled_event_create() -> EventType[
   @model.GuildScheduledEvent,
 ] {
@@ -412,6 +486,9 @@ pub fn Events::guild_scheduled_event_create() -> EventType[
 }
 
 ///|
+/// Typed descriptor for `GUILD_SCHEDULED_EVENT_DELETE` — a scheduled
+/// event was deleted. Delivered under the `GUILD_SCHEDULED_EVENTS`
+/// intent.
 pub fn Events::guild_scheduled_event_delete() -> EventType[
   @model.GuildScheduledEvent,
 ] {
@@ -427,6 +504,9 @@ pub fn Events::guild_scheduled_event_delete() -> EventType[
 }
 
 ///|
+/// Typed descriptor for `GUILD_SCHEDULED_EVENT_UPDATE` — a scheduled
+/// event was updated. Delivered under the `GUILD_SCHEDULED_EVENTS`
+/// intent.
 pub fn Events::guild_scheduled_event_update() -> EventType[
   @model.GuildScheduledEvent,
 ] {
@@ -442,6 +522,9 @@ pub fn Events::guild_scheduled_event_update() -> EventType[
 }
 
 ///|
+/// Typed descriptor for `GUILD_SCHEDULED_EVENT_USER_ADD` — a user
+/// subscribed to a scheduled event. Delivered under the
+/// `GUILD_SCHEDULED_EVENTS` intent.
 pub fn Events::guild_scheduled_event_user_add() -> EventType[
   @model.GuildScheduledEventUserEvent,
 ] {
@@ -457,6 +540,9 @@ pub fn Events::guild_scheduled_event_user_add() -> EventType[
 }
 
 ///|
+/// Typed descriptor for `GUILD_SCHEDULED_EVENT_USER_REMOVE` — a user
+/// unsubscribed from a scheduled event. Delivered under the
+/// `GUILD_SCHEDULED_EVENTS` intent.
 pub fn Events::guild_scheduled_event_user_remove() -> EventType[
   @model.GuildScheduledEventUserEvent,
 ] {
@@ -472,6 +558,8 @@ pub fn Events::guild_scheduled_event_user_remove() -> EventType[
 }
 
 ///|
+/// Typed descriptor for `GUILD_SOUNDBOARD_SOUND_CREATE` — a soundboard
+/// sound was created. Delivered under the `GUILD_EXPRESSIONS` intent.
 pub fn Events::guild_soundboard_sound_create() -> EventType[
   @model.SoundboardSound,
 ] {
@@ -487,6 +575,8 @@ pub fn Events::guild_soundboard_sound_create() -> EventType[
 }
 
 ///|
+/// Typed descriptor for `GUILD_SOUNDBOARD_SOUND_DELETE` — a soundboard
+/// sound was deleted. Delivered under the `GUILD_EXPRESSIONS` intent.
 pub fn Events::guild_soundboard_sound_delete() -> EventType[
   @model.GuildSoundboardSoundDeleteEvent,
 ] {
@@ -502,6 +592,9 @@ pub fn Events::guild_soundboard_sound_delete() -> EventType[
 }
 
 ///|
+/// Typed descriptor for `GUILD_SOUNDBOARD_SOUNDS_UPDATE` — multiple
+/// soundboard sounds were updated at once. Delivered under the
+/// `GUILD_EXPRESSIONS` intent.
 pub fn Events::guild_soundboard_sounds_update() -> EventType[
   @model.SoundboardSoundsEvent,
 ] {
@@ -517,6 +610,8 @@ pub fn Events::guild_soundboard_sounds_update() -> EventType[
 }
 
 ///|
+/// Typed descriptor for `GUILD_SOUNDBOARD_SOUND_UPDATE` — a soundboard
+/// sound was updated. Delivered under the `GUILD_EXPRESSIONS` intent.
 pub fn Events::guild_soundboard_sound_update() -> EventType[
   @model.SoundboardSound,
 ] {
@@ -532,6 +627,8 @@ pub fn Events::guild_soundboard_sound_update() -> EventType[
 }
 
 ///|
+/// Typed descriptor for `SOUNDBOARD_SOUNDS` — the response to a Request
+/// Soundboard Sounds gateway command. Not gated by a gateway intent.
 pub fn Events::soundboard_sounds() -> EventType[@model.SoundboardSoundsEvent] {
   {
     kind_: KSoundboardSounds,
@@ -545,6 +642,8 @@ pub fn Events::soundboard_sounds() -> EventType[@model.SoundboardSoundsEvent] {
 }
 
 ///|
+/// Typed descriptor for `GUILD_STICKERS_UPDATE` — a guild's sticker set
+/// changed. Delivered under the `GUILD_EXPRESSIONS` intent.
 pub fn Events::guild_stickers_update() -> EventType[
   @model.GuildStickersUpdateEvent,
 ] {
@@ -560,6 +659,8 @@ pub fn Events::guild_stickers_update() -> EventType[
 }
 
 ///|
+/// Typed descriptor for `GUILD_UPDATE` — a guild's settings were updated.
+/// Delivered under the `GUILDS` intent.
 pub fn Events::guild_update() -> EventType[@model.Guild] {
   {
     kind_: KGuildUpdate,
@@ -573,6 +674,8 @@ pub fn Events::guild_update() -> EventType[@model.Guild] {
 }
 
 ///|
+/// Typed descriptor for `INTEGRATION_CREATE` — an integration was created
+/// in a guild. Delivered under the `GUILD_INTEGRATIONS` intent.
 pub fn Events::integration_create() -> EventType[@model.IntegrationEvent] {
   {
     kind_: KIntegrationCreate,
@@ -586,6 +689,8 @@ pub fn Events::integration_create() -> EventType[@model.IntegrationEvent] {
 }
 
 ///|
+/// Typed descriptor for `INTEGRATION_DELETE` — an integration was deleted
+/// from a guild. Delivered under the `GUILD_INTEGRATIONS` intent.
 pub fn Events::integration_delete() -> EventType[@model.IntegrationDeleteEvent] {
   {
     kind_: KIntegrationDelete,
@@ -599,6 +704,8 @@ pub fn Events::integration_delete() -> EventType[@model.IntegrationDeleteEvent] 
 }
 
 ///|
+/// Typed descriptor for `INTEGRATION_UPDATE` — an integration was updated
+/// in a guild. Delivered under the `GUILD_INTEGRATIONS` intent.
 pub fn Events::integration_update() -> EventType[@model.IntegrationEvent] {
   {
     kind_: KIntegrationUpdate,
@@ -612,6 +719,10 @@ pub fn Events::integration_update() -> EventType[@model.IntegrationEvent] {
 }
 
 ///|
+/// Typed descriptor for `INTERACTION_CREATE` — a user invoked a slash
+/// command, component, modal, or autocomplete. Not gated by a gateway
+/// intent. Most bots should route interactions through `App::attach`
+/// instead of subscribing to this event directly.
 pub fn Events::interaction_create() -> EventType[@model.Interaction] {
   {
     kind_: KInteractionCreate,
@@ -625,6 +736,9 @@ pub fn Events::interaction_create() -> EventType[@model.Interaction] {
 }
 
 ///|
+/// Typed descriptor for `INVITE_CREATE` — an invite to a channel was
+/// created. Delivered under the `GUILD_INVITES` intent; the bot also
+/// needs the `Manage Channels` permission on the channel.
 pub fn Events::invite_create() -> EventType[@model.InviteCreateEvent] {
   {
     kind_: KInviteCreate,
@@ -638,6 +752,9 @@ pub fn Events::invite_create() -> EventType[@model.InviteCreateEvent] {
 }
 
 ///|
+/// Typed descriptor for `INVITE_DELETE` — an invite to a channel was
+/// deleted. Delivered under the `GUILD_INVITES` intent; the bot also
+/// needs the `Manage Channels` permission on the channel.
 pub fn Events::invite_delete() -> EventType[@model.InviteDeleteEvent] {
   {
     kind_: KInviteDelete,
@@ -651,6 +768,10 @@ pub fn Events::invite_delete() -> EventType[@model.InviteDeleteEvent] {
 }
 
 ///|
+/// Typed descriptor for `MESSAGE_CREATE` — a message was sent. Delivered
+/// under the `GUILD_MESSAGES` or `DIRECT_MESSAGES` intent; `content`,
+/// `embeds`, `attachments`, and `components` stay empty in guilds unless
+/// the privileged `MESSAGE_CONTENT` intent is also enabled.
 pub fn Events::message_create() -> EventType[@model.MessageCreateEvent] {
   {
     kind_: KMessageCreate,
@@ -664,6 +785,8 @@ pub fn Events::message_create() -> EventType[@model.MessageCreateEvent] {
 }
 
 ///|
+/// Typed descriptor for `MESSAGE_DELETE` — a message was deleted.
+/// Delivered under the `GUILD_MESSAGES` or `DIRECT_MESSAGES` intent.
 pub fn Events::message_delete() -> EventType[@model.MessageDeleteEvent] {
   {
     kind_: KMessageDelete,
@@ -677,6 +800,8 @@ pub fn Events::message_delete() -> EventType[@model.MessageDeleteEvent] {
 }
 
 ///|
+/// Typed descriptor for `MESSAGE_DELETE_BULK` — multiple messages were
+/// deleted at once. Delivered under the `GUILD_MESSAGES` intent.
 pub fn Events::message_delete_bulk() -> EventType[@model.MessageDeleteBulkEvent] {
   {
     kind_: KMessageDeleteBulk,
@@ -690,6 +815,9 @@ pub fn Events::message_delete_bulk() -> EventType[@model.MessageDeleteBulkEvent]
 }
 
 ///|
+/// Typed descriptor for `MESSAGE_POLL_VOTE_ADD` — a user voted on a poll.
+/// Delivered under the `GUILD_MESSAGE_POLLS` or `DIRECT_MESSAGE_POLLS`
+/// intent.
 pub fn Events::message_poll_vote_add() -> EventType[@model.MessagePollVoteEvent] {
   {
     kind_: KMessagePollVoteAdd,
@@ -703,6 +831,9 @@ pub fn Events::message_poll_vote_add() -> EventType[@model.MessagePollVoteEvent]
 }
 
 ///|
+/// Typed descriptor for `MESSAGE_POLL_VOTE_REMOVE` — a user removed a
+/// poll vote. Delivered under the `GUILD_MESSAGE_POLLS` or
+/// `DIRECT_MESSAGE_POLLS` intent.
 pub fn Events::message_poll_vote_remove() -> EventType[
   @model.MessagePollVoteEvent,
 ] {
@@ -782,6 +913,10 @@ pub fn Events::message_reaction_add() -> EventType[
 }
 
 ///|
+/// Typed descriptor for `MESSAGE_REACTION_REMOVE` — a user removed a
+/// reaction from a message. Delivered under the
+/// `GUILD_MESSAGE_REACTIONS` or `DIRECT_MESSAGE_REACTIONS` intent. See
+/// `Events::message_reaction_add` for a worked reaction-role example.
 pub fn Events::message_reaction_remove() -> EventType[
   @model.MessageReactionRemoveEvent,
 ] {
@@ -797,6 +932,9 @@ pub fn Events::message_reaction_remove() -> EventType[
 }
 
 ///|
+/// Typed descriptor for `MESSAGE_REACTION_REMOVE_ALL` — all reactions
+/// were cleared from a message. Delivered under the
+/// `GUILD_MESSAGE_REACTIONS` or `DIRECT_MESSAGE_REACTIONS` intent.
 pub fn Events::message_reaction_remove_all() -> EventType[
   @model.MessageReactionRemoveAllEvent,
 ] {
@@ -812,6 +950,9 @@ pub fn Events::message_reaction_remove_all() -> EventType[
 }
 
 ///|
+/// Typed descriptor for `MESSAGE_REACTION_REMOVE_EMOJI` — all reactions
+/// for a single emoji were cleared from a message. Delivered under the
+/// `GUILD_MESSAGE_REACTIONS` or `DIRECT_MESSAGE_REACTIONS` intent.
 pub fn Events::message_reaction_remove_emoji() -> EventType[
   @model.MessageReactionRemoveEmojiEvent,
 ] {
@@ -827,6 +968,10 @@ pub fn Events::message_reaction_remove_emoji() -> EventType[
 }
 
 ///|
+/// Typed descriptor for `MESSAGE_UPDATE` — a message was edited (also
+/// fired for embed unfurls and other partial edits). Delivered under the
+/// `GUILD_MESSAGES` or `DIRECT_MESSAGES` intent; content visibility
+/// follows the same `MESSAGE_CONTENT` rule as `MESSAGE_CREATE`.
 pub fn Events::message_update() -> EventType[@model.MessageUpdateEvent] {
   {
     kind_: KMessageUpdate,
@@ -840,6 +985,9 @@ pub fn Events::message_update() -> EventType[@model.MessageUpdateEvent] {
 }
 
 ///|
+/// Typed descriptor for `PRESENCE_UPDATE` — a member's presence (status
+/// or activities) changed. Delivered under the privileged
+/// `GUILD_PRESENCES` intent.
 pub fn Events::presence_update() -> EventType[@model.PresenceUpdateEvent] {
   {
     kind_: KPresenceUpdate,
@@ -853,6 +1001,9 @@ pub fn Events::presence_update() -> EventType[@model.PresenceUpdateEvent] {
 }
 
 ///|
+/// Typed descriptor for `RATE_LIMITED` — the gateway rejected a command
+/// sent by this shard and reported when it may retry. Not gated by a
+/// gateway intent.
 pub fn Events::rate_limited() -> EventType[@model.GatewayRateLimitedEvent] {
   {
     kind_: KRateLimited,
@@ -866,6 +1017,10 @@ pub fn Events::rate_limited() -> EventType[@model.GatewayRateLimitedEvent] {
 }
 
 ///|
+/// Typed descriptor for `READY` — the initial state after identify
+/// completes: the bot user, unavailable guilds, and session resume data.
+/// Fired once per session (including after reconnects that re-identify).
+/// Not gated by a gateway intent.
 pub fn Events::ready() -> EventType[@model.Ready] {
   {
     kind_: KReady,
@@ -879,6 +1034,8 @@ pub fn Events::ready() -> EventType[@model.Ready] {
 }
 
 ///|
+/// Typed descriptor for `STAGE_INSTANCE_CREATE` — a stage instance
+/// (live stage) was created. Delivered under the `GUILDS` intent.
 pub fn Events::stage_instance_create() -> EventType[@model.StageInstance] {
   {
     kind_: KStageInstanceCreate,
@@ -892,6 +1049,8 @@ pub fn Events::stage_instance_create() -> EventType[@model.StageInstance] {
 }
 
 ///|
+/// Typed descriptor for `STAGE_INSTANCE_DELETE` — a stage instance was
+/// deleted. Delivered under the `GUILDS` intent.
 pub fn Events::stage_instance_delete() -> EventType[@model.StageInstance] {
   {
     kind_: KStageInstanceDelete,
@@ -905,6 +1064,8 @@ pub fn Events::stage_instance_delete() -> EventType[@model.StageInstance] {
 }
 
 ///|
+/// Typed descriptor for `STAGE_INSTANCE_UPDATE` — a stage instance was
+/// updated. Delivered under the `GUILDS` intent.
 pub fn Events::stage_instance_update() -> EventType[@model.StageInstance] {
   {
     kind_: KStageInstanceUpdate,
@@ -918,6 +1079,8 @@ pub fn Events::stage_instance_update() -> EventType[@model.StageInstance] {
 }
 
 ///|
+/// Typed descriptor for `SUBSCRIPTION_CREATE` — a premium app
+/// subscription was created. Not gated by a gateway intent.
 pub fn Events::subscription_create() -> EventType[@model.Subscription] {
   {
     kind_: KSubscriptionCreate,
@@ -931,6 +1094,8 @@ pub fn Events::subscription_create() -> EventType[@model.Subscription] {
 }
 
 ///|
+/// Typed descriptor for `SUBSCRIPTION_DELETE` — a premium app
+/// subscription was deleted. Not gated by a gateway intent.
 pub fn Events::subscription_delete() -> EventType[@model.Subscription] {
   {
     kind_: KSubscriptionDelete,
@@ -944,6 +1109,9 @@ pub fn Events::subscription_delete() -> EventType[@model.Subscription] {
 }
 
 ///|
+/// Typed descriptor for `SUBSCRIPTION_UPDATE` — a premium app
+/// subscription was updated, e.g. renewed or ended. Not gated by a
+/// gateway intent.
 pub fn Events::subscription_update() -> EventType[@model.Subscription] {
   {
     kind_: KSubscriptionUpdate,
@@ -957,6 +1125,9 @@ pub fn Events::subscription_update() -> EventType[@model.Subscription] {
 }
 
 ///|
+/// Typed descriptor for `THREAD_CREATE` — a thread was created, or the
+/// bot was added to a private thread. Delivered under the `GUILDS`
+/// intent.
 pub fn Events::thread_create() -> EventType[@model.ThreadCreateEvent] {
   {
     kind_: KThreadCreate,
@@ -970,6 +1141,8 @@ pub fn Events::thread_create() -> EventType[@model.ThreadCreateEvent] {
 }
 
 ///|
+/// Typed descriptor for `THREAD_DELETE` — a thread was deleted. Delivered
+/// under the `GUILDS` intent.
 pub fn Events::thread_delete() -> EventType[@model.ThreadDeleteEvent] {
   {
     kind_: KThreadDelete,
@@ -983,6 +1156,9 @@ pub fn Events::thread_delete() -> EventType[@model.ThreadDeleteEvent] {
 }
 
 ///|
+/// Typed descriptor for `THREAD_LIST_SYNC` — the active threads of one or
+/// more channels were synced after the bot gained access to them.
+/// Delivered under the `GUILDS` intent.
 pub fn Events::thread_list_sync() -> EventType[@model.ThreadListSyncEvent] {
   {
     kind_: KThreadListSync,
@@ -996,6 +1172,10 @@ pub fn Events::thread_list_sync() -> EventType[@model.ThreadListSyncEvent] {
 }
 
 ///|
+/// Typed descriptor for `THREAD_MEMBERS_UPDATE` — users were added to or
+/// removed from a thread. With only the `GUILDS` intent this fires for
+/// changes involving the bot itself; the privileged `GUILD_MEMBERS`
+/// intent extends it to all users.
 pub fn Events::thread_members_update() -> EventType[
   @model.ThreadMembersUpdateEvent,
 ] {
@@ -1011,6 +1191,8 @@ pub fn Events::thread_members_update() -> EventType[
 }
 
 ///|
+/// Typed descriptor for `THREAD_MEMBER_UPDATE` — the bot's own thread
+/// member object was updated. Delivered under the `GUILDS` intent.
 pub fn Events::thread_member_update() -> EventType[
   @model.ThreadMemberUpdateEvent,
 ] {
@@ -1026,6 +1208,8 @@ pub fn Events::thread_member_update() -> EventType[
 }
 
 ///|
+/// Typed descriptor for `THREAD_UPDATE` — a thread was updated. Delivered
+/// under the `GUILDS` intent.
 pub fn Events::thread_update() -> EventType[@model.Channel] {
   {
     kind_: KThreadUpdate,
@@ -1039,6 +1223,9 @@ pub fn Events::thread_update() -> EventType[@model.Channel] {
 }
 
 ///|
+/// Typed descriptor for `TYPING_START` — a user started typing in a
+/// channel. Delivered under the `GUILD_MESSAGE_TYPING` or
+/// `DIRECT_MESSAGE_TYPING` intent.
 pub fn Events::typing_start() -> EventType[@model.TypingStartEvent] {
   {
     kind_: KTypingStart,
@@ -1052,6 +1239,8 @@ pub fn Events::typing_start() -> EventType[@model.TypingStartEvent] {
 }
 
 ///|
+/// Typed descriptor for `USER_UPDATE` — the bot's own user object was
+/// updated. Not gated by a gateway intent.
 pub fn Events::user_update() -> EventType[@model.User] {
   {
     kind_: KUserUpdate,
@@ -1065,6 +1254,9 @@ pub fn Events::user_update() -> EventType[@model.User] {
 }
 
 ///|
+/// Typed descriptor for `VOICE_CHANNEL_EFFECT_SEND` — someone sent an
+/// emoji or soundboard effect in a voice channel. Delivered under the
+/// `GUILD_VOICE_STATES` intent.
 pub fn Events::voice_channel_effect_send() -> EventType[
   @model.VoiceChannelEffectSendEvent,
 ] {
@@ -1080,6 +1272,9 @@ pub fn Events::voice_channel_effect_send() -> EventType[
 }
 
 ///|
+/// Typed descriptor for `VOICE_CHANNEL_START_TIME_UPDATE` — a voice
+/// channel's session start time changed. Delivered under the `GUILDS`
+/// intent.
 pub fn Events::voice_channel_start_time_update() -> EventType[
   @model.VoiceChannelStartTimeUpdateEvent,
 ] {
@@ -1095,6 +1290,8 @@ pub fn Events::voice_channel_start_time_update() -> EventType[
 }
 
 ///|
+/// Typed descriptor for `VOICE_CHANNEL_STATUS_UPDATE` — a voice channel's
+/// status text changed. Delivered under the `GUILDS` intent.
 pub fn Events::voice_channel_status_update() -> EventType[
   @model.VoiceChannelStatusUpdateEvent,
 ] {
@@ -1110,6 +1307,9 @@ pub fn Events::voice_channel_status_update() -> EventType[
 }
 
 ///|
+/// Typed descriptor for `VOICE_SERVER_UPDATE` — voice server credentials
+/// for a pending voice connection (consumed internally by
+/// `BotCtx::join_voice`). Not gated by a gateway intent.
 pub fn Events::voice_server_update() -> EventType[@model.VoiceServerUpdateEvent] {
   {
     kind_: KVoiceServerUpdate,
@@ -1123,6 +1323,9 @@ pub fn Events::voice_server_update() -> EventType[@model.VoiceServerUpdateEvent]
 }
 
 ///|
+/// Typed descriptor for `VOICE_STATE_UPDATE` — someone joined, left, or
+/// moved between voice channels, or a voice state changed (mute, deaf,
+/// ...). Delivered under the `GUILD_VOICE_STATES` intent.
 pub fn Events::voice_state_update() -> EventType[@model.VoiceState] {
   {
     kind_: KVoiceStateUpdate,
@@ -1136,6 +1339,9 @@ pub fn Events::voice_state_update() -> EventType[@model.VoiceState] {
 }
 
 ///|
+/// Typed descriptor for `WEBHOOKS_UPDATE` — a webhook in a channel was
+/// created, updated, or deleted. Delivered under the `GUILD_WEBHOOKS`
+/// intent.
 pub fn Events::webhooks_update() -> EventType[@model.WebhooksUpdateEvent] {
   {
     kind_: KWebhooksUpdate,

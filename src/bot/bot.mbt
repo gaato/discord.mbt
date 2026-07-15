@@ -17,6 +17,8 @@ pub(all) suberror BotError {
 } derive(Debug)
 
 ///|
+/// Human-readable failure message, including remediation hints for the
+/// intent-related close codes.
 pub impl Show for BotError with fn output(self, logger) {
   match self {
     FatallyClosed(code~) => {
@@ -78,6 +80,13 @@ pub struct Bot {
 }
 
 ///|
+/// Create a gateway runner for `app`. When `intents` is omitted, the bot
+/// infers the union of intents required by its typed event subscriptions at
+/// `run` time (privileged intents are only inferred, never invented — they
+/// must still be enabled in the developer portal). `client` supplies a
+/// preconfigured REST client; by default one is built from `token`.
+/// `shards`, `compress`, and `identify_queue` configure sharding, transport
+/// compression, and cross-process identify coordination.
 pub fn Bot::Bot(
   app : @app.App,
   token~ : String,
@@ -138,6 +147,11 @@ pub fn Bot::attach_cache(self : Bot, cache : @cache.InMemoryCache) -> Unit {
 }
 
 ///|
+/// Subscribe a typed handler to one gateway event (see `Events` for the
+/// descriptors). The event's required intents join the inferred intent set
+/// when `Bot(...)` omits explicit `intents`. Handlers run through the event
+/// middleware chain; a raised error is reported via the app's failure policy
+/// without stopping the bot.
 pub fn[T] Bot::on(
   self : Bot,
   event : EventType[T],
@@ -155,6 +169,9 @@ pub fn[T] Bot::on(
 }
 
 ///|
+/// Subscribe to the raw event stream: every decoded gateway dispatch,
+/// including `Resumed` and `Unknown`, without payload projection. Unlike
+/// `Bot::on`, this adds nothing to the inferred intent set.
 pub fn Bot::on_event(
   self : Bot,
   handler : async (GatewayCtx, @model.Event) -> Unit,
@@ -178,6 +195,10 @@ pub fn Bot::on_decode_error(
 }
 
 ///|
+/// Register a long-running background task started alongside the shards when
+/// the bot runs (e.g. a periodic status updater). `name` labels the service
+/// in failure reports. A raised error is reported via the app's failure
+/// policy and stops only that service, not the bot.
 pub fn Bot::service(
   self : Bot,
   name~ : String,
