@@ -1,0 +1,115 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "gaato/discord/voice"
+
+import {
+  "moonbitlang/async",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub async fn connect_voice_websocket(String) -> &VoiceTransport
+
+pub fn encode_binary_client_frame(Int, Bytes) -> Bytes
+
+pub fn encode_heartbeat(t~ : Int64, seq_ack~ : Int) -> Json
+
+pub fn encode_identify(server_id~ : String, user_id~ : String, session_id~ : String, token~ : String) -> Json
+
+pub fn encode_invalid_commit_welcome(transition_id~ : Int) -> Json
+
+pub fn encode_resume(server_id~ : String, session_id~ : String, token~ : String, seq_ack~ : Int) -> Json
+
+pub fn encode_select_protocol(address~ : String, port~ : Int, mode~ : String) -> Json
+
+pub fn encode_speaking(ssrc~ : UInt, flags~ : Int, delay? : Int) -> Json
+
+pub fn encode_transition_ready(transition_id~ : Int) -> Json
+
+pub fn parse_binary_frame(Bytes) -> (VoiceMessage, Int?) raise VoiceEnvelopeError
+
+pub fn parse_text_frame(String) -> (VoiceMessage, Int?) raise VoiceEnvelopeError
+
+pub fn voice_on_close(Int?, Bool) -> VoiceReconnectPolicy
+
+// Errors
+pub(all) suberror VoiceEnvelopeError {
+  InvalidTextFrame(reason~ : String)
+  InvalidBinaryFrame(reason~ : String)
+} derive(Eq, @debug.Debug)
+
+pub(all) suberror VoiceTransportClosed {
+  VoiceTransportClosed(code~ : Int?, reason~ : String)
+} derive(@debug.Debug)
+
+// Types and methods
+pub(all) enum VoiceFrame {
+  Text(String)
+  Binary(Bytes)
+} derive(Eq, @debug.Debug)
+
+pub struct VoiceGateway {
+  // private fields
+}
+pub async fn VoiceGateway::close(Self) -> Unit noraise
+pub fn VoiceGateway::latency_ms(Self) -> Int64?
+pub async fn VoiceGateway::next(Self) -> VoiceGatewayEvent
+pub async fn VoiceGateway::send_binary(Self, op~ : Int, Bytes) -> Unit
+pub async fn VoiceGateway::send_json(Self, Json) -> Unit
+pub fn[X] VoiceGateway::start(@async.TaskGroup[X], server_id~ : String, user_id~ : String, session_id~ : String, token~ : String, endpoint~ : String, select_protocol~ : async (UInt, String, Int, Array[String]) -> (String, Int, String), connector? : async (String) -> &VoiceTransport, queue_capacity? : Int, telemetry? : (VoiceGatewayEvent) -> Unit) -> Self
+pub fn VoiceGateway::state(Self) -> VoiceGatewayState
+
+pub(all) enum VoiceGatewayEvent {
+  ReadyReceived
+  SessionEstablished(mode~ : String, secret_key~ : Bytes, dave_protocol_version~ : Int)
+  Message(VoiceMessage)
+  Connected(resumed~ : Bool)
+  Disconnected(code~ : Int?, resuming~ : Bool)
+  NeedsRejoin(code~ : Int?)
+  FatallyClosed(code~ : Int)
+} derive(Eq, @debug.Debug)
+
+pub(all) enum VoiceGatewayState {
+  Disconnected(reconnect_attempts~ : Int)
+  Connecting
+  Identifying
+  SelectingProtocol
+  Active
+  Resuming
+  FatallyClosed(code~ : Int)
+} derive(Eq, @debug.Debug)
+
+pub(all) enum VoiceMessage {
+  Ready(ssrc~ : UInt, ip~ : String, port~ : Int, modes~ : Array[String])
+  Hello(heartbeat_interval~ : Int)
+  SessionDescription(mode~ : String, secret_key~ : Bytes, dave_protocol_version~ : Int)
+  HeartbeatAck(nonce~ : Int64)
+  Speaking(ssrc~ : UInt, user_id~ : String, flags~ : Int)
+  ClientsConnect(user_ids~ : Array[String])
+  ClientDisconnect(user_id~ : String)
+  Resumed
+  DavePrepareTransition(transition_id~ : Int, protocol_version~ : Int)
+  DaveExecuteTransition(transition_id~ : Int)
+  DavePrepareEpoch(transition_id~ : Int, epoch~ : Int)
+  DaveMlsExternalSender(payload~ : Bytes)
+  DaveMlsProposals(payload~ : Bytes)
+  DaveMlsAnnounceCommitTransition(transition_id~ : Int, commit~ : Bytes)
+  DaveMlsWelcome(transition_id~ : Int, welcome~ : Bytes)
+  Unknown(op~ : Int)
+} derive(Eq, @debug.Debug)
+
+pub(all) enum VoiceReconnectPolicy {
+  Resume
+  Rejoin
+  Fatal
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits
+pub(open) trait VoiceTransport {
+  async fn recv(Self) -> VoiceFrame
+  async fn send_text(Self, String) -> Unit
+  async fn send_binary(Self, Bytes) -> Unit
+  async fn close(Self, code~ : Int) -> Unit
+}
+

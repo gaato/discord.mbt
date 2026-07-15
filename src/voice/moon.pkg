@@ -1,0 +1,29 @@
+import {
+  "gaato/discord/internal/clock",
+  "moonbitlang/async",
+  "moonbitlang/async/aqueue",
+  "moonbitlang/async/websocket",
+  "moonbitlang/core/json",
+  "moonbitlang/core/random",
+}
+
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/aqueue",
+  "moonbitlang/core/json",
+} for "test"
+
+// Voice networking is available only on the native async runtime.
+
+options(
+  targets: {
+    "envelope.mbt": [ "native" ],
+    "envelope_test.mbt": [ "native" ],
+    "gateway.mbt": [ "native" ],
+    "pkg.generated.mbti": [ "native" ],
+    "state.mbt": [ "native" ],
+    "state_test.mbt": [ "native" ],
+    "transport.mbt": [ "native" ],
+    "voice_gateway_test.mbt": [ "native" ],
+  },
+)
