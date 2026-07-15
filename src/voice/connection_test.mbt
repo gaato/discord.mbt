@@ -2,11 +2,16 @@
 struct ConnectionTestTransport {
   incoming : @aqueue.Queue[@voice.VoiceFrame]
   outgoing_text : @aqueue.Queue[Json]
+  outgoing_binary : @aqueue.Queue[Bytes]
 }
 
 ///|
 fn ConnectionTestTransport::new() -> ConnectionTestTransport {
-  { incoming: Queue(kind=Unbounded), outgoing_text: Queue(kind=Unbounded) }
+  {
+    incoming: Queue(kind=Unbounded),
+    outgoing_text: Queue(kind=Unbounded),
+    outgoing_binary: Queue(kind=Unbounded),
+  }
 }
 
 ///|
@@ -34,10 +39,10 @@ impl @voice.VoiceTransport for ConnectionTestTransport with fn send_text(
 
 ///|
 impl @voice.VoiceTransport for ConnectionTestTransport with fn send_binary(
-  _self,
-  _bytes,
+  self,
+  bytes,
 ) {
-
+  self.outgoing_binary.put(bytes)
 }
 
 ///|
@@ -96,6 +101,90 @@ impl @voice.AudioSource for OneConnectionFrame with fn next_frame(self) {
     self.sent = true
     Some(b"voice-frame")
   }
+}
+
+///|
+struct ConnectionTestDave {
+  proposal_calls : Array[Array[String]]
+}
+
+///|
+impl @voice.DaveProvider for ConnectionTestDave with fn max_protocol_version(
+  _self,
+) {
+  1
+}
+
+///|
+impl @voice.DaveProvider for ConnectionTestDave with fn reinit(
+  _self,
+  protocol_version~,
+) {
+  assert_eq(protocol_version, 1)
+}
+
+///|
+impl @voice.DaveProvider for ConnectionTestDave with fn set_external_sender(
+  _self,
+  _payload,
+) {
+
+}
+
+///|
+impl @voice.DaveProvider for ConnectionTestDave with fn key_package(_self) {
+  b"connection-key-package"
+}
+
+///|
+impl @voice.DaveProvider for ConnectionTestDave with fn process_proposals(
+  self,
+  op_type~,
+  _payload,
+  recognized~,
+) {
+  assert_eq(op_type, 0)
+  self.proposal_calls.push(recognized.copy())
+  (None, None)
+}
+
+///|
+impl @voice.DaveProvider for ConnectionTestDave with fn process_commit(
+  _self,
+  _payload,
+) {
+
+}
+
+///|
+impl @voice.DaveProvider for ConnectionTestDave with fn process_welcome(
+  _self,
+  _payload,
+) {
+
+}
+
+///|
+impl @voice.DaveProvider for ConnectionTestDave with fn encrypt_frame(
+  _self,
+  frame,
+) {
+  frame
+}
+
+///|
+impl @voice.DaveProvider for ConnectionTestDave with fn decrypt_frame(
+  _self,
+  user_id~,
+  frame,
+) {
+  ignore(user_id)
+  frame
+}
+
+///|
+impl @voice.DaveProvider for ConnectionTestDave with fn status(_self) {
+  0
 }
 
 ///|
@@ -163,6 +252,69 @@ async fn connection_finish_protocol_selection(
   assert_eq(udp.outgoing.get(), @voice.build_ip_discovery_request(42U))
   udp.incoming.put(connection_discovery_response(42U))
   guard transport.outgoing_text.get() is { "op": Number(1, ..), .. }
+}
+
+///|
+async fn wait_for_proposal_calls(
+  fake : ConnectionTestDave,
+  expected : Int,
+) -> Unit {
+  @async.with_timeout(1000, () => {
+    while fake.proposal_calls.length() < expected {
+      @async.sleep(1)
+    }
+  })
+}
+
+///|
+async test "voice connection seeds its pre-session DAVE roster and sends key packages" {
+  if !@voice.shim_available() {
+    return
+  }
+  let transport = ConnectionTestTransport::new()
+  let udp = ConnectionTestUdp::new()
+  let fake = ConnectionTestDave::{ proposal_calls: [] }
+  @async.with_task_group(group => {
+    let connection = @voice.VoiceConnection::start(
+      group,
+      connection_credentials(),
+      user_id="self",
+      channel_id=7UL,
+      leave=() => (),
+      rejoin=() => connection_credentials(),
+      connector=_ => (transport : &@voice.VoiceTransport),
+      udp_opener=(_, _) => (udp : &@voice.VoiceUdp),
+      dave_factory=(protocol_version, user_id, channel_id) => {
+        assert_eq(protocol_version, 1)
+        assert_eq(user_id, "self")
+        assert_eq(channel_id, 7UL)
+        (fake : &@voice.DaveProvider)
+      },
+      receive=false,
+    )
+    connection_finish_protocol_selection(transport, udp)
+    transport.incoming.put(
+      Text("{\"op\":11,\"seq\":2,\"d\":{\"user_ids\":[\"member\"]}}"),
+    )
+    transport.incoming.put(
+      connection_session_description(3, dave_protocol_version=1),
+    )
+    connection.wait_ready(timeout_ms=1000)
+    assert_eq(transport.outgoing_binary.get(), b"\x1Aconnection-key-package")
+    transport.incoming.put(Binary(b"\x00\x04\x1B\x00proposal"))
+    wait_for_proposal_calls(fake, 1)
+    assert_eq(fake.proposal_calls[0], ["member", "self"])
+
+    // A newly established DAVE machine receives the connection's same roster.
+    transport.incoming.put(
+      connection_session_description(5, dave_protocol_version=1),
+    )
+    assert_eq(transport.outgoing_binary.get(), b"\x1Aconnection-key-package")
+    transport.incoming.put(Binary(b"\x00\x06\x1B\x00proposal"))
+    wait_for_proposal_calls(fake, 2)
+    assert_eq(fake.proposal_calls[1], ["member", "self"])
+    connection.disconnect()
+  })
 }
 
 ///|

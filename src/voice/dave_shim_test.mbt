@@ -57,7 +57,10 @@ test "libdave shim accepts recognized user IDs across the C array boundary" {
     ])
     |> ignore
   catch {
-    @voice.DaveError::DaveInternal(..) => ()
+    @voice.DaveError::DaveInternal(reason~, ..) =>
+      if reason.contains("is not UTF-8") {
+        fail("recognized user IDs were marshaled incorrectly: \{reason}")
+      }
     error => fail("unexpected proposals error: \{error}")
   } noraise {
     _ => fail("expected malformed proposals to fail")

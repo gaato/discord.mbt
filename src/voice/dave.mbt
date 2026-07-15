@@ -82,7 +82,9 @@ impl DaveProvider for LibdaveProvider with fn process_proposals(
   payload,
   recognized~,
 ) {
-  let recognized_bytes = recognized.map(user_id => @utf8.encode(user_id))
+  let recognized_bytes = FixedArray::makei(recognized.length(), index => {
+    @utf8.encode(recognized[index])
+  })
   let result = voice_shim_dave_process_proposals(
     self.session,
     op_type,
@@ -207,11 +209,12 @@ pub struct DaveMachine {
 pub fn DaveMachine::new(
   provider : &DaveProvider,
   self_user_id~ : String,
+  roster? : Array[String] = [],
 ) -> DaveMachine {
   {
     provider,
     protocol_version: 0,
-    roster: Set([]),
+    roster: Set(roster),
     self_user_id,
     pending: Map([]),
   }
@@ -236,6 +239,18 @@ fn DaveMachine::transition_ready(
 }
 
 ///|
+fn DaveMachine::transition_ready_if_needed(
+  self : DaveMachine,
+  transition_id : Int,
+) -> Array[DaveAction] {
+  if transition_id == 0 {
+    []
+  } else {
+    self.transition_ready(transition_id)
+  }
+}
+
+///|
 fn DaveMachine::recover_transition(
   self : DaveMachine,
   transition_id : Int,
@@ -257,9 +272,9 @@ fn DaveMachine::handle_commit(
 ) -> Array[DaveAction] raise {
   try {
     self.provider.process_commit(commit)
-    self.transition_ready(transition_id)
+    self.transition_ready_if_needed(transition_id)
   } catch {
-    DaveStale(..) => self.transition_ready(transition_id)
+    DaveStale(..) => self.transition_ready_if_needed(transition_id)
     DaveInvalid(..) => self.recover_transition(transition_id)
     error => raise error
   }
@@ -273,9 +288,9 @@ fn DaveMachine::handle_welcome(
 ) -> Array[DaveAction] raise {
   try {
     self.provider.process_welcome(welcome)
-    self.transition_ready(transition_id)
+    self.transition_ready_if_needed(transition_id)
   } catch {
-    DaveStale(..) => self.transition_ready(transition_id)
+    DaveStale(..) => self.transition_ready_if_needed(transition_id)
     DaveInvalid(..) => self.recover_transition(transition_id)
     error => raise error
   }
@@ -288,12 +303,14 @@ pub fn DaveMachine::handle(
   message : VoiceMessage,
 ) -> Array[DaveAction] raise {
   match message {
-    SessionDescription(dave_protocol_version~, ..) => {
+    SessionDescription(dave_protocol_version~, ..) =>
       if dave_protocol_version >= 1 {
         self.protocol_version = dave_protocol_version
+        self.provider.reinit(protocol_version=self.protocol_version)
+        [SendBinary(op=26, payload=self.provider.key_package())]
+      } else {
+        []
       }
-      []
-    }
     DaveMlsExternalSender(payload~) => {
       self.provider.set_external_sender(payload)
       []

@@ -88,6 +88,7 @@ pub(all) suberror VoiceEnvelopeError {
 } derive(Eq, @debug.Debug)
 
 pub(all) suberror VoiceError {
+  MissingIntent(intent~ : String)
   JoinTimeout
   ShimUnavailable(reason~ : String)
   NoCompatibleMode(offered~ : Array[String])
@@ -117,7 +118,7 @@ pub struct DaveMachine {
 }
 pub fn DaveMachine::encrypt_opus_frame(Self, Bytes) -> Bytes raise
 pub fn DaveMachine::handle(Self, VoiceMessage) -> Array[DaveAction] raise
-pub fn DaveMachine::new(&DaveProvider, self_user_id~ : String) -> Self
+pub fn DaveMachine::new(&DaveProvider, self_user_id~ : String, roster? : Array[String]) -> Self
 
 type DaveSession
 
@@ -234,6 +235,7 @@ pub(all) enum VoiceGatewayEvent {
   Message(VoiceMessage)
   Connected(resumed~ : Bool)
   Disconnected(code~ : Int?, resuming~ : Bool)
+  ConnectFailed(reason~ : String)
   NeedsRejoin(code~ : Int?)
   FatallyClosed(code~ : Int)
 } derive(Eq, @debug.Debug)

@@ -3,6 +3,7 @@
 pub struct GatewayCtx {
   priv app_ : @app.AppCtx
   priv mut ready_ : @model.Ready
+  priv intents_ : @model.Intents
   priv shard_ : @gateway.Shard
   priv shards_ : Array[@gateway.Shard]
   priv framework_ : @framework.Framework

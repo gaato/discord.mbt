@@ -24,7 +24,7 @@ struct FakeDave {
   mut proposal_commit : Bytes?
   mut proposal_welcome : Bytes?
   mut commit_failure : FakeDaveFailure
-  welcome_failure : FakeDaveFailure
+  mut welcome_failure : FakeDaveFailure
 }
 
 ///|
@@ -124,7 +124,7 @@ fn fake_machine(fake : FakeDave) -> @voice.DaveMachine {
 }
 
 ///|
-fn establish_dave(machine : @voice.DaveMachine) -> Unit raise {
+fn establish_dave(machine : @voice.DaveMachine, fake : FakeDave) -> Unit raise {
   assert_eq(
     machine.handle(
       SessionDescription(
@@ -133,8 +133,46 @@ fn establish_dave(machine : @voice.DaveMachine) -> Unit raise {
         dave_protocol_version=1,
       ),
     ),
+    [SendBinary(op=26, payload=b"key-package")],
+  )
+  fake.reinit_versions.clear()
+  fake.key_package_calls = 0
+}
+
+///|
+test "DAVE Session Description enables encryption and publishes a key package" {
+  let fake = FakeDave::new()
+  let machine = fake_machine(fake)
+  assert_eq(
+    machine.handle(
+      SessionDescription(
+        mode="aead_aes256_gcm_rtpsize",
+        secret_key=Bytes::new(32),
+        dave_protocol_version=1,
+      ),
+    ),
+    [SendBinary(op=26, payload=b"key-package")],
+  )
+  assert_eq(fake.reinit_versions, [1])
+  assert_eq(fake.key_package_calls, 1)
+}
+
+///|
+test "DAVE Session Description version zero requires no MLS action" {
+  let fake = FakeDave::new()
+  let machine = fake_machine(fake)
+  assert_eq(
+    machine.handle(
+      SessionDescription(
+        mode="aead_aes256_gcm_rtpsize",
+        secret_key=Bytes::new(32),
+        dave_protocol_version=0,
+      ),
+    ),
     [],
   )
+  assert_eq(fake.reinit_versions, [])
+  assert_eq(fake.key_package_calls, 0)
 }
 
 ///|
@@ -168,7 +206,7 @@ test "DAVE fresh-call flow creates and executes the pending epoch" {
 test "DAVE joiner accepts Welcome and acknowledges the transition" {
   let fake = FakeDave::new()
   let machine = fake_machine(fake)
-  establish_dave(machine)
+  establish_dave(machine, fake)
   machine.handle(DaveMlsExternalSender(payload=b"external")) |> ignore
   assert_eq(
     machine.handle(DaveMlsWelcome(transition_id=11, welcome=b"joiner-welcome")),
@@ -181,7 +219,7 @@ test "DAVE joiner accepts Welcome and acknowledges the transition" {
 test "DAVE downgrade switches media only on Execute Transition" {
   let fake = FakeDave::new()
   let machine = fake_machine(fake)
-  establish_dave(machine)
+  establish_dave(machine, fake)
   assert_eq(machine.encrypt_opus_frame(b"before"), b"dave:before")
   assert_eq(
     machine.handle(DavePrepareTransition(transition_id=12, protocol_version=0)),
@@ -198,7 +236,7 @@ test "DAVE downgrade switches media only on Execute Transition" {
 test "DAVE transition ID zero executes immediately without transition ready" {
   let fake = FakeDave::new()
   let machine = fake_machine(fake)
-  establish_dave(machine)
+  establish_dave(machine, fake)
   assert_eq(
     machine.handle(DavePrepareTransition(transition_id=0, protocol_version=0)),
     [SwitchMediaContext(protocol_version=0)],
@@ -208,10 +246,48 @@ test "DAVE transition ID zero executes immediately without transition ready" {
 }
 
 ///|
+test "DAVE commit and welcome with transition ID zero need no acknowledgement" {
+  let fake = FakeDave::new()
+  let machine = fake_machine(fake)
+  establish_dave(machine, fake)
+  assert_eq(
+    machine.handle(
+      DaveMlsAnnounceCommitTransition(transition_id=0, commit=b"commit-zero"),
+    ),
+    [],
+  )
+  assert_eq(
+    machine.handle(DaveMlsWelcome(transition_id=0, welcome=b"welcome-zero")),
+    [],
+  )
+  assert_eq(fake.commits, [b"commit-zero"])
+  assert_eq(fake.welcomes, [b"welcome-zero"])
+}
+
+///|
+test "DAVE stale transition ID zero needs no acknowledgement" {
+  let fake = FakeDave::new()
+  fake.commit_failure = FakeDaveStale
+  fake.welcome_failure = FakeDaveStale
+  let machine = fake_machine(fake)
+  establish_dave(machine, fake)
+  assert_eq(
+    machine.handle(
+      DaveMlsAnnounceCommitTransition(transition_id=0, commit=b"stale-commit"),
+    ),
+    [],
+  )
+  assert_eq(
+    machine.handle(DaveMlsWelcome(transition_id=0, welcome=b"stale-welcome")),
+    [],
+  )
+}
+
+///|
 test "DAVE tracks and executes multiple pending transitions independently" {
   let fake = FakeDave::new()
   let machine = fake_machine(fake)
-  establish_dave(machine)
+  establish_dave(machine, fake)
   assert_eq(
     machine.handle(DavePrepareTransition(transition_id=20, protocol_version=0)),
     [SendJson(@voice.encode_transition_ready(transition_id=20))],
@@ -234,7 +310,7 @@ test "DAVE invalid commit requests recovery and publishes a new key package" {
   let fake = FakeDave::new()
   fake.commit_failure = FakeDaveInvalid
   let machine = fake_machine(fake)
-  establish_dave(machine)
+  establish_dave(machine, fake)
   machine.handle(DavePrepareTransition(transition_id=13, protocol_version=0))
   |> ignore
   assert_eq(
@@ -256,7 +332,7 @@ test "DAVE stale commit is acknowledged without invalid-transition recovery" {
   let fake = FakeDave::new()
   fake.commit_failure = FakeDaveStale
   let machine = fake_machine(fake)
-  establish_dave(machine)
+  establish_dave(machine, fake)
   assert_eq(
     machine.handle(
       DaveMlsAnnounceCommitTransition(transition_id=14, commit=b"stale"),
@@ -273,11 +349,28 @@ test "DAVE proposals receive the current roster plus the local user" {
   fake.proposal_commit = None
   fake.proposal_welcome = None
   let machine = fake_machine(fake)
-  establish_dave(machine)
+  establish_dave(machine, fake)
   machine.handle(ClientsConnect(user_ids=["200", "300"])) |> ignore
   machine.handle(ClientDisconnect(user_id="200")) |> ignore
   assert_eq(machine.handle(DaveMlsProposals(payload=b"\x01revoke")), [])
   assert_eq(fake.proposal_calls, [
     { op_type: 1, payload: b"revoke", recognized: ["300", "100"] },
+  ])
+}
+
+///|
+test "DAVE initial roster includes clients connected before Session Description" {
+  let fake = FakeDave::new()
+  fake.proposal_commit = None
+  fake.proposal_welcome = None
+  let machine = @voice.DaveMachine::new(
+    (fake : &@voice.DaveProvider),
+    self_user_id="100",
+    roster=["200"],
+  )
+  establish_dave(machine, fake)
+  assert_eq(machine.handle(DaveMlsProposals(payload=b"\x00add")), [])
+  assert_eq(fake.proposal_calls, [
+    { op_type: 0, payload: b"add", recognized: ["200", "100"] },
   ])
 }

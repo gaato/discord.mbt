@@ -63,13 +63,15 @@ extern "c" fn voice_shim_dave_set_external_sender(
 extern "c" fn voice_shim_dave_get_key_package(session : DaveSession) -> Bytes = "discord_voice_dave_get_key_package"
 
 ///|
+/// The C ABI borrows a contiguous reference array. Each MoonBit `Bytes` value
+/// is runtime-NUL-terminated so the shim can read each entry as a C string.
 #borrow(session, payload, recognized_user_ids)
 extern "c" fn voice_shim_dave_process_proposals(
   session : DaveSession,
   op_type : Int,
   payload : Bytes,
-  recognized_user_ids : Array[Bytes],
-) -> Array[Bytes] = "discord_voice_dave_process_proposals"
+  recognized_user_ids : FixedArray[Bytes],
+) -> FixedArray[Bytes] = "discord_voice_dave_process_proposals"
 
 ///|
 #borrow(session, payload)

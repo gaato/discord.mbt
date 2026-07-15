@@ -97,6 +97,97 @@ async fn finish_handshake(
 }
 
 ///|
+async fn captured_gateway_url(endpoint : String) -> String {
+  let transport = FakeVoiceTransport()
+  let connected_urls : @aqueue.Queue[String] = Queue(kind=Unbounded)
+  @async.with_task_group(group => {
+    let gateway = @voice.VoiceGateway::start(
+      group,
+      server_id="guild",
+      user_id="user",
+      session_id="session",
+      token="token",
+      endpoint~,
+      select_protocol=(_, _, _, _) => {
+        ("203.0.113.8", 62000, "aead_aes256_gcm_rtpsize")
+      },
+      connector=url => {
+        connected_urls.put(url)
+        (transport : &@voice.VoiceTransport)
+      },
+    )
+    let url = connected_urls.get()
+    transport.server_close(None)
+    guard gateway.next() is NeedsRejoin(code=None)
+    url
+  })
+}
+
+///|
+async test "voice gateway URL always has a path before the v8 query" {
+  assert_eq(captured_gateway_url("voice.example"), "wss://voice.example/?v=8")
+  assert_eq(
+    captured_gateway_url("voice.example:2096"),
+    "wss://voice.example:2096/?v=8",
+  )
+  assert_eq(
+    captured_gateway_url("wss://voice.example"),
+    "wss://voice.example/?v=8",
+  )
+  assert_eq(
+    captured_gateway_url("voice.example/socket"),
+    "wss://voice.example/socket?v=8",
+  )
+  assert_eq(
+    captured_gateway_url("voice.example?encoding=json"),
+    "wss://voice.example/?encoding=json&v=8",
+  )
+}
+
+///|
+async test "voice gateway reports connector failures through telemetry and retries" {
+  let attempts = Ref(0)
+  let failures : Array[String] = []
+  @async.with_task_group(group => {
+    let gateway = @voice.VoiceGateway::start(
+      group,
+      server_id="guild",
+      user_id="user",
+      session_id="session",
+      token="token",
+      endpoint="voice.example",
+      select_protocol=(_, _, _, _) => {
+        ("203.0.113.8", 62000, "aead_aes256_gcm_rtpsize")
+      },
+      connector=_ => {
+        attempts.val += 1
+        raise @voice.VoiceTransportClosed(
+          code=None,
+          reason="connector attempt \{attempts.val}",
+        )
+      },
+      telemetry=event => {
+        match event {
+          ConnectFailed(reason~) => failures.push(reason)
+          _ => ()
+        }
+      },
+    )
+    @async.with_timeout(5000, () => {
+      while failures.length() < 2 {
+        @async.sleep(1)
+      }
+    })
+    assert_true(@async.with_timeout_opt(10, () => gateway.next()) is None)
+    gateway.close()
+    assert_eq(attempts.val, 2)
+    assert_eq(failures.length(), 2)
+    assert_true(failures[0].contains("connector attempt 1"))
+    assert_true(failures[1].contains("connector attempt 2"))
+  })
+}
+
+///|
 async test "missing heartbeat ACK closes with 4000 and reconnects" {
   let first = FakeVoiceTransport()
   let second = FakeVoiceTransport()
@@ -199,7 +290,7 @@ async test "voice gateway completes identify and protocol selection" {
     guard gateway.next() is SessionEstablished(..)
     guard gateway.next() is Connected(resumed=false)
     assert_eq(gateway.state(), Active)
-    assert_eq(connected_url.val, "wss://voice.example?v=8")
+    assert_eq(connected_url.val, "wss://voice.example/?v=8")
     gateway.send_json(@voice.encode_speaking(ssrc=42, flags=1))
     guard transport.outgoing_text.get() is { "op": Number(5, ..), .. }
     gateway.send_binary(op=26, b"key")

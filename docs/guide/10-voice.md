@@ -28,6 +28,17 @@ when `DISCORD_VOICE_SHIM_PATH` is unset.
 
 Call `join_voice` from a READY handler or a bot service. `GatewayCtx` sends
 main Gateway Opcode 4 and waits for the matching state and server updates.
+The main Gateway session must include `GUILD_VOICE_STATES`, because Discord
+uses that intent to deliver the bot's `VOICE_STATE_UPDATE`:
+
+```moonbit
+let intents = @model.Intents::guilds() |
+  @model.Intents::guild_voice_states()
+let bot = @discord.Bot(app, token~, intents~)
+```
+
+`join_voice` raises `VoiceError::MissingIntent(intent="GUILD_VOICE_STATES")`
+before sending Opcode 4 when the effective intent set omits it.
 
 ```moonbit
 let connection = ctx.join_voice(guild_id, channel_id, timeout_ms=10_000)

@@ -54,7 +54,9 @@ async fn main {
     let done : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
     let tracked = TrackedOggSource::{ source, done, finished: false }
     let app = @discord.App(sync=Disabled)
-    let bot = @discord.Bot(app, token~, intents=@model.Intents::guilds())
+    let intents = @model.Intents::guilds() |
+      @model.Intents::guild_voice_states()
+    let bot = @discord.Bot(app, token~, intents~)
     bot.service(name="voice-player", ctx => {
       let connection = ctx.join_voice(guild_id, channel_id)
       try {

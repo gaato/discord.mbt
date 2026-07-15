@@ -101,6 +101,12 @@ async fn GatewayCtx::watch_voice_server_updates(
 /// an existing connection to another channel is outside this API. Discord may
 /// send no response events when the channel is full and the bot lacks
 /// `MOVE_MEMBERS`; that case raises `VoiceError::JoinTimeout`.
+///
+/// The bot must connect the main Gateway with the `GUILD_VOICE_STATES` intent.
+/// This method raises `VoiceError::MissingIntent` before sending Opcode 4 when
+/// that intent is absent.
+///
+/// Pass `telemetry` to observe non-fatal voice gateway and media diagnostics.
 pub async fn GatewayCtx::join_voice(
   self : GatewayCtx,
   guild_id : @model.Id[@model.GuildMarker],
@@ -108,7 +114,12 @@ pub async fn GatewayCtx::join_voice(
   self_mute? : Bool = false,
   self_deaf? : Bool = false,
   timeout_ms? : Int = 10000,
+  telemetry? : (@voice.VoiceTelemetry) -> Unit = _ => (),
 ) -> @voice.VoiceConnection {
+  let required_intents = Events::voice_state_update().required_intents()
+  if !self.intents_.contains(required_intents) {
+    raise @voice.VoiceError::MissingIntent(intent="GUILD_VOICE_STATES")
+  }
   if self.voice_connections_.get(guild_id) is Some(existing) {
     return existing
   }
@@ -136,6 +147,7 @@ pub async fn GatewayCtx::join_voice(
     channel_id=channel_id.value(),
     leave~,
     rejoin~,
+    telemetry~,
   )
   connection.wait_ready(timeout_ms~) catch {
     error => {

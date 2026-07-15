@@ -10,6 +10,7 @@ pub(all) enum VoiceGatewayEvent {
   Message(VoiceMessage)
   Connected(resumed~ : Bool)
   Disconnected(code~ : Int?, resuming~ : Bool)
+  ConnectFailed(reason~ : String)
   NeedsRejoin(code~ : Int?)
   FatallyClosed(code~ : Int)
 } derive(Debug, Eq)
@@ -153,10 +154,18 @@ fn voice_gateway_url(endpoint : String) -> String {
   } else {
     "wss://\{endpoint}"
   }
-  if base.contains("?") {
-    "\{base}&v=8"
+  let (location, query) = match base.split_once("?") {
+    Some((location, query)) => (location.to_owned(), Some(query.to_owned()))
+    None => (base, None)
+  }
+  let location = if location["wss://".length():].to_owned().contains("/") {
+    location
   } else {
-    "\{base}?v=8"
+    "\{location}/"
+  }
+  match query {
+    Some("") | None => "\{location}?v=8"
+    Some(query) => "\{location}?\{query}&v=8"
   }
 }
 
@@ -191,7 +200,8 @@ async fn VoiceGateway::run(
     let transport = connector(voice_gateway_url(endpoint)) catch {
       error if @async.is_being_cancelled() ||
         @async.is_cancellation_error(error) => return
-      _ => {
+      error => {
+        (self.telemetry_)(ConnectFailed(reason="\{to_repr(error)}"))
         attempts += 1
         self.state_ = Disconnected(reconnect_attempts=attempts)
         continue

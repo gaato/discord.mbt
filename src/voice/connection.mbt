@@ -1,6 +1,9 @@
 ///|
 /// Errors surfaced while joining or operating a voice connection.
 pub(all) suberror VoiceError {
+  /// The main Gateway session lacks an intent required by the voice
+  /// handshake.
+  MissingIntent(intent~ : String)
   JoinTimeout
   ShimUnavailable(reason~ : String)
   NoCompatibleMode(offered~ : Array[String])
@@ -49,6 +52,7 @@ pub struct VoiceConnection {
   priv dave_factory_ : (Int, String, UInt64) -> &DaveProvider raise
   priv telemetry_ : (VoiceTelemetry) -> Unit
   priv receiver : ReceivePipeline
+  priv roster : Set[String]
   priv mut gateway : VoiceGateway?
   priv mut udp : &VoiceUdp?
   priv mut cipher : TransportCipher?
@@ -222,8 +226,12 @@ async fn VoiceConnection::establish_session(
         return
       }
     }
-    let machine = DaveMachine::new(provider, self_user_id=self.user_id)
-    let _ = machine.handle(
+    let machine = DaveMachine::new(
+      provider,
+      self_user_id=self.user_id,
+      roster=self.roster.to_array(),
+    )
+    let actions = machine.handle(
       SessionDescription(mode=mode_name, secret_key~, dave_protocol_version~),
     ) catch {
       error => {
@@ -232,6 +240,11 @@ async fn VoiceConnection::establish_session(
       }
     }
     dave = Some(machine)
+    self.dave = dave
+    self.apply_dave_actions(actions) catch {
+      error =>
+        (self.telemetry_)(PacketDropped(reason="DAVE send: \{to_repr(error)}"))
+    }
   }
   self.cipher = Some(cipher)
   self.dave = dave
@@ -262,6 +275,14 @@ async fn VoiceConnection::handle_message(
   self : VoiceConnection,
   message : VoiceMessage,
 ) -> Unit {
+  match message {
+    ClientsConnect(user_ids~) =>
+      for user_id in user_ids {
+        self.roster.add(user_id)
+      }
+    ClientDisconnect(user_id~) => self.roster.remove(user_id)
+    _ => ()
+  }
   if self.dave is Some(machine) {
     let actions = machine.handle(message) catch {
       error => {
@@ -321,6 +342,7 @@ async fn[X] VoiceConnection::run_event_pump(
         }
       }
       Connected(resumed=false) | ReadyReceived => ()
+      ConnectFailed(..) => ()
       Disconnected(code~, resuming=true) => {
         ignore(code)
         self.state_ = Reconnecting
@@ -497,6 +519,7 @@ pub fn[X] VoiceConnection::start(
     dave_factory_: dave_factory,
     telemetry_: telemetry,
     receiver,
+    roster: Set([]),
     gateway: None,
     udp: None,
     cipher: None,

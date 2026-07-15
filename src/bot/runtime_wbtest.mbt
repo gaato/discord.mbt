@@ -448,6 +448,44 @@ async test "voice credentials register both collectors before opcode 4" {
 }
 
 ///|
+async test "join_voice fails before opcode 4 without guild voice states intent" {
+  let transport = BotFakeTransport()
+  let app = @app.App(sync=Disabled)
+  let bot = middleware_runtime_bot(app, transport)
+  let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
+  bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
+  @async.with_task_group(group => {
+    let running = group.spawn(no_wait=true, () => bot.run())
+    transport.incoming.put(BOT_HELLO)
+    guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
+      fail("expected identify")
+    }
+    transport.incoming.put(bot_ready_frame())
+    let ctx = ready_contexts.get()
+    let guild_id : @model.GuildId = @model.Id::parse("100")
+    let channel_id : @model.ChannelId = @model.Id::parse("200")
+    try
+      @async.with_timeout(
+        100,
+        () => ctx.join_voice(guild_id, channel_id, timeout_ms=60_000),
+        error=@voice.VoiceError::JoinTimeout,
+      )
+    catch {
+      @voice.VoiceError::MissingIntent(intent~) =>
+        inspect(intent, content="GUILD_VOICE_STATES")
+      @voice.VoiceError::JoinTimeout =>
+        fail("join_voice waited instead of diagnosing the missing intent")
+      error => fail("unexpected voice join error: \{to_repr(error)}")
+    } noraise {
+      _ => fail("join_voice unexpectedly succeeded")
+    }
+    assert_true(transport.outgoing.try_get() is None)
+    ctx.shutdown()
+    running.wait()
+  })
+}
+
+///|
 async test "event middleware drops handlers after wire-level cache updates" {
   let transport = BotFakeTransport()
   let app = @app.App(sync=Disabled)

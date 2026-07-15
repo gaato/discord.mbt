@@ -520,6 +520,7 @@ pub async fn Bot::run(self : Bot) -> Unit {
               let created : GatewayCtx = {
                 app_: attached,
                 ready_: ready,
+                intents_: intents,
                 shard_: owner.shard,
                 shards_: shard_handles,
                 framework_: router,
