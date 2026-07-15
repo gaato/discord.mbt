@@ -159,60 +159,67 @@ fn run_seconds() -> Int {
 
 ///|
 async fn main {
-  let feedback = feedback_modal()
-  let token = @env.get_env_var("DISCORD_TOKEN").unwrap_or("")
-  let app = @discord.App(sync=command_sync())
-  app
-  ..command(demo_command())
-  ..command(wave_command())
-  ..command(quote_command())
-  ..on_component(
-    prefix="demo:feedback:",
-    Immediate(ctx => ShowModal(feedback.show(state=ctx.suffix()))),
-  )
-  ..on_component(
-    prefix="demo:done:",
-    DeferredUpdate(ctx => {
-      ctx.edit_original(
-        content="✅ \{ctx.suffix()} marked this greeting as done.",
-        components=[],
-      )
-      |> ignore
-    }),
-  )
-  .on_modal(
-    feedback,
-    Immediate((ctx, form) => {
-      let details = form.details.unwrap_or("(no details)")
-      @discord.InitialResponse::message(
-        content="Feedback from \{ctx.state().unwrap_or("unknown")}:\n" +
-          "**\{form.topic}**\n\{details}",
-        ephemeral=true,
-      )
-    }),
-  )
+  @signal.set_global_cancellation_signals([SIGINT, SIGTERM])
+  try {
+    let feedback = feedback_modal()
+    let token = @env.get_env_var("DISCORD_TOKEN").unwrap_or("")
+    let app = @discord.App(sync=command_sync())
+    app
+    ..command(demo_command())
+    ..command(wave_command())
+    ..command(quote_command())
+    ..on_component(
+      prefix="demo:feedback:",
+      Immediate(ctx => ShowModal(feedback.show(state=ctx.suffix()))),
+    )
+    ..on_component(
+      prefix="demo:done:",
+      DeferredUpdate(ctx => {
+        ctx.edit_original(
+          content="✅ \{ctx.suffix()} marked this greeting as done.",
+          components=[],
+        )
+        |> ignore
+      }),
+    )
+    .on_modal(
+      feedback,
+      Immediate((ctx, form) => {
+        let details = form.details.unwrap_or("(no details)")
+        @discord.InitialResponse::message(
+          content="Feedback from \{ctx.state().unwrap_or("unknown")}:\n" +
+            "**\{form.topic}**\n\{details}",
+          ephemeral=true,
+        )
+      }),
+    )
 
-  let bot = @discord.Bot(app, token~)
-  bot.on(@discord.Events::ready(), (_ctx, ready) => {
-    println("[bot] ready as \{ready.user.username}")
-  })
-  bot.on(@discord.Events::message_create(), (ctx, event) => {
-    if event.guild_id is None && event.message.content == "!ping" {
-      ctx.message_ref(event).reply(content="pong") |> ignore
+    let bot = @discord.Bot(app, token~)
+    bot.on(@discord.Events::ready(), (_ctx, ready) => {
+      println("[bot] ready as \{ready.user.username}")
+    })
+    bot.on(@discord.Events::message_create(), (ctx, event) => {
+      if event.guild_id is None && event.message.content == "!ping" {
+        ctx.message_ref(event).reply(content="pong") |> ignore
+      }
+    })
+    println("[try] /demo greet name:<autocomplete>")
+    println("[try] /demo add a:2 b:3")
+    println("[try] Apps → Wave on a user")
+    println("[try] Apps → Quote on a message")
+    println("[try] use both buttons on the /demo greet response")
+    println("[try] DM the bot !ping")
+    try @async.with_timeout_opt(run_seconds() * 1000, () => bot.run()) catch {
+      @discord.AppConfigError::EmptyToken =>
+        println("[error] EmptyToken: set DISCORD_TOKEN to run the bot")
+      error => raise error
+    } noraise {
+      _ => ()
     }
-  })
-  println("[try] /demo greet name:<autocomplete>")
-  println("[try] /demo add a:2 b:3")
-  println("[try] Apps → Wave on a user")
-  println("[try] Apps → Quote on a message")
-  println("[try] use both buttons on the /demo greet response")
-  println("[try] DM the bot !ping")
-  try @async.with_timeout_opt(run_seconds() * 1000, () => bot.run()) catch {
-    @discord.AppConfigError::EmptyToken =>
-      println("[error] EmptyToken: set DISCORD_TOKEN to run the bot")
+  } catch {
+    error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
+      ()
     error => raise error
-  } noraise {
-    _ => ()
   }
-  println("[done]")
+  println("[bot] shutting down")
 }

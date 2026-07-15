@@ -44,8 +44,16 @@ async fn run_bot(channel_id : @model.ChannelId) -> Unit {
 
 ///|
 async fn main {
-  match feedback_channel() {
-    Some(channel_id) => run_bot(channel_id)
-    None => println("set FEEDBACK_CHANNEL_ID to a Discord channel id")
+  @signal.set_global_cancellation_signals([SIGINT, SIGTERM])
+  try {
+    match feedback_channel() {
+      Some(channel_id) => run_bot(channel_id)
+      None => println("set FEEDBACK_CHANNEL_ID to a Discord channel id")
+    }
+  } catch {
+    error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
+      ()
+    error => raise error
   }
+  println("[bot] shutting down")
 }

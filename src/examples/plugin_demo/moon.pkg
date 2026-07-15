@@ -3,6 +3,7 @@ import {
   "gaato/discord/model",
   "gaato/discord/examples/plugin_demo/feedback",
   "moonbitlang/async",
+  "moonbitlang/async/signal",
   "moonbitlang/core/env",
 }
 

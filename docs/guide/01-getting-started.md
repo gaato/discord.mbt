@@ -26,6 +26,7 @@ Create an executable package, for example `src/main/moon.pkg`:
 import {
   "gaato/discord",
   "moonbitlang/async",
+  "moonbitlang/async/signal",
   "moonbitlang/core/env",
 }
 
@@ -57,15 +58,23 @@ fn echo_command() -> @discord.Command[String] {
 
 ///|
 async fn main {
-  let token = @env.get_env_var("DISCORD_TOKEN").unwrap_or("")
-  let app = @discord.App(sync=Global)
-  app.command(echo_command())
+  @signal.set_global_cancellation_signals([SIGINT, SIGTERM])
+  try {
+    let token = @env.get_env_var("DISCORD_TOKEN").unwrap_or("")
+    let app = @discord.App(sync=Global)
+    app.command(echo_command())
 
-  let bot = @discord.Bot(app, token~)
-  bot.on(@discord.Events::ready(), (_, ready) => {
-    println("ready as \{ready.user.username}")
-  })
-  bot.run()
+    let bot = @discord.Bot(app, token~)
+    bot.on(@discord.Events::ready(), (_, ready) => {
+      println("ready as \{ready.user.username}")
+    })
+    bot.run()
+  } catch {
+    error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
+      ()
+    error => raise error
+  }
+  println("[bot] shutting down")
 }
 ```
 
@@ -85,6 +94,14 @@ DISCORD_TOKEN=... moon run --target native src/main
 
 The token passed to `Bot(...)` and `Client(...)` is the raw bot token without a
 `Bot ` prefix.
+
+## Stop the bot
+
+Pressing Ctrl-C or sending SIGTERM cancels the async runtime because the entry
+point calls `set_global_cancellation_signals`. Structured concurrency then
+unwinds the bot's task groups and completes their teardown before the process
+exits. Signal handling is an entry-point concern; `Bot` does not install
+process-global signal handlers implicitly.
 
 Continue with [Commands](02-commands.md), or use
 [HTTP interactions](06-http-interactions.md) when the application should not

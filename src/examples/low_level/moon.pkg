@@ -5,6 +5,7 @@ import {
   "gaato/discord/interaction",
   "gaato/discord/framework",
   "moonbitlang/async",
+  "moonbitlang/async/signal",
   "moonbitlang/core/env",
   "moonbitlang/core/string",
 }

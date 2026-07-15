@@ -49,66 +49,73 @@ async fn handle_echo(ctx : @framework.CommandCtx) -> Unit {
 
 ///|
 async fn main {
-  let token = @env.get_env_var("DISCORD_TOKEN").unwrap_or("")
-  let run_seconds = match @env.get_env_var("RUN_SECONDS") {
-    Some(s) => @string.parse_int(s) catch { _ => DEFAULT_RUN_SECONDS }
-    None => DEFAULT_RUN_SECONDS
-  }
-  let client = @dhttp.Client(token)
-  let gateway_url = client.get_gateway()
-  @async.with_timeout_opt(run_seconds * 1000, () => {
-    @async.with_task_group((group : @async.TaskGroup[Unit]) => {
-      let shard = @gateway.Shard::start(
-        group,
-        token~,
-        intents=@model.Intents::guilds(),
-        gateway_url~,
-      )
-      let mut framework : @framework.Framework? = None
-      for ;; {
-        match shard.next() {
-          Dispatch(Ready(ready)) => {
-            println("[shard] ready as \{ready.user.username}")
-            let fw = @framework.Framework(client, ready.application.id)
-              .command(echo_spec(), handle_echo)
-              .on_error((label, error) => {
-                println("[fw] \{label} failed: \{to_repr(error)}")
-              })
-            match @env.get_env_var("GUILD_ID") {
-              Some(raw) => {
-                let guild_id : @model.GuildId = @model.Id::parse(raw) catch {
-                  _ => {
-                    println("[fw] invalid GUILD_ID, skipping sync")
-                    continue
+  @signal.set_global_cancellation_signals([SIGINT, SIGTERM])
+  try {
+    let token = @env.get_env_var("DISCORD_TOKEN").unwrap_or("")
+    let run_seconds = match @env.get_env_var("RUN_SECONDS") {
+      Some(s) => @string.parse_int(s) catch { _ => DEFAULT_RUN_SECONDS }
+      None => DEFAULT_RUN_SECONDS
+    }
+    let client = @dhttp.Client(token)
+    let gateway_url = client.get_gateway()
+    @async.with_timeout_opt(run_seconds * 1000, () => {
+      @async.with_task_group((group : @async.TaskGroup[Unit]) => {
+        let shard = @gateway.Shard::start(
+          group,
+          token~,
+          intents=@model.Intents::guilds(),
+          gateway_url~,
+        )
+        let mut framework : @framework.Framework? = None
+        for ;; {
+          match shard.next() {
+            Dispatch(Ready(ready)) => {
+              println("[shard] ready as \{ready.user.username}")
+              let fw = @framework.Framework(client, ready.application.id)
+                .command(echo_spec(), handle_echo)
+                .on_error((label, error) => {
+                  println("[fw] \{label} failed: \{to_repr(error)}")
+                })
+              match @env.get_env_var("GUILD_ID") {
+                Some(raw) => {
+                  let guild_id : @model.GuildId = @model.Id::parse(raw) catch {
+                    _ => {
+                      println("[fw] invalid GUILD_ID, skipping sync")
+                      continue
+                    }
                   }
+                  fw.sync_guild(guild_id) |> ignore
+                  println("[fw] synced /echo to guild \{guild_id}")
                 }
-                fw.sync_guild(guild_id) |> ignore
-                println("[fw] synced /echo to guild \{guild_id}")
+                None => {
+                  fw.sync_global() |> ignore
+                  println("[fw] synced /echo globally")
+                }
               }
-              None => {
-                fw.sync_global() |> ignore
-                println("[fw] synced /echo globally")
+              framework = Some(fw)
+            }
+            Dispatch(InteractionCreate(interaction)) => {
+              guard framework is Some(fw) else { continue }
+              if fw.process(interaction) {
+                println("[fw] handled interaction \{interaction.id}")
+              } else {
+                println("[fw] unhandled interaction \{interaction.id}")
               }
             }
-            framework = Some(fw)
-          }
-          Dispatch(InteractionCreate(interaction)) => {
-            guard framework is Some(fw) else { continue }
-            if fw.process(interaction) {
-              println("[fw] handled interaction \{interaction.id}")
-            } else {
-              println("[fw] unhandled interaction \{interaction.id}")
+            FatallyClosed(code~) => {
+              println("[shard] fatally closed: code=\{code}")
+              break
             }
+            _ => ()
           }
-          FatallyClosed(code~) => {
-            println("[shard] fatally closed: code=\{code}")
-            break
-          }
-          _ => ()
         }
-      }
+      })
     })
-  })
-  |> ignore
-  println("[done]")
+    |> ignore
+  } catch {
+    error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
+      ()
+    error => raise error
+  }
+  println("[bot] shutting down")
 }
