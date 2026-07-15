@@ -4,10 +4,19 @@ package "gaato/discord/voice"
 import {
   "moonbitlang/async",
   "moonbitlang/core/debug",
+  "moonbitlang/core/ref",
 }
 
 // Values
+pub const SILENCE_FRAME : Bytes = b"\xF8\xFF\xFE"
+
+pub fn build_ip_discovery_request(UInt) -> Bytes
+
+pub fn build_rtp_header(sequence~ : UInt16, timestamp~ : UInt, ssrc~ : UInt) -> Bytes
+
 pub async fn connect_voice_websocket(String) -> &VoiceTransport
+
+pub async fn discover_external_address(&VoiceUdp, UInt, retries? : Int, timeout_ms? : Int) -> (String, Int)
 
 pub fn encode_binary_client_frame(Int, Bytes) -> Bytes
 
@@ -25,13 +34,45 @@ pub fn encode_speaking(ssrc~ : UInt, flags~ : Int, delay? : Int) -> Json
 
 pub fn encode_transition_ready(transition_id~ : Int) -> Json
 
+pub async fn open_voice_udp(String, Int) -> &VoiceUdp
+
 pub fn parse_binary_frame(Bytes) -> (VoiceMessage, Int?) raise VoiceEnvelopeError
 
+pub fn parse_ip_discovery_response(Bytes, expected_ssrc~ : UInt) -> (String, Int) raise VoiceUdpError
+
+pub fn parse_rtp_packet(Bytes) -> RtpPacket raise RtpError
+
 pub fn parse_text_frame(String) -> (VoiceMessage, Int?) raise VoiceEnvelopeError
+
+pub fn rtpsize_header_len(Bytes) -> Int
+
+pub async fn run_send_loop(&AudioSource, TransportCipher, &VoiceUdp, VoiceGateway, ssrc~ : UInt, initial_sequence? : UInt16, initial_timestamp? : UInt, stop? : @ref.Ref[Bool], frame_duration_ms? : Int) -> Unit
+
+pub fn shim_available() -> Bool
+
+pub fn shim_unavailable_reason() -> String?
 
 pub fn voice_on_close(Int?, Bool) -> VoiceReconnectPolicy
 
 // Errors
+pub(all) suberror OggOpusError {
+  InvalidOggPage(reason~ : String)
+  InvalidOpusStream(reason~ : String)
+} derive(Eq, @debug.Debug)
+
+pub(all) suberror RtpError {
+  InvalidRtpPacket(reason~ : String)
+} derive(Eq, @debug.Debug)
+
+pub(all) suberror VoiceCryptoError {
+  NoCompatibleMode(modes~ : Array[String])
+  ShimUnavailable(reason~ : String)
+  InvalidSecretKey(length~ : Int)
+  InvalidEncryptedPacket(reason~ : String)
+  AuthenticationFailed(reason~ : String)
+  AeadFailed(status~ : Int, reason~ : String)
+} derive(Eq, @debug.Debug)
+
 pub(all) suberror VoiceEnvelopeError {
   InvalidTextFrame(reason~ : String)
   InvalidBinaryFrame(reason~ : String)
@@ -41,7 +82,49 @@ pub(all) suberror VoiceTransportClosed {
   VoiceTransportClosed(code~ : Int?, reason~ : String)
 } derive(@debug.Debug)
 
+pub(all) suberror VoiceUdpError {
+  InvalidDiscoveryPacket(reason~ : String)
+  IpDiscoveryFailed(attempts~ : Int, reason~ : String)
+} derive(Eq, @debug.Debug)
+
 // Types and methods
+pub(all) enum EncryptionMode {
+  AeadAes256GcmRtpsize
+  AeadXChaCha20Poly1305Rtpsize
+} derive(Eq, @debug.Debug)
+pub fn EncryptionMode::negotiate(Array[String]) -> Self raise VoiceCryptoError
+
+pub struct OggOpusSource {
+  // private fields
+}
+pub fn OggOpusSource::channels(Self) -> Int
+pub fn OggOpusSource::from_bytes(Bytes) -> Self raise OggOpusError
+pub fn OggOpusSource::pre_skip(Self) -> Int
+pub impl AudioSource for OggOpusSource
+
+pub struct OggPacketReader {
+  // private fields
+}
+pub fn OggPacketReader::new() -> Self
+pub fn OggPacketReader::next_packet(Self) -> Bytes? raise OggOpusError
+pub fn OggPacketReader::push(Self, Bytes) -> Unit
+
+pub(all) struct RtpPacket {
+  sequence : UInt16
+  timestamp : UInt
+  ssrc : UInt
+  header_len : Int
+  header : Bytes
+  payload : Bytes
+} derive(Eq, @debug.Debug)
+
+pub struct TransportCipher {
+  // private fields
+}
+pub fn TransportCipher::new(EncryptionMode, Bytes) -> Self raise VoiceCryptoError
+pub fn TransportCipher::open(Self, Bytes, header_len~ : Int) -> Bytes raise VoiceCryptoError
+pub fn TransportCipher::seal(Self, header~ : Bytes, Bytes) -> Bytes raise VoiceCryptoError
+
 pub(all) enum VoiceFrame {
   Text(String)
   Binary(Bytes)
@@ -106,10 +189,20 @@ pub(all) enum VoiceReconnectPolicy {
 // Type aliases
 
 // Traits
+pub(open) trait AudioSource {
+  async fn next_frame(Self) -> Bytes?
+}
+
 pub(open) trait VoiceTransport {
   async fn recv(Self) -> VoiceFrame
   async fn send_text(Self, String) -> Unit
   async fn send_binary(Self, Bytes) -> Unit
   async fn close(Self, code~ : Int) -> Unit
+}
+
+pub(open) trait VoiceUdp {
+  async fn recv(Self, FixedArray[Byte]) -> Int
+  async fn send(Self, Bytes) -> Unit
+  async fn close(Self) -> Unit
 }
 

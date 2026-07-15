@@ -3,6 +3,8 @@ import {
   "moonbitlang/async",
   "moonbitlang/async/aqueue",
   "moonbitlang/async/websocket",
+  "moonbitlang/async/socket",
+  "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/json",
   "moonbitlang/core/random",
 }
@@ -10,20 +12,34 @@ import {
 import {
   "moonbitlang/async",
   "moonbitlang/async/aqueue",
+  "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/json",
 } for "test"
 
 // Voice networking is available only on the native async runtime.
 
 options(
+  "native-stub": [ "shim_stub.c" ],
   targets: {
+    "audio.mbt": [ "native" ],
+    "audio_test.mbt": [ "native" ],
+    "crypto.mbt": [ "native" ],
+    "crypto_test.mbt": [ "native" ],
+    "crypto_wbtest.mbt": [ "native" ],
     "envelope.mbt": [ "native" ],
     "envelope_test.mbt": [ "native" ],
     "gateway.mbt": [ "native" ],
+    "ogg_opus.mbt": [ "native" ],
+    "ogg_opus_test.mbt": [ "native" ],
     "pkg.generated.mbti": [ "native" ],
+    "rtp.mbt": [ "native" ],
+    "rtp_test.mbt": [ "native" ],
+    "shim_ffi.mbt": [ "native" ],
     "state.mbt": [ "native" ],
     "state_test.mbt": [ "native" ],
     "transport.mbt": [ "native" ],
+    "udp.mbt": [ "native" ],
+    "udp_test.mbt": [ "native" ],
     "voice_gateway_test.mbt": [ "native" ],
   },
 )

@@ -65,3 +65,40 @@ jobs:
 
       - name: Test
         run: moon test --target js
+
+  voice-shim:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      DISCORD_VOICE_SHIM_PATH: ${{ github.workspace }}/voice-shim/target/release/libdiscord_voice_shim.so
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            voice-shim/target
+          key: voice-shim-ci-${{ runner.os }}-${{ hashFiles('voice-shim/Cargo.toml') }}
+
+      - name: Build voice shim
+        working-directory: voice-shim
+        run: cargo build --release
+
+      - name: Install MoonBit
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+
+      - name: Install dependencies
+        run: moon update && moon install
+
+      - name: Test with voice shim
+        run: moon test --target native --release
