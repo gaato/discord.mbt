@@ -119,9 +119,9 @@ async fn dispatch_guard_interaction(
 
 ///|
 async test "command checks run in order and stop before the handler" {
-  let client = @dhttp.Client::new("test-token")
+  let client = @dhttp.Client("test-token")
   defer client.close()
-  let app = App::new(sync=Disabled)
+  let app = App(sync=Disabled)
   let trace : Array[String] = []
   let errors : Array[String] = []
   app.error_policy((_, error) => {
@@ -150,7 +150,7 @@ async test "command checks run in order and stop before the handler" {
       true
     }),
   )
-  let framework = @framework.Framework::new(
+  let framework = @framework.Framework(
     client,
     @model.Id::parse("400000000000000001"),
   )
@@ -170,9 +170,9 @@ async test "command checks run in order and stop before the handler" {
 
 ///|
 async test "built-in scope and permission checks use invocation data" {
-  let client = @dhttp.Client::new("test-token")
+  let client = @dhttp.Client("test-token")
   defer client.close()
-  let app = App::new(sync=Disabled)
+  let app = App(sync=Disabled)
   let handled : Array[String] = []
   let errors : Array[String] = []
   app.error_policy((_, error) => {
@@ -201,7 +201,7 @@ async test "built-in scope and permission checks use invocation data" {
       handler=Raw(_ => handled.push("dm")),
     ).check(dm_only()),
   )
-  let framework = @framework.Framework::new(
+  let framework = @framework.Framework(
     client,
     @model.Id::parse("400000000000000001"),
   )
@@ -240,9 +240,9 @@ async test "built-in scope and permission checks use invocation data" {
 
 ///|
 async test "command cooldown reports retry time and recovers" {
-  let client = @dhttp.Client::new("test-token")
+  let client = @dhttp.Client("test-token")
   defer client.close()
-  let app = App::new(sync=Disabled)
+  let app = App(sync=Disabled)
   let clock = Ref(1_000L)
   app.set_clock(() => clock.val)
   let handled = Ref(0)
@@ -261,7 +261,7 @@ async test "command cooldown reports retry time and recovers" {
       handler=Raw(_ => handled.val += 1),
     ).cooldown(seconds=10, bucket=User),
   )
-  let framework = @framework.Framework::new(
+  let framework = @framework.Framework(
     client,
     @model.Id::parse("400000000000000001"),
   )
@@ -295,9 +295,9 @@ async test "command cooldown reports retry time and recovers" {
 
 ///|
 async test "guild and global cooldown buckets share the intended scope" {
-  let client = @dhttp.Client::new("test-token")
+  let client = @dhttp.Client("test-token")
   defer client.close()
-  let app = App::new(sync=Disabled)
+  let app = App(sync=Disabled)
   app.set_clock(() => 1_000L)
   let guild_runs = Ref(0)
   let global_runs = Ref(0)
@@ -324,7 +324,7 @@ async test "guild and global cooldown buckets share the intended scope" {
       handler=Raw(_ => global_runs.val += 1),
     ).cooldown(seconds=10, bucket=Global),
   )
-  let framework = @framework.Framework::new(
+  let framework = @framework.Framework(
     client,
     @model.Id::parse("400000000000000001"),
   )
@@ -373,7 +373,7 @@ async test "guild and global cooldown buckets share the intended scope" {
 
 ///|
 test "command validation rejects non-positive cooldowns" {
-  let app = App::new(sync=Disabled)
+  let app = App(sync=Disabled)
   app.command(
     slash(
       name="invalid-cooldown",
@@ -383,7 +383,7 @@ test "command validation rejects non-positive cooldowns" {
     ).cooldown(seconds=0),
   )
   try app.validate() catch {
-    AppConfigError::InvalidCooldown(command~, seconds~) => {
+    InvalidCooldown(command~, seconds~) => {
       inspect(command, content="invalid-cooldown")
       inspect(seconds, content="0")
     }
@@ -397,9 +397,7 @@ test "command validation rejects non-positive cooldowns" {
 test "initial response data matches framework message response shape" {
   let response = InitialResponse::message(
     content="done",
-    files=[
-      @dhttp.FileUpload::new("report.txt", b"ok", description="Result report"),
-    ],
+    files=[FileUpload("report.txt", b"ok", description="Result report")],
     ephemeral=true,
   )
   json_inspect(response.message_data(), content={
@@ -425,7 +423,7 @@ test "initial response emits explicit typed allowed mentions" {
 
 ///|
 test "app validates command type names and slash child structure" {
-  let duplicate = App::new(sync=Disabled)
+  let duplicate = App(sync=Disabled)
   let command = slash(
     name="same",
     description="Duplicate",
@@ -435,12 +433,12 @@ test "app validates command type names and slash child structure" {
   duplicate.command(command)
   duplicate.command(command)
   try duplicate.validate() catch {
-    AppConfigError::DuplicateCommand(name~) => inspect(name, content="same")
+    DuplicateCommand(name~) => inspect(name, content="same")
     error => fail("unexpected error: \{to_repr(error)}")
   } noraise {
     _ => fail("expected duplicate command error")
   }
-  let mixed = App::new(sync=Disabled)
+  let mixed = App(sync=Disabled)
   mixed.command(
     slash(
       name="shared",
@@ -451,7 +449,7 @@ test "app validates command type names and slash child structure" {
   )
   mixed.command(user_command(name="shared", handler=Raw(_ => ())))
   mixed.validate()
-  let duplicate_path = App::new(sync=Disabled)
+  let duplicate_path = App(sync=Disabled)
   duplicate_path.command(
     slash_group(name="admin", description="Administrative tools", children=[
       subcommand(
@@ -469,7 +467,7 @@ test "app validates command type names and slash child structure" {
     ]),
   )
   try duplicate_path.validate() catch {
-    AppConfigError::DuplicateCommandPath(command~, path~) => {
+    DuplicateCommandPath(command~, path~) => {
       inspect(command, content="admin")
       inspect(path, content="ping")
     }
@@ -477,7 +475,7 @@ test "app validates command type names and slash child structure" {
   } noraise {
     _ => fail("expected duplicate path error")
   }
-  let nested_group = App::new(sync=Disabled)
+  let nested_group = App(sync=Disabled)
   nested_group.command(
     slash_group(name="admin", description="Administrative tools", children=[
       subcommand_group(name="outer", description="Outer group", children=[
@@ -486,7 +484,7 @@ test "app validates command type names and slash child structure" {
     ]),
   )
   try nested_group.validate() catch {
-    AppConfigError::NestedSubcommandGroup(command~, path~) => {
+    NestedSubcommandGroup(command~, path~) => {
       inspect(command, content="admin")
       inspect(path, content="outer/inner")
     }
@@ -494,7 +492,7 @@ test "app validates command type names and slash child structure" {
   } noraise {
     _ => fail("expected nested group error")
   }
-  let choices_and_suggest = App::new(sync=Disabled)
+  let choices_and_suggest = App(sync=Disabled)
   choices_and_suggest.command(
     slash(
       name="search",
@@ -511,7 +509,7 @@ test "app validates command type names and slash child structure" {
     ),
   )
   try choices_and_suggest.validate() catch {
-    AppConfigError::ChoicesWithAutocomplete(command~, path~) => {
+    ChoicesWithAutocomplete(command~, path~) => {
       inspect(command, content="search")
       inspect(path, content="query")
     }
@@ -519,7 +517,7 @@ test "app validates command type names and slash child structure" {
   } noraise {
     _ => fail("expected choices and autocomplete error")
   }
-  let invalid_order = App::new(sync=Disabled)
+  let invalid_order = App(sync=Disabled)
   invalid_order.command(
     slash(
       name="ordered",
@@ -533,7 +531,7 @@ test "app validates command type names and slash child structure" {
     ),
   )
   try invalid_order.validate() catch {
-    AppConfigError::RequiredOptionAfterOptional(command~, path~) => {
+    RequiredOptionAfterOptional(command~, path~) => {
       inspect(command, content="ordered")
       inspect(path, content="required")
     }

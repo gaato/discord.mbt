@@ -58,7 +58,7 @@ pub struct App {
 }
 
 ///|
-pub fn App::new(sync? : CommandSync = Global, max_in_flight? : Int = 64) -> App {
+pub fn App::App(sync? : CommandSync = Global, max_in_flight? : Int = 64) -> App {
   {
     sync_: sync,
     max_in_flight_: max_in_flight,
@@ -69,7 +69,7 @@ pub fn App::new(sync? : CommandSync = Global, max_in_flight? : Int = 64) -> App 
     middleware_: [],
     policy_: None,
     warn_: message => println(message),
-    now_: @async.now,
+    now_: @clock.now_ms,
   }
 }
 
@@ -246,7 +246,7 @@ fn bounded_spawner(
 ///|
 /// Create a bounded task spawner for an executor-owned task group.
 pub fn App::spawner(self : App, group : @async.TaskGroup[Unit]) -> Spawner {
-  bounded_spawner(group, @async.Semaphore::new(self.max_in_flight_))
+  bounded_spawner(group, Semaphore(self.max_in_flight_))
 }
 
 ///|

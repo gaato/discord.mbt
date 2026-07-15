@@ -77,7 +77,7 @@ pub impl @json.FromJson for PollLayoutType with fn from_json(json, path) {
   match json {
     Number(value, ..) => PollLayoutType::from_int(value.to_int())
     _ =>
-      raise @json.JsonDecodeError(
+      raise JsonDecodeError(
         (path, "expected the presentation layout used by a poll (number)"),
       )
   }

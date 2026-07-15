@@ -138,14 +138,14 @@ fn command_sync() -> @discord.CommandSync {
         _ => None
       }
       match guild_id {
-        Some(value) => @discord.CommandSync::Guild(value)
+        Some(value) => Guild(value)
         None => {
           println("[bot] invalid GUILD_ID, syncing globally")
-          @discord.CommandSync::Global
+          Global
         }
       }
     }
-    None => @discord.CommandSync::Global
+    None => Global
   }
 }
 
@@ -161,16 +161,14 @@ fn run_seconds() -> Int {
 async fn main {
   let feedback = feedback_modal()
   let token = @env.get_env_var("DISCORD_TOKEN").unwrap_or("")
-  let app = @discord.App::new(sync=command_sync())
+  let app = @discord.App(sync=command_sync())
   app
   ..command(demo_command())
   ..command(wave_command())
   ..command(quote_command())
   ..on_component(
     prefix="demo:feedback:",
-    Immediate(ctx => {
-      @discord.ComponentReply::ShowModal(feedback.show(state=ctx.suffix()))
-    }),
+    Immediate(ctx => ShowModal(feedback.show(state=ctx.suffix()))),
   )
   ..on_component(
     prefix="demo:done:",
@@ -194,7 +192,7 @@ async fn main {
     }),
   )
 
-  let bot = @discord.Bot::new(app, token~)
+  let bot = @discord.Bot(app, token~)
   bot.on(@discord.Events::ready(), (_ctx, ready) => {
     println("[bot] ready as \{ready.user.username}")
   })

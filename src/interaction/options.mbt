@@ -33,7 +33,7 @@ pub fn CommandOptions::from_data(data : @model.CommandData) -> CommandOptions {
       _ => break
     }
   }
-  let leaves = {}
+  let leaves = Map([])
   if options is Some(list) {
     for opt in list {
       leaves[opt.name] = opt
@@ -86,9 +86,7 @@ fn CommandOptions::raw_value(
   expected : String,
 ) -> Json? raise OptionError {
   guard self.leaves.get(name) is Some(opt) else { return None }
-  guard opt.value is Some(value) else {
-    raise OptionError::WrongType(name~, expected~)
-  }
+  guard opt.value is Some(value) else { raise WrongType(name~, expected~) }
   Some(value)
 }
 
@@ -99,7 +97,7 @@ fn CommandOptions::required(
   expected : String,
 ) -> Json raise OptionError {
   guard self.raw_value(name, expected) is Some(value) else {
-    raise OptionError::MissingOption(name~)
+    raise MissingOption(name~)
   }
   value
 }
@@ -110,9 +108,7 @@ fn json_string(
   name : String,
   expected : String,
 ) -> String raise OptionError {
-  guard value is String(s) else {
-    raise OptionError::WrongType(name~, expected~)
-  }
+  guard value is String(s) else { raise WrongType(name~, expected~) }
   s
 }
 
@@ -125,10 +121,10 @@ fn json_int64(
   match value {
     Number(_, repr=Some(r)) =>
       @string.parse_int64(r.to_string()) catch {
-        _ => raise OptionError::WrongType(name~, expected~)
+        _ => raise WrongType(name~, expected~)
       }
     Number(n, repr=None) => n.to_int64()
-    _ => raise OptionError::WrongType(name~, expected~)
+    _ => raise WrongType(name~, expected~)
   }
 }
 
@@ -138,9 +134,7 @@ fn json_double(
   name : String,
   expected : String,
 ) -> Double raise OptionError {
-  guard value is Number(n, ..) else {
-    raise OptionError::WrongType(name~, expected~)
-  }
+  guard value is Number(n, ..) else { raise WrongType(name~, expected~) }
   n
 }
 
@@ -153,7 +147,7 @@ fn json_bool(
   match value {
     True => true
     False => false
-    _ => raise OptionError::WrongType(name~, expected~)
+    _ => raise WrongType(name~, expected~)
   }
 }
 
@@ -163,11 +157,9 @@ fn[M] json_id(
   name : String,
   expected : String,
 ) -> @model.Id[M] raise OptionError {
-  guard value is String(s) else {
-    raise OptionError::WrongType(name~, expected~)
-  }
+  guard value is String(s) else { raise WrongType(name~, expected~) }
   @model.Id::parse(s.view()) catch {
-    _ => raise OptionError::WrongType(name~, expected~)
+    _ => raise WrongType(name~, expected~)
   }
 }
 
@@ -337,7 +329,7 @@ pub fn CommandOptions::attachment(
   guard self.resolved is Some(resolved) &&
     resolved.attachments is Some(map) &&
     map.get(id.to_string()) is Some(attachment) else {
-    raise OptionError::MissingResolved(name~, kind="attachment")
+    raise MissingResolved(name~, kind="attachment")
   }
   attachment
 }

@@ -19,7 +19,7 @@ priv struct EventCollector {
 }
 
 ///|
-fn EventCollector::new() -> EventCollector {
+fn EventCollector::EventCollector() -> EventCollector {
   { waiters: [] }
 }
 
@@ -72,7 +72,7 @@ async fn[T] EventCollector::wait_for(
   let waiter : EventWaiter = {
     kind: event_type.kind(),
     matches: event => event_type.project(event).map(predicate).unwrap_or(false),
-    queue: @aqueue.Queue::new(kind=Unbounded),
+    queue: Queue(kind=Unbounded),
   }
   self.waiters.push(waiter)
   // Runs on normal delivery, timeout, and structured-concurrency cancellation.

@@ -58,10 +58,10 @@ fn echo_command() -> @discord.Command[String] {
 ///|
 async fn main {
   let token = @env.get_env_var("DISCORD_TOKEN").unwrap_or("")
-  let app = @discord.App::new(sync=Global)
+  let app = @discord.App(sync=Global)
   app.command(echo_command())
 
-  let bot = @discord.Bot::new(app, token~)
+  let bot = @discord.Bot(app, token~)
   bot.on(@discord.Events::ready(), (_, ready) => {
     println("ready as \{ready.user.username}")
   })
@@ -83,7 +83,7 @@ Create a bot application in the Discord developer portal, install it with the
 DISCORD_TOKEN=... moon run --target native src/main
 ```
 
-The token passed to `Bot::new` and `Client::new` is the raw bot token without a
+The token passed to `Bot(...)` and `Client(...)` is the raw bot token without a
 `Bot ` prefix.
 
 Continue with [Commands](02-commands.md), or use

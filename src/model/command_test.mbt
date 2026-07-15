@@ -196,5 +196,5 @@ test "command option preserves an unknown wire type" {
     ),
   )
   let decoded : @model.CommandOption = @json.from_json(@json.parse(encoded))
-  assert_true(decoded.typ == @model.CommandOptionType::Unknown(99))
+  assert_true(decoded.typ == Unknown(99))
 }

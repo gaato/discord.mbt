@@ -101,14 +101,14 @@ test "sticker decodes required fields only" {
 ///|
 test "sticker encode omits absent optional fields" {
   let sticker : @model.Sticker = {
-    id: @model.Id(1UL),
+    id: Id(1UL),
     pack_id: None,
     name: "Wave",
-    description: @model.Nullable::Null,
+    description: Null,
     tags: "wave, hello",
     asset: None,
-    typ: @model.StickerType::Standard,
-    format_type: @model.StickerFormatType::Png,
+    typ: Standard,
+    format_type: Png,
     available: None,
     guild_id: None,
     user: None,

@@ -9,7 +9,7 @@ test "webhook PING envelope has no event body" {
   let first : @model.WebhookEventPayload = @json.from_json(@json.parse(fixture))
   let second : @model.WebhookEventPayload = @json.from_json(first.to_json())
   assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
-  assert_true(first.typ == @model.WebhookPayloadType::Ping)
+  assert_true(first.typ == Ping)
   assert_true(first.event is None)
 }
 
@@ -33,7 +33,7 @@ test "unknown webhook event type preserves its name and data" {
     fail("event webhook payload is missing its body")
   }
   match body.project() {
-    @model.WebhookEvent::Unknown(typ~, data~) => {
+    Unknown(typ~, data~) => {
       assert_eq(typ, "FUTURE_EVENT")
       guard data is Some(data) else {
         fail("unknown webhook event lost its data")
@@ -78,5 +78,5 @@ test "quest enrollment is a known projection without undocumented fields" {
   guard payload.event is Some(body) else {
     fail("event webhook payload is missing its body")
   }
-  assert_true(body.project() is @model.WebhookEvent::QuestUserEnrollment)
+  assert_true(body.project() is QuestUserEnrollment)
 }

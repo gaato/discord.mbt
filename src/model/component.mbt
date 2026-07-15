@@ -65,7 +65,7 @@ pub impl ToJson for Component with fn to_json(self) {
 ///|
 pub impl @json.FromJson for Component with fn from_json(json, path) {
   guard json is Object(fields) else {
-    raise @json.JsonDecodeError((path, "expected a component (object)"))
+    raise JsonDecodeError((path, "expected a component (object)"))
   }
   match fields.get("type") {
     Some(Number(value, ..)) =>
@@ -163,7 +163,7 @@ pub impl ToJson for ButtonStyle with fn to_json(self) {
 pub impl @json.FromJson for ButtonStyle with fn from_json(json, path) {
   match json {
     Number(value, ..) => ButtonStyle::from_int(value.to_int())
-    _ => raise @json.JsonDecodeError((path, "expected a button style (number)"))
+    _ => raise JsonDecodeError((path, "expected a button style (number)"))
   }
 }
 
@@ -394,9 +394,6 @@ pub impl ToJson for TextInputStyle with fn to_json(self) {
 pub impl @json.FromJson for TextInputStyle with fn from_json(json, path) {
   match json {
     Number(value, ..) => TextInputStyle::from_int(value.to_int())
-    _ =>
-      raise @json.JsonDecodeError(
-        (path, "expected a text input style (number)"),
-      )
+    _ => raise JsonDecodeError((path, "expected a text input style (number)"))
   }
 }

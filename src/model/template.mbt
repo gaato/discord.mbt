@@ -114,15 +114,12 @@ pub impl @json.FromJson for GuildTemplatePermissions with fn from_json(
       GuildTemplatePermissions(
         @string.parse_uint64(repr.to_string()) catch {
           _ =>
-            raise @json.JsonDecodeError(
+            raise JsonDecodeError(
               (path, "expected template permissions (number)"),
             )
         },
       )
     Number(value, repr=None) => GuildTemplatePermissions(value.to_uint64())
-    _ =>
-      raise @json.JsonDecodeError(
-        (path, "expected template permissions (number)"),
-      )
+    _ => raise JsonDecodeError((path, "expected template permissions (number)"))
   }
 }

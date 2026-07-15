@@ -46,6 +46,7 @@ pub async fn ChannelRef::typing(Self) -> Unit raise DiscordHttpError
 pub struct Client {
   // private fields
 }
+pub fn Client::Client(String, base_url? : String, api_version? : Int, limiter? : &@ratelimit.RateLimiter, max_connections? : Int, request_timeout_ms? : Int, max_retries? : Int, default_allowed_mentions? : @model.AllowedMentions) -> Self
 pub async fn Client::add_member_role(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker], @model.Id[@model.RoleMarker], audit_reason? : String) -> Unit raise DiscordHttpError
 pub async fn Client::bulk_delete_messages(Self, @model.Id[@model.ChannelMarker], Array[@model.Id[@model.MessageMarker]], audit_reason? : String) -> Unit raise DiscordHttpError
 pub async fn Client::bulk_overwrite_global_commands(Self, @model.Id[@model.ApplicationMarker], Json) -> Array[@model.ApplicationCommand] raise DiscordHttpError
@@ -163,7 +164,6 @@ pub async fn Client::modify_guild_soundboard_sound(Self, @model.Id[@model.GuildM
 pub async fn Client::modify_guild_sticker(Self, @model.Id[@model.GuildMarker], @model.Id[@model.StickerMarker], name? : String, description? : String, clear_description? : Bool, tags? : String, audit_reason? : String) -> @model.Sticker raise DiscordHttpError
 pub async fn Client::modify_stage_instance(Self, @model.Id[@model.ChannelMarker], topic? : String, privacy_level? : @model.StagePrivacyLevel, audit_reason? : String) -> @model.StageInstance raise DiscordHttpError
 pub async fn Client::modify_webhook(Self, @model.Id[@model.WebhookMarker], name? : String, avatar? : String, clear_avatar? : Bool, channel_id? : @model.Id[@model.ChannelMarker], audit_reason? : String) -> @model.Webhook raise DiscordHttpError
-pub fn Client::new(String, base_url? : String, api_version? : Int, limiter? : &@ratelimit.RateLimiter, max_connections? : Int, request_timeout_ms? : Int, max_retries? : Int, default_allowed_mentions? : @model.AllowedMentions) -> Self
 pub fn Client::on_telemetry(Self, (@telemetry.TelemetryEvent) -> Unit raise) -> Unit
 pub fn Client::on_warn(Self, (String) -> Unit) -> Unit
 pub fn Client::paginate_current_user_guilds(Self, before? : @model.Id[@model.GuildMarker], after? : @model.Id[@model.GuildMarker], with_counts? : Bool, page_size? : Int) -> Paginator[@model.CurrentUserGuild] raise DiscordHttpError
@@ -190,7 +190,7 @@ pub impl Show for Client
 pub struct FileUpload {
   // private fields
 }
-pub fn FileUpload::new(String, Bytes, content_type? : String, description? : String) -> Self
+pub fn FileUpload::FileUpload(String, Bytes, content_type? : String, description? : String) -> Self
 pub impl @debug.Debug for FileUpload
 
 pub(all) struct HttpRequest {

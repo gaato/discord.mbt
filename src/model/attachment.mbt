@@ -76,14 +76,13 @@ pub impl @json.FromJson for AttachmentFlags with fn from_json(json, path) {
       AttachmentFlags(
         @string.parse_uint64(repr.to_string()) catch {
           _ =>
-            raise @json.JsonDecodeError(
+            raise JsonDecodeError(
               (path, "expected attachment flags (number), got \{repr}"),
             )
         },
       )
     Number(value, repr=None) => AttachmentFlags(value.to_uint64())
-    _ =>
-      raise @json.JsonDecodeError((path, "expected attachment flags (number)"))
+    _ => raise JsonDecodeError((path, "expected attachment flags (number)"))
   }
 }
 

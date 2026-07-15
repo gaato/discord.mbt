@@ -144,7 +144,7 @@ pub impl ToJson for BaseTheme with fn to_json(self) {
 pub impl @json.FromJson for BaseTheme with fn from_json(json, path) {
   match json {
     Number(value, ..) => BaseTheme::from_int(value.to_int())
-    _ => raise @json.JsonDecodeError((path, "expected base theme (number)"))
+    _ => raise JsonDecodeError((path, "expected base theme (number)"))
   }
 }
 
@@ -171,14 +171,14 @@ pub impl @json.FromJson for Nonce with fn from_json(json, path) {
       Num(
         @string.parse_int64(repr.to_string()) catch {
           _ =>
-            raise @json.JsonDecodeError(
+            raise JsonDecodeError(
               (path, "expected a message nonce (integer), got \{repr}"),
             )
         },
       )
     Number(value, repr=None) => Num(value.to_int64())
     _ =>
-      raise @json.JsonDecodeError(
+      raise JsonDecodeError(
         (path, "expected a message nonce (string or integer)"),
       )
   }
@@ -399,7 +399,7 @@ pub impl ToJson for MessageType with fn to_json(self) {
 pub impl @json.FromJson for MessageType with fn from_json(json, path) {
   match json {
     Number(value, ..) => MessageType::from_int(value.to_int())
-    _ => raise @json.JsonDecodeError((path, "expected a message type (number)"))
+    _ => raise JsonDecodeError((path, "expected a message type (number)"))
   }
 }
 
@@ -444,10 +444,7 @@ pub impl ToJson for MessageActivityType with fn to_json(self) {
 pub impl @json.FromJson for MessageActivityType with fn from_json(json, path) {
   match json {
     Number(value, ..) => MessageActivityType::from_int(value.to_int())
-    _ =>
-      raise @json.JsonDecodeError(
-        (path, "expected a message activity (number)"),
-      )
+    _ => raise JsonDecodeError((path, "expected a message activity (number)"))
   }
 }
 
@@ -486,10 +483,7 @@ pub impl ToJson for MessageReferenceType with fn to_json(self) {
 pub impl @json.FromJson for MessageReferenceType with fn from_json(json, path) {
   match json {
     Number(value, ..) => MessageReferenceType::from_int(value.to_int())
-    _ =>
-      raise @json.JsonDecodeError(
-        (path, "expected a message reference (number)"),
-      )
+    _ => raise JsonDecodeError((path, "expected a message reference (number)"))
   }
 }
 
@@ -547,13 +541,13 @@ pub impl @json.FromJson for MessageFlags with fn from_json(json, path) {
       MessageFlags(
         @string.parse_uint64(repr.to_string()) catch {
           _ =>
-            raise @json.JsonDecodeError(
+            raise JsonDecodeError(
               (path, "expected message flags (number), got \{repr}"),
             )
         },
       )
     Number(value, repr=None) => MessageFlags(value.to_uint64())
-    _ => raise @json.JsonDecodeError((path, "expected message flags (number)"))
+    _ => raise JsonDecodeError((path, "expected message flags (number)"))
   }
 }
 

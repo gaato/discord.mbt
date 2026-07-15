@@ -30,22 +30,20 @@ pub async fn Client::create_message(
   enforce_nonce? : Bool,
 ) -> @model.Message raise DiscordHttpError {
   if content is Some(c) && c.length() > 4000 {
-    raise DiscordHttpError::Validation(
-      message="content exceeds 4000 UTF-16 units",
-    )
+    raise Validation(message="content exceeds 4000 UTF-16 units")
   }
   if content is None &&
     embeds is None &&
     components is None &&
     sticker_ids is None &&
     files is None {
-    raise DiscordHttpError::Validation(
+    raise Validation(
       message="one of content/embeds/components/sticker_ids/files is required",
     )
   }
   let body = self
     .with_channel_allowed_mentions(
-      @model.ObjBuilder::new()
+      @model.ObjBuilder()
       .opt("content", content)
       .opt("embeds", embeds)
       .opt("components", components)
@@ -65,9 +63,7 @@ pub async fn Client::create_message(
   if files is Some(fs) && fs.length() > 0 {
     body.field("attachments", attachments_json(fs)) |> ignore
   }
-  decode(
-    self.request(Route::CreateMessage(channel_id~), body=body.build(), files?),
-  )
+  decode(self.request(CreateMessage(channel_id~), body=body.build(), files?))
 }
 
 ///|
@@ -95,7 +91,7 @@ pub async fn Client::edit_message(
   }
   decode(
     self.request(
-      Route::EditMessage(channel_id~, message_id~),
+      EditMessage(channel_id~, message_id~),
       body=builder.build(),
       files?,
     ),
@@ -110,8 +106,7 @@ pub async fn Client::delete_message(
   message_id : @model.MessageId,
   audit_reason? : String,
 ) -> Unit raise DiscordHttpError {
-  self.request(Route::DeleteMessage(channel_id~, message_id~), audit_reason?)
-  |> ignore
+  self.request(DeleteMessage(channel_id~, message_id~), audit_reason?) |> ignore
 }
 
 ///|
@@ -119,9 +114,7 @@ fn validate_bulk_delete_messages(
   messages : Array[@model.MessageId],
 ) -> Unit raise DiscordHttpError {
   if messages.length() < 2 || messages.length() > 100 {
-    raise DiscordHttpError::Validation(
-      message="bulk delete requires between 2 and 100 messages",
-    )
+    raise Validation(message="bulk delete requires between 2 and 100 messages")
   }
 }
 
@@ -134,9 +127,8 @@ pub async fn Client::bulk_delete_messages(
   audit_reason? : String,
 ) -> Unit raise DiscordHttpError {
   validate_bulk_delete_messages(messages)
-  let body = @model.ObjBuilder::new().field("messages", messages).build()
-  self.request(Route::BulkDeleteMessages(channel_id~), body~, audit_reason?)
-  |> ignore
+  let body = @model.ObjBuilder().field("messages", messages).build()
+  self.request(BulkDeleteMessages(channel_id~), body~, audit_reason?) |> ignore
 }
 
 ///|
@@ -146,7 +138,7 @@ pub async fn Client::get_message(
   channel_id : @model.ChannelId,
   message_id : @model.MessageId,
 ) -> @model.Message raise DiscordHttpError {
-  decode(self.request(Route::GetChannelMessage(channel_id~, message_id~)))
+  decode(self.request(GetChannelMessage(channel_id~, message_id~)))
 }
 
 ///|
@@ -165,7 +157,7 @@ pub async fn Client::get_channel_messages(
     (if before is Some(_) { 1 } else { 0 }) +
     (if after is Some(_) { 1 } else { 0 })
   if cursor_count > 1 {
-    raise DiscordHttpError::Validation(
+    raise Validation(
       message="message pagination accepts only one of around, before, or after",
     )
   }
@@ -183,5 +175,5 @@ pub async fn Client::get_channel_messages(
     params.push("after=\{id}")
   }
   let query = if params.length() == 0 { "" } else { "?" + params.join("&") }
-  decode(self.request(Route::GetChannelMessages(channel_id~, query~)))
+  decode(self.request(GetChannelMessages(channel_id~, query~)))
 }

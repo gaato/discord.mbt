@@ -28,8 +28,8 @@ pub(all) suberror TransportClosed {
 pub struct CommandLimiter {
   // private fields
 }
+pub fn CommandLimiter::CommandLimiter(limit? : Int) -> Self
 pub async fn CommandLimiter::acquire(Self) -> Unit
-pub fn CommandLimiter::new(limit? : Int) -> Self
 
 pub(all) enum GatewayFrame {
   Text(String)

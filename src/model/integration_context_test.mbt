@@ -1,9 +1,9 @@
 ///|
 test "application integration types round-trip" {
   let values : Array[@model.ApplicationIntegrationType] = [
-    @model.ApplicationIntegrationType::GuildInstall,
-    @model.ApplicationIntegrationType::UserInstall,
-    @model.ApplicationIntegrationType::Unknown(99),
+    GuildInstall,
+    UserInstall,
+    Unknown(99),
   ]
   for value in values {
     let decoded : @model.ApplicationIntegrationType = @json.from_json(
@@ -20,10 +20,10 @@ test "application integration types round-trip" {
 ///|
 test "interaction context types round-trip" {
   let values : Array[@model.InteractionContextType] = [
-    @model.InteractionContextType::Guild,
-    @model.InteractionContextType::BotDm,
-    @model.InteractionContextType::PrivateChannel,
-    @model.InteractionContextType::Unknown(99),
+    Guild,
+    BotDm,
+    PrivateChannel,
+    Unknown(99),
   ]
   for value in values {
     let decoded : @model.InteractionContextType = @json.from_json(

@@ -1,9 +1,6 @@
 ///|
 fn test_framework() -> @framework.Framework raise {
-  @framework.Framework::new(
-    @dhttp.Client::new("test-token"),
-    @model.Id::parse("400000000000000001"),
-  )
+  Framework(Client("test-token"), @model.Id::parse("400000000000000001"))
 }
 
 ///|

@@ -222,7 +222,7 @@ test "slash command autocomplete dispatches command data with resolved users" {
     ),
   )
   match interaction.data {
-    Some(@model.InteractionData::Command(data)) => {
+    Some(Command(data)) => {
       assert_true(
         data.options is Some(options) && options[0].focused == Some(true),
       )
@@ -284,7 +284,7 @@ test "button interaction dispatches component data" {
     ),
   )
   match interaction.data {
-    Some(@model.InteractionData::Component(data)) => {
+    Some(Component(data)) => {
       assert_true(data.custom_id == "confirm")
       assert_true(data.component_type == 2)
     }
@@ -445,7 +445,7 @@ test "unknown interaction type preserves raw data" {
   )
   let round_tripped : @model.Interaction = @json.from_json(@json.parse(encoded))
   match round_tripped.data {
-    Some(@model.InteractionData::Unknown(raw)) =>
+    Some(Unknown(raw)) =>
       inspect(
         raw.stringify(),
         content=(

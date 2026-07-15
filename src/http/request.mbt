@@ -44,7 +44,7 @@ async fn Client::perform(
     let response = match (route, files, body) {
       (CreateGuildSticker(..), Some([file]), Some(json)) => {
         let payload = json.stringify()
-        let seed = "\{@async.now()}-\{next_multipart_seq()}"
+        let seed = "\{@clock.now_ms()}-\{next_multipart_seq()}"
         let boundary = fresh_boundary(seed, payload, [file])
         headers["content-type"] = "multipart/form-data; boundary=\{boundary}"
         conn.request(route.method_(), path, extra_headers=headers)
@@ -63,8 +63,8 @@ async fn Client::perform(
         conn.end_request()
       }
       (_, Some(fs), _) if fs.length() > 0 => {
-        let payload = body.unwrap_or(Json::object({})).stringify()
-        let seed = "\{@async.now()}-\{next_multipart_seq()}"
+        let payload = body.unwrap_or(Json::empty_object()).stringify()
+        let seed = "\{@clock.now_ms()}-\{next_multipart_seq()}"
         let boundary = fresh_boundary(seed, payload, fs)
         headers["content-type"] = "multipart/form-data; boundary=\{boundary}"
         conn.request(route.method_(), path, extra_headers=headers)
@@ -88,7 +88,7 @@ async fn Client::perform(
         conn.end_request()
       }
     }
-    let lower_headers : Map[String, String] = {}
+    let lower_headers : Map[String, String] = Map([])
     for name, value in response.headers {
       lower_headers[name.to_lower()] = value
     }
@@ -117,27 +117,33 @@ pub async fn Client::request(
   audit_reason? : String,
   files? : Array[FileUpload],
 ) -> Json raise DiscordHttpError {
-  let request : HttpRequest = { route, body, audit_reason, files, headers: {} }
+  let request : HttpRequest = {
+    route,
+    body,
+    audit_reason,
+    files,
+    headers: Map([]),
+  }
   let timed = @async.with_timeout_opt(self.request_timeout_ms_, () => {
     RequestSucceeded(self.run_middleware(0, request)) catch {
       error if @async.is_being_cancelled() ||
         @async.is_cancellation_error(error) => raise error
       DiscordHttpError::Api(status~, error~) =>
-        RequestFailed(DiscordHttpError::Api(status~, error~))
+        RequestFailed(Api(status~, error~))
       DiscordHttpError::RateLimited(retry_after_ms~, global~) =>
-        RequestFailed(DiscordHttpError::RateLimited(retry_after_ms~, global~))
+        RequestFailed(RateLimited(retry_after_ms~, global~))
       DiscordHttpError::Deserialize(message~) =>
-        RequestFailed(DiscordHttpError::Deserialize(message~))
+        RequestFailed(Deserialize(message~))
       DiscordHttpError::Transport(message~) =>
-        RequestFailed(DiscordHttpError::Transport(message~))
+        RequestFailed(Transport(message~))
       DiscordHttpError::Timeout(timeout_ms~) =>
-        RequestFailed(DiscordHttpError::Timeout(timeout_ms~))
+        RequestFailed(Timeout(timeout_ms~))
       DiscordHttpError::Validation(message~) =>
-        RequestFailed(DiscordHttpError::Validation(message~))
-      error => RequestFailed(DiscordHttpError::Transport(message="\{error}"))
+        RequestFailed(Validation(message~))
+      error => RequestFailed(Transport(message="\{error}"))
     }
   }) catch {
-    error => raise DiscordHttpError::Transport(message="cancelled: \{error}")
+    error => raise Transport(message="cancelled: \{error}")
   }
   match timed {
     Some(RequestSucceeded(response)) => {
@@ -150,12 +156,12 @@ pub async fn Client::request(
               errors: None,
             }
         }
-        raise DiscordHttpError::Api(status=response.status, error~)
+        raise Api(status=response.status, error~)
       }
       response.body
     }
     Some(RequestFailed(error)) => raise error
-    None => raise DiscordHttpError::Timeout(timeout_ms=self.request_timeout_ms_)
+    None => raise Timeout(timeout_ms=self.request_timeout_ms_)
   }
 }
 
@@ -189,7 +195,7 @@ async fn Client::request_inner(
         raise e
       e => raise DiscordHttpError::Transport(message="cancelled: \{e}")
     }
-    let started_at = @async.now()
+    let started_at = @clock.now_ms()
     let response = try
       self.perform(
         request.route,
@@ -200,13 +206,13 @@ async fn Client::request_inner(
       )
     catch {
       e => {
-        self.limiter.release(bucket, status=0, headers={})
+        self.limiter.release(bucket, status=0, headers=Map([]))
         self.emit_telemetry(
-          @telemetry.TelemetryEvent::HttpRequest(
+          HttpRequest(
             route_bucket=bucket,
-            method_name=request.route.method_().to_string(),
+            method_name=@debug.to_string(request.route.method_()),
             status=0,
-            duration_ms=@async.now() - started_at,
+            duration_ms=@clock.now_ms() - started_at,
             retries=attempt,
           ),
         )
@@ -224,11 +230,11 @@ async fn Client::request_inner(
       headers=response.headers,
     )
     self.emit_telemetry(
-      @telemetry.TelemetryEvent::HttpRequest(
+      HttpRequest(
         route_bucket=bucket,
-        method_name=request.route.method_().to_string(),
+        method_name=@debug.to_string(request.route.method_()),
         status=response.status,
-        duration_ms=@async.now() - started_at,
+        duration_ms=@clock.now_ms() - started_at,
         retries=attempt,
       ),
     )
@@ -240,11 +246,7 @@ async fn Client::request_inner(
         _ => 1000L
       }
       self.emit_telemetry(
-        @telemetry.TelemetryEvent::HttpRateLimited(
-          route_bucket=bucket,
-          global~,
-          retry_after_ms~,
-        ),
+        HttpRateLimited(route_bucket=bucket, global~, retry_after_ms~),
       )
       if attempt == max_attempts - 1 {
         raise DiscordHttpError::RateLimited(retry_after_ms~, global~)
@@ -266,6 +268,6 @@ async fn Client::request_inner(
 /// Decode helper shared by the typed endpoint wrappers.
 fn[T : @json.FromJson] decode(json : Json) -> T raise DiscordHttpError {
   @json.from_json(json) catch {
-    e => raise DiscordHttpError::Deserialize(message="\{e}")
+    e => raise Deserialize(message="\{e}")
   }
 }

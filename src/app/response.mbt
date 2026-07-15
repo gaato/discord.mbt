@@ -62,7 +62,7 @@ pub fn InitialResponse::message(
 /// Build the same message data object used by `CommandCtx::respond`.
 #warnings("-unused_value")
 fn InitialResponse::message_data(self : InitialResponse) -> Json {
-  let builder = @model.ObjBuilder::new()
+  let builder = @model.ObjBuilder()
     .opt("content", self.content_)
     .opt("embeds", self.embeds_)
     .opt("components", self.components_)

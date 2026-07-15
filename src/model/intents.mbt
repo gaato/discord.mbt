@@ -47,7 +47,7 @@ pub impl ToJson for Intents with fn to_json(self) {
 pub impl @json.FromJson for Intents with fn from_json(json, path) {
   match json {
     Number(n, ..) => Intents(n.to_uint())
-    _ => raise @json.JsonDecodeError((path, "expected intents (number)"))
+    _ => raise JsonDecodeError((path, "expected intents (number)"))
   }
 }
 

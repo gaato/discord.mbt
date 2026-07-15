@@ -530,7 +530,7 @@ pub fn[A] Command::erase(self : Command[A]) -> RegisteredCommand {
     suggest_routes_: self.suggest_routes,
     checks_: self.checks,
     cooldown_: self.cooldown,
-    cooldowns_: {},
+    cooldowns_: Map([]),
     cooldown_cleanup_after_: 0L,
     dispatch: (bot, waiter, warn, raw) => {
       self.dispatch_typed(bot, waiter, warn, raw)

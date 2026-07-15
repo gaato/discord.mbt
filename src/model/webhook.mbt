@@ -58,7 +58,7 @@ pub impl @json.FromJson for WebhookType with fn from_json(json, path) {
   match json {
     Number(value, ..) => WebhookType::from_int(value.to_int())
     _ =>
-      raise @json.JsonDecodeError(
+      raise JsonDecodeError(
         (path, "expected the behavior category of a discord webhook (number)"),
       )
   }

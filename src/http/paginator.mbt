@@ -65,9 +65,7 @@ fn validate_page_limit(
   maximum : Int,
 ) -> Unit raise DiscordHttpError {
   if limit is Some(value) && (value < 1 || value > maximum) {
-    raise DiscordHttpError::Validation(
-      message="\{resource} limit must be 1 through \{maximum}",
-    )
+    raise Validation(message="\{resource} limit must be 1 through \{maximum}")
   }
 }
 
@@ -78,7 +76,7 @@ fn[A, B] validate_cursor_pair(
   after : B?,
 ) -> Unit raise DiscordHttpError {
   if before is Some(_) && after is Some(_) {
-    raise DiscordHttpError::Validation(
+    raise Validation(
       message="\{resource} pagination cannot use before and after together",
     )
   }
@@ -175,7 +173,7 @@ pub fn Client::paginate_messages(
     (if before is Some(_) { 1 } else { 0 }) +
     (if after is Some(_) { 1 } else { 0 })
   if cursor_count > 1 {
-    raise DiscordHttpError::Validation(
+    raise Validation(
       message="message pagination accepts only one of around, before, or after",
     )
   }

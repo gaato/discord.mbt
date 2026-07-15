@@ -16,9 +16,9 @@ async test "coordinator serializes identify and HTTP limits across clients" {
     remote_limiter.ping()
 
     first.wait_for_identify(0)
-    let first_admitted_at = @async.now()
+    let first_admitted_at = @clock.now_ms()
     second.wait_for_identify(1)
-    let second_admitted_at = @async.now()
+    let second_admitted_at = @clock.now_ms()
     assert_true(second_admitted_at - first_admitted_at >= 25L)
 
     remote_limiter.acquire("POST:/channels/1/messages", global_exempt=false)
@@ -26,9 +26,9 @@ async test "coordinator serializes identify and HTTP limits across clients" {
       "x-ratelimit-remaining": "0",
       "x-ratelimit-reset-after": "0.04",
     })
-    let rate_wait_started = @async.now()
+    let rate_wait_started = @clock.now_ms()
     remote_limiter.acquire("POST:/channels/1/messages", global_exempt=false)
-    let rate_wait = @async.now() - rate_wait_started
+    let rate_wait = @clock.now_ms() - rate_wait_started
     remote_limiter.release("POST:/channels/1/messages", status=200, headers={
       "x-ratelimit-remaining": "1",
     })
@@ -37,9 +37,9 @@ async test "coordinator serializes identify and HTTP limits across clients" {
     let concurrent_bucket = "POST:/channels/2/messages"
     remote_limiter.acquire(concurrent_bucket, global_exempt=false)
     let blocked_acquire = group.spawn(() => {
-      let started = @async.now()
+      let started = @clock.now_ms()
       remote_limiter.acquire(concurrent_bucket, global_exempt=false)
-      let waited = @async.now() - started
+      let waited = @clock.now_ms() - started
       remote_limiter.release(concurrent_bucket, status=200, headers={
         "x-ratelimit-remaining": "1",
       })

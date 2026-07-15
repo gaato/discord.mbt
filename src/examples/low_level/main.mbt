@@ -54,7 +54,7 @@ async fn main {
     Some(s) => @string.parse_int(s) catch { _ => DEFAULT_RUN_SECONDS }
     None => DEFAULT_RUN_SECONDS
   }
-  let client = @dhttp.Client::new(token)
+  let client = @dhttp.Client(token)
   let gateway_url = client.get_gateway()
   @async.with_timeout_opt(run_seconds * 1000, () => {
     @async.with_task_group((group : @async.TaskGroup[Unit]) => {
@@ -69,7 +69,7 @@ async fn main {
         match shard.next() {
           Dispatch(Ready(ready)) => {
             println("[shard] ready as \{ready.user.username}")
-            let fw = @framework.Framework::new(client, ready.application.id)
+            let fw = @framework.Framework(client, ready.application.id)
               .command(echo_spec(), handle_echo)
               .on_error((label, error) => {
                 println("[fw] \{label} failed: \{to_repr(error)}")

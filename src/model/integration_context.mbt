@@ -41,7 +41,7 @@ pub impl @json.FromJson for ApplicationIntegrationType with fn from_json(
   match json {
     Number(value, ..) => ApplicationIntegrationType::from_int(value.to_int())
     _ =>
-      raise @json.JsonDecodeError(
+      raise JsonDecodeError(
         (path, "expected an application integration type (number)"),
       )
   }
@@ -86,7 +86,7 @@ pub impl @json.FromJson for InteractionContextType with fn from_json(json, path)
   match json {
     Number(value, ..) => InteractionContextType::from_int(value.to_int())
     _ =>
-      raise @json.JsonDecodeError(
+      raise JsonDecodeError(
         (path, "expected an interaction context type (number)"),
       )
   }

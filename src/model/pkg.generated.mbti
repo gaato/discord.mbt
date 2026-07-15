@@ -128,7 +128,7 @@ pub impl ToJson for AllowedMentionType
 pub struct AllowedMentions {
   // private fields
 } derive(@debug.Debug)
-pub fn AllowedMentions::new(parse? : Array[AllowedMentionType], roles? : Array[Id[RoleMarker]], users? : Array[Id[UserMarker]], replied_user? : Bool) -> Self raise AllowedMentionsError
+pub fn AllowedMentions::AllowedMentions(parse? : Array[AllowedMentionType], roles? : Array[Id[RoleMarker]], users? : Array[Id[UserMarker]], replied_user? : Bool) -> Self raise AllowedMentionsError
 pub fn AllowedMentions::none() -> Self
 pub fn AllowedMentions::safe_default() -> Self
 pub impl ToJson for AllowedMentions
@@ -2371,10 +2371,12 @@ pub fn[T] Nullable::to_option(Self[T]) -> T?
 pub impl[T : ToJson] ToJson for Nullable[T]
 pub impl[T : @json.FromJson] @json.FromJson for Nullable[T]
 
-pub struct ObjBuilder(Map[String, Json])
+pub struct ObjBuilder {
+  // private fields
+}
+pub fn ObjBuilder::ObjBuilder() -> Self
 pub fn ObjBuilder::build(Self) -> Json
 pub fn[T : ToJson] ObjBuilder::field(Self, String, T) -> Self
-pub fn ObjBuilder::new() -> Self
 pub fn[T : ToJson] ObjBuilder::opt(Self, String, T?) -> Self
 pub fn[T : ToJson] ObjBuilder::und(Self, String, Undefinable[T]) -> Self
 

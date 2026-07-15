@@ -8,7 +8,7 @@ pub fn install_feedback(
   config~ : FeedbackConfig,
 ) -> Unit {
   app.middleware(feedback_access_policy(config))
-  FeedbackFeature::new(config).install(app)
+  FeedbackFeature(config).install(app)
 }
 ```
 
@@ -34,8 +34,8 @@ pub fn install_starboard(
 This convention keeps registration visible at the application entry point:
 
 ```moonbit
-let app = @discord.App::new(sync=command_sync)
-let bot = @discord.Bot::new(app, token~)
+let app = @discord.App(sync=command_sync)
+let bot = @discord.Bot(app, token~)
 
 install_feedback(app, config=feedback_config)
 install_starboard(app, bot, config=starboard_config)
@@ -73,7 +73,7 @@ pub struct FeedbackFeature {
   priv mut stored_ : Int
 }
 
-pub fn FeedbackFeature::new(config : FeedbackConfig) -> FeedbackFeature {
+pub fn FeedbackFeature::FeedbackFeature(config : FeedbackConfig) -> FeedbackFeature {
   { config_: config, stored_: 0 }
 }
 
@@ -98,7 +98,7 @@ pub fn FeedbackFeature::install(
 Keep the feature value when another part of the bot needs to query its state:
 
 ```moonbit
-let feedback = FeedbackFeature::new(config)
+let feedback = FeedbackFeature(config)
 feedback.install(app)
 ```
 

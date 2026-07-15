@@ -60,9 +60,9 @@ async fn run_echo_bot(token : String) -> Unit {
       )
     }),
   )
-  let app = @discord.App::new()
+  let app = @discord.App()
   app.command(echo)
-  let bot = @discord.Bot::new(app, token~)
+  let bot = @discord.Bot(app, token~)
   bot.on(@discord.Events::ready(), (_ctx, ready) => {
     println("ready as \{ready.user.username}")
   })
@@ -100,7 +100,7 @@ Packages remain usable on their own. A REST-only tool needs `http` and `model`.
 autocomplete routes, command synchronization, and the error policy. It has no
 gateway dependency. After building an App, choose an executor:
 
-- `Bot::new(app, token~)` connects to the gateway and routes
+- `Bot(app, token~)` connects to the gateway and routes
   `InteractionCreate` events through the App.
 - `app.serve(group, token~)` creates an `InteractionEndpoint` for an HTTP
   adapter.
@@ -162,11 +162,11 @@ several shards in this process, pass `shards`:
 ```mbt nocheck
 ///|
 /// Discord's recommended count, all shards in this process.
-let auto_bot : @discord.Bot = @discord.Bot::new(app, token~, shards=Auto)
+let auto_bot : @discord.Bot = @discord.Bot(app, token~, shards=Auto)
 
 ///|
 /// An explicit slice of a larger logical shard set.
-let sliced_bot : @discord.Bot = @discord.Bot::new(
+let sliced_bot : @discord.Bot = @discord.Bot(
   app,
   token~,
   shards=Range(ids=[0, 1], count=8),
@@ -185,11 +185,11 @@ TCP coordinator with `RemoteIdentifyQueue` and `RemoteRateLimiter`; see
 #### Gateway compression
 
 Gateway `zlib-stream` compression is opt-in on native builds. Pass
-`compress=true` to `Bot::new` (or `Shard::start` at the lower level):
+`compress=true` to `Bot(...)` (or `Shard::start` at the lower level):
 
 ```mbt nocheck
 ///|
-let bot = @discord.Bot::new(app, token~, compress=true)
+let bot = @discord.Bot(app, token~, compress=true)
 ```
 
 The client adds `compress=zlib-stream` to each Gateway connection and retains
@@ -290,7 +290,7 @@ fn readme_feedback_modal() -> @discord.Modal[ReadmeFeedback] {
 ///|
 fn readme_v3_app() -> @discord.App {
   let feedback = readme_feedback_modal()
-  let app = @discord.App::new(sync=Disabled)
+  let app = @discord.App(sync=Disabled)
   app
   ..command(
     @discord.slash_group(name="demo", description="v3 demo", children=[
@@ -337,9 +337,7 @@ fn readme_v3_app() -> @discord.App {
   )
   ..on_component(
     prefix="readme:feedback:",
-    Immediate(ctx => {
-      @discord.ComponentReply::ShowModal(feedback.show(state=ctx.suffix()))
-    }),
+    Immediate(ctx => ShowModal(feedback.show(state=ctx.suffix()))),
   )
   .on_modal(
     feedback,
@@ -574,7 +572,7 @@ message-shaped call:
 ```mbt nocheck
 let report = @fs.read_file("report.png").binary()
 ctx.respond(content="Here you go", files=[
-  @discord.FileUpload::new("report.png", report, content_type="image/png"),
+  @discord.FileUpload("report.png", report, content_type="image/png"),
 ])
 ```
 
@@ -585,7 +583,7 @@ limiting with a global window, automatic 429 retry, and a raw
 `client.request(route, body?)` escape hatch for anything not wrapped yet.
 
 ```mbt nocheck
-let client = @dhttp.Client::new(token)
+let client = @dhttp.Client(token)
 let message = client.create_message(channel_id, content="hello")
 client.create_message(channel_id, content="with reply", reply_to=message.id) |> ignore
 ```
@@ -595,7 +593,7 @@ still parsing user and role mentions. Override this per client or per request:
 
 ```mbt nocheck
 let quiet = @model.AllowedMentions::none()
-let client = @dhttp.Client::new(token, default_allowed_mentions=quiet)
+let client = @dhttp.Client(token, default_allowed_mentions=quiet)
 client.create_message(
   channel_id,
   content="No notifications",
@@ -636,7 +634,7 @@ count, and pool size when constructing a client:
 
 ```mbt nocheck
 ///|
-let client = @dhttp.Client::new(
+let client = @dhttp.Client(
   token,
   request_timeout_ms=15_000,
   max_retries=4,
@@ -699,8 +697,8 @@ to a native `Bot` to apply decoded events before event handlers run. The cache
 only sees events allowed by the bot's configured intents.
 
 ```mbt nocheck
-let cache = @cache.InMemoryCache::new(
-  resources=@cache.CacheResources::new(presences=true),
+let cache = @cache.InMemoryCache(
+  resources=@cache.CacheResources(presences=true),
   max_messages_per_channel=100,
 )
 bot.attach_cache(cache)

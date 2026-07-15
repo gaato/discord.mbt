@@ -30,10 +30,10 @@ fn command_sync() -> @discord.CommandSync {
 ///|
 async fn main {
   let token = @env.get_env_var("DISCORD_TOKEN").unwrap_or("")
-  let app = @discord.App::new(sync=command_sync())
+  let app = @discord.App(sync=command_sync())
   app.command(ping_command())
 
-  let bot = @discord.Bot::new(app, token~)
+  let bot = @discord.Bot(app, token~)
   bot.on(@discord.Events::ready(), (_, ready) => {
     println("[bot] ready as \{ready.user.username}")
   })

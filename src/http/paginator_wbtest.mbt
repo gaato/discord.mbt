@@ -119,18 +119,18 @@ async test "paginator each visits every remaining item" {
 
 ///|
 test "pagination validation is pre-IO" {
-  let client = Client::new("test-token")
-  let channel_id : @model.ChannelId = @model.Id(1UL)
-  let first : @model.MessageId = @model.Id(2UL)
-  let second : @model.MessageId = @model.Id(3UL)
+  let client = Client("test-token")
+  let channel_id : @model.ChannelId = Id(1UL)
+  let first : @model.MessageId = Id(2UL)
+  let second : @model.MessageId = Id(3UL)
   try client.paginate_messages(channel_id, before=first, after=second) catch {
-    DiscordHttpError::Validation(_) => ()
+    Validation(_) => ()
     error => fail("unexpected error: \{to_repr(error)}")
   } noraise {
     _ => fail("expected cursor validation")
   }
   try client.paginate_messages(channel_id, page_size=101) catch {
-    DiscordHttpError::Validation(_) => ()
+    Validation(_) => ()
     error => fail("unexpected error: \{to_repr(error)}")
   } noraise {
     _ => fail("expected page size validation")

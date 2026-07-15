@@ -49,10 +49,7 @@ test "slash command registration payload includes every scalar option kind" {
         "channel",
         "Alert destination",
         required=true,
-        channel_types=[
-          @model.ChannelType::GuildText,
-          @model.ChannelType::GuildAnnouncement,
-        ],
+        channel_types=[GuildText, GuildAnnouncement],
       ),
       @interaction.role_option("role", "Role to notify"),
       @interaction.mentionable_option("target", "User or role to notify"),
@@ -60,15 +57,8 @@ test "slash command registration payload includes every scalar option kind" {
     ],
     default_member_permissions=@model.Permissions::manage_guild(),
     nsfw=false,
-    integration_types=[
-      @model.ApplicationIntegrationType::GuildInstall,
-      @model.ApplicationIntegrationType::UserInstall,
-    ],
-    contexts=[
-      @model.InteractionContextType::Guild,
-      @model.InteractionContextType::BotDm,
-      @model.InteractionContextType::PrivateChannel,
-    ],
+    integration_types=[GuildInstall, UserInstall],
+    contexts=[Guild, BotDm, PrivateChannel],
   )
   json_inspect(spec.to_json(), content={
     "name": "configure",
@@ -191,10 +181,7 @@ test "subcommand and context-menu registration payloads" {
     @interaction.CommandSpec::user(
       "View profile",
       default_member_permissions=@model.Permissions::view_channel(),
-      contexts=[
-        @model.InteractionContextType::Guild,
-        @model.InteractionContextType::BotDm,
-      ],
+      contexts=[Guild, BotDm],
     ).to_json(),
     content={
       "name": "View profile",
@@ -206,7 +193,7 @@ test "subcommand and context-menu registration payloads" {
   )
   json_inspect(
     @interaction.CommandSpec::message("Archive message", nsfw=true, integration_types=[
-      @model.ApplicationIntegrationType::GuildInstall,
+      GuildInstall,
     ]).to_json(),
     content={
       "name": "Archive message",

@@ -6,10 +6,10 @@ struct ManagerFakeTransport {
 }
 
 ///|
-fn ManagerFakeTransport::new() -> ManagerFakeTransport {
+fn ManagerFakeTransport::ManagerFakeTransport() -> ManagerFakeTransport {
   {
-    incoming: @aqueue.Queue::new(kind=Unbounded),
-    outgoing: @aqueue.Queue::new(kind=Unbounded),
+    incoming: Queue(kind=Unbounded),
+    outgoing: Queue(kind=Unbounded),
     closed: Ref(false),
   }
 }
@@ -26,16 +26,12 @@ fn ManagerFakeTransport::server_close(
 
 ///|
 impl @gateway.GatewayTransport for ManagerFakeTransport with fn recv(self) {
-  @gateway.GatewayFrame::Text(
-    self.incoming.get() catch {
-      error => raise error
-    },
-  )
+  Text(self.incoming.get() catch { error => raise error })
 }
 
 ///|
 impl @gateway.GatewayTransport for ManagerFakeTransport with fn send(self, text) {
-  self.outgoing.put((@async.now(), @json.parse(text)))
+  self.outgoing.put((@clock.now_ms(), @json.parse(text)))
 }
 
 ///|
@@ -119,9 +115,9 @@ async fn[T] manager_get(queue : @aqueue.Queue[T], stage : String) -> T {
 
 ///|
 async test "shard config resolves auto fixed and range selections" {
-  let client = @dhttp.Client::new("test-token")
-  let app = @app.App::new(sync=@app.CommandSync::Disabled)
-  let auto = Bot::new(app, token="test-token", shards=Auto)
+  let client = @dhttp.Client("test-token")
+  let app = @app.App(sync=Disabled)
+  let auto = Bot(app, token="test-token", shards=Auto)
   assert_false(auto.compress_)
   auto.gateway_bot_info_.val = Some(manager_gateway_info(shards=3))
   let auto_config = auto.resolve_shards(client)
@@ -130,16 +126,16 @@ async test "shard config resolves auto fixed and range selections" {
     content="([0, 1, 2], 3, 1)",
   )
 
-  let fixed = Bot::new(app, token="test-token", shards=Fixed(count=2))
+  let fixed = Bot(app, token="test-token", shards=Fixed(count=2))
   fixed.gateway_bot_info_.val = Some(manager_gateway_info())
   let fixed_config = fixed.resolve_shards(client)
   debug_inspect((fixed_config.ids, fixed_config.count), content="([0, 1], 2)")
 
-  let compressed = Bot::new(app, token="test-token", compress=true)
+  let compressed = Bot(app, token="test-token", compress=true)
   assert_true(compressed.compress_)
 
-  let injected_queue = @queue.InMemoryQueue::new()
-  let coordinated = Bot::new(
+  let injected_queue = @queue.InMemoryQueue()
+  let coordinated = Bot(
     app,
     token="test-token",
     identify_queue=(injected_queue : &@queue.IdentifyQueue),
@@ -148,16 +144,12 @@ async test "shard config resolves auto fixed and range selections" {
     fail("expected injected identify queue")
   }
 
-  let ranged = Bot::new(
-    app,
-    token="test-token",
-    shards=Range(ids=[1, 3], count=4),
-  )
+  let ranged = Bot(app, token="test-token", shards=Range(ids=[1, 3], count=4))
   ranged.gateway_bot_info_.val = Some(manager_gateway_info())
   let range_config = ranged.resolve_shards(client)
   debug_inspect((range_config.ids, range_config.count), content="([1, 3], 4)")
 
-  let limited = Bot::new(app, token="test-token", shards=Fixed(count=2))
+  let limited = Bot(app, token="test-token", shards=Fixed(count=2))
   limited.gateway_bot_info_.val = Some(manager_gateway_info(remaining=1))
   try limited.resolve_shards(client) catch {
     SessionStartLimitExceeded(required=2, remaining=1, reset_after_ms=60000L) =>
@@ -171,15 +163,15 @@ async test "shard config resolves auto fixed and range selections" {
 
 ///|
 async test "fixed shards share identify queue and dispatch path" {
-  let first = ManagerFakeTransport::new()
-  let second = ManagerFakeTransport::new()
+  let first = ManagerFakeTransport()
+  let second = ManagerFakeTransport()
   let pending : Array[ManagerFakeTransport] = [second, first]
-  let app = @app.App::new(sync=@app.CommandSync::Disabled)
-  let bot = Bot::new(
+  let app = @app.App(sync=Disabled)
+  let bot = Bot(
     app,
     token="test-token",
     intents=@model.Intents::guild_messages(),
-    client=@dhttp.Client::new("test-token"),
+    client=Client("test-token"),
     shards=Fixed(count=2),
   )
   bot.gateway_bot_info_.val = Some(manager_gateway_info(max_concurrency=1))
@@ -190,19 +182,15 @@ async test "fixed shards share identify queue and dispatch path" {
       None => raise @gateway.TransportClosed(code=None, reason="no transport")
     }
   })
-  let ready_contexts : @aqueue.Queue[GatewayCtx] = @aqueue.Queue::new(
-    kind=Unbounded,
-  )
+  let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
-  let deleted : @aqueue.Queue[(String, Int)] = @aqueue.Queue::new(
-    kind=Unbounded,
-  )
+  let deleted : @aqueue.Queue[(String, Int)] = Queue(kind=Unbounded)
   bot.on(Events::message_delete(), (ctx, event) => {
     deleted.put((event.id.to_string(), ready_shard(ctx.ready())))
   })
   let identified : Array[Int] = []
   bot.on_telemetry(event => {
-    if event is @telemetry.TelemetryEvent::ShardIdentified(shard_id~) {
+    if event is ShardIdentified(shard_id~) {
       identified.push(shard_id)
     }
   })
@@ -260,14 +248,14 @@ async test "fixed shards share identify queue and dispatch path" {
 
 ///|
 async test "fatal close fails the manager and closes sibling shards" {
-  let first = ManagerFakeTransport::new()
-  let second = ManagerFakeTransport::new()
+  let first = ManagerFakeTransport()
+  let second = ManagerFakeTransport()
   let pending : Array[ManagerFakeTransport] = [second, first]
-  let app = @app.App::new(sync=@app.CommandSync::Disabled)
-  let bot = Bot::new(
+  let app = @app.App(sync=Disabled)
+  let bot = Bot(
     app,
     token="test-token",
-    client=@dhttp.Client::new("test-token"),
+    client=Client("test-token"),
     shards=Fixed(count=2),
   )
   bot.gateway_bot_info_.val = Some(manager_gateway_info(max_concurrency=2))
@@ -278,7 +266,7 @@ async test "fatal close fails the manager and closes sibling shards" {
       None => raise @gateway.TransportClosed(code=None, reason="no transport")
     }
   })
-  let ready : @aqueue.Queue[Unit] = @aqueue.Queue::new(kind=Unbounded)
+  let ready : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (_, _) => ready.put(()))
 
   @async.with_task_group(group => {

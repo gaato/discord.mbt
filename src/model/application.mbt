@@ -97,7 +97,7 @@ pub impl @json.FromJson for ApplicationEventWebhookStatus with fn from_json(
   match json {
     Number(value, ..) => ApplicationEventWebhookStatus::from_int(value.to_int())
     _ =>
-      raise @json.JsonDecodeError(
+      raise JsonDecodeError(
         (path, "expected application event webhook status (number)"),
       )
   }
@@ -157,14 +157,13 @@ pub impl @json.FromJson for ApplicationFlags with fn from_json(json, path) {
       ApplicationFlags(
         @string.parse_uint64(repr.to_string()) catch {
           _ =>
-            raise @json.JsonDecodeError(
+            raise JsonDecodeError(
               (path, "expected application flags (number), got \\{repr}"),
             )
         },
       )
     Number(value, repr=None) => ApplicationFlags(value.to_uint64())
-    _ =>
-      raise @json.JsonDecodeError((path, "expected application flags (number)"))
+    _ => raise JsonDecodeError((path, "expected application flags (number)"))
   }
 }
 

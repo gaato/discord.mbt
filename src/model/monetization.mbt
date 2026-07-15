@@ -72,7 +72,7 @@ pub impl @json.FromJson for EntitlementType with fn from_json(json, path) {
   match json {
     Number(value, ..) => EntitlementType::from_int(value.to_int())
     _ =>
-      raise @json.JsonDecodeError(
+      raise JsonDecodeError(
         (path, "expected the origin of an application entitlement (number)"),
       )
   }
@@ -135,7 +135,7 @@ pub impl @json.FromJson for SkuType with fn from_json(json, path) {
   match json {
     Number(value, ..) => SkuType::from_int(value.to_int())
     _ =>
-      raise @json.JsonDecodeError(
+      raise JsonDecodeError(
         (path, "expected the product category represented by a sku (number)"),
       )
   }
@@ -192,13 +192,13 @@ pub impl @json.FromJson for SkuFlags with fn from_json(json, path) {
       SkuFlags(
         @string.parse_uint64(repr.to_string()) catch {
           _ =>
-            raise @json.JsonDecodeError(
+            raise JsonDecodeError(
               (path, "expected SKU flags (number), got \\{repr}"),
             )
         },
       )
     Number(value, repr=None) => SkuFlags(value.to_uint64())
-    _ => raise @json.JsonDecodeError((path, "expected SKU flags (number)"))
+    _ => raise JsonDecodeError((path, "expected SKU flags (number)"))
   }
 }
 
@@ -270,9 +270,6 @@ pub impl ToJson for SubscriptionStatus with fn to_json(self) {
 pub impl @json.FromJson for SubscriptionStatus with fn from_json(json, path) {
   match json {
     Number(value, ..) => SubscriptionStatus::from_int(value.to_int())
-    _ =>
-      raise @json.JsonDecodeError(
-        (path, "expected subscription status (number)"),
-      )
+    _ => raise JsonDecodeError((path, "expected subscription status (number)"))
   }
 }

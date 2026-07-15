@@ -1,6 +1,6 @@
 ///|
 fn message_delete_event(id : String) -> @model.Event raise {
-  @model.Event::MessageDelete({
+  MessageDelete({
     id: @model.Id::parse(id),
     channel_id: @model.Id::parse("20"),
     guild_id: Some(@model.Id::parse("30")),
@@ -30,7 +30,7 @@ async fn wait_until_registered(
 
 ///|
 async test "event collector applies predicates and resolves concurrent waiters" {
-  let collector = EventCollector::new()
+  let collector = EventCollector()
   @async.with_task_group(group => {
     let first = group.spawn(no_wait=true, () => {
       collector.wait_for(
@@ -65,7 +65,7 @@ async test "event collector applies predicates and resolves concurrent waiters" 
 
 ///|
 async test "one gateway event resolves every matching collector" {
-  let collector = EventCollector::new()
+  let collector = EventCollector()
   @async.with_task_group(group => {
     let first = group.spawn(no_wait=true, () => {
       collector.wait_for(Events::message_delete(), _ => true, timeout_ms=500)
@@ -83,7 +83,7 @@ async test "one gateway event resolves every matching collector" {
 
 ///|
 async test "event collector timeout and cancellation remove registrations" {
-  let collector = EventCollector::new()
+  let collector = EventCollector()
   assert_true(
     collector.wait_for(Events::message_delete(), _ => true, timeout_ms=10)
     is None,

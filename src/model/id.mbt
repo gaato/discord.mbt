@@ -69,7 +69,7 @@ pub impl[M] @json.FromJson for Id[M] with fn from_json(json, path) {
       Id(
         @string.parse_uint64(s) catch {
           _ =>
-            raise @json.JsonDecodeError(
+            raise JsonDecodeError(
               (path, "expected a snowflake (decimal string), got \{s}"),
             )
         },
@@ -80,12 +80,12 @@ pub impl[M] @json.FromJson for Id[M] with fn from_json(json, path) {
       Id(
         @string.parse_uint64(r.to_string()) catch {
           _ =>
-            raise @json.JsonDecodeError(
+            raise JsonDecodeError(
               (path, "expected a snowflake (integer), got \{r}"),
             )
         },
       )
     Number(n, repr=None) => Id(n.to_uint64())
-    _ => raise @json.JsonDecodeError((path, "expected a snowflake"))
+    _ => raise JsonDecodeError((path, "expected a snowflake"))
   }
 }

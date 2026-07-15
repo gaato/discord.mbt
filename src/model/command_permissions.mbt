@@ -57,7 +57,7 @@ pub impl @json.FromJson for ApplicationCommandPermissionType with fn from_json(
     Number(value, ..) =>
       ApplicationCommandPermissionType::from_int(value.to_int())
     _ =>
-      raise @json.JsonDecodeError(
+      raise JsonDecodeError(
         (path, "expected application command permission type (number)"),
       )
   }

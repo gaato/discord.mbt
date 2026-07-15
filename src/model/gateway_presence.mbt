@@ -49,8 +49,7 @@ pub impl ToJson for PresenceStatus with fn to_json(self) {
 pub impl @json.FromJson for PresenceStatus with fn from_json(json, path) {
   match json {
     String(value) => PresenceStatus::from_string(value.to_string())
-    _ =>
-      raise @json.JsonDecodeError((path, "expected presence status (string)"))
+    _ => raise JsonDecodeError((path, "expected presence status (string)"))
   }
 }
 
@@ -109,7 +108,7 @@ pub impl ToJson for ActivityType with fn to_json(self) {
 pub impl @json.FromJson for ActivityType with fn from_json(json, path) {
   match json {
     Number(value, ..) => ActivityType::from_int(value.to_int())
-    _ => raise @json.JsonDecodeError((path, "expected activity type (number)"))
+    _ => raise JsonDecodeError((path, "expected activity type (number)"))
   }
 }
 
@@ -197,7 +196,7 @@ struct ActivityTimestampsWire {
 
 ///|
 pub impl ToJson for ActivityTimestamps with fn to_json(self) {
-  let fields : Map[String, Json] = {}
+  let fields : Map[String, Json] = Map([])
   if self.start is Some(value) {
     fields["start"] = Json::number(value.to_double(), repr=value.to_string())
   }
@@ -286,14 +285,11 @@ pub impl @json.FromJson for ActivityFlags with fn from_json(json, path) {
     Number(_, repr=Some(repr)) =>
       ActivityFlags(
         @string.parse_uint64(repr.to_string()) catch {
-          _ =>
-            raise @json.JsonDecodeError(
-              (path, "expected activity flags (number)"),
-            )
+          _ => raise JsonDecodeError((path, "expected activity flags (number)"))
         },
       )
     Number(value, repr=None) => ActivityFlags(value.to_uint64())
-    _ => raise @json.JsonDecodeError((path, "expected activity flags (number)"))
+    _ => raise JsonDecodeError((path, "expected activity flags (number)"))
   }
 }
 
@@ -329,7 +325,7 @@ fn[T : @json.FromJson] lenient_presence_field(
 ///|
 pub impl @json.FromJson for PresenceUser with fn from_json(json, path) {
   guard json is Object(fields) else {
-    raise @json.JsonDecodeError((path, "expected presence user (object)"))
+    raise JsonDecodeError((path, "expected presence user (object)"))
   }
   { id: lenient_presence_field(fields, "id", path) }
 }
@@ -337,7 +333,7 @@ pub impl @json.FromJson for PresenceUser with fn from_json(json, path) {
 ///|
 pub impl @json.FromJson for ClientStatus with fn from_json(json, path) {
   guard json is Object(fields) else {
-    raise @json.JsonDecodeError((path, "expected client status (object)"))
+    raise JsonDecodeError((path, "expected client status (object)"))
   }
   {
     desktop: lenient_presence_field(fields, "desktop", path),
@@ -349,7 +345,7 @@ pub impl @json.FromJson for ClientStatus with fn from_json(json, path) {
 ///|
 pub impl @json.FromJson for PresenceUpdateEvent with fn from_json(json, path) {
   guard json is Object(fields) else {
-    raise @json.JsonDecodeError((path, "expected presence update (object)"))
+    raise JsonDecodeError((path, "expected presence update (object)"))
   }
   {
     user: lenient_presence_field(fields, "user", path),

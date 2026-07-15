@@ -33,7 +33,7 @@ through the wrapper field shown by `moon doc`.
 
 ## Automatic intent derivation
 
-When `Bot::new` omits `intents`, `Bot` unions the delivery intents required by
+When `Bot(...)` omits `intents`, `Bot` unions the delivery intents required by
 all typed subscriptions, then removes privileged intents. For example,
 `message_create()` contributes `GUILD_MESSAGES | DIRECT_MESSAGES`.
 
@@ -54,7 +54,7 @@ let intents = @model.Intents::guilds() |
   @model.Intents::message_content()
 
 ///|
-let bot = @discord.Bot::new(app, token~, intents~)
+let bot = @discord.Bot(app, token~, intents~)
 ```
 
 `MESSAGE_CONTENT` controls field visibility rather than event delivery, so it
@@ -63,7 +63,7 @@ need ordinary user-authored message content.
 
 Raw handlers registered with `bot.on_event` also cannot imply an intent set.
 If any raw handlers are used, pass the complete intended bitfield to
-`Bot::new`.
+`Bot(...)`.
 
 ## Decode errors
 
@@ -120,9 +120,9 @@ and registration order.
 `shards` option:
 
 ```moonbit
-let bot = @discord.Bot::new(app, token~, shards=Auto)          // recommended count
-let bot = @discord.Bot::new(app, token~, shards=Fixed(count=4)) // explicit local count
-let bot = @discord.Bot::new(app, token~, shards=Range(ids=[0, 1], count=8))
+let bot = @discord.Bot(app, token~, shards=Auto)          // recommended count
+let bot = @discord.Bot(app, token~, shards=Fixed(count=4)) // explicit local count
+let bot = @discord.Bot(app, token~, shards=Range(ids=[0, 1], count=8))
 ```
 
 Every shard feeds the same handlers, cache, and collectors. Identify calls are

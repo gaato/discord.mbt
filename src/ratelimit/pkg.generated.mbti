@@ -13,7 +13,7 @@ pub struct InMemoryRateLimiter {
   mut global_blocked_until : Int64
   // private fields
 }
-pub fn InMemoryRateLimiter::new(global_limit? : Int) -> Self
+pub fn InMemoryRateLimiter::InMemoryRateLimiter(global_limit? : Int) -> Self
 pub impl RateLimiter for InMemoryRateLimiter
 
 // Type aliases

@@ -52,12 +52,11 @@ pub impl @json.FromJson for EmbedFlags with fn from_json(json, path) {
     Number(_, repr=Some(repr)) =>
       EmbedFlags(
         @string.parse_uint64(repr.to_string()) catch {
-          _ =>
-            raise @json.JsonDecodeError((path, "expected embed flags (number)"))
+          _ => raise JsonDecodeError((path, "expected embed flags (number)"))
         },
       )
     Number(value, repr=None) => EmbedFlags(value.to_uint64())
-    _ => raise @json.JsonDecodeError((path, "expected embed flags (number)"))
+    _ => raise JsonDecodeError((path, "expected embed flags (number)"))
   }
 }
 
@@ -119,7 +118,7 @@ pub impl ToJson for EmbedType with fn to_json(self) {
 pub impl @json.FromJson for EmbedType with fn from_json(json, path) {
   match json {
     String(value) => EmbedType::from_string(value)
-    _ => raise @json.JsonDecodeError((path, "expected an embed type (string)"))
+    _ => raise JsonDecodeError((path, "expected an embed type (string)"))
   }
 }
 

@@ -3,7 +3,10 @@
 pub type WorkerResponse
 
 ///|
-extern "js" fn WorkerResponse::new(kind : String, body : String) -> Self =
+extern "js" fn WorkerResponse::WorkerResponse(
+  kind : String,
+  body : String,
+) -> Self =
   #| (kind, body) => ({ kind, body })
 
 ///|
@@ -19,7 +22,7 @@ pub extern "js" fn WorkerResponse::body(self : Self) -> String =
 pub type WorkerDispatch
 
 ///|
-extern "js" fn WorkerDispatch::new(
+extern "js" fn WorkerDispatch::WorkerDispatch(
   response : @js_async.Promise[WorkerResponse],
   background : @js_async.Promise[Unit],
 ) -> Self =
@@ -64,7 +67,7 @@ fn slow_command() -> @discord.Command[Unit] {
 
 ///|
 fn worker_app() -> @discord.App {
-  let app = @discord.App::new(sync=Disabled)
+  let app = @discord.App(sync=Disabled)
   app..command(echo_command()).command(slow_command())
   app
 }
@@ -73,10 +76,10 @@ fn worker_app() -> @discord.App {
 fn encode_outcome(outcome : @discord.InteractionOutcome) -> WorkerResponse {
   match outcome {
     Reply(response~, files=_) =>
-      WorkerResponse::new("Reply", response.to_json().stringify())
-    NoRoute => WorkerResponse::new("NoRoute", "")
-    NoResponse => WorkerResponse::new("NoResponse", "")
-    TimedOut => WorkerResponse::new("TimedOut", "")
+      WorkerResponse("Reply", response.to_json().stringify())
+    NoRoute => WorkerResponse("NoRoute", "")
+    NoResponse => WorkerResponse("NoResponse", "")
+    TimedOut => WorkerResponse("TimedOut", "")
   }
 }
 
@@ -89,7 +92,7 @@ async fn run_interaction(
   let mut response_sent = false
   @async.with_task_group(group => {
     let interaction : @model.Interaction = @json.from_json(@json.parse(body))
-    let client = @discord.Client::new(token)
+    let client = @discord.Client(token)
     group.add_defer(() => client.close())
     let endpoint = worker_app().serve(
       group,
@@ -102,7 +105,7 @@ async fn run_interaction(
   }) catch {
     error => {
       if !response_sent {
-        responses.put(WorkerResponse::new("NoResponse", ""))
+        responses.put(WorkerResponse("NoResponse", ""))
       }
       raise error
     }
@@ -116,14 +119,12 @@ async fn run_interaction(
 /// initial Discord callback is known. The `background` property resolves only
 /// after the endpoint's task group and every deferred handler have completed.
 pub fn start_interaction(token : String, body : String) -> WorkerDispatch {
-  let responses : @aqueue.Queue[WorkerResponse] = @aqueue.Queue::new(
-    kind=Unbounded,
-  )
+  let responses : @aqueue.Queue[WorkerResponse] = Queue(kind=Unbounded)
   let background = @js_async.Promise::from_async(() => {
     run_interaction(token, body, responses)
   })
   let response = @js_async.Promise::from_async(() => responses.get())
-  WorkerDispatch::new(response, background)
+  WorkerDispatch(response, background)
 }
 
 ///|

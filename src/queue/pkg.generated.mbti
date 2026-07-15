@@ -9,7 +9,7 @@ package "gaato/discord/queue"
 pub struct InMemoryQueue {
   // private fields
 }
-pub fn InMemoryQueue::new(max_concurrency? : Int, spacing_ms? : Int) -> Self
+pub fn InMemoryQueue::InMemoryQueue(max_concurrency? : Int, spacing_ms? : Int) -> Self
 pub impl IdentifyQueue for InMemoryQueue
 
 // Type aliases

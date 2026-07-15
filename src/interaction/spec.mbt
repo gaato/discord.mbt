@@ -80,7 +80,7 @@ pub fn CommandSpec::message(
 
 ///|
 pub impl ToJson for CommandSpec with fn to_json(self) {
-  let builder = @model.ObjBuilder::new()
+  let builder = @model.ObjBuilder()
     .field("name", self.name)
     .field("description", self.description)
   if self.typ != ChatInput {

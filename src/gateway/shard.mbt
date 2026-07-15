@@ -91,9 +91,9 @@ pub fn[X] Shard::start(
   telemetry? : (@telemetry.TelemetryEvent) -> Unit = _ => (),
 ) -> Shard {
   let shard : Shard = {
-    events: @aqueue.Queue::new(kind=Blocking(queue_capacity)),
-    command_limiter: CommandLimiter::new(),
-    send_gate: @async.Semaphore::new(1),
+    events: Queue(kind=Blocking(queue_capacity)),
+    command_limiter: CommandLimiter(),
+    send_gate: Semaphore(1),
     transport: None,
     state: Disconnected(reconnect_attempts=0),
     session: None,
@@ -159,7 +159,7 @@ async fn Shard::run(
       }
     }
     self.state = Connecting
-    self.emit_telemetry(@telemetry.TelemetryEvent::ShardConnecting(shard_id~))
+    self.emit_telemetry(ShardConnecting(shard_id~))
     let base = match self.session {
       Some(session) => session.resume_url
       None => gateway_url
@@ -172,11 +172,7 @@ async fn Shard::run(
         attempts += 1
         self.state = Disconnected(reconnect_attempts=attempts)
         self.emit_telemetry(
-          @telemetry.TelemetryEvent::ShardDisconnected(
-            shard_id~,
-            code=None,
-            will_resume=false,
-          ),
+          ShardDisconnected(shard_id~, code=None, will_resume=false),
         )
         continue
       }
@@ -185,9 +181,7 @@ async fn Shard::run(
     let ended = try {
       let inflater = if compress { Some(inflater_factory()) } else { None }
       if compress {
-        self.emit_telemetry(
-          @telemetry.TelemetryEvent::ShardCompressionEnabled(shard_id~),
-        )
+        self.emit_telemetry(ShardCompressionEnabled(shard_id~))
       }
       self.run_connection(
         transport,
@@ -216,11 +210,7 @@ async fn Shard::run(
     if self.closing {
       self.state = Disconnected(reconnect_attempts=0)
       self.emit_telemetry(
-        @telemetry.TelemetryEvent::ShardDisconnected(
-          shard_id~,
-          code~,
-          will_resume=false,
-        ),
+        ShardDisconnected(shard_id~, code~, will_resume=false),
       )
       self.events.put(Disconnected(code~, resuming=false)) catch {
         _ => ()
@@ -232,11 +222,7 @@ async fn Shard::run(
         let fatal_code = code.unwrap_or(0)
         self.state = FatallyClosed(code=fatal_code)
         self.emit_telemetry(
-          @telemetry.TelemetryEvent::ShardDisconnected(
-            shard_id~,
-            code~,
-            will_resume=false,
-          ),
+          ShardDisconnected(shard_id~, code~, will_resume=false),
         )
         self.events.put(FatallyClosed(code=fatal_code)) catch {
           _ => ()
@@ -248,11 +234,7 @@ async fn Shard::run(
         attempts += 1
         self.state = Disconnected(reconnect_attempts=attempts)
         self.emit_telemetry(
-          @telemetry.TelemetryEvent::ShardDisconnected(
-            shard_id~,
-            code~,
-            will_resume=false,
-          ),
+          ShardDisconnected(shard_id~, code~, will_resume=false),
         )
         self.events.put(Disconnected(code~, resuming=false)) catch {
           _ => ()
@@ -262,11 +244,7 @@ async fn Shard::run(
         attempts += 1
         self.state = Disconnected(reconnect_attempts=attempts)
         self.emit_telemetry(
-          @telemetry.TelemetryEvent::ShardDisconnected(
-            shard_id~,
-            code~,
-            will_resume=true,
-          ),
+          ShardDisconnected(shard_id~, code~, will_resume=true),
         )
         self.events.put(Disconnected(code~, resuming=true)) catch {
           _ => ()
@@ -320,7 +298,7 @@ async fn Shard::run_connection(
         }
         self.send_heartbeat(transport)
         heartbeat_state.val = false
-        heartbeat_sent_at.val = @async.now()
+        heartbeat_sent_at.val = @clock.now_ms()
         @async.sleep(heartbeat_interval)
       }
     })
@@ -396,22 +374,14 @@ async fn Shard::run_connection(
               }
               self.session = Some({ id: session_id, resume_url, sequence })
               self.state = Active
-              self.emit_telemetry(
-                @telemetry.TelemetryEvent::ShardIdentified(shard_id~),
-              )
-              self.emit_telemetry(
-                @telemetry.TelemetryEvent::ShardConnected(shard_id~),
-              )
+              self.emit_telemetry(ShardIdentified(shard_id~))
+              self.emit_telemetry(ShardConnected(shard_id~))
               self.events.put(Connected(resumed=false))
             }
             "RESUMED" => {
               self.state = Active
-              self.emit_telemetry(
-                @telemetry.TelemetryEvent::ShardResumed(shard_id~),
-              )
-              self.emit_telemetry(
-                @telemetry.TelemetryEvent::ShardConnected(shard_id~),
-              )
+              self.emit_telemetry(ShardResumed(shard_id~))
+              self.emit_telemetry(ShardConnected(shard_id~))
               self.events.put(Connected(resumed=true))
             }
             _ => ()
@@ -422,7 +392,7 @@ async fn Shard::run_connection(
               e =>
                 // a known event failed to decode: surface it as Unknown
                 // rather than killing the connection
-                @model.Event::Unknown(t="DECODE_ERROR:\{t}:\{e}", d~)
+                Unknown(t="DECODE_ERROR:\{t}:\{e}", d~)
             }
             self.events.put(Dispatch(event))
           }
@@ -430,7 +400,7 @@ async fn Shard::run_connection(
         1 => {
           self.send_heartbeat(transport)
           heartbeat_state.val = false
-          heartbeat_sent_at.val = @async.now()
+          heartbeat_sent_at.val = @clock.now_ms()
         }
         7 =>
           // Reconnect request: close and resume
@@ -446,14 +416,9 @@ async fn Shard::run_connection(
         }
         11 => {
           heartbeat_state.val = true
-          self.latency = Some(@async.now() - heartbeat_sent_at.val)
+          self.latency = Some(@clock.now_ms() - heartbeat_sent_at.val)
           guard self.latency is Some(latency_ms)
-          self.emit_telemetry(
-            @telemetry.TelemetryEvent::ShardHeartbeatLatency(
-              shard_id~,
-              latency_ms~,
-            ),
-          )
+          self.emit_telemetry(ShardHeartbeatLatency(shard_id~, latency_ms~))
         }
         _ => ()
       }

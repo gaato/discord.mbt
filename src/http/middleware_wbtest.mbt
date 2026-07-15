@@ -3,11 +3,11 @@ priv suberror MiddlewareFailure derive(Debug)
 
 ///|
 async test "middleware execution order is onion-style" {
-  let client = Client::new("test-token")
+  let client = Client("test-token")
   defer client.close()
   client.perform_override_.val = Some((_route, _path, _headers, _body, _files) => {
     status: 200,
-    headers: {},
+    headers: Map([]),
     body: { "ok": true },
   })
   let order : Array[String] = []
@@ -24,41 +24,41 @@ async test "middleware execution order is onion-style" {
     response
   }
   client..middleware(first).middleware(second)
-  ignore(client.request(Route::GetGateway))
+  ignore(client.request(GetGateway))
   inspect(order.join(", "), content="a-in, b-in, b-out, a-out")
 }
 
 ///|
 async test "middleware request headers reach transport" {
-  let client = Client::new("test-token")
+  let client = Client("test-token")
   defer client.close()
   let captured_header = Ref("")
   client.perform_override_.val = Some((_route, _path, headers, _body, _files) => {
     captured_header.val = headers.get_or_default("x-middleware", "")
-    { status: 200, headers: {}, body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null() }
   })
   client.middleware((request, next) => {
     next({ ..request, headers: { "x-middleware": "present" } })
   })
-  ignore(client.request(Route::GetGateway))
+  ignore(client.request(GetGateway))
   inspect(captured_header.val, content="present")
 }
 
 ///|
 async test "middleware may short-circuit without transport" {
-  let client = Client::new("test-token")
+  let client = Client("test-token")
   defer client.close()
   let calls = Ref(0)
   client.perform_override_.val = Some((_route, _path, _headers, _body, _files) => {
     calls.val += 1
-    { status: 200, headers: {}, body: { "transport": true } }
+    { status: 200, headers: Map([]), body: { "transport": true } }
   })
   client.middleware((_request, _next) => {
     status: 200,
     headers: { "x-short-circuit": "true" },
     body: { "short_circuit": true },
   })
-  let response = client.request(Route::GetGateway)
+  let response = client.request(GetGateway)
   inspect(calls.val, content="0")
   guard response is { "short_circuit": True, .. } else {
     fail("expected synthetic response")
@@ -67,7 +67,7 @@ async test "middleware may short-circuit without transport" {
 
 ///|
 async test "middleware sees final response after 429 retries" {
-  let client = Client::new("test-token", max_retries=1, request_timeout_ms=1000)
+  let client = Client("test-token", max_retries=1, request_timeout_ms=1000)
   defer client.close()
   let calls = Ref(0)
   client.perform_override_.val = Some((_route, _path, _headers, _body, _files) => {
@@ -79,7 +79,7 @@ async test "middleware sees final response after 429 retries" {
         body: { "retry_after": 0.0 },
       }
     } else {
-      { status: 200, headers: {}, body: { "ok": true } }
+      { status: 200, headers: Map([]), body: { "ok": true } }
     }
   })
   let next_returns = Ref(0)
@@ -90,7 +90,7 @@ async test "middleware sees final response after 429 retries" {
     observed_status.val = response.status
     response
   })
-  ignore(client.request(Route::GetGateway))
+  ignore(client.request(GetGateway))
   inspect(calls.val, content="2")
   inspect(next_returns.val, content="1")
   inspect(observed_status.val, content="200")
@@ -98,12 +98,11 @@ async test "middleware sees final response after 429 retries" {
 
 ///|
 async test "middleware failures surface as transport errors" {
-  let client = Client::new("test-token")
+  let client = Client("test-token")
   defer client.close()
   client.middleware((_request, _next) => raise MiddlewareFailure)
-  try client.request(Route::GetGateway) catch {
-    DiscordHttpError::Transport(message~) =>
-      assert_true(message.contains("MiddlewareFailure"))
+  try client.request(GetGateway) catch {
+    Transport(message~) => assert_true(message.contains("MiddlewareFailure"))
     error => fail("unexpected error: \{to_repr(error)}")
   } noraise {
     _ => fail("expected transport error")
@@ -112,7 +111,7 @@ async test "middleware failures surface as transport errors" {
 
 ///|
 async test "middleware observes wire errors before API mapping" {
-  let client = Client::new("test-token")
+  let client = Client("test-token")
   defer client.close()
   client.perform_override_.val = Some((_route, _path, _headers, _body, _files) => {
     status: 404,
@@ -129,8 +128,8 @@ async test "middleware observes wire errors before API mapping" {
     observed_body.val = response.body
     response
   })
-  try client.request(Route::GetGateway) catch {
-    DiscordHttpError::Api(status~, error~) => {
+  try client.request(GetGateway) catch {
+    Api(status~, error~) => {
       inspect(status, content="404")
       inspect(error.code, content="10003")
     }

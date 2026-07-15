@@ -18,6 +18,7 @@ import {
 
 import {
   "gaato/discord/interaction",
+  "gaato/discord/internal/clock",
   "moonbitlang/core/json",
   "moonbitlang/async/aqueue",
 } for "wbtest"

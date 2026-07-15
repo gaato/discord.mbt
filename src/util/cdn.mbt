@@ -37,7 +37,7 @@ fn append_size(url : String, size : Int?) -> String raise CdnUrlError {
   match size {
     None => url
     Some(size) => {
-      guard valid_size(size) else { raise CdnUrlError::InvalidSize(size) }
+      guard valid_size(size) else { raise InvalidSize(size) }
       "\{url}?size=\{size}"
     }
   }
@@ -153,11 +153,10 @@ pub fn sticker_url(
   size? : Int,
 ) -> String raise CdnUrlError {
   let extension = match format {
-    @model.StickerFormatType::Png | @model.StickerFormatType::Apng => "png"
-    @model.StickerFormatType::Lottie => "json"
-    @model.StickerFormatType::Gif => "gif"
-    @model.StickerFormatType::Unknown(value) =>
-      raise CdnUrlError::UnsupportedStickerFormat(value)
+    Png | Apng => "png"
+    Lottie => "json"
+    Gif => "gif"
+    Unknown(value) => raise UnsupportedStickerFormat(value)
   }
   append_size("\{cdn_base}/stickers/\{sticker_id}.\{extension}", size)
 }

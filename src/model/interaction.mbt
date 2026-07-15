@@ -68,7 +68,7 @@ pub impl @json.FromJson for InteractionType with fn from_json(json, path) {
   match json {
     Number(value, ..) => InteractionType::from_int(value.to_int())
     _ =>
-      raise @json.JsonDecodeError(
+      raise JsonDecodeError(
         (path, "expected the dispatch category of an interaction (number)"),
       )
   }
@@ -340,7 +340,7 @@ pub impl @json.FromJson for InteractionResponseType with fn from_json(
   match json {
     Number(value, ..) => InteractionResponseType::from_int(value.to_int())
     _ =>
-      raise @json.JsonDecodeError(
+      raise JsonDecodeError(
         (
           path, "expected the callback behavior requested by an interaction response (number)",
         ),

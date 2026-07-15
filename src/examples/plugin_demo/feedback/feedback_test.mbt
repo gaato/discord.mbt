@@ -1,8 +1,8 @@
 ///|
 test "feedback feature installs a valid command graph" {
-  let app = @discord.App::new(sync=Disabled)
-  let feature = @feedback.FeedbackFeature::new(
-    @feedback.FeedbackConfig::new(
+  let app = @discord.App(sync=Disabled)
+  let feature = @feedback.FeedbackFeature(
+    FeedbackConfig(
       destination_channel=@model.Id::parse("800000000000000001"),
       cooldown_seconds=15,
     ),

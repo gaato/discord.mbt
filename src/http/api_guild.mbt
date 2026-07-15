@@ -7,8 +7,7 @@ pub async fn Client::get_guild(
 ) -> @model.Guild raise DiscordHttpError {
   let route = match with_counts {
     None => Route::GetGuild(guild_id~)
-    Some(value) =>
-      Route::GetGuildWithCounts(guild_id~, query="?with_counts=\{value}")
+    Some(value) => GetGuildWithCounts(guild_id~, query="?with_counts=\{value}")
   }
   decode(self.request(route))
 }
@@ -52,16 +51,12 @@ pub async fn Client::modify_guild(
   audit_reason? : String,
 ) -> @model.Guild raise DiscordHttpError {
   if name is Some(value) && (value.length() < 2 || value.length() > 100) {
-    raise DiscordHttpError::Validation(
-      message="guild name must be between 2 and 100 characters",
-    )
+    raise Validation(message="guild name must be between 2 and 100 characters")
   }
   if description is Some(value) && value.length() > 120 {
-    raise DiscordHttpError::Validation(
-      message="guild description exceeds 120 characters",
-    )
+    raise Validation(message="guild description exceeds 120 characters")
   }
-  let body = @model.ObjBuilder::new()
+  let body = @model.ObjBuilder()
     .opt("name", name)
     .opt("verification_level", verification_level)
     .opt("default_message_notifications", default_message_notifications)
@@ -114,7 +109,7 @@ pub async fn Client::modify_guild(
       ),
     )
     .build()
-  decode(self.request(Route::ModifyGuild(guild_id~), body~, audit_reason?))
+  decode(self.request(ModifyGuild(guild_id~), body~, audit_reason?))
 }
 
 ///|
@@ -130,9 +125,7 @@ pub async fn Client::get_guild_audit_log(
 ) -> @model.AuditLog raise DiscordHttpError {
   validate_cursor_pair("audit log", before, after)
   if limit is Some(value) && (value < 1 || value > 100) {
-    raise DiscordHttpError::Validation(
-      message="audit log limit must be 1 through 100",
-    )
+    raise Validation(message="audit log limit must be 1 through 100")
   }
   let params : Array[String] = []
   if user_id is Some(value) {
@@ -151,7 +144,7 @@ pub async fn Client::get_guild_audit_log(
     params.push("limit=\{value}")
   }
   let query = if params.length() == 0 { "" } else { "?" + params.join("&") }
-  decode(self.request(Route::GetGuildAuditLog(guild_id~, query~)))
+  decode(self.request(GetGuildAuditLog(guild_id~, query~)))
 }
 
 ///|
@@ -164,9 +157,7 @@ pub async fn Client::get_guild_bans(
   after? : @model.UserId,
 ) -> Array[@model.GuildBan] raise DiscordHttpError {
   if limit is Some(value) && (value < 1 || value > 1000) {
-    raise DiscordHttpError::Validation(
-      message="guild ban limit must be 1 through 1000",
-    )
+    raise Validation(message="guild ban limit must be 1 through 1000")
   }
   validate_cursor_pair("guild ban", before, after)
   let params : Array[String] = []
@@ -180,7 +171,7 @@ pub async fn Client::get_guild_bans(
     params.push("after=\{value}")
   }
   let query = if params.length() == 0 { "" } else { "?" + params.join("&") }
-  decode(self.request(Route::GetGuildBans(guild_id~, query~)))
+  decode(self.request(GetGuildBans(guild_id~, query~)))
 }
 
 ///|
@@ -189,7 +180,7 @@ pub async fn Client::get_guild_channels(
   self : Client,
   guild_id : @model.GuildId,
 ) -> Array[@model.Channel] raise DiscordHttpError {
-  decode(self.request(Route::GetGuildChannels(guild_id~)))
+  decode(self.request(GetGuildChannels(guild_id~)))
 }
 
 ///|
@@ -210,21 +201,17 @@ pub async fn Client::create_guild_channel(
   audit_reason? : String,
 ) -> @model.Channel raise DiscordHttpError {
   if name.length() < 1 || name.length() > 100 {
-    raise DiscordHttpError::Validation(
+    raise Validation(
       message="channel name must be between 1 and 100 characters",
     )
   }
   if topic is Some(value) && value.length() > 4096 {
-    raise DiscordHttpError::Validation(
-      message="channel topic exceeds 4096 characters",
-    )
+    raise Validation(message="channel topic exceeds 4096 characters")
   }
   if rate_limit_per_user is Some(value) && (value < 0 || value > 21600) {
-    raise DiscordHttpError::Validation(
-      message="rate_limit_per_user must be between 0 and 21600",
-    )
+    raise Validation(message="rate_limit_per_user must be between 0 and 21600")
   }
-  let body = @model.ObjBuilder::new()
+  let body = @model.ObjBuilder()
     .field("name", name)
     .opt("type", typ)
     .opt("topic", topic)
@@ -236,9 +223,7 @@ pub async fn Client::create_guild_channel(
     .opt("user_limit", user_limit)
     .opt("rate_limit_per_user", rate_limit_per_user)
     .build()
-  decode(
-    self.request(Route::CreateGuildChannel(guild_id~), body~, audit_reason?),
-  )
+  decode(self.request(CreateGuildChannel(guild_id~), body~, audit_reason?))
 }
 
 ///|
@@ -248,7 +233,7 @@ pub async fn Client::get_guild_member(
   guild_id : @model.GuildId,
   user_id : @model.UserId,
 ) -> @model.GuildMember raise DiscordHttpError {
-  decode(self.request(Route::GetGuildMember(guild_id~, user_id~)))
+  decode(self.request(GetGuildMember(guild_id~, user_id~)))
 }
 
 ///|
@@ -260,9 +245,7 @@ pub async fn Client::list_guild_members(
   after? : @model.UserId,
 ) -> Array[@model.GuildMember] raise DiscordHttpError {
   if limit is Some(value) && (value < 1 || value > 1000) {
-    raise DiscordHttpError::Validation(
-      message="member limit must be 1 through 1000",
-    )
+    raise Validation(message="member limit must be 1 through 1000")
   }
   let params : Array[String] = []
   if limit is Some(value) {
@@ -272,7 +255,7 @@ pub async fn Client::list_guild_members(
     params.push("after=\{value}")
   }
   let query = if params.length() == 0 { "" } else { "?" + params.join("&") }
-  decode(self.request(Route::ListGuildMembers(guild_id~, query~)))
+  decode(self.request(ListGuildMembers(guild_id~, query~)))
 }
 
 ///|
@@ -284,18 +267,16 @@ pub async fn Client::search_guild_members(
   limit? : Int,
 ) -> Array[@model.GuildMember] raise DiscordHttpError {
   if query.length() == 0 {
-    raise DiscordHttpError::Validation(message="member query must not be empty")
+    raise Validation(message="member query must not be empty")
   }
   if limit is Some(value) && (value < 1 || value > 1000) {
-    raise DiscordHttpError::Validation(
-      message="member limit must be 1 through 1000",
-    )
+    raise Validation(message="member limit must be 1 through 1000")
   }
   let suffix = match limit {
     None => "?query=\{query}"
     Some(value) => "?query=\{query}&limit=\{value}"
   }
-  decode(self.request(Route::SearchGuildMembers(guild_id~, query=suffix)))
+  decode(self.request(SearchGuildMembers(guild_id~, query=suffix)))
 }
 
 ///|
@@ -315,7 +296,7 @@ pub async fn Client::modify_guild_member(
   clear_communication_disabled_until? : Bool = false,
   audit_reason? : String,
 ) -> @model.GuildMember raise DiscordHttpError {
-  let body = @model.ObjBuilder::new()
+  let body = @model.ObjBuilder()
     .und("nick", patch_nullable("nick", nick, clear_nick))
     .und("roles", patch_value(roles))
     .opt("mute", mute)
@@ -332,11 +313,7 @@ pub async fn Client::modify_guild_member(
     )
     .build()
   decode(
-    self.request(
-      Route::ModifyGuildMember(guild_id~, user_id~),
-      body~,
-      audit_reason?,
-    ),
+    self.request(ModifyGuildMember(guild_id~, user_id~), body~, audit_reason?),
   )
 }
 
@@ -349,10 +326,7 @@ pub async fn Client::add_member_role(
   role_id : @model.RoleId,
   audit_reason? : String,
 ) -> Unit raise DiscordHttpError {
-  self.request(
-    Route::AddGuildMemberRole(guild_id~, user_id~, role_id~),
-    audit_reason?,
-  )
+  self.request(AddGuildMemberRole(guild_id~, user_id~, role_id~), audit_reason?)
   |> ignore
 }
 
@@ -366,7 +340,7 @@ pub async fn Client::remove_member_role(
   audit_reason? : String,
 ) -> Unit raise DiscordHttpError {
   self.request(
-    Route::RemoveGuildMemberRole(guild_id~, user_id~, role_id~),
+    RemoveGuildMemberRole(guild_id~, user_id~, role_id~),
     audit_reason?,
   )
   |> ignore
@@ -380,8 +354,7 @@ pub async fn Client::remove_guild_member(
   user_id : @model.UserId,
   audit_reason? : String,
 ) -> Unit raise DiscordHttpError {
-  self.request(Route::RemoveGuildMember(guild_id~, user_id~), audit_reason?)
-  |> ignore
+  self.request(RemoveGuildMember(guild_id~, user_id~), audit_reason?) |> ignore
 }
 
 ///|
@@ -394,14 +367,14 @@ pub async fn Client::create_guild_ban(
   audit_reason? : String,
 ) -> Unit raise DiscordHttpError {
   if delete_message_seconds is Some(value) && (value < 0 || value > 604800) {
-    raise DiscordHttpError::Validation(
+    raise Validation(
       message="delete_message_seconds must be between 0 and 604800",
     )
   }
-  let body = @model.ObjBuilder::new()
+  let body = @model.ObjBuilder()
     .opt("delete_message_seconds", delete_message_seconds)
     .build()
-  self.request(Route::CreateGuildBan(guild_id~, user_id~), body~, audit_reason?)
+  self.request(CreateGuildBan(guild_id~, user_id~), body~, audit_reason?)
   |> ignore
 }
 
@@ -413,8 +386,7 @@ pub async fn Client::remove_guild_ban(
   user_id : @model.UserId,
   audit_reason? : String,
 ) -> Unit raise DiscordHttpError {
-  self.request(Route::RemoveGuildBan(guild_id~, user_id~), audit_reason?)
-  |> ignore
+  self.request(RemoveGuildBan(guild_id~, user_id~), audit_reason?) |> ignore
 }
 
 ///|
@@ -423,7 +395,7 @@ pub async fn Client::get_guild_roles(
   self : Client,
   guild_id : @model.GuildId,
 ) -> Array[@model.Role] raise DiscordHttpError {
-  decode(self.request(Route::GetGuildRoles(guild_id~)))
+  decode(self.request(GetGuildRoles(guild_id~)))
 }
 
 ///|
@@ -439,18 +411,16 @@ pub async fn Client::create_guild_role(
   audit_reason? : String,
 ) -> @model.Role raise DiscordHttpError {
   if name is Some(value) && (value.length() < 1 || value.length() > 100) {
-    raise DiscordHttpError::Validation(
-      message="role name must be between 1 and 100 characters",
-    )
+    raise Validation(message="role name must be between 1 and 100 characters")
   }
-  let body = @model.ObjBuilder::new()
+  let body = @model.ObjBuilder()
     .opt("name", name)
     .opt("permissions", permissions)
     .opt("color", color)
     .opt("hoist", hoist)
     .opt("mentionable", mentionable)
     .build()
-  decode(self.request(Route::CreateGuildRole(guild_id~), body~, audit_reason?))
+  decode(self.request(CreateGuildRole(guild_id~), body~, audit_reason?))
 }
 
 ///|
@@ -467,11 +437,9 @@ pub async fn Client::modify_guild_role(
   audit_reason? : String,
 ) -> @model.Role raise DiscordHttpError {
   if name is Some(value) && (value.length() < 1 || value.length() > 100) {
-    raise DiscordHttpError::Validation(
-      message="role name must be between 1 and 100 characters",
-    )
+    raise Validation(message="role name must be between 1 and 100 characters")
   }
-  let body = @model.ObjBuilder::new()
+  let body = @model.ObjBuilder()
     .opt("name", name)
     .opt("permissions", permissions)
     .opt("color", color)
@@ -479,11 +447,7 @@ pub async fn Client::modify_guild_role(
     .opt("mentionable", mentionable)
     .build()
   decode(
-    self.request(
-      Route::ModifyGuildRole(guild_id~, role_id~),
-      body~,
-      audit_reason?,
-    ),
+    self.request(ModifyGuildRole(guild_id~, role_id~), body~, audit_reason?),
   )
 }
 
@@ -495,6 +459,5 @@ pub async fn Client::delete_guild_role(
   role_id : @model.RoleId,
   audit_reason? : String,
 ) -> Unit raise DiscordHttpError {
-  self.request(Route::DeleteGuildRole(guild_id~, role_id~), audit_reason?)
-  |> ignore
+  self.request(DeleteGuildRole(guild_id~, role_id~), audit_reason?) |> ignore
 }

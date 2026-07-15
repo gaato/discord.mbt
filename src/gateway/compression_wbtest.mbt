@@ -10,7 +10,7 @@ extern "C" fn test_deflate(deflater : TestDeflater, input : Bytes) -> Bytes = "d
 
 ///|
 test "zlib-stream round-trips split and consecutive messages" {
-  let inflater : &Inflater = ZlibStreamInflater::new()
+  let inflater : &Inflater = ZlibStreamInflater()
   let deflater = test_deflater_new()
   let first =
     #|{"op":10,"d":{"heartbeat_interval":45000}}

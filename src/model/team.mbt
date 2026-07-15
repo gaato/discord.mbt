@@ -53,7 +53,7 @@ pub impl @json.FromJson for TeamMembershipState with fn from_json(json, path) {
   match json {
     Number(value, ..) => TeamMembershipState::from_int(value.to_int())
     _ =>
-      raise @json.JsonDecodeError(
+      raise JsonDecodeError(
         (
           path, "expected a user's invitation state within a developer team (number)",
         ),

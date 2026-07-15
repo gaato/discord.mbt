@@ -9,6 +9,7 @@ import {
 import {
   "gaato/discord/queue",
   "gaato/discord/ratelimit",
+  "gaato/discord/internal/clock",
   "moonbitlang/async",
 } for "wbtest"
 

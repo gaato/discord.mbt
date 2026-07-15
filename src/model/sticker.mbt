@@ -55,7 +55,7 @@ pub impl ToJson for StickerType with fn to_json(self) {
 pub impl @json.FromJson for StickerType with fn from_json(json, path) {
   match json {
     Number(value, ..) => StickerType::from_int(value.to_int())
-    _ => raise @json.JsonDecodeError((path, "expected a sticker type (number)"))
+    _ => raise JsonDecodeError((path, "expected a sticker type (number)"))
   }
 }
 
@@ -100,8 +100,7 @@ pub impl ToJson for StickerFormatType with fn to_json(self) {
 pub impl @json.FromJson for StickerFormatType with fn from_json(json, path) {
   match json {
     Number(value, ..) => StickerFormatType::from_int(value.to_int())
-    _ =>
-      raise @json.JsonDecodeError((path, "expected a sticker format (number)"))
+    _ => raise JsonDecodeError((path, "expected a sticker format (number)"))
   }
 }
 

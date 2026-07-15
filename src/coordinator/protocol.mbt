@@ -20,7 +20,7 @@ fn error_response(message : String) -> Json {
 
 ///|
 fn decode_headers(fields : Map[String, Json]) -> Map[String, String] raise {
-  let headers : Map[String, String] = {}
+  let headers : Map[String, String] = Map([])
   for name, value in fields {
     guard value is String(text) else {
       raise CoordinatorError::InvalidResponse(

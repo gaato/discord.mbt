@@ -22,13 +22,13 @@ pub struct InMemoryQueue {
 }
 
 ///|
-pub fn InMemoryQueue::new(
+pub fn InMemoryQueue::InMemoryQueue(
   max_concurrency? : Int = 1,
   spacing_ms? : Int = 5250,
 ) -> InMemoryQueue {
   let buckets = []
   for _ in 0..<max_concurrency {
-    buckets.push({ gate: @async.Semaphore::new(1), last_identify_ms: 0 })
+    buckets.push({ gate: Semaphore(1), last_identify_ms: 0 })
   }
   { buckets, spacing_ms }
 }
@@ -43,11 +43,11 @@ pub impl IdentifyQueue for InMemoryQueue with fn wait_for_identify(
   try {
     let wait = bucket.last_identify_ms +
       self.spacing_ms.to_int64() -
-      @async.now()
+      @clock.now_ms()
     if wait > 0 {
       @async.sleep(wait.to_int())
     }
-    bucket.last_identify_ms = @async.now()
+    bucket.last_identify_ms = @clock.now_ms()
   } catch {
     e => {
       bucket.gate.release()

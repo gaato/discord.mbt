@@ -2,19 +2,15 @@
 test "mention formatters" {
   debug_inspect(
     [
-      @util.user_mention(@model.Id(1UL)),
-      @util.channel_mention(@model.Id(2UL)),
-      @util.role_mention(@model.Id(3UL)),
+      @util.user_mention(Id(1UL)),
+      @util.channel_mention(Id(2UL)),
+      @util.role_mention(Id(3UL)),
       @util.slash_command_mention(
         name="permissions user get",
-        command_id=@model.Id(4UL),
+        command_id=Id(4UL),
       ),
-      @util.custom_emoji_mention(name="wave", emoji_id=@model.Id(5UL)),
-      @util.custom_emoji_mention(
-        name="dance",
-        emoji_id=@model.Id(6UL),
-        animated=true,
-      ),
+      @util.custom_emoji_mention(name="wave", emoji_id=Id(5UL)),
+      @util.custom_emoji_mention(name="dance", emoji_id=Id(6UL), animated=true),
     ],
     content=(
       #|[
@@ -34,16 +30,16 @@ test "timestamp formatter supports every Discord style" {
   debug_inspect(
     [
       @util.timestamp(1615486537L),
-      @util.timestamp(1615486537L, style=@util.TimestampStyle::ShortTime),
-      @util.timestamp(1615486537L, style=@util.TimestampStyle::LongTime),
-      @util.timestamp(1615486537L, style=@util.TimestampStyle::ShortDate),
-      @util.timestamp(1615486537L, style=@util.TimestampStyle::LongDate),
-      @util.timestamp(1615486537L, style=@util.TimestampStyle::ShortDateTime),
-      @util.timestamp(1615486537L, style=@util.TimestampStyle::LongDateTime),
-      @util.timestamp(1615486537L, style=@util.TimestampStyle::Relative),
+      @util.timestamp(1615486537L, style=ShortTime),
+      @util.timestamp(1615486537L, style=LongTime),
+      @util.timestamp(1615486537L, style=ShortDate),
+      @util.timestamp(1615486537L, style=LongDate),
+      @util.timestamp(1615486537L, style=ShortDateTime),
+      @util.timestamp(1615486537L, style=LongDateTime),
+      @util.timestamp(1615486537L, style=Relative),
       @util.timestamp_from_model(
-        @model.Timestamp("2021-03-11T18:15:37Z"),
-        style=@util.TimestampStyle::Relative,
+        Timestamp("2021-03-11T18:15:37Z"),
+        style=Relative,
       ),
     ],
     content=(

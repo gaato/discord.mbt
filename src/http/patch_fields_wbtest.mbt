@@ -1,6 +1,9 @@
 ///|
 test "patch fields omit missing values and preserve empty arrays" {
-  json_inspect(message_patch_builder(None, false, None, None, None).build(), content={})
+  json_inspect(
+    message_patch_builder(None, false, None, None, None).build(),
+    content=Json::empty_object(),
+  )
   json_inspect(
     message_patch_builder(None, false, Some([]), Some([]), None).build(),
     content={ "embeds": [], "components": [] },

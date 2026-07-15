@@ -19,8 +19,8 @@ pub struct Pool {
   slots : @semaphore.Semaphore
   mut closed : Bool
 }
+pub fn Pool::Pool(String, max_connections? : Int) -> Self
 pub fn Pool::close(Self) -> Unit
-pub fn Pool::new(String, max_connections? : Int) -> Self
 pub async fn[T] Pool::with_conn(Self, async (@http.Client) -> T) -> T
 
 // Type aliases

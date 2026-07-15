@@ -2,7 +2,7 @@
 /// Render body chunks with CR/LF and non-printable bytes made visible, so
 /// the snapshot stays faithful (`#|` strings cannot hold raw `\r`).
 fn render_parts(parts : Array[Part]) -> String {
-  let out = StringBuilder::new()
+  let out = StringBuilder()
   fn put(code : Int) {
     if code == 13 {
       out.write_string("<CR>")
@@ -33,8 +33,8 @@ fn render_parts(parts : Array[Part]) -> String {
 ///|
 test "multipart body layout: payload_json first, files[n], closing delimiter" {
   let files = [
-    FileUpload::new("hello.txt", b"hi there", content_type="text/plain"),
-    FileUpload::new("data.bin", b"\x00\x01\x02"),
+    FileUpload("hello.txt", b"hi there", content_type="text/plain"),
+    FileUpload("data.bin", b"\x00\x01\x02"),
   ]
   let parts = multipart_parts("B", "{\"content\":\"see files\"}", files)
   inspect(
@@ -66,7 +66,7 @@ test "fresh_boundary skips candidates that appear in a part" {
   // no collision: first candidate wins
   inspect(fresh_boundary("seed", "{}", []), content="discordmbt-seed-0")
   // the payload embeds candidate 0, a file embeds candidate 1
-  let files = [FileUpload::new("evil.txt", b"...discordmbt-seed-1...")]
+  let files = [FileUpload("evil.txt", b"...discordmbt-seed-1...")]
   inspect(
     fresh_boundary("seed", "{\"content\":\"discordmbt-seed-0\"}", files),
     content="discordmbt-seed-2",
@@ -77,8 +77,8 @@ test "fresh_boundary skips candidates that appear in a part" {
 test "attachments_json carries ids, filenames, and descriptions" {
   json_inspect(
     attachments_json([
-      FileUpload::new("a.png", b"", description="a cat"),
-      FileUpload::new("b.txt", b""),
+      FileUpload("a.png", b"", description="a cat"),
+      FileUpload("b.txt", b""),
     ]),
     content=[
       { "id": 0, "filename": "a.png", "description": "a cat" },
@@ -90,13 +90,13 @@ test "attachments_json carries ids, filenames, and descriptions" {
 ///|
 test "validate_files rejects header-breaking filenames" {
   for bad in ["evil\r\n.txt", "quote\".txt", ""] {
-    try validate_files([FileUpload::new(bad, b"x")]) catch {
-      DiscordHttpError::Validation(_) => ()
+    try validate_files([FileUpload(bad, b"x")]) catch {
+      Validation(_) => ()
       e => fail("unexpected error: \{to_repr(e)}")
     } noraise {
       _ => fail("expected Validation for \{to_repr(bad)}")
     }
   }
   // a normal filename passes
-  validate_files([FileUpload::new("ok.png", b"x")])
+  validate_files([FileUpload("ok.png", b"x")])
 }

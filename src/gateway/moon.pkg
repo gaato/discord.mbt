@@ -2,6 +2,7 @@ import {
   "gaato/discord/model",
   "gaato/discord/telemetry",
   "gaato/discord/queue",
+  "gaato/discord/internal/clock",
   "moonbitlang/async",
   "moonbitlang/async/aqueue",
   "moonbitlang/async/websocket",
@@ -17,6 +18,7 @@ import {
   "gaato/discord/model",
   "gaato/discord/telemetry",
   "gaato/discord/queue",
+  "gaato/discord/internal/clock",
 } for "test"
 
 // This package is intentionally empty on non-native targets.

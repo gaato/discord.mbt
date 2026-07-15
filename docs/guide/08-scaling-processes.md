@@ -42,13 +42,13 @@ let limiter = @coordinator.RemoteRateLimiter::connect("127.0.0.1:7600")
 defer identify.close()
 defer limiter.close()
 
-let client = @dhttp.Client::new(
+let client = @dhttp.Client(
   token,
   limiter=(limiter : &@ratelimit.RateLimiter),
 )
 defer client.close()
 
-let bot = @discord.Bot::new(
+let bot = @discord.Bot(
   app,
   token~,
   client~,

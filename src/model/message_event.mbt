@@ -52,12 +52,12 @@ fn decode_gateway_message_event(
   path : @json.JsonPath,
 ) -> GatewayMessageEventFields raise @json.JsonDecodeError {
   guard json is Object(fields) else {
-    raise @json.JsonDecodeError((path, "expected gateway message (object)"))
+    raise JsonDecodeError((path, "expected gateway message (object)"))
   }
   let mentions : Array[GatewayMessageMention] = event_field(
     fields, "mentions", path,
   )
-  let mention_members : Map[UserId, GuildMember] = {}
+  let mention_members : Map[UserId, GuildMember] = Map([])
   for mention in mentions {
     if mention.guild_member is Some(guild_member) {
       mention_members[mention.id] = guild_member

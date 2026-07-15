@@ -36,22 +36,18 @@ priv struct ManagedShardEvent {
 ///|
 fn validate_shard_ids(ids : Array[Int], count : Int) -> Unit raise BotError {
   if count <= 0 {
-    raise BotError::InvalidShardConfig(message="shard count must be positive")
+    raise InvalidShardConfig(message="shard count must be positive")
   }
   if ids.is_empty() {
-    raise BotError::InvalidShardConfig(
-      message="at least one shard id must be selected",
-    )
+    raise InvalidShardConfig(message="at least one shard id must be selected")
   }
-  let seen : Map[Int, Bool] = {}
+  let seen : Map[Int, Bool] = Map([])
   for id in ids {
     if id < 0 || id >= count {
-      raise BotError::InvalidShardConfig(
-        message="shard id \{id} is outside 0..<\{count}",
-      )
+      raise InvalidShardConfig(message="shard id \{id} is outside 0..<\{count}")
     }
     if seen.get(id) == Some(true) {
-      raise BotError::InvalidShardConfig(message="duplicate shard id \{id}")
+      raise InvalidShardConfig(message="duplicate shard id \{id}")
     }
     seen[id] = true
   }

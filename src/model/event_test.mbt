@@ -250,19 +250,16 @@ test "guild audit log entry decodes flattened entry payload" {
 ///|
 test "dispatch names map to typed and unknown variants" {
   assert_true(
-    @model.EventKind::of_name("VOICE_SERVER_UPDATE")
-    is @model.EventKind::KVoiceServerUpdate,
+    @model.EventKind::of_name("VOICE_SERVER_UPDATE") is KVoiceServerUpdate,
   )
-  assert_true(
-    @model.EventKind::of_name("SOME_FUTURE_EVENT") is @model.EventKind::KUnknown,
-  )
+  assert_true(@model.EventKind::of_name("SOME_FUTURE_EVENT") is KUnknown)
   let pins_fixture =
     #|{"channel_id":"400","guild_id":"100","last_pin_timestamp":null}
   let known = @model.dispatch_event(
     "CHANNEL_PINS_UPDATE",
     @json.parse(pins_fixture),
   )
-  assert_true(known is @model.Event::ChannelPinsUpdate(_))
+  assert_true(known is ChannelPinsUpdate(_))
   let unknown_fixture =
     #|{"future":true,"value":99}
   let raw = @json.parse(unknown_fixture)

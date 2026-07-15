@@ -35,15 +35,15 @@ pub struct Framework {
 }
 
 ///|
-pub fn Framework::new(
+pub fn Framework::Framework(
   client : @dhttp.Client,
   application_id : @model.ApplicationId,
 ) -> Framework {
   {
     client,
     application_id,
-    commands: {},
-    autocompletes: {},
+    commands: Map([]),
+    autocompletes: Map([]),
     components: [],
     modals: [],
     waiters: [],
@@ -283,10 +283,7 @@ pub async fn Framework::wait_for_component(
   custom_id~ : String,
   timeout_ms? : Int,
 ) -> ComponentCtx? {
-  let waiter : ComponentWaiter = {
-    custom_id,
-    queue: @aqueue.Queue::new(kind=Unbounded),
-  }
+  let waiter : ComponentWaiter = { custom_id, queue: Queue(kind=Unbounded) }
   self.waiters.push(waiter)
   defer (for i, pending in self.waiters {
     if physical_equal(pending, waiter) {

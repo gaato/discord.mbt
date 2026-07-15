@@ -4,12 +4,12 @@ fn validate_scheduled_event_text(
   description : String?,
 ) -> Unit raise DiscordHttpError {
   if name is Some(value) && (value.length() < 1 || value.length() > 100) {
-    raise DiscordHttpError::Validation(
+    raise Validation(
       message="scheduled event name must be 1 through 100 characters",
     )
   }
   if description is Some(value) && value.length() > 1000 {
-    raise DiscordHttpError::Validation(
+    raise Validation(
       message="scheduled event description exceeds 1000 characters",
     )
   }
@@ -32,7 +32,7 @@ fn scheduled_event_create_body(
   recurrence_rule : @model.GuildScheduledEventRecurrenceRule?,
 ) -> Json raise DiscordHttpError {
   validate_scheduled_event_text(Some(name), description)
-  @model.ObjBuilder::new()
+  @model.ObjBuilder()
   .und("channel_id", patch_nullable("channel_id", channel_id, clear_channel_id))
   .und(
     "entity_metadata",
@@ -75,7 +75,7 @@ fn scheduled_event_modify_body(
   clear_recurrence_rule : Bool,
 ) -> Json raise DiscordHttpError {
   validate_scheduled_event_text(name, description)
-  @model.ObjBuilder::new()
+  @model.ObjBuilder()
   .und("channel_id", patch_nullable("channel_id", channel_id, clear_channel_id))
   .und(
     "entity_metadata",
@@ -115,7 +115,7 @@ pub async fn Client::list_guild_scheduled_events(
     Some(value) => "?with_user_count=\{value}"
     None => ""
   }
-  decode(self.request(Route::ListGuildScheduledEvents(guild_id~, query~)))
+  decode(self.request(ListGuildScheduledEvents(guild_id~, query~)))
 }
 
 ///|
@@ -144,11 +144,7 @@ pub async fn Client::create_guild_scheduled_event(
     entity_type, image, recurrence_rule,
   )
   decode(
-    self.request(
-      Route::CreateGuildScheduledEvent(guild_id~),
-      body~,
-      audit_reason?,
-    ),
+    self.request(CreateGuildScheduledEvent(guild_id~), body~, audit_reason?),
   )
 }
 
@@ -164,9 +160,7 @@ pub async fn Client::get_guild_scheduled_event(
     Some(value) => "?with_user_count=\{value}"
     None => ""
   }
-  decode(
-    self.request(Route::GetGuildScheduledEvent(guild_id~, event_id~, query~)),
-  )
+  decode(self.request(GetGuildScheduledEvent(guild_id~, event_id~, query~)))
 }
 
 ///|
@@ -202,7 +196,7 @@ pub async fn Client::modify_guild_scheduled_event(
   )
   decode(
     self.request(
-      Route::ModifyGuildScheduledEvent(guild_id~, event_id~),
+      ModifyGuildScheduledEvent(guild_id~, event_id~),
       body~,
       audit_reason?,
     ),
@@ -217,10 +211,7 @@ pub async fn Client::delete_guild_scheduled_event(
   event_id : @model.ScheduledEventId,
   audit_reason? : String,
 ) -> Unit raise DiscordHttpError {
-  self.request(
-    Route::DeleteGuildScheduledEvent(guild_id~, event_id~),
-    audit_reason?,
-  )
+  self.request(DeleteGuildScheduledEvent(guild_id~, event_id~), audit_reason?)
   |> ignore
 }
 
@@ -237,9 +228,7 @@ pub async fn Client::list_guild_scheduled_event_users(
 ) -> Array[@model.GuildScheduledEventUser] raise DiscordHttpError {
   validate_cursor_pair("scheduled event user", before, after)
   if limit is Some(value) && (value < 1 || value > 100) {
-    raise DiscordHttpError::Validation(
-      message="scheduled event user limit must be 1 through 100",
-    )
+    raise Validation(message="scheduled event user limit must be 1 through 100")
   }
   let params : Array[String] = []
   if limit is Some(value) {
@@ -256,8 +245,6 @@ pub async fn Client::list_guild_scheduled_event_users(
   }
   let query = if params.length() == 0 { "" } else { "?" + params.join("&") }
   decode(
-    self.request(
-      Route::ListGuildScheduledEventUsers(guild_id~, event_id~, query~),
-    ),
+    self.request(ListGuildScheduledEventUsers(guild_id~, event_id~, query~)),
   )
 }

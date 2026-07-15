@@ -57,14 +57,11 @@ pub impl @json.FromJson for InviteFlags with fn from_json(json, path) {
     Number(_, repr=Some(repr)) =>
       InviteFlags(
         @string.parse_uint64(repr.to_string()) catch {
-          _ =>
-            raise @json.JsonDecodeError(
-              (path, "expected invite flags (number)"),
-            )
+          _ => raise JsonDecodeError((path, "expected invite flags (number)"))
         },
       )
     Number(value, repr=None) => InviteFlags(value.to_uint64())
-    _ => raise @json.JsonDecodeError((path, "expected invite flags (number)"))
+    _ => raise JsonDecodeError((path, "expected invite flags (number)"))
   }
 }
 
@@ -112,7 +109,7 @@ pub impl @json.FromJson for InviteType with fn from_json(json, path) {
   match json {
     Number(value, ..) => InviteType::from_int(value.to_int())
     _ =>
-      raise @json.JsonDecodeError(
+      raise JsonDecodeError(
         (path, "expected the destination category of a discord invite (number)"),
       )
   }
@@ -154,7 +151,7 @@ pub impl @json.FromJson for InviteTargetType with fn from_json(json, path) {
   match json {
     Number(value, ..) => InviteTargetType::from_int(value.to_int())
     _ =>
-      raise @json.JsonDecodeError(
+      raise JsonDecodeError(
         (
           path, "expected the special target carried by a voice channel invite (number)",
         ),

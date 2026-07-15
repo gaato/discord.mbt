@@ -31,7 +31,7 @@ pub impl @json.FromJson for AvailableGuildCreateEvent with fn from_json(
   path,
 ) {
   guard json is Object(fields) else {
-    raise @json.JsonDecodeError(
+    raise JsonDecodeError(
       (path, "expected available guild create event (object)"),
     )
   }
@@ -59,10 +59,10 @@ pub impl @json.FromJson for AvailableGuildCreateEvent with fn from_json(
 ///|
 pub impl @json.FromJson for GuildCreateEvent with fn from_json(json, path) {
   guard json is Object(fields) else {
-    raise @json.JsonDecodeError((path, "expected guild create event (object)"))
+    raise JsonDecodeError((path, "expected guild create event (object)"))
   }
   match fields.get("unavailable") {
-    Some(True) => GuildCreateEvent::Unavailable(@json.from_json(json, path~))
-    _ => GuildCreateEvent::Available(@json.from_json(json, path~))
+    Some(True) => Unavailable(@json.from_json(json, path~))
+    _ => Available(@json.from_json(json, path~))
   }
 }

@@ -66,7 +66,7 @@ pub impl @json.FromJson for AutoModerationTriggerType with fn from_json(
   match json {
     Number(value, ..) => AutoModerationTriggerType::from_int(value.to_int())
     _ =>
-      raise @json.JsonDecodeError(
+      raise JsonDecodeError(
         (
           path, "expected the condition category that activates an auto-moderation rule (number)",
         ),
@@ -132,7 +132,7 @@ pub impl @json.FromJson for AutoModerationKeywordPresetType with fn from_json(
     Number(value, ..) =>
       AutoModerationKeywordPresetType::from_int(value.to_int())
     _ =>
-      raise @json.JsonDecodeError(
+      raise JsonDecodeError(
         (
           path, "expected a built-in keyword set used by auto moderation (number)",
         ),
@@ -181,7 +181,7 @@ pub impl @json.FromJson for AutoModerationEventType with fn from_json(
   match json {
     Number(value, ..) => AutoModerationEventType::from_int(value.to_int())
     _ =>
-      raise @json.JsonDecodeError(
+      raise JsonDecodeError(
         (
           path, "expected the guild event evaluated by an auto-moderation rule (number)",
         ),
@@ -247,7 +247,7 @@ pub impl @json.FromJson for AutoModerationActionType with fn from_json(
   match json {
     Number(value, ..) => AutoModerationActionType::from_int(value.to_int())
     _ =>
-      raise @json.JsonDecodeError(
+      raise JsonDecodeError(
         (path, "expected the operation performed by auto moderation (number)"),
       )
   }

@@ -47,7 +47,7 @@ test "discord docs: example guild announcement channel (line 143)" {
   let first : @model.Channel = @json.from_json(@json.parse(fixture))
   let second : @model.Channel = @json.from_json(first.to_json())
   assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
-  assert_true(first.name == Some(@model.Nullable::Value("important-news")))
+  assert_true(first.name == Some(Value("important-news")))
   inspect(first.typ.to_int(), content="5")
 }
 
@@ -102,7 +102,7 @@ test "discord docs: example group dm channel (line 202)" {
   let first : @model.Channel = @json.from_json(@json.parse(fixture))
   let second : @model.Channel = @json.from_json(first.to_json())
   assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
-  assert_true(first.name == Some(@model.Nullable::Value("Some test channel")))
+  assert_true(first.name == Some(Value("Some test channel")))
   inspect(first.recipients.unwrap_or([]).length(), content="2")
 }
 

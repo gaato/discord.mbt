@@ -26,9 +26,9 @@ async fn run_echo_bot(token : String) -> Unit {
       )
     }),
   )
-  let app = @discord.App::new()
+  let app = @discord.App()
   app.command(echo)
-  let bot = @discord.Bot::new(app, token~)
+  let bot = @discord.Bot(app, token~)
   bot.on(@discord.Events::ready(), (_ctx, ready) => {
     println("ready as \{ready.user.username}")
   })

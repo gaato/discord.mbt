@@ -6,11 +6,8 @@ struct FakeTransport {
 }
 
 ///|
-fn FakeTransport::new() -> FakeTransport {
-  {
-    incoming: @aqueue.Queue::new(kind=Unbounded),
-    outgoing: @aqueue.Queue::new(kind=Unbounded),
-  }
+fn FakeTransport::FakeTransport() -> FakeTransport {
+  { incoming: Queue(kind=Unbounded), outgoing: Queue(kind=Unbounded) }
 }
 
 ///|
@@ -22,7 +19,7 @@ fn FakeTransport::server_close(self : FakeTransport, code : Int?) -> Unit {
 
 ///|
 impl @gateway.GatewayTransport for FakeTransport with fn recv(self) {
-  @gateway.GatewayFrame::Text(self.incoming.get() catch { e => raise e })
+  Text(self.incoming.get() catch { e => raise e })
 }
 
 ///|
@@ -81,11 +78,8 @@ struct BinaryFakeTransport {
 }
 
 ///|
-fn BinaryFakeTransport::new() -> BinaryFakeTransport {
-  {
-    incoming: @aqueue.Queue::new(kind=Unbounded),
-    outgoing: @aqueue.Queue::new(kind=Unbounded),
-  }
+fn BinaryFakeTransport::BinaryFakeTransport() -> BinaryFakeTransport {
+  { incoming: Queue(kind=Unbounded), outgoing: Queue(kind=Unbounded) }
 }
 
 ///|
@@ -110,7 +104,7 @@ impl @gateway.GatewayTransport for BinaryFakeTransport with fn close(
 
 ///|
 async test "compressed shard buffers suffix fragments and decodes messages" {
-  let transport = BinaryFakeTransport::new()
+  let transport = BinaryFakeTransport()
   let inflater : FakeInflater = {
     // pop() consumes from the end: Hello, Ready, then dispatch.
     messages: [
@@ -158,7 +152,7 @@ async test "compressed shard buffers suffix fragments and decodes messages" {
     assert_eq(inflater.chunks.length(), 4)
     let saw_compression = Ref(false)
     for event in telemetry {
-      if event is @telemetry.TelemetryEvent::ShardCompressionEnabled(shard_id=0) {
+      if event is ShardCompressionEnabled(shard_id=0) {
         saw_compression.val = true
       }
     }
@@ -181,8 +175,8 @@ test "on_close classifies discord codes" {
 
 ///|
 async test "shard identifies, dispatches, and resumes across a drop" {
-  let first = FakeTransport::new()
-  let second = FakeTransport::new()
+  let first = FakeTransport()
+  let second = FakeTransport()
   let pending : Array[FakeTransport] = [second, first]
   let telemetry : Array[@telemetry.TelemetryEvent] = []
   @async.with_task_group(group => {
@@ -284,8 +278,8 @@ async test "shard identifies, dispatches, and resumes across a drop" {
 
 ///|
 async test "shard answers heartbeat requests and tracks op9" {
-  let first = FakeTransport::new()
-  let second = FakeTransport::new()
+  let first = FakeTransport()
+  let second = FakeTransport()
   let pending : Array[FakeTransport] = [second, first]
   let latencies : Array[Int64] = []
   @async.with_task_group(group => {
@@ -300,8 +294,7 @@ async test "shard answers heartbeat requests and tracks op9" {
         }
       },
       telemetry=event => {
-        if event
-          is @telemetry.TelemetryEvent::ShardHeartbeatLatency(latency_ms~, ..) {
+        if event is ShardHeartbeatLatency(latency_ms~, ..) {
           latencies.push(latency_ms)
         }
       },
@@ -345,19 +338,19 @@ async test "shard answers heartbeat requests and tracks op9" {
 
 ///|
 async test "identify queue spaces buckets" {
-  let queue = @queue.InMemoryQueue::new(max_concurrency=1, spacing_ms=60)
-  let start = @async.now()
+  let queue = @queue.InMemoryQueue(max_concurrency=1, spacing_ms=60)
+  let start = @clock.now_ms()
   queue.wait_for_identify(0)
   queue.wait_for_identify(1)
-  assert_true(@async.now() - start >= 50L)
+  assert_true(@clock.now_ms() - start >= 50L)
 }
 
 ///|
 async test "command limiter admits under the limit immediately" {
-  let limiter = @gateway.CommandLimiter::new(limit=5)
-  let start = @async.now()
+  let limiter = @gateway.CommandLimiter(limit=5)
+  let start = @clock.now_ms()
   for _ in 0..<5 {
     limiter.acquire()
   }
-  assert_true(@async.now() - start < 100L)
+  assert_true(@clock.now_ms() - start < 100L)
 }

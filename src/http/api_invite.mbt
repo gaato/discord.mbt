@@ -19,7 +19,7 @@ pub async fn Client::get_invite(
     params.push("guild_scheduled_event_id=\{value}")
   }
   let query = if params.length() == 0 { "" } else { "?" + params.join("&") }
-  decode(self.request(Route::GetInvite(code~, query~)))
+  decode(self.request(GetInvite(code~, query~)))
 }
 
 ///|
@@ -29,5 +29,5 @@ pub async fn Client::delete_invite(
   code : String,
   audit_reason? : String,
 ) -> @model.Invite raise DiscordHttpError {
-  decode(self.request(Route::DeleteInvite(code~), audit_reason?))
+  decode(self.request(DeleteInvite(code~), audit_reason?))
 }

@@ -9,9 +9,7 @@ pub async fn Client::get_poll_answer_voters(
   limit? : Int,
 ) -> @model.PollAnswerVoters raise DiscordHttpError {
   if limit is Some(value) && (value < 1 || value > 100) {
-    raise DiscordHttpError::Validation(
-      message="poll voter limit must be 1 through 100",
-    )
+    raise Validation(message="poll voter limit must be 1 through 100")
   }
   let params : Array[String] = []
   if after is Some(value) {
@@ -23,7 +21,7 @@ pub async fn Client::get_poll_answer_voters(
   let query = if params.length() == 0 { "" } else { "?" + params.join("&") }
   decode(
     self.request(
-      Route::GetPollAnswerVoters(channel_id~, message_id~, answer_id~, query~),
+      GetPollAnswerVoters(channel_id~, message_id~, answer_id~, query~),
     ),
   )
 }
@@ -35,5 +33,5 @@ pub async fn Client::expire_poll(
   channel_id : @model.ChannelId,
   message_id : @model.MessageId,
 ) -> @model.Message raise DiscordHttpError {
-  decode(self.request(Route::ExpirePoll(channel_id~, message_id~)))
+  decode(self.request(ExpirePoll(channel_id~, message_id~)))
 }

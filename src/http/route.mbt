@@ -329,7 +329,7 @@ pub fn Route::custom(
         Some((value, _)) => value.to_owned()
         None => path
       }
-      "CUSTOM:\{request_method.to_string().to_upper()}:\{bucket_path}"
+      "CUSTOM:\{@debug.to_string(request_method).to_upper()}:\{bucket_path}"
     }
   }
   Custom(request_method~, path~, bucket_key~, is_interaction~, supports_reason~)

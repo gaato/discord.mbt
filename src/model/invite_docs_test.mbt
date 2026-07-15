@@ -67,6 +67,6 @@ test "discord docs: example invite object (line 63)" {
   let second : @model.Invite = @json.from_json(first.to_json())
   assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
   assert_eq(first.code, "0vCdhLbwjZZTWZLD")
-  assert_true(first.typ == Some(@model.InviteType::Guild))
+  assert_true(first.typ == Some(Guild))
   assert_eq(first.guild.unwrap().name.unwrap(), "CS:GO Fraggers Only")
 }

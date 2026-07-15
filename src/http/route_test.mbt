@@ -12,7 +12,7 @@ struct RouteMetadata {
 fn route_metadata(name : String, route : @http.Route) -> RouteMetadata {
   {
     name,
-    method_name: route.method_().to_string(),
+    method_name: @debug.to_string(route.method_()),
     path: route.path(),
     bucket: route.bucket(),
     needs_auth: route.needs_auth(),
@@ -22,7 +22,7 @@ fn route_metadata(name : String, route : @http.Route) -> RouteMetadata {
 
 ///|
 fn route_signature(route : @http.Route) -> String {
-  "\{route.method_()} \{route.path()} | \{route.bucket()} | reason=\{route.supports_reason()}"
+  "\{@debug.to_string(route.method_())} \{route.path()} | \{route.bucket()} | reason=\{route.supports_reason()}"
 }
 
 ///|
@@ -38,29 +38,25 @@ test "current user guild REST route metadata" {
 
 ///|
 test "automod and sticker REST route metadata" {
-  let guild_id : @model.GuildId = @model.Id(10UL)
-  let rule_id : @model.AutoModerationRuleId = @model.Id(40UL)
-  let sticker_id : @model.StickerId = @model.Id(50UL)
-  let pack_id : @model.StickerPackId = @model.Id(80UL)
+  let guild_id : @model.GuildId = Id(10UL)
+  let rule_id : @model.AutoModerationRuleId = Id(40UL)
+  let sticker_id : @model.StickerId = Id(50UL)
+  let pack_id : @model.StickerPackId = Id(80UL)
   debug_inspect(
     [
-      route_signature(@http.Route::ListAutoModerationRules(guild_id~)),
-      route_signature(@http.Route::GetAutoModerationRule(guild_id~, rule_id~)),
-      route_signature(@http.Route::CreateAutoModerationRule(guild_id~)),
-      route_signature(
-        @http.Route::ModifyAutoModerationRule(guild_id~, rule_id~),
-      ),
-      route_signature(
-        @http.Route::DeleteAutoModerationRule(guild_id~, rule_id~),
-      ),
-      route_signature(@http.Route::GetSticker(sticker_id~)),
-      route_signature(@http.Route::ListStickerPacks),
-      route_signature(@http.Route::GetStickerPack(pack_id~)),
-      route_signature(@http.Route::ListGuildStickers(guild_id~)),
-      route_signature(@http.Route::GetGuildSticker(guild_id~, sticker_id~)),
-      route_signature(@http.Route::CreateGuildSticker(guild_id~)),
-      route_signature(@http.Route::ModifyGuildSticker(guild_id~, sticker_id~)),
-      route_signature(@http.Route::DeleteGuildSticker(guild_id~, sticker_id~)),
+      route_signature(ListAutoModerationRules(guild_id~)),
+      route_signature(GetAutoModerationRule(guild_id~, rule_id~)),
+      route_signature(CreateAutoModerationRule(guild_id~)),
+      route_signature(ModifyAutoModerationRule(guild_id~, rule_id~)),
+      route_signature(DeleteAutoModerationRule(guild_id~, rule_id~)),
+      route_signature(GetSticker(sticker_id~)),
+      route_signature(ListStickerPacks),
+      route_signature(GetStickerPack(pack_id~)),
+      route_signature(ListGuildStickers(guild_id~)),
+      route_signature(GetGuildSticker(guild_id~, sticker_id~)),
+      route_signature(CreateGuildSticker(guild_id~)),
+      route_signature(ModifyGuildSticker(guild_id~, sticker_id~)),
+      route_signature(DeleteGuildSticker(guild_id~, sticker_id~)),
     ],
     content=(
       #|[
@@ -84,42 +80,31 @@ test "automod and sticker REST route metadata" {
 
 ///|
 test "scheduled event and stage REST route metadata" {
-  let guild_id : @model.GuildId = @model.Id(10UL)
-  let channel_id : @model.ChannelId = @model.Id(20UL)
-  let event_id : @model.ScheduledEventId = @model.Id(60UL)
+  let guild_id : @model.GuildId = Id(10UL)
+  let channel_id : @model.ChannelId = Id(20UL)
+  let event_id : @model.ScheduledEventId = Id(60UL)
   debug_inspect(
     [
       route_signature(
-        @http.Route::ListGuildScheduledEvents(
-          guild_id~,
-          query="?with_user_count=true",
-        ),
+        ListGuildScheduledEvents(guild_id~, query="?with_user_count=true"),
       ),
-      route_signature(@http.Route::CreateGuildScheduledEvent(guild_id~)),
+      route_signature(CreateGuildScheduledEvent(guild_id~)),
       route_signature(
-        @http.Route::GetGuildScheduledEvent(
+        GetGuildScheduledEvent(
           guild_id~,
           event_id~,
           query="?with_user_count=true",
         ),
       ),
+      route_signature(ModifyGuildScheduledEvent(guild_id~, event_id~)),
+      route_signature(DeleteGuildScheduledEvent(guild_id~, event_id~)),
       route_signature(
-        @http.Route::ModifyGuildScheduledEvent(guild_id~, event_id~),
+        ListGuildScheduledEventUsers(guild_id~, event_id~, query="?limit=25"),
       ),
-      route_signature(
-        @http.Route::DeleteGuildScheduledEvent(guild_id~, event_id~),
-      ),
-      route_signature(
-        @http.Route::ListGuildScheduledEventUsers(
-          guild_id~,
-          event_id~,
-          query="?limit=25",
-        ),
-      ),
-      route_signature(@http.Route::CreateStageInstance),
-      route_signature(@http.Route::GetStageInstance(channel_id~)),
-      route_signature(@http.Route::ModifyStageInstance(channel_id~)),
-      route_signature(@http.Route::DeleteStageInstance(channel_id~)),
+      route_signature(CreateStageInstance),
+      route_signature(GetStageInstance(channel_id~)),
+      route_signature(ModifyStageInstance(channel_id~)),
+      route_signature(DeleteStageInstance(channel_id~)),
     ],
     content=(
       #|[
@@ -140,34 +125,28 @@ test "scheduled event and stage REST route metadata" {
 
 ///|
 test "poll and soundboard REST route metadata" {
-  let guild_id : @model.GuildId = @model.Id(10UL)
-  let channel_id : @model.ChannelId = @model.Id(20UL)
-  let message_id : @model.MessageId = @model.Id(30UL)
-  let sound_id : @model.SoundboardSoundId = @model.Id(70UL)
+  let guild_id : @model.GuildId = Id(10UL)
+  let channel_id : @model.ChannelId = Id(20UL)
+  let message_id : @model.MessageId = Id(30UL)
+  let sound_id : @model.SoundboardSoundId = Id(70UL)
   debug_inspect(
     [
       route_signature(
-        @http.Route::GetPollAnswerVoters(
+        GetPollAnswerVoters(
           channel_id~,
           message_id~,
           answer_id=2,
           query="?limit=25",
         ),
       ),
-      route_signature(@http.Route::ExpirePoll(channel_id~, message_id~)),
-      route_signature(@http.Route::SendSoundboardSound(channel_id~)),
-      route_signature(@http.Route::ListDefaultSoundboardSounds),
-      route_signature(@http.Route::ListGuildSoundboardSounds(guild_id~)),
-      route_signature(@http.Route::CreateGuildSoundboardSound(guild_id~)),
-      route_signature(
-        @http.Route::GetGuildSoundboardSound(guild_id~, sound_id~),
-      ),
-      route_signature(
-        @http.Route::ModifyGuildSoundboardSound(guild_id~, sound_id~),
-      ),
-      route_signature(
-        @http.Route::DeleteGuildSoundboardSound(guild_id~, sound_id~),
-      ),
+      route_signature(ExpirePoll(channel_id~, message_id~)),
+      route_signature(SendSoundboardSound(channel_id~)),
+      route_signature(ListDefaultSoundboardSounds),
+      route_signature(ListGuildSoundboardSounds(guild_id~)),
+      route_signature(CreateGuildSoundboardSound(guild_id~)),
+      route_signature(GetGuildSoundboardSound(guild_id~, sound_id~)),
+      route_signature(ModifyGuildSoundboardSound(guild_id~, sound_id~)),
+      route_signature(DeleteGuildSoundboardSound(guild_id~, sound_id~)),
     ],
     content=(
       #|[
@@ -187,10 +166,10 @@ test "poll and soundboard REST route metadata" {
 
 ///|
 test "new route buckets preserve majors and squash minor resources" {
-  let guild_a : @model.GuildId = @model.Id(10UL)
-  let guild_b : @model.GuildId = @model.Id(11UL)
-  let rule_a : @model.AutoModerationRuleId = @model.Id(40UL)
-  let rule_b : @model.AutoModerationRuleId = @model.Id(41UL)
+  let guild_a : @model.GuildId = Id(10UL)
+  let guild_b : @model.GuildId = Id(11UL)
+  let rule_a : @model.AutoModerationRuleId = Id(40UL)
+  let rule_b : @model.AutoModerationRuleId = Id(41UL)
   let first = @http.Route::ModifyAutoModerationRule(
     guild_id=guild_a,
     rule_id=rule_a,
@@ -212,8 +191,8 @@ test "new route buckets preserve majors and squash minor resources" {
 
 ///|
 test "route paths and buckets" {
-  let channel_id : @model.ChannelId = @model.Id(100UL)
-  let message_id : @model.MessageId = @model.Id(200UL)
+  let channel_id : @model.ChannelId = Id(100UL)
+  let message_id : @model.MessageId = Id(200UL)
   let create = @http.Route::CreateMessage(channel_id~)
   inspect(create.path(), content="/channels/100/messages")
   inspect(create.bucket(), content="POST:/channels/100/messages")
@@ -228,17 +207,17 @@ test "route paths and buckets" {
 ///|
 test "custom route derives a stable query-free bucket" {
   let route = @http.Route::custom(
-    request_method=@http.RequestMethod::Get,
+    request_method=Get,
     path="/guilds/100/auto-moderation/rules?limit=25",
   )
-  inspect(route.method_().to_string(), content="Get")
+  inspect(@debug.to_string(route.method_()), content="Get")
   inspect(route.path(), content="/guilds/100/auto-moderation/rules?limit=25")
   inspect(
     route.bucket(),
     content="CUSTOM:GET:/guilds/100/auto-moderation/rules",
   )
   let other_query = @http.Route::custom(
-    request_method=@http.RequestMethod::Get,
+    request_method=Get,
     path="/guilds/100/auto-moderation/rules?limit=100&before=200",
   )
   assert_true(route.bucket() == other_query.bucket())
@@ -250,13 +229,13 @@ test "custom route derives a stable query-free bucket" {
 ///|
 test "custom route accepts explicit bucket and interaction metadata" {
   let first = @http.Route::custom(
-    request_method=@http.RequestMethod::Patch,
+    request_method=Patch,
     path="/guilds/100/auto-moderation/rules/200",
     bucket="PATCH:/guilds/100/auto-moderation/rules/{}",
     supports_reason=true,
   )
   let second = @http.Route::custom(
-    request_method=@http.RequestMethod::Patch,
+    request_method=Patch,
     path="/guilds/100/auto-moderation/rules/201",
     bucket="PATCH:/guilds/100/auto-moderation/rules/{}",
     supports_reason=true,
@@ -265,7 +244,7 @@ test "custom route accepts explicit bucket and interaction metadata" {
   assert_true(first.bucket() == second.bucket())
   assert_true(first.supports_reason())
   let interaction = @http.Route::custom(
-    request_method=@http.RequestMethod::Post,
+    request_method=Post,
     path="/interactions/1/token/callback",
     is_interaction=true,
   )
@@ -275,17 +254,17 @@ test "custom route accepts explicit bucket and interaction metadata" {
 
 ///|
 test "default custom buckets do not collide with typed routes" {
-  let channel_id : @model.ChannelId = @model.Id(100UL)
+  let channel_id : @model.ChannelId = Id(100UL)
   let typed = @http.Route::CreateMessage(channel_id~)
   let custom = @http.Route::custom(
-    request_method=@http.RequestMethod::Post,
+    request_method=Post,
     path="/channels/100/messages",
   )
   inspect(typed.bucket(), content="POST:/channels/100/messages")
   inspect(custom.bucket(), content="CUSTOM:POST:/channels/100/messages")
   assert_false(typed.bucket() == custom.bucket())
   let explicitly_shared = @http.Route::custom(
-    request_method=@http.RequestMethod::Post,
+    request_method=Post,
     path="/channels/100/messages",
     bucket=typed.bucket(),
   )
@@ -295,25 +274,21 @@ test "default custom buckets do not collide with typed routes" {
 ///|
 test "custom route rejects invalid paths and empty buckets" {
   try
-    @http.Route::custom(
-      request_method=@http.RequestMethod::Get,
-      path="guilds/100/stickers",
-    )
+    @http.Route::custom(request_method=Get, path="guilds/100/stickers")
   catch {
-    @http.CustomRouteError::InvalidPath(path~) =>
-      inspect(path, content="guilds/100/stickers")
+    InvalidPath(path~) => inspect(path, content="guilds/100/stickers")
     error => fail("unexpected error: \{to_repr(error)}")
   } noraise {
     _ => fail("expected invalid path")
   }
   try
     @http.Route::custom(
-      request_method=@http.RequestMethod::Get,
+      request_method=Get,
       path="/guilds/100/stickers",
       bucket="",
     )
   catch {
-    @http.CustomRouteError::EmptyBucket => ()
+    EmptyBucket => ()
     error => fail("unexpected error: \{to_repr(error)}")
   } noraise {
     _ => fail("expected empty bucket")
@@ -340,37 +315,33 @@ test "current application route metadata" {
 
 ///|
 test "webhook route metadata" {
-  let channel_id : @model.ChannelId = @model.Id(10UL)
-  let guild_id : @model.GuildId = @model.Id(20UL)
-  let webhook_id : @model.WebhookId = @model.Id(30UL)
-  let message_id : @model.MessageId = @model.Id(40UL)
+  let channel_id : @model.ChannelId = Id(10UL)
+  let guild_id : @model.GuildId = Id(20UL)
+  let webhook_id : @model.WebhookId = Id(30UL)
+  let message_id : @model.MessageId = Id(40UL)
   debug_inspect(
     [
-      route_metadata("create", @http.Route::CreateWebhook(channel_id~)),
-      route_metadata("channel", @http.Route::GetChannelWebhooks(channel_id~)),
-      route_metadata("guild", @http.Route::GetGuildWebhooks(guild_id~)),
-      route_metadata("get", @http.Route::GetWebhook(webhook_id~)),
-      route_metadata("modify", @http.Route::ModifyWebhook(webhook_id~)),
-      route_metadata("delete", @http.Route::DeleteWebhook(webhook_id~)),
+      route_metadata("create", CreateWebhook(channel_id~)),
+      route_metadata("channel", GetChannelWebhooks(channel_id~)),
+      route_metadata("guild", GetGuildWebhooks(guild_id~)),
+      route_metadata("get", GetWebhook(webhook_id~)),
+      route_metadata("modify", ModifyWebhook(webhook_id~)),
+      route_metadata("delete", DeleteWebhook(webhook_id~)),
       route_metadata(
         "execute",
-        @http.Route::ExecuteWebhook(
-          webhook_id~,
-          token="tok",
-          query="?wait=true",
-        ),
+        ExecuteWebhook(webhook_id~, token="tok", query="?wait=true"),
       ),
       route_metadata(
         "get-message",
-        @http.Route::GetWebhookMessage(webhook_id~, token="tok", message_id~),
+        GetWebhookMessage(webhook_id~, token="tok", message_id~),
       ),
       route_metadata(
         "edit-message",
-        @http.Route::EditWebhookMessage(webhook_id~, token="tok", message_id~),
+        EditWebhookMessage(webhook_id~, token="tok", message_id~),
       ),
       route_metadata(
         "delete-message",
-        @http.Route::DeleteWebhookMessage(webhook_id~, token="tok", message_id~),
+        DeleteWebhookMessage(webhook_id~, token="tok", message_id~),
       ),
     ],
     content=(
@@ -462,28 +433,22 @@ test "webhook route metadata" {
 
 ///|
 test "channel miscellaneous route metadata" {
-  let channel_id : @model.ChannelId = @model.Id(10UL)
-  let overwrite_id : @model.GenericId = @model.Id(50UL)
+  let channel_id : @model.ChannelId = Id(10UL)
+  let overwrite_id : @model.GenericId = Id(50UL)
   debug_inspect(
     [
-      route_metadata(
-        "bulk-delete",
-        @http.Route::BulkDeleteMessages(channel_id~),
-      ),
-      route_metadata("pins", @http.Route::GetPinnedMessages(channel_id~)),
+      route_metadata("bulk-delete", BulkDeleteMessages(channel_id~)),
+      route_metadata("pins", GetPinnedMessages(channel_id~)),
       route_metadata(
         "edit-permissions",
-        @http.Route::EditChannelPermissions(channel_id~, overwrite_id~),
+        EditChannelPermissions(channel_id~, overwrite_id~),
       ),
       route_metadata(
         "delete-permission",
-        @http.Route::DeleteChannelPermission(channel_id~, overwrite_id~),
+        DeleteChannelPermission(channel_id~, overwrite_id~),
       ),
-      route_metadata("invites", @http.Route::GetChannelInvites(channel_id~)),
-      route_metadata(
-        "create-invite",
-        @http.Route::CreateChannelInvite(channel_id~),
-      ),
+      route_metadata("invites", GetChannelInvites(channel_id~)),
+      route_metadata("create-invite", CreateChannelInvite(channel_id~)),
     ],
     content=(
       #|[
@@ -546,12 +511,12 @@ test "invite route metadata keeps the invite code" {
     [
       route_metadata(
         "get",
-        @http.Route::GetInvite(
+        GetInvite(
           code="moonbit",
           query="?with_counts=true&with_expiration=true",
         ),
       ),
-      route_metadata("delete", @http.Route::DeleteInvite(code="moonbit")),
+      route_metadata("delete", DeleteInvite(code="moonbit")),
     ],
     content=(
       #|[
@@ -578,21 +543,15 @@ test "invite route metadata keeps the invite code" {
 
 ///|
 test "guild emoji route metadata" {
-  let guild_id : @model.GuildId = @model.Id(20UL)
-  let emoji_id : @model.EmojiId = @model.Id(60UL)
+  let guild_id : @model.GuildId = Id(20UL)
+  let emoji_id : @model.EmojiId = Id(60UL)
   debug_inspect(
     [
-      route_metadata("list", @http.Route::ListGuildEmojis(guild_id~)),
-      route_metadata("get", @http.Route::GetGuildEmoji(guild_id~, emoji_id~)),
-      route_metadata("create", @http.Route::CreateGuildEmoji(guild_id~)),
-      route_metadata(
-        "modify",
-        @http.Route::ModifyGuildEmoji(guild_id~, emoji_id~),
-      ),
-      route_metadata(
-        "delete",
-        @http.Route::DeleteGuildEmoji(guild_id~, emoji_id~),
-      ),
+      route_metadata("list", ListGuildEmojis(guild_id~)),
+      route_metadata("get", GetGuildEmoji(guild_id~, emoji_id~)),
+      route_metadata("create", CreateGuildEmoji(guild_id~)),
+      route_metadata("modify", ModifyGuildEmoji(guild_id~, emoji_id~)),
+      route_metadata("delete", DeleteGuildEmoji(guild_id~, emoji_id~)),
     ],
     content=(
       #|[
@@ -643,7 +602,7 @@ test "guild emoji route metadata" {
 
 ///|
 test "interaction routes are global-exempt and unauthenticated" {
-  let interaction_id : @model.InteractionId = @model.Id(1UL)
+  let interaction_id : @model.InteractionId = Id(1UL)
   let callback = @http.Route::CreateInteractionResponse(
     interaction_id~,
     token="tok",
@@ -651,18 +610,18 @@ test "interaction routes are global-exempt and unauthenticated" {
   assert_true(callback.is_interaction())
   assert_false(callback.needs_auth())
   inspect(callback.path(), content="/interactions/1/tok/callback")
-  let msg = @http.Route::CreateMessage(channel_id=@model.Id(2UL))
+  let msg = @http.Route::CreateMessage(channel_id=Id(2UL))
   assert_false(msg.is_interaction())
   assert_true(msg.needs_auth())
 }
 
 ///|
 test "reaction buckets squash message emoji and user ids" {
-  let channel_id : @model.ChannelId = @model.Id(10UL)
-  let first_message : @model.MessageId = @model.Id(20UL)
-  let second_message : @model.MessageId = @model.Id(21UL)
-  let first_user : @model.UserId = @model.Id(30UL)
-  let second_user : @model.UserId = @model.Id(31UL)
+  let channel_id : @model.ChannelId = Id(10UL)
+  let first_message : @model.MessageId = Id(20UL)
+  let second_message : @model.MessageId = Id(21UL)
+  let first_user : @model.UserId = Id(30UL)
+  let second_user : @model.UserId = Id(31UL)
   let own = @http.Route::DeleteOwnReaction(
     channel_id~,
     message_id=first_message,
@@ -698,8 +657,8 @@ test "reaction buckets squash message emoji and user ids" {
 
 ///|
 test "followup routes keep webhook majors and need no bot auth" {
-  let application_id : @model.ApplicationId = @model.Id(100UL)
-  let message_id : @model.MessageId = @model.Id(200UL)
+  let application_id : @model.ApplicationId = Id(100UL)
+  let message_id : @model.MessageId = Id(200UL)
   let get = @http.Route::GetFollowupMessage(
     application_id~,
     token="tok",
@@ -731,9 +690,9 @@ test "followup routes keep webhook majors and need no bot auth" {
 
 ///|
 test "guild role routes keep guild major and support audit reasons" {
-  let guild_id : @model.GuildId = @model.Id(500UL)
-  let first_role : @model.RoleId = @model.Id(600UL)
-  let second_role : @model.RoleId = @model.Id(601UL)
+  let guild_id : @model.GuildId = Id(500UL)
+  let first_role : @model.RoleId = Id(600UL)
+  let second_role : @model.RoleId = Id(601UL)
   let modify = @http.Route::ModifyGuildRole(guild_id~, role_id=first_role)
   let other = @http.Route::ModifyGuildRole(guild_id~, role_id=second_role)
   inspect(modify.path(), content="/guilds/500/roles/600")
@@ -744,7 +703,7 @@ test "guild role routes keep guild major and support audit reasons" {
   assert_true(
     @http.Route::DeleteGuildRole(guild_id~, role_id=first_role).supports_reason(),
   )
-  let user_id : @model.UserId = @model.Id(700UL)
+  let user_id : @model.UserId = Id(700UL)
   let member_role = @http.Route::AddGuildMemberRole(
     guild_id~,
     user_id~,

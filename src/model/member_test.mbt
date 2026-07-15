@@ -149,7 +149,7 @@ test "guild member encode omits absent optional fields" {
     avatar: None,
     banner: None,
     roles: [],
-    joined_at: @model.Nullable::Null,
+    joined_at: Null,
     premium_since: None,
     deaf: Some(false),
     mute: Some(false),

@@ -97,7 +97,7 @@ test "typed event descriptors project representative payloads" {
     ),
   )
   guard Events::guild_create().project(guild_create)
-    is Some(@model.GuildCreateEvent::Unavailable(guild_create_payload)) else {
+    is Some(Unavailable(guild_create_payload)) else {
     fail("expected guild create payload")
   }
   let presence = typed_event(

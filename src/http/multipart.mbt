@@ -20,7 +20,7 @@ pub impl Debug for FileUpload with fn to_repr(self) {
 ///|
 /// Describe one file to upload. `description` becomes the attachment's
 /// alt text where the endpoint supports it.
-pub fn FileUpload::new(
+pub fn FileUpload::FileUpload(
   filename : String,
   content : Bytes,
   content_type? : String = "application/octet-stream",
@@ -34,12 +34,12 @@ pub fn FileUpload::new(
 fn validate_files(files : Array[FileUpload]) -> Unit raise DiscordHttpError {
   for file in files {
     if file.filename.is_empty() {
-      raise DiscordHttpError::Validation(message="filename must not be empty")
+      raise Validation(message="filename must not be empty")
     }
     if file.filename.contains("\r") ||
       file.filename.contains("\n") ||
       file.filename.contains("\"") {
-      raise DiscordHttpError::Validation(
+      raise Validation(
         message="filename must not contain CR, LF, or double quotes",
       )
     }
@@ -55,7 +55,7 @@ pub fn attachments_json(files : Array[FileUpload]) -> Json {
   let items : Array[Json] = []
   for i, file in files {
     items.push(
-      @model.ObjBuilder::new()
+      @model.ObjBuilder()
       .field("id", i)
       .field("filename", file.filename)
       .opt("description", file.description)

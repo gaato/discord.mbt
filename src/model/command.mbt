@@ -68,7 +68,7 @@ pub impl @json.FromJson for EntryPointCommandHandlerType with fn from_json(
   match json {
     Number(value, ..) => EntryPointCommandHandlerType::from_int(value.to_int())
     _ =>
-      raise @json.JsonDecodeError(
+      raise JsonDecodeError(
         (path, "expected entry-point command handler type (number)"),
       )
   }
@@ -116,7 +116,7 @@ pub impl @json.FromJson for ApplicationCommandType with fn from_json(json, path)
   match json {
     Number(value, ..) => ApplicationCommandType::from_int(value.to_int())
     _ =>
-      raise @json.JsonDecodeError(
+      raise JsonDecodeError(
         (
           path, "expected the invocation category of an application command (number)",
         ),
@@ -212,7 +212,7 @@ pub impl @json.FromJson for CommandOptionType with fn from_json(json, path) {
   match json {
     Number(value, ..) => CommandOptionType::from_int(value.to_int())
     _ =>
-      raise @json.JsonDecodeError(
+      raise JsonDecodeError(
         (
           path, "expected the value category accepted by a command option (number)",
         ),

@@ -55,10 +55,7 @@ test "discord docs: entry-point command handler and localized response fields" {
     #|  "version":"107000000000000002","handler":2
     #|}
   let value : @model.ApplicationCommand = @json.from_json(@json.parse(fixture))
-  assert_true(
-    value.handler ==
-    Some(@model.EntryPointCommandHandlerType::DiscordLaunchActivity),
-  )
+  assert_true(value.handler == Some(DiscordLaunchActivity))
   assert_true(value.name_localized == Some("启动"))
 }
 
@@ -99,8 +96,8 @@ test "discord docs: incidents data example (line 739)" {
     #|  "dms_disabled_until":null
     #|}
   let value : @model.IncidentsData = @json.from_json(@json.parse(fixture))
-  assert_true(value.invites_disabled_until is Some(@model.Nullable::Value(_)))
-  assert_true(value.dms_disabled_until == Some(@model.Nullable::Null))
+  assert_true(value.invites_disabled_until is Some(Value(_)))
+  assert_true(value.dms_disabled_until == Some(Null))
 }
 
 ///|
@@ -171,9 +168,7 @@ test "discord docs: shared client theme example (line 882)" {
     #|{"colors":["5865F2","7258F2","9858F2","BE58F2","E558F2"],
     #|"gradient_angle":0,"base_mix":58,"base_theme":1}
   let value : @model.SharedClientTheme = @json.from_json(@json.parse(fixture))
-  assert_true(
-    value.base_theme == Some(@model.Nullable::Value(@model.BaseTheme::Dark)),
-  )
+  assert_true(value.base_theme == Some(Value(Dark)))
   inspect(value.colors.length(), content="5")
 }
 

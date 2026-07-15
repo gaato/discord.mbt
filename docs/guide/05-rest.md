@@ -19,7 +19,7 @@ async fn send_message(
 Create a client with a raw bot token:
 
 ```moonbit
-let client = @dhttp.Client::new(token, max_connections=4)
+let client = @dhttp.Client(token, max_connections=4)
 ```
 
 Call `client.close()` when the client is no longer needed. HTTP methods raise
@@ -36,13 +36,13 @@ request:
 
 ```moonbit
 ///|
-let client = @dhttp.Client::new(
+let client = @dhttp.Client(
   token,
   default_allowed_mentions=@model.AllowedMentions::none(),
 )
 
 ///|
-let mentions = @model.AllowedMentions::new(
+let mentions = @model.AllowedMentions(
   users=[recipient_id],
   replied_user=false,
 )
@@ -56,7 +56,7 @@ client.create_message(
 |> ignore
 ```
 
-`AllowedMentions::new` rejects more than 100 role or user IDs and rejects a
+`AllowedMentions(...)` rejects more than 100 role or user IDs and rejects a
 category supplied in both `parse` and its explicit ID list. Interaction,
 followup, and webhook methods omit `allowed_mentions` when it is not supplied,
 preserving Discord's endpoint default.
@@ -110,7 +110,7 @@ The default `InMemoryRateLimiter` coordinates route buckets and Discord's
 global window inside one process. The client updates bucket state from response
 headers and retries 429 responses after the declared delay. Typed and custom
 routes use the same request path, so no separate limiter integration is
-required. A custom limiter can be passed through `Client::new(limiter=...)`.
+required. A custom limiter can be passed through `Client(limiter=...)`.
 
 ## Request middleware
 

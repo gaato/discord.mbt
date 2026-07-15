@@ -52,23 +52,23 @@ test "id decode rejects garbage" {
 ///|
 test "id extracts snowflake timestamp" {
   // example snowflake from the Discord docs: 2016-04-30T11:18:25.796Z
-  let id : @model.UserId = @model.Id(175928847299117063UL)
+  let id : @model.UserId = Id(175928847299117063UL)
   inspect(id.timestamp_ms(), content="1462015105796")
 }
 
 ///|
 test "id cast re-tags the marker" {
-  let guild_id : @model.GuildId = @model.Id(81384788765712384UL)
+  let guild_id : @model.GuildId = Id(81384788765712384UL)
   let everyone_role : @model.RoleId = guild_id.cast()
   inspect(everyone_role.value(), content="81384788765712384")
 }
 
 ///|
 test "ids work as map keys" {
-  let m : Map[@model.ChannelId, String] = {}
-  m[@model.Id(1UL)] = "general"
-  m[@model.Id(2UL)] = "random"
-  assert_eq(m[@model.Id(1UL)], "general")
+  let m : Map[@model.ChannelId, String] = Map([])
+  m[Id(1UL)] = "general"
+  m[Id(2UL)] = "random"
+  assert_eq(m[Id(1UL)], "general")
 }
 
 ///|
@@ -102,11 +102,11 @@ test "derived struct composes core types (decode)" {
 ///|
 test "derived struct composes core types (encode, absent optional omitted)" {
   let entity : SampleEntity = {
-    id: @model.Id(1UL),
+    id: Id(1UL),
     guild_id: None,
     nick: Value("neko"),
     avatar: Some(Null),
-    typ: @model.ChannelType::Unknown(99),
+    typ: Unknown(99),
   }
   inspect(
     entity.to_json().stringify(),
@@ -118,13 +118,13 @@ test "derived struct composes core types (encode, absent optional omitted)" {
 
 ///|
 test "obj_builder emits field/opt/und correctly" {
-  let body = @model.ObjBuilder::new()
+  let body = @model.ObjBuilder()
     .field("name", "general")
     .opt("topic", (None : String?))
     .opt("position", Some(3))
     .und("icon", (Missing : @model.Undefinable[String]))
     .und("banner", (Null : @model.Undefinable[String]))
-    .und("nick", @model.Undefinable::Value("neko"))
+    .und("nick", Value("neko"))
     .build()
   inspect(
     body.stringify(),
@@ -189,7 +189,7 @@ test "timestamp parses discord shapes" {
 ///|
 test "timestamp rejects malformed input" {
   try @model.Timestamp("yesterday").unix_ms() |> ignore catch {
-    @model.InvalidTimestamp(s) => inspect(s, content="yesterday")
+    InvalidTimestamp(s) => inspect(s, content="yesterday")
   } noraise {
     _ => fail("expected parse to fail")
   }
@@ -219,11 +219,9 @@ test "image hash animated detection" {
 
 ///|
 test "nullable helpers" {
-  let v : @model.Nullable[Int] = @model.Nullable::Value(1)
+  let v : @model.Nullable[Int] = Value(1)
   assert_true(v.to_option() == Some(1))
-  let n : @model.Nullable[Int] = @model.Nullable::Null
+  let n : @model.Nullable[Int] = Null
   assert_true(n.to_option() is None)
-  assert_true(
-    @model.Nullable::from_option(Some(2)) == @model.Nullable::Value(2),
-  )
+  assert_true(@model.Nullable::from_option(Some(2)) == Value(2))
 }

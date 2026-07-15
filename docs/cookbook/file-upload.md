@@ -11,7 +11,7 @@ async fn send_report(
   channel_id : @model.ChannelId,
   report : Bytes,
 ) -> @model.Message {
-  let file = @dhttp.FileUpload::new(
+  let file = @dhttp.FileUpload(
     "report.csv",
     report,
     content_type="text/csv",

@@ -250,8 +250,8 @@ test "channel decodes a minimal DM" {
 ///|
 test "channel encode omits every absent variant field" {
   let channel : @model.Channel = {
-    id: @model.Id(1UL),
-    typ: @model.ChannelType::Dm,
+    id: Id(1UL),
+    typ: Dm,
     guild_id: None,
     position: None,
     permission_overwrites: None,

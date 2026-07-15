@@ -45,7 +45,7 @@ pub impl @json.FromJson for StagePrivacyLevel with fn from_json(json, path) {
   match json {
     Number(value, ..) => StagePrivacyLevel::from_int(value.to_int())
     _ =>
-      raise @json.JsonDecodeError(
+      raise JsonDecodeError(
         (
           path, "expected the audience allowed to discover a stage instance (number)",
         ),

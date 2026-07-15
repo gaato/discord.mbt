@@ -16,8 +16,8 @@ test "auto moderation create and patch bodies preserve arrays" {
   json_inspect(
     auto_moderation_rule_body(
       Some("links"),
-      Some(@model.AutoModerationEventType::MessageSend),
-      Some(@model.AutoModerationTriggerType::Keyword),
+      Some(MessageSend),
+      Some(Keyword),
       Some(metadata),
       Some([action]),
       Some(true),
@@ -57,12 +57,12 @@ test "scheduled event request bodies model null and recurrence explicitly" {
       Some({ location: Some("Community Hall") }),
       false,
       "Meetup",
-      @model.GuildScheduledEventPrivacyLevel::GuildOnly,
+      GuildOnly,
       start,
       Some(end),
       false,
       Some("Community meetup"),
-      @model.GuildScheduledEventEntityType::External,
+      External,
       None,
       Some(recurrence),
     ),
@@ -88,12 +88,12 @@ test "scheduled event request bodies model null and recurrence explicitly" {
 
 ///|
 test "guild sticker multipart uses named form fields and file" {
-  let body = @model.ObjBuilder::new()
+  let body = @model.ObjBuilder()
     .field("name", "Wave")
     .field("description", "Wumpus waves")
     .field("tags", "wave,hello")
     .build()
-  let file = FileUpload::new("wave.png", b"PNG", content_type="image/png")
+  let file = FileUpload("wave.png", b"PNG", content_type="image/png")
   inspect(
     render_parts(
       multipart_form_parts("B", sticker_form_fields(body), "file", file),
@@ -125,19 +125,19 @@ test "guild sticker multipart uses named form fields and file" {
 ///|
 test "stage sticker and soundboard validation is pre-IO" {
   try validate_stage_topic(Some("")) catch {
-    DiscordHttpError::Validation(_) => ()
+    Validation(_) => ()
     error => fail("unexpected error: \{to_repr(error)}")
   } noraise {
     _ => fail("expected stage topic validation")
   }
   try validate_sticker_fields(Some("x"), None, None) catch {
-    DiscordHttpError::Validation(_) => ()
+    Validation(_) => ()
     error => fail("unexpected error: \{to_repr(error)}")
   } noraise {
     _ => fail("expected sticker name validation")
   }
   try validate_soundboard_fields(Some("ok"), Some(1.1)) catch {
-    DiscordHttpError::Validation(_) => ()
+    Validation(_) => ()
     error => fail("unexpected error: \{to_repr(error)}")
   } noraise {
     _ => fail("expected soundboard volume validation")
@@ -146,14 +146,14 @@ test "stage sticker and soundboard validation is pre-IO" {
 
 ///|
 async test "REST pagination limits fail before transport" {
-  let client = Client::new("test-token", base_url="http://127.0.0.1:1")
+  let client = Client("test-token", base_url="http://127.0.0.1:1")
   defer client.close()
-  let guild_id : @model.GuildId = @model.Id(10UL)
-  let event_id : @model.ScheduledEventId = @model.Id(20UL)
-  let channel_id : @model.ChannelId = @model.Id(30UL)
-  let message_id : @model.MessageId = @model.Id(40UL)
+  let guild_id : @model.GuildId = Id(10UL)
+  let event_id : @model.ScheduledEventId = Id(20UL)
+  let channel_id : @model.ChannelId = Id(30UL)
+  let message_id : @model.MessageId = Id(40UL)
   try client.get_guild_audit_log(guild_id, limit=0) catch {
-    DiscordHttpError::Validation(_) => ()
+    Validation(_) => ()
     error => fail("unexpected error: \{to_repr(error)}")
   } noraise {
     _ => fail("expected audit limit validation")
@@ -161,7 +161,7 @@ async test "REST pagination limits fail before transport" {
   try
     client.list_guild_scheduled_event_users(guild_id, event_id, limit=101)
   catch {
-    DiscordHttpError::Validation(_) => ()
+    Validation(_) => ()
     error => fail("unexpected error: \{to_repr(error)}")
   } noraise {
     _ => fail("expected scheduled event user limit validation")
@@ -169,7 +169,7 @@ async test "REST pagination limits fail before transport" {
   try
     client.get_poll_answer_voters(channel_id, message_id, 1, limit=101)
   catch {
-    DiscordHttpError::Validation(_) => ()
+    Validation(_) => ()
     error => fail("unexpected error: \{to_repr(error)}")
   } noraise {
     _ => fail("expected poll voter limit validation")

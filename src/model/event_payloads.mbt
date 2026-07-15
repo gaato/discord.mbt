@@ -6,8 +6,7 @@ fn[T : @json.FromJson] event_field(
 ) -> T raise @json.JsonDecodeError {
   match fields.get(key) {
     Some(value) => @json.from_json(value, path=path.add_key(key))
-    None =>
-      raise @json.JsonDecodeError((path.add_key(key), "missing required field"))
+    None => raise JsonDecodeError((path.add_key(key), "missing required field"))
   }
 }
 
@@ -21,9 +20,7 @@ pub(all) struct GuildMemberAddEvent {
 ///|
 pub impl @json.FromJson for GuildMemberAddEvent with fn from_json(json, path) {
   guard json is Object(fields) else {
-    raise @json.JsonDecodeError(
-      (path, "expected guild member add event (object)"),
-    )
+    raise JsonDecodeError((path, "expected guild member add event (object)"))
   }
   {
     guild_id: event_field(fields, "guild_id", path),
@@ -141,7 +138,7 @@ pub(all) struct IntegrationEvent {
 ///|
 pub impl @json.FromJson for IntegrationEvent with fn from_json(json, path) {
   guard json is Object(fields) else {
-    raise @json.JsonDecodeError((path, "expected integration event (object)"))
+    raise JsonDecodeError((path, "expected integration event (object)"))
   }
   { guild_id: event_field(fields, "guild_id", path), integration: json }
 }
@@ -307,7 +304,7 @@ pub(all) struct ThreadCreateEvent {
 ///|
 pub impl @json.FromJson for ThreadCreateEvent with fn from_json(json, path) {
   guard json is Object(fields) else {
-    raise @json.JsonDecodeError((path, "expected thread create event (object)"))
+    raise JsonDecodeError((path, "expected thread create event (object)"))
   }
   {
     channel: @json.from_json(json, path~),
@@ -351,7 +348,7 @@ pub impl @json.FromJson for ThreadMemberUpdateEvent with fn from_json(
   path,
 ) {
   guard json is Object(fields) else {
-    raise @json.JsonDecodeError(
+    raise JsonDecodeError(
       (path, "expected thread member update event (object)"),
     )
   }
@@ -448,7 +445,7 @@ pub impl @json.FromJson for GuildAuditLogEntryCreateEvent with fn from_json(
   path,
 ) {
   guard json is Object(fields) else {
-    raise @json.JsonDecodeError(
+    raise JsonDecodeError(
       (path, "expected guild audit log entry create event (object)"),
     )
   }

@@ -94,8 +94,8 @@ test "voice state decodes required fields only" {
 test "voice state encode omits absent optional fields" {
   let voice_state : @model.VoiceState = {
     guild_id: None,
-    channel_id: @model.Nullable::Null,
-    user_id: @model.Id(1UL),
+    channel_id: Null,
+    user_id: Id(1UL),
     guild_member: None,
     session_id: "session",
     deaf: false,
@@ -105,7 +105,7 @@ test "voice state encode omits absent optional fields" {
     self_stream: None,
     self_video: Some(false),
     suppress: false,
-    request_to_speak_timestamp: @model.Nullable::Null,
+    request_to_speak_timestamp: Null,
   }
   inspect(
     voice_state.to_json().stringify(),

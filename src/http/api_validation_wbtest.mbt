@@ -1,6 +1,6 @@
 ///|
 test "bulk delete validates the message count" {
-  let one : Array[@model.MessageId] = [@model.Id(1UL)]
+  let one : Array[@model.MessageId] = [Id(1UL)]
   try validate_bulk_delete_messages(one) catch {
     err =>
       debug_inspect(
@@ -12,7 +12,7 @@ test "bulk delete validates the message count" {
   } noraise {
     _ => fail("expected to fail")
   }
-  let too_many : Array[@model.MessageId] = Array::make(101, @model.Id(1UL))
+  let too_many : Array[@model.MessageId] = Array::make(101, Id(1UL))
   try validate_bulk_delete_messages(too_many) catch {
     err =>
       debug_inspect(
@@ -24,8 +24,8 @@ test "bulk delete validates the message count" {
   } noraise {
     _ => fail("expected to fail")
   }
-  validate_bulk_delete_messages([@model.Id(1UL), @model.Id(2UL)])
-  validate_bulk_delete_messages(Array::make(100, @model.Id(1UL)))
+  validate_bulk_delete_messages([Id(1UL), Id(2UL)])
+  validate_bulk_delete_messages(Array::make(100, Id(1UL)))
 }
 
 ///|
@@ -46,7 +46,7 @@ test "execute webhook requires message content" {
     None,
     None,
     None,
-    Some([FileUpload::new("hello.txt", b"hello")]),
+    Some([FileUpload("hello.txt", b"hello")]),
   )
 }
 

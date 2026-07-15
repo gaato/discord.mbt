@@ -8,7 +8,7 @@ fn message_response_data(
   allowed_mentions : @model.AllowedMentions?,
   ephemeral : Bool,
 ) -> Json {
-  let builder = @model.ObjBuilder::new()
+  let builder = @model.ObjBuilder()
     .opt("content", content)
     .opt("embeds", embeds)
     .opt("components", components)
@@ -56,7 +56,7 @@ async fn respond_modal(
   gate.send({
     typ: Modal,
     data: Some(
-      @model.ObjBuilder::new()
+      @model.ObjBuilder()
       .field("custom_id", custom_id)
       .field("title", title)
       .field("components", components)
@@ -595,6 +595,6 @@ pub async fn AutocompleteCtx::suggest(
 ) -> Unit {
   self.gate.send({
     typ: Autocomplete,
-    data: Some(@model.ObjBuilder::new().field("choices", choices).build()),
+    data: Some(@model.ObjBuilder().field("choices", choices).build()),
   })
 }

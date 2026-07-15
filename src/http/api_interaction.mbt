@@ -10,7 +10,7 @@ pub async fn Client::create_interaction_response(
   files? : Array[FileUpload],
 ) -> Unit raise DiscordHttpError {
   self.request(
-    Route::CreateInteractionResponse(interaction_id~, token~),
+    CreateInteractionResponse(interaction_id~, token~),
     body=response.to_json(),
     files?,
   )
@@ -24,9 +24,7 @@ pub async fn Client::get_original_response(
   application_id : @model.ApplicationId,
   token : String,
 ) -> @model.Message raise DiscordHttpError {
-  decode(
-    self.request(Route::GetOriginalInteractionResponse(application_id~, token~)),
-  )
+  decode(self.request(GetOriginalInteractionResponse(application_id~, token~)))
 }
 
 ///|
@@ -55,7 +53,7 @@ pub async fn Client::edit_original_response(
   }
   decode(
     self.request(
-      Route::EditOriginalInteractionResponse(application_id~, token~),
+      EditOriginalInteractionResponse(application_id~, token~),
       body=builder.build(),
       files?,
     ),
@@ -69,9 +67,7 @@ pub async fn Client::delete_original_response(
   application_id : @model.ApplicationId,
   token : String,
 ) -> Unit raise DiscordHttpError {
-  self.request(
-    Route::DeleteOriginalInteractionResponse(application_id~, token~),
-  )
+  self.request(DeleteOriginalInteractionResponse(application_id~, token~))
   |> ignore
 }
 
@@ -89,16 +85,14 @@ pub async fn Client::create_followup(
   allowed_mentions? : @model.AllowedMentions,
 ) -> @model.Message raise DiscordHttpError {
   if content is Some(value) && value.length() > 4000 {
-    raise DiscordHttpError::Validation(
-      message="content exceeds 4000 UTF-16 units",
-    )
+    raise Validation(message="content exceeds 4000 UTF-16 units")
   }
   if content is None && embeds is None && components is None && files is None {
-    raise DiscordHttpError::Validation(
+    raise Validation(
       message="one of content/embeds/components/files is required",
     )
   }
-  let builder = @model.ObjBuilder::new()
+  let builder = @model.ObjBuilder()
     .opt("content", content)
     .opt("embeds", embeds)
     .opt("components", components)
@@ -109,7 +103,7 @@ pub async fn Client::create_followup(
   }
   decode(
     self.request(
-      Route::CreateFollowupMessage(application_id~, token~),
+      CreateFollowupMessage(application_id~, token~),
       body=builder.build(),
       files?,
     ),
@@ -124,11 +118,7 @@ pub async fn Client::get_followup(
   token : String,
   message_id : @model.MessageId,
 ) -> @model.Message raise DiscordHttpError {
-  decode(
-    self.request(
-      Route::GetFollowupMessage(application_id~, token~, message_id~),
-    ),
-  )
+  decode(self.request(GetFollowupMessage(application_id~, token~, message_id~)))
 }
 
 ///|
@@ -158,7 +148,7 @@ pub async fn Client::edit_followup(
   }
   decode(
     self.request(
-      Route::EditFollowupMessage(application_id~, token~, message_id~),
+      EditFollowupMessage(application_id~, token~, message_id~),
       body=builder.build(),
       files?,
     ),
@@ -173,8 +163,6 @@ pub async fn Client::delete_followup(
   token : String,
   message_id : @model.MessageId,
 ) -> Unit raise DiscordHttpError {
-  self.request(
-    Route::DeleteFollowupMessage(application_id~, token~, message_id~),
-  )
+  self.request(DeleteFollowupMessage(application_id~, token~, message_id~))
   |> ignore
 }

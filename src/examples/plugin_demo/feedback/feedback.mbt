@@ -6,7 +6,7 @@ pub(all) struct FeedbackConfig {
 }
 
 ///|
-pub fn FeedbackConfig::new(
+pub fn FeedbackConfig::FeedbackConfig(
   destination_channel~ : @model.ChannelId,
   cooldown_seconds? : Int = 30,
 ) -> FeedbackConfig {
@@ -28,7 +28,9 @@ pub struct FeedbackFeature {
 }
 
 ///|
-pub fn FeedbackFeature::new(config : FeedbackConfig) -> FeedbackFeature {
+pub fn FeedbackFeature::FeedbackFeature(
+  config : FeedbackConfig,
+) -> FeedbackFeature {
   { config_: config, stored_: 0 }
 }
 
@@ -97,5 +99,5 @@ pub fn FeedbackFeature::install(
 /// Install a feedback feature without retaining its state handle. The
 /// registered closures keep the feature alive.
 pub fn install_feedback(app : @discord.App, config~ : FeedbackConfig) -> Unit {
-  FeedbackFeature::new(config).install(app)
+  FeedbackFeature(config).install(app)
 }

@@ -39,8 +39,8 @@ pub impl[T : @json.FromJson] @json.FromJson for Nullable[T] with fn from_json(
   path,
 ) {
   match json {
-    Null => Nullable::Null
-    v => Nullable::Value(@json.from_json(v, path~))
+    Null => Null
+    v => Value(@json.from_json(v, path~))
   }
 }
 
@@ -81,7 +81,7 @@ pub impl[T : @json.FromJson] @json.FromJson for Undefinable[T] with fn from_json
   path,
 ) {
   match json {
-    Null => Undefinable::Null
-    v => Undefinable::Value(@json.from_json(v, path~))
+    Null => Null
+    v => Value(@json.from_json(v, path~))
   }
 }

@@ -6,22 +6,20 @@ fn validate_auto_moderation_rule(
   exempt_channels : Array[@model.ChannelId]?,
 ) -> Unit raise DiscordHttpError {
   if name is Some(value) && (value.length() < 1 || value.length() > 100) {
-    raise DiscordHttpError::Validation(
+    raise Validation(
       message="auto moderation rule name must be 1 through 100 characters",
     )
   }
   if actions is Some(value) && (value.length() < 1 || value.length() > 3) {
-    raise DiscordHttpError::Validation(
+    raise Validation(
       message="auto moderation actions must contain 1 through 3 entries",
     )
   }
   if exempt_roles is Some(value) && value.length() > 20 {
-    raise DiscordHttpError::Validation(
-      message="auto moderation exempt_roles exceeds 20 entries",
-    )
+    raise Validation(message="auto moderation exempt_roles exceeds 20 entries")
   }
   if exempt_channels is Some(value) && value.length() > 50 {
-    raise DiscordHttpError::Validation(
+    raise Validation(
       message="auto moderation exempt_channels exceeds 50 entries",
     )
   }
@@ -39,7 +37,7 @@ fn auto_moderation_rule_body(
   exempt_channels : Array[@model.ChannelId]?,
 ) -> Json raise DiscordHttpError {
   validate_auto_moderation_rule(name, actions, exempt_roles, exempt_channels)
-  @model.ObjBuilder::new()
+  @model.ObjBuilder()
   .opt("name", name)
   .opt("event_type", event_type)
   .opt("trigger_type", trigger_type)
@@ -57,7 +55,7 @@ pub async fn Client::list_auto_moderation_rules(
   self : Client,
   guild_id : @model.GuildId,
 ) -> Array[@model.AutoModerationRule] raise DiscordHttpError {
-  decode(self.request(Route::ListAutoModerationRules(guild_id~)))
+  decode(self.request(ListAutoModerationRules(guild_id~)))
 }
 
 ///|
@@ -67,7 +65,7 @@ pub async fn Client::get_auto_moderation_rule(
   guild_id : @model.GuildId,
   rule_id : @model.AutoModerationRuleId,
 ) -> @model.AutoModerationRule raise DiscordHttpError {
-  decode(self.request(Route::GetAutoModerationRule(guild_id~, rule_id~)))
+  decode(self.request(GetAutoModerationRule(guild_id~, rule_id~)))
 }
 
 ///|
@@ -96,11 +94,7 @@ pub async fn Client::create_auto_moderation_rule(
     exempt_channels,
   )
   decode(
-    self.request(
-      Route::CreateAutoModerationRule(guild_id~),
-      body~,
-      audit_reason?,
-    ),
+    self.request(CreateAutoModerationRule(guild_id~), body~, audit_reason?),
   )
 }
 
@@ -131,7 +125,7 @@ pub async fn Client::modify_auto_moderation_rule(
   )
   decode(
     self.request(
-      Route::ModifyAutoModerationRule(guild_id~, rule_id~),
+      ModifyAutoModerationRule(guild_id~, rule_id~),
       body~,
       audit_reason?,
     ),
@@ -146,9 +140,6 @@ pub async fn Client::delete_auto_moderation_rule(
   rule_id : @model.AutoModerationRuleId,
   audit_reason? : String,
 ) -> Unit raise DiscordHttpError {
-  self.request(
-    Route::DeleteAutoModerationRule(guild_id~, rule_id~),
-    audit_reason?,
-  )
+  self.request(DeleteAutoModerationRule(guild_id~, rule_id~), audit_reason?)
   |> ignore
 }

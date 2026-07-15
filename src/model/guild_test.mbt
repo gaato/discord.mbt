@@ -169,16 +169,11 @@ test "guild decodes a full fixture with future features" {
       #|}
     ),
   )
-  assert_true(
-    guild.features[1] == @model.GuildFeature::Unknown("SOME_FUTURE_FEATURE"),
-  )
+  assert_true(guild.features[1] == Unknown("SOME_FUTURE_FEATURE"))
   let encoded = guild.to_json().stringify()
   assert_true(encoded.contains("SOME_FUTURE_FEATURE"))
   let round_tripped : @model.Guild = @json.from_json(@json.parse(encoded))
-  assert_true(
-    round_tripped.features[1] ==
-    @model.GuildFeature::Unknown("SOME_FUTURE_FEATURE"),
-  )
+  assert_true(round_tripped.features[1] == Unknown("SOME_FUTURE_FEATURE"))
 }
 
 ///|

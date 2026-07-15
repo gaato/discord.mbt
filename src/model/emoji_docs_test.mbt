@@ -25,7 +25,7 @@ test "discord docs: emoji example (line 57)" {
   let first : @model.Emoji = @json.from_json(@json.parse(fixture))
   let second : @model.Emoji = @json.from_json(first.to_json())
   assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
-  assert_true(first.name == @model.Nullable::Value("LUL"))
+  assert_true(first.name == Value("LUL"))
   assert_true(first.animated == Some(false))
 }
 
@@ -39,8 +39,8 @@ test "discord docs: standard emoji example (line 78)" {
   let first : @model.Emoji = @json.from_json(@json.parse(fixture))
   let second : @model.Emoji = @json.from_json(first.to_json())
   assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
-  assert_true(first.id == Some(@model.Nullable::Null))
-  assert_true(first.name == @model.Nullable::Value("🔥"))
+  assert_true(first.id == Some(Null))
+  assert_true(first.name == Value("🔥"))
 }
 
 ///|
@@ -54,7 +54,7 @@ test "discord docs: custom emoji examples (line 96)" {
   let first : @model.Emoji = @json.from_json(@json.parse(fixture))
   let second : @model.Emoji = @json.from_json(first.to_json())
   assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
-  assert_true(first.name == @model.Nullable::Value("LUL"))
+  assert_true(first.name == Value("LUL"))
   assert_true(first.animated == Some(true))
 }
 
@@ -68,6 +68,6 @@ test "discord docs: custom emoji examples (line 104)" {
   let first : @model.Emoji = @json.from_json(@json.parse(fixture))
   let second : @model.Emoji = @json.from_json(first.to_json())
   assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
-  assert_true(first.name == @model.Nullable::Null)
-  assert_true(first.id is Some(@model.Nullable::Value(_)))
+  assert_true(first.name == Null)
+  assert_true(first.id is Some(Value(_)))
 }

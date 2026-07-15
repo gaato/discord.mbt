@@ -4,14 +4,12 @@ fn validate_soundboard_fields(
   volume : Double?,
 ) -> Unit raise DiscordHttpError {
   if name is Some(value) && (value.length() < 2 || value.length() > 32) {
-    raise DiscordHttpError::Validation(
+    raise Validation(
       message="soundboard sound name must be between 2 and 32 characters",
     )
   }
   if volume is Some(value) && (value < 0.0 || value > 1.0) {
-    raise DiscordHttpError::Validation(
-      message="soundboard volume must be between 0 and 1",
-    )
+    raise Validation(message="soundboard volume must be between 0 and 1")
   }
 }
 
@@ -23,11 +21,11 @@ pub async fn Client::send_soundboard_sound(
   sound_id : @model.SoundboardSoundId,
   source_guild_id? : @model.GuildId,
 ) -> Unit raise DiscordHttpError {
-  let body = @model.ObjBuilder::new()
+  let body = @model.ObjBuilder()
     .field("sound_id", sound_id)
     .opt("source_guild_id", source_guild_id)
     .build()
-  self.request(Route::SendSoundboardSound(channel_id~), body~) |> ignore
+  self.request(SendSoundboardSound(channel_id~), body~) |> ignore
 }
 
 ///|
@@ -35,7 +33,7 @@ pub async fn Client::send_soundboard_sound(
 pub async fn Client::list_default_soundboard_sounds(
   self : Client,
 ) -> Array[@model.SoundboardSound] raise DiscordHttpError {
-  decode(self.request(Route::ListDefaultSoundboardSounds))
+  decode(self.request(ListDefaultSoundboardSounds))
 }
 
 ///|
@@ -44,7 +42,7 @@ pub async fn Client::list_guild_soundboard_sounds(
   self : Client,
   guild_id : @model.GuildId,
 ) -> Array[@model.SoundboardSound] raise DiscordHttpError {
-  decode(self.request(Route::ListGuildSoundboardSounds(guild_id~)))
+  decode(self.request(ListGuildSoundboardSounds(guild_id~)))
 }
 
 ///|
@@ -54,7 +52,7 @@ pub async fn Client::get_guild_soundboard_sound(
   guild_id : @model.GuildId,
   sound_id : @model.SoundboardSoundId,
 ) -> @model.SoundboardSound raise DiscordHttpError {
-  decode(self.request(Route::GetGuildSoundboardSound(guild_id~, sound_id~)))
+  decode(self.request(GetGuildSoundboardSound(guild_id~, sound_id~)))
 }
 
 ///|
@@ -70,7 +68,7 @@ pub async fn Client::create_guild_soundboard_sound(
   audit_reason? : String,
 ) -> @model.SoundboardSound raise DiscordHttpError {
   validate_soundboard_fields(Some(name), volume)
-  let body = @model.ObjBuilder::new()
+  let body = @model.ObjBuilder()
     .field("name", name)
     .field("sound", sound)
     .opt("volume", volume)
@@ -78,11 +76,7 @@ pub async fn Client::create_guild_soundboard_sound(
     .opt("emoji_name", emoji_name)
     .build()
   decode(
-    self.request(
-      Route::CreateGuildSoundboardSound(guild_id~),
-      body~,
-      audit_reason?,
-    ),
+    self.request(CreateGuildSoundboardSound(guild_id~), body~, audit_reason?),
   )
 }
 
@@ -101,7 +95,7 @@ pub async fn Client::modify_guild_soundboard_sound(
   audit_reason? : String,
 ) -> @model.SoundboardSound raise DiscordHttpError {
   validate_soundboard_fields(name, volume)
-  let body = @model.ObjBuilder::new()
+  let body = @model.ObjBuilder()
     .opt("name", name)
     .opt("volume", volume)
     .und("emoji_id", patch_nullable("emoji_id", emoji_id, clear_emoji_id))
@@ -112,7 +106,7 @@ pub async fn Client::modify_guild_soundboard_sound(
     .build()
   decode(
     self.request(
-      Route::ModifyGuildSoundboardSound(guild_id~, sound_id~),
+      ModifyGuildSoundboardSound(guild_id~, sound_id~),
       body~,
       audit_reason?,
     ),
@@ -127,9 +121,6 @@ pub async fn Client::delete_guild_soundboard_sound(
   sound_id : @model.SoundboardSoundId,
   audit_reason? : String,
 ) -> Unit raise DiscordHttpError {
-  self.request(
-    Route::DeleteGuildSoundboardSound(guild_id~, sound_id~),
-    audit_reason?,
-  )
+  self.request(DeleteGuildSoundboardSound(guild_id~, sound_id~), audit_reason?)
   |> ignore
 }

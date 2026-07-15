@@ -98,13 +98,13 @@ pub impl @json.FromJson for UserFlags with fn from_json(json, path) {
       UserFlags(
         @string.parse_uint64(r.to_string()) catch {
           _ =>
-            raise @json.JsonDecodeError(
+            raise JsonDecodeError(
               (path, "expected user flags (number), got \{r}"),
             )
         },
       )
     Number(n, repr=None) => UserFlags(n.to_uint64())
-    _ => raise @json.JsonDecodeError((path, "expected user flags (number)"))
+    _ => raise JsonDecodeError((path, "expected user flags (number)"))
   }
 }
 
@@ -264,7 +264,7 @@ pub impl ToJson for PremiumType with fn to_json(self) {
 pub impl @json.FromJson for PremiumType with fn from_json(json, path) {
   match json {
     Number(n, ..) => PremiumType::from_int(n.to_int())
-    _ => raise @json.JsonDecodeError((path, "expected a premium type (number)"))
+    _ => raise JsonDecodeError((path, "expected a premium type (number)"))
   }
 }
 

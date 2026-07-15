@@ -1,3 +1,4 @@
 import {
+  "gaato/discord/internal/clock",
   "moonbitlang/async",
 }

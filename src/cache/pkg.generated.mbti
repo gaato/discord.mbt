@@ -13,14 +13,15 @@ import {
 pub struct CacheResources {
   // private fields
 }
+pub fn CacheResources::CacheResources(guilds? : Bool, channels? : Bool, roles? : Bool, members? : Bool, users? : Bool, voice_states? : Bool, presences? : Bool, messages? : Bool) -> Self
 pub fn CacheResources::all() -> Self
 pub fn CacheResources::default() -> Self
-pub fn CacheResources::new(guilds? : Bool, channels? : Bool, roles? : Bool, members? : Bool, users? : Bool, voice_states? : Bool, presences? : Bool, messages? : Bool) -> Self
 pub fn CacheResources::none() -> Self
 
 pub struct InMemoryCache {
   // private fields
 }
+pub fn InMemoryCache::InMemoryCache(resources~ : CacheResources, max_messages_per_channel? : Int) -> Self
 pub fn InMemoryCache::channel(Self, @model.Id[@model.ChannelMarker]) -> @model.Channel?
 pub fn InMemoryCache::channels(Self) -> Array[@model.Channel]
 pub fn InMemoryCache::guild(Self, @model.Id[@model.GuildMarker]) -> @model.Guild?
@@ -30,7 +31,6 @@ pub fn InMemoryCache::member(Self, @model.Id[@model.GuildMarker], @model.Id[@mod
 pub fn InMemoryCache::members(Self, @model.Id[@model.GuildMarker]) -> Array[@model.GuildMember]
 pub fn InMemoryCache::message(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker]) -> @model.Message?
 pub fn InMemoryCache::messages(Self, @model.Id[@model.ChannelMarker]) -> Array[@model.Message]
-pub fn InMemoryCache::new(resources~ : CacheResources, max_messages_per_channel? : Int) -> Self
 pub fn InMemoryCache::permissions(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker]) -> @model.Permissions?
 pub fn InMemoryCache::permissions_in(Self, @model.Id[@model.GuildMarker], @model.Id[@model.ChannelMarker], @model.Id[@model.UserMarker]) -> @model.Permissions?
 pub fn InMemoryCache::presence(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker]) -> @model.PresenceUpdateEvent?

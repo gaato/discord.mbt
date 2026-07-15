@@ -95,7 +95,7 @@ test "discord docs: example ban (line 518)" {
   let first : @model.GuildBan = @json.from_json(@json.parse(fixture))
   let second : @model.GuildBan = @json.from_json(first.to_json())
   assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
-  assert_true(first.reason == @model.Nullable::Value("mentioning b1nzy"))
+  assert_true(first.reason == Value("mentioning b1nzy"))
   inspect(first.user.id.to_string(), content="53908099506183680")
 }
 

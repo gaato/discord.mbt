@@ -40,13 +40,13 @@ pub fn on_close(code : Int?, has_session : Bool) -> ReconnectPolicy {
     | Some(4012)
     | Some(4013)
     | Some(4014) => ReconnectPolicy::Fatal
-    Some(4007) | Some(4009) => ReconnectPolicy::Reidentify
+    Some(4007) | Some(4009) => Reidentify
     // normal closure invalidates the session per Discord's resume rules
-    Some(1000) | Some(1001) => ReconnectPolicy::Reidentify
-    _ => ReconnectPolicy::Resume
+    Some(1000) | Some(1001) => Reidentify
+    _ => Resume
   }
   if policy is Resume && !has_session {
-    ReconnectPolicy::Reidentify
+    Reidentify
   } else {
     policy
   }

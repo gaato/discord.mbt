@@ -15,7 +15,7 @@ async fn main {
     Some(s) => @string.parse_int(s) catch { _ => DEFAULT_RUN_SECONDS }
     None => DEFAULT_RUN_SECONDS
   }
-  let client = @dhttp.Client::new(token)
+  let client = @dhttp.Client(token)
   let gateway_url = client.get_gateway()
   println("[rest] gateway url: \{gateway_url}")
   let intents = @model.Intents::guilds() |

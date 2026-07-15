@@ -268,7 +268,7 @@ pub impl @json.FromJson for AuditLogEvent with fn from_json(json, path) {
   match json {
     Number(value, ..) => AuditLogEvent::from_int(value.to_int())
     _ =>
-      raise @json.JsonDecodeError(
+      raise JsonDecodeError(
         (
           path, "expected the action category recorded by a guild audit log (number)",
         ),

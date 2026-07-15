@@ -50,14 +50,14 @@ fn command_sync() -> @discord.CommandSync {
         _ => None
       }
       match guild_id {
-        Some(value) => @discord.CommandSync::Guild(value)
+        Some(value) => Guild(value)
         None => {
           println("[bot] invalid GUILD_ID, syncing globally")
-          @discord.CommandSync::Global
+          Global
         }
       }
     }
-    None => @discord.CommandSync::Global
+    None => Global
   }
 }
 
@@ -68,10 +68,10 @@ async fn main {
     Some(s) => @string.parse_int(s) catch { _ => DEFAULT_RUN_SECONDS }
     None => DEFAULT_RUN_SECONDS
   }
-  let app = @discord.App::new(sync=command_sync())
+  let app = @discord.App(sync=command_sync())
   app.command(echo_command())
 
-  let bot = @discord.Bot::new(app, token~)
+  let bot = @discord.Bot(app, token~)
   bot.on(@discord.Events::ready(), (_ctx, ready) => {
     println("[bot] ready as \{ready.user.username}")
   })

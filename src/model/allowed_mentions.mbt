@@ -41,24 +41,24 @@ pub struct AllowedMentions {
 
 ///|
 /// Construct a validated allowed-mentions object.
-pub fn AllowedMentions::new(
+pub fn AllowedMentions::AllowedMentions(
   parse? : Array[AllowedMentionType],
   roles? : Array[RoleId],
   users? : Array[UserId],
   replied_user? : Bool,
 ) -> AllowedMentions raise AllowedMentionsError {
   if roles is Some(ids) && ids.length() > 100 {
-    raise AllowedMentionsError::TooManyRoles(count=ids.length())
+    raise TooManyRoles(count=ids.length())
   }
   if users is Some(ids) && ids.length() > 100 {
-    raise AllowedMentionsError::TooManyUsers(count=ids.length())
+    raise TooManyUsers(count=ids.length())
   }
   if parse is Some(types) {
     if roles is Some(_) && types.contains(Roles) {
-      raise AllowedMentionsError::ParseAndExplicit(typ=Roles)
+      raise ParseAndExplicit(typ=Roles)
     }
     if users is Some(_) && types.contains(Users) {
-      raise AllowedMentionsError::ParseAndExplicit(typ=Users)
+      raise ParseAndExplicit(typ=Users)
     }
   }
   {
@@ -84,7 +84,7 @@ pub fn AllowedMentions::safe_default() -> AllowedMentions {
 
 ///|
 pub impl ToJson for AllowedMentions with fn to_json(self) {
-  let fields : Map[String, Json] = {}
+  let fields : Map[String, Json] = Map([])
   if self.parse is Some(parse) {
     fields["parse"] = parse.to_json()
   }

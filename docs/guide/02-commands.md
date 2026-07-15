@@ -130,7 +130,7 @@ let quote = @discord.message_command(
 - `Raw(ctx => Unit)` exposes the lower-level `framework.CommandCtx`.
 
 Register every command with `app.command(command)`. Command synchronization is
-controlled by `App::new(sync=...)`: `Global`, `Guild(id)`, `Guilds(ids)`, or
+controlled by `App(sync=...)`: `Global`, `Guild(id)`, `Guilds(ids)`, or
 `Disabled`.
 
 ## Checks and app middleware

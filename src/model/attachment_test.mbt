@@ -89,7 +89,7 @@ test "attachment decodes required fields only" {
 ///|
 test "attachment encode omits absent optional fields" {
   let attachment : @model.Attachment = {
-    id: @model.Id(1UL),
+    id: Id(1UL),
     filename: "notes.txt",
     title: None,
     description: None,

@@ -22,7 +22,7 @@ pub impl ToJson for Timestamp with fn to_json(self) {
 pub impl @json.FromJson for Timestamp with fn from_json(json, path) {
   match json {
     String(s) => Timestamp(s)
-    _ => raise @json.JsonDecodeError((path, "expected an ISO8601 timestamp"))
+    _ => raise JsonDecodeError((path, "expected an ISO8601 timestamp"))
   }
 }
 
@@ -152,6 +152,6 @@ pub impl ToJson for ImageHash with fn to_json(self) {
 pub impl @json.FromJson for ImageHash with fn from_json(json, path) {
   match json {
     String(s) => ImageHash(s)
-    _ => raise @json.JsonDecodeError((path, "expected an image hash"))
+    _ => raise JsonDecodeError((path, "expected an image hash"))
   }
 }

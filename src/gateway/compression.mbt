@@ -34,7 +34,7 @@ priv struct ZlibStreamInflater {
 }
 
 ///|
-fn ZlibStreamInflater::new() -> ZlibStreamInflater raise InflateError {
+fn ZlibStreamInflater::ZlibStreamInflater() -> ZlibStreamInflater raise InflateError {
   let handle = zlib_new()
   let status = zlib_status(handle)
   if status != 0 {
@@ -73,5 +73,5 @@ impl Inflater for ZlibStreamInflater with fn push(self, bytes) {
 
 ///|
 fn new_zlib_stream_inflater() -> &Inflater raise {
-  ZlibStreamInflater::new()
+  ZlibStreamInflater()
 }

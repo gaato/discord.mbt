@@ -182,7 +182,7 @@ test "commands_in_sync normalizes command defaults and uses type plus name" {
     "inspect",
     "Inspect a target",
     nsfw=false,
-    integration_types=[@model.ApplicationIntegrationType::GuildInstall],
+    integration_types=[GuildInstall],
   )
   let omitted_defaults = fetched_command(
     (
@@ -220,8 +220,8 @@ test "commands_in_sync normalizes command defaults and uses type plus name" {
 
 ///|
 test "intent derivation strips privileged intents and warns" {
-  let app = @app.App::new(sync=@app.CommandSync::Disabled)
-  let bot = Bot::new(app, token="token")
+  let app = @app.App(sync=Disabled)
+  let bot = Bot(app, token="token")
   let warnings : Array[String] = []
   app.on_warn(message => warnings.push(message))
   bot.on(Events::message_create(), (_, _) => ())
@@ -229,8 +229,8 @@ test "intent derivation strips privileged intents and warns" {
   inspect(bot.resolved_intents().bits(), content="4608")
   inspect(warnings.length(), content="1")
   assert_true(warnings[0].contains("privileged intent"))
-  let explicit_app = @app.App::new(sync=@app.CommandSync::Disabled)
-  let explicit = Bot::new(
+  let explicit_app = @app.App(sync=Disabled)
+  let explicit = Bot(
     explicit_app,
     token="token",
     intents=@model.Intents::guilds(),
@@ -244,18 +244,16 @@ test "intent derivation strips privileged intents and warns" {
 
 ///|
 test "cache attachment keeps the gateway filter open and shares state" {
-  let app = @app.App::new(sync=@app.CommandSync::Disabled)
-  let bot = Bot::new(app, token="token")
-  let cache = @cache.InMemoryCache::new(
-    resources=@cache.CacheResources::default(),
-  )
+  let app = @app.App(sync=Disabled)
+  let bot = Bot(app, token="token")
+  let cache = @cache.InMemoryCache(resources=@cache.CacheResources::default())
   bot.attach_cache(cache)
   let filter = bot.event_filter()
   assert_true(filter(KReady))
   assert_true(filter(KInviteDelete))
   guard bot.cache_ is Some(attached) else { fail("expected attached cache") }
   attached.update(
-    @model.Event::GuildDelete({ id: @model.Id::parse("100"), unavailable: true }),
+    GuildDelete({ id: @model.Id::parse("100"), unavailable: true }),
   )
   let guild_id : @model.GuildId = @model.Id::parse("100")
   assert_true(cache.is_guild_unavailable(guild_id))
@@ -268,14 +266,12 @@ priv suberror RuntimeTestFailure {
 
 ///|
 test "bot telemetry hook failures flow to app warnings" {
-  let app = @app.App::new(sync=@app.CommandSync::Disabled)
+  let app = @app.App(sync=Disabled)
   let warnings : Array[String] = []
   app.on_warn(message => warnings.push(message))
-  let bot = Bot::new(app, token="test-token")
+  let bot = Bot(app, token="test-token")
   bot.on_telemetry(_ => raise RuntimeTestFailure)
-  bot.emit_telemetry(
-    @telemetry.TelemetryEvent::DecodeError(marker="DECODE_ERROR:test"),
-  )
+  bot.emit_telemetry(DecodeError(marker="DECODE_ERROR:test"))
   inspect(warnings.length(), content="1")
   assert_true(warnings[0].contains("telemetry hook failed"))
 }
@@ -287,20 +283,13 @@ struct BotFakeTransport {
 }
 
 ///|
-fn BotFakeTransport::new() -> BotFakeTransport {
-  {
-    incoming: @aqueue.Queue::new(kind=Unbounded),
-    outgoing: @aqueue.Queue::new(kind=Unbounded),
-  }
+fn BotFakeTransport::BotFakeTransport() -> BotFakeTransport {
+  { incoming: Queue(kind=Unbounded), outgoing: Queue(kind=Unbounded) }
 }
 
 ///|
 impl @gateway.GatewayTransport for BotFakeTransport with fn recv(self) {
-  @gateway.GatewayFrame::Text(
-    self.incoming.get() catch {
-      error => raise error
-    },
-  )
+  Text(self.incoming.get() catch { error => raise error })
 }
 
 ///|
@@ -363,11 +352,11 @@ fn message_create_frame(sequence : Int, id : String) -> String {
 
 ///|
 fn middleware_runtime_bot(app : @app.App, transport : BotFakeTransport) -> Bot {
-  let bot = Bot::new(
+  let bot = Bot(
     app,
     token="test-token",
     intents=@model.Intents::guild_messages(),
-    client=@dhttp.Client::new("test-token"),
+    client=Client("test-token"),
     gateway_url="wss://gateway.example",
   )
   bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
@@ -376,12 +365,10 @@ fn middleware_runtime_bot(app : @app.App, transport : BotFakeTransport) -> Bot {
 
 ///|
 async test "event middleware drops handlers after wire-level cache updates" {
-  let transport = BotFakeTransport::new()
-  let app = @app.App::new(sync=Disabled)
+  let transport = BotFakeTransport()
+  let app = @app.App(sync=Disabled)
   let bot = middleware_runtime_bot(app, transport)
-  let cache = @cache.InMemoryCache::new(
-    resources=@cache.CacheResources::new(messages=true),
-  )
+  let cache = @cache.InMemoryCache(resources=CacheResources(messages=true))
   bot.attach_cache(cache)
   bot.middleware((_, event, next) => {
     match event {
@@ -389,11 +376,9 @@ async test "event middleware drops handlers after wire-level cache updates" {
       _ => next(event)
     }
   })
-  let ready_contexts : @aqueue.Queue[GatewayCtx] = @aqueue.Queue::new(
-    kind=Unbounded,
-  )
+  let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
-  let handler_events : @aqueue.Queue[Unit] = @aqueue.Queue::new(kind=Unbounded)
+  let handler_events : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   bot.on(Events::message_create(), (_, _) => handler_events.put(()))
   let message_dispatches = Ref(0)
   bot.on_telemetry(event => {
@@ -434,8 +419,8 @@ async test "event middleware drops handlers after wire-level cache updates" {
 
 ///|
 async test "event middleware transforms events for typed handlers" {
-  let transport = BotFakeTransport::new()
-  let app = @app.App::new(sync=Disabled)
+  let transport = BotFakeTransport()
+  let app = @app.App(sync=Disabled)
   let bot = middleware_runtime_bot(app, transport)
   bot.middleware((_, event, next) => {
     match event {
@@ -446,11 +431,9 @@ async test "event middleware transforms events for typed handlers" {
       _ => next(event)
     }
   })
-  let ready_contexts : @aqueue.Queue[GatewayCtx] = @aqueue.Queue::new(
-    kind=Unbounded,
-  )
+  let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
-  let contents : @aqueue.Queue[String] = @aqueue.Queue::new(kind=Unbounded)
+  let contents : @aqueue.Queue[String] = Queue(kind=Unbounded)
   bot.on(Events::message_create(), (_, event) => {
     contents.put(event.message.content)
   })
@@ -471,8 +454,8 @@ async test "event middleware transforms events for typed handlers" {
 
 ///|
 async test "event middleware order is onion-style" {
-  let transport = BotFakeTransport::new()
-  let app = @app.App::new(sync=Disabled)
+  let transport = BotFakeTransport()
+  let app = @app.App(sync=Disabled)
   let bot = middleware_runtime_bot(app, transport)
   let trace : Array[String] = []
   let first : EventMiddleware = (_, event, next) => {
@@ -496,11 +479,9 @@ async test "event middleware order is onion-style" {
     }
   }
   bot..middleware(first).middleware(second)
-  let ready_contexts : @aqueue.Queue[GatewayCtx] = @aqueue.Queue::new(
-    kind=Unbounded,
-  )
+  let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
-  let handled : @aqueue.Queue[Unit] = @aqueue.Queue::new(kind=Unbounded)
+  let handled : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   bot.on(Events::message_delete(), (_, _) => handled.put(()))
   @async.with_task_group(group => {
     let running = group.spawn(no_wait=true, () => bot.run())
@@ -526,9 +507,9 @@ async test "event middleware order is onion-style" {
 
 ///|
 async test "interaction routing survives dropped gateway events" {
-  let transport = BotFakeTransport::new()
-  let app = @app.App::new(sync=Disabled)
-  let commands : @aqueue.Queue[Unit] = @aqueue.Queue::new(kind=Unbounded)
+  let transport = BotFakeTransport()
+  let app = @app.App(sync=Disabled)
+  let commands : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   app.command(
     @app.slash(
       name="raw",
@@ -539,9 +520,7 @@ async test "interaction routing survives dropped gateway events" {
   )
   let bot = middleware_runtime_bot(app, transport)
   bot.middleware((_, _, _) => ())
-  let service_contexts : @aqueue.Queue[GatewayCtx] = @aqueue.Queue::new(
-    kind=Unbounded,
-  )
+  let service_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.service(name="capture-context", ctx => service_contexts.put(ctx))
   @async.with_task_group(group => {
     let running = group.spawn(no_wait=true, () => bot.run())
@@ -562,8 +541,8 @@ async test "interaction routing survives dropped gateway events" {
 
 ///|
 async test "event middleware failures warn and preserve later dispatch" {
-  let transport = BotFakeTransport::new()
-  let app = @app.App::new(sync=Disabled)
+  let transport = BotFakeTransport()
+  let app = @app.App(sync=Disabled)
   let warnings : Array[String] = []
   app.on_warn(message => warnings.push(message))
   let bot = middleware_runtime_bot(app, transport)
@@ -577,11 +556,9 @@ async test "event middleware failures warn and preserve later dispatch" {
       _ => next(event)
     }
   })
-  let ready_contexts : @aqueue.Queue[GatewayCtx] = @aqueue.Queue::new(
-    kind=Unbounded,
-  )
+  let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
-  let handled : @aqueue.Queue[String] = @aqueue.Queue::new(kind=Unbounded)
+  let handled : @aqueue.Queue[String] = Queue(kind=Unbounded)
   bot.on(Events::message_delete(), (_, event) => {
     handled.put(event.id.to_string())
   })
@@ -611,25 +588,21 @@ async test "event middleware failures warn and preserve later dispatch" {
 
 ///|
 async test "bot updates cache before typed event handlers" {
-  let transport = BotFakeTransport::new()
-  let app = @app.App::new(sync=@app.CommandSync::Disabled)
-  let bot = Bot::new(
+  let transport = BotFakeTransport()
+  let app = @app.App(sync=Disabled)
+  let bot = Bot(
     app,
     token="test-token",
     intents=@model.Intents::guild_messages(),
-    client=@dhttp.Client::new("test-token"),
+    client=Client("test-token"),
     gateway_url="wss://gateway.example",
   )
   bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
-  let cache = @cache.InMemoryCache::new(
-    resources=@cache.CacheResources::new(messages=true),
-  )
+  let cache = @cache.InMemoryCache(resources=CacheResources(messages=true))
   bot.attach_cache(cache)
-  let ready_contexts : @aqueue.Queue[GatewayCtx] = @aqueue.Queue::new(
-    kind=Unbounded,
-  )
+  let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
-  let observed : @aqueue.Queue[Bool] = @aqueue.Queue::new(kind=Unbounded)
+  let observed : @aqueue.Queue[Bool] = Queue(kind=Unbounded)
   bot.on(Events::message_create(), (_, event) => {
     observed.put(
       cache.message(event.message.channel_id, event.message.id) is Some(_),
@@ -652,30 +625,28 @@ async test "bot updates cache before typed event handlers" {
 
 ///|
 async test "bot run dispatches concurrently, survives handlers, and shuts down" {
-  let empty_app = @app.App::new(sync=@app.CommandSync::Disabled)
-  try Bot::new(empty_app, token="").run() catch {
+  let empty_app = @app.App(sync=Disabled)
+  try Bot(empty_app, token="").run() catch {
     @app.AppConfigError::EmptyToken => ()
     error => fail("unexpected error: \{to_repr(error)}")
   } noraise {
     _ => fail("expected empty token error")
   }
-  let transport = BotFakeTransport::new()
-  let app = @app.App::new(sync=@app.CommandSync::Disabled, max_in_flight=8)
-  let bot = Bot::new(
+  let transport = BotFakeTransport()
+  let app = @app.App(sync=Disabled, max_in_flight=8)
+  let bot = Bot(
     app,
     token="test-token",
-    client=@dhttp.Client::new("test-token"),
+    client=Client("test-token"),
     gateway_url="wss://gateway.example",
   )
   bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
-  let ready_contexts : @aqueue.Queue[GatewayCtx] = @aqueue.Queue::new(
-    kind=Unbounded,
-  )
+  let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
   let command_count = Ref(0)
-  let first_started : @aqueue.Queue[Unit] = @aqueue.Queue::new(kind=Unbounded)
-  let release_first : @aqueue.Queue[Unit] = @aqueue.Queue::new(kind=Unbounded)
-  let second_started : @aqueue.Queue[Unit] = @aqueue.Queue::new(kind=Unbounded)
+  let first_started : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  let release_first : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  let second_started : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   app.command(
     @app.slash(
       name="raw",
@@ -701,7 +672,7 @@ async test "bot run dispatches concurrently, survives handlers, and shuts down" 
       handler=Raw(_ => raise RuntimeTestFailure),
     ),
   )
-  let event_calls : @aqueue.Queue[Int] = @aqueue.Queue::new(kind=Unbounded)
+  let event_calls : @aqueue.Queue[Int] = Queue(kind=Unbounded)
   let event_count = Ref(0)
   bot.on(Events::message_delete(), (_, _) => {
     event_count.val += 1
@@ -710,7 +681,7 @@ async test "bot run dispatches concurrently, survives handlers, and shuts down" 
       raise RuntimeTestFailure
     }
   })
-  let policy_calls : @aqueue.Queue[String] = @aqueue.Queue::new(kind=Unbounded)
+  let policy_calls : @aqueue.Queue[String] = Queue(kind=Unbounded)
   app.error_policy((failure, _) => {
     policy_calls.put("\{to_repr(failure.origin())}")
   })
@@ -756,8 +727,8 @@ async test "bot run dispatches concurrently, survives handlers, and shuts down" 
 ///|
 async test "bot reports gateway decode errors and preserves dispatch" {
   // Decode-error observers do not request any additional event kinds.
-  let filter_app = @app.App::new(sync=@app.CommandSync::Disabled)
-  let filter_bot = Bot::new(filter_app, token="test-token")
+  let filter_app = @app.App(sync=Disabled)
+  let filter_bot = Bot(filter_app, token="test-token")
   filter_bot.on_decode_error((_, _) => ())
   let filter = filter_bot.event_filter()
   assert_true(filter(KReady))
@@ -765,21 +736,19 @@ async test "bot reports gateway decode errors and preserves dispatch" {
   assert_false(filter(KMessageDelete))
   assert_false(filter(KInviteDelete))
 
-  let transport = BotFakeTransport::new()
-  let app = @app.App::new(sync=@app.CommandSync::Disabled)
+  let transport = BotFakeTransport()
+  let app = @app.App(sync=Disabled)
   let warnings : Array[String] = []
   app.on_warn(message => warnings.push(message))
-  let bot = Bot::new(
+  let bot = Bot(
     app,
     token="test-token",
     intents=@model.Intents::guild_messages(),
-    client=@dhttp.Client::new("test-token"),
+    client=Client("test-token"),
     gateway_url="wss://gateway.example",
   )
   bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
-  let ready_contexts : @aqueue.Queue[GatewayCtx] = @aqueue.Queue::new(
-    kind=Unbounded,
-  )
+  let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
   let decode_errors : Array[(String, Json)] = []
   bot.on_decode_error((marker, payload) => decode_errors.push((marker, payload)))
@@ -788,22 +757,17 @@ async test "bot reports gateway decode errors and preserves dispatch" {
   let saw_decode_dispatch = Ref(false)
   bot.on_telemetry(event => {
     match event {
-      @telemetry.TelemetryEvent::ShardIdentified(shard_id=0) =>
-        saw_identified.val = true
-      @telemetry.TelemetryEvent::DecodeError(marker~) =>
+      ShardIdentified(shard_id=0) => saw_identified.val = true
+      DecodeError(marker~) =>
         saw_decode_telemetry.val = marker.has_prefix(
           "DECODE_ERROR:INTERACTION_CREATE:",
         )
-      @telemetry.TelemetryEvent::EventDispatched(
-        kind="KUnknown",
-        handler_count=1
-      ) => saw_decode_dispatch.val = true
+      EventDispatched(kind="KUnknown", handler_count=1) =>
+        saw_decode_dispatch.val = true
       _ => ()
     }
   })
-  let raw_decode_errors : @aqueue.Queue[(String, Json)] = @aqueue.Queue::new(
-    kind=Unbounded,
-  )
+  let raw_decode_errors : @aqueue.Queue[(String, Json)] = Queue(kind=Unbounded)
   bot.on_event((_, event) => {
     match event {
       Unknown(t~, d~) if t.has_prefix("DECODE_ERROR:") =>
@@ -811,7 +775,7 @@ async test "bot reports gateway decode errors and preserves dispatch" {
       _ => ()
     }
   })
-  let normal_events : @aqueue.Queue[Unit] = @aqueue.Queue::new(kind=Unbounded)
+  let normal_events : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   bot.on(Events::message_delete(), (_, _) => normal_events.put(()))
   @async.with_task_group(group => {
     let running = group.spawn(no_wait=true, () => bot.run())

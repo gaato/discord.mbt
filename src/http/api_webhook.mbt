@@ -1,9 +1,7 @@
 ///|
 fn validate_webhook_name(name : String) -> Unit raise DiscordHttpError {
   if name.length() < 1 || name.length() > 80 {
-    raise DiscordHttpError::Validation(
-      message="webhook name must be between 1 and 80 characters",
-    )
+    raise Validation(message="webhook name must be between 1 and 80 characters")
   }
 }
 
@@ -15,12 +13,10 @@ fn validate_execute_webhook(
   files : Array[FileUpload]?,
 ) -> Unit raise DiscordHttpError {
   if content is Some(value) && value.length() > 4000 {
-    raise DiscordHttpError::Validation(
-      message="content exceeds 4000 UTF-16 units",
-    )
+    raise Validation(message="content exceeds 4000 UTF-16 units")
   }
   if content is None && embeds is None && components is None && files is None {
-    raise DiscordHttpError::Validation(
+    raise Validation(
       message="one of content/embeds/components/files is required",
     )
   }
@@ -36,11 +32,11 @@ pub async fn Client::create_webhook(
   audit_reason? : String,
 ) -> @model.Webhook raise DiscordHttpError {
   validate_webhook_name(name)
-  let body = @model.ObjBuilder::new()
+  let body = @model.ObjBuilder()
     .field("name", name)
     .opt("avatar", avatar)
     .build()
-  decode(self.request(Route::CreateWebhook(channel_id~), body~, audit_reason?))
+  decode(self.request(CreateWebhook(channel_id~), body~, audit_reason?))
 }
 
 ///|
@@ -49,7 +45,7 @@ pub async fn Client::get_channel_webhooks(
   self : Client,
   channel_id : @model.ChannelId,
 ) -> Array[@model.Webhook] raise DiscordHttpError {
-  decode(self.request(Route::GetChannelWebhooks(channel_id~)))
+  decode(self.request(GetChannelWebhooks(channel_id~)))
 }
 
 ///|
@@ -58,7 +54,7 @@ pub async fn Client::get_guild_webhooks(
   self : Client,
   guild_id : @model.GuildId,
 ) -> Array[@model.Webhook] raise DiscordHttpError {
-  decode(self.request(Route::GetGuildWebhooks(guild_id~)))
+  decode(self.request(GetGuildWebhooks(guild_id~)))
 }
 
 ///|
@@ -67,7 +63,7 @@ pub async fn Client::get_webhook(
   self : Client,
   webhook_id : @model.WebhookId,
 ) -> @model.Webhook raise DiscordHttpError {
-  decode(self.request(Route::GetWebhook(webhook_id~)))
+  decode(self.request(GetWebhook(webhook_id~)))
 }
 
 ///|
@@ -84,12 +80,12 @@ pub async fn Client::modify_webhook(
   if name is Some(value) {
     validate_webhook_name(value)
   }
-  let body = @model.ObjBuilder::new()
+  let body = @model.ObjBuilder()
     .opt("name", name)
     .und("avatar", patch_nullable("avatar", avatar, clear_avatar))
     .opt("channel_id", channel_id)
     .build()
-  decode(self.request(Route::ModifyWebhook(webhook_id~), body~, audit_reason?))
+  decode(self.request(ModifyWebhook(webhook_id~), body~, audit_reason?))
 }
 
 ///|
@@ -99,7 +95,7 @@ pub async fn Client::delete_webhook(
   webhook_id : @model.WebhookId,
   audit_reason? : String,
 ) -> Unit raise DiscordHttpError {
-  self.request(Route::DeleteWebhook(webhook_id~), audit_reason?) |> ignore
+  self.request(DeleteWebhook(webhook_id~), audit_reason?) |> ignore
 }
 
 ///|
@@ -119,7 +115,7 @@ pub async fn Client::execute_webhook(
   allowed_mentions? : @model.AllowedMentions,
 ) -> @model.Message raise DiscordHttpError {
   validate_execute_webhook(content, embeds, components, files)
-  let builder = @model.ObjBuilder::new()
+  let builder = @model.ObjBuilder()
     .opt("content", content)
     .opt("embeds", embeds)
     .opt("components", components)
@@ -132,7 +128,7 @@ pub async fn Client::execute_webhook(
   }
   decode(
     self.request(
-      Route::ExecuteWebhook(webhook_id~, token~, query="?wait=true"),
+      ExecuteWebhook(webhook_id~, token~, query="?wait=true"),
       body=builder.build(),
       files?,
     ),
@@ -147,9 +143,7 @@ pub async fn Client::get_webhook_message(
   token : String,
   message_id : @model.MessageId,
 ) -> @model.Message raise DiscordHttpError {
-  decode(
-    self.request(Route::GetWebhookMessage(webhook_id~, token~, message_id~)),
-  )
+  decode(self.request(GetWebhookMessage(webhook_id~, token~, message_id~)))
 }
 
 ///|
@@ -179,7 +173,7 @@ pub async fn Client::edit_webhook_message(
   }
   decode(
     self.request(
-      Route::EditWebhookMessage(webhook_id~, token~, message_id~),
+      EditWebhookMessage(webhook_id~, token~, message_id~),
       body=builder.build(),
       files?,
     ),
@@ -194,6 +188,5 @@ pub async fn Client::delete_webhook_message(
   token : String,
   message_id : @model.MessageId,
 ) -> Unit raise DiscordHttpError {
-  self.request(Route::DeleteWebhookMessage(webhook_id~, token~, message_id~))
-  |> ignore
+  self.request(DeleteWebhookMessage(webhook_id~, token~, message_id~)) |> ignore
 }

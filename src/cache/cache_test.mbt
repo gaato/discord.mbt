@@ -79,7 +79,7 @@ fn message_fixture(id : String, content : String) -> String {
 
 ///|
 test "guild create seeds selected resources and updates replace state" {
-  let cache = InMemoryCache::new(resources=CacheResources::all())
+  let cache = @cache.InMemoryCache(resources=CacheResources::all())
   cache.update(cached_event("GUILD_CREATE", guild_create_fixture()))
   let guild_id : @model.GuildId = @model.Id::parse("100")
   let channel_id : @model.ChannelId = @model.Id::parse("400")
@@ -117,7 +117,7 @@ test "guild create seeds selected resources and updates replace state" {
   guard cache.channel(channel_id) is Some(channel) else {
     fail("expected updated channel")
   }
-  assert_true(channel.name == Some(@model.Nullable::Value("renamed")))
+  assert_true(channel.name == Some(Value("renamed")))
 
   cache.update(
     cached_event(
@@ -137,7 +137,7 @@ test "guild create seeds selected resources and updates replace state" {
   guard cache.member(guild_id, writer_id) is Some(updated_member) else {
     fail("expected updated member")
   }
-  assert_true(updated_member.nick == Some(@model.Nullable::Value("Writer")))
+  assert_true(updated_member.nick == Some(Value("Writer")))
 
   cache.update(
     cached_event(
@@ -160,7 +160,7 @@ test "guild create seeds selected resources and updates replace state" {
   guard cache.presence(guild_id, writer_id) is Some(presence) else {
     fail("expected updated presence")
   }
-  assert_true(presence.status == Some(@model.PresenceStatus::Idle))
+  assert_true(presence.status == Some(Idle))
 
   cache.update(
     cached_event(
@@ -186,7 +186,7 @@ test "guild create seeds selected resources and updates replace state" {
 
 ///|
 test "permissions use owner administrator and channel overwrites" {
-  let cache = InMemoryCache::new(resources=CacheResources::all())
+  let cache = @cache.InMemoryCache(resources=CacheResources::all())
   cache.update(cached_event("GUILD_CREATE", guild_create_fixture()))
   let guild_id : @model.GuildId = @model.Id::parse("100")
   let channel_id : @model.ChannelId = @model.Id::parse("400")
@@ -218,7 +218,7 @@ test "permissions use owner administrator and channel overwrites" {
 
 ///|
 test "messages are bounded by per-channel event recency" {
-  let cache = InMemoryCache::new(
+  let cache = @cache.InMemoryCache(
     resources=CacheResources::all(),
     max_messages_per_channel=2,
   )
@@ -248,7 +248,7 @@ test "messages are bounded by per-channel event recency" {
 
 ///|
 test "disabled resources never retain events" {
-  let cache = InMemoryCache::new(resources=CacheResources::none())
+  let cache = @cache.InMemoryCache(resources=CacheResources::none())
   cache.update(cached_event("GUILD_CREATE", guild_create_fixture()))
   cache.update(cached_event("MESSAGE_CREATE", message_fixture("500", "one")))
   let guild_id : @model.GuildId = @model.Id::parse("100")
@@ -264,7 +264,7 @@ test "disabled resources never retain events" {
 
 ///|
 test "default resources exclude presence and message churn" {
-  let cache = InMemoryCache::new(resources=CacheResources::default())
+  let cache = @cache.InMemoryCache(resources=CacheResources::default())
   cache.update(cached_event("GUILD_CREATE", guild_create_fixture()))
   cache.update(cached_event("MESSAGE_CREATE", message_fixture("500", "one")))
   let guild_id : @model.GuildId = @model.Id::parse("100")
@@ -279,7 +279,7 @@ test "default resources exclude presence and message churn" {
 
 ///|
 test "unavailable guilds retain data until a permanent delete" {
-  let cache = InMemoryCache::new(resources=CacheResources::default())
+  let cache = @cache.InMemoryCache(resources=CacheResources::default())
   let guild_id : @model.GuildId = @model.Id::parse("100")
   cache.update(cached_event("GUILD_CREATE", guild_create_fixture()))
   cache.update(

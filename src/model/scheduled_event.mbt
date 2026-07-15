@@ -106,7 +106,7 @@ pub impl @json.FromJson for GuildScheduledEventRecurrenceRuleFrequency with fn f
     Number(value, ..) =>
       GuildScheduledEventRecurrenceRuleFrequency::from_int(value.to_int())
     _ =>
-      raise @json.JsonDecodeError(
+      raise JsonDecodeError(
         (path, "expected scheduled-event recurrence frequency (number)"),
       )
   }
@@ -173,7 +173,7 @@ pub impl @json.FromJson for GuildScheduledEventRecurrenceRuleWeekday with fn fro
     Number(value, ..) =>
       GuildScheduledEventRecurrenceRuleWeekday::from_int(value.to_int())
     _ =>
-      raise @json.JsonDecodeError(
+      raise JsonDecodeError(
         (path, "expected scheduled-event recurrence weekday (number)"),
       )
   }
@@ -253,7 +253,7 @@ pub impl @json.FromJson for GuildScheduledEventRecurrenceRuleMonth with fn from_
     Number(value, ..) =>
       GuildScheduledEventRecurrenceRuleMonth::from_int(value.to_int())
     _ =>
-      raise @json.JsonDecodeError(
+      raise JsonDecodeError(
         (path, "expected scheduled-event recurrence month (number)"),
       )
   }
@@ -300,7 +300,7 @@ pub impl @json.FromJson for GuildScheduledEventPrivacyLevel with fn from_json(
     Number(value, ..) =>
       GuildScheduledEventPrivacyLevel::from_int(value.to_int())
     _ =>
-      raise @json.JsonDecodeError(
+      raise JsonDecodeError(
         (
           path, "expected the audience allowed to access a scheduled event (number)",
         ),
@@ -357,7 +357,7 @@ pub impl @json.FromJson for GuildScheduledEventStatus with fn from_json(
   match json {
     Number(value, ..) => GuildScheduledEventStatus::from_int(value.to_int())
     _ =>
-      raise @json.JsonDecodeError(
+      raise JsonDecodeError(
         (path, "expected the lifecycle state of a scheduled event (number)"),
       )
   }
@@ -409,7 +409,7 @@ pub impl @json.FromJson for GuildScheduledEventEntityType with fn from_json(
   match json {
     Number(value, ..) => GuildScheduledEventEntityType::from_int(value.to_int())
     _ =>
-      raise @json.JsonDecodeError(
+      raise JsonDecodeError(
         (path, "expected the hosting entity used by a scheduled event (number)"),
       )
   }

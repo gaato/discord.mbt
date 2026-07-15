@@ -72,6 +72,6 @@ pub impl ToJson for ChannelType with fn to_json(self) {
 pub impl @json.FromJson for ChannelType with fn from_json(json, path) {
   match json {
     Number(n, ..) => ChannelType::from_int(n.to_int())
-    _ => raise @json.JsonDecodeError((path, "expected a channel type (number)"))
+    _ => raise JsonDecodeError((path, "expected a channel type (number)"))
   }
 }

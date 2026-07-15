@@ -35,12 +35,12 @@ test "discord docs: application authorized example (line 171)" {
   let second : @model.WebhookEventPayload = @json.from_json(first.to_json())
   assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
   inspect(first.application_id.to_string(), content="1234560123453231555")
-  assert_true(first.typ == @model.WebhookPayloadType::Event)
+  assert_true(first.typ == Event)
   guard first.event is Some(body) else {
     fail("event webhook payload is missing its body")
   }
   match body.project() {
-    @model.WebhookEvent::ApplicationAuthorized(data) => {
+    ApplicationAuthorized(data) => {
       inspect(data.user.id.to_string(), content="111178765189277770")
       inspect(data.scopes.length(), content="1")
     }
@@ -74,12 +74,12 @@ test "discord docs: application deauthorized example (line 206)" {
   let second : @model.WebhookEventPayload = @json.from_json(first.to_json())
   assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
   inspect(first.application_id.to_string(), content="1234560123453231555")
-  assert_true(first.typ == @model.WebhookPayloadType::Event)
+  assert_true(first.typ == Event)
   guard first.event is Some(body) else {
     fail("event webhook payload is missing its body")
   }
   match body.project() {
-    @model.WebhookEvent::ApplicationDeauthorized(data) =>
+    ApplicationDeauthorized(data) =>
       inspect(data.user.id.to_string(), content="111178765189277770")
     event => fail("expected application deauthorized, got \{to_repr(event)}")
   }
@@ -112,12 +112,12 @@ test "discord docs: entitlement create example (line 246)" {
   let second : @model.WebhookEventPayload = @json.from_json(first.to_json())
   assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
   inspect(first.application_id.to_string(), content="1234560123453231555")
-  assert_true(first.typ == @model.WebhookPayloadType::Event)
+  assert_true(first.typ == Event)
   guard first.event is Some(body) else {
     fail("event webhook payload is missing its body")
   }
   match body.project() {
-    @model.WebhookEvent::EntitlementCreate(data) => {
+    EntitlementCreate(data) => {
       inspect(data.id.to_string(), content="1234505980407808808")
       assert_false(data.deleted)
     }
@@ -152,12 +152,12 @@ test "discord docs: entitlement update example (line 279)" {
   let second : @model.WebhookEventPayload = @json.from_json(first.to_json())
   assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
   inspect(first.application_id.to_string(), content="1234560123453231555")
-  assert_true(first.typ == @model.WebhookPayloadType::Event)
+  assert_true(first.typ == Event)
   guard first.event is Some(body) else {
     fail("event webhook payload is missing its body")
   }
   match body.project() {
-    @model.WebhookEvent::EntitlementUpdate(data) => {
+    EntitlementUpdate(data) => {
       inspect(data.id.to_string(), content="1234505980407808808")
       assert_false(data.deleted)
     }
@@ -192,12 +192,12 @@ test "discord docs: entitlement delete example (line 312)" {
   let second : @model.WebhookEventPayload = @json.from_json(first.to_json())
   assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
   inspect(first.application_id.to_string(), content="1234560123453231555")
-  assert_true(first.typ == @model.WebhookPayloadType::Event)
+  assert_true(first.typ == Event)
   guard first.event is Some(body) else {
     fail("event webhook payload is missing its body")
   }
   match body.project() {
-    @model.WebhookEvent::EntitlementDelete(data) => {
+    EntitlementDelete(data) => {
       inspect(data.id.to_string(), content="1234505980407808808")
       assert_true(data.deleted)
     }
@@ -238,12 +238,12 @@ test "discord docs: lobby message create example (line 353)" {
   let second : @model.WebhookEventPayload = @json.from_json(first.to_json())
   assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
   inspect(first.application_id.to_string(), content="1234567765431056709")
-  assert_true(first.typ == @model.WebhookPayloadType::Event)
+  assert_true(first.typ == Event)
   guard first.event is Some(body) else {
     fail("event webhook payload is missing its body")
   }
   match body.project() {
-    @model.WebhookEvent::LobbyMessageCreate(data) => {
+    LobbyMessageCreate(data) => {
       inspect(data.lobby_id.to_string(), content="1397729744753266719")
       assert_eq(data.content, "welcome to the party!")
     }
@@ -285,12 +285,12 @@ test "discord docs: lobby message update example (line 387)" {
   let second : @model.WebhookEventPayload = @json.from_json(first.to_json())
   assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
   inspect(first.application_id.to_string(), content="1234567765431056709")
-  assert_true(first.typ == @model.WebhookPayloadType::Event)
+  assert_true(first.typ == Event)
   guard first.event is Some(body) else {
     fail("event webhook payload is missing its body")
   }
   match body.project() {
-    @model.WebhookEvent::LobbyMessageUpdate(data) => {
+    LobbyMessageUpdate(data) => {
       inspect(data.id.to_string(), content="1402390388030832792")
       assert_eq(data.content, "noice")
     }
@@ -318,12 +318,12 @@ test "discord docs: lobby message delete example (line 425)" {
   let second : @model.WebhookEventPayload = @json.from_json(first.to_json())
   assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
   inspect(first.application_id.to_string(), content="1234567765431056709")
-  assert_true(first.typ == @model.WebhookPayloadType::Event)
+  assert_true(first.typ == Event)
   guard first.event is Some(body) else {
     fail("event webhook payload is missing its body")
   }
   match body.project() {
-    @model.WebhookEvent::LobbyMessageDelete(data) => {
+    LobbyMessageDelete(data) => {
       inspect(data.id.to_string(), content="1402406637632884857")
       inspect(data.lobby_id.to_string(), content="1402399883394285659")
     }
@@ -364,12 +364,12 @@ test "discord docs: game direct message create example (line 451)" {
   let second : @model.WebhookEventPayload = @json.from_json(first.to_json())
   assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
   inspect(first.application_id.to_string(), content="1234567765431056709")
-  assert_true(first.typ == @model.WebhookPayloadType::Event)
+  assert_true(first.typ == Event)
   guard first.event is Some(body) else {
     fail("event webhook payload is missing its body")
   }
   match body.project() {
-    @model.WebhookEvent::GameDirectMessageCreate(data) => {
+    GameDirectMessageCreate(data) => {
       inspect(data.id.to_string(), content="1405614357781545021")
       assert_true(data.attachments is Some([]))
     }
@@ -407,12 +407,12 @@ test "discord docs: game direct message update example (line 485)" {
   let second : @model.WebhookEventPayload = @json.from_json(first.to_json())
   assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
   inspect(first.application_id.to_string(), content="1234567765431056709")
-  assert_true(first.typ == @model.WebhookPayloadType::Event)
+  assert_true(first.typ == Event)
   guard first.event is Some(body) else {
     fail("event webhook payload is missing its body")
   }
   match body.project() {
-    @model.WebhookEvent::GameDirectMessageUpdate(data) => {
+    GameDirectMessageUpdate(data) => {
       inspect(data.id.to_string(), content="1405591838810706081")
       assert_true(data.content == Some("almost ready to queue?"))
     }
@@ -454,12 +454,12 @@ test "discord docs: game direct message delete example (line 516)" {
   let second : @model.WebhookEventPayload = @json.from_json(first.to_json())
   assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
   inspect(first.application_id.to_string(), content="1234567765431056709")
-  assert_true(first.typ == @model.WebhookPayloadType::Event)
+  assert_true(first.typ == Event)
   guard first.event is Some(body) else {
     fail("event webhook payload is missing its body")
   }
   match body.project() {
-    @model.WebhookEvent::GameDirectMessageDelete(data) => {
+    GameDirectMessageDelete(data) => {
       inspect(data.id.to_string(), content="1407771600643686503")
       assert_true(data.components is Some([]))
     }

@@ -1,7 +1,7 @@
 ///|
 test "allowed mentions encode official wire fields" {
-  let mentions = @model.AllowedMentions::new(
-    parse=[@model.AllowedMentionType::Everyone],
+  let mentions = @model.AllowedMentions(
+    parse=[Everyone],
     roles=[@model.Id::parse("100")],
     users=[@model.Id::parse("200")],
     replied_user=true,
@@ -22,9 +22,7 @@ test "allowed mentions none suppresses all parsed categories" {
 ///|
 test "allowed mentions reject parse and explicit list conflicts" {
   try
-    @model.AllowedMentions::new(parse=[@model.AllowedMentionType::Users], users=[
-      @model.Id::parse("200"),
-    ])
+    @model.AllowedMentions(parse=[Users], users=[@model.Id::parse("200")])
   catch {
     error =>
       debug_inspect(
@@ -37,9 +35,7 @@ test "allowed mentions reject parse and explicit list conflicts" {
     _ => fail("expected users conflict")
   }
   try
-    @model.AllowedMentions::new(parse=[@model.AllowedMentionType::Roles], roles=[
-      @model.Id::parse("100"),
-    ])
+    @model.AllowedMentions(parse=[Roles], roles=[@model.Id::parse("100")])
   catch {
     error =>
       debug_inspect(
@@ -56,7 +52,7 @@ test "allowed mentions reject parse and explicit list conflicts" {
 ///|
 test "allowed mentions reject more than 100 explicit ids" {
   let roles : Array[@model.RoleId] = Array::make(101, @model.Id::parse("100"))
-  try @model.AllowedMentions::new(roles~) catch {
+  try @model.AllowedMentions(roles~) catch {
     error =>
       debug_inspect(
         error,
@@ -68,7 +64,7 @@ test "allowed mentions reject more than 100 explicit ids" {
     _ => fail("expected role count validation")
   }
   let users : Array[@model.UserId] = Array::make(101, @model.Id::parse("200"))
-  try @model.AllowedMentions::new(users~) catch {
+  try @model.AllowedMentions(users~) catch {
     error =>
       debug_inspect(
         error,

@@ -44,7 +44,7 @@ fn install_reaction_role(
 
 The bot needs the `Manage Roles` permission, and its highest role must be above
 the assigned role. Typed subscriptions infer the non-privileged reaction
-delivery intents when `Bot::new` omits an explicit `intents` value. If intents
+delivery intents when `Bot(...)` omits an explicit `intents` value. If intents
 are explicit, include `Intents::guild_message_reactions()`.
 
 Production handlers should also restrict the configured message and channel

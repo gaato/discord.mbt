@@ -50,7 +50,7 @@ pub async fn App::serve(
       guard token is Some(token) && !token.is_empty() else {
         raise AppConfigError::EmptyToken
       }
-      (@dhttp.Client::new(token), true)
+      (Client(token), true)
     }
   }
   if owns_client {
@@ -63,7 +63,7 @@ pub async fn App::serve(
   if sync {
     self.sync_commands(client, application_id)
   }
-  let framework = @framework.Framework::new(client, application_id)
+  let framework = @framework.Framework(client, application_id)
   self.attach(framework, client~, application_id~) |> ignore
   { framework, spawner: self.spawner(group), warn: self.warn_ }
 }
@@ -81,7 +81,7 @@ pub async fn InteractionEndpoint::handle_interaction(
     return Reply(response={ typ: Pong, data: None }, files=None)
   }
   let (gate, capture) = @framework.ResponseGate::capture(interaction)
-  let race : @aqueue.Queue[InteractionRace] = @aqueue.Queue::new(kind=Unbounded)
+  let race : @aqueue.Queue[InteractionRace] = Queue(kind=Unbounded)
   (self.spawner)(() => {
     let routed = self.framework.process_with(interaction, gate~) catch {
       error if @async.is_being_cancelled() ||

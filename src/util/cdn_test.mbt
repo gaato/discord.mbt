@@ -2,33 +2,21 @@
 test "CDN asset URLs and defaults" {
   debug_inspect(
     [
-      @util.user_avatar_url(
-        @model.Id(1UL),
-        @model.ImageHash("a_avatar"),
-        size=128,
-      ),
-      @util.user_avatar_url(
-        @model.Id(1UL),
-        @model.ImageHash("avatar"),
-        format=@util.CdnImageFormat::Webp,
-      ),
-      @util.default_user_avatar_url(@model.Id(4194304UL)),
+      @util.user_avatar_url(Id(1UL), ImageHash("a_avatar"), size=128),
+      @util.user_avatar_url(Id(1UL), ImageHash("avatar"), format=Webp),
+      @util.default_user_avatar_url(Id(4194304UL)),
       @util.legacy_default_user_avatar_url(1234),
-      @util.guild_icon_url(@model.Id(2UL), @model.ImageHash("icon"), size=16),
-      @util.guild_banner_url(@model.Id(2UL), @model.ImageHash("a_banner")),
+      @util.guild_icon_url(Id(2UL), ImageHash("icon"), size=16),
+      @util.guild_banner_url(Id(2UL), ImageHash("a_banner")),
       @util.guild_splash_url(
-        @model.Id(2UL),
-        @model.ImageHash("splash"),
-        format=@util.CdnImageFormat::Jpeg,
+        Id(2UL),
+        ImageHash("splash"),
+        format=Jpeg,
         size=4096,
       ),
-      @util.emoji_url(@model.Id(3UL), format=@util.CdnImageFormat::Gif, size=64),
-      @util.sticker_url(@model.Id(4UL), format=@model.StickerFormatType::Lottie),
-      @util.sticker_url(
-        @model.Id(5UL),
-        format=@model.StickerFormatType::Apng,
-        size=256,
-      ),
+      @util.emoji_url(Id(3UL), format=Gif, size=64),
+      @util.sticker_url(Id(4UL), format=Lottie),
+      @util.sticker_url(Id(5UL), format=Apng, size=256),
     ],
     content=(
       #|[
@@ -49,21 +37,15 @@ test "CDN asset URLs and defaults" {
 
 ///|
 test "CDN URLs reject invalid size and unknown sticker format" {
-  try @util.emoji_url(@model.Id(1UL), size=100) catch {
-    @util.CdnUrlError::InvalidSize(size) => inspect(size, content="100")
+  try @util.emoji_url(Id(1UL), size=100) catch {
+    InvalidSize(size) => inspect(size, content="100")
     error => fail("unexpected error: \{to_repr(error)}")
   } noraise {
     _ => fail("expected invalid size")
   }
 
-  try
-    @util.sticker_url(
-      @model.Id(1UL),
-      format=@model.StickerFormatType::Unknown(99),
-    )
-  catch {
-    @util.CdnUrlError::UnsupportedStickerFormat(value) =>
-      inspect(value, content="99")
+  try @util.sticker_url(Id(1UL), format=Unknown(99)) catch {
+    UnsupportedStickerFormat(value) => inspect(value, content="99")
     error => fail("unexpected error: \{to_repr(error)}")
   } noraise {
     _ => fail("expected unsupported sticker format")

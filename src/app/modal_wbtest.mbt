@@ -78,14 +78,13 @@ test "modal field optional default and validation semantics" {
     ),
   )
   try validated.decode(invalid) catch {
-    HandlerError::InvalidArgument(message) =>
-      inspect(message, content="code must be ok")
+    InvalidArgument(message) => inspect(message, content="code must be ok")
     error => fail("unexpected error: \{to_repr(error)}")
   } noraise {
     _ => fail("expected validation failure")
   }
   try validated.decode([]) catch {
-    HandlerError::InvalidArgument(message) =>
+    InvalidArgument(message) =>
       inspect(message, content="missing modal field: code")
     error => fail("unexpected error: \{to_repr(error)}")
   } noraise {

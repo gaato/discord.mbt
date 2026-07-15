@@ -90,8 +90,7 @@ pub impl ToJson for OverwriteType with fn to_json(self) {
 pub impl @json.FromJson for OverwriteType with fn from_json(json, path) {
   match json {
     Number(value, ..) => OverwriteType::from_int(value.to_int())
-    _ =>
-      raise @json.JsonDecodeError((path, "expected an overwrite type (number)"))
+    _ => raise JsonDecodeError((path, "expected an overwrite type (number)"))
   }
 }
 
@@ -130,10 +129,7 @@ pub impl ToJson for VideoQualityMode with fn to_json(self) {
 pub impl @json.FromJson for VideoQualityMode with fn from_json(json, path) {
   match json {
     Number(value, ..) => VideoQualityMode::from_int(value.to_int())
-    _ =>
-      raise @json.JsonDecodeError(
-        (path, "expected a video quality mode (number)"),
-      )
+    _ => raise JsonDecodeError((path, "expected a video quality mode (number)"))
   }
 }
 
@@ -172,8 +168,7 @@ pub impl ToJson for SortOrderType with fn to_json(self) {
 pub impl @json.FromJson for SortOrderType with fn from_json(json, path) {
   match json {
     Number(value, ..) => SortOrderType::from_int(value.to_int())
-    _ =>
-      raise @json.JsonDecodeError((path, "expected a sort order type (number)"))
+    _ => raise JsonDecodeError((path, "expected a sort order type (number)"))
   }
 }
 
@@ -215,10 +210,7 @@ pub impl ToJson for ForumLayoutType with fn to_json(self) {
 pub impl @json.FromJson for ForumLayoutType with fn from_json(json, path) {
   match json {
     Number(value, ..) => ForumLayoutType::from_int(value.to_int())
-    _ =>
-      raise @json.JsonDecodeError(
-        (path, "expected a forum layout type (number)"),
-      )
+    _ => raise JsonDecodeError((path, "expected a forum layout type (number)"))
   }
 }
 
@@ -271,7 +263,7 @@ pub impl @json.FromJson for ThreadAutoArchiveDuration with fn from_json(
   match json {
     Number(value, ..) => ThreadAutoArchiveDuration::from_int(value.to_int())
     _ =>
-      raise @json.JsonDecodeError(
+      raise JsonDecodeError(
         (path, "expected a thread auto-archive duration (number)"),
       )
   }
@@ -373,13 +365,13 @@ pub impl @json.FromJson for ChannelFlags with fn from_json(json, path) {
       ChannelFlags(
         @string.parse_uint64(repr.to_string()) catch {
           _ =>
-            raise @json.JsonDecodeError(
+            raise JsonDecodeError(
               (path, "expected channel flags (number), got \{repr}"),
             )
         },
       )
     Number(value, repr=None) => ChannelFlags(value.to_uint64())
-    _ => raise @json.JsonDecodeError((path, "expected channel flags (number)"))
+    _ => raise JsonDecodeError((path, "expected channel flags (number)"))
   }
 }
 

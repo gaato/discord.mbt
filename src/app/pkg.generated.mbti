@@ -67,12 +67,12 @@ pub(all) suberror HandlerError {
 pub struct App {
   // private fields
 }
+pub fn App::App(sync? : CommandSync, max_in_flight? : Int) -> Self
 pub fn App::attach(Self, @framework.Framework, client~ : @http.Client, application_id~ : @model.Id[@model.ApplicationMarker], waiter? : async (String, Int?) -> @framework.ComponentCtx?) -> AppCtx
 pub fn App::autocomplete(Self, String, async (@framework.AutocompleteCtx) -> Unit) -> Unit
 pub fn[A] App::command(Self, Command[A]) -> Unit
 pub fn App::error_policy(Self, async (FailureCtx, Error) -> Unit) -> Unit
 pub fn App::middleware(Self, async (InteractionCtx, async () -> Unit) -> Unit) -> Unit
-pub fn App::new(sync? : CommandSync, max_in_flight? : Int) -> Self
 pub fn App::on_component(Self, prefix~ : String, ComponentHandler) -> Unit
 pub fn[A] App::on_modal(Self, Modal[A], ModalSubmitHandler[A]) -> Unit
 pub fn App::on_modal_raw(Self, prefix~ : String, async (@framework.ModalCtx) -> Unit) -> Unit

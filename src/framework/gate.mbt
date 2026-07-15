@@ -38,7 +38,7 @@ pub struct ResponseCapture {
 
 ///|
 /// Construct a gate around an injected callback sink.
-pub fn ResponseGate::new(
+pub fn ResponseGate::ResponseGate(
   kind : @model.InteractionType,
   sink : async (@model.InteractionResponse, Array[@dhttp.FileUpload]?) -> Unit,
 ) -> ResponseGate {
@@ -51,7 +51,7 @@ pub fn ResponseGate::rest(
   client : @dhttp.Client,
   interaction : @model.Interaction,
 ) -> ResponseGate {
-  ResponseGate::new(interaction.typ, (response, files) => {
+  ResponseGate(interaction.typ, (response, files) => {
     client.create_interaction_response(
       interaction.id,
       interaction.token,
@@ -66,11 +66,9 @@ pub fn ResponseGate::rest(
 pub fn ResponseGate::capture(
   interaction : @model.Interaction,
 ) -> (ResponseGate, ResponseCapture) {
-  let queue : @aqueue.Queue[CapturedResponse] = @aqueue.Queue::new(
-    kind=Blocking(1),
-  )
+  let queue : @aqueue.Queue[CapturedResponse] = Queue(kind=Blocking(1))
   let capture : ResponseCapture = { queue, }
-  let gate = ResponseGate::new(interaction.typ, (response, files) => {
+  let gate = ResponseGate(interaction.typ, (response, files) => {
     queue.put({ response, files })
   })
   (gate, capture)

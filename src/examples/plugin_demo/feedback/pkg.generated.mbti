@@ -16,13 +16,13 @@ pub(all) struct FeedbackConfig {
   destination_channel : @model.Id[@model.ChannelMarker]
   cooldown_seconds : Int
 }
-pub fn FeedbackConfig::new(destination_channel~ : @model.Id[@model.ChannelMarker], cooldown_seconds? : Int) -> Self
+pub fn FeedbackConfig::FeedbackConfig(destination_channel~ : @model.Id[@model.ChannelMarker], cooldown_seconds? : Int) -> Self
 
 pub struct FeedbackFeature {
   // private fields
 }
+pub fn FeedbackFeature::FeedbackFeature(FeedbackConfig) -> Self
 pub fn FeedbackFeature::install(Self, @app.App) -> Unit
-pub fn FeedbackFeature::new(FeedbackConfig) -> Self
 pub fn FeedbackFeature::stored_count(Self) -> Int
 
 // Type aliases

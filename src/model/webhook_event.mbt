@@ -47,7 +47,7 @@ pub impl @json.FromJson for WebhookPayloadType with fn from_json(json, path) {
   match json {
     Number(value, ..) => WebhookPayloadType::from_int(value.to_int())
     _ =>
-      raise @json.JsonDecodeError(
+      raise JsonDecodeError(
         (path, "expected an outbound webhook payload type (number)"),
       )
   }
@@ -131,7 +131,7 @@ pub impl @json.FromJson for WebhookEventType with fn from_json(json, path) {
   match json {
     String(value) => WebhookEventType::from_string(value)
     _ =>
-      raise @json.JsonDecodeError(
+      raise JsonDecodeError(
         (path, "expected an outbound webhook event type (string)"),
       )
   }
@@ -166,27 +166,19 @@ pub(all) enum WebhookEvent {
 pub fn WebhookEventBody::project(self : WebhookEventBody) -> WebhookEvent raise {
   let data = self.data.unwrap_or(Json::null())
   match self.typ {
-    ApplicationAuthorized =>
-      WebhookEvent::ApplicationAuthorized(@json.from_json(data))
-    ApplicationDeauthorized =>
-      WebhookEvent::ApplicationDeauthorized(@json.from_json(data))
-    EntitlementCreate => WebhookEvent::EntitlementCreate(@json.from_json(data))
-    EntitlementUpdate => WebhookEvent::EntitlementUpdate(@json.from_json(data))
-    EntitlementDelete => WebhookEvent::EntitlementDelete(@json.from_json(data))
-    LobbyMessageCreate =>
-      WebhookEvent::LobbyMessageCreate(@json.from_json(data))
-    LobbyMessageUpdate =>
-      WebhookEvent::LobbyMessageUpdate(@json.from_json(data))
-    LobbyMessageDelete =>
-      WebhookEvent::LobbyMessageDelete(@json.from_json(data))
-    GameDirectMessageCreate =>
-      WebhookEvent::GameDirectMessageCreate(@json.from_json(data))
-    GameDirectMessageUpdate =>
-      WebhookEvent::GameDirectMessageUpdate(@json.from_json(data))
-    GameDirectMessageDelete =>
-      WebhookEvent::GameDirectMessageDelete(@json.from_json(data))
-    QuestUserEnrollment => WebhookEvent::QuestUserEnrollment
-    Unknown(typ) => WebhookEvent::Unknown(typ~, data=self.data)
+    ApplicationAuthorized => ApplicationAuthorized(@json.from_json(data))
+    ApplicationDeauthorized => ApplicationDeauthorized(@json.from_json(data))
+    EntitlementCreate => EntitlementCreate(@json.from_json(data))
+    EntitlementUpdate => EntitlementUpdate(@json.from_json(data))
+    EntitlementDelete => EntitlementDelete(@json.from_json(data))
+    LobbyMessageCreate => LobbyMessageCreate(@json.from_json(data))
+    LobbyMessageUpdate => LobbyMessageUpdate(@json.from_json(data))
+    LobbyMessageDelete => LobbyMessageDelete(@json.from_json(data))
+    GameDirectMessageCreate => GameDirectMessageCreate(@json.from_json(data))
+    GameDirectMessageUpdate => GameDirectMessageUpdate(@json.from_json(data))
+    GameDirectMessageDelete => GameDirectMessageDelete(@json.from_json(data))
+    QuestUserEnrollment => QuestUserEnrollment
+    Unknown(typ) => Unknown(typ~, data=self.data)
   }
 }
 

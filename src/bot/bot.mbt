@@ -78,7 +78,7 @@ pub struct Bot {
 }
 
 ///|
-pub fn Bot::new(
+pub fn Bot::Bot(
   app : @app.App,
   token~ : String,
   intents? : @model.Intents,
@@ -104,7 +104,7 @@ pub fn Bot::new(
     decode_errors_: [],
     telemetry_: [],
     services_: [],
-    collector_: EventCollector::new(),
+    collector_: EventCollector(),
     connector_: Ref(None),
     gateway_bot_info_: Ref(None),
     identify_spacing_ms_: Ref(5250),
@@ -192,7 +192,7 @@ fn Bot::observe_decode_error(self : Bot, event : @model.Event) -> Unit {
     Unknown(t~, d~) if t.has_prefix("DECODE_ERROR:") => {
       // Never include `d`: payloads can contain user content and credentials.
       self.app_.warn("gateway event decode failure: \{t}")
-      self.emit_telemetry(@telemetry.TelemetryEvent::DecodeError(marker=t))
+      self.emit_telemetry(DecodeError(marker=t))
       for handler in self.decode_errors_ {
         handler(t, d)
       }
@@ -369,11 +369,7 @@ fn Bot::spawn_services(
       (service.dispatch)(gateway) catch {
         error if @async.is_being_cancelled() ||
           @async.is_cancellation_error(error) => raise error
-        error =>
-          self.app_.report_failure(
-            @app.FailureOrigin::Service(name=service.name),
-            error,
-          )
+        error => self.app_.report_failure(Service(name=service.name), error)
       }
     })
   }
@@ -393,20 +389,14 @@ async fn Bot::spawn_event_handlers(
       handler_count += 1
     }
   }
-  self.emit_telemetry(
-    @telemetry.TelemetryEvent::EventDispatched(
-      kind="\{to_repr(kind)}",
-      handler_count~,
-    ),
-  )
+  self.emit_telemetry(EventDispatched(kind="\{to_repr(kind)}", handler_count~))
   for subscription in self.typed_events_ {
     if subscription.kind == kind {
       spawner(() => {
         (subscription.dispatch)(gateway, event) catch {
           error if @async.is_being_cancelled() ||
             @async.is_cancellation_error(error) => raise error
-          error =>
-            self.app_.report_failure(@app.FailureOrigin::Event(kind~), error)
+          error => self.app_.report_failure(Event(kind~), error)
         }
       })
     }
@@ -416,8 +406,7 @@ async fn Bot::spawn_event_handlers(
       handler(gateway, event) catch {
         error if @async.is_being_cancelled() ||
           @async.is_cancellation_error(error) => raise error
-        error =>
-          self.app_.report_failure(@app.FailureOrigin::Event(kind~), error)
+        error => self.app_.report_failure(Event(kind~), error)
       }
     })
   }
@@ -453,7 +442,7 @@ pub async fn Bot::run(self : Bot) -> Unit {
   }
   let intents = self.resolved_intents()
   let owns_client = self.client_ is None
-  let client = self.client_.unwrap_or_else(() => @dhttp.Client::new(self.token_))
+  let client = self.client_.unwrap_or_else(() => Client(self.token_))
   defer (if owns_client { client.close() })
   client.on_telemetry(event => self.emit_telemetry(event))
   let resolved = self.resolve_shards(client)
@@ -462,7 +451,7 @@ pub async fn Bot::run(self : Bot) -> Unit {
     let identify_queue : &@queue.IdentifyQueue = match self.identify_queue_ {
       Some(queue) => queue
       None =>
-        @queue.InMemoryQueue::new(
+        @queue.InMemoryQueue(
           max_concurrency=resolved.max_concurrency,
           spacing_ms=self.identify_spacing_ms_.val,
         )
@@ -484,9 +473,7 @@ pub async fn Bot::run(self : Bot) -> Unit {
       shard_handles.push(shard)
     }
     group.add_defer(() => close_shards(shard_handles))
-    let shard_events : @aqueue.Queue[ManagedShardEvent] = @aqueue.Queue::new(
-      kind=Unbounded,
-    )
+    let shard_events : @aqueue.Queue[ManagedShardEvent] = Queue(kind=Unbounded)
     for owner in managed_shards {
       group.spawn_bg(no_wait=true, () => {
         for ;; {
@@ -508,7 +495,7 @@ pub async fn Bot::run(self : Bot) -> Unit {
           }
           let first_ready = framework is None
           if first_ready {
-            let router = @framework.Framework::new(client, ready.application.id)
+            let router = @framework.Framework(client, ready.application.id)
             let waiter : @app.ComponentWaiter = (custom_id, timeout_ms) => {
               router.wait_for_component(custom_id~, timeout_ms?)
             }

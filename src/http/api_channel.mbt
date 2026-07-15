@@ -4,7 +4,7 @@ pub async fn Client::get_channel(
   self : Client,
   channel_id : @model.ChannelId,
 ) -> @model.Channel raise DiscordHttpError {
-  decode(self.request(Route::GetChannel(channel_id~)))
+  decode(self.request(GetChannel(channel_id~)))
 }
 
 ///|
@@ -23,21 +23,17 @@ pub async fn Client::modify_channel(
   audit_reason? : String,
 ) -> @model.Channel raise DiscordHttpError {
   if name is Some(value) && (value.length() < 1 || value.length() > 100) {
-    raise DiscordHttpError::Validation(
+    raise Validation(
       message="channel name must be between 1 and 100 characters",
     )
   }
   if topic is Some(value) && value.length() > 4096 {
-    raise DiscordHttpError::Validation(
-      message="channel topic exceeds 4096 characters",
-    )
+    raise Validation(message="channel topic exceeds 4096 characters")
   }
   if rate_limit_per_user is Some(value) && (value < 0 || value > 21600) {
-    raise DiscordHttpError::Validation(
-      message="rate_limit_per_user must be between 0 and 21600",
-    )
+    raise Validation(message="rate_limit_per_user must be between 0 and 21600")
   }
-  let body = @model.ObjBuilder::new()
+  let body = @model.ObjBuilder()
     .opt("name", name)
     .und("topic", patch_nullable("topic", topic, clear_topic))
     .opt("nsfw", nsfw)
@@ -45,7 +41,7 @@ pub async fn Client::modify_channel(
     .opt("rate_limit_per_user", rate_limit_per_user)
     .opt("position", position)
     .build()
-  decode(self.request(Route::ModifyChannel(channel_id~), body~, audit_reason?))
+  decode(self.request(ModifyChannel(channel_id~), body~, audit_reason?))
 }
 
 ///|
@@ -55,7 +51,7 @@ pub async fn Client::delete_channel(
   channel_id : @model.ChannelId,
   audit_reason? : String,
 ) -> @model.Channel raise DiscordHttpError {
-  decode(self.request(Route::DeleteChannel(channel_id~), audit_reason?))
+  decode(self.request(DeleteChannel(channel_id~), audit_reason?))
 }
 
 ///|
@@ -64,7 +60,7 @@ pub async fn Client::trigger_typing(
   self : Client,
   channel_id : @model.ChannelId,
 ) -> Unit raise DiscordHttpError {
-  self.request(Route::TriggerTypingIndicator(channel_id~)) |> ignore
+  self.request(TriggerTypingIndicator(channel_id~)) |> ignore
 }
 
 ///|
@@ -75,8 +71,7 @@ pub async fn Client::pin_message(
   message_id : @model.MessageId,
   audit_reason? : String,
 ) -> Unit raise DiscordHttpError {
-  self.request(Route::PinMessage(channel_id~, message_id~), audit_reason?)
-  |> ignore
+  self.request(PinMessage(channel_id~, message_id~), audit_reason?) |> ignore
 }
 
 ///|
@@ -87,8 +82,7 @@ pub async fn Client::unpin_message(
   message_id : @model.MessageId,
   audit_reason? : String,
 ) -> Unit raise DiscordHttpError {
-  self.request(Route::UnpinMessage(channel_id~, message_id~), audit_reason?)
-  |> ignore
+  self.request(UnpinMessage(channel_id~, message_id~), audit_reason?) |> ignore
 }
 
 ///|
@@ -97,7 +91,7 @@ pub async fn Client::get_pinned_messages(
   self : Client,
   channel_id : @model.ChannelId,
 ) -> Array[@model.Message] raise DiscordHttpError {
-  decode(self.request(Route::GetPinnedMessages(channel_id~)))
+  decode(self.request(GetPinnedMessages(channel_id~)))
 }
 
 ///|
@@ -111,13 +105,13 @@ pub async fn Client::edit_channel_permissions(
   typ : Int,
   audit_reason? : String,
 ) -> Unit raise DiscordHttpError {
-  let body = @model.ObjBuilder::new()
+  let body = @model.ObjBuilder()
     .field("allow", allow)
     .field("deny", deny)
     .field("type", typ)
     .build()
   self.request(
-    Route::EditChannelPermissions(channel_id~, overwrite_id~),
+    EditChannelPermissions(channel_id~, overwrite_id~),
     body~,
     audit_reason?,
   )
@@ -133,7 +127,7 @@ pub async fn Client::delete_channel_permission(
   audit_reason? : String,
 ) -> Unit raise DiscordHttpError {
   self.request(
-    Route::DeleteChannelPermission(channel_id~, overwrite_id~),
+    DeleteChannelPermission(channel_id~, overwrite_id~),
     audit_reason?,
   )
   |> ignore
@@ -145,7 +139,7 @@ pub async fn Client::get_channel_invites(
   self : Client,
   channel_id : @model.ChannelId,
 ) -> Array[@model.Invite] raise DiscordHttpError {
-  decode(self.request(Route::GetChannelInvites(channel_id~)))
+  decode(self.request(GetChannelInvites(channel_id~)))
 }
 
 ///|
@@ -159,15 +153,13 @@ pub async fn Client::create_channel_invite(
   unique? : Bool,
   audit_reason? : String,
 ) -> @model.Invite raise DiscordHttpError {
-  let body = @model.ObjBuilder::new()
+  let body = @model.ObjBuilder()
     .opt("max_age", max_age)
     .opt("max_uses", max_uses)
     .opt("temporary", temporary)
     .opt("unique", unique)
     .build()
-  decode(
-    self.request(Route::CreateChannelInvite(channel_id~), body~, audit_reason?),
-  )
+  decode(self.request(CreateChannelInvite(channel_id~), body~, audit_reason?))
 }
 
 ///|
@@ -179,8 +171,7 @@ pub async fn Client::create_reaction(
   message_id : @model.MessageId,
   emoji : String,
 ) -> Unit raise DiscordHttpError {
-  self.request(Route::CreateReaction(channel_id~, message_id~, emoji~))
-  |> ignore
+  self.request(CreateReaction(channel_id~, message_id~, emoji~)) |> ignore
 }
 
 ///|
@@ -191,8 +182,7 @@ pub async fn Client::delete_own_reaction(
   message_id : @model.MessageId,
   emoji : String,
 ) -> Unit raise DiscordHttpError {
-  self.request(Route::DeleteOwnReaction(channel_id~, message_id~, emoji~))
-  |> ignore
+  self.request(DeleteOwnReaction(channel_id~, message_id~, emoji~)) |> ignore
 }
 
 ///|
@@ -204,9 +194,7 @@ pub async fn Client::delete_user_reaction(
   emoji : String,
   user_id : @model.UserId,
 ) -> Unit raise DiscordHttpError {
-  self.request(
-    Route::DeleteUserReaction(channel_id~, message_id~, emoji~, user_id~),
-  )
+  self.request(DeleteUserReaction(channel_id~, message_id~, emoji~, user_id~))
   |> ignore
 }
 
@@ -217,7 +205,7 @@ pub async fn Client::delete_all_reactions(
   channel_id : @model.ChannelId,
   message_id : @model.MessageId,
 ) -> Unit raise DiscordHttpError {
-  self.request(Route::DeleteAllReactions(channel_id~, message_id~)) |> ignore
+  self.request(DeleteAllReactions(channel_id~, message_id~)) |> ignore
 }
 
 ///|
@@ -231,9 +219,7 @@ pub async fn Client::get_reactions(
   after? : @model.UserId,
 ) -> Array[@model.User] raise DiscordHttpError {
   if limit is Some(value) && (value < 1 || value > 100) {
-    raise DiscordHttpError::Validation(
-      message="reaction limit must be 1 through 100",
-    )
+    raise Validation(message="reaction limit must be 1 through 100")
   }
   let params : Array[String] = []
   if limit is Some(value) {
@@ -243,9 +229,7 @@ pub async fn Client::get_reactions(
     params.push("after=\{value}")
   }
   let query = if params.length() == 0 { "" } else { "?" + params.join("&") }
-  decode(
-    self.request(Route::GetReactions(channel_id~, message_id~, emoji~, query~)),
-  )
+  decode(self.request(GetReactions(channel_id~, message_id~, emoji~, query~)))
 }
 
 ///|
@@ -260,23 +244,19 @@ pub async fn Client::start_thread_from_message(
   audit_reason? : String,
 ) -> @model.Channel raise DiscordHttpError {
   if name.length() < 1 || name.length() > 100 {
-    raise DiscordHttpError::Validation(
-      message="thread name must be between 1 and 100 characters",
-    )
+    raise Validation(message="thread name must be between 1 and 100 characters")
   }
   if rate_limit_per_user is Some(value) && (value < 0 || value > 21600) {
-    raise DiscordHttpError::Validation(
-      message="rate_limit_per_user must be between 0 and 21600",
-    )
+    raise Validation(message="rate_limit_per_user must be between 0 and 21600")
   }
-  let body = @model.ObjBuilder::new()
+  let body = @model.ObjBuilder()
     .field("name", name)
     .opt("auto_archive_duration", auto_archive_duration)
     .opt("rate_limit_per_user", rate_limit_per_user)
     .build()
   decode(
     self.request(
-      Route::StartThreadFromMessage(channel_id~, message_id~),
+      StartThreadFromMessage(channel_id~, message_id~),
       body~,
       audit_reason?,
     ),
@@ -289,7 +269,7 @@ pub async fn Client::join_thread(
   self : Client,
   channel_id : @model.ChannelId,
 ) -> Unit raise DiscordHttpError {
-  self.request(Route::JoinThread(channel_id~)) |> ignore
+  self.request(JoinThread(channel_id~)) |> ignore
 }
 
 ///|
@@ -298,5 +278,5 @@ pub async fn Client::leave_thread(
   self : Client,
   channel_id : @model.ChannelId,
 ) -> Unit raise DiscordHttpError {
-  self.request(Route::LeaveThread(channel_id~)) |> ignore
+  self.request(LeaveThread(channel_id~)) |> ignore
 }

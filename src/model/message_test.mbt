@@ -451,11 +451,11 @@ test "message decodes an integer nonce without losing precision" {
 ///|
 test "message encode omits absent optional fields" {
   let author : @model.User = {
-    id: @model.Id(2UL),
+    id: Id(2UL),
     username: "neko",
     discriminator: "0",
-    global_name: Some(@model.Nullable::Null),
-    avatar: @model.Nullable::Null,
+    global_name: Some(Null),
+    avatar: Null,
     bot: None,
     system: None,
     mfa_enabled: None,
@@ -473,12 +473,12 @@ test "message encode omits absent optional fields" {
     primary_guild: None,
   }
   let message : @model.Message = {
-    id: @model.Id(1UL),
-    channel_id: @model.Id(3UL),
+    id: Id(1UL),
+    channel_id: Id(3UL),
     author,
     content: "hello",
-    timestamp: @model.Timestamp("2024-01-01T00:00:00Z"),
-    edited_timestamp: @model.Nullable::Null,
+    timestamp: Timestamp("2024-01-01T00:00:00Z"),
+    edited_timestamp: Null,
     tts: false,
     mention_everyone: false,
     mentions: [],
@@ -490,7 +490,7 @@ test "message encode omits absent optional fields" {
     nonce: None,
     pinned: false,
     webhook_id: None,
-    typ: @model.MessageType::Default,
+    typ: Default,
     activity: None,
     application_id: None,
     message_reference: None,

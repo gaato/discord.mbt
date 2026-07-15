@@ -69,7 +69,7 @@ priv suberror GateSinkError {
 
 ///|
 async test "response gate remains terminal after sink failure" {
-  let gate = @framework.ResponseGate::new(ApplicationCommand, (_, _) => {
+  let gate = @framework.ResponseGate(ApplicationCommand, (_, _) => {
     raise GateSinkError
   })
   try gate.send({ typ: ChannelMessageWithSource, data: None }) catch {

@@ -3,12 +3,15 @@ import {
   "gaato/discord/telemetry",
   "gaato/discord/ratelimit",
   "gaato/discord/internal/pool",
+  "gaato/discord/internal/clock",
   "moonbitlang/async",
   "moonbitlang/async/http" @ahttp,
   "moonbitlang/core/json",
+  "moonbitlang/core/debug",
 }
 
 import {
   "moonbitlang/core/json",
+  "moonbitlang/core/debug",
   "gaato/discord/model",
 } for "test"

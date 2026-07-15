@@ -41,7 +41,7 @@ pub(all) struct RoleTags {
 
 ///|
 pub impl ToJson for RoleTags with fn to_json(self) {
-  let fields : Map[String, Json] = {}
+  let fields : Map[String, Json] = Map([])
   if self.bot_id is Some(value) {
     fields["bot_id"] = value.to_json()
   }
@@ -66,7 +66,7 @@ pub impl ToJson for RoleTags with fn to_json(self) {
 ///|
 pub impl @json.FromJson for RoleTags with fn from_json(json, path) {
   guard json is Object(fields) else {
-    raise @json.JsonDecodeError((path, "expected role tags (object)"))
+    raise JsonDecodeError((path, "expected role tags (object)"))
   }
   let bot_id : UserId? = match fields.get("bot_id") {
     None => None
@@ -159,13 +159,13 @@ pub impl @json.FromJson for RoleFlags with fn from_json(json, path) {
       RoleFlags(
         @string.parse_uint64(r.to_string()) catch {
           _ =>
-            raise @json.JsonDecodeError(
+            raise JsonDecodeError(
               (path, "expected role flags (number), got \{r}"),
             )
         },
       )
     Number(n, repr=None) => RoleFlags(n.to_uint64())
-    _ => raise @json.JsonDecodeError((path, "expected role flags (number)"))
+    _ => raise JsonDecodeError((path, "expected role flags (number)"))
   }
 }
 

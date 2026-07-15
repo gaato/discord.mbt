@@ -82,7 +82,7 @@ pub impl @json.FromJson for IntegrationExpireBehavior with fn from_json(
   match json {
     Number(value, ..) => IntegrationExpireBehavior::from_int(value.to_int())
     _ =>
-      raise @json.JsonDecodeError(
+      raise JsonDecodeError(
         (path, "expected integration expire behavior (number)"),
       )
   }

@@ -408,7 +408,7 @@ pub fn container(
   Container({
     id: None,
     components,
-    accent_color: accent_color.map(value => @model.Nullable::Value(value)),
+    accent_color: accent_color.map(value => Value(value)),
     spoiler,
   })
 }

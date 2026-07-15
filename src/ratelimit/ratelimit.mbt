@@ -51,11 +51,11 @@ pub struct InMemoryRateLimiter {
 }
 
 ///|
-pub fn InMemoryRateLimiter::new(
+pub fn InMemoryRateLimiter::InMemoryRateLimiter(
   global_limit? : Int = 50,
 ) -> InMemoryRateLimiter {
   {
-    buckets: {},
+    buckets: Map([]),
     global_limit,
     global_window_start: 0,
     global_count: 0,
@@ -68,7 +68,7 @@ async fn InMemoryRateLimiter::wait_for_global(
   self : InMemoryRateLimiter,
 ) -> Unit {
   for ;; {
-    let now = @async.now()
+    let now = @clock.now_ms()
     if now < self.global_blocked_until {
       @async.sleep((self.global_blocked_until - now).to_int() + 1)
       continue
@@ -99,7 +99,7 @@ pub impl RateLimiter for InMemoryRateLimiter with fn acquire(
     Some(b) => b
     None => {
       let b : Bucket = {
-        gate: @async.Semaphore::new(1),
+        gate: Semaphore(1),
         known: false,
         remaining: 0,
         reset_at_ms: 0,
@@ -113,7 +113,7 @@ pub impl RateLimiter for InMemoryRateLimiter with fn acquire(
   // for the bucket reset releases it.
   try {
     if bucket.known && bucket.remaining <= 0 {
-      let wait = bucket.reset_at_ms - @async.now()
+      let wait = bucket.reset_at_ms - @clock.now_ms()
       if wait > 0 {
         @async.sleep(wait.to_int() + 1)
       }
@@ -143,7 +143,7 @@ pub impl RateLimiter for InMemoryRateLimiter with fn release(
   // Prefer the relative reset to be robust against wall-clock jumps.
   if headers.get("x-ratelimit-reset-after") is Some(after_s) {
     let after = @string.parse_double(after_s) catch { _ => 0.0 }
-    bucket.reset_at_ms = @async.now() + (after * 1000.0).to_int64()
+    bucket.reset_at_ms = @clock.now_ms() + (after * 1000.0).to_int64()
   }
   if status == 429 {
     let retry_after_ms = match headers.get("retry-after") {
@@ -154,11 +154,11 @@ pub impl RateLimiter for InMemoryRateLimiter with fn release(
       None => 1000L
     }
     if headers.get("x-ratelimit-global") is Some(_) {
-      self.global_blocked_until = @async.now() + retry_after_ms
+      self.global_blocked_until = @clock.now_ms() + retry_after_ms
     } else {
       bucket.known = true
       bucket.remaining = 0
-      bucket.reset_at_ms = @async.now() + retry_after_ms
+      bucket.reset_at_ms = @clock.now_ms() + retry_after_ms
     }
   }
   bucket.gate.release()

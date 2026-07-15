@@ -114,18 +114,18 @@ fn autocomplete_choices(
 
 ///|
 async test "interaction endpoint dispatches captured responses and completion outcomes" {
-  let app = @app.App::new(sync=Disabled)
+  let app = @app.App(sync=Disabled)
   let warnings : Array[String] = []
   app.on_warn(message => warnings.push(message))
-  let waiter_results : @aqueue.Queue[Bool] = @aqueue.Queue::new(kind=Unbounded)
-  let slow_finished : @aqueue.Queue[Unit] = @aqueue.Queue::new(kind=Unbounded)
+  let waiter_results : @aqueue.Queue[Bool] = Queue(kind=Unbounded)
+  let slow_finished : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   app.command(
     @app.slash(
       name="immediate",
       description="Immediate response",
       args=@interaction.Args::unit(),
       handler=Immediate((ctx, _) => {
-        guard ctx.scope() is @framework.InvocationScope::Dm(user) else {
+        guard ctx.scope() is Dm(user) else {
           fail("expected a DM command invocation")
         }
         assert_true(user.id == ctx.user().id)
@@ -147,7 +147,7 @@ async test "interaction endpoint dispatches captured responses and completion ou
       description="Deferred without gateway waiter",
       args=@interaction.Args::unit(),
       handler=Deferred(ephemeral=false, (ctx, _) => {
-        assert_true(ctx.scope() is @framework.InvocationScope::Dm(_))
+        assert_true(ctx.scope() is Dm(_))
         assert_true(ctx.user().id.to_string() == "200000000000000001")
         waiter_results.put(
           ctx.wait_for_component(custom_id="never", timeout_ms=1) is None,
@@ -175,7 +175,7 @@ async test "interaction endpoint dispatches captured responses and completion ou
       _ => fail("expected an empty token error")
     }
   })
-  let client = @dhttp.Client::new(
+  let client = @dhttp.Client(
     "test-token",
     base_url="http://127.0.0.1:1",
     max_connections=1,
@@ -259,7 +259,7 @@ async test "interaction endpoint dispatches captured responses and completion ou
 
 ///|
 async test "interaction endpoint dispatches component and typed modal handlers" {
-  let app = @app.App::new(sync=Disabled)
+  let app = @app.App(sync=Disabled)
   let feedback = @app.modal(
     custom_id="feedback",
     title="Feedback",
@@ -270,15 +270,13 @@ async test "interaction endpoint dispatches component and typed modal handlers" 
       name="open-form",
       description="Open the feedback form",
       args=@interaction.Args::unit(),
-      handler=Immediate((_, _) => {
-        CommandReply::ShowModal(feedback.show(state="from-command"))
-      }),
+      handler=Immediate((_, _) => ShowModal(feedback.show(state="from-command"))),
     ),
   )
   app.on_component(
     prefix="update:",
     Immediate(ctx => {
-      assert_true(ctx.scope() is @framework.InvocationScope::Dm(_))
+      assert_true(ctx.scope() is Dm(_))
       assert_true(ctx.user().id.to_string() == "200000000000000001")
       assert_true(ctx.message().content == "component host")
       @app.ComponentReply::update_message(content="updated:\{ctx.suffix()}")
@@ -286,23 +284,21 @@ async test "interaction endpoint dispatches component and typed modal handlers" 
   )
   app.on_component(
     prefix="open:",
-    Immediate(ctx => {
-      ComponentReply::ShowModal(feedback.show(state=ctx.suffix()))
-    }),
+    Immediate(ctx => ShowModal(feedback.show(state=ctx.suffix()))),
   )
   app.on_component(
     prefix="defer:",
     DeferredUpdate(ctx => {
-      assert_true(ctx.scope() is @framework.InvocationScope::Dm(_))
+      assert_true(ctx.scope() is Dm(_))
       assert_true(ctx.message().content == "component host")
     }),
   )
   app.on_modal(
     feedback,
     Immediate((ctx, note) => {
-      assert_true(ctx.scope() is @framework.InvocationScope::Dm(_))
+      assert_true(ctx.scope() is Dm(_))
       assert_true(ctx.user().id.to_string() == "200000000000000001")
-      assert_true(ctx.origin() is @framework.ModalOrigin::FromCommand)
+      assert_true(ctx.origin() is FromCommand)
       @app.InitialResponse::message(
         content="saved:\{note}:\{ctx.state().unwrap_or("none")}",
       )
@@ -316,14 +312,14 @@ async test "interaction endpoint dispatches component and typed modal handlers" 
   app.on_modal(
     deferred_feedback,
     Deferred(ephemeral=false, (ctx, _) => {
-      assert_true(ctx.scope() is @framework.InvocationScope::Dm(_))
-      guard ctx.origin() is @framework.ModalOrigin::FromComponent(message) else {
+      assert_true(ctx.scope() is Dm(_))
+      guard ctx.origin() is FromComponent(message) else {
         fail("expected a component-origin modal")
       }
       assert_true(message.content == "component host")
     }),
   )
-  let client = @dhttp.Client::new(
+  let client = @dhttp.Client(
     "test-token",
     base_url="http://127.0.0.1:1",
     max_connections=1,
@@ -418,7 +414,7 @@ async test "interaction endpoint dispatches component and typed modal handlers" 
 
 ///|
 async test "typed autocomplete dispatches partial and nested focused options" {
-  let app = @app.App::new(sync=Disabled)
+  let app = @app.App(sync=Disabled)
   app.command(
     @app.slash(
       name="search",
@@ -497,7 +493,7 @@ async test "typed autocomplete dispatches partial and nested focused options" {
       #|{"id":"500000000000000303","application_id":"400000000000000001","type":4,"token":"interaction-token","version":1,"data":{"id":"600000000000000303","name":"manual","type":1,"options":[{"name":"query","type":3,"value":"m","focused":true}]}}
     ),
   )
-  let client = @dhttp.Client::new(
+  let client = @dhttp.Client(
     "test-token",
     base_url="http://127.0.0.1:1",
     max_connections=1,
@@ -576,7 +572,7 @@ test "command constructors emit context types and slash attributes" {
 
 ///|
 async test "context menu commands decode resolved targets" {
-  let app = @app.App::new(sync=Disabled)
+  let app = @app.App(sync=Disabled)
   app.command(
     @app.user_command(
       name="Inspect",
@@ -681,7 +677,7 @@ async test "context menu commands decode resolved targets" {
       #|{"id":"500000000000000203","application_id":"400000000000000001","type":2,"token":"interaction-token","version":1,"data":{"id":"600000000000000203","name":"Inspect","type":2,"target_id":"80351110224678912"}}
     ),
   )
-  let client = @dhttp.Client::new(
+  let client = @dhttp.Client(
     "test-token",
     base_url="http://127.0.0.1:1",
     max_connections=1,
@@ -787,7 +783,7 @@ async test "slash groups emit nested specs and dispatch direct and grouped paths
       },
     ],
   })
-  let app = @app.App::new(sync=Disabled)
+  let app = @app.App(sync=Disabled)
   app.command(command)
   let direct = app_interaction(
     (
@@ -804,7 +800,7 @@ async test "slash groups emit nested specs and dispatch direct and grouped paths
       #|{"id":"500000000000000213","application_id":"400000000000000001","type":2,"token":"interaction-token","version":1,"data":{"id":"600000000000000213","name":"admin","type":1,"options":[{"name":"missing","type":1}]}}
     ),
   )
-  let client = @dhttp.Client::new(
+  let client = @dhttp.Client(
     "test-token",
     base_url="http://127.0.0.1:1",
     max_connections=1,

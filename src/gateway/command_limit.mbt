@@ -8,14 +8,14 @@ pub struct CommandLimiter {
 }
 
 ///|
-pub fn CommandLimiter::new(limit? : Int = 115) -> CommandLimiter {
+pub fn CommandLimiter::CommandLimiter(limit? : Int = 115) -> CommandLimiter {
   { timestamps: [], limit }
 }
 
 ///|
 pub async fn CommandLimiter::acquire(self : CommandLimiter) -> Unit {
   for ;; {
-    let now = @async.now()
+    let now = @clock.now_ms()
     while self.timestamps.length() > 0 && now - self.timestamps[0] >= 60000L {
       self.timestamps.remove(0) |> ignore
     }

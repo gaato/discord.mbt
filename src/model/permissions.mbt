@@ -52,12 +52,12 @@ pub impl @json.FromJson for Permissions with fn from_json(json, path) {
       Permissions(
         @string.parse_uint64(s) catch {
           _ =>
-            raise @json.JsonDecodeError(
+            raise JsonDecodeError(
               (path, "expected permissions (decimal string), got \{s}"),
             )
         },
       )
-    _ => raise @json.JsonDecodeError((path, "expected permissions (string)"))
+    _ => raise JsonDecodeError((path, "expected permissions (string)"))
   }
 }
 

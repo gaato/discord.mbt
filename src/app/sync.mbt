@@ -103,7 +103,7 @@ pub fn commands_in_sync(
   if declared.length() != fetched.length() {
     return false
   }
-  let by_key : Map[String, @model.ApplicationCommand] = {}
+  let by_key : Map[String, @model.ApplicationCommand] = Map([])
   for command in fetched {
     let typ = command.typ.unwrap_or(ChatInput)
     let key = command_key(typ, command.name)

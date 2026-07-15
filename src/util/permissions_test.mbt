@@ -5,7 +5,7 @@ fn overwrite(
   allow : @model.Permissions,
   deny : @model.Permissions,
 ) -> @model.Overwrite {
-  { id: @model.Id(id), typ, allow, deny }
+  { id: Id(id), typ, allow, deny }
 }
 
 ///|
@@ -47,14 +47,14 @@ test "channel overwrites use official precedence and aggregate roles" {
     @model.Permissions::attach_files()
   let permissions = @util.channel_permissions(
     base~,
-    guild_id=@model.Id(1UL),
-    member_id=@model.Id(2UL),
-    role_ids=[@model.Id(10UL), @model.Id(11UL)],
+    guild_id=Id(1UL),
+    member_id=Id(2UL),
+    role_ids=[Id(10UL), Id(11UL)],
     overwrites=[
       // @everyone applies first.
       overwrite(
         1UL,
-        @model.OverwriteType::Role,
+        Role,
         @model.Permissions::read_message_history(),
         @model.Permissions::send_messages(),
       ),
@@ -63,33 +63,33 @@ test "channel overwrites use official precedence and aggregate roles" {
       // unrelated deny stage.
       overwrite(
         10UL,
-        @model.OverwriteType::Role,
+        Role,
         @model.Permissions::attach_files(),
         @model.Permissions::embed_links(),
       ),
       overwrite(
         11UL,
-        @model.OverwriteType::Role,
+        Role,
         @model.Permissions::send_messages(),
         @model.Permissions::attach_files(),
       ),
       // The member overwrite applies last.
       overwrite(
         2UL,
-        @model.OverwriteType::Member,
+        Member,
         @model.Permissions::embed_links(),
         @model.Permissions::attach_files(),
       ),
       // Unrelated and future overwrite categories do not affect the result.
       overwrite(
         99UL,
-        @model.OverwriteType::Member,
+        Member,
         @model.Permissions::administrator(),
         @model.Permissions::none(),
       ),
       overwrite(
         2UL,
-        @model.OverwriteType::Unknown(7),
+        Unknown(7),
         @model.Permissions::administrator(),
         @model.Permissions::none(),
       ),
@@ -109,16 +109,11 @@ test "administrator bypasses channel overwrites" {
     @model.Permissions::view_channel()
   let permissions = @util.channel_permissions(
     base~,
-    guild_id=@model.Id(1UL),
-    member_id=@model.Id(2UL),
+    guild_id=Id(1UL),
+    member_id=Id(2UL),
     role_ids=[],
     overwrites=[
-      overwrite(
-        1UL,
-        @model.OverwriteType::Role,
-        @model.Permissions::none(),
-        @util.all_permissions(),
-      ),
+      overwrite(1UL, Role, @model.Permissions::none(), @util.all_permissions()),
     ],
   )
   assert_eq(permissions.bits(), @util.all_permissions().bits())
@@ -131,7 +126,7 @@ test "communication timeout is opt-in and administrator exempt" {
     @model.Permissions::send_messages()
   let active = @util.apply_communication_timeout(
     permissions~,
-    communication_disabled_until=@model.Timestamp("2100-01-01T00:00:00Z"),
+    communication_disabled_until=Timestamp("2100-01-01T00:00:00Z"),
     now_unix_ms=0L,
   )
   assert_true(active.contains(@model.Permissions::view_channel()))
@@ -140,7 +135,7 @@ test "communication timeout is opt-in and administrator exempt" {
 
   let expired = @util.apply_communication_timeout(
     permissions~,
-    communication_disabled_until=@model.Timestamp("1970-01-01T00:00:00Z"),
+    communication_disabled_until=Timestamp("1970-01-01T00:00:00Z"),
     now_unix_ms=1L,
   )
   assert_eq(expired.bits(), permissions.bits())
@@ -149,7 +144,7 @@ test "communication timeout is opt-in and administrator exempt" {
     @model.Permissions::send_messages()
   let exempt = @util.apply_communication_timeout(
     permissions=administrator,
-    communication_disabled_until=@model.Timestamp("2100-01-01T00:00:00Z"),
+    communication_disabled_until=Timestamp("2100-01-01T00:00:00Z"),
     now_unix_ms=0L,
   )
   assert_eq(exempt.bits(), administrator.bits())

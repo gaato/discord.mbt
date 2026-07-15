@@ -114,7 +114,7 @@ pub impl @json.FromJson for VerificationLevel with fn from_json(json, path) {
   match json {
     Number(value, ..) => VerificationLevel::from_int(value.to_int())
     _ =>
-      raise @json.JsonDecodeError(
+      raise JsonDecodeError(
         (path, "expected guild verification level (number)"),
       )
   }
@@ -163,7 +163,7 @@ pub impl @json.FromJson for DefaultMessageNotifications with fn from_json(
   match json {
     Number(value, ..) => DefaultMessageNotifications::from_int(value.to_int())
     _ =>
-      raise @json.JsonDecodeError(
+      raise JsonDecodeError(
         (path, "expected default message notification level (number)"),
       )
   }
@@ -208,7 +208,7 @@ pub impl @json.FromJson for ExplicitContentFilter with fn from_json(json, path) 
   match json {
     Number(value, ..) => ExplicitContentFilter::from_int(value.to_int())
     _ =>
-      raise @json.JsonDecodeError(
+      raise JsonDecodeError(
         (path, "expected explicit content filter level (number)"),
       )
   }
@@ -249,8 +249,7 @@ pub impl ToJson for MfaLevel with fn to_json(self) {
 pub impl @json.FromJson for MfaLevel with fn from_json(json, path) {
   match json {
     Number(value, ..) => MfaLevel::from_int(value.to_int())
-    _ =>
-      raise @json.JsonDecodeError((path, "expected guild MFA level (number)"))
+    _ => raise JsonDecodeError((path, "expected guild MFA level (number)"))
   }
 }
 
@@ -295,10 +294,7 @@ pub impl ToJson for PremiumTier with fn to_json(self) {
 pub impl @json.FromJson for PremiumTier with fn from_json(json, path) {
   match json {
     Number(value, ..) => PremiumTier::from_int(value.to_int())
-    _ =>
-      raise @json.JsonDecodeError(
-        (path, "expected guild premium tier (number)"),
-      )
+    _ => raise JsonDecodeError((path, "expected guild premium tier (number)"))
   }
 }
 
@@ -343,8 +339,7 @@ pub impl ToJson for NsfwLevel with fn to_json(self) {
 pub impl @json.FromJson for NsfwLevel with fn from_json(json, path) {
   match json {
     Number(value, ..) => NsfwLevel::from_int(value.to_int())
-    _ =>
-      raise @json.JsonDecodeError((path, "expected guild NSFW level (number)"))
+    _ => raise JsonDecodeError((path, "expected guild NSFW level (number)"))
   }
 }
 
@@ -496,7 +491,7 @@ pub impl ToJson for GuildFeature with fn to_json(self) {
 pub impl @json.FromJson for GuildFeature with fn from_json(json, path) {
   match json {
     String(value) => GuildFeature::from_string(value.to_string())
-    _ => raise @json.JsonDecodeError((path, "expected guild feature (string)"))
+    _ => raise JsonDecodeError((path, "expected guild feature (string)"))
   }
 }
 
@@ -554,16 +549,13 @@ pub impl @json.FromJson for SystemChannelFlags with fn from_json(json, path) {
       SystemChannelFlags(
         @string.parse_uint64(repr.to_string()) catch {
           _ =>
-            raise @json.JsonDecodeError(
+            raise JsonDecodeError(
               (path, "expected system channel flags (number), got \{repr}"),
             )
         },
       )
     Number(value, repr=None) => SystemChannelFlags(value.to_uint64())
-    _ =>
-      raise @json.JsonDecodeError(
-        (path, "expected system channel flags (number)"),
-      )
+    _ => raise JsonDecodeError((path, "expected system channel flags (number)"))
   }
 }
 

@@ -3,10 +3,10 @@
 pub async fn Client::get_gateway(
   self : Client,
 ) -> String raise DiscordHttpError {
-  match self.request(Route::GetGateway) {
+  match self.request(GetGateway) {
     { "url": String(url), .. } => url
     other =>
-      raise DiscordHttpError::Deserialize(
+      raise Deserialize(
         message="expected gateway url, got \{other.stringify()}",
       )
   }
@@ -17,5 +17,5 @@ pub async fn Client::get_gateway(
 pub async fn Client::get_gateway_bot(
   self : Client,
 ) -> @model.GatewayBotInfo raise DiscordHttpError {
-  decode(self.request(Route::GetGatewayBot))
+  decode(self.request(GetGatewayBot))
 }

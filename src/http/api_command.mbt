@@ -4,14 +4,10 @@ fn validate_command_text(
   description : String,
 ) -> Unit raise DiscordHttpError {
   if name.length() < 1 || name.length() > 32 {
-    raise DiscordHttpError::Validation(
-      message="command name must be between 1 and 32 characters",
-    )
+    raise Validation(message="command name must be between 1 and 32 characters")
   }
   if description.length() > 100 {
-    raise DiscordHttpError::Validation(
-      message="command description exceeds 100 characters",
-    )
+    raise Validation(message="command description exceeds 100 characters")
   }
 }
 
@@ -21,14 +17,10 @@ fn validate_command_patch(
   description : String?,
 ) -> Unit raise DiscordHttpError {
   if name is Some(value) && (value.length() < 1 || value.length() > 32) {
-    raise DiscordHttpError::Validation(
-      message="command name must be between 1 and 32 characters",
-    )
+    raise Validation(message="command name must be between 1 and 32 characters")
   }
   if description is Some(value) && value.length() > 100 {
-    raise DiscordHttpError::Validation(
-      message="command description exceeds 100 characters",
-    )
+    raise Validation(message="command description exceeds 100 characters")
   }
 }
 
@@ -42,7 +34,7 @@ fn command_body(
   clear_default_member_permissions : Bool,
   nsfw : Bool?,
 ) -> Json raise DiscordHttpError {
-  @model.ObjBuilder::new()
+  @model.ObjBuilder()
   .field("name", name)
   .field("description", description)
   .opt("options", options)
@@ -66,7 +58,7 @@ fn command_patch_body(
   clear_default_member_permissions : Bool,
   nsfw : Bool?,
 ) -> Json raise DiscordHttpError {
-  @model.ObjBuilder::new()
+  @model.ObjBuilder()
   .opt("name", name)
   .opt("description", description)
   .und("options", patch_value(options))
@@ -83,9 +75,7 @@ fn command_patch_body(
 ///|
 fn validate_bulk_commands(commands : Json) -> Unit raise DiscordHttpError {
   if !(commands is Array(_)) {
-    raise DiscordHttpError::Validation(
-      message="bulk command payload must be a JSON array",
-    )
+    raise Validation(message="bulk command payload must be a JSON array")
   }
 }
 
@@ -95,7 +85,7 @@ pub async fn Client::get_global_commands(
   self : Client,
   application_id : @model.ApplicationId,
 ) -> Array[@model.ApplicationCommand] raise DiscordHttpError {
-  decode(self.request(Route::GetGlobalCommands(application_id~)))
+  decode(self.request(GetGlobalCommands(application_id~)))
 }
 
 ///|
@@ -105,7 +95,7 @@ pub async fn Client::get_global_command(
   application_id : @model.ApplicationId,
   command_id : @model.CommandId,
 ) -> @model.ApplicationCommand raise DiscordHttpError {
-  decode(self.request(Route::GetGlobalCommand(application_id~, command_id~)))
+  decode(self.request(GetGlobalCommand(application_id~, command_id~)))
 }
 
 ///|
@@ -126,7 +116,7 @@ pub async fn Client::create_global_command(
     name, description, options, typ, default_member_permissions, clear_default_member_permissions,
     nsfw,
   )
-  decode(self.request(Route::CreateGlobalCommand(application_id~), body~))
+  decode(self.request(CreateGlobalCommand(application_id~), body~))
 }
 
 ///|
@@ -147,9 +137,7 @@ pub async fn Client::edit_global_command(
     name, description, options, default_member_permissions, clear_default_member_permissions,
     nsfw,
   )
-  decode(
-    self.request(Route::EditGlobalCommand(application_id~, command_id~), body~),
-  )
+  decode(self.request(EditGlobalCommand(application_id~, command_id~), body~))
 }
 
 ///|
@@ -159,8 +147,7 @@ pub async fn Client::delete_global_command(
   application_id : @model.ApplicationId,
   command_id : @model.CommandId,
 ) -> Unit raise DiscordHttpError {
-  self.request(Route::DeleteGlobalCommand(application_id~, command_id~))
-  |> ignore
+  self.request(DeleteGlobalCommand(application_id~, command_id~)) |> ignore
 }
 
 ///|
@@ -172,10 +159,7 @@ pub async fn Client::bulk_overwrite_global_commands(
 ) -> Array[@model.ApplicationCommand] raise DiscordHttpError {
   validate_bulk_commands(commands)
   decode(
-    self.request(
-      Route::BulkOverwriteGlobalCommands(application_id~),
-      body=commands,
-    ),
+    self.request(BulkOverwriteGlobalCommands(application_id~), body=commands),
   )
 }
 
@@ -186,7 +170,7 @@ pub async fn Client::get_guild_commands(
   application_id : @model.ApplicationId,
   guild_id : @model.GuildId,
 ) -> Array[@model.ApplicationCommand] raise DiscordHttpError {
-  decode(self.request(Route::GetGuildCommands(application_id~, guild_id~)))
+  decode(self.request(GetGuildCommands(application_id~, guild_id~)))
 }
 
 ///|
@@ -197,11 +181,7 @@ pub async fn Client::get_guild_command(
   guild_id : @model.GuildId,
   command_id : @model.CommandId,
 ) -> @model.ApplicationCommand raise DiscordHttpError {
-  decode(
-    self.request(
-      Route::GetGuildCommand(application_id~, guild_id~, command_id~),
-    ),
-  )
+  decode(self.request(GetGuildCommand(application_id~, guild_id~, command_id~)))
 }
 
 ///|
@@ -223,9 +203,7 @@ pub async fn Client::create_guild_command(
     name, description, options, typ, default_member_permissions, clear_default_member_permissions,
     nsfw,
   )
-  decode(
-    self.request(Route::CreateGuildCommand(application_id~, guild_id~), body~),
-  )
+  decode(self.request(CreateGuildCommand(application_id~, guild_id~), body~))
 }
 
 ///|
@@ -249,7 +227,7 @@ pub async fn Client::edit_guild_command(
   )
   decode(
     self.request(
-      Route::EditGuildCommand(application_id~, guild_id~, command_id~),
+      EditGuildCommand(application_id~, guild_id~, command_id~),
       body~,
     ),
   )
@@ -263,9 +241,7 @@ pub async fn Client::delete_guild_command(
   guild_id : @model.GuildId,
   command_id : @model.CommandId,
 ) -> Unit raise DiscordHttpError {
-  self.request(
-    Route::DeleteGuildCommand(application_id~, guild_id~, command_id~),
-  )
+  self.request(DeleteGuildCommand(application_id~, guild_id~, command_id~))
   |> ignore
 }
 
@@ -280,7 +256,7 @@ pub async fn Client::bulk_overwrite_guild_commands(
   validate_bulk_commands(commands)
   decode(
     self.request(
-      Route::BulkOverwriteGuildCommands(application_id~, guild_id~),
+      BulkOverwriteGuildCommands(application_id~, guild_id~),
       body=commands,
     ),
   )

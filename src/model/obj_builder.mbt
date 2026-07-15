@@ -5,11 +5,13 @@
 /// - `field`: always emitted
 /// - `opt`: emitted only when `Some`
 /// - `und`: `Missing` omitted, `Null` emitted as JSON `null`, `Value` emitted
-pub struct ObjBuilder(Map[String, Json])
+pub struct ObjBuilder {
+  priv fields : Map[String, Json]
+}
 
 ///|
-pub fn ObjBuilder::new() -> ObjBuilder {
-  ObjBuilder({})
+pub fn ObjBuilder::ObjBuilder() -> ObjBuilder {
+  { fields: Map([]) }
 }
 
 ///|
@@ -18,7 +20,7 @@ pub fn[T : ToJson] ObjBuilder::field(
   key : String,
   value : T,
 ) -> ObjBuilder {
-  self.0[key] = value.to_json()
+  self.fields[key] = value.to_json()
   self
 }
 
@@ -29,7 +31,7 @@ pub fn[T : ToJson] ObjBuilder::opt(
   value : T?,
 ) -> ObjBuilder {
   if value is Some(v) {
-    self.0[key] = v.to_json()
+    self.fields[key] = v.to_json()
   }
   self
 }
@@ -42,13 +44,13 @@ pub fn[T : ToJson] ObjBuilder::und(
 ) -> ObjBuilder {
   match value {
     Missing => ()
-    Null => self.0[key] = Json::null()
-    Value(v) => self.0[key] = v.to_json()
+    Null => self.fields[key] = Json::null()
+    Value(v) => self.fields[key] = v.to_json()
   }
   self
 }
 
 ///|
 pub fn ObjBuilder::build(self : ObjBuilder) -> Json {
-  Json::object(self.0)
+  Json::object(self.fields)
 }

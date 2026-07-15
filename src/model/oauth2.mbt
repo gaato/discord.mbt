@@ -124,10 +124,7 @@ pub impl ToJson for ConnectionService with fn to_json(self) {
 pub impl @json.FromJson for ConnectionService with fn from_json(json, path) {
   match json {
     String(value) => ConnectionService::from_string(value.to_string())
-    _ =>
-      raise @json.JsonDecodeError(
-        (path, "expected connection service (string)"),
-      )
+    _ => raise JsonDecodeError((path, "expected connection service (string)"))
   }
 }
 

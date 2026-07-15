@@ -1,9 +1,7 @@
 ///|
 fn validate_stage_topic(topic : String?) -> Unit raise DiscordHttpError {
   if topic is Some(value) && (value.length() < 1 || value.length() > 120) {
-    raise DiscordHttpError::Validation(
-      message="stage topic must be 1 through 120 characters",
-    )
+    raise Validation(message="stage topic must be 1 through 120 characters")
   }
 }
 
@@ -19,14 +17,14 @@ pub async fn Client::create_stage_instance(
   audit_reason? : String,
 ) -> @model.StageInstance raise DiscordHttpError {
   validate_stage_topic(Some(topic))
-  let body = @model.ObjBuilder::new()
+  let body = @model.ObjBuilder()
     .field("channel_id", channel_id)
     .field("topic", topic)
     .opt("privacy_level", privacy_level)
     .opt("send_start_notification", send_start_notification)
     .opt("guild_scheduled_event_id", guild_scheduled_event_id)
     .build()
-  decode(self.request(Route::CreateStageInstance, body~, audit_reason?))
+  decode(self.request(CreateStageInstance, body~, audit_reason?))
 }
 
 ///|
@@ -35,7 +33,7 @@ pub async fn Client::get_stage_instance(
   self : Client,
   channel_id : @model.ChannelId,
 ) -> @model.StageInstance raise DiscordHttpError {
-  decode(self.request(Route::GetStageInstance(channel_id~)))
+  decode(self.request(GetStageInstance(channel_id~)))
 }
 
 ///|
@@ -48,13 +46,11 @@ pub async fn Client::modify_stage_instance(
   audit_reason? : String,
 ) -> @model.StageInstance raise DiscordHttpError {
   validate_stage_topic(topic)
-  let body = @model.ObjBuilder::new()
+  let body = @model.ObjBuilder()
     .opt("topic", topic)
     .opt("privacy_level", privacy_level)
     .build()
-  decode(
-    self.request(Route::ModifyStageInstance(channel_id~), body~, audit_reason?),
-  )
+  decode(self.request(ModifyStageInstance(channel_id~), body~, audit_reason?))
 }
 
 ///|
@@ -64,5 +60,5 @@ pub async fn Client::delete_stage_instance(
   channel_id : @model.ChannelId,
   audit_reason? : String,
 ) -> Unit raise DiscordHttpError {
-  self.request(Route::DeleteStageInstance(channel_id~), audit_reason?) |> ignore
+  self.request(DeleteStageInstance(channel_id~), audit_reason?) |> ignore
 }

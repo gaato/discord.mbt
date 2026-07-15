@@ -105,11 +105,11 @@ test "user decodes required fields only" {
 ///|
 test "user encode omits absent optional fields" {
   let user : @model.User = {
-    id: @model.Id(1UL),
+    id: Id(1UL),
     username: "neko",
     discriminator: "0",
-    global_name: Some(@model.Nullable::Value("Neko")),
-    avatar: @model.Nullable::Null,
+    global_name: Some(Value("Neko")),
+    avatar: Null,
     bot: None,
     system: None,
     mfa_enabled: None,

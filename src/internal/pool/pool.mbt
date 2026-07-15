@@ -15,13 +15,8 @@ pub struct Pool {
 }
 
 ///|
-pub fn Pool::new(uri : String, max_connections? : Int = 4) -> Pool {
-  {
-    uri,
-    idle: [],
-    slots: @async.Semaphore::new(max_connections),
-    closed: false,
-  }
+pub fn Pool::Pool(uri : String, max_connections? : Int = 4) -> Pool {
+  { uri, idle: [], slots: Semaphore(max_connections), closed: false }
 }
 
 ///|
@@ -39,7 +34,7 @@ pub async fn[T] Pool::with_conn(
   let conn = match self.idle.pop() {
     Some(c) => c
     None =>
-      @http.Client::new(self.uri) catch {
+      Client(self.uri) catch {
         e => {
           self.slots.release()
           raise e

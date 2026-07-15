@@ -81,16 +81,15 @@ pub fn channel_permissions(
   for overwrite in overwrites {
     let target = overwrite.id.value()
     match overwrite.typ {
-      @model.OverwriteType::Role if target == guild_value => {
+      Role if target == guild_value => {
         everyone_allow = everyone_allow | overwrite.allow
         everyone_deny = everyone_deny | overwrite.deny
       }
-      @model.OverwriteType::Role if target != guild_value &&
-        has_role(role_ids, target) => {
+      Role if target != guild_value && has_role(role_ids, target) => {
         roles_allow = roles_allow | overwrite.allow
         roles_deny = roles_deny | overwrite.deny
       }
-      @model.OverwriteType::Member if target == member_value => {
+      Member if target == member_value => {
         member_allow = member_allow | overwrite.allow
         member_deny = member_deny | overwrite.deny
       }

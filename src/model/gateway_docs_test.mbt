@@ -32,10 +32,7 @@ test "discord docs: example voice server update payload (line 1539)" {
   let second : @model.VoiceServerUpdateEvent = @json.from_json(first.to_json())
   assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
   inspect(first.guild_id.to_string(), content="41771983423143937")
-  assert_true(
-    first.endpoint ==
-    @model.Nullable::Value("sweetwater-12345.discord.media:2048"),
-  )
+  assert_true(first.endpoint == Value("sweetwater-12345.discord.media:2048"))
 }
 
 ///|
@@ -93,7 +90,7 @@ test "discord docs: MESSAGE_UPDATE guild payload with MESSAGE_CREATE extra field
     #|}
   let event = @model.dispatch_event("MESSAGE_UPDATE", @json.parse(fixture))
   match event {
-    @model.Event::MessageUpdate(update) => {
+    MessageUpdate(update) => {
       let message = update.message
       inspect(message.id.to_string(), content="120000000000000001")
       inspect(message.mentions.length(), content="1")
@@ -150,7 +147,7 @@ test "discord docs: MESSAGE_UPDATE payload without guild-only extra fields" {
     #|}
   let event = @model.dispatch_event("MESSAGE_UPDATE", @json.parse(fixture))
   match event {
-    @model.Event::MessageUpdate(update) => {
+    MessageUpdate(update) => {
       let message = update.message
       inspect(message.id.to_string(), content="120000000000000002")
       inspect(message.content, content="edited in a DM")
@@ -219,7 +216,7 @@ test "discord docs: MESSAGE_CREATE guild payload with gateway extra fields" {
     #|}
   let event = @model.dispatch_event("MESSAGE_CREATE", @json.parse(fixture))
   match event {
-    @model.Event::MessageCreate(create) => {
+    MessageCreate(create) => {
       let message = create.message
       inspect(message.id.to_string(), content="120000000000000003")
       inspect(message.mentions.length(), content="1")
@@ -332,7 +329,7 @@ test "discord docs: GUILD_CREATE available payload" {
     #|}
   let event = @model.dispatch_event("GUILD_CREATE", @json.parse(fixture))
   match event {
-    @model.Event::GuildCreate(@model.GuildCreateEvent::Available(available)) => {
+    GuildCreate(Available(available)) => {
       inspect(available.guild.id.to_string(), content="100000000000000001")
       inspect(available.member_count, content="1")
       inspect(available.channels.length(), content="1")
@@ -350,7 +347,7 @@ test "discord docs: GUILD_CREATE unavailable payload" {
     #|{"id":"100000000000000001","unavailable":true}
   let event = @model.dispatch_event("GUILD_CREATE", @json.parse(fixture))
   match event {
-    @model.Event::GuildCreate(@model.GuildCreateEvent::Unavailable(unavailable)) => {
+    GuildCreate(Unavailable(unavailable)) => {
       inspect(unavailable.id.to_string(), content="100000000000000001")
       assert_true(unavailable.unavailable)
     }
@@ -377,7 +374,7 @@ test "discord docs: PRESENCE_UPDATE is lenient per field" {
     #|}
   let event = @model.dispatch_event("PRESENCE_UPDATE", @json.parse(fixture))
   match event {
-    @model.Event::PresenceUpdate(presence) => {
+    PresenceUpdate(presence) => {
       guard presence.user is Some(user) else {
         fail("expected the partial user to decode")
       }
@@ -394,7 +391,7 @@ test "discord docs: PRESENCE_UPDATE is lenient per field" {
       guard presence.client_status is Some(client_status) else {
         fail("expected client status object")
       }
-      assert_true(client_status.desktop == Some(@model.PresenceStatus::Online))
+      assert_true(client_status.desktop == Some(Online))
       assert_true(client_status.mobile is None)
     }
     _ => fail("expected PRESENCE_UPDATE payload")
@@ -434,7 +431,7 @@ test "discord docs: GUILD_MEMBERS_CHUNK has typed presences" {
     #|}
   let event = @model.dispatch_event("GUILD_MEMBERS_CHUNK", @json.parse(fixture))
   match event {
-    @model.Event::GuildMembersChunk(chunk) => {
+    GuildMembersChunk(chunk) => {
       inspect(chunk.members.length(), content="1")
       guard chunk.presences is Some(presences) else {
         fail("expected typed member-chunk presences")
@@ -443,7 +440,7 @@ test "discord docs: GUILD_MEMBERS_CHUNK has typed presences" {
         fail("expected typed presence user")
       }
       inspect(user_id.to_string(), content="200000000000000001")
-      assert_true(presences[0].status == Some(@model.PresenceStatus::Online))
+      assert_true(presences[0].status == Some(Online))
     }
     _ => fail("expected GUILD_MEMBERS_CHUNK payload")
   }
@@ -472,9 +469,9 @@ test "discord docs: THREAD_CREATE newly created thread payload" {
     #|}
   let event = @model.dispatch_event("THREAD_CREATE", @json.parse(fixture))
   match event {
-    @model.Event::ThreadCreate(create) => {
+    ThreadCreate(create) => {
       inspect(create.channel.id.to_string(), content="110000000000000001")
-      assert_true(create.channel.typ is @model.ChannelType::PublicThread)
+      assert_true(create.channel.typ is PublicThread)
       assert_true(create.newly_created == Some(true))
       assert_true(create.channel.thread_member is None)
     }
@@ -500,8 +497,8 @@ test "discord docs: THREAD_CREATE existing private thread member payload" {
     #|}
   let event = @model.dispatch_event("THREAD_CREATE", @json.parse(fixture))
   match event {
-    @model.Event::ThreadCreate(create) => {
-      assert_true(create.channel.typ is @model.ChannelType::PrivateThread)
+    ThreadCreate(create) => {
+      assert_true(create.channel.typ is PrivateThread)
       assert_true(create.newly_created is None)
       guard create.channel.thread_member is Some(thread_member) else {
         fail("expected the channel's thread member")
@@ -527,7 +524,7 @@ test "discord docs: THREAD_CREATE payload without event-only fields" {
     #|}
   let event = @model.dispatch_event("THREAD_CREATE", @json.parse(fixture))
   match event {
-    @model.Event::ThreadCreate(create) => {
+    ThreadCreate(create) => {
       inspect(create.channel.id.to_string(), content="110000000000000003")
       assert_true(create.newly_created is None)
       assert_true(create.channel.thread_member is None)
@@ -553,17 +550,17 @@ test "discord docs: subscription dispatch payloads" {
     #|}
   let payload = @json.parse(fixture)
   match @model.dispatch_event("SUBSCRIPTION_CREATE", payload) {
-    @model.Event::SubscriptionCreate(subscription) =>
+    SubscriptionCreate(subscription) =>
       inspect(subscription.user_id.to_string(), content="771129655544643584")
     _ => fail("expected SUBSCRIPTION_CREATE payload")
   }
   match @model.dispatch_event("SUBSCRIPTION_UPDATE", payload) {
-    @model.Event::SubscriptionUpdate(subscription) =>
+    SubscriptionUpdate(subscription) =>
       inspect(subscription.status.to_int(), content="0")
     _ => fail("expected SUBSCRIPTION_UPDATE payload")
   }
   match @model.dispatch_event("SUBSCRIPTION_DELETE", payload) {
-    @model.Event::SubscriptionDelete(subscription) =>
+    SubscriptionDelete(subscription) =>
       inspect(subscription.sku_ids.length(), content="1")
     _ => fail("expected SUBSCRIPTION_DELETE payload")
   }
@@ -587,7 +584,7 @@ test "discord docs: APPLICATION_COMMAND_PERMISSIONS_UPDATE payload" {
     @json.parse(fixture),
   )
   match event {
-    @model.Event::ApplicationCommandPermissionsUpdate(permissions) => {
+    ApplicationCommandPermissionsUpdate(permissions) => {
       inspect(permissions.id.to_string(), content="110000000000000001")
       inspect(permissions.permissions.length(), content="3")
       inspect(permissions.permissions[2].typ.to_int(), content="3")

@@ -16,7 +16,7 @@ pub struct CacheResources {
 }
 
 ///|
-pub fn CacheResources::new(
+pub fn CacheResources::CacheResources(
   guilds? : Bool = true,
   channels? : Bool = true,
   roles? : Bool = true,
@@ -40,12 +40,12 @@ pub fn CacheResources::new(
 
 ///|
 pub fn CacheResources::all() -> CacheResources {
-  CacheResources::new(presences=true, messages=true)
+  CacheResources(presences=true, messages=true)
 }
 
 ///|
 pub fn CacheResources::none() -> CacheResources {
-  CacheResources::new(
+  CacheResources(
     guilds=false,
     channels=false,
     roles=false,
@@ -57,7 +57,7 @@ pub fn CacheResources::none() -> CacheResources {
 
 ///|
 pub fn CacheResources::default() -> CacheResources {
-  CacheResources::new()
+  CacheResources()
 }
 
 ///|
@@ -106,24 +106,24 @@ pub struct InMemoryCache {
 }
 
 ///|
-pub fn InMemoryCache::new(
+pub fn InMemoryCache::InMemoryCache(
   resources~ : CacheResources,
   max_messages_per_channel? : Int = 100,
 ) -> InMemoryCache {
   {
     resources_: resources,
     max_messages_per_channel_: max_messages_per_channel.max(0),
-    guilds_: {},
-    unavailable_guilds_: {},
-    channels_: {},
-    channel_guilds_: {},
-    roles_: {},
-    members_: {},
-    users_: {},
-    voice_states_: {},
-    presences_: {},
-    messages_: {},
-    message_order_: {},
+    guilds_: Map([]),
+    unavailable_guilds_: Map([]),
+    channels_: Map([]),
+    channel_guilds_: Map([]),
+    roles_: Map([]),
+    members_: Map([]),
+    users_: Map([]),
+    voice_states_: Map([]),
+    presences_: Map([]),
+    messages_: Map([]),
+    message_order_: Map([]),
   }
 }
 
@@ -146,7 +146,7 @@ fn InMemoryCache::store_member(
       let guild_members = match self.members_.get(guild_id) {
         Some(value) => value
         None => {
-          let value : Map[@model.UserId, @model.GuildMember] = {}
+          let value : Map[@model.UserId, @model.GuildMember] = Map([])
           self.members_[guild_id] = value
           value
         }
@@ -163,7 +163,7 @@ fn InMemoryCache::store_roles(
   roles : Array[@model.Role],
 ) -> Unit {
   if self.resources_.roles_ {
-    let cached : Map[@model.RoleId, @model.Role] = {}
+    let cached : Map[@model.RoleId, @model.Role] = Map([])
     for role in roles {
       cached[role.id] = role
     }
@@ -203,7 +203,7 @@ fn InMemoryCache::store_presence(
   let guild_presences = match self.presences_.get(resolved_guild_id) {
     Some(value) => value
     None => {
-      let value : Map[@model.UserId, @model.PresenceUpdateEvent] = {}
+      let value : Map[@model.UserId, @model.PresenceUpdateEvent] = Map([])
       self.presences_[resolved_guild_id] = value
       value
     }
@@ -241,15 +241,15 @@ fn InMemoryCache::store_voice_state(
     return
   }
   match voice_state.channel_id {
-    @model.Nullable::Null =>
+    Null =>
       if self.voice_states_.get(resolved_guild_id) is Some(states) {
         states.remove(voice_state.user_id) |> ignore
       }
-    @model.Nullable::Value(_) => {
+    Value(_) => {
       let states = match self.voice_states_.get(resolved_guild_id) {
         Some(value) => value
         None => {
-          let value : Map[@model.UserId, @model.VoiceState] = {}
+          let value : Map[@model.UserId, @model.VoiceState] = Map([])
           self.voice_states_[resolved_guild_id] = value
           value
         }
@@ -288,7 +288,7 @@ fn InMemoryCache::store_message(
   let channel_messages = match self.messages_.get(message.channel_id) {
     Some(value) => value
     None => {
-      let value : Map[@model.MessageId, @model.Message] = {}
+      let value : Map[@model.MessageId, @model.Message] = Map([])
       self.messages_[message.channel_id] = value
       value
     }
@@ -370,7 +370,7 @@ fn InMemoryCache::seed_available_guild(
   }
   self.store_roles(guild_id, available.guild.roles)
   if self.resources_.members_ {
-    self.members_[guild_id] = {}
+    self.members_[guild_id] = Map([])
   }
   for cached_member in available.members {
     self.store_member(guild_id, cached_member)
@@ -382,13 +382,13 @@ fn InMemoryCache::seed_available_guild(
     self.store_channel(thread, guild_id~)
   }
   if self.resources_.voice_states_ {
-    self.voice_states_[guild_id] = {}
+    self.voice_states_[guild_id] = Map([])
   }
   for voice_state in available.voice_states {
     self.store_voice_state(voice_state, guild_id~)
   }
   if self.resources_.presences_ {
-    self.presences_[guild_id] = {}
+    self.presences_[guild_id] = Map([])
   }
   for presence in available.presences {
     self.store_presence(presence, guild_id~)
@@ -451,8 +451,7 @@ fn InMemoryCache::sync_threads(
       None => true
       Some(parent_ids) =>
         match channel.parent_id {
-          Some(@model.Nullable::Value(parent_id)) =>
-            parent_ids.contains(parent_id)
+          Some(Value(parent_id)) => parent_ids.contains(parent_id)
           _ => false
         }
     }
@@ -507,7 +506,7 @@ pub fn InMemoryCache::update(
       let roles = match self.roles_.get(event.guild_id) {
         Some(value) => value
         None => {
-          let value : Map[@model.RoleId, @model.Role] = {}
+          let value : Map[@model.RoleId, @model.Role] = Map([])
           self.roles_[event.guild_id] = value
           value
         }

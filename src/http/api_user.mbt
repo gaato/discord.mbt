@@ -3,7 +3,7 @@
 pub async fn Client::get_current_user(
   self : Client,
 ) -> @model.User raise DiscordHttpError {
-  decode(self.request(Route::GetCurrentUser))
+  decode(self.request(GetCurrentUser))
 }
 
 ///|
@@ -31,7 +31,7 @@ pub async fn Client::get_current_user_guilds(
     params.push("with_counts=\{value}")
   }
   let query = if params.length() == 0 { "" } else { "?" + params.join("&") }
-  decode(self.request(Route::GetCurrentUserGuilds(query~)))
+  decode(self.request(GetCurrentUserGuilds(query~)))
 }
 
 ///|
@@ -40,7 +40,7 @@ pub async fn Client::get_user(
   self : Client,
   user_id : @model.UserId,
 ) -> @model.User raise DiscordHttpError {
-  decode(self.request(Route::GetUser(user_id~)))
+  decode(self.request(GetUser(user_id~)))
 }
 
 ///|
@@ -52,15 +52,13 @@ pub async fn Client::modify_current_user(
   clear_avatar? : Bool = false,
 ) -> @model.User raise DiscordHttpError {
   if username is Some(value) && (value.length() < 2 || value.length() > 32) {
-    raise DiscordHttpError::Validation(
-      message="username must be between 2 and 32 characters",
-    )
+    raise Validation(message="username must be between 2 and 32 characters")
   }
-  let body = @model.ObjBuilder::new()
+  let body = @model.ObjBuilder()
     .opt("username", username)
     .und("avatar", patch_nullable("avatar", avatar, clear_avatar))
     .build()
-  decode(self.request(Route::ModifyCurrentUser, body~))
+  decode(self.request(ModifyCurrentUser, body~))
 }
 
 ///|
@@ -69,8 +67,6 @@ pub async fn Client::create_dm(
   self : Client,
   recipient_id : @model.UserId,
 ) -> @model.Channel raise DiscordHttpError {
-  let body = @model.ObjBuilder::new()
-    .field("recipient_id", recipient_id)
-    .build()
-  decode(self.request(Route::CreateDm, body~))
+  let body = @model.ObjBuilder().field("recipient_id", recipient_id).build()
+  decode(self.request(CreateDm, body~))
 }
