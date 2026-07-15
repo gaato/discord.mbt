@@ -557,3 +557,213 @@ async test "voice connection surfaces ShimUnavailable through wait_ready" {
     connection.disconnect()
   })
 }
+
+///|
+async fn[X] ready_receive_connection(
+  group : @async.TaskGroup[X],
+  transport : ConnectionTestTransport,
+  udp : ConnectionTestUdp,
+) -> @voice.VoiceConnection {
+  let connection = @voice.VoiceConnection::start(
+    group,
+    connection_credentials(),
+    user_id="self",
+    channel_id=7UL,
+    leave=() => (),
+    rejoin=() => connection_credentials(),
+    connector=_ => (transport : &@voice.VoiceTransport),
+    udp_opener=(_, _) => (udp : &@voice.VoiceUdp),
+  )
+  connection_finish_protocol_selection(transport, udp)
+  transport.incoming.put(connection_session_description(2))
+  connection.wait_ready(timeout_ms=1000)
+  assert_eq(connection.next_event(), ConnectionReady)
+  connection
+}
+
+///|
+async fn map_connection_speaker(
+  connection : @voice.VoiceConnection,
+  transport : ConnectionTestTransport,
+  user_id : String,
+  ssrc : UInt,
+  sequence : Int,
+) -> Unit {
+  transport.incoming.put(
+    Text(
+      "{\"op\":5,\"seq\":\{sequence},\"d\":{\"ssrc\":\{ssrc},\"user_id\":\"\{user_id}\",\"speaking\":1}}",
+    ),
+  )
+  assert_eq(connection.next_event(), SpeakingChanged(user_id~, ssrc~, flags=1))
+}
+
+///|
+fn connection_opus_datagram(
+  ssrc : UInt,
+  sequence : Int,
+  opus : Bytes,
+) -> Bytes raise {
+  let sender = @voice.TransportCipher::new(AeadAes256GcmRtpsize, Bytes::new(32))
+  let header = @voice.build_rtp_header(
+    sequence=sequence.to_uint16(),
+    timestamp=(sequence * 960).reinterpret_as_uint(),
+    ssrc~,
+  )
+  sender.seal(header~, opus)
+}
+
+///|
+async test "voice subscriptions filter users without consuming main events" {
+  if !@voice.shim_available() {
+    return
+  }
+  let transport = ConnectionTestTransport::new()
+  let udp = ConnectionTestUdp::new()
+  @async.with_task_group(group => {
+    let connection = ready_receive_connection(group, transport, udp)
+    map_connection_speaker(connection, transport, "target", 77U, 3)
+    map_connection_speaker(connection, transport, "other", 88U, 4)
+    let stream = connection.subscribe(user_id="target")
+    let audio : &@voice.AudioSource = stream
+    udp.incoming.put(connection_opus_datagram(77U, 1, b"target-one"))
+    udp.incoming.put(connection_opus_datagram(88U, 1, b"other"))
+    udp.incoming.put(connection_opus_datagram(77U, 2, b"target-two"))
+    assert_eq(
+      connection.next_event(),
+      OpusReceived(
+        user_id=Some("target"),
+        ssrc=77U,
+        sequence=1,
+        timestamp=960U,
+        opus=b"target-one",
+      ),
+    )
+    assert_eq(
+      connection.next_event(),
+      OpusReceived(
+        user_id=Some("other"),
+        ssrc=88U,
+        sequence=1,
+        timestamp=960U,
+        opus=b"other",
+      ),
+    )
+    assert_eq(
+      connection.next_event(),
+      OpusReceived(
+        user_id=Some("target"),
+        ssrc=77U,
+        sequence=2,
+        timestamp=1920U,
+        opus=b"target-two",
+      ),
+    )
+    assert_eq(audio.next_frame(), Some(b"target-one"))
+    assert_eq(audio.next_frame(), Some(b"target-two"))
+    stream.close()
+    connection.disconnect()
+  })
+}
+
+///|
+async test "voice subscription ends and unregisters after silence" {
+  if !@voice.shim_available() {
+    return
+  }
+  let transport = ConnectionTestTransport::new()
+  let udp = ConnectionTestUdp::new()
+  @async.with_task_group(group => {
+    let connection = ready_receive_connection(group, transport, udp)
+    map_connection_speaker(connection, transport, "target", 77U, 3)
+    let stream = connection.subscribe(
+      user_id="target",
+      end_after_silence_ms=Some(20),
+    )
+    let audio : &@voice.AudioSource = stream
+    udp.incoming.put(connection_opus_datagram(77U, 1, b"first"))
+    guard connection.next_event() is OpusReceived(opus=b"first", ..)
+    assert_eq(audio.next_frame(), Some(b"first"))
+    assert_eq(@async.with_timeout(200, () => audio.next_frame()), None)
+    udp.incoming.put(connection_opus_datagram(77U, 2, b"too-late"))
+    guard connection.next_event() is OpusReceived(opus=b"too-late", ..)
+    assert_eq(audio.next_frame(), None)
+    connection.disconnect()
+  })
+}
+
+///|
+async test "closing a voice subscription wakes a blocked reader" {
+  let transport = ConnectionTestTransport::new()
+  @async.with_task_group(group => {
+    let connection = @voice.VoiceConnection::start(
+      group,
+      connection_credentials(),
+      user_id="self",
+      channel_id=7UL,
+      leave=() => (),
+      rejoin=() => connection_credentials(),
+      connector=_ => (transport : &@voice.VoiceTransport),
+      receive=false,
+    )
+    let stream = connection.subscribe(user_id="target")
+    let audio : &@voice.AudioSource = stream
+    let blocked = group.spawn(() => audio.next_frame())
+    @async.sleep(10)
+    stream.close()
+    assert_eq(@async.with_timeout(200, () => blocked.wait()), None)
+    connection.disconnect()
+  })
+}
+
+///|
+async test "disconnect ends every voice subscription" {
+  let transport = ConnectionTestTransport::new()
+  @async.with_task_group(group => {
+    let connection = @voice.VoiceConnection::start(
+      group,
+      connection_credentials(),
+      user_id="self",
+      channel_id=7UL,
+      leave=() => (),
+      rejoin=() => connection_credentials(),
+      connector=_ => (transport : &@voice.VoiceTransport),
+      receive=false,
+    )
+    let first : &@voice.AudioSource = connection.subscribe(user_id="one")
+    let second : &@voice.AudioSource = connection.subscribe(user_id="two")
+    let first_read = group.spawn(() => first.next_frame())
+    let second_read = group.spawn(() => second.next_frame())
+    @async.sleep(10)
+    connection.disconnect()
+    assert_eq(@async.with_timeout(200, () => first_read.wait()), None)
+    assert_eq(@async.with_timeout(200, () => second_read.wait()), None)
+  })
+}
+
+///|
+async test "manual voice subscription waits across a long gap" {
+  if !@voice.shim_available() {
+    return
+  }
+  let transport = ConnectionTestTransport::new()
+  let udp = ConnectionTestUdp::new()
+  @async.with_task_group(group => {
+    let connection = ready_receive_connection(group, transport, udp)
+    map_connection_speaker(connection, transport, "target", 77U, 3)
+    let stream = connection.subscribe(
+      user_id="target",
+      end_after_silence_ms=None,
+    )
+    let audio : &@voice.AudioSource = stream
+    let blocked = group.spawn(() => audio.next_frame())
+    @async.sleep(60)
+    udp.incoming.put(connection_opus_datagram(77U, 1, b"after-gap"))
+    guard connection.next_event() is OpusReceived(opus=b"after-gap", ..)
+    assert_eq(
+      @async.with_timeout(200, () => blocked.wait()),
+      Some(b"after-gap"),
+    )
+    stream.close()
+    connection.disconnect()
+  })
+}

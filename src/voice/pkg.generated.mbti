@@ -196,6 +196,7 @@ pub async fn VoiceConnection::set_speaking(Self, Int) -> Unit
 pub fn[X] VoiceConnection::start(@async.TaskGroup[X], VoiceCredentials, user_id~ : String, channel_id~ : UInt64, leave~ : async () -> Unit, rejoin~ : async () -> VoiceCredentials, connector? : async (String) -> &VoiceTransport, udp_opener? : async (String, Int) -> &VoiceUdp, dave_factory? : (Int, String, UInt64) -> &DaveProvider raise, receive? : Bool, telemetry? : (VoiceTelemetry) -> Unit) -> Self
 pub fn VoiceConnection::state(Self) -> VoiceConnectionState
 pub async fn VoiceConnection::stop(Self) -> Unit
+pub fn VoiceConnection::subscribe(Self, user_id~ : String, end_after_silence_ms? : Int?) -> VoiceReceiveStream
 pub async fn VoiceConnection::wait_ready(Self, timeout_ms? : Int) -> Unit raise VoiceError
 
 pub(all) enum VoiceConnectionState {
@@ -278,6 +279,12 @@ pub(all) enum VoiceMessage {
   DaveMlsWelcome(transition_id~ : Int, welcome~ : Bytes)
   Unknown(op~ : Int)
 } derive(Eq, @debug.Debug)
+
+pub struct VoiceReceiveStream {
+  // private fields
+}
+pub fn VoiceReceiveStream::close(Self) -> Unit
+pub impl AudioSource for VoiceReceiveStream
 
 pub(all) enum VoiceReconnectPolicy {
   Resume

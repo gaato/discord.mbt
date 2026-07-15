@@ -43,6 +43,7 @@ priv struct PlaybackRequest {
 pub struct VoiceConnection {
   priv events : @aqueue.Queue[VoiceEvent]
   priv playback : @aqueue.Queue[PlaybackRequest]
+  priv subscriptions : Array[VoiceReceiveStream]
   priv user_id : String
   priv channel_id : UInt64
   priv leave_ : async () -> Unit
@@ -184,6 +185,19 @@ async fn VoiceConnection::emit(
   self : VoiceConnection,
   event : VoiceEvent,
 ) -> Unit {
+  if event is OpusReceived(user_id=Some(user_id), opus~, ..) {
+    let matched : Array[VoiceReceiveStream] = []
+    for subscription in self.subscriptions {
+      if !subscription.closed && subscription.user_id == user_id {
+        matched.push(subscription)
+      }
+    }
+    for subscription in matched {
+      (subscription.queue.try_put(opus) |> ignore) catch {
+        _ => self.remove_subscription(subscription)
+      }
+    }
+  }
   self.events.put(event)
 }
 
@@ -371,6 +385,7 @@ async fn[X] VoiceConnection::run_event_pump(
       FatallyClosed(code~) => {
         self.set_failure(GatewayClosed(code=Some(code)), code=Some(code))
         self.reset_session()
+        self.close_subscriptions()
         self.events.close(error=VoiceError::Disconnected)
         return
       }
@@ -510,6 +525,7 @@ pub fn[X] VoiceConnection::start(
   let connection : VoiceConnection = {
     events: Queue(kind=Unbounded),
     playback: Queue(kind=Unbounded),
+    subscriptions: [],
     user_id,
     channel_id,
     leave_: leave,
@@ -659,6 +675,7 @@ pub async fn VoiceConnection::disconnect(self : VoiceConnection) -> Unit {
     gateway.close()
   }
   self.close_udp()
+  self.close_subscriptions()
   self.playback.close(error=VoiceError::Disconnected)
   self.events.close(error=VoiceError::Disconnected)
 }

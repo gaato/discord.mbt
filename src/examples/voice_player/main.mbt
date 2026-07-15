@@ -1,5 +1,7 @@
 ///|
-/// Play one Ogg/Opus file in a voice channel, then leave.
+/// Play one audio file in a voice channel, then leave. Files ending in `.ogg`
+/// use the in-memory Ogg path; every other extension is transcoded and streamed
+/// through ffmpeg without buffering the complete output.
 ///
 /// Prepare a compatible file with:
 ///   ffmpeg -i input.mp3 -c:a libopus -ar 48000 -ac 2 -frame_duration 20 -f ogg out.ogg
@@ -26,6 +28,37 @@ struct TrackedOggSource {
 }
 
 ///|
+async fn[X] load_audio_source(
+  group : @async.TaskGroup[X],
+  audio_path : String,
+) -> (@discord.OggOpusSource, () -> Unit) {
+  if audio_path.has_suffix(".ogg") {
+    let audio = @fs.read_file(audio_path).binary()
+    (@discord.OggOpusSource::from_bytes(audio), () => ())
+  } else {
+    let (stdout, process_stdout) = @process.read_from_process()
+    @process.spawn(
+      group,
+      "ffmpeg",
+      [
+        "-loglevel", "error", "-i", audio_path, "-f", "ogg", "-c:a", "libopus", "-ar",
+        "48000", "-ac", "2", "-frame_duration", "20", "pipe:1",
+      ],
+      stdout=process_stdout,
+      no_wait=true,
+    )
+    |> ignore
+    let source = @discord.OggOpusSource::from_reader(stdout) catch {
+      error => {
+        stdout.close()
+        raise error
+      }
+    }
+    (source, () => stdout.close())
+  }
+}
+
+///|
 impl @discord.AudioSource for TrackedOggSource with fn next_frame(self) {
   match self.source.next_frame() {
     Some(frame) => Some(frame)
@@ -49,34 +82,36 @@ async fn main {
       required_env("CHANNEL_ID"),
     )
     let audio_path = required_env("AUDIO_FILE")
-    let audio = @fs.read_file(audio_path).binary()
-    let source = @discord.OggOpusSource::from_bytes(audio)
-    let done : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
-    let tracked = TrackedOggSource::{ source, done, finished: false }
-    let app = @discord.App(sync=Disabled)
-    let intents = @model.Intents::guilds() |
-      @model.Intents::guild_voice_states()
-    let bot = @discord.Bot(app, token~, intents~)
-    bot.service(name="voice-player", ctx => {
-      let connection = ctx.join_voice(guild_id, channel_id)
-      try {
-        println("[voice] connected; playing \{audio_path}")
-        connection.play((tracked : &@discord.AudioSource))
-        done.get()
-        connection.stop()
-        println("[voice] playback complete")
-        connection.disconnect()
-        ctx.shutdown()
-      } catch {
-        error => {
-          connection.disconnect() catch {
-            _ => ()
+    @async.with_task_group(process_group => {
+      let (source, close_source) = load_audio_source(process_group, audio_path)
+      defer close_source()
+      let done : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+      let tracked = TrackedOggSource::{ source, done, finished: false }
+      let app = @discord.App(sync=Disabled)
+      let intents = @model.Intents::guilds() |
+        @model.Intents::guild_voice_states()
+      let bot = @discord.Bot(app, token~, intents~)
+      bot.service(name="voice-player", ctx => {
+        let connection = ctx.join_voice(guild_id, channel_id)
+        try {
+          println("[voice] connected; playing \{audio_path}")
+          connection.play((tracked : &@discord.AudioSource))
+          done.get()
+          connection.stop()
+          println("[voice] playback complete")
+          connection.disconnect()
+          ctx.shutdown()
+        } catch {
+          error => {
+            connection.disconnect() catch {
+              _ => ()
+            }
+            raise error
           }
-          raise error
         }
-      }
+      })
+      bot.run()
     })
-    bot.run()
   } catch {
     error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
       ()

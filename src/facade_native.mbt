@@ -20,7 +20,9 @@ pub using @voice {
   type VoiceTelemetry,
   trait AudioSource,
   type OggOpusSource,
+  type OggOpusWriter,
   type OggOpusError,
+  type VoiceReceiveStream,
   SILENCE_FRAME,
 }
 

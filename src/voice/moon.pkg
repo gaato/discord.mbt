@@ -48,6 +48,7 @@ options(
     "shim_ffi.mbt": [ "native" ],
     "state.mbt": [ "native" ],
     "state_test.mbt": [ "native" ],
+    "subscribe.mbt": [ "native" ],
     "transport.mbt": [ "native" ],
     "udp.mbt": [ "native" ],
     "udp_test.mbt": [ "native" ],

@@ -2,9 +2,8 @@ import {
   "gaato/discord",
   "gaato/discord/model",
   "moonbitlang/async",
-  "moonbitlang/async/aqueue",
   "moonbitlang/async/fs",
-  "moonbitlang/async/process",
+  "moonbitlang/async/io",
   "moonbitlang/async/signal",
   "moonbitlang/core/env",
 }

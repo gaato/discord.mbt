@@ -264,6 +264,8 @@ pub using @voice {type OggOpusError}
 
 pub using @voice {type OggOpusSource}
 
+pub using @voice {type OggOpusWriter}
+
 pub using @http {type Paginator}
 
 pub using @app {type RegisteredCommand}
@@ -299,6 +301,8 @@ pub using @voice {type VoiceConnectionState}
 pub using @voice {type VoiceError}
 
 pub using @voice {type VoiceEvent}
+
+pub using @voice {type VoiceReceiveStream}
 
 pub using @voice {type VoiceTelemetry}
 
