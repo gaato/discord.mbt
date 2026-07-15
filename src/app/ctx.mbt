@@ -21,6 +21,9 @@ pub fn AppCtx::application_id(self : AppCtx) -> @model.ApplicationId {
 }
 
 ///|
+/// Executor-provided lookup behind `wait_for_component`: resolves the
+/// next component interaction matching a custom id, with an optional
+/// timeout in milliseconds.
 pub type ComponentWaiter = async (String, Int?) -> @framework.ComponentCtx?
 
 ///|
@@ -39,26 +42,31 @@ pub struct ImmediateCtx {
 }
 
 ///|
+/// The app-level services: the REST client and application id.
 pub fn ImmediateCtx::app(self : ImmediateCtx) -> AppCtx {
   self.bot_
 }
 
 ///|
+/// Guild or DM invocation scope, carrying the invoking member or user.
 pub fn ImmediateCtx::scope(self : ImmediateCtx) -> @framework.InvocationScope {
   self.raw_.scope()
 }
 
 ///|
+/// The invoking user.
 pub fn ImmediateCtx::user(self : ImmediateCtx) -> @model.User {
   self.raw_.user()
 }
 
 ///|
+/// The full interaction payload.
 pub fn ImmediateCtx::interaction(self : ImmediateCtx) -> @model.Interaction {
   self.raw_.interaction
 }
 
 ///|
+/// The guild the interaction was invoked in, or `None` outside guilds.
 pub fn ImmediateCtx::guild_id(self : ImmediateCtx) -> @model.GuildId? {
   self.raw_.interaction.guild_id
 }
@@ -80,31 +88,38 @@ pub struct DeferredCtx {
 }
 
 ///|
+/// The app-level services: the REST client and application id.
 pub fn DeferredCtx::app(self : DeferredCtx) -> AppCtx {
   self.bot_
 }
 
 ///|
+/// Guild or DM invocation scope, carrying the invoking member or user.
 pub fn DeferredCtx::scope(self : DeferredCtx) -> @framework.InvocationScope {
   self.raw_.scope()
 }
 
 ///|
+/// The invoking user.
 pub fn DeferredCtx::user(self : DeferredCtx) -> @model.User {
   self.raw_.user()
 }
 
 ///|
+/// The full interaction payload.
 pub fn DeferredCtx::interaction(self : DeferredCtx) -> @model.Interaction {
   self.raw_.interaction
 }
 
 ///|
+/// The guild the interaction was invoked in, or `None` outside guilds.
 pub fn DeferredCtx::guild_id(self : DeferredCtx) -> @model.GuildId? {
   self.raw_.interaction.guild_id
 }
 
 ///|
+/// Escape hatch for advanced inspection. Calling response methods on the
+/// raw value opts out of this wrapper's response discipline.
 pub fn DeferredCtx::raw(self : DeferredCtx) -> @framework.CommandCtx {
   self.raw_
 }

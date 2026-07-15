@@ -210,11 +210,15 @@ pub fn[A, B] ModalField::map(
 }
 
 ///|
+/// Lift a single field into a `ModalFields`; combine further with `zip`
+/// and `map`, or use the `mapN` helpers directly.
 pub fn[A] ModalFields::of(field : ModalField[A]) -> ModalFields[A] {
   { definitions_: [field.definition_], decode_: field.decode_ }
 }
 
 ///|
+/// Transform the decoded value without changing the emitted
+/// components.
 pub fn[A, B] ModalFields::map(
   self : ModalFields[A],
   f : (A) -> B,
@@ -226,6 +230,7 @@ pub fn[A, B] ModalFields::map(
 }
 
 ///|
+/// Concatenate two field sets and pair their decoded values.
 pub fn[A, B] ModalFields::zip(
   self : ModalFields[A],
   other : ModalFields[B],
@@ -241,6 +246,8 @@ pub fn[A, B] ModalFields::zip(
 }
 
 ///|
+/// Build a modal's field set from one field, mapping its decoded
+/// value into the handler's argument type.
 pub fn[A, Z] ModalFields::map1(
   a : ModalField[A],
   f : (A) -> Z,
@@ -249,6 +256,8 @@ pub fn[A, Z] ModalFields::map1(
 }
 
 ///|
+/// Build a modal's field set from two fields, combining their
+/// decoded values with the final function argument.
 pub fn[A, B, Z] ModalFields::map2(
   a : ModalField[A],
   b : ModalField[B],
@@ -258,6 +267,8 @@ pub fn[A, B, Z] ModalFields::map2(
 }
 
 ///|
+/// Build a modal's field set from three fields, combining their
+/// decoded values with the final function argument.
 pub fn[A, B, C, Z] ModalFields::map3(
   a : ModalField[A],
   b : ModalField[B],
@@ -270,6 +281,8 @@ pub fn[A, B, C, Z] ModalFields::map3(
 }
 
 ///|
+/// Build a modal's field set from four fields, combining their
+/// decoded values with the final function argument.
 pub fn[A, B, C, D, Z] ModalFields::map4(
   a : ModalField[A],
   b : ModalField[B],
@@ -283,6 +296,8 @@ pub fn[A, B, C, D, Z] ModalFields::map4(
 }
 
 ///|
+/// Build a modal's field set from five fields, combining their
+/// decoded values with the final function argument.
 pub fn[A, B, C, D, E, Z] ModalFields::map5(
   a : ModalField[A],
   b : ModalField[B],
@@ -404,11 +419,13 @@ fn modal_state(base : String, custom_id : String) -> String? raise HandlerError 
 }
 
 ///|
+/// The app-level services: the REST client and application id.
 pub fn ModalImmediateCtx::app(self : ModalImmediateCtx) -> AppCtx {
   self.bot_
 }
 
 ///|
+/// Guild or DM invocation scope, carrying the invoking member or user.
 pub fn ModalImmediateCtx::scope(
   self : ModalImmediateCtx,
 ) -> @framework.InvocationScope {
@@ -416,11 +433,14 @@ pub fn ModalImmediateCtx::scope(
 }
 
 ///|
+/// The invoking user.
 pub fn ModalImmediateCtx::user(self : ModalImmediateCtx) -> @model.User {
   self.raw_.user()
 }
 
 ///|
+/// What opened the modal: a component (with its host message) or a
+/// command.
 pub fn ModalImmediateCtx::origin(
   self : ModalImmediateCtx,
 ) -> @framework.ModalOrigin {
@@ -428,6 +448,7 @@ pub fn ModalImmediateCtx::origin(
 }
 
 ///|
+/// The full interaction payload.
 pub fn ModalImmediateCtx::interaction(
   self : ModalImmediateCtx,
 ) -> @model.Interaction {
@@ -435,26 +456,32 @@ pub fn ModalImmediateCtx::interaction(
 }
 
 ///|
+/// The guild the interaction was invoked in, or `None` outside guilds.
 pub fn ModalImmediateCtx::guild_id(self : ModalImmediateCtx) -> @model.GuildId? {
   self.raw_.interaction.guild_id
 }
 
 ///|
+/// The opaque state string passed to `Modal::show`, if any.
 pub fn ModalImmediateCtx::state(self : ModalImmediateCtx) -> String? {
   self.state_
 }
 
 ///|
+/// Escape hatch for advanced inspection. Calling response methods on the
+/// raw value opts out of this wrapper's response discipline.
 pub fn ModalImmediateCtx::raw(self : ModalImmediateCtx) -> @framework.ModalCtx {
   self.raw_
 }
 
 ///|
+/// The app-level services: the REST client and application id.
 pub fn ModalDeferredCtx::app(self : ModalDeferredCtx) -> AppCtx {
   self.bot_
 }
 
 ///|
+/// Guild or DM invocation scope, carrying the invoking member or user.
 pub fn ModalDeferredCtx::scope(
   self : ModalDeferredCtx,
 ) -> @framework.InvocationScope {
@@ -462,11 +489,14 @@ pub fn ModalDeferredCtx::scope(
 }
 
 ///|
+/// The invoking user.
 pub fn ModalDeferredCtx::user(self : ModalDeferredCtx) -> @model.User {
   self.raw_.user()
 }
 
 ///|
+/// What opened the modal: a component (with its host message) or a
+/// command.
 pub fn ModalDeferredCtx::origin(
   self : ModalDeferredCtx,
 ) -> @framework.ModalOrigin {
@@ -474,6 +504,7 @@ pub fn ModalDeferredCtx::origin(
 }
 
 ///|
+/// The full interaction payload.
 pub fn ModalDeferredCtx::interaction(
   self : ModalDeferredCtx,
 ) -> @model.Interaction {
@@ -481,21 +512,26 @@ pub fn ModalDeferredCtx::interaction(
 }
 
 ///|
+/// The guild the interaction was invoked in, or `None` outside guilds.
 pub fn ModalDeferredCtx::guild_id(self : ModalDeferredCtx) -> @model.GuildId? {
   self.raw_.interaction.guild_id
 }
 
 ///|
+/// The opaque state string passed to `Modal::show`, if any.
 pub fn ModalDeferredCtx::state(self : ModalDeferredCtx) -> String? {
   self.state_
 }
 
 ///|
+/// Escape hatch for advanced inspection. Calling response methods on the
+/// raw value opts out of this wrapper's response discipline.
 pub fn ModalDeferredCtx::raw(self : ModalDeferredCtx) -> @framework.ModalCtx {
   self.raw_
 }
 
 ///|
+/// Edit the original response after deferring.
 pub async fn ModalDeferredCtx::edit_original(
   self : ModalDeferredCtx,
   content? : String,
@@ -516,6 +552,7 @@ pub async fn ModalDeferredCtx::edit_original(
 }
 
 ///|
+/// Send a followup message after the initial deferred response.
 pub async fn ModalDeferredCtx::followup(
   self : ModalDeferredCtx,
   content? : String,

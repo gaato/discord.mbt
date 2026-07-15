@@ -40,6 +40,8 @@ priv struct AutocompleteHandler {
 }
 
 ///|
+/// Executor-provided function that runs a handler task concurrently on
+/// the surrounding async runtime.
 pub type Spawner = async (async () -> Unit) -> Unit
 
 ///|
@@ -58,6 +60,9 @@ pub struct App {
 }
 
 ///|
+/// Create an application core. `sync` picks the command-sync strategy
+/// applied by `sync_commands` (default: overwrite global commands);
+/// `max_in_flight` caps concurrently running interaction handlers.
 pub fn App::App(sync? : CommandSync = Global, max_in_flight? : Int = 64) -> App {
   {
     sync_: sync,
@@ -82,16 +87,23 @@ pub fn App::middleware(self : App, middleware : InteractionMiddleware) -> Unit {
 }
 
 ///|
+/// Register a typed slash or context-menu command built with the
+/// `command` / `user_command` / `message_command` builders.
 pub fn[A] App::command(self : App, command : Command[A]) -> Unit {
   self.register(command.erase())
 }
 
 ///|
+/// Register a type-erased command. `App::command` is the typed
+/// entry point; use this when composing pre-erased commands, e.g. from
+/// a plugin.
 pub fn App::register(self : App, command : RegisteredCommand) -> Unit {
   self.commands_.push(command)
 }
 
 ///|
+/// Route component interactions whose custom id starts with `prefix` to
+/// `handler`. Longer prefixes win when several match.
 pub fn App::on_component(
   self : App,
   prefix~ : String,
@@ -101,6 +113,9 @@ pub fn App::on_component(
 }
 
 ///|
+/// Route submissions of the typed `modal` to `handler`; field values
+/// are decoded through the modal's `ModalFields` before the handler
+/// runs.
 pub fn[A] App::on_modal(
   self : App,
   modal : Modal[A],
@@ -139,11 +154,16 @@ pub fn App::autocomplete(
 }
 
 ///|
+/// Replace the error policy invoked when a handler raises. The default
+/// policy maps `HandlerError` variants to ephemeral user-facing
+/// messages and warns about everything else.
 pub fn App::error_policy(self : App, policy : ErrorPolicy) -> Unit {
   self.policy_ = Some(policy)
 }
 
 ///|
+/// Replace the warning hook used for non-fatal diagnostics (default:
+/// `println`).
 pub fn App::on_warn(self : App, hook : (String) -> Unit) -> Unit {
   self.warn_ = hook
 }
@@ -189,6 +209,10 @@ fn validate_command_options(
 }
 
 ///|
+/// Check the declared commands for configuration errors: duplicate
+/// names or subcommand paths, nested subcommand groups, required
+/// options after optional ones, and invalid cooldowns. Executors call
+/// this at startup; call it directly in a test to fail fast.
 pub fn App::validate(self : App) -> Unit raise AppConfigError {
   let commands : Set[String] = Set([])
   for command in self.commands_ {
@@ -421,6 +445,10 @@ async fn App::run_registered_autocomplete(
 }
 
 ///|
+/// Wire every registered command, component, modal, and autocomplete
+/// route into `framework` and return the `AppCtx` shared by handlers.
+/// Called by the built-in executors (`Bot`, the HTTP endpoint); only
+/// custom executors need it directly.
 pub fn App::attach(
   self : App,
   framework : @framework.Framework,
@@ -468,6 +496,9 @@ pub fn App::attach(
 }
 
 ///|
+/// Push the declared command set to Discord following the `CommandSync`
+/// strategy chosen at construction: global, one or more guilds, or
+/// disabled.
 pub async fn App::sync_commands(
   self : App,
   client : @dhttp.Client,
@@ -487,6 +518,9 @@ pub async fn App::sync_commands(
 }
 
 ///|
+/// Run the error policy for a failure raised outside interaction
+/// dispatch. Executors use this for event and service handlers; the
+/// policy context has no response target in that case.
 pub async fn App::report_failure(
   self : App,
   origin : FailureOrigin,
@@ -500,6 +534,7 @@ pub async fn App::report_failure(
 }
 
 ///|
+/// Emit a message through the app's warning hook.
 pub fn App::warn(self : App, message : String) -> Unit {
   (self.warn_)(message)
 }

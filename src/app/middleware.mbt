@@ -16,11 +16,13 @@ pub struct InteractionCtx {
 }
 
 ///|
+/// The routed command, component, or modal being invoked.
 pub fn InteractionCtx::target(self : InteractionCtx) -> InteractionTarget {
   self.target_
 }
 
 ///|
+/// The full interaction payload.
 pub fn InteractionCtx::interaction(self : InteractionCtx) -> @model.Interaction {
   match self.raw_ {
     RawCommand(ctx) => ctx.interaction
@@ -30,6 +32,7 @@ pub fn InteractionCtx::interaction(self : InteractionCtx) -> @model.Interaction 
 }
 
 ///|
+/// The invoking user.
 pub fn InteractionCtx::user(self : InteractionCtx) -> @model.User {
   match self.raw_ {
     RawCommand(ctx) => ctx.user()
@@ -39,6 +42,7 @@ pub fn InteractionCtx::user(self : InteractionCtx) -> @model.User {
 }
 
 ///|
+/// Guild or DM invocation scope, carrying the invoking member or user.
 pub fn InteractionCtx::scope(
   self : InteractionCtx,
 ) -> @framework.InvocationScope {
@@ -50,6 +54,7 @@ pub fn InteractionCtx::scope(
 }
 
 ///|
+/// The guild the interaction was invoked in, or `None` outside guilds.
 pub fn InteractionCtx::guild_id(self : InteractionCtx) -> @model.GuildId? {
   self.interaction().guild_id
 }
@@ -69,6 +74,10 @@ pub async fn InteractionCtx::respond(
 }
 
 ///|
+/// Middleware around interaction dispatch: receives the read-only
+/// context and a `next` continuation. Call `next()` to continue the
+/// chain; skip it (typically after `InteractionCtx::respond`) to
+/// short-circuit the handler.
 pub type InteractionMiddleware = async (InteractionCtx, async () -> Unit) -> Unit
 
 ///|

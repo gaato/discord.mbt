@@ -20,6 +20,7 @@ priv enum FailureRaw {
 }
 
 ///|
+/// Context handed to the error policy when a handler fails.
 pub struct FailureCtx {
   priv origin_ : FailureOrigin
   priv phase_ : ResponsePhase?
@@ -28,11 +29,15 @@ pub struct FailureCtx {
 }
 
 ///|
+/// What opened the modal: a component (with its host message) or a
+/// command.
 pub fn FailureCtx::origin(self : FailureCtx) -> FailureOrigin {
   self.origin_
 }
 
 ///|
+/// How far the response lifecycle progressed before the failure, when an
+/// interaction was involved.
 pub fn FailureCtx::phase(self : FailureCtx) -> ResponsePhase? {
   self.phase_
 }

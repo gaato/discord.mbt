@@ -39,6 +39,7 @@ pub struct ComponentDeferredCtx {
 }
 
 ///|
+/// Reply by editing the message that hosts the component.
 pub fn ComponentReply::update_message(
   content? : String,
   embeds? : Array[@model.Embed],
@@ -49,6 +50,8 @@ pub fn ComponentReply::update_message(
 }
 
 ///|
+/// Reply with a new message; set `ephemeral=true` to show it only to
+/// the invoking user.
 pub fn ComponentReply::message(
   content? : String,
   embeds? : Array[@model.Embed],
@@ -154,16 +157,19 @@ fn selected_channels(raw : @framework.ComponentCtx) -> Array[@model.Channel] {
 }
 
 ///|
+/// The app-level services: the REST client and application id.
 pub fn ComponentImmediateCtx::app(self : ComponentImmediateCtx) -> AppCtx {
   self.bot_
 }
 
 ///|
+/// The invoking user.
 pub fn ComponentImmediateCtx::user(self : ComponentImmediateCtx) -> @model.User {
   self.raw_.user()
 }
 
 ///|
+/// Guild or DM invocation scope, carrying the invoking member or user.
 pub fn ComponentImmediateCtx::scope(
   self : ComponentImmediateCtx,
 ) -> @framework.InvocationScope {
@@ -171,6 +177,7 @@ pub fn ComponentImmediateCtx::scope(
 }
 
 ///|
+/// The full interaction payload.
 pub fn ComponentImmediateCtx::interaction(
   self : ComponentImmediateCtx,
 ) -> @model.Interaction {
@@ -178,6 +185,7 @@ pub fn ComponentImmediateCtx::interaction(
 }
 
 ///|
+/// The guild the interaction was invoked in, or `None` outside guilds.
 pub fn ComponentImmediateCtx::guild_id(
   self : ComponentImmediateCtx,
 ) -> @model.GuildId? {
@@ -185,16 +193,20 @@ pub fn ComponentImmediateCtx::guild_id(
 }
 
 ///|
+/// The full custom id of the component that fired.
 pub fn ComponentImmediateCtx::custom_id(self : ComponentImmediateCtx) -> String {
   self.raw_.data.custom_id
 }
 
 ///|
+/// The custom id with this route's registered prefix stripped (the full
+/// id when it does not start with the prefix).
 pub fn ComponentImmediateCtx::suffix(self : ComponentImmediateCtx) -> String {
   component_suffix(self.raw_.data.custom_id, self.prefix_)
 }
 
 ///|
+/// The raw string values selected in a select menu (empty for buttons).
 pub fn ComponentImmediateCtx::values(
   self : ComponentImmediateCtx,
 ) -> Array[String] {
@@ -202,6 +214,7 @@ pub fn ComponentImmediateCtx::values(
 }
 
 ///|
+/// Resolved user objects for a user or mentionable select.
 pub fn ComponentImmediateCtx::selected_users(
   self : ComponentImmediateCtx,
 ) -> Array[@model.User] {
@@ -209,6 +222,7 @@ pub fn ComponentImmediateCtx::selected_users(
 }
 
 ///|
+/// Resolved role objects for a role or mentionable select.
 pub fn ComponentImmediateCtx::selected_roles(
   self : ComponentImmediateCtx,
 ) -> Array[@model.Role] {
@@ -216,6 +230,7 @@ pub fn ComponentImmediateCtx::selected_roles(
 }
 
 ///|
+/// Resolved partial channel objects for a channel select.
 pub fn ComponentImmediateCtx::selected_channels(
   self : ComponentImmediateCtx,
 ) -> Array[@model.Channel] {
@@ -223,6 +238,7 @@ pub fn ComponentImmediateCtx::selected_channels(
 }
 
 ///|
+/// The message hosting the component.
 pub fn ComponentImmediateCtx::message(
   self : ComponentImmediateCtx,
 ) -> @model.Message {
@@ -230,6 +246,8 @@ pub fn ComponentImmediateCtx::message(
 }
 
 ///|
+/// Escape hatch for advanced inspection. Calling response methods on the
+/// raw value opts out of this wrapper's response discipline.
 pub fn ComponentImmediateCtx::raw(
   self : ComponentImmediateCtx,
 ) -> @framework.ComponentCtx {
@@ -237,16 +255,19 @@ pub fn ComponentImmediateCtx::raw(
 }
 
 ///|
+/// The app-level services: the REST client and application id.
 pub fn ComponentDeferredCtx::app(self : ComponentDeferredCtx) -> AppCtx {
   self.bot_
 }
 
 ///|
+/// The invoking user.
 pub fn ComponentDeferredCtx::user(self : ComponentDeferredCtx) -> @model.User {
   self.raw_.user()
 }
 
 ///|
+/// Guild or DM invocation scope, carrying the invoking member or user.
 pub fn ComponentDeferredCtx::scope(
   self : ComponentDeferredCtx,
 ) -> @framework.InvocationScope {
@@ -254,6 +275,7 @@ pub fn ComponentDeferredCtx::scope(
 }
 
 ///|
+/// The full interaction payload.
 pub fn ComponentDeferredCtx::interaction(
   self : ComponentDeferredCtx,
 ) -> @model.Interaction {
@@ -261,6 +283,7 @@ pub fn ComponentDeferredCtx::interaction(
 }
 
 ///|
+/// The guild the interaction was invoked in, or `None` outside guilds.
 pub fn ComponentDeferredCtx::guild_id(
   self : ComponentDeferredCtx,
 ) -> @model.GuildId? {
@@ -268,16 +291,20 @@ pub fn ComponentDeferredCtx::guild_id(
 }
 
 ///|
+/// The full custom id of the component that fired.
 pub fn ComponentDeferredCtx::custom_id(self : ComponentDeferredCtx) -> String {
   self.raw_.data.custom_id
 }
 
 ///|
+/// The custom id with this route's registered prefix stripped (the full
+/// id when it does not start with the prefix).
 pub fn ComponentDeferredCtx::suffix(self : ComponentDeferredCtx) -> String {
   component_suffix(self.raw_.data.custom_id, self.prefix_)
 }
 
 ///|
+/// The raw string values selected in a select menu (empty for buttons).
 pub fn ComponentDeferredCtx::values(
   self : ComponentDeferredCtx,
 ) -> Array[String] {
@@ -285,6 +312,7 @@ pub fn ComponentDeferredCtx::values(
 }
 
 ///|
+/// Resolved user objects for a user or mentionable select.
 pub fn ComponentDeferredCtx::selected_users(
   self : ComponentDeferredCtx,
 ) -> Array[@model.User] {
@@ -292,6 +320,7 @@ pub fn ComponentDeferredCtx::selected_users(
 }
 
 ///|
+/// Resolved role objects for a role or mentionable select.
 pub fn ComponentDeferredCtx::selected_roles(
   self : ComponentDeferredCtx,
 ) -> Array[@model.Role] {
@@ -299,6 +328,7 @@ pub fn ComponentDeferredCtx::selected_roles(
 }
 
 ///|
+/// Resolved partial channel objects for a channel select.
 pub fn ComponentDeferredCtx::selected_channels(
   self : ComponentDeferredCtx,
 ) -> Array[@model.Channel] {
@@ -306,6 +336,7 @@ pub fn ComponentDeferredCtx::selected_channels(
 }
 
 ///|
+/// The message hosting the component.
 pub fn ComponentDeferredCtx::message(
   self : ComponentDeferredCtx,
 ) -> @model.Message {
@@ -313,6 +344,8 @@ pub fn ComponentDeferredCtx::message(
 }
 
 ///|
+/// Escape hatch for advanced inspection. Calling response methods on the
+/// raw value opts out of this wrapper's response discipline.
 pub fn ComponentDeferredCtx::raw(
   self : ComponentDeferredCtx,
 ) -> @framework.ComponentCtx {
@@ -320,6 +353,8 @@ pub fn ComponentDeferredCtx::raw(
 }
 
 ///|
+/// Edit the original response after deferring. For `DeferredUpdate`
+/// handlers this edits the component's host message.
 pub async fn ComponentDeferredCtx::edit_original(
   self : ComponentDeferredCtx,
   content? : String,
@@ -340,6 +375,7 @@ pub async fn ComponentDeferredCtx::edit_original(
 }
 
 ///|
+/// Send a followup message after the initial deferred response.
 pub async fn ComponentDeferredCtx::followup(
   self : ComponentDeferredCtx,
   content? : String,
@@ -360,6 +396,9 @@ pub async fn ComponentDeferredCtx::followup(
 }
 
 ///|
+/// Wait for the next component interaction with an exact custom id.
+/// Returns `None` on timeout, or immediately when running without a
+/// gateway connection.
 pub async fn ComponentDeferredCtx::wait_for_component(
   self : ComponentDeferredCtx,
   custom_id~ : String,

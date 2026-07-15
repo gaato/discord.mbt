@@ -6,21 +6,25 @@ pub struct CheckCtx {
 }
 
 ///|
+/// Guild or DM invocation scope, carrying the invoking member or user.
 pub fn CheckCtx::scope(self : CheckCtx) -> @framework.InvocationScope {
   self.raw_.scope()
 }
 
 ///|
+/// The invoking user.
 pub fn CheckCtx::user(self : CheckCtx) -> @model.User {
   self.raw_.user()
 }
 
 ///|
+/// The full interaction payload.
 pub fn CheckCtx::interaction(self : CheckCtx) -> @model.Interaction {
   self.raw_.interaction
 }
 
 ///|
+/// The guild the interaction was invoked in, or `None` outside guilds.
 pub fn CheckCtx::guild_id(self : CheckCtx) -> @model.GuildId? {
   self.raw_.interaction.guild_id
 }
