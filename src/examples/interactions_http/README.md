@@ -6,7 +6,7 @@ Set the bot token and application public key, then run the server:
 DISCORD_TOKEN=... PUBLIC_KEY=... PORT=8080 moon run --target native src/examples/interactions_http
 ```
 
-The example synchronizes one `/echo` command and listens on
+Set `GUILD_ID` to sync the `/echo` command to a single guild instead of globally. The example synchronizes one `/echo` command and listens on
 `http://0.0.0.0:8080/`. Put it behind a TLS-terminating reverse proxy; TLS is a
 deployment concern rather than part of this HTTP server.
 

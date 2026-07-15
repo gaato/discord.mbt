@@ -11,6 +11,25 @@ fn echo_command() -> @discord.Command[String] {
 }
 
 ///|
+fn command_sync() -> @discord.CommandSync {
+  match @env.get_env_var("GUILD_ID") {
+    Some(raw) => {
+      let guild_id : @model.GuildId? = Some(@model.Id::parse(raw)) catch {
+        _ => None
+      }
+      match guild_id {
+        Some(value) => Guild(value)
+        None => {
+          println("[http] invalid GUILD_ID, syncing globally")
+          Global
+        }
+      }
+    }
+    None => Global
+  }
+}
+
+///|
 fn port() -> Int {
   match @env.get_env_var("PORT") {
     Some(value) => @string.parse_int(value) catch { _ => 8080 }
@@ -24,7 +43,7 @@ async fn main {
   try {
     let token = @env.get_env_var("DISCORD_TOKEN").unwrap_or("")
     let public_key = @env.get_env_var("PUBLIC_KEY").unwrap_or("")
-    let app = @discord.App(sync=Global)
+    let app = @discord.App(sync=command_sync())
     app.command(echo_command())
     @async.with_task_group(group => {
       let server = @discord.serve_interactions(
