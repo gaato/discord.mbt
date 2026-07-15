@@ -139,9 +139,7 @@ async fn sync_global_commands(
   specs : Array[@interaction.CommandSpec],
 ) -> Unit {
   let fetched = client.get_global_commands(application_id)
-  if commands_in_sync(specs, fetched) {
-    println("commands in sync, skipping PUT")
-  } else {
+  if !commands_in_sync(specs, fetched) {
     client.bulk_overwrite_global_commands(
       application_id,
       command_payload(specs),
@@ -158,9 +156,7 @@ async fn sync_guild_commands(
   specs : Array[@interaction.CommandSpec],
 ) -> Unit {
   let fetched = client.get_guild_commands(application_id, guild_id)
-  if commands_in_sync(specs, fetched) {
-    println("commands in sync, skipping PUT")
-  } else {
+  if !commands_in_sync(specs, fetched) {
     client.bulk_overwrite_guild_commands(
       application_id,
       guild_id,
