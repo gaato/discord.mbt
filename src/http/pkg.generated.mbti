@@ -41,8 +41,10 @@ pub(all) struct ApiError {
 pub struct ChannelRef {
   // private fields
 }
+pub async fn ChannelRef::fetch(Self) -> @model.Channel raise DiscordHttpError
+pub fn ChannelRef::message_ref(Self, @model.Id[@model.MessageMarker]) -> MessageRef
 pub fn ChannelRef::messages(Self, before? : @model.Id[@model.MessageMarker], after? : @model.Id[@model.MessageMarker], around? : @model.Id[@model.MessageMarker], page_size? : Int) -> Paginator[@model.Message] raise DiscordHttpError
-pub async fn ChannelRef::send(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], allowed_mentions? : @model.AllowedMentions, files? : Array[FileUpload], reply_to? : @model.Id[@model.MessageMarker]) -> @model.Message raise DiscordHttpError
+pub async fn ChannelRef::send(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], sticker_ids? : Array[@model.Id[@model.StickerMarker]], files? : Array[FileUpload], reply_to? : @model.Id[@model.MessageMarker], tts? : Bool, flags? : @model.MessageFlags, allowed_mentions? : @model.AllowedMentions, nonce? : @model.Nonce, enforce_nonce? : Bool) -> @model.Message raise DiscordHttpError
 pub async fn ChannelRef::typing(Self) -> Unit raise DiscordHttpError
 
 pub struct Client {
@@ -307,6 +309,7 @@ pub struct MemberRef {
 }
 pub async fn MemberRef::add_role(Self, @model.Id[@model.RoleMarker], reason? : String) -> Unit raise DiscordHttpError
 pub async fn MemberRef::ban(Self, delete_message_seconds? : Int, reason? : String) -> Unit raise DiscordHttpError
+pub async fn MemberRef::fetch(Self) -> @model.GuildMember raise DiscordHttpError
 pub async fn MemberRef::kick(Self, reason? : String) -> Unit raise DiscordHttpError
 pub async fn MemberRef::remove_role(Self, @model.Id[@model.RoleMarker], reason? : String) -> Unit raise DiscordHttpError
 pub async fn MemberRef::timeout(Self, @model.Timestamp?, reason? : String) -> @model.GuildMember raise DiscordHttpError
@@ -314,13 +317,14 @@ pub async fn MemberRef::timeout(Self, @model.Timestamp?, reason? : String) -> @m
 pub struct MessageRef {
   // private fields
 }
-pub async fn MessageRef::delete(Self) -> Unit raise DiscordHttpError
+pub async fn MessageRef::delete(Self, reason? : String) -> Unit raise DiscordHttpError
 pub async fn MessageRef::delete_reactions(Self) -> Unit raise DiscordHttpError
 pub async fn MessageRef::edit(Self, content? : String, clear_content? : Bool, embeds? : Array[@model.Embed], components? : Array[@model.Component], flags? : @model.MessageFlags, allowed_mentions? : @model.AllowedMentions, files? : Array[FileUpload]) -> @model.Message raise DiscordHttpError
-pub async fn MessageRef::pin(Self) -> Unit raise DiscordHttpError
+pub async fn MessageRef::fetch(Self) -> @model.Message raise DiscordHttpError
+pub async fn MessageRef::pin(Self, reason? : String) -> Unit raise DiscordHttpError
 pub async fn MessageRef::react(Self, String) -> Unit raise DiscordHttpError
-pub async fn MessageRef::reply(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], allowed_mentions? : @model.AllowedMentions, files? : Array[FileUpload]) -> @model.Message raise DiscordHttpError
-pub async fn MessageRef::unpin(Self) -> Unit raise DiscordHttpError
+pub async fn MessageRef::reply(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], sticker_ids? : Array[@model.Id[@model.StickerMarker]], files? : Array[FileUpload], tts? : Bool, flags? : @model.MessageFlags, allowed_mentions? : @model.AllowedMentions, nonce? : @model.Nonce, enforce_nonce? : Bool) -> @model.Message raise DiscordHttpError
+pub async fn MessageRef::unpin(Self, reason? : String) -> Unit raise DiscordHttpError
 
 pub enum MultipartChunk {
   Text(String)
@@ -557,6 +561,7 @@ pub struct UserRef {
   // private fields
 }
 pub async fn UserRef::dm(Self) -> ChannelRef raise DiscordHttpError
+pub async fn UserRef::fetch(Self) -> @model.User raise DiscordHttpError
 
 // Type aliases
 pub type HttpMiddleware = async (HttpRequest, async (HttpRequest) -> HttpResponse) -> HttpResponse
