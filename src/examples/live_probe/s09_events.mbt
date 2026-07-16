@@ -104,7 +104,8 @@ async fn sec_events(p : P) -> Unit {
       "probe keyword rule",
       MessageSend,
       Keyword,
-      {
+      [{ typ: BlockMessage, metadata: None }],
+      trigger_metadata={
         keyword_filter: Some(["live-probe-blocked-phrase"]),
         presets: None,
         allow_list: Some(["live-probe-allowed"]),
@@ -112,12 +113,32 @@ async fn sec_events(p : P) -> Unit {
         mention_total_limit: None,
         mention_raid_protection_enabled: None,
       },
-      [{ typ: BlockMessage, metadata: None }],
       enabled=false,
       audit_reason="live probe",
     )
     rule_id = Some(rule.id)
     "id=\{rule.id}"
+  })
+  p.probe("create_auto_moderation_rule (spam, no trigger_metadata)", () => {
+    // Community guilds may already carry a leftover Spam rule; reuse it.
+    let existing = leftovers.filter(r => r.trigger_type == Spam)
+    if existing is [rule, ..] {
+      "reusing existing rule \{rule.id}"
+    } else {
+      let rule = c.create_auto_moderation_rule(
+        g,
+        "probe spam rule",
+        MessageSend,
+        Spam,
+        [{ typ: BlockMessage, metadata: None }],
+        enabled=false,
+        audit_reason="live probe",
+      )
+      c.delete_auto_moderation_rule(g, rule.id, audit_reason="cleanup") catch {
+        _ => ()
+      }
+      "id=\{rule.id}"
+    }
   })
   p.probe("GuildRef::create_auto_moderation_rule (mention spam)", () => {
     // Community guilds allow exactly one MentionSpam rule and refuse to
@@ -130,7 +151,8 @@ async fn sec_events(p : P) -> Unit {
         "probe mention rule",
         MessageSend,
         MentionSpam,
-        {
+        [{ typ: BlockMessage, metadata: None }],
+        trigger_metadata={
           keyword_filter: None,
           presets: None,
           allow_list: None,
@@ -138,7 +160,6 @@ async fn sec_events(p : P) -> Unit {
           mention_total_limit: Some(10),
           mention_raid_protection_enabled: Some(false),
         },
-        [{ typ: BlockMessage, metadata: None }],
         enabled=false,
       )
       c.delete_auto_moderation_rule(g, rule.id) catch {
@@ -174,7 +195,8 @@ async fn sec_events(p : P) -> Unit {
       "probe tmp rule",
       MessageSend,
       Keyword,
-      {
+      [{ typ: BlockMessage, metadata: None }],
+      trigger_metadata={
         keyword_filter: Some(["tmp-phrase"]),
         presets: None,
         allow_list: None,
@@ -182,7 +204,6 @@ async fn sec_events(p : P) -> Unit {
         mention_total_limit: None,
         mention_raid_protection_enabled: None,
       },
-      [{ typ: BlockMessage, metadata: None }],
       enabled=false,
     )
     gr.auto_moderation_rule_ref(tmp.id).delete(reason="live probe cleanup")

@@ -62,6 +62,23 @@ async fn Client::perform(
         }
         conn.end_request()
       }
+      (CreateChannelInvite(..), Some([file]), Some(json)) => {
+        let payload = json.stringify()
+        let seed = "\{@clock.now_ms()}-\{next_multipart_seq()}"
+        let boundary = fresh_boundary(seed, payload, [file])
+        headers["content-type"] = "multipart/form-data; boundary=\{boundary}"
+        conn.request(route.method_(), path, extra_headers=headers)
+        for
+          part in multipart_payload_with_named_file(
+            boundary, payload, "target_users_file", file,
+          ) {
+          match part {
+            Text(text) => conn.write(text)
+            Blob(bytes) => conn.write(bytes)
+          }
+        }
+        conn.end_request()
+      }
       (UpdateInviteTargetUsers(..), Some([file]), None) => {
         let seed = "\{@clock.now_ms()}-\{next_multipart_seq()}"
         let boundary = fresh_boundary(seed, "", [file])
@@ -174,7 +191,11 @@ pub async fn Client::request(
               String(text) => text
               body => body.stringify()
             }
-            { code: 0, message: "HTTP \{response.status}: \{detail}", errors: None }
+            {
+              code: 0,
+              message: "HTTP \{response.status}: \{detail}",
+              errors: None,
+            }
           }
         }
         raise Api(status=response.status, error~)
@@ -201,6 +222,13 @@ async fn Client::execute(self : Client, request : HttpRequest) -> HttpResponse {
     !(request.files is Some([_]) && request.body is None) {
     raise DiscordHttpError::Validation(
       message="update invite target users requires exactly one file and no JSON body",
+    )
+  }
+  if request.route is CreateChannelInvite(..) &&
+    request.files is Some(files) &&
+    !(files is [_] && request.body is Some(_)) {
+    raise DiscordHttpError::Validation(
+      message="create channel invite accepts exactly one target-users file next to its JSON params",
     )
   }
   self.request_inner(request)

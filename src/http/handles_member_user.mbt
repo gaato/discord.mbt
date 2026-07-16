@@ -94,6 +94,7 @@ pub async fn MemberRef::edit(
   clear_channel_id? : Bool = false,
   communication_disabled_until? : @model.Timestamp,
   clear_communication_disabled_until? : Bool = false,
+  flags? : @model.GuildMemberFlags,
   reason? : String,
 ) -> @model.GuildMember raise DiscordHttpError {
   self.client.modify_guild_member(
@@ -108,6 +109,7 @@ pub async fn MemberRef::edit(
     clear_channel_id~,
     communication_disabled_until?,
     clear_communication_disabled_until~,
+    flags?,
     audit_reason?=reason,
   )
 }

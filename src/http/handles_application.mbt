@@ -210,8 +210,9 @@ pub async fn ApplicationRef::create_emoji(
 /// `src/app`'s diff-based command sync; bots using sync normally need not call it.
 pub async fn ApplicationRef::global_commands(
   self : ApplicationRef,
+  with_localizations? : Bool,
 ) -> Array[@model.ApplicationCommand] raise DiscordHttpError {
-  self.client.get_global_commands(self.application_id)
+  self.client.get_global_commands(self.application_id, with_localizations?)
 }
 
 ///|
@@ -220,22 +221,32 @@ pub async fn ApplicationRef::global_commands(
 pub async fn ApplicationRef::create_global_command(
   self : ApplicationRef,
   name : String,
-  description : String,
+  description? : String,
   options? : Array[@model.CommandOption],
   typ? : @model.ApplicationCommandType,
   default_member_permissions? : @model.Permissions,
   clear_default_member_permissions? : Bool = false,
   nsfw? : Bool,
+  name_localizations? : Map[String, String],
+  description_localizations? : Map[String, String],
+  integration_types? : Array[@model.ApplicationIntegrationType],
+  contexts? : Array[@model.InteractionContextType],
+  handler? : @model.EntryPointCommandHandlerType,
 ) -> @model.ApplicationCommand raise DiscordHttpError {
   self.client.create_global_command(
     self.application_id,
     name,
-    description,
+    description?,
     options?,
     typ?,
     default_member_permissions?,
     clear_default_member_permissions~,
     nsfw?,
+    name_localizations?,
+    description_localizations?,
+    integration_types?,
+    contexts?,
+    handler?,
   )
 }
 
@@ -255,8 +266,13 @@ pub async fn ApplicationRef::bulk_overwrite_global_commands(
 pub async fn ApplicationRef::guild_commands(
   self : ApplicationRef,
   guild_id : @model.GuildId,
+  with_localizations? : Bool,
 ) -> Array[@model.ApplicationCommand] raise DiscordHttpError {
-  self.client.get_guild_commands(self.application_id, guild_id)
+  self.client.get_guild_commands(
+    self.application_id,
+    guild_id,
+    with_localizations?,
+  )
 }
 
 ///|
@@ -266,23 +282,27 @@ pub async fn ApplicationRef::create_guild_command(
   self : ApplicationRef,
   guild_id : @model.GuildId,
   name : String,
-  description : String,
+  description? : String,
   options? : Array[@model.CommandOption],
   typ? : @model.ApplicationCommandType,
   default_member_permissions? : @model.Permissions,
   clear_default_member_permissions? : Bool = false,
   nsfw? : Bool,
+  name_localizations? : Map[String, String],
+  description_localizations? : Map[String, String],
 ) -> @model.ApplicationCommand raise DiscordHttpError {
   self.client.create_guild_command(
     self.application_id,
     guild_id,
     name,
-    description,
+    description?,
     options?,
     typ?,
     default_member_permissions?,
     clear_default_member_permissions~,
     nsfw?,
+    name_localizations?,
+    description_localizations?,
   )
 }
 
@@ -408,6 +428,13 @@ pub async fn GlobalCommandRef::edit(
   default_member_permissions? : @model.Permissions,
   clear_default_member_permissions? : Bool = false,
   nsfw? : Bool,
+  name_localizations? : Map[String, String],
+  clear_name_localizations? : Bool = false,
+  description_localizations? : Map[String, String],
+  clear_description_localizations? : Bool = false,
+  integration_types? : Array[@model.ApplicationIntegrationType],
+  contexts? : Array[@model.InteractionContextType],
+  handler? : @model.EntryPointCommandHandlerType,
 ) -> @model.ApplicationCommand raise DiscordHttpError {
   self.client.edit_global_command(
     self.application_id,
@@ -418,6 +445,13 @@ pub async fn GlobalCommandRef::edit(
     default_member_permissions?,
     clear_default_member_permissions~,
     nsfw?,
+    name_localizations?,
+    clear_name_localizations~,
+    description_localizations?,
+    clear_description_localizations~,
+    integration_types?,
+    contexts?,
+    handler?,
   )
 }
 
@@ -454,6 +488,10 @@ pub async fn GuildCommandRef::edit(
   default_member_permissions? : @model.Permissions,
   clear_default_member_permissions? : Bool = false,
   nsfw? : Bool,
+  name_localizations? : Map[String, String],
+  clear_name_localizations? : Bool = false,
+  description_localizations? : Map[String, String],
+  clear_description_localizations? : Bool = false,
 ) -> @model.ApplicationCommand raise DiscordHttpError {
   self.client.edit_guild_command(
     self.application_id,
@@ -465,6 +503,10 @@ pub async fn GuildCommandRef::edit(
     default_member_permissions?,
     clear_default_member_permissions~,
     nsfw?,
+    name_localizations?,
+    clear_name_localizations~,
+    description_localizations?,
+    clear_description_localizations~,
   )
 }
 

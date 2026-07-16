@@ -13,14 +13,20 @@ fn Client::with_channel_allowed_mentions(
 ///|
 /// Post a message to a channel. Labeled optional arguments replace the
 /// builder pattern; at least one of `content`, `embeds`, `components`,
-/// `sticker_ids`, `files`, or `poll` must be provided.
+/// `sticker_ids`, `files`, `poll`, or `shared_client_theme` must be
+/// provided — unless `message_reference` forwards another message, which
+/// needs nothing else.
+///
+/// `reply_to` is shorthand for a same-channel reply; pass a full
+/// `message_reference` instead for forwards, cross-channel references, or
+/// `fail_if_not_exists`. The two are mutually exclusive.
 ///
 /// Message-shaped endpoints switch to multipart automatically when `files`
 /// is present (see `FileUpload` and `attachments_json` for the wire format).
 /// The same `files` argument is available on interaction responses,
 /// followups, and edit methods. On edit, the supplied files replace the
-/// attachment list sent in that request; preserve any attachments that
-/// should remain.
+/// attachment list sent in that request unless `keep_attachments` lists the
+/// ones to retain.
 ///
 /// ```mbt check
 /// test "upload a file alongside message content" {
@@ -56,16 +62,25 @@ pub async fn Client::create_message(
   nonce? : @model.Nonce,
   enforce_nonce? : Bool,
   poll? : @model.PollCreateRequest,
+  message_reference? : @model.MessageReference,
+  shared_client_theme? : @model.SharedClientTheme,
 ) -> @model.Message raise DiscordHttpError {
   validate_content(content)
+  if reply_to is Some(_) && message_reference is Some(_) {
+    raise Validation(
+      message="reply_to and message_reference are mutually exclusive",
+    )
+  }
   if content is None &&
     embeds is None &&
     components is None &&
     sticker_ids is None &&
     files is None &&
-    poll is None {
+    poll is None &&
+    shared_client_theme is None &&
+    message_reference is None {
     raise Validation(
-      message="one of content/embeds/components/sticker_ids/files/poll is required",
+      message="one of content/embeds/components/sticker_ids/files/poll/shared_client_theme is required",
     )
   }
   let flags = message_flags_with_components_v2(
@@ -89,6 +104,8 @@ pub async fn Client::create_message(
     .opt("nonce", nonce)
     .opt("enforce_nonce", enforce_nonce)
     .opt("poll", poll)
+    .opt("message_reference", message_reference)
+    .opt("shared_client_theme", shared_client_theme)
   if reply_to is Some(message_id) {
     body.field("message_reference", {
       "message_id": Json::string(message_id.to_string()),
@@ -102,9 +119,11 @@ pub async fn Client::create_message(
 }
 
 ///|
-/// Edit a previously sent message. When `files` is given, the message's
-/// attachments are replaced by the uploaded files (Discord keeps only the
-/// attachments listed in the request).
+/// Edit a previously sent message. `keep_attachments` lists the existing
+/// attachments to retain (optionally updating their description or spoiler
+/// state); `keep_attachments=[]` with no files removes them all. Without
+/// it, supplying `files` replaces the whole attachment list (Discord keeps
+/// only the attachments named in the request).
 pub async fn Client::edit_message(
   self : Client,
   channel_id : @model.ChannelId,
@@ -116,14 +135,16 @@ pub async fn Client::edit_message(
   flags? : @model.MessageFlags,
   allowed_mentions? : @model.AllowedMentions,
   files? : Array[FileUpload],
+  keep_attachments? : Array[@model.AttachmentRequest],
 ) -> @model.Message raise DiscordHttpError {
-  let builder = self.with_channel_allowed_mentions(
-    message_patch_builder(content, clear_content, embeds, components, flags),
-    allowed_mentions,
+  let builder = edit_attachments_field(
+    self.with_channel_allowed_mentions(
+      message_patch_builder(content, clear_content, embeds, components, flags),
+      allowed_mentions,
+    ),
+    keep_attachments,
+    files,
   )
-  if files is Some(fs) && fs.length() > 0 {
-    builder.field("attachments", attachments_json(fs)) |> ignore
-  }
   decode(
     self.request(
       EditMessage(channel_id~, message_id~),

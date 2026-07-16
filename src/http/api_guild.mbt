@@ -176,7 +176,9 @@ pub async fn Client::get_guild_channels(
 }
 
 ///|
-/// Create a channel in a guild.
+/// Create a channel in a guild. `rtc_region` and `video_quality_mode` apply
+/// to voice and stage channels; the `available_tags`/`default_*` family
+/// applies to forum and media channels.
 pub async fn Client::create_guild_channel(
   self : Client,
   guild_id : @model.GuildId,
@@ -190,6 +192,14 @@ pub async fn Client::create_guild_channel(
   bitrate? : Int,
   user_limit? : Int,
   rate_limit_per_user? : Int,
+  rtc_region? : String,
+  video_quality_mode? : @model.VideoQualityMode,
+  default_auto_archive_duration? : @model.ThreadAutoArchiveDuration,
+  available_tags? : Array[@model.ForumTagRequest],
+  default_reaction_emoji? : @model.DefaultReaction,
+  default_thread_rate_limit_per_user? : Int,
+  default_sort_order? : @model.SortOrderType,
+  default_forum_layout? : @model.ForumLayoutType,
   audit_reason? : String,
 ) -> @model.Channel raise DiscordHttpError {
   validate_length("channel name", Some(name), min=1, max=100)
@@ -206,6 +216,16 @@ pub async fn Client::create_guild_channel(
     .opt("bitrate", bitrate)
     .opt("user_limit", user_limit)
     .opt("rate_limit_per_user", rate_limit_per_user)
+    .opt("rtc_region", rtc_region)
+    .opt("video_quality_mode", video_quality_mode)
+    .opt("default_auto_archive_duration", default_auto_archive_duration)
+    .opt("available_tags", available_tags)
+    .opt("default_reaction_emoji", default_reaction_emoji)
+    .opt(
+      "default_thread_rate_limit_per_user", default_thread_rate_limit_per_user,
+    )
+    .opt("default_sort_order", default_sort_order)
+    .opt("default_forum_layout", default_forum_layout)
     .build()
   decode(self.request(CreateGuildChannel(guild_id~), body~, audit_reason?))
 }
@@ -333,6 +353,7 @@ pub async fn Client::modify_guild_member(
   clear_channel_id? : Bool = false,
   communication_disabled_until? : @model.Timestamp,
   clear_communication_disabled_until? : Bool = false,
+  flags? : @model.GuildMemberFlags,
   audit_reason? : String,
 ) -> @model.GuildMember raise DiscordHttpError {
   let body = @model.ObjBuilder()
@@ -350,6 +371,7 @@ pub async fn Client::modify_guild_member(
         "communication_disabled_until", communication_disabled_until, clear_communication_disabled_until,
       ),
     )
+    .opt("flags", flags)
     .build()
   decode(
     self.request(ModifyGuildMember(guild_id~, user_id~), body~, audit_reason?),
@@ -463,14 +485,19 @@ pub async fn Client::get_guild_roles(
 }
 
 ///|
-/// Create a guild role.
+/// Create a guild role. `colors` supersedes the legacy `color` field and can
+/// express gradient and holographic styles; `icon` (base64 image data) and
+/// `unicode_emoji` need the `ROLE_ICONS` guild feature.
 pub async fn Client::create_guild_role(
   self : Client,
   guild_id : @model.GuildId,
   name? : String,
   permissions? : @model.Permissions,
   color? : Int,
+  colors? : @model.RoleColors,
   hoist? : Bool,
+  icon? : String,
+  unicode_emoji? : String,
   mentionable? : Bool,
   audit_reason? : String,
 ) -> @model.Role raise DiscordHttpError {
@@ -479,14 +506,19 @@ pub async fn Client::create_guild_role(
     .opt("name", name)
     .opt("permissions", permissions)
     .opt("color", color)
+    .opt("colors", colors)
     .opt("hoist", hoist)
+    .opt("icon", icon)
+    .opt("unicode_emoji", unicode_emoji)
     .opt("mentionable", mentionable)
     .build()
   decode(self.request(CreateGuildRole(guild_id~), body~, audit_reason?))
 }
 
 ///|
-/// Modify a guild role.
+/// Modify a guild role. `colors` supersedes the legacy `color` field; `icon`
+/// (base64 image data) and `unicode_emoji` need the `ROLE_ICONS` guild
+/// feature, and the `clear_*` companions remove them.
 pub async fn Client::modify_guild_role(
   self : Client,
   guild_id : @model.GuildId,
@@ -494,7 +526,12 @@ pub async fn Client::modify_guild_role(
   name? : String,
   permissions? : @model.Permissions,
   color? : Int,
+  colors? : @model.RoleColors,
   hoist? : Bool,
+  icon? : String,
+  clear_icon? : Bool = false,
+  unicode_emoji? : String,
+  clear_unicode_emoji? : Bool = false,
   mentionable? : Bool,
   audit_reason? : String,
 ) -> @model.Role raise DiscordHttpError {
@@ -503,7 +540,13 @@ pub async fn Client::modify_guild_role(
     .opt("name", name)
     .opt("permissions", permissions)
     .opt("color", color)
+    .opt("colors", colors)
     .opt("hoist", hoist)
+    .und("icon", patch_nullable("icon", icon, clear_icon))
+    .und(
+      "unicode_emoji",
+      patch_nullable("unicode_emoji", unicode_emoji, clear_unicode_emoji),
+    )
     .opt("mentionable", mentionable)
     .build()
   decode(

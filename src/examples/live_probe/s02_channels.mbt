@@ -49,16 +49,29 @@ async fn sec_base_channels(p : P) -> Unit {
   })
   // Stage and media channels require the COMMUNITY feature, which sec_guild
   // enables; they are created there.
-  p.probe("create_guild_channel (forum)", () => {
+  p.probe("create_guild_channel (forum with tag/defaults)", () => {
     let ch = c.create_guild_channel(
       g,
       "probe-forum",
       typ=GuildForum,
       topic="forum guidelines here",
       parent_id?=p.s.category,
+      available_tags=[
+        {
+          id: None,
+          name: "probe-tag",
+          moderated: Some(false),
+          emoji_id: None,
+          emoji_name: Some("🔧"),
+        },
+      ],
+      default_reaction_emoji={ emoji_id: Null, emoji_name: Value("👍") },
+      default_thread_rate_limit_per_user=0,
+      default_sort_order=LatestActivity,
+      default_forum_layout=ListView,
     )
     p.s.forum = Some(ch.id)
-    "id=\{ch.id}"
+    "id=\{ch.id} tags=\{ch.available_tags.map_or(0, t => t.length())}"
   })
   guard p.s.text is Some(text) else { return }
   p.probe("get_channel", () => {
@@ -79,6 +92,46 @@ async fn sec_base_channels(p : P) -> Unit {
     let restored = c.channel_ref(text).edit(rate_limit_per_user=0)
     "rate_limit=\{restored.rate_limit_per_user.unwrap_or(-1)}"
   })
+  p.probe("modify_channel (voice: bitrate/user_limit/rtc_region/video)", () => {
+    let vc = need(p.s.voice, "voice channel")
+    let ch = c.modify_channel(
+      vc,
+      bitrate=96000,
+      user_limit=10,
+      rtc_region="japan",
+      video_quality_mode=Full,
+    )
+    ignore(ch)
+    let auto = c
+      .channel_ref(vc)
+      .edit(clear_rtc_region=true, video_quality_mode=Auto)
+    "bitrate=\{auto.bitrate.unwrap_or(-1)} region_auto=\{!(auto.rtc_region is Some(Value(_)))}"
+  })
+  p.probe("modify_channel (forum defaults + clear)", () => {
+    let forum = need(p.s.forum, "forum channel")
+    let ch = c.modify_channel(
+      forum,
+      default_sort_order=CreationDate,
+      default_forum_layout=GalleryView,
+      default_thread_rate_limit_per_user=5,
+      available_tags=[
+        {
+          id: None,
+          name: "probe-tag-2",
+          moderated: Some(true),
+          emoji_id: None,
+          emoji_name: None,
+        },
+      ],
+    )
+    ignore(ch)
+    let cleared = c.modify_channel(
+      forum,
+      clear_default_sort_order=true,
+      clear_default_reaction_emoji=true,
+    )
+    "layout=\{cleared.default_forum_layout.map_or(-1, l => l.to_int())} tags=\{cleared.available_tags.map_or(0, t => t.length())}"
+  })
   p.probe("get_guild_channels", () => {
     let chans = c.get_guild_channels(g)
     "count=\{chans.length()}"
@@ -94,9 +147,8 @@ async fn sec_base_channels(p : P) -> Unit {
     c.edit_channel_permissions(
       text,
       everyone,
-      @model.Permissions::none(),
-      @model.Permissions::send_messages(),
-      0,
+      Role,
+      deny=@model.Permissions::send_messages(),
       audit_reason="live probe overwrite",
     )
     "ok"
@@ -130,6 +182,48 @@ async fn sec_base_channels(p : P) -> Unit {
     let deleted = c.invite_ref(invite.code).delete(reason="live probe cleanup")
     "code=\{deleted.code}"
   })
+  p.probe("create_channel_invite (role_ids + target_users_file)", () => {
+    let role = c.create_guild_role(
+      g,
+      name="probe-invite-role",
+      permissions=@model.Permissions::none(),
+      audit_reason="live probe invite role",
+    )
+    let invite = c.create_channel_invite(
+      text,
+      max_age=3600,
+      max_uses=1,
+      unique=true,
+      role_ids=[role.id],
+      target_users_file=@dhttp.FileUpload(
+        "users.csv",
+        b"159985870458322944\n",
+        content_type="text/csv",
+      ),
+      audit_reason="live probe targeted invite",
+    )
+    let _ = c.delete_invite(invite.code, audit_reason="cleanup") catch {
+      _ => invite
+    }
+    c.delete_guild_role(g, role.id, audit_reason="cleanup") catch {
+      _ => ()
+    }
+    "code set=\{invite.code.length() > 0}"
+  })
+  p.probe_err(
+    "create_channel_invite (target_type Stream without live stream)",
+    expect=[400],
+    () => {
+      let vc = need(p.s.voice, "voice channel")
+      let invite = c.create_channel_invite(
+        vc,
+        max_age=3600,
+        target_type=Stream,
+        target_user_id=p.owner_id,
+      )
+      ignore(invite)
+    },
+  )
   p.probe("get_channel_invites", () => {
     let invites = c.get_channel_invites(text)
     "count=\{invites.length()}"

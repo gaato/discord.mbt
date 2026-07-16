@@ -33,17 +33,38 @@ async fn sec_commands(p : P) -> Unit {
     let cmd = c.create_global_command(
       a,
       "live-probe-global",
-      "created by live probe",
+      description="created by live probe",
       options=[option],
+      name_localizations={ "ja": "らいぶぷろーぶ" },
+      description_localizations={ "ja": "ライブプローブ製" },
+      integration_types=[GuildInstall],
+      contexts=[Guild, BotDm],
     )
     global_cmd = Some(cmd.id)
-    "id=\{cmd.id}"
+    "id=\{cmd.id} contexts=\{cmd.contexts is Some(Value(_))}"
+  })
+  p.probe("create_global_command (USER type, no description)", () => {
+    let cmd = c.create_global_command(a, "live-probe-user-cmd", typ=User)
+    c.delete_global_command(a, cmd.id)
+    "type=\{cmd.typ.map_or(-1, t => t.to_int())}"
   })
   guard global_cmd is Some(gc) else { return }
-  p.probe("get_global_commands + ApplicationRef::global_commands", () => {
+  p.probe("get_global_commands (+with_localizations)", () => {
     let cmds = c.get_global_commands(a)
-    ignore(ar.global_commands())
-    "count=\{cmds.length()}"
+    let localized = ar.global_commands(with_localizations=true)
+    let has_localization = localized
+      .iter()
+      .any(cmd => cmd.name_localizations is Some(Value(_)))
+    "count=\{cmds.length()} localized=\{has_localization}"
+  })
+  p.probe("edit_global_command (clear localizations)", () => {
+    let cmd = c.edit_global_command(
+      a,
+      gc,
+      clear_name_localizations=true,
+      clear_description_localizations=true,
+    )
+    "name_loc=\{cmd.name_localizations is Some(Value(_))}"
   })
   p.probe("get_global_command + GlobalCommandRef::fetch", () => {
     let cmd = c.get_global_command(a, gc)
@@ -74,7 +95,10 @@ async fn sec_commands(p : P) -> Unit {
   let mut guild_cmd : @model.CommandId? = None
   p.probe("create_guild_command", () => {
     let cmd = c.create_guild_command(
-      a, g, "live-probe-guild", "guild command by live probe",
+      a,
+      g,
+      "live-probe-guild",
+      description="guild command by live probe",
     )
     guild_cmd = Some(cmd.id)
     "id=\{cmd.id}"

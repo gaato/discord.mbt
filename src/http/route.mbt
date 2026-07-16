@@ -369,7 +369,8 @@ pub(all) enum Route {
   )
   CreateInteractionResponse(
     interaction_id~ : @model.InteractionId,
-    token~ : String
+    token~ : String,
+    query~ : String
   )
   GetOriginalInteractionResponse(
     application_id~ : @model.ApplicationId,
@@ -399,7 +400,7 @@ pub(all) enum Route {
     token~ : String,
     message_id~ : @model.MessageId
   )
-  GetGlobalCommands(application_id~ : @model.ApplicationId)
+  GetGlobalCommands(application_id~ : @model.ApplicationId, query~ : String)
   CreateGlobalCommand(application_id~ : @model.ApplicationId)
   GetGlobalCommand(
     application_id~ : @model.ApplicationId,
@@ -416,7 +417,8 @@ pub(all) enum Route {
   BulkOverwriteGlobalCommands(application_id~ : @model.ApplicationId)
   GetGuildCommands(
     application_id~ : @model.ApplicationId,
-    guild_id~ : @model.GuildId
+    guild_id~ : @model.GuildId,
+    query~ : String
   )
   CreateGuildCommand(
     application_id~ : @model.ApplicationId,
@@ -974,8 +976,8 @@ pub fn Route::path(self : Route) -> String {
     | EditWebhookMessage(webhook_id~, token~, message_id~, query~)
     | DeleteWebhookMessage(webhook_id~, token~, message_id~, query~) =>
       "/webhooks/\{webhook_id}/\{token}/messages/\{message_id}\{query}"
-    CreateInteractionResponse(interaction_id~, token~) =>
-      "/interactions/\{interaction_id}/\{token}/callback"
+    CreateInteractionResponse(interaction_id~, token~, query~) =>
+      "/interactions/\{interaction_id}/\{token}/callback\{query}"
     GetOriginalInteractionResponse(application_id~, token~)
     | EditOriginalInteractionResponse(application_id~, token~)
     | DeleteOriginalInteractionResponse(application_id~, token~) =>
@@ -986,16 +988,18 @@ pub fn Route::path(self : Route) -> String {
     | EditFollowupMessage(application_id~, token~, message_id~)
     | DeleteFollowupMessage(application_id~, token~, message_id~) =>
       "/webhooks/\{application_id}/\{token}/messages/\{message_id}"
-    GetGlobalCommands(application_id~)
-    | CreateGlobalCommand(application_id~)
+    GetGlobalCommands(application_id~, query~) =>
+      "/applications/\{application_id}/commands\{query}"
+    CreateGlobalCommand(application_id~)
     | BulkOverwriteGlobalCommands(application_id~) =>
       "/applications/\{application_id}/commands"
     GetGlobalCommand(application_id~, command_id~)
     | EditGlobalCommand(application_id~, command_id~)
     | DeleteGlobalCommand(application_id~, command_id~) =>
       "/applications/\{application_id}/commands/\{command_id}"
-    GetGuildCommands(application_id~, guild_id~)
-    | CreateGuildCommand(application_id~, guild_id~)
+    GetGuildCommands(application_id~, guild_id~, query~) =>
+      "/applications/\{application_id}/guilds/\{guild_id}/commands\{query}"
+    CreateGuildCommand(application_id~, guild_id~)
     | BulkOverwriteGuildCommands(application_id~, guild_id~) =>
       "/applications/\{application_id}/guilds/\{guild_id}/commands"
     GetGuildCommand(application_id~, guild_id~, command_id~)
@@ -1306,7 +1310,7 @@ pub fn Route::bucket(self : Route) -> String {
       "PATCH:/webhooks/\{application_id}/\{token}/messages/{}"
     DeleteFollowupMessage(application_id~, token~, ..) =>
       "DELETE:/webhooks/\{application_id}/\{token}/messages/{}"
-    GetGlobalCommands(application_id~) =>
+    GetGlobalCommands(application_id~, ..) =>
       "GET:/applications/\{application_id}/commands"
     CreateGlobalCommand(application_id~) =>
       "POST:/applications/\{application_id}/commands"
@@ -1318,7 +1322,7 @@ pub fn Route::bucket(self : Route) -> String {
       "DELETE:/applications/\{application_id}/commands/{}"
     BulkOverwriteGlobalCommands(application_id~) =>
       "PUT:/applications/\{application_id}/commands"
-    GetGuildCommands(application_id~, guild_id~) =>
+    GetGuildCommands(application_id~, guild_id~, ..) =>
       "GET:/applications/\{application_id}/guilds/\{guild_id}/commands"
     CreateGuildCommand(application_id~, guild_id~) =>
       "POST:/applications/\{application_id}/guilds/\{guild_id}/commands"

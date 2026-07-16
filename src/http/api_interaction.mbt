@@ -10,11 +10,36 @@ pub async fn Client::create_interaction_response(
   files? : Array[FileUpload],
 ) -> Unit raise DiscordHttpError {
   self.request(
-    CreateInteractionResponse(interaction_id~, token~),
+    CreateInteractionResponse(interaction_id~, token~, query=""),
     body=response.to_json(),
     files?,
   )
   |> ignore
+}
+
+///|
+/// Send the initial response to an interaction and get back what it
+/// created (`with_response=true`): the created message, or the launched
+/// Activity instance. Use `create_interaction_response` when the result is
+/// not needed.
+pub async fn Client::create_interaction_response_with_callback(
+  self : Client,
+  interaction_id : @model.InteractionId,
+  token : String,
+  response : @model.InteractionResponse,
+  files? : Array[FileUpload],
+) -> @model.InteractionCallbackResponse raise DiscordHttpError {
+  decode(
+    self.request(
+      CreateInteractionResponse(
+        interaction_id~,
+        token~,
+        query="?with_response=true",
+      ),
+      body=response.to_json(),
+      files?,
+    ),
+  )
 }
 
 ///|
@@ -28,8 +53,10 @@ pub async fn Client::get_original_response(
 }
 
 ///|
-/// Edit the original response for an interaction. When `files` is given,
-/// the response's attachments are replaced by the uploaded files.
+/// Edit the original response for an interaction. `keep_attachments` lists
+/// the existing attachments to retain; without it, supplying `files`
+/// replaces the whole attachment list. `poll` can only be added when the
+/// response was deferred.
 pub async fn Client::edit_original_response(
   self : Client,
   application_id : @model.ApplicationId,
@@ -38,19 +65,19 @@ pub async fn Client::edit_original_response(
   clear_content? : Bool = false,
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
+  flags? : @model.MessageFlags,
   allowed_mentions? : @model.AllowedMentions,
   files? : Array[FileUpload],
+  keep_attachments? : Array[@model.AttachmentRequest],
+  poll? : @model.PollCreateRequest,
 ) -> @model.Message raise DiscordHttpError {
-  let builder = message_patch_builder(
-    content,
-    clear_content,
-    embeds,
-    components,
-    None,
-  ).opt("allowed_mentions", allowed_mentions)
-  if files is Some(fs) && fs.length() > 0 {
-    builder.field("attachments", attachments_json(fs)) |> ignore
-  }
+  let builder = edit_attachments_field(
+    message_patch_builder(content, clear_content, embeds, components, flags)
+    .opt("allowed_mentions", allowed_mentions)
+    .opt("poll", poll),
+    keep_attachments,
+    files,
+  )
   decode(
     self.request(
       EditOriginalInteractionResponse(application_id~, token~),
@@ -83,11 +110,16 @@ pub async fn Client::create_followup(
   files? : Array[FileUpload],
   flags? : @model.MessageFlags,
   allowed_mentions? : @model.AllowedMentions,
+  poll? : @model.PollCreateRequest,
 ) -> @model.Message raise DiscordHttpError {
   validate_content(content)
-  if content is None && embeds is None && components is None && files is None {
+  if content is None &&
+    embeds is None &&
+    components is None &&
+    files is None &&
+    poll is None {
     raise Validation(
-      message="one of content/embeds/components/files is required",
+      message="one of content/embeds/components/files/poll is required",
     )
   }
   let flags = message_flags_with_components_v2(
@@ -99,6 +131,7 @@ pub async fn Client::create_followup(
     .opt("components", components)
     .opt("flags", flags)
     .opt("allowed_mentions", allowed_mentions)
+    .opt("poll", poll)
   if files is Some(fs) && fs.length() > 0 {
     builder.field("attachments", attachments_json(fs)) |> ignore
   }
@@ -123,8 +156,9 @@ pub async fn Client::get_followup(
 }
 
 ///|
-/// Edit a followup message for an interaction. When `files` is given, the
-/// followup's attachments are replaced by the uploaded files.
+/// Edit a followup message for an interaction. `keep_attachments` lists the
+/// existing attachments to retain; without it, supplying `files` replaces
+/// the whole attachment list.
 pub async fn Client::edit_followup(
   self : Client,
   application_id : @model.ApplicationId,
@@ -134,19 +168,18 @@ pub async fn Client::edit_followup(
   clear_content? : Bool = false,
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
+  flags? : @model.MessageFlags,
   allowed_mentions? : @model.AllowedMentions,
   files? : Array[FileUpload],
+  keep_attachments? : Array[@model.AttachmentRequest],
 ) -> @model.Message raise DiscordHttpError {
-  let builder = message_patch_builder(
-    content,
-    clear_content,
-    embeds,
-    components,
-    None,
-  ).opt("allowed_mentions", allowed_mentions)
-  if files is Some(fs) && fs.length() > 0 {
-    builder.field("attachments", attachments_json(fs)) |> ignore
-  }
+  let builder = edit_attachments_field(
+    message_patch_builder(content, clear_content, embeds, components, flags).opt(
+      "allowed_mentions", allowed_mentions,
+    ),
+    keep_attachments,
+    files,
+  )
   decode(
     self.request(
       EditFollowupMessage(application_id~, token~, message_id~),

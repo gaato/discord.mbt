@@ -113,6 +113,7 @@ async fn edit_interaction_followup(
   components : Array[@model.Component]?,
   allowed_mentions : @model.AllowedMentions?,
   files : Array[@dhttp.FileUpload]?,
+  keep_attachments : Array[@model.AttachmentRequest]?,
 ) -> @model.Message {
   client.edit_followup(
     application_id,
@@ -124,6 +125,7 @@ async fn edit_interaction_followup(
     components?,
     allowed_mentions?,
     files?,
+    keep_attachments?,
   )
 }
 
@@ -321,6 +323,8 @@ pub async fn CommandCtx::edit_response(
   components? : Array[@model.Component],
   allowed_mentions? : @model.AllowedMentions,
   files? : Array[@dhttp.FileUpload],
+  keep_attachments? : Array[@model.AttachmentRequest],
+  poll? : @model.PollCreateRequest,
 ) -> @model.Message {
   self.client.edit_original_response(
     self.application_id,
@@ -331,6 +335,8 @@ pub async fn CommandCtx::edit_response(
     components?,
     allowed_mentions?,
     files?,
+    keep_attachments?,
+    poll?,
   )
 }
 
@@ -343,6 +349,7 @@ pub async fn CommandCtx::followup(
   components? : Array[@model.Component],
   files? : Array[@dhttp.FileUpload],
   allowed_mentions? : @model.AllowedMentions,
+  poll? : @model.PollCreateRequest,
   ephemeral? : Bool = false,
 ) -> @model.Message {
   self.client.create_followup(
@@ -353,6 +360,7 @@ pub async fn CommandCtx::followup(
     components?,
     files?,
     allowed_mentions?,
+    poll?,
     flags=if ephemeral {
       @model.MessageFlags::ephemeral()
     } else {
@@ -386,6 +394,7 @@ pub async fn CommandCtx::edit_followup(
   components? : Array[@model.Component],
   allowed_mentions? : @model.AllowedMentions,
   files? : Array[@dhttp.FileUpload],
+  keep_attachments? : Array[@model.AttachmentRequest],
 ) -> @model.Message {
   edit_interaction_followup(
     self.client,
@@ -398,6 +407,7 @@ pub async fn CommandCtx::edit_followup(
     components,
     allowed_mentions,
     files,
+    keep_attachments,
   )
 }
 
@@ -556,6 +566,8 @@ pub async fn ComponentCtx::edit_response(
   components? : Array[@model.Component],
   allowed_mentions? : @model.AllowedMentions,
   files? : Array[@dhttp.FileUpload],
+  keep_attachments? : Array[@model.AttachmentRequest],
+  poll? : @model.PollCreateRequest,
 ) -> @model.Message {
   self.client.edit_original_response(
     self.application_id,
@@ -566,6 +578,8 @@ pub async fn ComponentCtx::edit_response(
     components?,
     allowed_mentions?,
     files?,
+    keep_attachments?,
+    poll?,
   )
 }
 
@@ -578,6 +592,7 @@ pub async fn ComponentCtx::followup(
   components? : Array[@model.Component],
   files? : Array[@dhttp.FileUpload],
   allowed_mentions? : @model.AllowedMentions,
+  poll? : @model.PollCreateRequest,
   ephemeral? : Bool = false,
 ) -> @model.Message {
   self.client.create_followup(
@@ -588,6 +603,7 @@ pub async fn ComponentCtx::followup(
     components?,
     files?,
     allowed_mentions?,
+    poll?,
     flags=if ephemeral {
       @model.MessageFlags::ephemeral()
     } else {
@@ -621,6 +637,7 @@ pub async fn ComponentCtx::edit_followup(
   components? : Array[@model.Component],
   allowed_mentions? : @model.AllowedMentions,
   files? : Array[@dhttp.FileUpload],
+  keep_attachments? : Array[@model.AttachmentRequest],
 ) -> @model.Message {
   edit_interaction_followup(
     self.client,
@@ -633,6 +650,7 @@ pub async fn ComponentCtx::edit_followup(
     components,
     allowed_mentions,
     files,
+    keep_attachments,
   )
 }
 
@@ -778,6 +796,8 @@ pub async fn ModalCtx::edit_response(
   components? : Array[@model.Component],
   allowed_mentions? : @model.AllowedMentions,
   files? : Array[@dhttp.FileUpload],
+  keep_attachments? : Array[@model.AttachmentRequest],
+  poll? : @model.PollCreateRequest,
 ) -> @model.Message {
   self.client.edit_original_response(
     self.application_id,
@@ -788,6 +808,8 @@ pub async fn ModalCtx::edit_response(
     components?,
     allowed_mentions?,
     files?,
+    keep_attachments?,
+    poll?,
   )
 }
 
@@ -800,6 +822,7 @@ pub async fn ModalCtx::followup(
   components? : Array[@model.Component],
   files? : Array[@dhttp.FileUpload],
   allowed_mentions? : @model.AllowedMentions,
+  poll? : @model.PollCreateRequest,
   ephemeral? : Bool = false,
 ) -> @model.Message {
   self.client.create_followup(
@@ -810,6 +833,7 @@ pub async fn ModalCtx::followup(
     components?,
     files?,
     allowed_mentions?,
+    poll?,
     flags=if ephemeral {
       @model.MessageFlags::ephemeral()
     } else {
@@ -843,6 +867,7 @@ pub async fn ModalCtx::edit_followup(
   components? : Array[@model.Component],
   allowed_mentions? : @model.AllowedMentions,
   files? : Array[@dhttp.FileUpload],
+  keep_attachments? : Array[@model.AttachmentRequest],
 ) -> @model.Message {
   edit_interaction_followup(
     self.client,
@@ -855,6 +880,7 @@ pub async fn ModalCtx::edit_followup(
     components,
     allowed_mentions,
     files,
+    keep_attachments,
   )
 }
 

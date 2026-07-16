@@ -153,6 +153,7 @@ pub async fn WebhookTokenRef::send(
   applied_tags? : Array[@model.GenericId],
   poll? : @model.PollCreateRequest,
   with_components? : Bool,
+  flags? : @model.MessageFlags,
 ) -> @model.Message raise DiscordHttpError {
   self.client.execute_webhook(
     self.webhook_id,
@@ -170,6 +171,7 @@ pub async fn WebhookTokenRef::send(
     applied_tags?,
     poll?,
     with_components?,
+    flags?,
   )
 }
 
@@ -231,9 +233,12 @@ pub async fn WebhookMessageRef::edit(
   clear_content? : Bool = false,
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
+  flags? : @model.MessageFlags,
   allowed_mentions? : @model.AllowedMentions,
   files? : Array[FileUpload],
+  keep_attachments? : Array[@model.AttachmentRequest],
   thread_id? : @model.ChannelId,
+  with_components? : Bool,
 ) -> @model.Message raise DiscordHttpError {
   self.client.edit_webhook_message(
     self.webhook_id,
@@ -243,9 +248,12 @@ pub async fn WebhookMessageRef::edit(
     clear_content~,
     embeds?,
     components?,
+    flags?,
     allowed_mentions?,
     files?,
+    keep_attachments?,
     thread_id?,
+    with_components?,
   )
 }
 

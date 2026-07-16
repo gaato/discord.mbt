@@ -44,17 +44,21 @@ pub async fn Client::get_user(
 }
 
 ///|
-/// Modify the bot user's username or avatar data URI.
+/// Modify the bot user's username, avatar, or banner (both images as base64
+/// data URIs).
 pub async fn Client::modify_current_user(
   self : Client,
   username? : String,
   avatar? : String,
   clear_avatar? : Bool = false,
+  banner? : String,
+  clear_banner? : Bool = false,
 ) -> @model.User raise DiscordHttpError {
   validate_length("username", username, min=2, max=32)
   let body = @model.ObjBuilder()
     .opt("username", username)
     .und("avatar", patch_nullable("avatar", avatar, clear_avatar))
+    .und("banner", patch_nullable("banner", banner, clear_banner))
     .build()
   decode(self.request(ModifyCurrentUser, body~))
 }

@@ -237,6 +237,7 @@ pub async fn Client::execute_webhook(
   applied_tags? : Array[@model.GenericId],
   poll? : @model.PollCreateRequest,
   with_components? : Bool,
+  flags? : @model.MessageFlags,
 ) -> @model.Message raise DiscordHttpError {
   validate_execute_webhook(content, embeds, components, files, poll)
   if thread_id is Some(_) && thread_name is Some(_) {
@@ -250,10 +251,7 @@ pub async fn Client::execute_webhook(
     query_params.push("with_components=\{value}")
   }
   let flags = message_flags_with_components_v2(
-    None,
-    content,
-    embeds,
-    components,
+    flags, content, embeds, components,
   )
   let builder = @model.ObjBuilder()
     .opt("content", content)
@@ -296,8 +294,10 @@ pub async fn Client::get_webhook_message(
 }
 
 ///|
-/// Edit a message previously created by a webhook. Uploaded files replace
-/// the attachment list announced in the request.
+/// Edit a message previously created by a webhook. `keep_attachments` lists
+/// the existing attachments to retain; without it, uploaded files replace
+/// the whole attachment list. `with_components=true` lets the edit change
+/// components on a webhook without an application.
 pub async fn Client::edit_webhook_message(
   self : Client,
   webhook_id : @model.WebhookId,
@@ -307,21 +307,32 @@ pub async fn Client::edit_webhook_message(
   clear_content? : Bool = false,
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
+  flags? : @model.MessageFlags,
   allowed_mentions? : @model.AllowedMentions,
   files? : Array[FileUpload],
+  keep_attachments? : Array[@model.AttachmentRequest],
   thread_id? : @model.ChannelId,
+  with_components? : Bool,
 ) -> @model.Message raise DiscordHttpError {
-  let query = compatible_webhook_query(thread_id, None)
-  let builder = message_patch_builder(
-    content,
-    clear_content,
-    embeds,
-    components,
-    None,
-  ).opt("allowed_mentions", allowed_mentions)
-  if files is Some(fs) && fs.length() > 0 {
-    builder.field("attachments", attachments_json(fs)) |> ignore
+  let query_params : Array[String] = []
+  if thread_id is Some(value) {
+    query_params.push("thread_id=\{value}")
   }
+  if with_components is Some(value) {
+    query_params.push("with_components=\{value}")
+  }
+  let query = if query_params.length() == 0 {
+    ""
+  } else {
+    "?" + query_params.join("&")
+  }
+  let builder = edit_attachments_field(
+    message_patch_builder(content, clear_content, embeds, components, flags).opt(
+      "allowed_mentions", allowed_mentions,
+    ),
+    keep_attachments,
+    files,
+  )
   decode(
     self.request(
       EditWebhookMessage(webhook_id~, token~, message_id~, query~),

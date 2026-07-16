@@ -1291,6 +1291,7 @@ test "interaction routes are global-exempt and unauthenticated" {
   let callback = @http.Route::CreateInteractionResponse(
     interaction_id~,
     token="tok",
+    query="",
   )
   assert_true(callback.is_interaction())
   assert_false(callback.needs_auth())

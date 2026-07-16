@@ -159,7 +159,10 @@ async test "execute webhook rejects thread_id together with thread_name" {
     )
   catch {
     Validation(message~) =>
-      inspect(message, content="thread_id and thread_name are mutually exclusive")
+      inspect(
+        message,
+        content="thread_id and thread_name are mutually exclusive",
+      )
     error => fail("unexpected error: \{to_repr(error)}")
   } noraise {
     _ => fail("expected a validation error")
@@ -177,11 +180,20 @@ async test "webhook message endpoints append the thread_id query" {
   })
   let webhook_id : @model.WebhookId = Id(1UL)
   let message_id : @model.MessageId = Id(2UL)
-  client.delete_webhook_message(webhook_id, "tok", message_id, thread_id=Id(77UL))
+  client.delete_webhook_message(
+    webhook_id,
+    "tok",
+    message_id,
+    thread_id=Id(77UL),
+  )
   inspect(
     captured_path.val,
     content="/api/v10/webhooks/1/tok/messages/2?thread_id=77",
   )
-  client.webhook_ref(webhook_id).with_token("tok").message_ref(message_id).delete()
+  client
+  .webhook_ref(webhook_id)
+  .with_token("tok")
+  .message_ref(message_id)
+  .delete()
   inspect(captured_path.val, content="/api/v10/webhooks/1/tok/messages/2")
 }

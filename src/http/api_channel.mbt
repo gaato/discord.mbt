@@ -11,11 +11,16 @@ pub async fn Client::get_channel(
 /// Modify common channel settings. `archived`, `auto_archive_duration`,
 /// `locked`, `invitable`, and `applied_tags` only apply when the channel is
 /// a thread; `flags` covers both threads (`PINNED`) and forum/media channels
-/// (`REQUIRE_TAG`).
+/// (`REQUIRE_TAG`). `typ` converts between text and announcement channels;
+/// `bitrate`, `user_limit`, `rtc_region` (null means automatic), and
+/// `video_quality_mode` apply to voice and stage channels; the
+/// `available_tags`/`default_*` family applies to forum and media channels;
+/// `icon` (base64 image data) renames a group DM.
 pub async fn Client::modify_channel(
   self : Client,
   channel_id : @model.ChannelId,
   name? : String,
+  typ? : @model.ChannelType,
   topic? : String,
   clear_topic? : Bool = false,
   nsfw? : Bool,
@@ -23,6 +28,22 @@ pub async fn Client::modify_channel(
   clear_parent_id? : Bool = false,
   rate_limit_per_user? : Int,
   position? : Int,
+  bitrate? : Int,
+  user_limit? : Int,
+  permission_overwrites? : Array[@model.Overwrite],
+  rtc_region? : String,
+  clear_rtc_region? : Bool = false,
+  video_quality_mode? : @model.VideoQualityMode,
+  clear_video_quality_mode? : Bool = false,
+  default_auto_archive_duration? : @model.ThreadAutoArchiveDuration,
+  available_tags? : Array[@model.ForumTagRequest],
+  default_reaction_emoji? : @model.DefaultReaction,
+  clear_default_reaction_emoji? : Bool = false,
+  default_thread_rate_limit_per_user? : Int,
+  default_sort_order? : @model.SortOrderType,
+  clear_default_sort_order? : Bool = false,
+  default_forum_layout? : @model.ForumLayoutType,
+  icon? : String,
   flags? : @model.ChannelFlags,
   archived? : Bool,
   auto_archive_duration? : @model.ThreadAutoArchiveDuration,
@@ -36,11 +57,44 @@ pub async fn Client::modify_channel(
   validate_range("rate_limit_per_user", rate_limit_per_user, min=0, max=21600)
   let body = @model.ObjBuilder()
     .opt("name", name)
+    .opt("type", typ)
     .und("topic", patch_nullable("topic", topic, clear_topic))
     .opt("nsfw", nsfw)
     .und("parent_id", patch_nullable("parent_id", parent_id, clear_parent_id))
     .opt("rate_limit_per_user", rate_limit_per_user)
     .opt("position", position)
+    .opt("bitrate", bitrate)
+    .opt("user_limit", user_limit)
+    .opt("permission_overwrites", permission_overwrites)
+    .und(
+      "rtc_region",
+      patch_nullable("rtc_region", rtc_region, clear_rtc_region),
+    )
+    .und(
+      "video_quality_mode",
+      patch_nullable(
+        "video_quality_mode", video_quality_mode, clear_video_quality_mode,
+      ),
+    )
+    .opt("default_auto_archive_duration", default_auto_archive_duration)
+    .opt("available_tags", available_tags)
+    .und(
+      "default_reaction_emoji",
+      patch_nullable(
+        "default_reaction_emoji", default_reaction_emoji, clear_default_reaction_emoji,
+      ),
+    )
+    .opt(
+      "default_thread_rate_limit_per_user", default_thread_rate_limit_per_user,
+    )
+    .und(
+      "default_sort_order",
+      patch_nullable(
+        "default_sort_order", default_sort_order, clear_default_sort_order,
+      ),
+    )
+    .opt("default_forum_layout", default_forum_layout)
+    .opt("icon", icon)
     .opt("flags", flags)
     .opt("archived", archived)
     .opt("auto_archive_duration", auto_archive_duration)
@@ -102,19 +156,20 @@ pub async fn Client::get_pinned_messages(
 }
 
 ///|
-/// Create or replace a channel permission overwrite.
+/// Create or replace a channel permission overwrite. Omitted `allow`/`deny`
+/// default to no permissions on the Discord side.
 pub async fn Client::edit_channel_permissions(
   self : Client,
   channel_id : @model.ChannelId,
   overwrite_id : @model.GenericId,
-  allow : @model.Permissions,
-  deny : @model.Permissions,
-  typ : Int,
+  typ : @model.OverwriteType,
+  allow? : @model.Permissions,
+  deny? : @model.Permissions,
   audit_reason? : String,
 ) -> Unit raise DiscordHttpError {
   let body = @model.ObjBuilder()
-    .field("allow", allow)
-    .field("deny", deny)
+    .opt("allow", allow)
+    .opt("deny", deny)
     .field("type", typ)
     .build()
   self.request(
@@ -150,7 +205,12 @@ pub async fn Client::get_channel_invites(
 }
 
 ///|
-/// Create an invite for a channel.
+/// Create an invite for a channel. `target_type` makes a voice-channel
+/// invite open a stream (`Stream`, requires `target_user_id`) or an embedded
+/// application (`EmbeddedApplication`, requires `target_application_id`).
+/// `role_ids` grants roles to accepting users (requires `MANAGE_ROLES`);
+/// `target_users_file` restricts who may accept it (a CSV of user ids, sent
+/// as multipart form data).
 pub async fn Client::create_channel_invite(
   self : Client,
   channel_id : @model.ChannelId,
@@ -158,15 +218,35 @@ pub async fn Client::create_channel_invite(
   max_uses? : Int,
   temporary? : Bool,
   unique? : Bool,
+  target_type? : @model.InviteTargetType,
+  target_user_id? : @model.UserId,
+  target_application_id? : @model.ApplicationId,
+  role_ids? : Array[@model.RoleId],
+  target_users_file? : FileUpload,
   audit_reason? : String,
 ) -> @model.Invite raise DiscordHttpError {
+  if target_type is Some(Stream) && target_user_id is None {
+    raise Validation(message="target_type Stream requires target_user_id")
+  }
+  if target_type is Some(EmbeddedApplication) && target_application_id is None {
+    raise Validation(
+      message="target_type EmbeddedApplication requires target_application_id",
+    )
+  }
   let body = @model.ObjBuilder()
     .opt("max_age", max_age)
     .opt("max_uses", max_uses)
     .opt("temporary", temporary)
     .opt("unique", unique)
+    .opt("target_type", target_type)
+    .opt("target_user_id", target_user_id)
+    .opt("target_application_id", target_application_id)
+    .opt("role_ids", role_ids)
     .build()
-  decode(self.request(CreateChannelInvite(channel_id~), body~, audit_reason?))
+  let files = target_users_file.map(file => [file])
+  decode(
+    self.request(CreateChannelInvite(channel_id~), body~, files?, audit_reason?),
+  )
 }
 
 ///|
@@ -313,18 +393,23 @@ pub async fn Client::delete_all_reactions_for_emoji(
 
 ///|
 /// List users who reacted with an emoji. The emoji is passed raw (unicode or
-/// name:id) and percent-encoded here.
+/// name:id) and percent-encoded here. `typ` selects normal or burst (super)
+/// reactions.
 pub async fn Client::get_reactions(
   self : Client,
   channel_id : @model.ChannelId,
   message_id : @model.MessageId,
   emoji : String,
+  typ? : @model.ReactionType,
   limit? : Int,
   after? : @model.UserId,
 ) -> Array[@model.User] raise DiscordHttpError {
   let emoji = percent_encode_query_text(emoji)
   validate_range("reaction limit", limit, min=1, max=100)
   let params : Array[String] = []
+  if typ is Some(value) {
+    params.push("type=\{value.to_int()}")
+  }
   if limit is Some(value) {
     params.push("limit=\{value}")
   }

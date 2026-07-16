@@ -22,6 +22,8 @@ pub async fn ChannelRef::send(
   nonce? : @model.Nonce,
   enforce_nonce? : Bool,
   poll? : @model.PollCreateRequest,
+  message_reference? : @model.MessageReference,
+  shared_client_theme? : @model.SharedClientTheme,
 ) -> @model.Message raise DiscordHttpError {
   self.client.create_message(
     self.channel_id,
@@ -37,6 +39,8 @@ pub async fn ChannelRef::send(
     nonce?,
     enforce_nonce?,
     poll?,
+    message_reference?,
+    shared_client_theme?,
   )
 }
 
@@ -81,6 +85,7 @@ pub fn ChannelRef::message_ref(
 pub async fn ChannelRef::edit(
   self : ChannelRef,
   name? : String,
+  typ? : @model.ChannelType,
   topic? : String,
   clear_topic? : Bool = false,
   nsfw? : Bool,
@@ -88,6 +93,22 @@ pub async fn ChannelRef::edit(
   clear_parent_id? : Bool = false,
   rate_limit_per_user? : Int,
   position? : Int,
+  bitrate? : Int,
+  user_limit? : Int,
+  permission_overwrites? : Array[@model.Overwrite],
+  rtc_region? : String,
+  clear_rtc_region? : Bool = false,
+  video_quality_mode? : @model.VideoQualityMode,
+  clear_video_quality_mode? : Bool = false,
+  default_auto_archive_duration? : @model.ThreadAutoArchiveDuration,
+  available_tags? : Array[@model.ForumTagRequest],
+  default_reaction_emoji? : @model.DefaultReaction,
+  clear_default_reaction_emoji? : Bool = false,
+  default_thread_rate_limit_per_user? : Int,
+  default_sort_order? : @model.SortOrderType,
+  clear_default_sort_order? : Bool = false,
+  default_forum_layout? : @model.ForumLayoutType,
+  icon? : String,
   flags? : @model.ChannelFlags,
   archived? : Bool,
   auto_archive_duration? : @model.ThreadAutoArchiveDuration,
@@ -99,6 +120,7 @@ pub async fn ChannelRef::edit(
   self.client.modify_channel(
     self.channel_id,
     name?,
+    typ?,
     topic?,
     clear_topic~,
     nsfw?,
@@ -106,6 +128,22 @@ pub async fn ChannelRef::edit(
     clear_parent_id~,
     rate_limit_per_user?,
     position?,
+    bitrate?,
+    user_limit?,
+    permission_overwrites?,
+    rtc_region?,
+    clear_rtc_region~,
+    video_quality_mode?,
+    clear_video_quality_mode~,
+    default_auto_archive_duration?,
+    available_tags?,
+    default_reaction_emoji?,
+    clear_default_reaction_emoji~,
+    default_thread_rate_limit_per_user?,
+    default_sort_order?,
+    clear_default_sort_order~,
+    default_forum_layout?,
+    icon?,
     flags?,
     archived?,
     auto_archive_duration?,
@@ -173,6 +211,11 @@ pub async fn ChannelRef::create_invite(
   max_uses? : Int,
   temporary? : Bool,
   unique? : Bool,
+  target_type? : @model.InviteTargetType,
+  target_user_id? : @model.UserId,
+  target_application_id? : @model.ApplicationId,
+  role_ids? : Array[@model.RoleId],
+  target_users_file? : FileUpload,
   reason? : String,
 ) -> @model.Invite raise DiscordHttpError {
   self.client.create_channel_invite(
@@ -181,6 +224,11 @@ pub async fn ChannelRef::create_invite(
     max_uses?,
     temporary?,
     unique?,
+    target_type?,
+    target_user_id?,
+    target_application_id?,
+    role_ids?,
+    target_users_file?,
     audit_reason?=reason,
   )
 }
@@ -190,17 +238,17 @@ pub async fn ChannelRef::create_invite(
 pub async fn ChannelRef::edit_permissions(
   self : ChannelRef,
   overwrite_id : @model.GenericId,
-  allow : @model.Permissions,
-  deny : @model.Permissions,
-  typ : Int,
+  typ : @model.OverwriteType,
+  allow? : @model.Permissions,
+  deny? : @model.Permissions,
   reason? : String,
 ) -> Unit raise DiscordHttpError {
   self.client.edit_channel_permissions(
     self.channel_id,
     overwrite_id,
-    allow,
-    deny,
     typ,
+    allow?,
+    deny?,
     audit_reason?=reason,
   )
 }

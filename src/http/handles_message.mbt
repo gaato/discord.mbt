@@ -20,6 +20,7 @@ pub async fn MessageRef::reply(
   allowed_mentions? : @model.AllowedMentions,
   nonce? : @model.Nonce,
   enforce_nonce? : Bool,
+  poll? : @model.PollCreateRequest,
 ) -> @model.Message raise DiscordHttpError {
   self.client.create_message(
     self.channel_id,
@@ -34,7 +35,24 @@ pub async fn MessageRef::reply(
     allowed_mentions?,
     nonce?,
     enforce_nonce?,
+    poll?,
   )
+}
+
+///|
+/// Forward this message to another channel (a snapshot reference; no other
+/// content may accompany it).
+pub async fn MessageRef::forward(
+  self : MessageRef,
+  to : @model.ChannelId,
+) -> @model.Message raise DiscordHttpError {
+  self.client.create_message(to, message_reference={
+    typ: Some(Forward),
+    message_id: Some(self.message_id),
+    channel_id: Some(self.channel_id),
+    guild_id: None,
+    fail_if_not_exists: None,
+  })
 }
 
 ///|
@@ -48,6 +66,7 @@ pub async fn MessageRef::edit(
   flags? : @model.MessageFlags,
   allowed_mentions? : @model.AllowedMentions,
   files? : Array[FileUpload],
+  keep_attachments? : Array[@model.AttachmentRequest],
 ) -> @model.Message raise DiscordHttpError {
   self.client.edit_message(
     self.channel_id,
@@ -59,6 +78,7 @@ pub async fn MessageRef::edit(
     flags?,
     allowed_mentions?,
     files?,
+    keep_attachments?,
   )
 }
 
@@ -168,6 +188,7 @@ pub async fn MessageRef::delete_reactions_for(
 pub async fn MessageRef::reactions(
   self : MessageRef,
   emoji : String,
+  typ? : @model.ReactionType,
   limit? : Int,
   after? : @model.UserId,
 ) -> Array[@model.User] raise DiscordHttpError {
@@ -175,6 +196,7 @@ pub async fn MessageRef::reactions(
     self.channel_id,
     self.message_id,
     emoji,
+    typ?,
     limit?,
     after?,
   )

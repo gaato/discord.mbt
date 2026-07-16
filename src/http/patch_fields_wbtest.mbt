@@ -8,9 +8,24 @@ test "patch fields omit missing values and preserve empty arrays" {
     message_patch_builder(None, false, Some([]), Some([]), None).build(),
     content={ "embeds": [], "components": [] },
   )
-  json_inspect(command_patch_body(None, None, Some([]), None, false, None), content={
-    "options": [],
-  })
+  json_inspect(
+    command_patch_body(
+      None,
+      None,
+      Some([]),
+      None,
+      false,
+      None,
+      None,
+      false,
+      None,
+      false,
+      None,
+      None,
+      None,
+    ),
+    content={ "options": [] },
+  )
 }
 
 ///|
@@ -43,9 +58,24 @@ test "nullable patch fields distinguish set and clear" {
   json_inspect(message_patch_builder(None, true, None, None, None).build(), content={
     "content": null,
   })
-  json_inspect(command_patch_body(None, None, None, None, true, None), content={
-    "default_member_permissions": null,
-  })
+  json_inspect(
+    command_patch_body(
+      None,
+      None,
+      None,
+      None,
+      true,
+      None,
+      None,
+      false,
+      None,
+      false,
+      None,
+      None,
+      None,
+    ),
+    content={ "default_member_permissions": null },
+  )
 }
 
 ///|
@@ -70,6 +100,13 @@ test "nullable patch fields reject set and clear together" {
       None,
       Some(@model.Permissions::view_channel()),
       true,
+      None,
+      None,
+      false,
+      None,
+      false,
+      None,
+      None,
       None,
     )
     |> ignore

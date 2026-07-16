@@ -6,11 +6,9 @@ async test "non-json error bodies surface verbatim in the Api error" {
   let client = Client("test-token")
   defer client.close()
   client.perform_override_.val = Some((_route, _path, _headers, _body, _files) => {
-    {
-      status: 502,
-      headers: Map([]),
-      body: Json::string("<html>bad gateway</html>"),
-    }
+    status: 502,
+    headers: Map([]),
+    body: Json::string("<html>bad gateway</html>"),
   })
   try client.get_gateway() catch {
     Api(status~, error~) => {
@@ -31,7 +29,9 @@ async test "unshaped json error bodies fall back to a stringified message" {
   let client = Client("test-token")
   defer client.close()
   client.perform_override_.val = Some((_route, _path, _headers, _body, _files) => {
-    { status: 400, headers: Map([]), body: Json::null() }
+    status: 400,
+    headers: Map([]),
+    body: Json::null(),
   })
   try client.get_gateway() catch {
     Api(status~, error~) => {

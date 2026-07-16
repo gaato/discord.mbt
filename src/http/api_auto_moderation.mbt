@@ -65,15 +65,16 @@ pub async fn Client::get_auto_moderation_rule(
 }
 
 ///|
-/// Create an auto-moderation rule.
+/// Create an auto-moderation rule. `trigger_metadata` is only meaningful for
+/// some trigger types (e.g. Keyword); triggers like Spam need none.
 pub async fn Client::create_auto_moderation_rule(
   self : Client,
   guild_id : @model.GuildId,
   name : String,
   event_type : @model.AutoModerationEventType,
   trigger_type : @model.AutoModerationTriggerType,
-  trigger_metadata : @model.TriggerMetadata,
   actions : Array[@model.AutoModerationAction],
+  trigger_metadata? : @model.TriggerMetadata,
   enabled? : Bool,
   exempt_roles? : Array[@model.RoleId],
   exempt_channels? : Array[@model.ChannelId],
@@ -83,7 +84,7 @@ pub async fn Client::create_auto_moderation_rule(
     Some(name),
     Some(event_type),
     Some(trigger_type),
-    Some(trigger_metadata),
+    trigger_metadata,
     Some(actions),
     enabled,
     exempt_roles,
