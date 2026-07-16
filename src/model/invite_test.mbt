@@ -213,3 +213,39 @@ test "invite enums preserve unknown values" {
     ),
   )
 }
+
+///|
+test "invite target-user job status round-trips" {
+  let fixture =
+    #|{"status":3,"total_users":100,"processed_users":41,"created_at":"2025-01-08T12:00:00.000000+00:00","completed_at":null,"error_message":"Failed to parse CSV file"}
+  let status : @model.TargetUsersJobStatus = @json.from_json(
+    @json.parse(fixture),
+  )
+  debug_inspect(
+    status,
+    content=(
+      #|{
+      #|  status: Failed,
+      #|  total_users: 100,
+      #|  processed_users: 41,
+      #|  created_at: "2025-01-08T12:00:00.000000+00:00",
+      #|  completed_at: Null,
+      #|  error_message: Some("Failed to parse CSV file"),
+      #|}
+    ),
+  )
+  assert_eq(status.to_json().stringify(), fixture)
+}
+
+///|
+test "invite target-user job status tolerates absent error and unknown status" {
+  let fixture =
+    #|{"status":99,"total_users":100,"processed_users":41,"created_at":"2025-01-08T12:00:00.000000+00:00","completed_at":null}
+  let status : @model.TargetUsersJobStatus = @json.from_json(
+    @json.parse(fixture),
+  )
+  assert_eq(status.status, Unknown(99))
+  assert_true(status.completed_at is Null)
+  assert_true(status.error_message is None)
+  assert_eq(status.to_json().stringify(), fixture)
+}

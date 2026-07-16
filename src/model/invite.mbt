@@ -158,3 +158,67 @@ pub impl @json.FromJson for InviteTargetType with fn from_json(json, path) {
       )
   }
 }
+
+///|
+/// Progress and outcome of an invite target-user CSV update.
+pub(all) struct TargetUsersJobStatus {
+  status : TargetUsersJobStatusCode
+  total_users : Int
+  processed_users : Int
+  created_at : Timestamp
+  completed_at : Nullable[Timestamp]
+  error_message : String?
+} derive(ToJson, FromJson, Debug)
+
+///|
+/// State of an invite target-user CSV update job.
+pub(all) enum TargetUsersJobStatusCode {
+  Unspecified
+  Processing
+  Completed
+  Failed
+  Unknown(Int)
+} derive(Eq, Debug)
+
+///|
+pub fn TargetUsersJobStatusCode::to_int(self : TargetUsersJobStatusCode) -> Int {
+  match self {
+    Unspecified => 0
+    Processing => 1
+    Completed => 2
+    Failed => 3
+    Unknown(value) => value
+  }
+}
+
+///|
+pub fn TargetUsersJobStatusCode::from_int(
+  value : Int,
+) -> TargetUsersJobStatusCode {
+  match value {
+    0 => Unspecified
+    1 => Processing
+    2 => Completed
+    3 => Failed
+    value => Unknown(value)
+  }
+}
+
+///|
+pub impl ToJson for TargetUsersJobStatusCode with fn to_json(self) {
+  Json::number(self.to_int().to_double())
+}
+
+///|
+pub impl @json.FromJson for TargetUsersJobStatusCode with fn from_json(
+  json,
+  path,
+) {
+  match json {
+    Number(value, ..) => TargetUsersJobStatusCode::from_int(value.to_int())
+    _ =>
+      raise JsonDecodeError(
+        (path, "expected invite target-user job status (number)"),
+      )
+  }
+}

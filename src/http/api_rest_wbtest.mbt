@@ -553,6 +553,29 @@ test "guild sticker multipart uses named form fields and file" {
 }
 
 ///|
+test "invite target users multipart uses only target_users_file" {
+  let file = FileUpload(
+    "target-users.csv",
+    b"user_id\n123\n",
+    content_type="text/csv",
+  )
+  inspect(
+    render_parts(multipart_form_parts("B", [], "target_users_file", file)),
+    content=(
+      #|--B<CR><LF>
+      #|content-disposition: form-data; name="target_users_file"; filename="target-users.csv"<CR><LF>
+      #|content-type: text/csv<CR><LF>
+      #|<CR><LF>
+      #|user_id<LF>
+      #|123<LF>
+      #|<CR><LF>
+      #|--B--<CR><LF>
+      #|
+    ),
+  )
+}
+
+///|
 test "stage sticker and soundboard validation is pre-IO" {
   try validate_stage_topic(Some("")) catch {
     Validation(_) => ()

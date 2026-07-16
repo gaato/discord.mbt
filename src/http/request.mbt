@@ -62,6 +62,20 @@ async fn Client::perform(
         }
         conn.end_request()
       }
+      (UpdateInviteTargetUsers(..), Some([file]), None) => {
+        let seed = "\{@clock.now_ms()}-\{next_multipart_seq()}"
+        let boundary = fresh_boundary(seed, "", [file])
+        headers["content-type"] = "multipart/form-data; boundary=\{boundary}"
+        conn.request(route.method_(), path, extra_headers=headers)
+        for
+          part in multipart_form_parts(boundary, [], "target_users_file", file) {
+          match part {
+            Text(text) => conn.write(text)
+            Blob(bytes) => conn.write(bytes)
+          }
+        }
+        conn.end_request()
+      }
       (_, Some(fs), _) if fs.length() > 0 => {
         let payload = body.unwrap_or(Json::empty_object()).stringify()
         let seed = "\{@clock.now_ms()}-\{next_multipart_seq()}"
@@ -176,6 +190,12 @@ async fn Client::execute(self : Client, request : HttpRequest) -> HttpResponse {
     !(request.files is Some([_]) && request.body is Some(_)) {
     raise DiscordHttpError::Validation(
       message="create guild sticker requires exactly one file and form fields",
+    )
+  }
+  if request.route is UpdateInviteTargetUsers(..) &&
+    !(request.files is Some([_]) && request.body is None) {
+    raise DiscordHttpError::Validation(
+      message="update invite target users requires exactly one file and no JSON body",
     )
   }
   self.request_inner(request)

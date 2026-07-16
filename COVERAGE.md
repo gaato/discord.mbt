@@ -161,9 +161,8 @@ The mechanical diff needs manual review afterwards:
 
 ## Invites
 
-- [ ] GET /invites/{code}/target-users — List invite target users
-- [ ] PUT /invites/{code}/target-users — Set invite target users
-- [ ] GET /invites/{code}/target-users/job-status — Get invite target users job status
+- [x] PUT /invites/{code}/target-users — Update Target Users (`Client::update_invite_target_users`)
+- [x] GET /invites/{code}/target-users/job-status — Get Target Users Job Status (`Client::get_invite_target_users_job_status`)
 
 ## Users & OAuth2
 
@@ -172,6 +171,11 @@ The mechanical diff needs manual review afterwards:
 - [x] DELETE /users/@me/guilds/{id} — Leave Guild (`Client::leave_guild`)
 - [x] GET /oauth2/@me — Get Current Authorization Information (`Client::get_current_authorization_information`)
 - [x] GET /oauth2/applications/@me — Get Current Bot Application Information (`Client::get_current_bot_application_information`)
+
+## Out of scope: non-JSON responses
+
+- GET /invites/{code}/target-users — List invite target users (returns
+  text/csv; transport decodes JSON only — reachable via `Route::custom`)
 
 ## Out of scope (proposed): Discord Social SDK
 

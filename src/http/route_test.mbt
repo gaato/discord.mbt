@@ -1100,7 +1100,7 @@ test "channel miscellaneous route metadata" {
 }
 
 ///|
-test "invite route metadata keeps the invite code" {
+test "invite route metadata squashes the minor invite code" {
   debug_inspect(
     [
       route_metadata(
@@ -1118,7 +1118,7 @@ test "invite route metadata keeps the invite code" {
       #|    name: "get",
       #|    method_name: "Get",
       #|    path: "/invites/moonbit?with_counts=true&with_expiration=true",
-      #|    bucket: "GET:/invites/moonbit",
+      #|    bucket: "GET:/invites/{}",
       #|    needs_auth: true,
       #|    supports_reason: false,
       #|  },
@@ -1126,13 +1126,35 @@ test "invite route metadata keeps the invite code" {
       #|    name: "delete",
       #|    method_name: "Delete",
       #|    path: "/invites/moonbit",
-      #|    bucket: "DELETE:/invites/moonbit",
+      #|    bucket: "DELETE:/invites/{}",
       #|    needs_auth: true,
       #|    supports_reason: true,
       #|  },
       #|]
     ),
   )
+}
+
+///|
+test "invite target-user REST route metadata" {
+  let routes : Array[@http.Route] = [
+    UpdateInviteTargetUsers(code="moonbit"),
+    GetInviteTargetUsersJobStatus(code="moonbit"),
+  ]
+  debug_inspect(
+    routes.map(route_signature),
+    content=(
+      #|[
+      #|  "Put /invites/moonbit/target-users | PUT:/invites/{}/target-users | reason=false",
+      #|  "Get /invites/moonbit/target-users/job-status | GET:/invites/{}/target-users/job-status | reason=false",
+      #|]
+    ),
+  )
+  for route in routes {
+    assert_true(route.needs_auth())
+    assert_false(route.is_interaction())
+    assert_false(route.supports_reason())
+  }
 }
 
 ///|

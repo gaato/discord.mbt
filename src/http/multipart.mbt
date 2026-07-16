@@ -187,8 +187,8 @@ fn multipart_parts(
 
 ///|
 /// Render a conventional multipart form with text fields and one named file.
-/// Discord's guild-sticker endpoint uses this shape instead of payload_json
-/// plus files[n].
+/// Discord's guild-sticker and invite target-user endpoints use this shape
+/// instead of payload_json plus files[n].
 fn multipart_form_parts(
   boundary : String,
   fields : Array[(String, String)],

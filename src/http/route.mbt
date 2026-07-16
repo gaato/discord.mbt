@@ -326,6 +326,8 @@ pub(all) enum Route {
   DeleteStageInstance(channel_id~ : @model.ChannelId)
   GetInvite(code~ : String, query~ : String)
   DeleteInvite(code~ : String)
+  UpdateInviteTargetUsers(code~ : String)
+  GetInviteTargetUsersJobStatus(code~ : String)
   GetWebhook(webhook_id~ : @model.WebhookId)
   ModifyWebhook(webhook_id~ : @model.WebhookId)
   DeleteWebhook(webhook_id~ : @model.WebhookId)
@@ -585,6 +587,7 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | GetGuildTemplates(..)
     | GetStageInstance(..)
     | GetInvite(..)
+    | GetInviteTargetUsersJobStatus(..)
     | GetWebhook(..)
     | GetWebhookWithToken(..)
     | GetWebhookMessage(..)
@@ -709,7 +712,8 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | EditApplicationCommandPermissions(..)
     | UpdateApplicationRoleConnectionMetadataRecords(..)
     | UpdateCurrentUserApplicationRoleConnection(..)
-    | SyncGuildTemplate(..) => Put
+    | SyncGuildTemplate(..)
+    | UpdateInviteTargetUsers(..) => Put
     ModifyGuildOnboarding(..) | ModifyGuildIncidentActions(..) => Put
   }
 }
@@ -947,6 +951,9 @@ pub fn Route::path(self : Route) -> String {
     | DeleteStageInstance(channel_id~) => "/stage-instances/\{channel_id}"
     GetInvite(code~, query~) => "/invites/\{code}\{query}"
     DeleteInvite(code~) => "/invites/\{code}"
+    UpdateInviteTargetUsers(code~) => "/invites/\{code}/target-users"
+    GetInviteTargetUsersJobStatus(code~) =>
+      "/invites/\{code}/target-users/job-status"
     GetWebhook(webhook_id~)
     | ModifyWebhook(webhook_id~)
     | DeleteWebhook(webhook_id~) => "/webhooks/\{webhook_id}"
@@ -1255,8 +1262,11 @@ pub fn Route::bucket(self : Route) -> String {
     GetStageInstance(channel_id~) => "GET:/stage-instances/\{channel_id}"
     ModifyStageInstance(channel_id~) => "PATCH:/stage-instances/\{channel_id}"
     DeleteStageInstance(channel_id~) => "DELETE:/stage-instances/\{channel_id}"
-    GetInvite(code~, ..) => "GET:/invites/\{code}"
-    DeleteInvite(code~) => "DELETE:/invites/\{code}"
+    GetInvite(..) => "GET:/invites/{}"
+    DeleteInvite(..) => "DELETE:/invites/{}"
+    UpdateInviteTargetUsers(..) => "PUT:/invites/{}/target-users"
+    GetInviteTargetUsersJobStatus(..) =>
+      "GET:/invites/{}/target-users/job-status"
     GetWebhook(webhook_id~) => "GET:/webhooks/\{webhook_id}"
     ModifyWebhook(webhook_id~) => "PATCH:/webhooks/\{webhook_id}"
     DeleteWebhook(webhook_id~) => "DELETE:/webhooks/\{webhook_id}"

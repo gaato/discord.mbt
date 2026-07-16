@@ -177,6 +177,7 @@ pub async fn Client::get_guild_welcome_screen(Self, @model.Id[@model.GuildMarker
 pub async fn Client::get_guild_widget(Self, @model.Id[@model.GuildMarker]) -> @model.GuildWidget raise DiscordHttpError
 pub async fn Client::get_guild_widget_settings(Self, @model.Id[@model.GuildMarker]) -> @model.GuildWidgetSettings raise DiscordHttpError
 pub async fn Client::get_invite(Self, String, with_counts? : Bool, with_expiration? : Bool, guild_scheduled_event_id? : @model.Id[@model.ScheduledEventMarker]) -> @model.Invite raise DiscordHttpError
+pub async fn Client::get_invite_target_users_job_status(Self, String) -> @model.TargetUsersJobStatus raise DiscordHttpError
 pub async fn Client::get_message(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker]) -> @model.Message raise DiscordHttpError
 pub async fn Client::get_original_response(Self, @model.Id[@model.ApplicationMarker], String) -> @model.Message raise DiscordHttpError
 pub async fn Client::get_pinned_messages(Self, @model.Id[@model.ChannelMarker]) -> Array[@model.Message] raise DiscordHttpError
@@ -268,6 +269,7 @@ pub async fn Client::trigger_typing(Self, @model.Id[@model.ChannelMarker]) -> Un
 pub async fn Client::unpin_message(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], audit_reason? : String) -> Unit raise DiscordHttpError
 pub async fn Client::update_application_role_connection_metadata_records(Self, @model.Id[@model.ApplicationMarker], Array[@model.ApplicationRoleConnectionMetadata]) -> Array[@model.ApplicationRoleConnectionMetadata] raise DiscordHttpError
 pub async fn Client::update_current_user_application_role_connection(Self, @model.Id[@model.ApplicationMarker], platform_name? : String, platform_username? : String, metadata? : Json, bearer_token~ : String) -> @model.ApplicationRoleConnection raise DiscordHttpError
+pub async fn Client::update_invite_target_users(Self, String, FileUpload) -> Unit raise DiscordHttpError
 pub fn Client::user_ref(Self, @model.Id[@model.UserMarker]) -> UserRef
 pub impl Show for Client
 
@@ -496,6 +498,8 @@ pub(all) enum Route {
   DeleteStageInstance(channel_id~ : @model.Id[@model.ChannelMarker])
   GetInvite(code~ : String, query~ : String)
   DeleteInvite(code~ : String)
+  UpdateInviteTargetUsers(code~ : String)
+  GetInviteTargetUsersJobStatus(code~ : String)
   GetWebhook(webhook_id~ : @model.Id[@model.WebhookMarker])
   ModifyWebhook(webhook_id~ : @model.Id[@model.WebhookMarker])
   DeleteWebhook(webhook_id~ : @model.Id[@model.WebhookMarker])

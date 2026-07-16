@@ -3149,6 +3149,27 @@ pub impl ToJson for SystemChannelFlags
 pub impl @debug.Debug for SystemChannelFlags
 pub impl @json.FromJson for SystemChannelFlags
 
+pub(all) struct TargetUsersJobStatus {
+  status : TargetUsersJobStatusCode
+  total_users : Int
+  processed_users : Int
+  created_at : Timestamp
+  completed_at : Nullable[Timestamp]
+  error_message : String?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum TargetUsersJobStatusCode {
+  Unspecified
+  Processing
+  Completed
+  Failed
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn TargetUsersJobStatusCode::from_int(Int) -> Self
+pub fn TargetUsersJobStatusCode::to_int(Self) -> Int
+pub impl ToJson for TargetUsersJobStatusCode
+pub impl @json.FromJson for TargetUsersJobStatusCode
+
 pub(all) struct Team {
   icon : Nullable[ImageHash]
   id : Id[TeamMarker]
