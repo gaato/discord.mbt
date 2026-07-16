@@ -351,6 +351,15 @@ fn message_create_frame(sequence : Int, id : String) -> String {
 }
 
 ///|
+fn message_update_frame(sequence : Int, id : String) -> String {
+  (
+    #|{"op":0,"s":SEQUENCE_PLACEHOLDER,"t":"MESSAGE_UPDATE","d":{"id":"ID_PLACEHOLDER","channel_id":"6","author":{"id":"200","username":"nelly","discriminator":"0","avatar":null},"content":"edited","timestamp":"2025-06-01T10:00:00Z","edited_timestamp":"2025-06-01T10:05:00Z","tts":false,"mention_everyone":false,"mentions":[],"mention_roles":[],"attachments":[],"embeds":[],"pinned":false,"type":0}}
+  )
+  .replace(old="SEQUENCE_PLACEHOLDER", new=sequence.to_string())
+  .replace(old="ID_PLACEHOLDER", new=id)
+}
+
+///|
 fn voice_state_frame(sequence : Int, endpoint_session : String) -> String {
   (
     #|{"op":0,"s":SEQUENCE_PLACEHOLDER,"t":"VOICE_STATE_UPDATE","d":{"guild_id":"100","channel_id":"200","user_id":"1","session_id":"SESSION_PLACEHOLDER","deaf":false,"mute":false,"self_deaf":false,"self_mute":false,"suppress":false,"request_to_speak_timestamp":null}}
@@ -739,6 +748,73 @@ async test "bot updates cache before typed event handlers" {
     transport.incoming.put(bot_ready_frame())
     let ctx = ready_contexts.get()
     transport.incoming.put(message_create_frame(2, "700"))
+    assert_true(observed.get())
+    ctx.shutdown()
+    running.wait()
+  })
+}
+
+///|
+async test "message update handlers receive the cached previous revision" {
+  let transport = BotFakeTransport()
+  let app = @app.App(sync=Disabled)
+  let bot = middleware_runtime_bot(app, transport)
+  let cache = @cache.InMemoryCache(resources=CacheResources(messages=true))
+  bot.attach_cache(cache)
+  let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
+  bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
+  let created : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  bot.on(Events::message_create(), (_, _) => created.put(()))
+  let observed : @aqueue.Queue[String] = Queue(kind=Unbounded)
+  bot.on(Events::message_update(), (_, event) => {
+    observed.put(event.before.map(message => message.content).unwrap_or("none"))
+  })
+  @async.with_task_group(group => {
+    let running = group.spawn(no_wait=true, () => bot.run())
+    transport.incoming.put(BOT_HELLO)
+    guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
+      fail("expected identify")
+    }
+    transport.incoming.put(bot_ready_frame())
+    let ctx = ready_contexts.get()
+    transport.incoming.put(message_create_frame(2, "706"))
+    created.get()
+    transport.incoming.put(message_update_frame(3, "706"))
+    inspect(observed.get(), content="cached")
+    let channel_id : @model.ChannelId = @model.Id::parse("6")
+    let message_id : @model.MessageId = @model.Id::parse("706")
+    guard cache.message(channel_id, message_id) is Some(message) else {
+      fail("expected updated cached message")
+    }
+    inspect(message.content, content="edited")
+    ctx.shutdown()
+    running.wait()
+  })
+}
+
+///|
+async test "message update handlers receive no before when messages are disabled" {
+  let transport = BotFakeTransport()
+  let app = @app.App(sync=Disabled)
+  let bot = middleware_runtime_bot(app, transport)
+  bot.attach_cache(
+    @cache.InMemoryCache(resources=@cache.CacheResources::default()),
+  )
+  let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
+  bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
+  let observed : @aqueue.Queue[Bool] = Queue(kind=Unbounded)
+  bot.on(Events::message_update(), (_, event) => {
+    observed.put(event.before is None)
+  })
+  @async.with_task_group(group => {
+    let running = group.spawn(no_wait=true, () => bot.run())
+    transport.incoming.put(BOT_HELLO)
+    guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
+      fail("expected identify")
+    }
+    transport.incoming.put(bot_ready_frame())
+    let ctx = ready_contexts.get()
+    transport.incoming.put(message_update_frame(2, "707"))
     assert_true(observed.get())
     ctx.shutdown()
     running.wait()

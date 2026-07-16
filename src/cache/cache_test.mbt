@@ -217,7 +217,7 @@ test "permissions use owner administrator and channel overwrites" {
 }
 
 ///|
-test "messages are bounded by per-channel event recency" {
+test "message updates replace retained entries without changing eviction order" {
   let cache = @cache.InMemoryCache(
     resources=CacheResources::all(),
     max_messages_per_channel=2,
@@ -228,21 +228,38 @@ test "messages are bounded by per-channel event recency" {
   let third_id : @model.MessageId = @model.Id::parse("502")
   cache.update(cached_event("MESSAGE_CREATE", message_fixture("500", "one")))
   cache.update(cached_event("MESSAGE_CREATE", message_fixture("501", "two")))
-  // Updating 500 makes it the most recently active cached message.
   cache.update(cached_event("MESSAGE_UPDATE", message_fixture("500", "edited")))
+  guard cache.message(channel_id, first_id) is Some(edited) else {
+    fail("expected updated message")
+  }
+  assert_eq(edited.content, "edited")
+  debug_inspect(
+    cache.messages(channel_id).map(message => message.id.to_string()),
+    content="[\"500\", \"501\"]",
+  )
   cache.update(cached_event("MESSAGE_CREATE", message_fixture("502", "three")))
-  assert_true(cache.message(channel_id, first_id) is Some(_))
-  assert_true(cache.message(channel_id, second_id) is None)
+  assert_true(cache.message(channel_id, first_id) is None)
+  assert_true(cache.message(channel_id, second_id) is Some(_))
   assert_true(cache.message(channel_id, third_id) is Some(_))
   debug_inspect(
     cache.messages(channel_id).map(message => message.id.to_string()),
-    content="[\"500\", \"502\"]",
+    content="[\"501\", \"502\"]",
   )
   cache.update(
     cached_event(
-      "MESSAGE_DELETE_BULK", "{\"ids\":[\"500\",\"502\"],\"channel_id\":\"400\",\"guild_id\":\"100\"}",
+      "MESSAGE_DELETE_BULK", "{\"ids\":[\"501\",\"502\"],\"channel_id\":\"400\",\"guild_id\":\"100\"}",
     ),
   )
+  assert_eq(cache.messages(channel_id).length(), 0)
+}
+
+///|
+test "message update cache misses are not inserted" {
+  let cache = @cache.InMemoryCache(resources=CacheResources::all())
+  let channel_id : @model.ChannelId = @model.Id::parse("400")
+  let message_id : @model.MessageId = @model.Id::parse("599")
+  cache.update(cached_event("MESSAGE_UPDATE", message_fixture("599", "old")))
+  assert_true(cache.message(channel_id, message_id) is None)
   assert_eq(cache.messages(channel_id).length(), 0)
 }
 

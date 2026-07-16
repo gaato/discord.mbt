@@ -321,6 +321,27 @@ fn InMemoryCache::store_message(
 }
 
 ///|
+/// Replace a retained message without changing its eviction position.
+/// A cache miss is intentionally left unfilled: an update does not establish
+/// that an older message is among the channel's most recent messages.
+fn InMemoryCache::update_message(
+  self : InMemoryCache,
+  message : @model.Message,
+  guild_id : @model.GuildId?,
+) -> Unit {
+  self.store_user(message.author)
+  if guild_id is Some(resolved_guild_id) {
+    self.channel_guilds_[message.channel_id] = resolved_guild_id
+  }
+  guard self.resources_.messages_ else { return }
+  guard self.messages_.get(message.channel_id) is Some(channel_messages) &&
+    channel_messages.get(message.id) is Some(_) else {
+    return
+  }
+  channel_messages[message.id] = message
+}
+
+///|
 fn InMemoryCache::delete_message(
   self : InMemoryCache,
   channel_id : @model.ChannelId,
@@ -571,7 +592,7 @@ pub fn InMemoryCache::update(
     VoiceStateUpdate(voice_state) => self.store_voice_state(voice_state)
     PresenceUpdate(presence) => self.store_presence(presence)
     MessageCreate(event) => self.store_message(event.message, event.guild_id)
-    MessageUpdate(event) => self.store_message(event.message, event.guild_id)
+    MessageUpdate(event) => self.update_message(event.message, event.guild_id)
     MessageDelete(event) => self.delete_message(event.channel_id, event.id)
     MessageDeleteBulk(event) =>
       for id in event.ids {

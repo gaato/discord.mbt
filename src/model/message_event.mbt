@@ -13,11 +13,52 @@ pub(all) struct MessageCreateEvent {
 /// creation.
 pub(all) struct MessageUpdateEvent {
   message : Message
+  /// `None` when decoded via `FromJson`. The bot gateway runtime supplies the
+  /// cached previous revision only when its messages cache is enabled and that
+  /// revision is still retained.
+  before : Message?
   guild_id : GuildId?
   guild_member : GuildMember?
   mention_members : Map[UserId, GuildMember]
   channel_type : ChannelType?
 } derive(Debug)
+
+///|
+/// Whether this update changed the message's edit timestamp.
+///
+/// Without `before`, this uses the presence of an edited timestamp as a
+/// heuristic and may misclassify pin or unfurl updates to an already-edited
+/// message as edits.
+pub fn MessageUpdateEvent::is_edit(self : MessageUpdateEvent) -> Bool {
+  match self.before {
+    Some(before) =>
+      !edited_timestamps_equal(
+        before.edited_timestamp,
+        self.message.edited_timestamp,
+      )
+    None => self.message.edited_timestamp is Value(_)
+  }
+}
+
+///|
+/// Discord echoes `edited_timestamp` with varying sub-second precision
+/// (microseconds on the edit dispatch, milliseconds on later pin or unfurl
+/// updates for the same message), so compare instants at millisecond
+/// precision rather than strings.
+fn edited_timestamps_equal(
+  a : Nullable[Timestamp],
+  b : Nullable[Timestamp],
+) -> Bool {
+  match (a, b) {
+    (Null, Null) => true
+    (Value(left), Value(right)) => {
+      let left_ms = left.unix_ms() catch { _ => return left == right }
+      let right_ms = right.unix_ms() catch { _ => return left == right }
+      left_ms == right_ms
+    }
+    _ => false
+  }
+}
 
 ///|
 priv struct GatewayMessageMention {
@@ -89,6 +130,7 @@ pub impl @json.FromJson for MessageUpdateEvent with fn from_json(json, path) {
   let fields = decode_gateway_message_event(json, path)
   {
     message: fields.message,
+    before: None,
     guild_id: fields.guild_id,
     guild_member: fields.guild_member,
     mention_members: fields.mention_members,

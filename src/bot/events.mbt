@@ -971,7 +971,9 @@ pub fn Events::message_reaction_remove_emoji() -> EventType[
 /// Typed descriptor for `MESSAGE_UPDATE` — a message was edited (also
 /// fired for embed unfurls and other partial edits). Delivered under the
 /// `GUILD_MESSAGES` or `DIRECT_MESSAGES` intent; content visibility
-/// follows the same `MESSAGE_CONTENT` rule as `MESSAGE_CREATE`.
+/// follows the same `MESSAGE_CONTENT` rule as `MESSAGE_CREATE`. `before` is
+/// present only when the bot's messages cache is enabled and the previous
+/// revision is still within its retention window.
 pub fn Events::message_update() -> EventType[@model.MessageUpdateEvent] {
   {
     kind_: KMessageUpdate,

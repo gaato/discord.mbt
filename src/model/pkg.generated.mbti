@@ -2519,11 +2519,13 @@ pub impl @json.FromJson for MessageType
 
 pub(all) struct MessageUpdateEvent {
   message : Message
+  before : Message?
   guild_id : Id[GuildMarker]?
   guild_member : GuildMember?
   mention_members : Map[Id[UserMarker], GuildMember]
   channel_type : ChannelType?
 } derive(@debug.Debug)
+pub fn MessageUpdateEvent::is_edit(Self) -> Bool
 pub impl @json.FromJson for MessageUpdateEvent
 
 pub(all) enum MfaLevel {

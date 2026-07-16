@@ -580,6 +580,17 @@ pub async fn Bot::run(self : Bot) -> Unit {
           }
         }
         Dispatch(event) => {
+          let event = match (event, self.cache_) {
+            (MessageUpdate(update), Some(cache)) =>
+              @model.Event::MessageUpdate({
+                ..update,
+                before: cache.message(
+                  update.message.channel_id,
+                  update.message.id,
+                ),
+              })
+            _ => event
+          }
           if self.cache_ is Some(cache) {
             cache.update(event)
           }
