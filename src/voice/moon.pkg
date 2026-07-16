@@ -19,6 +19,9 @@ import {
 } for "test"
 
 // Voice networking is available only on the native async runtime.
+// This package is intentionally empty on non-native targets.
+
+warnings = "-29"
 
 options(
   "native-stub": [ "shim_stub.c" ],

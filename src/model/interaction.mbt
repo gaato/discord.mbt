@@ -162,7 +162,7 @@ fn decode_interaction_data(
 
 ///|
 pub impl ToJson for Interaction with fn to_json(self) {
-  match self.fields().to_json() {
+  match ToJson::to_json(self.fields()) {
     Object(fields) => {
       if self.data is Some(data) {
         fields["data"] = data.to_json()

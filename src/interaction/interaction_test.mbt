@@ -618,7 +618,9 @@ test "command model decodes a typed command value" {
     #|    {"name": "limit", "type": 4, "value": 25}
     #|  ]
     #|}
-  let command = ExampleCommand::from_options(command_options(fixture))
+  let command : ExampleCommand = @interaction.CommandModel::from_options(
+    command_options(fixture),
+  )
   debug_inspect(
     command,
     content=(
