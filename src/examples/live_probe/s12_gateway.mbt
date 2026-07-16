@@ -21,6 +21,7 @@ async fn sec_gateway(p : P) -> Unit {
           token~,
           intents=intents_union([
             @model.Intents::guilds(),
+            @model.Intents::guild_members(),
             @model.Intents::guild_voice_states(),
             @model.Intents::guild_messages(),
           ]),

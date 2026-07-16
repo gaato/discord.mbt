@@ -307,27 +307,16 @@ async fn main {
   // guild; give the whole probe a roomier request timeout.
   let client = @dhttp.Client(token, request_timeout_ms=60_000)
   defer client.close()
-  // GUILD_ID env wins; otherwise use the first (only) guild the bot is in.
-  let guild_id : @model.GuildId = match @env.get_env_var("GUILD_ID") {
-    Some(raw) =>
-      @model.Id::parse(raw) catch {
-        _ => {
-          println("invalid GUILD_ID")
-          return
-        }
-      }
-    None => {
-      let guilds = client.get_current_user_guilds() catch {
-        err => {
-          println("guild discovery failed: \{describe(err)}")
-          return
-        }
-      }
-      guard guilds is [first, ..] else {
-        println("the bot is in no guilds; invite it to a test guild first")
-        return
-      }
-      first.id
+  // The probe mutates the guild heavily; require an explicit GUILD_ID so it
+  // can never pick up an unintended guild by discovery.
+  guard @env.get_env_var("GUILD_ID") is Some(raw_guild) else {
+    println("GUILD_ID is required (the probe rewrites the target guild)")
+    return
+  }
+  let guild_id : @model.GuildId = @model.Id::parse(raw_guild) catch {
+    _ => {
+      println("invalid GUILD_ID")
+      return
     }
   }
   println("target guild: \{guild_id}")
