@@ -641,6 +641,66 @@ test "route paths and buckets" {
 }
 
 ///|
+test "guild management REST route metadata" {
+  let guild_id : @model.GuildId = Id(10UL)
+  let user_id : @model.UserId = Id(20UL)
+  let role_id : @model.RoleId = Id(30UL)
+  let integration_id : @model.IntegrationId = Id(40UL)
+  debug_inspect(
+    [
+      route_signature(GetGuildPreview(guild_id~)),
+      route_signature(GetGuildBan(guild_id~, user_id~)),
+      route_signature(BulkGuildBan(guild_id~)),
+      route_signature(
+        GetGuildPruneCount(guild_id~, query="?days=7&include_roles=30,31"),
+      ),
+      route_signature(BeginGuildPrune(guild_id~)),
+      route_signature(GetGuildVoiceRegions(guild_id~)),
+      route_signature(GetGuildInvites(guild_id~)),
+      route_signature(GetGuildIntegrations(guild_id~)),
+      route_signature(DeleteGuildIntegration(guild_id~, integration_id~)),
+      route_signature(GetGuildVanityUrl(guild_id~)),
+      route_signature(GetGuildWidgetSettings(guild_id~)),
+      route_signature(ModifyGuildWidget(guild_id~)),
+      route_signature(GetGuildWidget(guild_id~)),
+      route_signature(GetGuildWelcomeScreen(guild_id~)),
+      route_signature(ModifyGuildWelcomeScreen(guild_id~)),
+      route_signature(GetGuildOnboarding(guild_id~)),
+      route_signature(ModifyGuildOnboarding(guild_id~)),
+      route_signature(ModifyGuildIncidentActions(guild_id~)),
+      route_signature(GetGuildRole(guild_id~, role_id~)),
+      route_signature(ModifyGuildRolePositions(guild_id~)),
+      route_signature(AddGuildMember(guild_id~, user_id~)),
+    ],
+    content=(
+      #|[
+      #|  "Get /guilds/10/preview | GET:/guilds/10/preview | reason=false",
+      #|  "Get /guilds/10/bans/20 | GET:/guilds/10/bans/{} | reason=false",
+      #|  "Post /guilds/10/bulk-ban | POST:/guilds/10/bulk-ban | reason=true",
+      #|  "Get /guilds/10/prune?days=7&include_roles=30,31 | GET:/guilds/10/prune | reason=false",
+      #|  "Post /guilds/10/prune | POST:/guilds/10/prune | reason=true",
+      #|  "Get /guilds/10/regions | GET:/guilds/10/regions | reason=false",
+      #|  "Get /guilds/10/invites | GET:/guilds/10/invites | reason=false",
+      #|  "Get /guilds/10/integrations | GET:/guilds/10/integrations | reason=false",
+      #|  "Delete /guilds/10/integrations/40 | DELETE:/guilds/10/integrations/{} | reason=true",
+      #|  "Get /guilds/10/vanity-url | GET:/guilds/10/vanity-url | reason=false",
+      #|  "Get /guilds/10/widget | GET:/guilds/10/widget | reason=false",
+      #|  "Patch /guilds/10/widget | PATCH:/guilds/10/widget | reason=true",
+      #|  "Get /guilds/10/widget.json | GET:/guilds/10/widget.json | reason=false",
+      #|  "Get /guilds/10/welcome-screen | GET:/guilds/10/welcome-screen | reason=false",
+      #|  "Patch /guilds/10/welcome-screen | PATCH:/guilds/10/welcome-screen | reason=true",
+      #|  "Get /guilds/10/onboarding | GET:/guilds/10/onboarding | reason=false",
+      #|  "Put /guilds/10/onboarding | PUT:/guilds/10/onboarding | reason=true",
+      #|  "Put /guilds/10/incident-actions | PUT:/guilds/10/incident-actions | reason=false",
+      #|  "Get /guilds/10/roles/30 | GET:/guilds/10/roles/{} | reason=false",
+      #|  "Patch /guilds/10/roles | PATCH:/guilds/10/roles | reason=true",
+      #|  "Put /guilds/10/members/20 | PUT:/guilds/10/members/{} | reason=false",
+      #|]
+    ),
+  )
+}
+
+///|
 test "custom route derives a stable query-free bucket" {
   let route = @http.Route::custom(
     request_method=Get,

@@ -105,32 +105,28 @@ The mechanical diff needs manual review afterwards:
 
 ## Guild management
 
-- [ ] GET /guilds/{id}/preview — Get Guild Preview
-- [ ] GET /guilds/{id}/bans/{user} — Get Guild Ban
-- [ ] POST /guilds/{id}/bulk-ban — Bulk Guild Ban
-- [ ] GET /guilds/{id}/prune — Get Guild Prune Count
-- [ ] POST /guilds/{id}/prune — Begin Guild Prune
-- [ ] GET /guilds/{id}/regions — Get Guild Voice Regions
-- [ ] GET /guilds/{id}/invites — Get Guild Invites
-- [ ] GET /guilds/{id}/integrations — Get Guild Integrations
-- [ ] DELETE /guilds/{id}/integrations/{integration} — Delete Guild Integration
-- [ ] GET /guilds/{id}/vanity-url — Get Guild Vanity URL
-- [ ] GET /guilds/{id}/widget — Get Guild Widget Settings
-- [ ] PATCH /guilds/{id}/widget — Modify Guild Widget
-- [ ] GET /guilds/{id}/widget.json — Get Guild Widget
-- [ ] GET /guilds/{id}/widget.png — Get Guild Widget Image
-- [ ] GET /guilds/{id}/welcome-screen — Get Guild Welcome Screen
-- [ ] PATCH /guilds/{id}/welcome-screen — Modify Guild Welcome Screen
-- [ ] GET /guilds/{id}/onboarding — Get Guild Onboarding
-- [ ] PUT /guilds/{id}/onboarding — Modify Guild Onboarding
-- [ ] PUT /guilds/{id}/incident-actions — Modify Guild Incident Actions
-- [ ] GET /guilds/{id}/roles/{role} — Get Guild Role
-- [ ] GET /guilds/{id}/roles/member-counts — Get role member counts
-- [ ] PATCH /guilds/{id}/roles — Modify Guild Role Positions
-- [ ] PUT /guilds/{id}/members/{user} — Add Guild Member (OAuth2 `guilds.join`)
-- [ ] GET /guilds/{id}/requests — List guild join requests
-- [ ] PATCH /guilds/{id}/requests/{user} — Act on a guild join request
-- [ ] GET /guilds/{id}/new-member-welcome — Get new member welcome (not in public docs)
+- [x] GET /guilds/{id}/preview — Get Guild Preview (`Client::get_guild_preview`)
+- [x] GET /guilds/{id}/bans/{user} — Get Guild Ban (`Client::get_guild_ban`)
+- [x] POST /guilds/{id}/bulk-ban — Bulk Guild Ban (`Client::bulk_guild_ban`)
+- [x] GET /guilds/{id}/prune — Get Guild Prune Count (`Client::get_guild_prune_count`)
+- [x] POST /guilds/{id}/prune — Begin Guild Prune (`Client::begin_guild_prune`)
+- [x] GET /guilds/{id}/regions — Get Guild Voice Regions (`Client::get_guild_voice_regions`)
+- [x] GET /guilds/{id}/invites — Get Guild Invites (`Client::get_guild_invites`)
+- [x] GET /guilds/{id}/integrations — Get Guild Integrations (`Client::get_guild_integrations`)
+- [x] DELETE /guilds/{id}/integrations/{integration} — Delete Guild Integration (`Client::delete_guild_integration`)
+- [x] GET /guilds/{id}/vanity-url — Get Guild Vanity URL (`Client::get_guild_vanity_url`)
+- [x] GET /guilds/{id}/widget — Get Guild Widget Settings (`Client::get_guild_widget_settings`)
+- [x] PATCH /guilds/{id}/widget — Modify Guild Widget (`Client::modify_guild_widget`)
+- [x] GET /guilds/{id}/widget.json — Get Guild Widget (`Client::get_guild_widget`)
+- [x] GET /guilds/{id}/widget.png — Get Guild Widget Image (covered by `Client::guild_widget_image_url`; binary endpoint, no JSON route)
+- [x] GET /guilds/{id}/welcome-screen — Get Guild Welcome Screen (`Client::get_guild_welcome_screen`)
+- [x] PATCH /guilds/{id}/welcome-screen — Modify Guild Welcome Screen (`Client::modify_guild_welcome_screen`)
+- [x] GET /guilds/{id}/onboarding — Get Guild Onboarding (`Client::get_guild_onboarding`)
+- [x] PUT /guilds/{id}/onboarding — Modify Guild Onboarding (`Client::modify_guild_onboarding`)
+- [x] PUT /guilds/{id}/incident-actions — Modify Guild Incident Actions (`Client::modify_guild_incident_actions`)
+- [x] GET /guilds/{id}/roles/{role} — Get Guild Role (`Client::get_guild_role`)
+- [x] PATCH /guilds/{id}/roles — Modify Guild Role Positions (`Client::modify_guild_role_positions`)
+- [x] PUT /guilds/{id}/members/{user} — Add Guild Member (`Client::add_guild_member`; OAuth2 `guilds.join`)
 
 ## Voice
 
@@ -208,6 +204,14 @@ context; both remain reachable through `Route::custom`.
 
 ## Out of scope: undocumented endpoints
 
+- GET /guilds/{id}/requests — List guild join requests: not present in the
+  official developer docs; reachable via `Route::custom`.
+- PATCH /guilds/{id}/requests/{user} — Act on a guild join request: not present
+  in the official developer docs; reachable via `Route::custom`.
+- GET /guilds/{id}/roles/member-counts — Get role member counts: not present in
+  the official developer docs; reachable via `Route::custom`.
+- GET /guilds/{id}/new-member-welcome — Get new member welcome: not present in
+  the official developer docs; reachable via `Route::custom`.
 - GET /channels/{id}/threads/search — Search Threads: not present in the
   official developer docs (limited-availability endpoint); reachable via
   `Route::custom`.

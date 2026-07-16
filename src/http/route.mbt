@@ -190,6 +190,7 @@ pub(all) enum Route {
   GetGuild(guild_id~ : @model.GuildId)
   GetGuildWithCounts(guild_id~ : @model.GuildId, query~ : String)
   ModifyGuild(guild_id~ : @model.GuildId)
+  GetGuildPreview(guild_id~ : @model.GuildId)
   GetGuildChannels(guild_id~ : @model.GuildId)
   CreateGuildChannel(guild_id~ : @model.GuildId)
   ModifyGuildChannelPositions(guild_id~ : @model.GuildId)
@@ -198,8 +199,11 @@ pub(all) enum Route {
   SearchGuildMembers(guild_id~ : @model.GuildId, query~ : String)
   ModifyGuildMember(guild_id~ : @model.GuildId, user_id~ : @model.UserId)
   ModifyCurrentMember(guild_id~ : @model.GuildId)
+  AddGuildMember(guild_id~ : @model.GuildId, user_id~ : @model.UserId)
   GetGuildRoles(guild_id~ : @model.GuildId)
+  GetGuildRole(guild_id~ : @model.GuildId, role_id~ : @model.RoleId)
   CreateGuildRole(guild_id~ : @model.GuildId)
+  ModifyGuildRolePositions(guild_id~ : @model.GuildId)
   ModifyGuildRole(guild_id~ : @model.GuildId, role_id~ : @model.RoleId)
   DeleteGuildRole(guild_id~ : @model.GuildId, role_id~ : @model.RoleId)
   AddGuildMemberRole(
@@ -215,7 +219,27 @@ pub(all) enum Route {
   RemoveGuildMember(guild_id~ : @model.GuildId, user_id~ : @model.UserId)
   CreateGuildBan(guild_id~ : @model.GuildId, user_id~ : @model.UserId)
   RemoveGuildBan(guild_id~ : @model.GuildId, user_id~ : @model.UserId)
+  GetGuildBan(guild_id~ : @model.GuildId, user_id~ : @model.UserId)
   GetGuildBans(guild_id~ : @model.GuildId, query~ : String)
+  BulkGuildBan(guild_id~ : @model.GuildId)
+  GetGuildPruneCount(guild_id~ : @model.GuildId, query~ : String)
+  BeginGuildPrune(guild_id~ : @model.GuildId)
+  GetGuildVoiceRegions(guild_id~ : @model.GuildId)
+  GetGuildInvites(guild_id~ : @model.GuildId)
+  GetGuildIntegrations(guild_id~ : @model.GuildId)
+  DeleteGuildIntegration(
+    guild_id~ : @model.GuildId,
+    integration_id~ : @model.IntegrationId
+  )
+  GetGuildVanityUrl(guild_id~ : @model.GuildId)
+  GetGuildWidgetSettings(guild_id~ : @model.GuildId)
+  ModifyGuildWidget(guild_id~ : @model.GuildId)
+  GetGuildWidget(guild_id~ : @model.GuildId)
+  GetGuildWelcomeScreen(guild_id~ : @model.GuildId)
+  ModifyGuildWelcomeScreen(guild_id~ : @model.GuildId)
+  GetGuildOnboarding(guild_id~ : @model.GuildId)
+  ModifyGuildOnboarding(guild_id~ : @model.GuildId)
+  ModifyGuildIncidentActions(guild_id~ : @model.GuildId)
   GetGuildAuditLog(guild_id~ : @model.GuildId, query~ : String)
   ListAutoModerationRules(guild_id~ : @model.GuildId)
   GetAutoModerationRule(
@@ -514,12 +538,24 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | ListActiveGuildThreads(..)
     | GetGuild(..)
     | GetGuildWithCounts(..)
+    | GetGuildPreview(..)
     | GetGuildChannels(..)
     | GetGuildMember(..)
     | ListGuildMembers(..)
     | SearchGuildMembers(..)
+    | GetGuildRole(..)
     | GetGuildRoles(..)
+    | GetGuildBan(..)
     | GetGuildBans(..)
+    | GetGuildPruneCount(..)
+    | GetGuildVoiceRegions(..)
+    | GetGuildInvites(..)
+    | GetGuildIntegrations(..)
+    | GetGuildVanityUrl(..)
+    | GetGuildWidgetSettings(..)
+    | GetGuildWidget(..)
+    | GetGuildWelcomeScreen(..)
+    | GetGuildOnboarding(..)
     | GetGuildAuditLog(..)
     | ListAutoModerationRules(..)
     | GetAutoModerationRule(..)
@@ -569,6 +605,8 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | StartThreadWithoutMessage(..)
     | CreateGuildChannel(..)
     | CreateGuildRole(..)
+    | BulkGuildBan(..)
+    | BeginGuildPrune(..)
     | CreateChannelInvite(..)
     | CreateWebhook(..)
     | CreateGuildEmoji(..)
@@ -596,6 +634,9 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | ModifyGuildMember(..)
     | ModifyCurrentMember(..)
     | ModifyGuildRole(..)
+    | ModifyGuildRolePositions(..)
+    | ModifyGuildWidget(..)
+    | ModifyGuildWelcomeScreen(..)
     | ModifyWebhook(..)
     | ModifyWebhookWithToken(..)
     | EditWebhookMessage(..)
@@ -625,6 +666,7 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | LeaveThread(..)
     | RemoveThreadMember(..)
     | DeleteGuildRole(..)
+    | DeleteGuildIntegration(..)
     | RemoveGuildMemberRole(..)
     | RemoveGuildMember(..)
     | RemoveGuildBan(..)
@@ -655,6 +697,7 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | SetVoiceChannelStatus(..)
     | GroupDmAddRecipient(..)
     | AddGuildMemberRole(..)
+    | AddGuildMember(..)
     | CreateGuildBan(..)
     | BulkOverwriteGlobalCommands(..)
     | BulkOverwriteGuildCommands(..)
@@ -662,6 +705,7 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | UpdateApplicationRoleConnectionMetadataRecords(..)
     | UpdateCurrentUserApplicationRoleConnection(..)
     | SyncGuildTemplate(..) => Put
+    ModifyGuildOnboarding(..) | ModifyGuildIncidentActions(..) => Put
   }
 }
 
@@ -785,28 +829,52 @@ pub fn Route::path(self : Route) -> String {
     GetGuild(guild_id~) => "/guilds/\{guild_id}"
     GetGuildWithCounts(guild_id~, query~) => "/guilds/\{guild_id}\{query}"
     ModifyGuild(guild_id~) => "/guilds/\{guild_id}"
+    GetGuildPreview(guild_id~) => "/guilds/\{guild_id}/preview"
     GetGuildChannels(guild_id~)
     | CreateGuildChannel(guild_id~)
     | ModifyGuildChannelPositions(guild_id~) => "/guilds/\{guild_id}/channels"
     GetGuildMember(guild_id~, user_id~)
     | ModifyGuildMember(guild_id~, user_id~)
+    | AddGuildMember(guild_id~, user_id~)
     | RemoveGuildMember(guild_id~, user_id~) =>
       "/guilds/\{guild_id}/members/\{user_id}"
     ListGuildMembers(guild_id~, query~) => "/guilds/\{guild_id}/members\{query}"
     SearchGuildMembers(guild_id~, query~) =>
       "/guilds/\{guild_id}/members/search\{query}"
     ModifyCurrentMember(guild_id~) => "/guilds/\{guild_id}/members/@me"
-    GetGuildRoles(guild_id~) | CreateGuildRole(guild_id~) =>
-      "/guilds/\{guild_id}/roles"
-    ModifyGuildRole(guild_id~, role_id~)
+    GetGuildRoles(guild_id~)
+    | CreateGuildRole(guild_id~)
+    | ModifyGuildRolePositions(guild_id~) => "/guilds/\{guild_id}/roles"
+    GetGuildRole(guild_id~, role_id~)
+    | ModifyGuildRole(guild_id~, role_id~)
     | DeleteGuildRole(guild_id~, role_id~) =>
       "/guilds/\{guild_id}/roles/\{role_id}"
     AddGuildMemberRole(guild_id~, user_id~, role_id~)
     | RemoveGuildMemberRole(guild_id~, user_id~, role_id~) =>
       "/guilds/\{guild_id}/members/\{user_id}/roles/\{role_id}"
-    CreateGuildBan(guild_id~, user_id~) | RemoveGuildBan(guild_id~, user_id~) =>
+    GetGuildBan(guild_id~, user_id~)
+    | CreateGuildBan(guild_id~, user_id~)
+    | RemoveGuildBan(guild_id~, user_id~) =>
       "/guilds/\{guild_id}/bans/\{user_id}"
     GetGuildBans(guild_id~, query~) => "/guilds/\{guild_id}/bans\{query}"
+    BulkGuildBan(guild_id~) => "/guilds/\{guild_id}/bulk-ban"
+    GetGuildPruneCount(guild_id~, query~) => "/guilds/\{guild_id}/prune\{query}"
+    BeginGuildPrune(guild_id~) => "/guilds/\{guild_id}/prune"
+    GetGuildVoiceRegions(guild_id~) => "/guilds/\{guild_id}/regions"
+    GetGuildInvites(guild_id~) => "/guilds/\{guild_id}/invites"
+    GetGuildIntegrations(guild_id~) => "/guilds/\{guild_id}/integrations"
+    DeleteGuildIntegration(guild_id~, integration_id~) =>
+      "/guilds/\{guild_id}/integrations/\{integration_id}"
+    GetGuildVanityUrl(guild_id~) => "/guilds/\{guild_id}/vanity-url"
+    GetGuildWidgetSettings(guild_id~) | ModifyGuildWidget(guild_id~) =>
+      "/guilds/\{guild_id}/widget"
+    GetGuildWidget(guild_id~) => "/guilds/\{guild_id}/widget.json"
+    GetGuildWelcomeScreen(guild_id~) | ModifyGuildWelcomeScreen(guild_id~) =>
+      "/guilds/\{guild_id}/welcome-screen"
+    GetGuildOnboarding(guild_id~) | ModifyGuildOnboarding(guild_id~) =>
+      "/guilds/\{guild_id}/onboarding"
+    ModifyGuildIncidentActions(guild_id~) =>
+      "/guilds/\{guild_id}/incident-actions"
     GetGuildAuditLog(guild_id~, query~) =>
       "/guilds/\{guild_id}/audit-logs\{query}"
     ListAutoModerationRules(guild_id~) | CreateAutoModerationRule(guild_id~) =>
@@ -1061,6 +1129,7 @@ pub fn Route::bucket(self : Route) -> String {
     GetGuild(guild_id~) | GetGuildWithCounts(guild_id~, ..) =>
       "GET:/guilds/\{guild_id}"
     ModifyGuild(guild_id~) => "PATCH:/guilds/\{guild_id}"
+    GetGuildPreview(guild_id~) => "GET:/guilds/\{guild_id}/preview"
     GetGuildChannels(guild_id~) => "GET:/guilds/\{guild_id}/channels"
     CreateGuildChannel(guild_id~) => "POST:/guilds/\{guild_id}/channels"
     ModifyGuildChannelPositions(guild_id~) =>
@@ -1070,9 +1139,12 @@ pub fn Route::bucket(self : Route) -> String {
     SearchGuildMembers(guild_id~, ..) =>
       "GET:/guilds/\{guild_id}/members/search"
     ModifyGuildMember(guild_id~, ..) => "PATCH:/guilds/\{guild_id}/members/{}"
+    AddGuildMember(guild_id~, ..) => "PUT:/guilds/\{guild_id}/members/{}"
     ModifyCurrentMember(guild_id~) => "PATCH:/guilds/\{guild_id}/members/@me"
     GetGuildRoles(guild_id~) => "GET:/guilds/\{guild_id}/roles"
+    GetGuildRole(guild_id~, ..) => "GET:/guilds/\{guild_id}/roles/{}"
     CreateGuildRole(guild_id~) => "POST:/guilds/\{guild_id}/roles"
+    ModifyGuildRolePositions(guild_id~) => "PATCH:/guilds/\{guild_id}/roles"
     ModifyGuildRole(guild_id~, ..) => "PATCH:/guilds/\{guild_id}/roles/{}"
     DeleteGuildRole(guild_id~, ..) => "DELETE:/guilds/\{guild_id}/roles/{}"
     AddGuildMemberRole(guild_id~, ..) =>
@@ -1082,7 +1154,27 @@ pub fn Route::bucket(self : Route) -> String {
     RemoveGuildMember(guild_id~, ..) => "DELETE:/guilds/\{guild_id}/members/{}"
     CreateGuildBan(guild_id~, ..) => "PUT:/guilds/\{guild_id}/bans/{}"
     RemoveGuildBan(guild_id~, ..) => "DELETE:/guilds/\{guild_id}/bans/{}"
+    GetGuildBan(guild_id~, ..) => "GET:/guilds/\{guild_id}/bans/{}"
     GetGuildBans(guild_id~, ..) => "GET:/guilds/\{guild_id}/bans"
+    BulkGuildBan(guild_id~) => "POST:/guilds/\{guild_id}/bulk-ban"
+    GetGuildPruneCount(guild_id~, ..) => "GET:/guilds/\{guild_id}/prune"
+    BeginGuildPrune(guild_id~) => "POST:/guilds/\{guild_id}/prune"
+    GetGuildVoiceRegions(guild_id~) => "GET:/guilds/\{guild_id}/regions"
+    GetGuildInvites(guild_id~) => "GET:/guilds/\{guild_id}/invites"
+    GetGuildIntegrations(guild_id~) => "GET:/guilds/\{guild_id}/integrations"
+    DeleteGuildIntegration(guild_id~, ..) =>
+      "DELETE:/guilds/\{guild_id}/integrations/{}"
+    GetGuildVanityUrl(guild_id~) => "GET:/guilds/\{guild_id}/vanity-url"
+    GetGuildWidgetSettings(guild_id~) => "GET:/guilds/\{guild_id}/widget"
+    ModifyGuildWidget(guild_id~) => "PATCH:/guilds/\{guild_id}/widget"
+    GetGuildWidget(guild_id~) => "GET:/guilds/\{guild_id}/widget.json"
+    GetGuildWelcomeScreen(guild_id~) => "GET:/guilds/\{guild_id}/welcome-screen"
+    ModifyGuildWelcomeScreen(guild_id~) =>
+      "PATCH:/guilds/\{guild_id}/welcome-screen"
+    GetGuildOnboarding(guild_id~) => "GET:/guilds/\{guild_id}/onboarding"
+    ModifyGuildOnboarding(guild_id~) => "PUT:/guilds/\{guild_id}/onboarding"
+    ModifyGuildIncidentActions(guild_id~) =>
+      "PUT:/guilds/\{guild_id}/incident-actions"
     GetGuildAuditLog(guild_id~, ..) => "GET:/guilds/\{guild_id}/audit-logs"
     ListAutoModerationRules(guild_id~) =>
       "GET:/guilds/\{guild_id}/auto-moderation/rules"
@@ -1280,13 +1372,20 @@ pub fn Route::supports_reason(self : Route) -> Bool {
     | CreateGuildChannel(..)
     | ModifyGuildChannelPositions(..)
     | ModifyGuildRole(..)
+    | ModifyGuildRolePositions(..)
     | CreateGuildRole(..)
     | DeleteGuildRole(..)
     | AddGuildMemberRole(..)
     | RemoveGuildMemberRole(..)
     | RemoveGuildMember(..)
     | CreateGuildBan(..)
+    | BulkGuildBan(..)
     | RemoveGuildBan(..)
+    | BeginGuildPrune(..)
+    | DeleteGuildIntegration(..)
+    | ModifyGuildWidget(..)
+    | ModifyGuildWelcomeScreen(..)
+    | ModifyGuildOnboarding(..)
     | ModifyGuildMember(..)
     | ModifyCurrentMember(..)
     | CreateAutoModerationRule(..)

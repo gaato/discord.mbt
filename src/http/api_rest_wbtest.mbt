@@ -611,3 +611,213 @@ async test "REST pagination limits fail before transport" {
     _ => fail("expected thread member limit validation")
   }
 }
+
+///|
+test "guild management request bodies and prune query" {
+  let user_a : @model.UserId = Id(10UL)
+  let user_b : @model.UserId = Id(11UL)
+  let role_a : @model.RoleId = Id(20UL)
+  let role_b : @model.RoleId = Id(21UL)
+  json_inspect(bulk_guild_ban_body([user_a, user_b], Some(3600)), content={
+    "user_ids": ["10", "11"],
+    "delete_message_seconds": 3600,
+  })
+  inspect(
+    guild_prune_query(Some(7), Some([role_a, role_b])),
+    content="?days=7&include_roles=20,21",
+  )
+  json_inspect(
+    begin_guild_prune_body(Some(14), Some(true), Some([role_a, role_b])),
+    content={
+      "days": 14,
+      "compute_prune_count": true,
+      "include_roles": ["20", "21"],
+    },
+  )
+}
+
+///|
+test "modify guild widget body distinguishes values and clear" {
+  let channel_id : @model.ChannelId = Id(30UL)
+  json_inspect(modify_guild_widget_body(Some(true), Some(channel_id), false), content={
+    "enabled": true,
+    "channel_id": "30",
+  })
+  json_inspect(modify_guild_widget_body(None, None, true), content={
+    "channel_id": null,
+  })
+}
+
+///|
+test "modify guild welcome screen body handles values clears and omission" {
+  let channel : @model.WelcomeScreenChannel = {
+    channel_id: Id(30UL),
+    description: "Read the rules",
+    emoji_id: Null,
+    emoji_name: Value("👋"),
+  }
+  json_inspect(
+    modify_guild_welcome_screen_body(
+      Some(true),
+      false,
+      Some([channel]),
+      false,
+      Some("Welcome!"),
+      false,
+    ),
+    content={
+      "enabled": true,
+      "welcome_channels": [
+        {
+          "channel_id": "30",
+          "description": "Read the rules",
+          "emoji_id": null,
+          "emoji_name": "👋",
+        },
+      ],
+      "description": "Welcome!",
+    },
+  )
+  json_inspect(
+    modify_guild_welcome_screen_body(None, true, None, true, None, true),
+    content={ "enabled": null, "welcome_channels": null, "description": null },
+  )
+  json_inspect(
+    modify_guild_welcome_screen_body(None, false, None, false, None, false),
+    content=Json::empty_object(),
+  )
+}
+
+///|
+test "modify guild onboarding body encodes required fields" {
+  let option : @model.OnboardingPromptOption = {
+    id: Id(41UL),
+    channel_ids: [Id(30UL)],
+    role_ids: [Id(20UL)],
+    emoji: None,
+    emoji_id: None,
+    emoji_name: Some("👋"),
+    emoji_animated: Some(false),
+    title: "Announcements",
+    description: Value("Choose this to receive updates"),
+  }
+  let prompt : @model.OnboardingPrompt = {
+    id: Id(40UL),
+    typ: MultipleChoice,
+    options: [option],
+    title: "What do you want to see?",
+    single_select: false,
+    required: true,
+    in_onboarding: true,
+  }
+  json_inspect(
+    modify_guild_onboarding_body(
+      [prompt],
+      [Id(30UL)],
+      true,
+      @model.OnboardingMode::Advanced,
+    ),
+    content={
+      "prompts": [
+        {
+          "id": "40",
+          "type": 0,
+          "options": [
+            {
+              "id": "41",
+              "channel_ids": ["30"],
+              "role_ids": ["20"],
+              "emoji_name": "👋",
+              "emoji_animated": false,
+              "title": "Announcements",
+              "description": "Choose this to receive updates",
+            },
+          ],
+          "title": "What do you want to see?",
+          "single_select": false,
+          "required": true,
+          "in_onboarding": true,
+        },
+      ],
+      "default_channel_ids": ["30"],
+      "enabled": true,
+      "mode": 1,
+    },
+  )
+}
+
+///|
+test "guild incident actions body handles value and clear" {
+  let timestamp = @model.Timestamp("2026-07-17T00:00:00Z")
+  json_inspect(
+    modify_guild_incident_actions_body(Some(timestamp), false, None, true),
+    content={
+      "invites_disabled_until": "2026-07-17T00:00:00Z",
+      "dms_disabled_until": null,
+    },
+  )
+}
+
+///|
+test "guild role positions body is a raw array" {
+  let role_a : @model.RoleId = Id(20UL)
+  let role_b : @model.RoleId = Id(21UL)
+  json_inspect(
+    modify_guild_role_positions_body([(role_a, Some(3)), (role_b, None)]),
+    content=[{ "id": "20", "position": 3 }, { "id": "21", "position": null }],
+  )
+}
+
+///|
+test "add guild member body includes OAuth token and optional fields" {
+  let role_id : @model.RoleId = Id(20UL)
+  json_inspect(
+    add_guild_member_body(
+      "oauth-token",
+      Some("Moon"),
+      Some([role_id]),
+      Some(false),
+      Some(true),
+    ),
+    content={
+      "access_token": "oauth-token",
+      "nick": "Moon",
+      "roles": ["20"],
+      "mute": false,
+      "deaf": true,
+    },
+  )
+}
+
+///|
+async test "add guild member maps empty 204 response to None" {
+  let client = Client("test-token")
+  defer client.close()
+  client.perform_override_.val = Some((_route, _path, _headers, _body, _files) => {
+    status: 204,
+    headers: Map([]),
+    body: Json::null(),
+  })
+  let guild_id : @model.GuildId = Id(10UL)
+  let user_id : @model.UserId = Id(11UL)
+  assert_true(client.add_guild_member(guild_id, user_id, "oauth-token") is None)
+}
+
+///|
+test "guild widget image URL uses the configured API base" {
+  let guild_id : @model.GuildId = Id(10UL)
+  let client = Client(
+    "test-token",
+    base_url="https://discord.example",
+    api_version=9,
+  )
+  defer client.close()
+  inspect(
+    client.guild_widget_image_url(guild_id),
+    content="https://discord.example/api/v9/guilds/10/widget.png",
+  )
+  inspect(
+    client.guild_widget_image_url(guild_id, style="banner2"),
+    content="https://discord.example/api/v9/guilds/10/widget.png?style=banner2",
+  )
+}

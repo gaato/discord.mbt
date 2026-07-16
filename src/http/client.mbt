@@ -4,6 +4,7 @@ pub struct Client {
   priv token : String
   priv pool : @pool.Pool
   priv limiter : &@ratelimit.RateLimiter
+  priv base_url : String
   priv base_path : String
   priv default_allowed_mentions : @model.AllowedMentions
   priv request_timeout_ms_ : Int
@@ -42,6 +43,7 @@ pub fn Client::Client(
     token,
     pool: Pool(base_url, max_connections~),
     limiter,
+    base_url,
     base_path: "/api/v\{api_version}",
     default_allowed_mentions: default_allowed_mentions.unwrap_or_else(
       @model.AllowedMentions::safe_default,

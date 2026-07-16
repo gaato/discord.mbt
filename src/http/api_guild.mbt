@@ -461,3 +461,444 @@ pub async fn Client::delete_guild_role(
 ) -> Unit raise DiscordHttpError {
   self.request(DeleteGuildRole(guild_id~, role_id~), audit_reason?) |> ignore
 }
+
+///|
+/// Fetch the public preview for a discoverable guild.
+pub async fn Client::get_guild_preview(
+  self : Client,
+  guild_id : @model.GuildId,
+) -> @model.GuildPreview raise DiscordHttpError {
+  decode(self.request(GetGuildPreview(guild_id~)))
+}
+
+///|
+/// Fetch one guild ban.
+pub async fn Client::get_guild_ban(
+  self : Client,
+  guild_id : @model.GuildId,
+  user_id : @model.UserId,
+) -> @model.GuildBan raise DiscordHttpError {
+  decode(self.request(GetGuildBan(guild_id~, user_id~)))
+}
+
+///|
+fn bulk_guild_ban_body(
+  user_ids : Array[@model.UserId],
+  delete_message_seconds : Int?,
+) -> Json raise DiscordHttpError {
+  if user_ids.length() > 200 {
+    raise Validation(message="bulk guild ban exceeds 200 users")
+  }
+  if delete_message_seconds is Some(value) && (value < 0 || value > 604800) {
+    raise Validation(
+      message="delete_message_seconds must be between 0 and 604800",
+    )
+  }
+  @model.ObjBuilder()
+  .field("user_ids", user_ids)
+  .opt("delete_message_seconds", delete_message_seconds)
+  .build()
+}
+
+///|
+/// Ban up to 200 users from a guild in one request.
+pub async fn Client::bulk_guild_ban(
+  self : Client,
+  guild_id : @model.GuildId,
+  user_ids : Array[@model.UserId],
+  delete_message_seconds? : Int,
+  audit_reason? : String,
+) -> @model.BulkBanResponse raise DiscordHttpError {
+  let body = bulk_guild_ban_body(user_ids, delete_message_seconds)
+  decode(self.request(BulkGuildBan(guild_id~), body~, audit_reason?))
+}
+
+///|
+fn guild_prune_query(
+  days : Int?,
+  include_roles : Array[@model.RoleId]?,
+) -> String raise DiscordHttpError {
+  if days is Some(value) && (value < 1 || value > 30) {
+    raise Validation(message="prune days must be between 1 and 30")
+  }
+  let params : Array[String] = []
+  if days is Some(value) {
+    params.push("days=\{value}")
+  }
+  if include_roles is Some(value) {
+    params.push(
+      "include_roles=\{[for role_id in value => "\{role_id}"].join(",")}",
+    )
+  }
+  if params.length() == 0 {
+    ""
+  } else {
+    "?" + params.join("&")
+  }
+}
+
+///|
+/// Return the number of members that would be removed by a guild prune.
+pub async fn Client::get_guild_prune_count(
+  self : Client,
+  guild_id : @model.GuildId,
+  days? : Int,
+  include_roles? : Array[@model.RoleId],
+) -> @model.GuildPruneResult raise DiscordHttpError {
+  let query = guild_prune_query(days, include_roles)
+  decode(self.request(GetGuildPruneCount(guild_id~, query~)))
+}
+
+///|
+fn begin_guild_prune_body(
+  days : Int?,
+  compute_prune_count : Bool?,
+  include_roles : Array[@model.RoleId]?,
+) -> Json raise DiscordHttpError {
+  if days is Some(value) && (value < 1 || value > 30) {
+    raise Validation(message="prune days must be between 1 and 30")
+  }
+  @model.ObjBuilder()
+  .opt("days", days)
+  .opt("compute_prune_count", compute_prune_count)
+  .opt("include_roles", include_roles)
+  .build()
+}
+
+///|
+/// Begin pruning inactive members from a guild.
+pub async fn Client::begin_guild_prune(
+  self : Client,
+  guild_id : @model.GuildId,
+  days? : Int,
+  compute_prune_count? : Bool,
+  include_roles? : Array[@model.RoleId],
+  audit_reason? : String,
+) -> @model.GuildPruneResult raise DiscordHttpError {
+  let body = begin_guild_prune_body(days, compute_prune_count, include_roles)
+  decode(self.request(BeginGuildPrune(guild_id~), body~, audit_reason?))
+}
+
+///|
+/// List the voice regions available to a guild.
+pub async fn Client::get_guild_voice_regions(
+  self : Client,
+  guild_id : @model.GuildId,
+) -> Array[@model.VoiceRegion] raise DiscordHttpError {
+  decode(self.request(GetGuildVoiceRegions(guild_id~)))
+}
+
+///|
+/// List the invites for a guild.
+pub async fn Client::get_guild_invites(
+  self : Client,
+  guild_id : @model.GuildId,
+) -> Array[@model.Invite] raise DiscordHttpError {
+  decode(self.request(GetGuildInvites(guild_id~)))
+}
+
+///|
+/// List the integrations configured for a guild.
+pub async fn Client::get_guild_integrations(
+  self : Client,
+  guild_id : @model.GuildId,
+) -> Array[@model.Integration] raise DiscordHttpError {
+  decode(self.request(GetGuildIntegrations(guild_id~)))
+}
+
+///|
+/// Delete an integration from a guild.
+pub async fn Client::delete_guild_integration(
+  self : Client,
+  guild_id : @model.GuildId,
+  integration_id : @model.IntegrationId,
+  audit_reason? : String,
+) -> Unit raise DiscordHttpError {
+  self.request(
+    DeleteGuildIntegration(guild_id~, integration_id~),
+    audit_reason?,
+  )
+  |> ignore
+}
+
+///|
+/// Fetch a guild's vanity invite code and use count.
+pub async fn Client::get_guild_vanity_url(
+  self : Client,
+  guild_id : @model.GuildId,
+) -> @model.GuildVanityUrl raise DiscordHttpError {
+  decode(self.request(GetGuildVanityUrl(guild_id~)))
+}
+
+///|
+/// Fetch a guild's widget settings.
+pub async fn Client::get_guild_widget_settings(
+  self : Client,
+  guild_id : @model.GuildId,
+) -> @model.GuildWidgetSettings raise DiscordHttpError {
+  decode(self.request(GetGuildWidgetSettings(guild_id~)))
+}
+
+///|
+fn modify_guild_widget_body(
+  enabled : Bool?,
+  channel_id : @model.ChannelId?,
+  clear_channel_id : Bool,
+) -> Json raise DiscordHttpError {
+  @model.ObjBuilder()
+  .opt("enabled", enabled)
+  .und("channel_id", patch_nullable("channel_id", channel_id, clear_channel_id))
+  .build()
+}
+
+///|
+/// Modify a guild's widget settings.
+pub async fn Client::modify_guild_widget(
+  self : Client,
+  guild_id : @model.GuildId,
+  enabled? : Bool,
+  channel_id? : @model.ChannelId,
+  clear_channel_id? : Bool = false,
+  audit_reason? : String,
+) -> @model.GuildWidgetSettings raise DiscordHttpError {
+  let body = modify_guild_widget_body(enabled, channel_id, clear_channel_id)
+  decode(self.request(ModifyGuildWidget(guild_id~), body~, audit_reason?))
+}
+
+///|
+/// Fetch the public JSON representation of a guild widget.
+pub async fn Client::get_guild_widget(
+  self : Client,
+  guild_id : @model.GuildId,
+) -> @model.GuildWidget raise DiscordHttpError {
+  decode(self.request(GetGuildWidget(guild_id~)))
+}
+
+///|
+/// Build the guild widget PNG URL using this client's configured API base.
+/// Discord documents the styles `shield`, `banner1`, `banner2`, `banner3`,
+/// and `banner4`; the style is passed through without validation.
+pub fn Client::guild_widget_image_url(
+  self : Client,
+  guild_id : @model.GuildId,
+  style? : String,
+) -> String {
+  let url = "\{self.base_url}\{self.base_path}/guilds/\{guild_id}/widget.png"
+  match style {
+    None => url
+    Some(value) => "\{url}?style=\{value}"
+  }
+}
+
+///|
+/// Fetch a guild's welcome screen.
+pub async fn Client::get_guild_welcome_screen(
+  self : Client,
+  guild_id : @model.GuildId,
+) -> @model.WelcomeScreen raise DiscordHttpError {
+  decode(self.request(GetGuildWelcomeScreen(guild_id~)))
+}
+
+///|
+fn modify_guild_welcome_screen_body(
+  enabled : Bool?,
+  clear_enabled : Bool,
+  welcome_channels : Array[@model.WelcomeScreenChannel]?,
+  clear_welcome_channels : Bool,
+  description : String?,
+  clear_description : Bool,
+) -> Json raise DiscordHttpError {
+  @model.ObjBuilder()
+  .und("enabled", patch_nullable("enabled", enabled, clear_enabled))
+  .und(
+    "welcome_channels",
+    patch_nullable("welcome_channels", welcome_channels, clear_welcome_channels),
+  )
+  .und(
+    "description",
+    patch_nullable("description", description, clear_description),
+  )
+  .build()
+}
+
+///|
+/// Modify a guild's welcome screen. Each nullable field has a matching clear
+/// flag so omission remains distinct from JSON null.
+pub async fn Client::modify_guild_welcome_screen(
+  self : Client,
+  guild_id : @model.GuildId,
+  enabled? : Bool,
+  clear_enabled? : Bool = false,
+  welcome_channels? : Array[@model.WelcomeScreenChannel],
+  clear_welcome_channels? : Bool = false,
+  description? : String,
+  clear_description? : Bool = false,
+  audit_reason? : String,
+) -> @model.WelcomeScreen raise DiscordHttpError {
+  let body = modify_guild_welcome_screen_body(
+    enabled, clear_enabled, welcome_channels, clear_welcome_channels, description,
+    clear_description,
+  )
+  decode(
+    self.request(ModifyGuildWelcomeScreen(guild_id~), body~, audit_reason?),
+  )
+}
+
+///|
+/// Fetch a guild's onboarding configuration.
+pub async fn Client::get_guild_onboarding(
+  self : Client,
+  guild_id : @model.GuildId,
+) -> @model.GuildOnboarding raise DiscordHttpError {
+  decode(self.request(GetGuildOnboarding(guild_id~)))
+}
+
+///|
+fn modify_guild_onboarding_body(
+  prompts : Array[@model.OnboardingPrompt],
+  default_channel_ids : Array[@model.ChannelId],
+  enabled : Bool,
+  mode : @model.OnboardingMode,
+) -> Json {
+  @model.ObjBuilder()
+  .field("prompts", prompts)
+  .field("default_channel_ids", default_channel_ids)
+  .field("enabled", enabled)
+  .field("mode", mode)
+  .build()
+}
+
+///|
+/// Replace a guild's onboarding configuration.
+pub async fn Client::modify_guild_onboarding(
+  self : Client,
+  guild_id : @model.GuildId,
+  prompts : Array[@model.OnboardingPrompt],
+  default_channel_ids : Array[@model.ChannelId],
+  enabled : Bool,
+  mode : @model.OnboardingMode,
+  audit_reason? : String,
+) -> @model.GuildOnboarding raise DiscordHttpError {
+  let body = modify_guild_onboarding_body(
+    prompts, default_channel_ids, enabled, mode,
+  )
+  decode(self.request(ModifyGuildOnboarding(guild_id~), body~, audit_reason?))
+}
+
+///|
+fn modify_guild_incident_actions_body(
+  invites_disabled_until : @model.Timestamp?,
+  clear_invites_disabled_until : Bool,
+  dms_disabled_until : @model.Timestamp?,
+  clear_dms_disabled_until : Bool,
+) -> Json raise DiscordHttpError {
+  @model.ObjBuilder()
+  .und(
+    "invites_disabled_until",
+    patch_nullable(
+      "invites_disabled_until", invites_disabled_until, clear_invites_disabled_until,
+    ),
+  )
+  .und(
+    "dms_disabled_until",
+    patch_nullable(
+      "dms_disabled_until", dms_disabled_until, clear_dms_disabled_until,
+    ),
+  )
+  .build()
+}
+
+///|
+/// Modify temporary guild incident restrictions. Discord permits each
+/// timestamp to be at most 24 hours in the future.
+pub async fn Client::modify_guild_incident_actions(
+  self : Client,
+  guild_id : @model.GuildId,
+  invites_disabled_until? : @model.Timestamp,
+  clear_invites_disabled_until? : Bool = false,
+  dms_disabled_until? : @model.Timestamp,
+  clear_dms_disabled_until? : Bool = false,
+) -> @model.IncidentsData raise DiscordHttpError {
+  let body = modify_guild_incident_actions_body(
+    invites_disabled_until, clear_invites_disabled_until, dms_disabled_until, clear_dms_disabled_until,
+  )
+  decode(self.request(ModifyGuildIncidentActions(guild_id~), body~))
+}
+
+///|
+/// Fetch one role from a guild.
+pub async fn Client::get_guild_role(
+  self : Client,
+  guild_id : @model.GuildId,
+  role_id : @model.RoleId,
+) -> @model.Role raise DiscordHttpError {
+  decode(self.request(GetGuildRole(guild_id~, role_id~)))
+}
+
+///|
+fn modify_guild_role_positions_body(
+  positions : Array[(@model.RoleId, Int?)],
+) -> Json {
+  Json::array(
+    positions.map(position => {
+      let (id, value) = position
+      let builder = @model.ObjBuilder().field("id", id)
+      match value {
+        Some(position) => builder.field("position", position).build()
+        None => builder.field("position", Json::null()).build()
+      }
+    }),
+  )
+}
+
+///|
+/// Modify guild role positions using Discord's raw JSON array body.
+pub async fn Client::modify_guild_role_positions(
+  self : Client,
+  guild_id : @model.GuildId,
+  positions : Array[(@model.RoleId, Int?)],
+  audit_reason? : String,
+) -> Array[@model.Role] raise DiscordHttpError {
+  let body = modify_guild_role_positions_body(positions)
+  decode(
+    self.request(ModifyGuildRolePositions(guild_id~), body~, audit_reason?),
+  )
+}
+
+///|
+fn add_guild_member_body(
+  access_token : String,
+  nick : String?,
+  roles : Array[@model.RoleId]?,
+  mute : Bool?,
+  deaf : Bool?,
+) -> Json {
+  @model.ObjBuilder()
+  .field("access_token", access_token)
+  .opt("nick", nick)
+  .opt("roles", roles)
+  .opt("mute", mute)
+  .opt("deaf", deaf)
+  .build()
+}
+
+///|
+/// Add a user to a guild with an OAuth2 access token carrying the
+/// `guilds.join` scope. A null response means the user was already a member.
+pub async fn Client::add_guild_member(
+  self : Client,
+  guild_id : @model.GuildId,
+  user_id : @model.UserId,
+  access_token : String,
+  nick? : String,
+  roles? : Array[@model.RoleId],
+  mute? : Bool,
+  deaf? : Bool,
+) -> @model.GuildMember? raise DiscordHttpError {
+  let body = add_guild_member_body(access_token, nick, roles, mute, deaf)
+  let json = self.request(AddGuildMember(guild_id~, user_id~), body~)
+  match json {
+    Null => None
+    _ => Some(decode(json))
+  }
+}

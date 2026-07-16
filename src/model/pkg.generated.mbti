@@ -600,6 +600,11 @@ pub fn BaseTheme::to_int(Self) -> Int
 pub impl ToJson for BaseTheme
 pub impl @json.FromJson for BaseTheme
 
+pub(all) struct BulkBanResponse {
+  banned_users : Array[Id[UserMarker]]
+  failed_users : Array[Id[UserMarker]]
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) struct Button {
   id : Int?
   style : ButtonStyle
@@ -1592,6 +1597,32 @@ pub(all) struct GuildMessageSearchResults {
   message : String?
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
+pub(all) struct GuildOnboarding {
+  guild_id : Id[GuildMarker]
+  prompts : Array[OnboardingPrompt]
+  default_channel_ids : Array[Id[ChannelMarker]]
+  enabled : Bool
+  mode : OnboardingMode
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct GuildPreview {
+  id : Id[GuildMarker]
+  name : String
+  icon : Nullable[ImageHash]
+  splash : Nullable[ImageHash]
+  discovery_splash : Nullable[ImageHash]
+  emojis : Array[Emoji]
+  features : Array[GuildFeature]
+  approximate_member_count : Int
+  approximate_presence_count : Int
+  description : Nullable[String]
+  stickers : Array[Sticker]
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct GuildPruneResult {
+  pruned : Nullable[Int]
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) struct GuildRoleDeleteEvent {
   guild_id : Id[GuildMarker]
   role_id : Id[RoleMarker]
@@ -1809,6 +1840,40 @@ pub(all) struct GuildTemplateSource {
   system_channel_id : Nullable[Int]?
   system_channel_flags : SystemChannelFlags?
   icon_hash : Nullable[ImageHash]?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct GuildVanityUrl {
+  code : Nullable[String]
+  uses : Int
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct GuildWidget {
+  id : Id[GuildMarker]
+  name : String
+  instant_invite : Nullable[String]
+  channels : Array[GuildWidgetChannel]
+  members : Array[GuildWidgetMember]
+  presence_count : Int
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct GuildWidgetChannel {
+  id : Id[ChannelMarker]
+  name : String
+  position : Int
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct GuildWidgetMember {
+  id : String
+  username : String
+  discriminator : String
+  avatar : Nullable[String]
+  status : String
+  avatar_url : String
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct GuildWidgetSettings {
+  enabled : Bool
+  channel_id : Nullable[Id[ChannelMarker]]
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct Hello {
@@ -2451,6 +2516,48 @@ pub fn ObjBuilder::build(Self) -> Json
 pub fn[T : ToJson] ObjBuilder::field(Self, String, T) -> Self
 pub fn[T : ToJson] ObjBuilder::opt(Self, String, T?) -> Self
 pub fn[T : ToJson] ObjBuilder::und(Self, String, Undefinable[T]) -> Self
+
+pub(all) enum OnboardingMode {
+  Default
+  Advanced
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn OnboardingMode::from_int(Int) -> Self
+pub fn OnboardingMode::to_int(Self) -> Int
+pub impl ToJson for OnboardingMode
+pub impl @json.FromJson for OnboardingMode
+
+pub(all) struct OnboardingPrompt {
+  id : Id[GenericMarker]
+  typ : OnboardingPromptType
+  options : Array[OnboardingPromptOption]
+  title : String
+  single_select : Bool
+  required : Bool
+  in_onboarding : Bool
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct OnboardingPromptOption {
+  id : Id[GenericMarker]
+  channel_ids : Array[Id[ChannelMarker]]
+  role_ids : Array[Id[RoleMarker]]
+  emoji : Emoji?
+  emoji_id : Id[EmojiMarker]?
+  emoji_name : String?
+  emoji_animated : Bool?
+  title : String
+  description : Nullable[String]
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum OnboardingPromptType {
+  MultipleChoice
+  Dropdown
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn OnboardingPromptType::from_int(Int) -> Self
+pub fn OnboardingPromptType::to_int(Self) -> Int
+pub impl ToJson for OnboardingPromptType
+pub impl @json.FromJson for OnboardingPromptType
 
 pub(all) struct Overwrite {
   id : Id[GenericMarker]

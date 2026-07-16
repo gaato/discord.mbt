@@ -200,6 +200,42 @@ test "SKU subscription list validates its documented limit" {
 }
 
 ///|
+test "bulk guild ban validates user count and delete window" {
+  let user_id : @model.UserId = Id(1UL)
+  expect_json_validation(
+    () => bulk_guild_ban_body(Array::make(201, user_id), None),
+    "bulk guild ban exceeds 200 users",
+  )
+  expect_json_validation(
+    () => bulk_guild_ban_body([user_id], Some(-1)),
+    "delete_message_seconds must be between 0 and 604800",
+  )
+  expect_json_validation(
+    () => bulk_guild_ban_body([user_id], Some(604801)),
+    "delete_message_seconds must be between 0 and 604800",
+  )
+  ignore(bulk_guild_ban_body(Array::make(200, user_id), Some(604800)))
+}
+
+///|
+test "guild prune validates documented day range" {
+  expect_search_validation(
+    () => guild_prune_query(Some(0), None),
+    "prune days must be between 1 and 30",
+  )
+  expect_search_validation(
+    () => guild_prune_query(Some(31), None),
+    "prune days must be between 1 and 30",
+  )
+  expect_json_validation(
+    () => begin_guild_prune_body(Some(0), None, None),
+    "prune days must be between 1 and 30",
+  )
+  ignore(guild_prune_query(Some(1), None))
+  ignore(begin_guild_prune_body(Some(30), None, None))
+}
+
+///|
 test "execute webhook requires message content" {
   try validate_execute_webhook(None, None, None, None) catch {
     err =>
