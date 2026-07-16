@@ -2,6 +2,7 @@
 _build/
 target/
 .mooncakes/
+moon.work
 .moonagent/
 .repos/
 .env
