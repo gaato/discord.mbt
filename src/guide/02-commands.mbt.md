@@ -129,7 +129,8 @@ test "command declarations compile" {
 - `Immediate((ctx, value) => CommandReply)` returns the initial response.
 - `Deferred(ephemeral=..., (ctx, value) => Unit)` acknowledges first; use
   `ctx.edit_original`, `ctx.followup`, or `ctx.wait_for_component` afterward.
-- `Raw(ctx => Unit)` exposes the lower-level `framework.CommandCtx`.
+- `Raw(ctx => Unit)` exposes the lower-level `framework.CommandCtx`; see
+  [The framework layer](11-framework.mbt.md) for its full response surface.
 
 Register every command with `app.command(command)`. Command synchronization is
 controlled by `App(sync=...)`: `Global`, `Guild(id)`, `Guilds(ids)`, or

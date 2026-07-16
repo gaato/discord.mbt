@@ -312,7 +312,10 @@ Cooldown buckets are `User`, `Guild`, and `Global`, and denials use the normal
 error policy with an ephemeral response by default.
 
 For lower-level work, `client.request(...)` exposes route-level JSON, and
-`src/examples/low_level` shows manual gateway and framework wiring.
+`src/examples/low_level` shows manual gateway and framework wiring. The
+[framework layer guide](src/guide/11-framework.mbt.md) documents the
+interaction router, handler contexts, and response gates that `App` is built
+on — including how to unit-test handlers with a capture gate and no network.
 
 ## Typed interaction APIs
 

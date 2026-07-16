@@ -8,6 +8,8 @@ import {
   "gaato/discord",
   "gaato/discord/model",
   "gaato/discord/http" @dhttp,
+  "gaato/discord/interaction",
+  "gaato/discord/framework",
   "gaato/discord/app",
   "gaato/discord/bot",
   "gaato/discord/coordinator",

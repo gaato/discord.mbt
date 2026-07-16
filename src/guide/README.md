@@ -25,6 +25,8 @@ drift from the library.
    and Gateway handler fan-out.
 10. [Voice](10-voice.mbt.md): join channels, play and receive Opus, and
     install the native DAVE shim.
+11. [The framework layer](11-framework.mbt.md): direct interaction routing,
+    response gates, and testing handlers without a network.
 
 The guides explain normal application structure and assume the reader starts
 from an empty module. Exact type and method documentation lives in doc
