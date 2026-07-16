@@ -139,3 +139,20 @@ test "entitlement owner type round-trips known and unknown values" {
   }
   assert_eq(@model.EntitlementOwnerType::from_int(99), Unknown(99))
 }
+
+///|
+/// Pins the documented table (ACTIVE=0, INACTIVE=1, ENDING=2); the first
+/// transcription had 1 and 2 reversed and no test to catch it.
+test "subscription status matches the documented values" {
+  let table : Array[(@model.SubscriptionStatus, Int)] = [
+    (Active, 0),
+    (Inactive, 1),
+    (Ending, 2),
+  ]
+  for pair in table {
+    let (status, value) = pair
+    assert_eq(status.to_int(), value)
+    assert_eq(@model.SubscriptionStatus::from_int(value), status)
+  }
+  assert_eq(@model.SubscriptionStatus::from_int(9), Unknown(9))
+}

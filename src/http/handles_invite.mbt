@@ -16,15 +16,9 @@ pub fn Client::invite_ref(self : Client, code : String) -> InviteRef {
 pub async fn InviteRef::fetch(
   self : InviteRef,
   with_counts? : Bool,
-  with_expiration? : Bool,
   guild_scheduled_event_id? : @model.ScheduledEventId,
 ) -> @model.Invite raise DiscordHttpError {
-  self.client.get_invite(
-    self.code,
-    with_counts?,
-    with_expiration?,
-    guild_scheduled_event_id?,
-  )
+  self.client.get_invite(self.code, with_counts?, guild_scheduled_event_id?)
 }
 
 ///|

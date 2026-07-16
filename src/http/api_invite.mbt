@@ -1,19 +1,16 @@
 ///|
-/// Fetch an invite by code, optionally requesting approximate counts,
-/// expiration data, or a scheduled-event association.
+/// Fetch an invite by code, optionally requesting approximate counts or a
+/// scheduled-event association. (`with_expiration` no longer exists in the
+/// API; `expires_at` is always part of the invite object.)
 pub async fn Client::get_invite(
   self : Client,
   code : String,
   with_counts? : Bool,
-  with_expiration? : Bool,
   guild_scheduled_event_id? : @model.ScheduledEventId,
 ) -> @model.Invite raise DiscordHttpError {
   let params : Array[String] = []
   if with_counts is Some(value) {
     params.push("with_counts=\{value}")
-  }
-  if with_expiration is Some(value) {
-    params.push("with_expiration=\{value}")
   }
   if guild_scheduled_event_id is Some(value) {
     params.push("guild_scheduled_event_id=\{value}")

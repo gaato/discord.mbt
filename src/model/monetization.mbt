@@ -285,8 +285,8 @@ pub(all) enum SubscriptionStatus {
 pub fn SubscriptionStatus::to_int(self : SubscriptionStatus) -> Int {
   match self {
     Active => 0
-    Ending => 1
-    Inactive => 2
+    Inactive => 1
+    Ending => 2
     Unknown(value) => value
   }
 }
@@ -295,8 +295,8 @@ pub fn SubscriptionStatus::to_int(self : SubscriptionStatus) -> Int {
 pub fn SubscriptionStatus::from_int(value : Int) -> SubscriptionStatus {
   match value {
     0 => Active
-    1 => Ending
-    2 => Inactive
+    1 => Inactive
+    2 => Ending
     value => Unknown(value)
   }
 }

@@ -110,8 +110,10 @@ async fn Client::perform(
     let body_json = if response.code == 204 {
       Json::null()
     } else {
+      // A body that is not valid JSON (proxy error pages, empty replies) is
+      // preserved as a JSON string so error paths can report its content.
       @json.parse(body_data.text()) catch {
-        _ => Json::null()
+        _ => Json::string(body_data.text())
       }
     }
     { status: response.code, headers: lower_headers, body: body_json }
@@ -165,12 +167,15 @@ pub async fn Client::request(
     Some(RequestSucceeded(response)) => {
       if response.status >= 400 {
         let error : ApiError = @json.from_json(response.body) catch {
-          _ =>
-            {
-              code: 0,
-              message: "HTTP \{response.status}: \{response.body.stringify()}",
-              errors: None,
+          _ => {
+            // Non-JSON bodies (proxy HTML, empty strings) surface verbatim so
+            // the user-visible error keeps whatever the server actually said.
+            let detail = match response.body {
+              String(text) => text
+              body => body.stringify()
             }
+            { code: 0, message: "HTTP \{response.status}: \{detail}", errors: None }
+          }
         }
         raise Api(status=response.status, error~)
       }
