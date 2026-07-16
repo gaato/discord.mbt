@@ -41,6 +41,23 @@ async fn sec_members(p : P) -> Unit {
     let back = c.role_ref(g, role).edit(name="probe-role")
     "name=\{back.name}"
   })
+  p.probe("modify_guild_role (colors object)", () => {
+    let edited = c.modify_guild_role(g, role, colors={
+      primary_color: 0x1ABC9C,
+      secondary_color: Null,
+      tertiary_color: Null,
+    })
+    "primary=\{edited.colors.map_or(-1, colors => colors.primary_color)}"
+  })
+  p.probe_env("modify_guild_role (unicode_emoji, needs ROLE_ICONS)", () => {
+    let guild = c.get_guild(g)
+    if !guild.features.contains(RoleIcons) {
+      let _ : Unit = need(None, "ROLE_ICONS guild feature")
+    }
+    let edited = c.modify_guild_role(g, role, unicode_emoji="🦊")
+    ignore(c.modify_guild_role(g, role, clear_unicode_emoji=true))
+    "emoji=\{edited.unicode_emoji is Some(Value(_))}"
+  })
   p.probe("modify_guild_role_positions", () => {
     let roles = c.modify_guild_role_positions(g, [(role, Some(1))])
     "count=\{roles.length()}"
@@ -94,6 +111,18 @@ async fn sec_members(p : P) -> Unit {
       // Bots must use ModifyCurrentMember for themselves and outrank any other
       // target; without a third member only the refusal is observable.
       let gm = c.modify_guild_member(g, p.bot_id, nick="probe-member-nick")
+      ignore(gm)
+    },
+  )
+  p.probe_err(
+    "modify_guild_member (flags wiring; self-target rejected)",
+    expect=[400, 403],
+    () => {
+      let gm = c.modify_guild_member(
+        g,
+        p.bot_id,
+        flags=@model.GuildMemberFlags::bypasses_verification(),
+      )
       ignore(gm)
     },
   )

@@ -95,6 +95,47 @@ async fn sec_messages(p : P) -> Unit {
     let msg = c.edit_message(text, mid, content="live probe: edited")
     "edited=\{msg.edited_timestamp is Value(_)}"
   })
+  p.probe("edit_message (keep_attachments merge + clear)", () => {
+    let msg = c.create_message(text, content="attachment edit target", files=[
+      @dhttp.FileUpload("one.txt", b"one", content_type="text/plain"),
+      @dhttp.FileUpload("two.txt", b"two", content_type="text/plain"),
+    ])
+    let keep : @model.AttachmentRequest = {
+      id: msg.attachments[0].id,
+      filename: None,
+      title: None,
+      description: Some("kept by probe"),
+      duration_secs: None,
+      waveform: None,
+      is_spoiler: None,
+    }
+    let merged = c
+      .message_ref(text, msg.id)
+      .edit(keep_attachments=[keep], files=[
+        @dhttp.FileUpload("three.txt", b"three", content_type="text/plain"),
+      ])
+    let cleared = c.edit_message(text, msg.id, keep_attachments=[])
+    c.delete_message(text, msg.id)
+    "merged=\{merged.attachments.length()} cleared=\{cleared.attachments.length()}"
+  })
+  p.probe("MessageRef::forward (message_reference type=FORWARD)", () => {
+    let target = need(p.s.text2, "second text channel")
+    let src = c.create_message(text, content="forward source")
+    let forwarded = c.message_ref(text, src.id).forward(target)
+    c.delete_message(target, forwarded.id)
+    c.delete_message(text, src.id)
+    "id=\{forwarded.id}"
+  })
+  p.probe("create_message (shared_client_theme)", () => {
+    let msg = c.create_message(text, content="themed", shared_client_theme={
+      colors: ["5865F2", "EB459E"],
+      gradient_angle: 45,
+      base_mix: 58,
+      base_theme: None,
+    })
+    c.delete_message(text, msg.id)
+    "theme=\{msg.shared_client_theme is Some(_)}"
+  })
   p.probe("get_channel_messages + paginate_messages", () => {
     let msgs = c.get_channel_messages(text, limit=10)
     let paged = c.paginate_messages(text, page_size=2).collect(max=5)
@@ -110,9 +151,11 @@ async fn sec_messages(p : P) -> Unit {
     c.create_reaction(text, mid, "\{p.s.emoji_name}:\{id}")
     "ok"
   })
-  p.probe("get_reactions", () => {
+  p.probe("get_reactions (normal + burst type)", () => {
     let users = c.get_reactions(text, mid, "🔥", limit=5)
-    "users=\{users.length()}"
+    let normal = c.get_reactions(text, mid, "🔥", typ=Normal)
+    let burst = c.get_reactions(text, mid, "🔥", typ=Burst)
+    "users=\{users.length()} normal=\{normal.length()} burst=\{burst.length()}"
   })
   p.probe("MessageRef::react/reactions/unreact", () => {
     let r = c.message_ref(text, mid)

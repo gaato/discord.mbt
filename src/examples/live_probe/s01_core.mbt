@@ -69,6 +69,14 @@ async fn sec_core(p : P) -> Unit {
     )
     "id=\{user.id}"
   })
+  p.probe("modify_current_user (banner round-trip)", () => {
+    let user = c.modify_current_user(
+      banner="data:image/png;base64," + EMOJI_PNG_B64,
+    )
+    let has_banner = user.banner is Some(Value(_))
+    let cleared = c.modify_current_user(clear_banner=true)
+    "set=\{has_banner} cleared=\{!(cleared.banner is Some(Value(_)))}"
+  })
   // Bearer-token endpoints: we only have a bot token; a bogus bearer verifies
   // wiring and the authorization-header override path.
   p.probe_err(

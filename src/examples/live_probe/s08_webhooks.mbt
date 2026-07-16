@@ -97,6 +97,32 @@ async fn sec_webhooks(p : P) -> Unit {
     tr.message_ref(msg.id).delete()
     "ok"
   })
+  p.probe("execute_webhook (flags) + edit keep_attachments", () => {
+    let msg = c.execute_webhook(
+      wid,
+      wtoken,
+      content="quiet webhook message",
+      flags=@model.MessageFlags::suppress_notifications(),
+      files=[@dhttp.FileUpload("keep.txt", b"keep", content_type="text/plain")],
+    )
+    let keep : @model.AttachmentRequest = {
+      id: msg.attachments[0].id,
+      filename: None,
+      title: None,
+      description: None,
+      duration_secs: None,
+      waveform: None,
+      is_spoiler: Some(true),
+    }
+    let edited = tr
+      .message_ref(msg.id)
+      .edit(content="edited, attachment kept", keep_attachments=[keep])
+    let flags_kept = msg.flags.map_or(false, f => {
+      f.contains(@model.MessageFlags::suppress_notifications())
+    })
+    c.delete_webhook_message(wid, wtoken, msg.id)
+    "flags=\{flags_kept} attachments=\{edited.attachments.length()}"
+  })
   p.probe("execute_webhook (poll body)", () => {
     let msg = c.execute_webhook(wid, wtoken, poll={
       question: { text: Some("webhook poll?"), emoji: None },
@@ -121,7 +147,12 @@ async fn sec_webhooks(p : P) -> Unit {
         thread_name="probe webhook thread",
       )
       let thread = msg.channel_id
-      let fetched = c.get_webhook_message(hook.id, token, msg.id, thread_id=thread)
+      let fetched = c.get_webhook_message(
+        hook.id,
+        token,
+        msg.id,
+        thread_id=thread,
+      )
       ignore(fetched)
       let edited = c.edit_webhook_message(
         hook.id,
