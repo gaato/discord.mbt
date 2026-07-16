@@ -114,6 +114,8 @@ pub fn[A] slash(
   nsfw? : Bool,
   integration_types? : Array[@model.ApplicationIntegrationType],
   contexts? : Array[@model.InteractionContextType],
+  name_localizations? : Map[String, String],
+  description_localizations? : Map[String, String],
 ) -> Command[A] {
   {
     definition: @interaction.CommandSpec::slash(
@@ -124,6 +126,8 @@ pub fn[A] slash(
       nsfw?,
       integration_types?,
       contexts?,
+      name_localizations?,
+      description_localizations?,
     ),
     decode: raw => decode_command_args(args, raw.options),
     handler,
@@ -206,6 +210,7 @@ pub fn user_command(
   nsfw? : Bool,
   integration_types? : Array[@model.ApplicationIntegrationType],
   contexts? : Array[@model.InteractionContextType],
+  name_localizations? : Map[String, String],
 ) -> Command[TargetUser] {
   {
     definition: @interaction.CommandSpec::user(
@@ -214,6 +219,7 @@ pub fn user_command(
       nsfw?,
       integration_types?,
       contexts?,
+      name_localizations?,
     ),
     decode: raw => decode_target_user(raw),
     handler,
@@ -235,6 +241,7 @@ pub fn message_command(
   nsfw? : Bool,
   integration_types? : Array[@model.ApplicationIntegrationType],
   contexts? : Array[@model.InteractionContextType],
+  name_localizations? : Map[String, String],
 ) -> Command[@model.Message] {
   {
     definition: @interaction.CommandSpec::message(
@@ -243,6 +250,7 @@ pub fn message_command(
       nsfw?,
       integration_types?,
       contexts?,
+      name_localizations?,
     ),
     decode: raw => decode_target_message(raw),
     handler,
@@ -276,6 +284,8 @@ pub fn[A] subcommand(
   description~ : String,
   args~ : @interaction.Args[A],
   handler~ : InteractionHandler[A],
+  name_localizations? : Map[String, String],
+  description_localizations? : Map[String, String],
 ) -> SlashChild {
   let decode = (raw : @framework.CommandCtx) => {
     decode_command_args(args, raw.options)
@@ -285,6 +295,8 @@ pub fn[A] subcommand(
       name,
       description,
       options=args.definitions(),
+      name_localizations?,
+      description_localizations?,
     ),
     routes_: [
       {
@@ -316,6 +328,8 @@ pub fn subcommand_group(
   name~ : String,
   description~ : String,
   children~ : Array[SlashChild],
+  name_localizations? : Map[String, String],
+  description_localizations? : Map[String, String],
 ) -> SlashChild {
   let definitions = children.map(child => child.definition_)
   let routes = []
@@ -340,7 +354,13 @@ pub fn subcommand_group(
     }
   }
   {
-    definition_: @interaction.sub_command_group(name, description, definitions),
+    definition_: @interaction.sub_command_group(
+      name,
+      description,
+      definitions,
+      name_localizations?,
+      description_localizations?,
+    ),
     routes_: routes,
     node_paths_: node_paths,
     nested_group_paths_: nested_group_paths,
@@ -359,6 +379,8 @@ pub fn slash_group(
   nsfw? : Bool,
   integration_types? : Array[@model.ApplicationIntegrationType],
   contexts? : Array[@model.InteractionContextType],
+  name_localizations? : Map[String, String],
+  description_localizations? : Map[String, String],
 ) -> Command[Unit] {
   let routes = []
   let node_paths = []
@@ -379,6 +401,8 @@ pub fn slash_group(
       nsfw?,
       integration_types?,
       contexts?,
+      name_localizations?,
+      description_localizations?,
     ),
     decode: _ => (),
     handler: Raw(_ => ()),

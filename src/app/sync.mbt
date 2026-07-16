@@ -138,7 +138,10 @@ async fn sync_global_commands(
   application_id : @model.ApplicationId,
   specs : Array[@interaction.CommandSpec],
 ) -> Unit {
-  let fetched = client.get_global_commands(application_id)
+  let fetched = client.get_global_commands(
+    application_id,
+    with_localizations=true,
+  )
   if !commands_in_sync(specs, fetched) {
     client.bulk_overwrite_global_commands(
       application_id,
@@ -155,7 +158,11 @@ async fn sync_guild_commands(
   guild_id : @model.GuildId,
   specs : Array[@interaction.CommandSpec],
 ) -> Unit {
-  let fetched = client.get_guild_commands(application_id, guild_id)
+  let fetched = client.get_guild_commands(
+    application_id,
+    guild_id,
+    with_localizations=true,
+  )
   if !commands_in_sync(specs, fetched) {
     client.bulk_overwrite_guild_commands(
       application_id,

@@ -23,31 +23,31 @@ pub const SILENCE_FRAME : Bytes = b"\xF8\xFF\xFE"
 
 pub fn action_row(Array[@model.Component]) -> @model.Component
 
-pub fn arg_attachment(name~ : String, description~ : String) -> @interaction.Arg[@model.Attachment]
+pub fn arg_attachment(name~ : String, description~ : String, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @interaction.Arg[@model.Attachment]
 
-pub fn arg_bool(name~ : String, description~ : String) -> @interaction.Arg[Bool]
+pub fn arg_bool(name~ : String, description~ : String, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @interaction.Arg[Bool]
 
-pub fn arg_channel(name~ : String, description~ : String, channel_types? : Array[@model.ChannelType]) -> @interaction.Arg[@model.Id[@model.ChannelMarker]]
+pub fn arg_channel(name~ : String, description~ : String, channel_types? : Array[@model.ChannelType], name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @interaction.Arg[@model.Id[@model.ChannelMarker]]
 
-pub fn arg_int(name~ : String, description~ : String, min? : Int64, max? : Int64, choices? : Array[@model.CommandOptionChoice], suggest? : async (@interaction.SuggestCtx, Int64) -> Array[@model.CommandOptionChoice]) -> @interaction.Arg[Int64]
+pub fn arg_int(name~ : String, description~ : String, min? : Int64, max? : Int64, choices? : Array[@model.CommandOptionChoice], suggest? : async (@interaction.SuggestCtx, Int64) -> Array[@model.CommandOptionChoice], name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @interaction.Arg[Int64]
 
-pub fn arg_mentionable(name~ : String, description~ : String) -> @interaction.Arg[@model.Id[@model.GenericMarker]]
+pub fn arg_mentionable(name~ : String, description~ : String, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @interaction.Arg[@model.Id[@model.GenericMarker]]
 
-pub fn arg_number(name~ : String, description~ : String, min? : Double, max? : Double, choices? : Array[@model.CommandOptionChoice], suggest? : async (@interaction.SuggestCtx, Double) -> Array[@model.CommandOptionChoice]) -> @interaction.Arg[Double]
+pub fn arg_number(name~ : String, description~ : String, min? : Double, max? : Double, choices? : Array[@model.CommandOptionChoice], suggest? : async (@interaction.SuggestCtx, Double) -> Array[@model.CommandOptionChoice], name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @interaction.Arg[Double]
 
-pub fn arg_role(name~ : String, description~ : String) -> @interaction.Arg[@model.Id[@model.RoleMarker]]
+pub fn arg_role(name~ : String, description~ : String, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @interaction.Arg[@model.Id[@model.RoleMarker]]
 
-pub fn arg_string(name~ : String, description~ : String, choices? : Array[@model.CommandOptionChoice], min_length? : Int, max_length? : Int, suggest? : async (@interaction.SuggestCtx, String) -> Array[@model.CommandOptionChoice]) -> @interaction.Arg[String]
+pub fn arg_string(name~ : String, description~ : String, choices? : Array[@model.CommandOptionChoice], min_length? : Int, max_length? : Int, suggest? : async (@interaction.SuggestCtx, String) -> Array[@model.CommandOptionChoice], name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @interaction.Arg[String]
 
-pub fn arg_user(name~ : String, description~ : String) -> @interaction.Arg[@model.Id[@model.UserMarker]]
+pub fn arg_user(name~ : String, description~ : String, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @interaction.Arg[@model.Id[@model.UserMarker]]
 
-pub fn attachment_option(String, String, required? : Bool) -> @model.CommandOption
+pub fn attachment_option(String, String, required? : Bool, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @model.CommandOption
 
-pub fn boolean_option(String, String, required? : Bool) -> @model.CommandOption
+pub fn boolean_option(String, String, required? : Bool, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @model.CommandOption
 
 pub fn button(custom_id~ : String, label? : String, style? : @model.ButtonStyle, emoji? : @model.Emoji, disabled? : Bool) -> @model.Component
 
-pub fn channel_option(String, String, required? : Bool, channel_types? : Array[@model.ChannelType]) -> @model.CommandOption
+pub fn channel_option(String, String, required? : Bool, channel_types? : Array[@model.ChannelType], name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @model.CommandOption
 
 pub fn channel_select(custom_id~ : String, placeholder? : String, min_values? : Int, max_values? : Int, disabled? : Bool, channel_types? : Array[@model.ChannelType]) -> @model.Component
 
@@ -57,9 +57,9 @@ pub fn dm_only() -> (@app.CheckCtx) -> Bool raise @app.HandlerError
 
 pub fn guild_only() -> (@app.CheckCtx) -> Bool raise @app.HandlerError
 
-pub fn int_choice(String, Int64) -> @model.CommandOptionChoice
+pub fn int_choice(String, Int64, name_localizations? : Map[String, String]) -> @model.CommandOptionChoice
 
-pub fn integer_option(String, String, required? : Bool, choices? : Array[@model.CommandOptionChoice], min_value? : Int64, max_value? : Int64, autocomplete? : Bool) -> @model.CommandOption
+pub fn integer_option(String, String, required? : Bool, choices? : Array[@model.CommandOptionChoice], min_value? : Int64, max_value? : Int64, autocomplete? : Bool, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @model.CommandOption
 
 pub fn label(label~ : String, component~ : @model.Component, description? : String) -> @model.Component
 
@@ -69,21 +69,21 @@ pub fn media_gallery(Array[@model.MediaGalleryItem]) -> @model.Component
 
 pub fn media_item(url~ : String, description? : String, spoiler? : Bool) -> @model.MediaGalleryItem
 
-pub fn mentionable_option(String, String, required? : Bool) -> @model.CommandOption
+pub fn mentionable_option(String, String, required? : Bool, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @model.CommandOption
 
 pub fn mentionable_select(custom_id~ : String, placeholder? : String, min_values? : Int, max_values? : Int, disabled? : Bool) -> @model.Component
 
-pub fn message_command(name~ : String, handler~ : @app.InteractionHandler[@model.Message], default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType]) -> @app.Command[@model.Message]
+pub fn message_command(name~ : String, handler~ : @app.InteractionHandler[@model.Message], default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType], name_localizations? : Map[String, String]) -> @app.Command[@model.Message]
 
 pub fn[A] modal(custom_id~ : String, title~ : String, fields~ : @app.ModalFields[A]) -> @app.Modal[A]
 
-pub fn number_choice(String, Double) -> @model.CommandOptionChoice
+pub fn number_choice(String, Double, name_localizations? : Map[String, String]) -> @model.CommandOptionChoice
 
-pub fn number_option(String, String, required? : Bool, choices? : Array[@model.CommandOptionChoice], min_value? : Double, max_value? : Double, autocomplete? : Bool) -> @model.CommandOption
+pub fn number_option(String, String, required? : Bool, choices? : Array[@model.CommandOptionChoice], min_value? : Double, max_value? : Double, autocomplete? : Bool, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @model.CommandOption
 
 pub fn required_permissions(@model.Permissions) -> (@app.CheckCtx) -> Bool raise @app.HandlerError
 
-pub fn role_option(String, String, required? : Bool) -> @model.CommandOption
+pub fn role_option(String, String, required? : Bool, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @model.CommandOption
 
 pub fn role_select(custom_id~ : String, placeholder? : String, min_values? : Int, max_values? : Int, disabled? : Bool) -> @model.Component
 
@@ -97,23 +97,23 @@ pub fn separator(divider? : Bool, spacing? : Int) -> @model.Component
 
 pub async fn[X] serve_interactions(@async.TaskGroup[X], @app.App, addr~ : String, public_key~ : String, client? : @http.Client, token? : String, application_id? : @model.Id[@model.ApplicationMarker], sync? : Bool, path? : String, deadline_ms? : Int) -> @endpoint_http.InteractionsServer
 
-pub fn[A] slash(name~ : String, description~ : String, args~ : @interaction.Args[A], handler~ : @app.InteractionHandler[A], default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType]) -> @app.Command[A]
+pub fn[A] slash(name~ : String, description~ : String, args~ : @interaction.Args[A], handler~ : @app.InteractionHandler[A], default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType], name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @app.Command[A]
 
-pub fn slash_group(name~ : String, description~ : String, children~ : Array[@app.SlashChild], default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType]) -> @app.Command[Unit]
+pub fn slash_group(name~ : String, description~ : String, children~ : Array[@app.SlashChild], default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType], name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @app.Command[Unit]
 
-pub fn string_choice(String, String) -> @model.CommandOptionChoice
+pub fn string_choice(String, String, name_localizations? : Map[String, String]) -> @model.CommandOptionChoice
 
-pub fn string_option(String, String, required? : Bool, choices? : Array[@model.CommandOptionChoice], min_length? : Int, max_length? : Int, autocomplete? : Bool) -> @model.CommandOption
+pub fn string_option(String, String, required? : Bool, choices? : Array[@model.CommandOptionChoice], min_length? : Int, max_length? : Int, autocomplete? : Bool, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @model.CommandOption
 
 pub fn string_select(custom_id~ : String, options~ : Array[@model.SelectOption], placeholder? : String, min_values? : Int, max_values? : Int, disabled? : Bool) -> @model.Component
 
-pub fn sub_command(String, String, options? : Array[@model.CommandOption]) -> @model.CommandOption
+pub fn sub_command(String, String, options? : Array[@model.CommandOption], name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @model.CommandOption
 
-pub fn sub_command_group(String, String, Array[@model.CommandOption]) -> @model.CommandOption
+pub fn sub_command_group(String, String, Array[@model.CommandOption], name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @model.CommandOption
 
-pub fn[A] subcommand(name~ : String, description~ : String, args~ : @interaction.Args[A], handler~ : @app.InteractionHandler[A]) -> @app.SlashChild
+pub fn[A] subcommand(name~ : String, description~ : String, args~ : @interaction.Args[A], handler~ : @app.InteractionHandler[A], name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @app.SlashChild
 
-pub fn subcommand_group(name~ : String, description~ : String, children~ : Array[@app.SlashChild]) -> @app.SlashChild
+pub fn subcommand_group(name~ : String, description~ : String, children~ : Array[@app.SlashChild], name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @app.SlashChild
 
 pub fn text_display(String) -> @model.Component
 
@@ -123,9 +123,9 @@ pub fn text_input(custom_id~ : String, style? : @model.TextInputStyle, placehold
 
 pub fn thumbnail(url~ : String, description? : String, spoiler? : Bool) -> @model.Component
 
-pub fn user_command(name~ : String, handler~ : @app.InteractionHandler[@app.TargetUser], default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType]) -> @app.Command[@app.TargetUser]
+pub fn user_command(name~ : String, handler~ : @app.InteractionHandler[@app.TargetUser], default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType], name_localizations? : Map[String, String]) -> @app.Command[@app.TargetUser]
 
-pub fn user_option(String, String, required? : Bool) -> @model.CommandOption
+pub fn user_option(String, String, required? : Bool, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @model.CommandOption
 
 pub fn user_select(custom_id~ : String, placeholder? : String, min_values? : Int, max_values? : Int, disabled? : Bool) -> @model.Component
 

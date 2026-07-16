@@ -4,7 +4,9 @@
 /// route incoming interactions by command type and name.
 pub(all) struct CommandSpec {
   name : String
+  name_localizations : Map[String, String]?
   description : String
+  description_localizations : Map[String, String]?
   typ : @model.ApplicationCommandType
   options : Array[@model.CommandOption]
   default_member_permissions : @model.Permissions?
@@ -23,10 +25,14 @@ pub fn CommandSpec::slash(
   nsfw? : Bool,
   integration_types? : Array[@model.ApplicationIntegrationType],
   contexts? : Array[@model.InteractionContextType],
+  name_localizations? : Map[String, String],
+  description_localizations? : Map[String, String],
 ) -> CommandSpec {
   {
     name,
+    name_localizations,
     description,
+    description_localizations,
     typ: ChatInput,
     options,
     default_member_permissions,
@@ -44,10 +50,13 @@ pub fn CommandSpec::user(
   nsfw? : Bool,
   integration_types? : Array[@model.ApplicationIntegrationType],
   contexts? : Array[@model.InteractionContextType],
+  name_localizations? : Map[String, String],
 ) -> CommandSpec {
   {
     name,
+    name_localizations,
     description: "",
+    description_localizations: None,
     typ: User,
     options: [],
     default_member_permissions,
@@ -65,10 +74,13 @@ pub fn CommandSpec::message(
   nsfw? : Bool,
   integration_types? : Array[@model.ApplicationIntegrationType],
   contexts? : Array[@model.InteractionContextType],
+  name_localizations? : Map[String, String],
 ) -> CommandSpec {
   {
     name,
+    name_localizations,
     description: "",
+    description_localizations: None,
     typ: Message,
     options: [],
     default_member_permissions,
@@ -84,7 +96,9 @@ pub fn CommandSpec::message(
 pub impl ToJson for CommandSpec with fn to_json(self) {
   let builder = @model.ObjBuilder()
     .field("name", self.name)
+    .opt("name_localizations", self.name_localizations)
     .field("description", self.description)
+    .opt("description_localizations", self.description_localizations)
   if self.typ != ChatInput {
     builder.field("type", self.typ) |> ignore
   }

@@ -46,6 +46,136 @@ test "typed command spec derives options from Args" {
 }
 
 ///|
+test "localized command builders reach the registration payload" {
+  let command = slash(
+    name="greet",
+    description="Greet a user",
+    name_localizations={ "ja": "あいさつ" },
+    description_localizations={ "ja": "ユーザーにあいさつ" },
+    args=@interaction.Args::of(
+      @interaction.arg_string(
+        name="style",
+        description="Greeting style",
+        name_localizations={ "ja": "スタイル" },
+        description_localizations={ "ja": "あいさつの形式" },
+        choices=[
+          @interaction.string_choice("Friendly", "friendly", name_localizations={
+            "ja": "親しみやすい",
+          }),
+        ],
+      ),
+    ),
+    handler=Raw(_ => ()),
+  )
+  json_inspect(command.spec().to_json(), content={
+    "name": "greet",
+    "name_localizations": { "ja": "あいさつ" },
+    "description": "Greet a user",
+    "description_localizations": { "ja": "ユーザーにあいさつ" },
+    "options": [
+      {
+        "type": 3,
+        "name": "style",
+        "name_localizations": { "ja": "スタイル" },
+        "description": "Greeting style",
+        "description_localizations": { "ja": "あいさつの形式" },
+        "required": true,
+        "choices": [
+          {
+            "name": "Friendly",
+            "name_localizations": { "ja": "親しみやすい" },
+            "value": "friendly",
+          },
+        ],
+      },
+    ],
+  })
+  json_inspect(
+    @interaction.CommandSpec::slash("plain", "Plain command").to_json(),
+    content={ "name": "plain", "description": "Plain command" },
+  )
+}
+
+///|
+test "localized group and context command builders reach their specs" {
+  let grouped = slash_group(
+    name="admin",
+    description="Administration",
+    name_localizations={ "ja": "管理" },
+    description_localizations={ "ja": "管理機能" },
+    children=[
+      subcommand_group(
+        name="member",
+        description="Member tools",
+        name_localizations={ "ja": "メンバー" },
+        description_localizations={ "ja": "メンバー機能" },
+        children=[
+          subcommand(
+            name="show",
+            description="Show a member",
+            name_localizations={ "ja": "表示" },
+            description_localizations={ "ja": "メンバーを表示" },
+            args=@interaction.Args::unit(),
+            handler=Raw(_ => ()),
+          ),
+        ],
+      ),
+    ],
+  )
+  let user = user_command(
+    name="Inspect user",
+    name_localizations={ "ja": "ユーザーを確認" },
+    handler=Raw(_ => ()),
+  )
+  let message = message_command(
+    name="Inspect message",
+    name_localizations={ "ja": "メッセージを確認" },
+    handler=Raw(_ => ()),
+  )
+  json_inspect(
+    [grouped.spec().to_json(), user.spec().to_json(), message.spec().to_json()],
+    content=[
+      {
+        "name": "admin",
+        "name_localizations": { "ja": "管理" },
+        "description": "Administration",
+        "description_localizations": { "ja": "管理機能" },
+        "options": [
+          {
+            "type": 2,
+            "name": "member",
+            "name_localizations": { "ja": "メンバー" },
+            "description": "Member tools",
+            "description_localizations": { "ja": "メンバー機能" },
+            "options": [
+              {
+                "type": 1,
+                "name": "show",
+                "name_localizations": { "ja": "表示" },
+                "description": "Show a member",
+                "description_localizations": { "ja": "メンバーを表示" },
+              },
+            ],
+          },
+        ],
+      },
+      {
+        "name": "Inspect user",
+        "name_localizations": { "ja": "ユーザーを確認" },
+        "description": "",
+        "type": 2,
+      },
+      {
+        "name": "Inspect message",
+        "name_localizations": { "ja": "メッセージを確認" },
+        "description": "",
+        "type": 3,
+      },
+    ],
+  )
+}
+
+///|
 test "command argument decode errors become InvalidArgument" {
   let fixture =
     #|{

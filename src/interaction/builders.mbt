@@ -5,13 +5,17 @@ fn base_option(
   typ : @model.CommandOptionType,
   name : String,
   description : String,
+  name_localizations? : Map[String, String],
+  description_localizations? : Map[String, String],
 ) -> @model.CommandOption {
   {
     typ,
     name,
-    name_localizations: None,
+    name_localizations: name_localizations.map(value => Value(value)),
     description,
-    description_localizations: None,
+    description_localizations: description_localizations.map(value => {
+      Value(value)
+    }),
     required: None,
     choices: None,
     options: None,
@@ -34,9 +38,17 @@ pub fn string_option(
   min_length? : Int,
   max_length? : Int,
   autocomplete? : Bool,
+  name_localizations? : Map[String, String],
+  description_localizations? : Map[String, String],
 ) -> @model.CommandOption {
   {
-    ..base_option(String, name, description),
+    ..base_option(
+      String,
+      name,
+      description,
+      name_localizations?,
+      description_localizations?,
+    ),
     required,
     choices,
     min_length,
@@ -55,11 +67,19 @@ pub fn integer_option(
   min_value? : Int64,
   max_value? : Int64,
   autocomplete? : Bool,
+  name_localizations? : Map[String, String],
+  description_localizations? : Map[String, String],
 ) -> @model.CommandOption {
   let min_value = min_value.map(value => Json::number(value.to_double()))
   let max_value = max_value.map(value => Json::number(value.to_double()))
   {
-    ..base_option(Integer, name, description),
+    ..base_option(
+      Integer,
+      name,
+      description,
+      name_localizations?,
+      description_localizations?,
+    ),
     required,
     choices,
     min_value,
@@ -78,11 +98,19 @@ pub fn number_option(
   min_value? : Double,
   max_value? : Double,
   autocomplete? : Bool,
+  name_localizations? : Map[String, String],
+  description_localizations? : Map[String, String],
 ) -> @model.CommandOption {
   let min_value = min_value.map(value => Json::number(value))
   let max_value = max_value.map(value => Json::number(value))
   {
-    ..base_option(Number, name, description),
+    ..base_option(
+      Number,
+      name,
+      description,
+      name_localizations?,
+      description_localizations?,
+    ),
     required,
     choices,
     min_value,
@@ -97,8 +125,19 @@ pub fn boolean_option(
   name : String,
   description : String,
   required? : Bool,
+  name_localizations? : Map[String, String],
+  description_localizations? : Map[String, String],
 ) -> @model.CommandOption {
-  { ..base_option(Boolean, name, description), required, }
+  {
+    ..base_option(
+      Boolean,
+      name,
+      description,
+      name_localizations?,
+      description_localizations?,
+    ),
+    required,
+  }
 }
 
 ///|
@@ -107,8 +146,19 @@ pub fn user_option(
   name : String,
   description : String,
   required? : Bool,
+  name_localizations? : Map[String, String],
+  description_localizations? : Map[String, String],
 ) -> @model.CommandOption {
-  { ..base_option(User, name, description), required, }
+  {
+    ..base_option(
+      User,
+      name,
+      description,
+      name_localizations?,
+      description_localizations?,
+    ),
+    required,
+  }
 }
 
 ///|
@@ -118,8 +168,20 @@ pub fn channel_option(
   description : String,
   required? : Bool,
   channel_types? : Array[@model.ChannelType],
+  name_localizations? : Map[String, String],
+  description_localizations? : Map[String, String],
 ) -> @model.CommandOption {
-  { ..base_option(Channel, name, description), required, channel_types }
+  {
+    ..base_option(
+      Channel,
+      name,
+      description,
+      name_localizations?,
+      description_localizations?,
+    ),
+    required,
+    channel_types,
+  }
 }
 
 ///|
@@ -128,8 +190,19 @@ pub fn role_option(
   name : String,
   description : String,
   required? : Bool,
+  name_localizations? : Map[String, String],
+  description_localizations? : Map[String, String],
 ) -> @model.CommandOption {
-  { ..base_option(Role, name, description), required, }
+  {
+    ..base_option(
+      Role,
+      name,
+      description,
+      name_localizations?,
+      description_localizations?,
+    ),
+    required,
+  }
 }
 
 ///|
@@ -138,8 +211,19 @@ pub fn mentionable_option(
   name : String,
   description : String,
   required? : Bool,
+  name_localizations? : Map[String, String],
+  description_localizations? : Map[String, String],
 ) -> @model.CommandOption {
-  { ..base_option(Mentionable, name, description), required, }
+  {
+    ..base_option(
+      Mentionable,
+      name,
+      description,
+      name_localizations?,
+      description_localizations?,
+    ),
+    required,
+  }
 }
 
 ///|
@@ -148,8 +232,19 @@ pub fn attachment_option(
   name : String,
   description : String,
   required? : Bool,
+  name_localizations? : Map[String, String],
+  description_localizations? : Map[String, String],
 ) -> @model.CommandOption {
-  { ..base_option(Attachment, name, description), required, }
+  {
+    ..base_option(
+      Attachment,
+      name,
+      description,
+      name_localizations?,
+      description_localizations?,
+    ),
+    required,
+  }
 }
 
 ///|
@@ -158,9 +253,20 @@ pub fn sub_command(
   name : String,
   description : String,
   options? : Array[@model.CommandOption] = [],
+  name_localizations? : Map[String, String],
+  description_localizations? : Map[String, String],
 ) -> @model.CommandOption {
   let options = if options.length() > 0 { Some(options) } else { None }
-  { ..base_option(SubCommand, name, description), options, }
+  {
+    ..base_option(
+      SubCommand,
+      name,
+      description,
+      name_localizations?,
+      description_localizations?,
+    ),
+    options,
+  }
 }
 
 ///|
@@ -169,13 +275,24 @@ pub fn sub_command_group(
   name : String,
   description : String,
   sub_commands : Array[@model.CommandOption],
+  name_localizations? : Map[String, String],
+  description_localizations? : Map[String, String],
 ) -> @model.CommandOption {
   let options = if sub_commands.length() > 0 {
     Some(sub_commands)
   } else {
     None
   }
-  { ..base_option(SubCommandGroup, name, description), options, }
+  {
+    ..base_option(
+      SubCommandGroup,
+      name,
+      description,
+      name_localizations?,
+      description_localizations?,
+    ),
+    options,
+  }
 }
 
 ///|
@@ -183,14 +300,27 @@ pub fn sub_command_group(
 pub fn string_choice(
   name : String,
   value : String,
+  name_localizations? : Map[String, String],
 ) -> @model.CommandOptionChoice {
-  { name, name_localizations: None, value: Json::string(value) }
+  {
+    name,
+    name_localizations: name_localizations.map(value => Value(value)),
+    value: Json::string(value),
+  }
 }
 
 ///|
 /// Describe an integer-valued option choice.
-pub fn int_choice(name : String, value : Int64) -> @model.CommandOptionChoice {
-  { name, name_localizations: None, value: Json::number(value.to_double()) }
+pub fn int_choice(
+  name : String,
+  value : Int64,
+  name_localizations? : Map[String, String],
+) -> @model.CommandOptionChoice {
+  {
+    name,
+    name_localizations: name_localizations.map(value => Value(value)),
+    value: Json::number(value.to_double()),
+  }
 }
 
 ///|
@@ -198,8 +328,13 @@ pub fn int_choice(name : String, value : Int64) -> @model.CommandOptionChoice {
 pub fn number_choice(
   name : String,
   value : Double,
+  name_localizations? : Map[String, String],
 ) -> @model.CommandOptionChoice {
-  { name, name_localizations: None, value: Json::number(value) }
+  {
+    name,
+    name_localizations: name_localizations.map(value => Value(value)),
+    value: Json::number(value),
+  }
 }
 
 ///|

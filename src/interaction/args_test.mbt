@@ -80,6 +80,94 @@ test "typed args definitions are the command registration payload" {
 }
 
 ///|
+test "every typed arg builder preserves localizations" {
+  let name_localizations = { "ja": "ローカライズ名" }
+  let description_localizations = { "ja": "ローカライズ説明" }
+  let definitions = [
+    @interaction.Args::of(
+      @interaction.arg_string(
+        name="string",
+        description="String",
+        name_localizations~,
+        description_localizations~,
+      ),
+    ).definitions()[0],
+    @interaction.Args::of(
+      @interaction.arg_int(
+        name="integer",
+        description="Integer",
+        name_localizations~,
+        description_localizations~,
+      ),
+    ).definitions()[0],
+    @interaction.Args::of(
+      @interaction.arg_number(
+        name="number",
+        description="Number",
+        name_localizations~,
+        description_localizations~,
+      ),
+    ).definitions()[0],
+    @interaction.Args::of(
+      @interaction.arg_bool(
+        name="boolean",
+        description="Boolean",
+        name_localizations~,
+        description_localizations~,
+      ),
+    ).definitions()[0],
+    @interaction.Args::of(
+      @interaction.arg_user(
+        name="user",
+        description="User",
+        name_localizations~,
+        description_localizations~,
+      ),
+    ).definitions()[0],
+    @interaction.Args::of(
+      @interaction.arg_channel(
+        name="channel",
+        description="Channel",
+        name_localizations~,
+        description_localizations~,
+      ),
+    ).definitions()[0],
+    @interaction.Args::of(
+      @interaction.arg_role(
+        name="role",
+        description="Role",
+        name_localizations~,
+        description_localizations~,
+      ),
+    ).definitions()[0],
+    @interaction.Args::of(
+      @interaction.arg_mentionable(
+        name="mentionable",
+        description="Mentionable",
+        name_localizations~,
+        description_localizations~,
+      ),
+    ).definitions()[0],
+    @interaction.Args::of(
+      @interaction.arg_attachment(
+        name="attachment",
+        description="Attachment",
+        name_localizations~,
+        description_localizations~,
+      ),
+    ).definitions()[0],
+  ]
+  for definition in definitions {
+    guard definition.name_localizations is Some(Value(names)) &&
+      definition.description_localizations is Some(Value(descriptions)) else {
+      fail("expected localized option definition")
+    }
+    assert_true(names.get("ja") == Some("ローカライズ名"))
+    assert_true(descriptions.get("ja") == Some("ローカライズ説明"))
+  }
+}
+
+///|
 test "typed args decode present optional and defaulted values" {
   let fixture =
     #|{

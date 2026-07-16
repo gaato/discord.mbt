@@ -130,6 +130,28 @@ test "slash command registration payload includes every scalar option kind" {
 }
 
 ///|
+test "choice builders serialize name localizations" {
+  json_inspect(
+    [
+      @interaction.string_choice("Fast", "fast", name_localizations={
+        "ja": "高速",
+      }).to_json(),
+      @interaction.int_choice("Once", 1L, name_localizations={ "ja": "1回" }).to_json(),
+      @interaction.number_choice("Low", 0.25, name_localizations={ "ja": "低" }).to_json(),
+    ],
+    content=[
+      {
+        "name": "Fast",
+        "name_localizations": { "ja": "高速" },
+        "value": "fast",
+      },
+      { "name": "Once", "name_localizations": { "ja": "1回" }, "value": 1 },
+      { "name": "Low", "name_localizations": { "ja": "低" }, "value": 0.25 },
+    ],
+  )
+}
+
+///|
 test "subcommand and context-menu registration payloads" {
   let spec = @interaction.CommandSpec::slash("admin", "Administrative tools", options=[
     @interaction.sub_command_group("member", "Member administration", [

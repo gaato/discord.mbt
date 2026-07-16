@@ -66,6 +66,8 @@ pub fn arg_string(
   min_length? : Int,
   max_length? : Int,
   suggest? : async (SuggestCtx, String) -> Array[@model.CommandOptionChoice],
+  name_localizations? : Map[String, String],
+  description_localizations? : Map[String, String],
 ) -> Arg[String] {
   let suggest_handler = typed_suggest(
     name,
@@ -81,6 +83,8 @@ pub fn arg_string(
       min_length?,
       max_length?,
       autocomplete?=suggest_handler.map(_ => true),
+      name_localizations?,
+      description_localizations?,
     ),
     options => options.string(name),
     suggest?=suggest_handler,
@@ -96,6 +100,8 @@ pub fn arg_int(
   max? : Int64,
   choices? : Array[@model.CommandOptionChoice],
   suggest? : async (SuggestCtx, Int64) -> Array[@model.CommandOptionChoice],
+  name_localizations? : Map[String, String],
+  description_localizations? : Map[String, String],
 ) -> Arg[Int64] {
   let suggest_handler = typed_suggest(
     name,
@@ -111,6 +117,8 @@ pub fn arg_int(
       min_value?=min,
       max_value?=max,
       autocomplete?=suggest_handler.map(_ => true),
+      name_localizations?,
+      description_localizations?,
     ),
     options => options.int(name),
     suggest?=suggest_handler,
@@ -126,6 +134,8 @@ pub fn arg_number(
   max? : Double,
   choices? : Array[@model.CommandOptionChoice],
   suggest? : async (SuggestCtx, Double) -> Array[@model.CommandOptionChoice],
+  name_localizations? : Map[String, String],
+  description_localizations? : Map[String, String],
 ) -> Arg[Double] {
   let suggest_handler = typed_suggest(
     name,
@@ -141,6 +151,8 @@ pub fn arg_number(
       min_value?=min,
       max_value?=max,
       autocomplete?=suggest_handler.map(_ => true),
+      name_localizations?,
+      description_localizations?,
     ),
     options => options.number(name),
     suggest?=suggest_handler,
@@ -149,18 +161,42 @@ pub fn arg_number(
 
 ///|
 /// Define a required boolean option.
-pub fn arg_bool(name~ : String, description~ : String) -> Arg[Bool] {
-  required_arg(boolean_option(name, description, required=true), options => {
-    options.bool(name)
-  })
+pub fn arg_bool(
+  name~ : String,
+  description~ : String,
+  name_localizations? : Map[String, String],
+  description_localizations? : Map[String, String],
+) -> Arg[Bool] {
+  required_arg(
+    boolean_option(
+      name,
+      description,
+      required=true,
+      name_localizations?,
+      description_localizations?,
+    ),
+    options => options.bool(name),
+  )
 }
 
 ///|
 /// Define a required user option.
-pub fn arg_user(name~ : String, description~ : String) -> Arg[@model.UserId] {
-  required_arg(user_option(name, description, required=true), options => {
-    options.user(name)
-  })
+pub fn arg_user(
+  name~ : String,
+  description~ : String,
+  name_localizations? : Map[String, String],
+  description_localizations? : Map[String, String],
+) -> Arg[@model.UserId] {
+  required_arg(
+    user_option(
+      name,
+      description,
+      required=true,
+      name_localizations?,
+      description_localizations?,
+    ),
+    options => options.user(name),
+  )
 }
 
 ///|
@@ -169,19 +205,40 @@ pub fn arg_channel(
   name~ : String,
   description~ : String,
   channel_types? : Array[@model.ChannelType],
+  name_localizations? : Map[String, String],
+  description_localizations? : Map[String, String],
 ) -> Arg[@model.ChannelId] {
   required_arg(
-    channel_option(name, description, required=true, channel_types?),
+    channel_option(
+      name,
+      description,
+      required=true,
+      channel_types?,
+      name_localizations?,
+      description_localizations?,
+    ),
     options => options.channel(name),
   )
 }
 
 ///|
 /// Define a required role option.
-pub fn arg_role(name~ : String, description~ : String) -> Arg[@model.RoleId] {
-  required_arg(role_option(name, description, required=true), options => {
-    options.role(name)
-  })
+pub fn arg_role(
+  name~ : String,
+  description~ : String,
+  name_localizations? : Map[String, String],
+  description_localizations? : Map[String, String],
+) -> Arg[@model.RoleId] {
+  required_arg(
+    role_option(
+      name,
+      description,
+      required=true,
+      name_localizations?,
+      description_localizations?,
+    ),
+    options => options.role(name),
+  )
 }
 
 ///|
@@ -189,10 +246,19 @@ pub fn arg_role(name~ : String, description~ : String) -> Arg[@model.RoleId] {
 pub fn arg_mentionable(
   name~ : String,
   description~ : String,
+  name_localizations? : Map[String, String],
+  description_localizations? : Map[String, String],
 ) -> Arg[@model.GenericId] {
-  required_arg(mentionable_option(name, description, required=true), options => {
-    options.mentionable(name)
-  })
+  required_arg(
+    mentionable_option(
+      name,
+      description,
+      required=true,
+      name_localizations?,
+      description_localizations?,
+    ),
+    options => options.mentionable(name),
+  )
 }
 
 ///|
@@ -200,10 +266,19 @@ pub fn arg_mentionable(
 pub fn arg_attachment(
   name~ : String,
   description~ : String,
+  name_localizations? : Map[String, String],
+  description_localizations? : Map[String, String],
 ) -> Arg[@model.Attachment] {
-  required_arg(attachment_option(name, description, required=true), options => {
-    options.attachment(name)
-  })
+  required_arg(
+    attachment_option(
+      name,
+      description,
+      required=true,
+      name_localizations?,
+      description_localizations?,
+    ),
+    options => options.attachment(name),
+  )
 }
 
 ///|
