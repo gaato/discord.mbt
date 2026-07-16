@@ -3,14 +3,14 @@
 Typed `Route` / `Client` coverage of the Discord REST API, diffed against the
 official OpenAPI spec ([discord/discord-api-spec], `main`, fetched 2026-07-16).
 
-- Spec: **242** method:path pairs. At diff time **119** had typed routes and
-  **119** did not (one of those, `PATCH /applications/@me`, has since landed;
-  the remaining 118 are the unchecked items below).
-- Every unwrapped endpoint is still reachable today through the escape hatch:
+- **Status: complete.** Every endpoint in the official developer docs has a
+  typed wrapper (checked items below), including two documented endpoints the
+  spec omits (List SKUs, Create Guild From Template). Everything else is a
+  deliberate non-goal recorded in the "Out of scope" sections with a reason.
+- Endpoints without a typed wrapper remain reachable through the escape hatch:
   `Route::custom` + `Client::request` (`src/http/route.mbt`).
-- This file is the work list for closing the gap. Check items off as typed
-  wrappers land; move deliberate non-goals to the "Out of scope" section with
-  a reason.
+- When Discord documents new endpoints, regenerate the diff below; any line
+  not explained by a false positive or an "Out of scope" entry is new work.
 
 [discord/discord-api-spec]: https://github.com/discord/discord-api-spec
 
@@ -31,9 +31,9 @@ The mechanical diff needs manual review afterwards:
 
 - **Bucket collapsing hides detail.** Bucket strings fold minor IDs and `@me`
   suffixes together, so several spec pairs can map onto one bucket. This
-  produces false positives (`PUT .../reactions/{emoji}/@me` looks missing but
-  `Client::create_reaction` exists) and false negatives (`DELETE
-  .../reactions/{emoji}` looked covered but had no route — it is listed below).
+  produces false positives: the residual `reactions/{emoji}/@me` and
+  `reactions/{emoji}/{user}` lines are covered by `Client::create_reaction`,
+  `Client::delete_own_reaction`, and `Client::delete_user_reaction`.
 - **Pins moved.** The spec lists `/channels/{id}/messages/pins`; the library
   implements the equivalent legacy `/channels/{id}/pins` routes
   (`GET`/`PUT`/`DELETE`), so those three are covered, not missing.
@@ -133,14 +133,6 @@ The mechanical diff needs manual review afterwards:
 - [x] PATCH /guilds/{id}/voice-states/@me — Modify Current User Voice State (`Client::modify_current_user_voice_state`)
 - [x] PATCH /guilds/{id}/voice-states/{user} — Modify User Voice State (`Client::modify_user_voice_state`)
 
-## Guild scheduled events
-
-- [ ] GET /guilds/{id}/scheduled-events/{event}/users/counts — Get event user counts
-- [ ] GET /guilds/{id}/scheduled-events/{event}/{exception}/users — Get exception users
-- [ ] POST /guilds/{id}/scheduled-events/{event}/exceptions — Create event exception
-- [ ] PATCH /guilds/{id}/scheduled-events/{event}/exceptions/{exception} — Modify event exception
-- [ ] DELETE /guilds/{id}/scheduled-events/{event}/exceptions/{exception} — Delete event exception
-
 ## Guild templates
 
 - [x] GET /guilds/templates/{code} — Get Guild Template (`Client::get_guild_template`)
@@ -174,14 +166,18 @@ The mechanical diff needs manual review afterwards:
 
 ## Out of scope: non-JSON responses
 
-- GET /invites/{code}/target-users — List invite target users (returns
-  text/csv; transport decodes JSON only — reachable via `Route::custom`)
+The transport (`Client::perform`) decodes JSON only. Binary/CSV endpoints stay
+unwrapped; both remain reachable via `Route::custom` with external handling.
 
-## Out of scope (proposed): Discord Social SDK
+- GET /invites/{code}/target-users — List invite target users (returns text/csv)
+- GET /guilds/{id}/widget.png — Get Guild Widget Image (binary PNG; the
+  `Client::guild_widget_image_url` helper builds its URL, see Guild management)
+
+## Out of scope: Discord Social SDK
 
 Lobbies and the Partner SDK back the Discord Social SDK for games; they are
-not useful to a bot library. Proposed as deliberate non-goals — `Route::custom`
-remains available if someone needs them.
+not useful to a bot library. Deliberate non-goals — `Route::custom` remains
+available if someone needs them.
 
 - POST /lobbies · PUT /lobbies · GET/PATCH/DELETE /lobbies/{id}
 - PATCH /lobbies/{id}/channel-linking
@@ -194,36 +190,29 @@ remains available if someone needs them.
 - POST /partner-sdk/provisional-accounts/unmerge · POST /partner-sdk/provisional-accounts/unmerge/bot
 - PUT /partner-sdk/dms/{a}/{b}/messages/{msg}/moderation-metadata
 
-## Out of scope: undocumented OAuth2 endpoints
-
-These endpoints are not present in the official developer docs. Discord's
-public docs reference OIDC only in the Social SDK provisional-accounts
-context; both remain reachable through `Route::custom`.
-
-- GET /oauth2/keys — Get OAuth2 signing keys
-- GET /oauth2/userinfo — OAuth2 userinfo
-
 ## Out of scope: undocumented endpoints
 
-- GET /applications/{id} — Get Application: not present in the official
-  developer docs (only the `@me` application endpoints are documented);
-  reachable via `Route::custom`.
-- PATCH /applications/{id} — Edit Application: not present in the official
-  developer docs (only the `@me` application endpoints are documented);
-  reachable via `Route::custom`.
-- POST /applications/{id}/attachment — Upload ephemeral application
-  attachment: not present in the official developer docs (only the `@me`
-  application endpoints are documented); reachable via `Route::custom`.
-- GET /guilds/{id}/requests — List guild join requests: not present in the
-  official developer docs; reachable via `Route::custom`.
-- PATCH /guilds/{id}/requests/{user} — Act on a guild join request: not present
-  in the official developer docs; reachable via `Route::custom`.
-- GET /guilds/{id}/roles/member-counts — Get role member counts: not present in
-  the official developer docs; reachable via `Route::custom`.
-- GET /guilds/{id}/new-member-welcome — Get new member welcome: not present in
-  the official developer docs; reachable via `Route::custom`.
-- GET /channels/{id}/threads/search — Search Threads: not present in the
-  official developer docs (limited-availability endpoint); reachable via
-  `Route::custom`.
-- GET /users/@me/applications/{id}/entitlements — List user entitlements: not
-  present in the official developer docs; reachable via `Route::custom`.
+These appear in the OpenAPI spec but not in the official developer docs
+(checked against docs.discord.com, 2026-07-16). All remain reachable via
+`Route::custom`; promote any of them to a typed wrapper if Discord documents
+them.
+
+- GET /applications/{id} — Get Application (only the `@me` variant is documented)
+- PATCH /applications/{id} — Edit Application (only the `@me` variant is documented)
+- POST /applications/{id}/attachment — Upload ephemeral application attachment
+- GET /guilds/{id}/requests — List guild join requests
+- PATCH /guilds/{id}/requests/{user} — Act on a guild join request
+- GET /guilds/{id}/roles/member-counts — Get role member counts
+- GET /guilds/{id}/new-member-welcome — Get new member welcome
+- GET /channels/{id}/threads/search — Search Threads (limited availability)
+- GET /users/@me/applications/{id}/entitlements — List user entitlements
+- GET /guilds/{id}/scheduled-events/{event}/users/counts — Get event user counts
+- GET /guilds/{id}/scheduled-events/{event}/{exception}/users — Get exception users
+- POST /guilds/{id}/scheduled-events/{event}/exceptions — Create event exception
+- PATCH /guilds/{id}/scheduled-events/{event}/exceptions/{exception} — Modify event exception
+- DELETE /guilds/{id}/scheduled-events/{event}/exceptions/{exception} — Delete event exception
+  (recurrence *rules* are documented on the scheduled-event object, but the
+  exception endpoints are not)
+- GET /oauth2/keys — Get OAuth2 signing keys
+- GET /oauth2/userinfo — OAuth2 userinfo (Discord's docs reference OIDC only
+  in the Social SDK provisional-accounts context)
