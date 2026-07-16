@@ -19,7 +19,7 @@ cargo build --release
 Point the runtime at the built library:
 
 ```sh
-set -x DISCORD_VOICE_SHIM_PATH "$PWD/voice-shim/target/release/libdiscord_voice_shim.so"
+export DISCORD_VOICE_SHIM_PATH="$PWD/voice-shim/target/release/libdiscord_voice_shim.so"
 ```
 
 macOS uses `libdiscord_voice_shim.dylib`; Windows uses

@@ -18,7 +18,7 @@ relevant symbols — look anything up with `moon ide doc` (see
 
 ## Install
 
-```bash
+```sh
 moon add gaato/discord
 ```
 
@@ -251,7 +251,7 @@ point `DISCORD_VOICE_SHIM_PATH` at the built library. Build it with cargo
 ```sh
 cd voice-shim
 cargo build --release
-set -x DISCORD_VOICE_SHIM_PATH "$PWD/target/release/libdiscord_voice_shim.so"
+export DISCORD_VOICE_SHIM_PATH="$PWD/target/release/libdiscord_voice_shim.so"
 ```
 
 Call `ctx.join_voice(guild_id, channel_id)` from a READY handler or service,
@@ -829,7 +829,7 @@ and checks/cooldowns used by this pattern.
 
 ## Development
 
-```bash
+```sh
 moon check --target native
 moon test --target native --release   # debug native builds need a working tcc setup
 moon fmt
@@ -839,7 +839,7 @@ moon info                             # regenerate pkg.generated.mbti (API revie
 Look up any package, type, or symbol — including its docstring examples —
 from the terminal:
 
-```bash
+```sh
 moon ide doc "@discord"
 moon ide doc "@http.Client::create_message"
 moon ide doc "@model.Message"
