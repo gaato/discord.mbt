@@ -172,3 +172,48 @@ pub async fn Client::edit_current_application(
   )
   decode(self.request(EditCurrentApplication, body~))
 }
+
+///|
+fn update_application_role_connection_metadata_records_body(
+  records : Array[@model.ApplicationRoleConnectionMetadata],
+) -> Json raise DiscordHttpError {
+  if records.length() > 5 {
+    raise Validation(
+      message="role connection metadata records exceed 5 entries",
+    )
+  }
+  records.to_json()
+}
+
+///|
+/// Fetch the application role connection metadata records for an application.
+///
+/// https://discord.com/developers/docs/resources/application-role-connection-metadata#get-application-role-connection-metadata-records
+pub async fn Client::get_application_role_connection_metadata_records(
+  self : Client,
+  application_id : @model.ApplicationId,
+) -> Array[@model.ApplicationRoleConnectionMetadata] raise DiscordHttpError {
+  decode(
+    self.request(GetApplicationRoleConnectionMetadataRecords(application_id~)),
+  )
+}
+
+///|
+/// Replace the application role connection metadata records for an application.
+///
+/// The records are sent as a raw JSON array. Discord accepts at most five.
+///
+/// https://discord.com/developers/docs/resources/application-role-connection-metadata#update-application-role-connection-metadata-records
+pub async fn Client::update_application_role_connection_metadata_records(
+  self : Client,
+  application_id : @model.ApplicationId,
+  records : Array[@model.ApplicationRoleConnectionMetadata],
+) -> Array[@model.ApplicationRoleConnectionMetadata] raise DiscordHttpError {
+  let body = update_application_role_connection_metadata_records_body(records)
+  decode(
+    self.request(
+      UpdateApplicationRoleConnectionMetadataRecords(application_id~),
+      body~,
+    ),
+  )
+}

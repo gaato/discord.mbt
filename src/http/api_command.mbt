@@ -80,6 +80,18 @@ fn validate_bulk_commands(commands : Json) -> Unit raise DiscordHttpError {
 }
 
 ///|
+fn edit_application_command_permissions_body(
+  permissions : Array[@model.ApplicationCommandPermission],
+) -> Json raise DiscordHttpError {
+  if permissions.length() > 100 {
+    raise Validation(
+      message="application command permissions exceed 100 entries",
+    )
+  }
+  @model.ObjBuilder().field("permissions", permissions).build()
+}
+
+///|
 /// List global application commands.
 pub async fn Client::get_global_commands(
   self : Client,
@@ -258,6 +270,64 @@ pub async fn Client::bulk_overwrite_guild_commands(
     self.request(
       BulkOverwriteGuildCommands(application_id~, guild_id~),
       body=commands,
+    ),
+  )
+}
+
+///|
+/// Fetch permission overrides for every application command in a guild.
+///
+/// https://discord.com/developers/docs/interactions/application-commands#get-guild-application-command-permissions
+pub async fn Client::get_guild_application_command_permissions(
+  self : Client,
+  application_id : @model.ApplicationId,
+  guild_id : @model.GuildId,
+) -> Array[@model.GuildApplicationCommandPermissions] raise DiscordHttpError {
+  decode(
+    self.request(
+      GetGuildApplicationCommandPermissions(application_id~, guild_id~),
+    ),
+  )
+}
+
+///|
+/// Fetch permission overrides for one application command in a guild.
+///
+/// https://discord.com/developers/docs/interactions/application-commands#get-application-command-permissions
+pub async fn Client::get_application_command_permissions(
+  self : Client,
+  application_id : @model.ApplicationId,
+  guild_id : @model.GuildId,
+  command_id : @model.CommandId,
+) -> @model.GuildApplicationCommandPermissions raise DiscordHttpError {
+  decode(
+    self.request(
+      GetApplicationCommandPermissions(application_id~, guild_id~, command_id~),
+    ),
+  )
+}
+
+///|
+/// Replace permission overrides for one application command in a guild.
+///
+/// Requires an OAuth2 bearer token with the
+/// `applications.commands.permissions.update` scope.
+///
+/// https://discord.com/developers/docs/interactions/application-commands#edit-application-command-permissions
+pub async fn Client::edit_application_command_permissions(
+  self : Client,
+  application_id : @model.ApplicationId,
+  guild_id : @model.GuildId,
+  command_id : @model.CommandId,
+  permissions : Array[@model.ApplicationCommandPermission],
+  bearer_token~ : String,
+) -> @model.GuildApplicationCommandPermissions raise DiscordHttpError {
+  let body = edit_application_command_permissions_body(permissions)
+  decode(
+    self.request(
+      EditApplicationCommandPermissions(application_id~, guild_id~, command_id~),
+      body~,
+      headers=bearer_headers(bearer_token),
     ),
   )
 }

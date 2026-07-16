@@ -292,6 +292,31 @@ pub(all) struct ApplicationRoleConnection {
   metadata : Json
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
+pub(all) struct ApplicationRoleConnectionMetadata {
+  typ : ApplicationRoleConnectionMetadataType
+  key : String
+  name : String
+  name_localizations : Nullable[Map[String, String]]?
+  description : String
+  description_localizations : Nullable[Map[String, String]]?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum ApplicationRoleConnectionMetadataType {
+  IntegerLessThanOrEqual
+  IntegerGreaterThanOrEqual
+  IntegerEqual
+  IntegerNotEqual
+  DatetimeLessThanOrEqual
+  DatetimeGreaterThanOrEqual
+  BooleanEqual
+  BooleanNotEqual
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn ApplicationRoleConnectionMetadataType::from_int(Int) -> Self
+pub fn ApplicationRoleConnectionMetadataType::to_int(Self) -> Int
+pub impl ToJson for ApplicationRoleConnectionMetadataType
+pub impl @json.FromJson for ApplicationRoleConnectionMetadataType
+
 pub(all) struct Attachment {
   id : Id[AttachmentMarker]
   filename : String

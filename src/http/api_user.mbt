@@ -145,3 +145,85 @@ pub async fn Client::leave_guild(
 ) -> Unit raise DiscordHttpError {
   self.request(LeaveGuild(guild_id~)) |> ignore
 }
+
+///|
+fn update_current_user_application_role_connection_body(
+  platform_name : String?,
+  platform_username : String?,
+  metadata : Json?,
+) -> Json raise DiscordHttpError {
+  if platform_name is Some(value) && value.length() > 50 {
+    raise Validation(message="platform_name exceeds 50 characters")
+  }
+  if platform_username is Some(value) && value.length() > 100 {
+    raise Validation(message="platform_username exceeds 100 characters")
+  }
+  @model.ObjBuilder()
+  .opt("platform_name", platform_name)
+  .opt("platform_username", platform_username)
+  .opt("metadata", metadata)
+  .build()
+}
+
+///|
+/// Fetch the current user's role connection for an application.
+///
+/// Requires an OAuth2 bearer token with the `role_connections.write` scope.
+///
+/// https://discord.com/developers/docs/resources/user#get-current-user-application-role-connection
+pub async fn Client::get_current_user_application_role_connection(
+  self : Client,
+  application_id : @model.ApplicationId,
+  bearer_token~ : String,
+) -> @model.ApplicationRoleConnection raise DiscordHttpError {
+  decode(
+    self.request(
+      GetCurrentUserApplicationRoleConnection(application_id~),
+      headers=bearer_headers(bearer_token),
+    ),
+  )
+}
+
+///|
+/// Update the current user's role connection for an application.
+///
+/// Requires an OAuth2 bearer token with the `role_connections.write` scope.
+///
+/// https://discord.com/developers/docs/resources/user#update-current-user-application-role-connection
+pub async fn Client::update_current_user_application_role_connection(
+  self : Client,
+  application_id : @model.ApplicationId,
+  platform_name? : String,
+  platform_username? : String,
+  metadata? : Json,
+  bearer_token~ : String,
+) -> @model.ApplicationRoleConnection raise DiscordHttpError {
+  let body = update_current_user_application_role_connection_body(
+    platform_name, platform_username, metadata,
+  )
+  decode(
+    self.request(
+      UpdateCurrentUserApplicationRoleConnection(application_id~),
+      body~,
+      headers=bearer_headers(bearer_token),
+    ),
+  )
+}
+
+///|
+/// Delete the current user's role connection for an application.
+///
+/// Requires an OAuth2 bearer token with the `role_connections.write` scope.
+///
+/// https://docs.discord.com/developers/resources/user#delete-current-user-application-role-connection
+pub async fn Client::delete_current_user_application_role_connection(
+  self : Client,
+  application_id : @model.ApplicationId,
+  bearer_token~ : String,
+) -> Unit raise DiscordHttpError {
+  self.request(
+    DeleteCurrentUserApplicationRoleConnection(application_id~),
+    headers=bearer_headers(bearer_token),
+  )
+  |> ignore
+}

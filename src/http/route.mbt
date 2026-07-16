@@ -25,10 +25,25 @@ pub(all) enum Route {
   GetGatewayBot
   GetCurrentApplication
   EditCurrentApplication
+  GetApplicationRoleConnectionMetadataRecords(
+    application_id~ : @model.ApplicationId
+  )
+  UpdateApplicationRoleConnectionMetadataRecords(
+    application_id~ : @model.ApplicationId
+  )
   GetCurrentUser
   GetCurrentUserGuilds(query~ : String)
   GetCurrentUserConnections
   GetCurrentUserGuildMember(guild_id~ : @model.GuildId)
+  GetCurrentUserApplicationRoleConnection(
+    application_id~ : @model.ApplicationId
+  )
+  UpdateCurrentUserApplicationRoleConnection(
+    application_id~ : @model.ApplicationId
+  )
+  DeleteCurrentUserApplicationRoleConnection(
+    application_id~ : @model.ApplicationId
+  )
   LeaveGuild(guild_id~ : @model.GuildId)
   GetUser(user_id~ : @model.UserId)
   ModifyCurrentUser
@@ -307,6 +322,20 @@ pub(all) enum Route {
     application_id~ : @model.ApplicationId,
     guild_id~ : @model.GuildId
   )
+  GetGuildApplicationCommandPermissions(
+    application_id~ : @model.ApplicationId,
+    guild_id~ : @model.GuildId
+  )
+  GetApplicationCommandPermissions(
+    application_id~ : @model.ApplicationId,
+    guild_id~ : @model.GuildId,
+    command_id~ : @model.CommandId
+  )
+  EditApplicationCommandPermissions(
+    application_id~ : @model.ApplicationId,
+    guild_id~ : @model.GuildId,
+    command_id~ : @model.CommandId
+  )
 }
 
 ///|
@@ -366,10 +395,12 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     GetGateway
     | GetGatewayBot
     | GetCurrentApplication
+    | GetApplicationRoleConnectionMetadataRecords(..)
     | GetCurrentUser
     | GetCurrentUserGuilds(..)
     | GetCurrentUserConnections
     | GetCurrentUserGuildMember(..)
+    | GetCurrentUserApplicationRoleConnection(..)
     | GetCurrentAuthorizationInformation
     | GetCurrentBotApplicationInformation
     | GetUser(..)
@@ -418,7 +449,9 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | GetGlobalCommands(..)
     | GetGlobalCommand(..)
     | GetGuildCommands(..)
-    | GetGuildCommand(..) => Get
+    | GetGuildCommand(..)
+    | GetGuildApplicationCommandPermissions(..)
+    | GetApplicationCommandPermissions(..) => Get
     CreateDm
     | CreateMessage(..)
     | ExpirePoll(..)
@@ -490,6 +523,7 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | DeleteFollowupMessage(..)
     | DeleteGlobalCommand(..)
     | DeleteGuildCommand(..)
+    | DeleteCurrentUserApplicationRoleConnection(..)
     | LeaveGuild(..) => Delete
     CreateReaction(..)
     | EditChannelPermissions(..)
@@ -498,7 +532,10 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | AddGuildMemberRole(..)
     | CreateGuildBan(..)
     | BulkOverwriteGlobalCommands(..)
-    | BulkOverwriteGuildCommands(..) => Put
+    | BulkOverwriteGuildCommands(..)
+    | EditApplicationCommandPermissions(..)
+    | UpdateApplicationRoleConnectionMetadataRecords(..)
+    | UpdateCurrentUserApplicationRoleConnection(..) => Put
   }
 }
 
@@ -511,11 +548,18 @@ pub fn Route::path(self : Route) -> String {
     GetGateway => "/gateway"
     GetGatewayBot => "/gateway/bot"
     GetCurrentApplication | EditCurrentApplication => "/applications/@me"
+    GetApplicationRoleConnectionMetadataRecords(application_id~)
+    | UpdateApplicationRoleConnectionMetadataRecords(application_id~) =>
+      "/applications/\{application_id}/role-connections/metadata"
     GetCurrentUser | ModifyCurrentUser => "/users/@me"
     GetCurrentUserGuilds(query~) => "/users/@me/guilds\{query}"
     GetCurrentUserConnections => "/users/@me/connections"
     GetCurrentUserGuildMember(guild_id~) =>
       "/users/@me/guilds/\{guild_id}/member"
+    GetCurrentUserApplicationRoleConnection(application_id~)
+    | UpdateCurrentUserApplicationRoleConnection(application_id~)
+    | DeleteCurrentUserApplicationRoleConnection(application_id~) =>
+      "/users/@me/applications/\{application_id}/role-connection"
     LeaveGuild(guild_id~) => "/users/@me/guilds/\{guild_id}"
     GetUser(user_id~) => "/users/\{user_id}"
     CreateDm => "/users/@me/channels"
@@ -683,6 +727,11 @@ pub fn Route::path(self : Route) -> String {
     | EditGuildCommand(application_id~, guild_id~, command_id~)
     | DeleteGuildCommand(application_id~, guild_id~, command_id~) =>
       "/applications/\{application_id}/guilds/\{guild_id}/commands/\{command_id}"
+    GetGuildApplicationCommandPermissions(application_id~, guild_id~) =>
+      "/applications/\{application_id}/guilds/\{guild_id}/commands/permissions"
+    GetApplicationCommandPermissions(application_id~, guild_id~, command_id~)
+    | EditApplicationCommandPermissions(application_id~, guild_id~, command_id~) =>
+      "/applications/\{application_id}/guilds/\{guild_id}/commands/\{command_id}/permissions"
   }
 }
 
@@ -696,11 +745,21 @@ pub fn Route::bucket(self : Route) -> String {
     GetGatewayBot => "GET:/gateway/bot"
     GetCurrentApplication => "GET:/applications/@me"
     EditCurrentApplication => "PATCH:/applications/@me"
+    GetApplicationRoleConnectionMetadataRecords(application_id~) =>
+      "GET:/applications/\{application_id}/role-connections/metadata"
+    UpdateApplicationRoleConnectionMetadataRecords(application_id~) =>
+      "PUT:/applications/\{application_id}/role-connections/metadata"
     GetCurrentUser => "GET:/users/@me"
     GetCurrentUserGuilds(..) => "GET:/users/@me/guilds"
     GetCurrentUserConnections => "GET:/users/@me/connections"
     GetCurrentUserGuildMember(guild_id~) =>
       "GET:/users/@me/guilds/\{guild_id}/member"
+    GetCurrentUserApplicationRoleConnection(application_id~) =>
+      "GET:/users/@me/applications/\{application_id}/role-connection"
+    UpdateCurrentUserApplicationRoleConnection(application_id~) =>
+      "PUT:/users/@me/applications/\{application_id}/role-connection"
+    DeleteCurrentUserApplicationRoleConnection(application_id~) =>
+      "DELETE:/users/@me/applications/\{application_id}/role-connection"
     LeaveGuild(guild_id~) => "DELETE:/users/@me/guilds/\{guild_id}"
     ModifyCurrentUser => "PATCH:/users/@me"
     GetUser(..) => "GET:/users/{}"
@@ -894,6 +953,12 @@ pub fn Route::bucket(self : Route) -> String {
       "DELETE:/applications/\{application_id}/guilds/\{guild_id}/commands/{}"
     BulkOverwriteGuildCommands(application_id~, guild_id~) =>
       "PUT:/applications/\{application_id}/guilds/\{guild_id}/commands"
+    GetGuildApplicationCommandPermissions(application_id~, guild_id~) =>
+      "GET:/applications/\{application_id}/guilds/\{guild_id}/commands/permissions"
+    GetApplicationCommandPermissions(application_id~, guild_id~, ..) =>
+      "GET:/applications/\{application_id}/guilds/\{guild_id}/commands/{}/permissions"
+    EditApplicationCommandPermissions(application_id~, guild_id~, ..) =>
+      "PUT:/applications/\{application_id}/guilds/\{guild_id}/commands/{}/permissions"
   }
 }
 

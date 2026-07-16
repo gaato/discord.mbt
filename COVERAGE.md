@@ -59,17 +59,17 @@ The mechanical diff needs manual review afterwards:
 
 ## Command permissions
 
-- [ ] GET /applications/{id}/guilds/{guild}/commands/permissions — Get Guild Application Command Permissions
-- [ ] GET /applications/{id}/guilds/{guild}/commands/{cmd}/permissions — Get Application Command Permissions
-- [ ] PUT /applications/{id}/guilds/{guild}/commands/{cmd}/permissions — Edit Application Command Permissions
+- [x] GET /applications/{id}/guilds/{guild}/commands/permissions — Get Guild Application Command Permissions (`Client::get_guild_application_command_permissions`)
+- [x] GET /applications/{id}/guilds/{guild}/commands/{cmd}/permissions — Get Application Command Permissions (`Client::get_application_command_permissions`)
+- [x] PUT /applications/{id}/guilds/{guild}/commands/{cmd}/permissions — Edit Application Command Permissions (`Client::edit_application_command_permissions`)
 
 ## Role connections
 
-- [ ] GET /applications/{id}/role-connections/metadata — Get Role Connection Metadata Records
-- [ ] PUT /applications/{id}/role-connections/metadata — Update Role Connection Metadata Records
-- [ ] GET /users/@me/applications/{id}/role-connection — Get Current User Application Role Connection
-- [ ] PUT /users/@me/applications/{id}/role-connection — Update Current User Application Role Connection
-- [ ] DELETE /users/@me/applications/{id}/role-connection — Delete Current User Application Role Connection
+- [x] GET /applications/{id}/role-connections/metadata — Get Role Connection Metadata Records (`Client::get_application_role_connection_metadata_records`)
+- [x] PUT /applications/{id}/role-connections/metadata — Update Role Connection Metadata Records (`Client::update_application_role_connection_metadata_records`)
+- [x] GET /users/@me/applications/{id}/role-connection — Get Current User Application Role Connection (`Client::get_current_user_application_role_connection`)
+- [x] PUT /users/@me/applications/{id}/role-connection — Update Current User Application Role Connection (`Client::update_current_user_application_role_connection`)
+- [x] DELETE /users/@me/applications/{id}/role-connection — Delete Current User Application Role Connection (`Client::delete_current_user_application_role_connection`)
 
 ## Monetization
 

@@ -39,6 +39,144 @@ test "edit current application REST route metadata" {
 }
 
 ///|
+test "get application role connection metadata records REST route metadata" {
+  let application_id : @model.ApplicationId = Id(10UL)
+  let route = @http.Route::GetApplicationRoleConnectionMetadataRecords(
+    application_id~,
+  )
+  inspect(
+    route_signature(route),
+    content=(
+      #|Get /applications/10/role-connections/metadata | GET:/applications/10/role-connections/metadata | reason=false
+    ),
+  )
+  assert_true(route.needs_auth())
+  assert_false(route.is_interaction())
+}
+
+///|
+test "update application role connection metadata records REST route metadata" {
+  let application_id : @model.ApplicationId = Id(10UL)
+  let route = @http.Route::UpdateApplicationRoleConnectionMetadataRecords(
+    application_id~,
+  )
+  inspect(
+    route_signature(route),
+    content=(
+      #|Put /applications/10/role-connections/metadata | PUT:/applications/10/role-connections/metadata | reason=false
+    ),
+  )
+  assert_true(route.needs_auth())
+  assert_false(route.is_interaction())
+}
+
+///|
+test "get current user application role connection REST route metadata" {
+  let application_id : @model.ApplicationId = Id(10UL)
+  let route = @http.Route::GetCurrentUserApplicationRoleConnection(
+    application_id~,
+  )
+  inspect(
+    route_signature(route),
+    content=(
+      #|Get /users/@me/applications/10/role-connection | GET:/users/@me/applications/10/role-connection | reason=false
+    ),
+  )
+  assert_true(route.needs_auth())
+  assert_false(route.is_interaction())
+}
+
+///|
+test "update current user application role connection REST route metadata" {
+  let application_id : @model.ApplicationId = Id(10UL)
+  let route = @http.Route::UpdateCurrentUserApplicationRoleConnection(
+    application_id~,
+  )
+  inspect(
+    route_signature(route),
+    content=(
+      #|Put /users/@me/applications/10/role-connection | PUT:/users/@me/applications/10/role-connection | reason=false
+    ),
+  )
+  assert_true(route.needs_auth())
+  assert_false(route.is_interaction())
+}
+
+///|
+test "delete current user application role connection REST route metadata" {
+  let application_id : @model.ApplicationId = Id(10UL)
+  let route = @http.Route::DeleteCurrentUserApplicationRoleConnection(
+    application_id~,
+  )
+  inspect(
+    route_signature(route),
+    content=(
+      #|Delete /users/@me/applications/10/role-connection | DELETE:/users/@me/applications/10/role-connection | reason=false
+    ),
+  )
+  assert_true(route.needs_auth())
+  assert_false(route.is_interaction())
+}
+
+///|
+test "get guild application command permissions REST route metadata" {
+  let application_id : @model.ApplicationId = Id(10UL)
+  let guild_id : @model.GuildId = Id(20UL)
+  let route = @http.Route::GetGuildApplicationCommandPermissions(
+    application_id~,
+    guild_id~,
+  )
+  inspect(
+    route_signature(route),
+    content=(
+      #|Get /applications/10/guilds/20/commands/permissions | GET:/applications/10/guilds/20/commands/permissions | reason=false
+    ),
+  )
+  assert_true(route.needs_auth())
+  assert_false(route.is_interaction())
+}
+
+///|
+test "get application command permissions REST route metadata" {
+  let application_id : @model.ApplicationId = Id(10UL)
+  let guild_id : @model.GuildId = Id(20UL)
+  let command_id : @model.CommandId = Id(30UL)
+  let route = @http.Route::GetApplicationCommandPermissions(
+    application_id~,
+    guild_id~,
+    command_id~,
+  )
+  inspect(
+    route_signature(route),
+    content=(
+      #|Get /applications/10/guilds/20/commands/30/permissions | GET:/applications/10/guilds/20/commands/{}/permissions | reason=false
+    ),
+  )
+  assert_true(route.needs_auth())
+  assert_false(route.is_interaction())
+}
+
+///|
+test "edit application command permissions REST route metadata" {
+  let application_id : @model.ApplicationId = Id(10UL)
+  let guild_id : @model.GuildId = Id(20UL)
+  let command_id : @model.CommandId = Id(30UL)
+  let route = @http.Route::EditApplicationCommandPermissions(
+    application_id~,
+    guild_id~,
+    command_id~,
+  )
+  inspect(
+    route_signature(route),
+    content=(
+      #|Put /applications/10/guilds/20/commands/30/permissions | PUT:/applications/10/guilds/20/commands/{}/permissions | reason=false
+    ),
+  )
+  assert_true(route.needs_auth())
+  assert_false(route.is_interaction())
+}
+
+///|
 test "list voice regions REST route metadata" {
   let route = @http.Route::ListVoiceRegions
   inspect(

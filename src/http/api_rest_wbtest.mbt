@@ -120,6 +120,58 @@ test "current user voice state body distinguishes timestamp clear and omission" 
 }
 
 ///|
+test "edit application command permissions body wraps permission records" {
+  let permission : @model.ApplicationCommandPermission = {
+    id: Id(10UL),
+    typ: Role,
+    permission: true,
+  }
+  json_inspect(edit_application_command_permissions_body([permission]), content={
+    "permissions": [{ "id": "10", "type": 1, "permission": true }],
+  })
+}
+
+///|
+test "update application role connection metadata body is a raw array" {
+  let fixture =
+    #|[{"type":3,"key":"level","name":"Level","description":"Account level"}]
+  let records : Array[@model.ApplicationRoleConnectionMetadata] = @json.from_json(
+    @json.parse(fixture),
+  )
+  json_inspect(
+    update_application_role_connection_metadata_records_body(records),
+    content=[
+      {
+        "type": 3,
+        "key": "level",
+        "name": "Level",
+        "description": "Account level",
+      },
+    ],
+  )
+}
+
+///|
+test "update current user application role connection body handles values and omission" {
+  json_inspect(
+    update_current_user_application_role_connection_body(
+      Some("Steam"),
+      Some("moonbit-user"),
+      Some({ "level": "42", "verified": "true" }),
+    ),
+    content={
+      "platform_name": "Steam",
+      "platform_username": "moonbit-user",
+      "metadata": { "level": "42", "verified": "true" },
+    },
+  )
+  json_inspect(
+    update_current_user_application_role_connection_body(None, None, None),
+    content=Json::empty_object(),
+  )
+}
+
+///|
 test "auto moderation create and patch bodies preserve arrays" {
   let metadata : @model.TriggerMetadata = {
     keyword_filter: Some(["moonbit"]),

@@ -12,6 +12,19 @@ fn expect_edit_application_validation(
 }
 
 ///|
+fn expect_json_validation(
+  run : () -> Json raise DiscordHttpError,
+  expected_message : String,
+) -> Unit raise {
+  try run() catch {
+    Validation(message~) => assert_eq(message, expected_message)
+    error => fail("unexpected error: \{to_repr(error)}")
+  } noraise {
+    _ => fail("expected to fail")
+  }
+}
+
+///|
 test "edit current application rejects value and clear together" {
   expect_edit_application_validation(
     () => {
@@ -151,4 +164,60 @@ test "execute webhook validates content length" {
   } noraise {
     _ => fail("expected to fail")
   }
+}
+
+///|
+test "application command permissions validate the record limit" {
+  let permission : @model.ApplicationCommandPermission = {
+    id: Id(1UL),
+    typ: Role,
+    permission: true,
+  }
+  expect_json_validation(
+    () => {
+      edit_application_command_permissions_body(Array::make(101, permission))
+    },
+    "application command permissions exceed 100 entries",
+  )
+}
+
+///|
+test "application role connection metadata validates the record limit" {
+  let fixture =
+    #|{"type":3,"key":"level","name":"Level","description":"Account level"}
+  let record : @model.ApplicationRoleConnectionMetadata = @json.from_json(
+    @json.parse(fixture),
+  )
+  expect_json_validation(
+    () => {
+      update_application_role_connection_metadata_records_body(
+        Array::make(6, record),
+      )
+    },
+    "role connection metadata records exceed 5 entries",
+  )
+}
+
+///|
+test "current user application role connection validates platform lengths" {
+  expect_json_validation(
+    () => {
+      update_current_user_application_role_connection_body(
+        Some(String::make(51, 'x')),
+        None,
+        None,
+      )
+    },
+    "platform_name exceeds 50 characters",
+  )
+  expect_json_validation(
+    () => {
+      update_current_user_application_role_connection_body(
+        None,
+        Some(String::make(101, 'x')),
+        None,
+      )
+    },
+    "platform_username exceeds 100 characters",
+  )
 }

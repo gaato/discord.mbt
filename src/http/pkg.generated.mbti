@@ -77,6 +77,7 @@ pub async fn Client::delete_all_reactions(Self, @model.Id[@model.ChannelMarker],
 pub async fn Client::delete_auto_moderation_rule(Self, @model.Id[@model.GuildMarker], @model.Id[@model.AutoModerationRuleMarker], audit_reason? : String) -> Unit raise DiscordHttpError
 pub async fn Client::delete_channel(Self, @model.Id[@model.ChannelMarker], audit_reason? : String) -> @model.Channel raise DiscordHttpError
 pub async fn Client::delete_channel_permission(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.GenericMarker], audit_reason? : String) -> Unit raise DiscordHttpError
+pub async fn Client::delete_current_user_application_role_connection(Self, @model.Id[@model.ApplicationMarker], bearer_token~ : String) -> Unit raise DiscordHttpError
 pub async fn Client::delete_followup(Self, @model.Id[@model.ApplicationMarker], String, @model.Id[@model.MessageMarker]) -> Unit raise DiscordHttpError
 pub async fn Client::delete_global_command(Self, @model.Id[@model.ApplicationMarker], @model.Id[@model.CommandMarker]) -> Unit raise DiscordHttpError
 pub async fn Client::delete_guild_command(Self, @model.Id[@model.ApplicationMarker], @model.Id[@model.GuildMarker], @model.Id[@model.CommandMarker]) -> Unit raise DiscordHttpError
@@ -93,6 +94,7 @@ pub async fn Client::delete_stage_instance(Self, @model.Id[@model.ChannelMarker]
 pub async fn Client::delete_user_reaction(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], String, @model.Id[@model.UserMarker]) -> Unit raise DiscordHttpError
 pub async fn Client::delete_webhook(Self, @model.Id[@model.WebhookMarker], audit_reason? : String) -> Unit raise DiscordHttpError
 pub async fn Client::delete_webhook_message(Self, @model.Id[@model.WebhookMarker], String, @model.Id[@model.MessageMarker]) -> Unit raise DiscordHttpError
+pub async fn Client::edit_application_command_permissions(Self, @model.Id[@model.ApplicationMarker], @model.Id[@model.GuildMarker], @model.Id[@model.CommandMarker], Array[@model.ApplicationCommandPermission], bearer_token~ : String) -> @model.GuildApplicationCommandPermissions raise DiscordHttpError
 pub async fn Client::edit_channel_permissions(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.GenericMarker], @model.Permissions, @model.Permissions, Int, audit_reason? : String) -> Unit raise DiscordHttpError
 pub async fn Client::edit_current_application(Self, custom_install_url? : String, clear_custom_install_url? : Bool, description? : String, clear_description? : Bool, role_connections_verification_url? : String, clear_role_connections_verification_url? : Bool, install_params? : @model.InstallParams, clear_install_params? : Bool, integration_types_config? : Map[String, @model.ApplicationIntegrationTypeConfiguration], flags? : @model.ApplicationFlags, icon? : String, clear_icon? : Bool, cover_image? : String, clear_cover_image? : Bool, interactions_endpoint_url? : String, clear_interactions_endpoint_url? : Bool, tags? : Array[String], clear_tags? : Bool, event_webhooks_url? : String, clear_event_webhooks_url? : Bool, event_webhooks_status? : @model.ApplicationEventWebhookStatus, event_webhooks_types? : Array[String]) -> @model.Application raise DiscordHttpError
 pub async fn Client::edit_followup(Self, @model.Id[@model.ApplicationMarker], String, @model.Id[@model.MessageMarker], content? : String, clear_content? : Bool, embeds? : Array[@model.Embed], components? : Array[@model.Component], allowed_mentions? : @model.AllowedMentions, files? : Array[FileUpload]) -> @model.Message raise DiscordHttpError
@@ -103,6 +105,8 @@ pub async fn Client::edit_original_response(Self, @model.Id[@model.ApplicationMa
 pub async fn Client::edit_webhook_message(Self, @model.Id[@model.WebhookMarker], String, @model.Id[@model.MessageMarker], content? : String, clear_content? : Bool, embeds? : Array[@model.Embed], components? : Array[@model.Component], allowed_mentions? : @model.AllowedMentions, files? : Array[FileUpload]) -> @model.Message raise DiscordHttpError
 pub async fn Client::execute_webhook(Self, @model.Id[@model.WebhookMarker], String, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[FileUpload], username? : String, avatar_url? : String, tts? : Bool, allowed_mentions? : @model.AllowedMentions) -> @model.Message raise DiscordHttpError
 pub async fn Client::expire_poll(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker]) -> @model.Message raise DiscordHttpError
+pub async fn Client::get_application_command_permissions(Self, @model.Id[@model.ApplicationMarker], @model.Id[@model.GuildMarker], @model.Id[@model.CommandMarker]) -> @model.GuildApplicationCommandPermissions raise DiscordHttpError
+pub async fn Client::get_application_role_connection_metadata_records(Self, @model.Id[@model.ApplicationMarker]) -> Array[@model.ApplicationRoleConnectionMetadata] raise DiscordHttpError
 pub async fn Client::get_auto_moderation_rule(Self, @model.Id[@model.GuildMarker], @model.Id[@model.AutoModerationRuleMarker]) -> @model.AutoModerationRule raise DiscordHttpError
 pub async fn Client::get_channel(Self, @model.Id[@model.ChannelMarker]) -> @model.Channel raise DiscordHttpError
 pub async fn Client::get_channel_invites(Self, @model.Id[@model.ChannelMarker]) -> Array[@model.Invite] raise DiscordHttpError
@@ -112,6 +116,7 @@ pub async fn Client::get_current_application(Self) -> @model.Application raise D
 pub async fn Client::get_current_authorization_information(Self, bearer_token~ : String) -> @model.AuthorizationInformation raise DiscordHttpError
 pub async fn Client::get_current_bot_application_information(Self) -> @model.Application raise DiscordHttpError
 pub async fn Client::get_current_user(Self) -> @model.User raise DiscordHttpError
+pub async fn Client::get_current_user_application_role_connection(Self, @model.Id[@model.ApplicationMarker], bearer_token~ : String) -> @model.ApplicationRoleConnection raise DiscordHttpError
 pub async fn Client::get_current_user_connections(Self, bearer_token~ : String) -> Array[@model.Connection] raise DiscordHttpError
 pub async fn Client::get_current_user_guild_member(Self, @model.Id[@model.GuildMarker], bearer_token~ : String) -> @model.GuildMember raise DiscordHttpError
 pub async fn Client::get_current_user_guilds(Self, limit? : Int, before? : @model.Id[@model.GuildMarker], after? : @model.Id[@model.GuildMarker], with_counts? : Bool) -> Array[@model.CurrentUserGuild] raise DiscordHttpError
@@ -122,6 +127,7 @@ pub async fn Client::get_gateway_bot(Self) -> @model.GatewayBotInfo raise Discor
 pub async fn Client::get_global_command(Self, @model.Id[@model.ApplicationMarker], @model.Id[@model.CommandMarker]) -> @model.ApplicationCommand raise DiscordHttpError
 pub async fn Client::get_global_commands(Self, @model.Id[@model.ApplicationMarker]) -> Array[@model.ApplicationCommand] raise DiscordHttpError
 pub async fn Client::get_guild(Self, @model.Id[@model.GuildMarker], with_counts? : Bool) -> @model.Guild raise DiscordHttpError
+pub async fn Client::get_guild_application_command_permissions(Self, @model.Id[@model.ApplicationMarker], @model.Id[@model.GuildMarker]) -> Array[@model.GuildApplicationCommandPermissions] raise DiscordHttpError
 pub async fn Client::get_guild_audit_log(Self, @model.Id[@model.GuildMarker], user_id? : @model.Id[@model.UserMarker], action_type? : @model.AuditLogEvent, before? : @model.Id[@model.AuditLogEntryMarker], after? : @model.Id[@model.AuditLogEntryMarker], limit? : Int) -> @model.AuditLog raise DiscordHttpError
 pub async fn Client::get_guild_bans(Self, @model.Id[@model.GuildMarker], limit? : Int, before? : @model.Id[@model.UserMarker], after? : @model.Id[@model.UserMarker]) -> Array[@model.GuildBan] raise DiscordHttpError
 pub async fn Client::get_guild_channels(Self, @model.Id[@model.GuildMarker]) -> Array[@model.Channel] raise DiscordHttpError
@@ -197,6 +203,8 @@ pub async fn Client::send_soundboard_sound(Self, @model.Id[@model.ChannelMarker]
 pub async fn Client::start_thread_from_message(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], String, auto_archive_duration? : @model.ThreadAutoArchiveDuration, rate_limit_per_user? : Int, audit_reason? : String) -> @model.Channel raise DiscordHttpError
 pub async fn Client::trigger_typing(Self, @model.Id[@model.ChannelMarker]) -> Unit raise DiscordHttpError
 pub async fn Client::unpin_message(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], audit_reason? : String) -> Unit raise DiscordHttpError
+pub async fn Client::update_application_role_connection_metadata_records(Self, @model.Id[@model.ApplicationMarker], Array[@model.ApplicationRoleConnectionMetadata]) -> Array[@model.ApplicationRoleConnectionMetadata] raise DiscordHttpError
+pub async fn Client::update_current_user_application_role_connection(Self, @model.Id[@model.ApplicationMarker], platform_name? : String, platform_username? : String, metadata? : Json, bearer_token~ : String) -> @model.ApplicationRoleConnection raise DiscordHttpError
 pub fn Client::user_ref(Self, @model.Id[@model.UserMarker]) -> UserRef
 pub impl Show for Client
 
@@ -258,10 +266,15 @@ pub(all) enum Route {
   GetGatewayBot
   GetCurrentApplication
   EditCurrentApplication
+  GetApplicationRoleConnectionMetadataRecords(application_id~ : @model.Id[@model.ApplicationMarker])
+  UpdateApplicationRoleConnectionMetadataRecords(application_id~ : @model.Id[@model.ApplicationMarker])
   GetCurrentUser
   GetCurrentUserGuilds(query~ : String)
   GetCurrentUserConnections
   GetCurrentUserGuildMember(guild_id~ : @model.Id[@model.GuildMarker])
+  GetCurrentUserApplicationRoleConnection(application_id~ : @model.Id[@model.ApplicationMarker])
+  UpdateCurrentUserApplicationRoleConnection(application_id~ : @model.Id[@model.ApplicationMarker])
+  DeleteCurrentUserApplicationRoleConnection(application_id~ : @model.Id[@model.ApplicationMarker])
   LeaveGuild(guild_id~ : @model.Id[@model.GuildMarker])
   GetUser(user_id~ : @model.Id[@model.UserMarker])
   ModifyCurrentUser
@@ -390,6 +403,9 @@ pub(all) enum Route {
   EditGuildCommand(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker], command_id~ : @model.Id[@model.CommandMarker])
   DeleteGuildCommand(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker], command_id~ : @model.Id[@model.CommandMarker])
   BulkOverwriteGuildCommands(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker])
+  GetGuildApplicationCommandPermissions(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker])
+  GetApplicationCommandPermissions(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker], command_id~ : @model.Id[@model.CommandMarker])
+  EditApplicationCommandPermissions(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker], command_id~ : @model.Id[@model.CommandMarker])
 }
 pub fn Route::bucket(Self) -> String
 pub fn Route::custom(request_method~ : @moonbitlang/async/http.RequestMethod, path~ : String, bucket? : String, is_interaction? : Bool, supports_reason? : Bool) -> Self raise CustomRouteError
