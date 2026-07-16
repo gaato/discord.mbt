@@ -107,6 +107,7 @@ pub using @app {
   type ErrorPolicy,
   type FailureCtx,
   type FailureOrigin,
+  type FailureRaw,
   type ResponsePhase,
   slash,
   user_command,

@@ -222,6 +222,8 @@ pub using @app {type FailureCtx}
 
 pub using @app {type FailureOrigin}
 
+pub using @app {type FailureRaw}
+
 pub using @http {type FileUpload}
 
 pub using @framework {type Framework}

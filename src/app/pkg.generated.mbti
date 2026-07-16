@@ -202,9 +202,12 @@ pub async fn DeferredCtx::wait_for_component(Self, custom_id~ : String, timeout_
 pub struct FailureCtx {
   // private fields
 }
+pub fn FailureCtx::interaction(Self) -> @model.Interaction?
 pub fn FailureCtx::origin(Self) -> FailureOrigin
 pub fn FailureCtx::phase(Self) -> ResponsePhase?
-pub async fn FailureCtx::respond_error(Self, String, ephemeral? : Bool) -> Unit
+pub fn FailureCtx::raw(Self) -> FailureRaw?
+pub async fn FailureCtx::respond_error(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, ephemeral? : Bool) -> Unit
+pub fn FailureCtx::user(Self) -> @model.User?
 
 pub(all) enum FailureOrigin {
   Command(name~ : String)
@@ -214,6 +217,12 @@ pub(all) enum FailureOrigin {
   Event(kind~ : @model.EventKind)
   Service(name~ : String)
 } derive(@debug.Debug)
+
+pub(all) enum FailureRaw {
+  RawCommand(@framework.CommandCtx)
+  RawComponent(@framework.ComponentCtx)
+  RawModal(@framework.ModalCtx)
+}
 
 pub struct ImmediateCtx {
   // private fields
