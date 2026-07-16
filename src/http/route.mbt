@@ -96,6 +96,15 @@ pub(all) enum Route {
     channel_id~ : @model.ChannelId,
     message_id~ : @model.MessageId
   )
+  DeleteAllReactionsForEmoji(
+    channel_id~ : @model.ChannelId,
+    message_id~ : @model.MessageId,
+    emoji~ : String
+  )
+  CrosspostMessage(
+    channel_id~ : @model.ChannelId,
+    message_id~ : @model.MessageId
+  )
   GetReactions(
     channel_id~ : @model.ChannelId,
     message_id~ : @model.MessageId,
@@ -126,6 +135,13 @@ pub(all) enum Route {
   )
   GetChannelInvites(channel_id~ : @model.ChannelId)
   CreateChannelInvite(channel_id~ : @model.ChannelId)
+  FollowAnnouncementChannel(channel_id~ : @model.ChannelId)
+  SetVoiceChannelStatus(channel_id~ : @model.ChannelId)
+  GroupDmAddRecipient(channel_id~ : @model.ChannelId, user_id~ : @model.UserId)
+  GroupDmRemoveRecipient(
+    channel_id~ : @model.ChannelId,
+    user_id~ : @model.UserId
+  )
   CreateWebhook(channel_id~ : @model.ChannelId)
   GetChannelWebhooks(channel_id~ : @model.ChannelId)
   StartThreadFromMessage(
@@ -150,6 +166,7 @@ pub(all) enum Route {
     query~ : String
   )
   ListActiveGuildThreads(guild_id~ : @model.GuildId)
+  SearchGuildMessages(guild_id~ : @model.GuildId, query~ : String)
   GetGuild(guild_id~ : @model.GuildId)
   GetGuildWithCounts(guild_id~ : @model.GuildId, query~ : String)
   ModifyGuild(guild_id~ : @model.GuildId)
@@ -438,6 +455,7 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | GetChannel(..)
     | GetChannelMessages(..)
     | GetChannelMessage(..)
+    | SearchGuildMessages(..)
     | GetReactions(..)
     | GetPollAnswerVoters(..)
     | GetPinnedMessages(..)
@@ -494,6 +512,8 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | ExpirePoll(..)
     | SendSoundboardSound(..)
     | BulkDeleteMessages(..)
+    | CrosspostMessage(..)
+    | FollowAnnouncementChannel(..)
     | TriggerTypingIndicator(..)
     | StartThreadFromMessage(..)
     | StartThreadWithoutMessage(..)
@@ -542,6 +562,8 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | DeleteOwnReaction(..)
     | DeleteUserReaction(..)
     | DeleteAllReactions(..)
+    | DeleteAllReactionsForEmoji(..)
+    | GroupDmRemoveRecipient(..)
     | DeleteChannelPermission(..)
     | UnpinMessage(..)
     | LeaveThread(..)
@@ -571,6 +593,8 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | PinMessage(..)
     | JoinThread(..)
     | AddThreadMember(..)
+    | SetVoiceChannelStatus(..)
+    | GroupDmAddRecipient(..)
     | AddGuildMemberRole(..)
     | CreateGuildBan(..)
     | BulkOverwriteGlobalCommands(..)
@@ -633,6 +657,10 @@ pub fn Route::path(self : Route) -> String {
       "/channels/\{channel_id}/messages/\{message_id}/reactions/\{emoji}/\{user_id}"
     DeleteAllReactions(channel_id~, message_id~) =>
       "/channels/\{channel_id}/messages/\{message_id}/reactions"
+    DeleteAllReactionsForEmoji(channel_id~, message_id~, emoji~) =>
+      "/channels/\{channel_id}/messages/\{message_id}/reactions/\{emoji}"
+    CrosspostMessage(channel_id~, message_id~) =>
+      "/channels/\{channel_id}/messages/\{message_id}/crosspost"
     GetReactions(channel_id~, message_id~, emoji~, query~) =>
       "/channels/\{channel_id}/messages/\{message_id}/reactions/\{emoji}\{query}"
     GetPollAnswerVoters(channel_id~, message_id~, answer_id~, query~) =>
@@ -651,6 +679,12 @@ pub fn Route::path(self : Route) -> String {
       "/channels/\{channel_id}/permissions/\{overwrite_id}"
     GetChannelInvites(channel_id~) | CreateChannelInvite(channel_id~) =>
       "/channels/\{channel_id}/invites"
+    FollowAnnouncementChannel(channel_id~) =>
+      "/channels/\{channel_id}/followers"
+    SetVoiceChannelStatus(channel_id~) => "/channels/\{channel_id}/voice-status"
+    GroupDmAddRecipient(channel_id~, user_id~)
+    | GroupDmRemoveRecipient(channel_id~, user_id~) =>
+      "/channels/\{channel_id}/recipients/\{user_id}"
     CreateWebhook(channel_id~) | GetChannelWebhooks(channel_id~) =>
       "/channels/\{channel_id}/webhooks"
     StartThreadFromMessage(channel_id~, message_id~) =>
@@ -672,6 +706,8 @@ pub fn Route::path(self : Route) -> String {
     ListJoinedPrivateArchivedThreads(channel_id~, query~) =>
       "/channels/\{channel_id}/users/@me/threads/archived/private\{query}"
     ListActiveGuildThreads(guild_id~) => "/guilds/\{guild_id}/threads/active"
+    SearchGuildMessages(guild_id~, query~) =>
+      "/guilds/\{guild_id}/messages/search\{query}"
     GetGuild(guild_id~) => "/guilds/\{guild_id}"
     GetGuildWithCounts(guild_id~, query~) => "/guilds/\{guild_id}\{query}"
     ModifyGuild(guild_id~) => "/guilds/\{guild_id}"
@@ -861,6 +897,10 @@ pub fn Route::bucket(self : Route) -> String {
       "DELETE:/channels/\{channel_id}/messages/{}/reactions/{}"
     DeleteAllReactions(channel_id~, ..) =>
       "DELETE:/channels/\{channel_id}/messages/{}/reactions"
+    DeleteAllReactionsForEmoji(channel_id~, ..) =>
+      "DELETE:/channels/\{channel_id}/messages/{}/reactions/{}"
+    CrosspostMessage(channel_id~, ..) =>
+      "POST:/channels/\{channel_id}/messages/{}/crosspost"
     GetReactions(channel_id~, ..) =>
       "GET:/channels/\{channel_id}/messages/{}/reactions/{}"
     GetPollAnswerVoters(channel_id~, ..) =>
@@ -879,6 +919,14 @@ pub fn Route::bucket(self : Route) -> String {
       "DELETE:/channels/\{channel_id}/permissions/{}"
     GetChannelInvites(channel_id~) => "GET:/channels/\{channel_id}/invites"
     CreateChannelInvite(channel_id~) => "POST:/channels/\{channel_id}/invites"
+    FollowAnnouncementChannel(channel_id~) =>
+      "POST:/channels/\{channel_id}/followers"
+    SetVoiceChannelStatus(channel_id~) =>
+      "PUT:/channels/\{channel_id}/voice-status"
+    GroupDmAddRecipient(channel_id~, ..) =>
+      "PUT:/channels/\{channel_id}/recipients/{}"
+    GroupDmRemoveRecipient(channel_id~, ..) =>
+      "DELETE:/channels/\{channel_id}/recipients/{}"
     CreateWebhook(channel_id~) => "POST:/channels/\{channel_id}/webhooks"
     GetChannelWebhooks(channel_id~) => "GET:/channels/\{channel_id}/webhooks"
     StartThreadFromMessage(channel_id~, ..) =>
@@ -904,6 +952,8 @@ pub fn Route::bucket(self : Route) -> String {
       "GET:/channels/\{channel_id}/users/@me/threads/archived/private"
     ListActiveGuildThreads(guild_id~) =>
       "GET:/guilds/\{guild_id}/threads/active"
+    SearchGuildMessages(guild_id~, ..) =>
+      "GET:/guilds/\{guild_id}/messages/search"
     GetGuild(guild_id~) | GetGuildWithCounts(guild_id~, ..) =>
       "GET:/guilds/\{guild_id}"
     ModifyGuild(guild_id~) => "PATCH:/guilds/\{guild_id}"
@@ -1087,6 +1137,8 @@ pub fn Route::supports_reason(self : Route) -> Bool {
     | EditChannelPermissions(..)
     | DeleteChannelPermission(..)
     | CreateChannelInvite(..)
+    | FollowAnnouncementChannel(..)
+    | SetVoiceChannelStatus(..)
     | CreateWebhook(..)
     | ModifyWebhook(..)
     | DeleteWebhook(..)

@@ -1281,6 +1281,11 @@ pub(all) struct FileUpload {
   values : Array[String]?
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
+pub(all) struct FollowedChannel {
+  channel_id : Id[ChannelMarker]
+  webhook_id : Id[WebhookMarker]
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) enum ForumLayoutType {
   NotSet
   ListView
@@ -1563,6 +1568,18 @@ pub(all) struct GuildMembersChunkEvent {
   not_found : Array[Json]?
   presences : Array[PresenceUpdateEvent]?
   nonce : String?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct GuildMessageSearchResults {
+  doing_deep_historical_index : Bool?
+  documents_indexed : Int?
+  total_results : Int?
+  messages : Array[Array[Message]]?
+  threads : Array[Channel]?
+  members : Array[ThreadMember]?
+  retry_after : Int?
+  code : Int?
+  message : String?
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct GuildRoleDeleteEvent {

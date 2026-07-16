@@ -25,6 +25,19 @@ fn expect_json_validation(
 }
 
 ///|
+fn expect_search_validation(
+  run : () -> String raise DiscordHttpError,
+  expected_message : String,
+) -> Unit raise {
+  try run() catch {
+    Validation(message~) => assert_eq(message, expected_message)
+    error => fail("unexpected error: \{to_repr(error)}")
+  } noraise {
+    _ => fail("expected to fail")
+  }
+}
+
+///|
 test "edit current application rejects value and clear together" {
   expect_edit_application_validation(
     () => {
@@ -126,6 +139,36 @@ test "bulk delete validates the message count" {
   }
   validate_bulk_delete_messages([Id(1UL), Id(2UL)])
   validate_bulk_delete_messages(Array::make(100, Id(1UL)))
+}
+
+///|
+test "voice channel status validates its length" {
+  expect_json_validation(
+    () => set_voice_channel_status_body(Some(String::make(501, 'x'))),
+    "voice channel status exceeds 500 characters",
+  )
+  ignore(set_voice_channel_status_body(Some(String::make(500, 'x'))))
+}
+
+///|
+test "guild message search validates ranges and array caps" {
+  expect_search_validation(
+    () => search_guild_messages_query(limit=0),
+    "search limit must be between 1 and 25",
+  )
+  expect_search_validation(
+    () => search_guild_messages_query(offset=9976),
+    "search offset must be between 0 and 9975",
+  )
+  expect_search_validation(
+    () => search_guild_messages_query(content=String::make(1025, 'x')),
+    "search content exceeds 1024 characters",
+  )
+  let channel_id : @model.ChannelId = Id(1UL)
+  expect_search_validation(
+    () => search_guild_messages_query(channel_id=Array::make(501, channel_id)),
+    "channel_id exceeds 500 entries",
+  )
 }
 
 ///|

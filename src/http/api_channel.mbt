@@ -163,6 +163,85 @@ pub async fn Client::create_channel_invite(
 }
 
 ///|
+fn follow_announcement_channel_body(
+  webhook_channel_id : @model.ChannelId,
+) -> Json {
+  @model.ObjBuilder().field("webhook_channel_id", webhook_channel_id).build()
+}
+
+///|
+/// Follow an announcement channel, forwarding its messages to another
+/// channel through the returned webhook.
+pub async fn Client::follow_announcement_channel(
+  self : Client,
+  channel_id : @model.ChannelId,
+  webhook_channel_id : @model.ChannelId,
+  audit_reason? : String,
+) -> @model.FollowedChannel raise DiscordHttpError {
+  let body = follow_announcement_channel_body(webhook_channel_id)
+  decode(
+    self.request(FollowAnnouncementChannel(channel_id~), body~, audit_reason?),
+  )
+}
+
+///|
+fn set_voice_channel_status_body(
+  status : String?,
+) -> Json raise DiscordHttpError {
+  if status is Some(value) && value.length() > 500 {
+    raise Validation(message="voice channel status exceeds 500 characters")
+  }
+  @model.ObjBuilder()
+  .field("status", @model.Nullable::from_option(status))
+  .build()
+}
+
+///|
+/// Set a voice channel's status, or clear it by omitting `status`.
+pub async fn Client::set_voice_channel_status(
+  self : Client,
+  channel_id : @model.ChannelId,
+  status? : String,
+  audit_reason? : String,
+) -> Unit raise DiscordHttpError {
+  let body = set_voice_channel_status_body(status)
+  self.request(SetVoiceChannelStatus(channel_id~), body~, audit_reason?)
+  |> ignore
+}
+
+///|
+fn group_dm_add_recipient_body(access_token : String, nick : String?) -> Json {
+  @model.ObjBuilder()
+  .field("access_token", access_token)
+  .opt("nick", nick)
+  .build()
+}
+
+///|
+/// Add a user to a group DM. `access_token` is the recipient's OAuth2 token
+/// with the `gdm.join` scope and is sent as a JSON body field.
+pub async fn Client::group_dm_add_recipient(
+  self : Client,
+  channel_id : @model.ChannelId,
+  user_id : @model.UserId,
+  access_token : String,
+  nick? : String,
+) -> Unit raise DiscordHttpError {
+  let body = group_dm_add_recipient_body(access_token, nick)
+  self.request(GroupDmAddRecipient(channel_id~, user_id~), body~) |> ignore
+}
+
+///|
+/// Remove a user from a group DM.
+pub async fn Client::group_dm_remove_recipient(
+  self : Client,
+  channel_id : @model.ChannelId,
+  user_id : @model.UserId,
+) -> Unit raise DiscordHttpError {
+  self.request(GroupDmRemoveRecipient(channel_id~, user_id~)) |> ignore
+}
+
+///|
 /// Add a reaction. The emoji must already be URL-encoded; for custom emoji,
 /// callers should pass forms such as name%3A123456789012345678.
 pub async fn Client::create_reaction(
@@ -206,6 +285,19 @@ pub async fn Client::delete_all_reactions(
   message_id : @model.MessageId,
 ) -> Unit raise DiscordHttpError {
   self.request(DeleteAllReactions(channel_id~, message_id~)) |> ignore
+}
+
+///|
+/// Delete every reaction matching an emoji. The emoji must already be
+/// URL-encoded.
+pub async fn Client::delete_all_reactions_for_emoji(
+  self : Client,
+  channel_id : @model.ChannelId,
+  message_id : @model.MessageId,
+  emoji : String,
+) -> Unit raise DiscordHttpError {
+  self.request(DeleteAllReactionsForEmoji(channel_id~, message_id~, emoji~))
+  |> ignore
 }
 
 ///|

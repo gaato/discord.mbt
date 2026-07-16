@@ -178,6 +178,86 @@ test "archived thread query includes values and omits absent parameters" {
 }
 
 ///|
+test "follow announcement channel body uses the destination channel id" {
+  let channel_id : @model.ChannelId = Id(20UL)
+  json_inspect(follow_announcement_channel_body(channel_id), content={
+    "webhook_channel_id": "20",
+  })
+}
+
+///|
+test "voice channel status body sends a value or explicit null" {
+  json_inspect(set_voice_channel_status_body(Some("In a meeting")), content={
+    "status": "In a meeting",
+  })
+  json_inspect(set_voice_channel_status_body(None), content={ "status": null })
+}
+
+///|
+test "guild message search query includes scalar parameters" {
+  let max_id : @model.MessageId = Id(90UL)
+  let min_id : @model.MessageId = Id(10UL)
+  inspect(
+    search_guild_messages_query(
+      limit=25,
+      offset=50,
+      slop=5,
+      mention_everyone=true,
+      pinned=false,
+      include_nsfw=true,
+      sort_by="timestamp",
+      sort_order="desc",
+      max_id~,
+      min_id~,
+    ),
+    content="?limit=25&offset=50&slop=5&mention_everyone=true&pinned=false&include_nsfw=true&sort_by=timestamp&sort_order=desc&max_id=90&min_id=10",
+  )
+}
+
+///|
+test "guild message search query repeats array parameters" {
+  let channel_ids : Array[@model.ChannelId] = [Id(1UL), Id(2UL)]
+  let author_ids : Array[@model.UserId] = [Id(3UL), Id(4UL)]
+  let mentions : Array[@model.UserId] = [Id(5UL)]
+  let role_ids : Array[@model.RoleId] = [Id(6UL)]
+  let replied_users : Array[@model.UserId] = [Id(7UL)]
+  let replied_messages : Array[@model.MessageId] = [Id(8UL)]
+  inspect(
+    search_guild_messages_query(
+      channel_id=channel_ids,
+      author_type=["user", "webhook"],
+      author_id=author_ids,
+      mentions~,
+      mentions_role_id=role_ids,
+      replied_to_user_id=replied_users,
+      replied_to_message_id=replied_messages,
+      has=["link", "file"],
+      embed_type=["image"],
+    ),
+    content="?channel_id=1&channel_id=2&author_type=user&author_type=webhook&author_id=3&author_id=4&mentions=5&mentions_role_id=6&replied_to_user_id=7&replied_to_message_id=8&has=link&has=file&embed_type=image",
+  )
+}
+
+///|
+test "guild message search query percent-encodes free text" {
+  inspect(
+    search_guild_messages_query(
+      content="hello + world/&?=雪",
+      embed_provider=["Moon & Stars"],
+      link_hostname=["example.com/a?b=c"],
+      attachment_filename=["report #1.csv"],
+      attachment_extension=["tar+gz"],
+    ),
+    content="?content=hello%20%2B%20world%2F%26%3F%3D%E9%9B%AA&embed_provider=Moon%20%26%20Stars&link_hostname=example.com%2Fa%3Fb%3Dc&attachment_filename=report%20%231.csv&attachment_extension=tar%2Bgz",
+  )
+}
+
+///|
+test "guild message search query is empty without parameters" {
+  inspect(search_guild_messages_query(), content="")
+}
+
+///|
 test "edit application command permissions body wraps permission records" {
   let permission : @model.ApplicationCommandPermission = {
     id: Id(10UL),

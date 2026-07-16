@@ -299,6 +299,41 @@ test "thread REST route metadata" {
 }
 
 ///|
+test "channels and messages batch REST route metadata" {
+  let channel_id : @model.ChannelId = Id(10UL)
+  let message_id : @model.MessageId = Id(20UL)
+  let user_id : @model.UserId = Id(30UL)
+  let guild_id : @model.GuildId = Id(40UL)
+  let routes : Array[@http.Route] = [
+    DeleteAllReactionsForEmoji(channel_id~, message_id~, emoji="party%3A50"),
+    CrosspostMessage(channel_id~, message_id~),
+    FollowAnnouncementChannel(channel_id~),
+    SetVoiceChannelStatus(channel_id~),
+    GroupDmAddRecipient(channel_id~, user_id~),
+    GroupDmRemoveRecipient(channel_id~, user_id~),
+    SearchGuildMessages(guild_id~, query="?limit=25&channel_id=10"),
+  ]
+  debug_inspect(
+    routes.map(route_signature),
+    content=(
+      #|[
+      #|  "Delete /channels/10/messages/20/reactions/party%3A50 | DELETE:/channels/10/messages/{}/reactions/{} | reason=false",
+      #|  "Post /channels/10/messages/20/crosspost | POST:/channels/10/messages/{}/crosspost | reason=false",
+      #|  "Post /channels/10/followers | POST:/channels/10/followers | reason=true",
+      #|  "Put /channels/10/voice-status | PUT:/channels/10/voice-status | reason=true",
+      #|  "Put /channels/10/recipients/30 | PUT:/channels/10/recipients/{} | reason=false",
+      #|  "Delete /channels/10/recipients/30 | DELETE:/channels/10/recipients/{} | reason=false",
+      #|  "Get /guilds/40/messages/search?limit=25&channel_id=10 | GET:/guilds/40/messages/search | reason=false",
+      #|]
+    ),
+  )
+  for route in routes {
+    assert_true(route.needs_auth())
+    assert_false(route.is_interaction())
+  }
+}
+
+///|
 test "get current user connections REST route metadata" {
   let route = @http.Route::GetCurrentUserConnections
   inspect(

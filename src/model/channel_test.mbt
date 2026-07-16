@@ -504,3 +504,21 @@ test "channel supporting wire values preserve unknown values" {
   let decoded : @model.ChannelFlags = @json.from_json(@json.parse(encoded))
   assert_true(decoded.bits() == unknown_bits)
 }
+
+///|
+test "followed channel JSON round trip" {
+  let fixture =
+    #|{"channel_id":"123456789012345678","webhook_id":"987654321098765432"}
+  let decoded : @model.FollowedChannel = @json.from_json(@json.parse(fixture))
+  let encoded = decoded.to_json().stringify()
+  inspect(
+    encoded,
+    content=(
+      #|{"channel_id":"123456789012345678","webhook_id":"987654321098765432"}
+    ),
+  )
+  let round_trip : @model.FollowedChannel = @json.from_json(
+    @json.parse(encoded),
+  )
+  assert_eq(round_trip.to_json().stringify(), encoded)
+}

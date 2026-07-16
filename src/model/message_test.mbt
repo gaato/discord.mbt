@@ -567,3 +567,43 @@ test "message wire enums and flags preserve unknown values" {
   let decoded : @model.MessageFlags = @json.from_json(@json.parse(encoded))
   assert_true(decoded.bits() == unknown_bits)
 }
+
+///|
+test "guild message search success JSON round trip" {
+  let fixture =
+    #|{"doing_deep_historical_index":false,"documents_indexed":42,"total_results":0,"messages":[],"threads":[],"members":[]}
+  let decoded : @model.GuildMessageSearchResults = @json.from_json(
+    @json.parse(fixture),
+  )
+  let encoded = decoded.to_json().stringify()
+  inspect(
+    encoded,
+    content=(
+      #|{"doing_deep_historical_index":false,"documents_indexed":42,"total_results":0,"messages":[],"threads":[],"members":[]}
+    ),
+  )
+  let round_trip : @model.GuildMessageSearchResults = @json.from_json(
+    @json.parse(encoded),
+  )
+  assert_eq(round_trip.to_json().stringify(), encoded)
+}
+
+///|
+test "guild message search HTTP 202 JSON round trip" {
+  let fixture =
+    #|{"documents_indexed":0,"retry_after":1,"code":110000,"message":"Index not yet available. Try again later"}
+  let decoded : @model.GuildMessageSearchResults = @json.from_json(
+    @json.parse(fixture),
+  )
+  let encoded = decoded.to_json().stringify()
+  inspect(
+    encoded,
+    content=(
+      #|{"documents_indexed":0,"retry_after":1,"code":110000,"message":"Index not yet available. Try again later"}
+    ),
+  )
+  let round_trip : @model.GuildMessageSearchResults = @json.from_json(
+    @json.parse(encoded),
+  )
+  assert_eq(round_trip.to_json().stringify(), encoded)
+}

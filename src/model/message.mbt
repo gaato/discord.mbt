@@ -46,6 +46,23 @@ pub(all) struct Message {
 )
 
 ///|
+/// A guild message search response. All fields are optional because Discord
+/// returns either completed results or an HTTP 202 indexing response. When
+/// `retry_after` is `Some`, the search index was not ready and the caller
+/// should retry after that many seconds.
+pub(all) struct GuildMessageSearchResults {
+  doing_deep_historical_index : Bool?
+  documents_indexed : Int?
+  total_results : Int?
+  messages : Array[Array[Message]]?
+  threads : Array[Channel]?
+  members : Array[ThreadMember]?
+  retry_after : Int?
+  code : Int?
+  message : String?
+} derive(ToJson, FromJson, Debug)
+
+///|
 /// Metadata identifying the interaction that produced a message.
 ///
 /// The optional fields cover the documented command, component, and modal

@@ -176,6 +176,16 @@ pub async fn Client::get_message(
 }
 
 ///|
+/// Publish a message from an announcement channel to its followers.
+pub async fn Client::crosspost_message(
+  self : Client,
+  channel_id : @model.ChannelId,
+  message_id : @model.MessageId,
+) -> @model.Message raise DiscordHttpError {
+  decode(self.request(CrosspostMessage(channel_id~, message_id~)))
+}
+
+///|
 /// List messages in a channel. `around`/`before`/`after` are mutually
 /// exclusive.
 pub async fn Client::get_channel_messages(
@@ -210,4 +220,273 @@ pub async fn Client::get_channel_messages(
   }
   let query = if params.length() == 0 { "" } else { "?" + params.join("&") }
   decode(self.request(GetChannelMessages(channel_id~, query~)))
+}
+
+///|
+fn percent_encode_query_text(value : String) -> String {
+  let builder = StringBuilder(size_hint=value.length())
+  for byte in @utf8.encode(value).iter() {
+    let value = byte.to_int()
+    let unreserved = (value >= 65 && value <= 90) ||
+      (value >= 97 && value <= 122) ||
+      (value >= 48 && value <= 57) ||
+      value == 45 ||
+      value == 46 ||
+      value == 95 ||
+      value == 126
+    if unreserved {
+      builder.write_char(byte.to_char())
+    } else {
+      builder.write_char('%')
+      builder.write_string(byte.to_hex().to_upper())
+    }
+  }
+  builder.to_string()
+}
+
+///|
+fn validate_search_array_count(
+  name : String,
+  values_length : Int,
+  maximum : Int,
+) -> Unit raise DiscordHttpError {
+  if values_length > maximum {
+    raise Validation(message="\{name} exceeds \{maximum} entries")
+  }
+}
+
+///|
+fn search_guild_messages_query(
+  limit? : Int,
+  offset? : Int,
+  slop? : Int,
+  content? : String,
+  mention_everyone? : Bool,
+  pinned? : Bool,
+  include_nsfw? : Bool,
+  sort_by? : String,
+  sort_order? : String,
+  max_id? : @model.MessageId,
+  min_id? : @model.MessageId,
+  channel_id? : Array[@model.ChannelId],
+  author_type? : Array[String],
+  author_id? : Array[@model.UserId],
+  mentions? : Array[@model.UserId],
+  mentions_role_id? : Array[@model.RoleId],
+  replied_to_user_id? : Array[@model.UserId],
+  replied_to_message_id? : Array[@model.MessageId],
+  has? : Array[String],
+  embed_type? : Array[String],
+  embed_provider? : Array[String],
+  link_hostname? : Array[String],
+  attachment_filename? : Array[String],
+  attachment_extension? : Array[String],
+) -> String raise DiscordHttpError {
+  if limit is Some(value) && (value < 1 || value > 25) {
+    raise Validation(message="search limit must be between 1 and 25")
+  }
+  if offset is Some(value) && (value < 0 || value > 9975) {
+    raise Validation(message="search offset must be between 0 and 9975")
+  }
+  if slop is Some(value) && (value < 0 || value > 100) {
+    raise Validation(message="search slop must be between 0 and 100")
+  }
+  if content is Some(value) && value.length() > 1024 {
+    raise Validation(message="search content exceeds 1024 characters")
+  }
+  if channel_id is Some(values) {
+    validate_search_array_count("channel_id", values.length(), 500)
+  }
+  if author_id is Some(values) {
+    validate_search_array_count("author_id", values.length(), 100)
+  }
+  if mentions is Some(values) {
+    validate_search_array_count("mentions", values.length(), 100)
+  }
+  if mentions_role_id is Some(values) {
+    validate_search_array_count("mentions_role_id", values.length(), 100)
+  }
+  if replied_to_user_id is Some(values) {
+    validate_search_array_count("replied_to_user_id", values.length(), 100)
+  }
+  if replied_to_message_id is Some(values) {
+    validate_search_array_count("replied_to_message_id", values.length(), 100)
+  }
+  if embed_provider is Some(values) {
+    validate_search_array_count("embed_provider", values.length(), 100)
+  }
+  if link_hostname is Some(values) {
+    validate_search_array_count("link_hostname", values.length(), 100)
+  }
+  if attachment_filename is Some(values) {
+    validate_search_array_count("attachment_filename", values.length(), 100)
+  }
+  if attachment_extension is Some(values) {
+    validate_search_array_count("attachment_extension", values.length(), 100)
+  }
+  let params : Array[String] = []
+  if limit is Some(value) {
+    params.push("limit=\{value}")
+  }
+  if offset is Some(value) {
+    params.push("offset=\{value}")
+  }
+  if slop is Some(value) {
+    params.push("slop=\{value}")
+  }
+  if content is Some(value) {
+    params.push("content=" + percent_encode_query_text(value))
+  }
+  if mention_everyone is Some(value) {
+    params.push("mention_everyone=\{value}")
+  }
+  if pinned is Some(value) {
+    params.push("pinned=\{value}")
+  }
+  if include_nsfw is Some(value) {
+    params.push("include_nsfw=\{value}")
+  }
+  if sort_by is Some(value) {
+    params.push("sort_by=" + value)
+  }
+  if sort_order is Some(value) {
+    params.push("sort_order=" + value)
+  }
+  if max_id is Some(value) {
+    params.push("max_id=\{value}")
+  }
+  if min_id is Some(value) {
+    params.push("min_id=\{value}")
+  }
+  if channel_id is Some(values) {
+    for value in values {
+      params.push("channel_id=\{value}")
+    }
+  }
+  if author_type is Some(values) {
+    for value in values {
+      params.push("author_type=" + value)
+    }
+  }
+  if author_id is Some(values) {
+    for value in values {
+      params.push("author_id=\{value}")
+    }
+  }
+  if mentions is Some(values) {
+    for value in values {
+      params.push("mentions=\{value}")
+    }
+  }
+  if mentions_role_id is Some(values) {
+    for value in values {
+      params.push("mentions_role_id=\{value}")
+    }
+  }
+  if replied_to_user_id is Some(values) {
+    for value in values {
+      params.push("replied_to_user_id=\{value}")
+    }
+  }
+  if replied_to_message_id is Some(values) {
+    for value in values {
+      params.push("replied_to_message_id=\{value}")
+    }
+  }
+  if has is Some(values) {
+    for value in values {
+      params.push("has=" + value)
+    }
+  }
+  if embed_type is Some(values) {
+    for value in values {
+      params.push("embed_type=" + value)
+    }
+  }
+  if embed_provider is Some(values) {
+    for value in values {
+      params.push("embed_provider=" + percent_encode_query_text(value))
+    }
+  }
+  if link_hostname is Some(values) {
+    for value in values {
+      params.push("link_hostname=" + percent_encode_query_text(value))
+    }
+  }
+  if attachment_filename is Some(values) {
+    for value in values {
+      params.push("attachment_filename=" + percent_encode_query_text(value))
+    }
+  }
+  if attachment_extension is Some(values) {
+    for value in values {
+      params.push("attachment_extension=" + percent_encode_query_text(value))
+    }
+  }
+  if params.length() == 0 {
+    ""
+  } else {
+    "?" + params.join("&")
+  }
+}
+
+///|
+/// Search messages in a guild. Results that contain message content require
+/// the MESSAGE_CONTENT privileged intent, and the caller must have the
+/// READ_MESSAGE_HISTORY permission in the channels being searched.
+pub async fn Client::search_guild_messages(
+  self : Client,
+  guild_id : @model.GuildId,
+  limit? : Int,
+  offset? : Int,
+  slop? : Int,
+  content? : String,
+  mention_everyone? : Bool,
+  pinned? : Bool,
+  include_nsfw? : Bool,
+  sort_by? : String,
+  sort_order? : String,
+  max_id? : @model.MessageId,
+  min_id? : @model.MessageId,
+  channel_id? : Array[@model.ChannelId],
+  author_type? : Array[String],
+  author_id? : Array[@model.UserId],
+  mentions? : Array[@model.UserId],
+  mentions_role_id? : Array[@model.RoleId],
+  replied_to_user_id? : Array[@model.UserId],
+  replied_to_message_id? : Array[@model.MessageId],
+  has? : Array[String],
+  embed_type? : Array[String],
+  embed_provider? : Array[String],
+  link_hostname? : Array[String],
+  attachment_filename? : Array[String],
+  attachment_extension? : Array[String],
+) -> @model.GuildMessageSearchResults raise DiscordHttpError {
+  let query = search_guild_messages_query(
+    limit?,
+    offset?,
+    slop?,
+    content?,
+    mention_everyone?,
+    pinned?,
+    include_nsfw?,
+    sort_by?,
+    sort_order?,
+    max_id?,
+    min_id?,
+    channel_id?,
+    author_type?,
+    author_id?,
+    mentions?,
+    mentions_role_id?,
+    replied_to_user_id?,
+    replied_to_message_id?,
+    has?,
+    embed_type?,
+    embed_provider?,
+    link_hostname?,
+    attachment_filename?,
+    attachment_extension?,
+  )
+  decode(self.request(SearchGuildMessages(guild_id~, query~)))
 }

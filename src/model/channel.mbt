@@ -310,6 +310,13 @@ pub(all) struct ActiveGuildThreads {
 } derive(ToJson, FromJson, Debug)
 
 ///|
+/// The announcement channel and webhook created by following a channel.
+pub(all) struct FollowedChannel {
+  channel_id : ChannelId
+  webhook_id : WebhookId
+} derive(ToJson, FromJson, Debug)
+
+///|
 /// A tag available for categorizing threads in a forum or media channel.
 pub(all) struct ForumTag {
   id : GenericId

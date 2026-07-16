@@ -87,13 +87,13 @@ OpenAPI spec; include it when doing this category.
 
 ## Channels & messages
 
-- [ ] DELETE /channels/{id}/messages/{msg}/reactions/{emoji} — Delete All Reactions for Emoji (hidden by bucket collapsing; see notes above)
-- [ ] POST /channels/{id}/messages/{msg}/crosspost — Crosspost Message
-- [ ] POST /channels/{id}/followers — Follow Announcement Channel
-- [ ] PUT /channels/{id}/voice-status — Set Voice Channel Status
-- [ ] PUT /channels/{id}/recipients/{user} — Group DM Add Recipient
-- [ ] DELETE /channels/{id}/recipients/{user} — Group DM Remove Recipient
-- [ ] GET /guilds/{id}/messages/search — Search Guild Messages (limited availability)
+- [x] DELETE /channels/{id}/messages/{msg}/reactions/{emoji} — Delete All Reactions for Emoji (`Client::delete_all_reactions_for_emoji`)
+- [x] POST /channels/{id}/messages/{msg}/crosspost — Crosspost Message (`Client::crosspost_message`)
+- [x] POST /channels/{id}/followers — Follow Announcement Channel (`Client::follow_announcement_channel`)
+- [x] PUT /channels/{id}/voice-status — Set Voice Channel Status (`Client::set_voice_channel_status`)
+- [x] PUT /channels/{id}/recipients/{user} — Group DM Add Recipient (`Client::group_dm_add_recipient`)
+- [x] DELETE /channels/{id}/recipients/{user} — Group DM Remove Recipient (`Client::group_dm_remove_recipient`)
+- [x] GET /guilds/{id}/messages/search — Search Guild Messages (`Client::search_guild_messages`)
 
 ## Threads
 
