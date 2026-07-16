@@ -14,4 +14,23 @@ pub(all) struct SessionStartLimit {
   remaining : Int
   reset_after : Int64
   max_concurrency : Int
-} derive(ToJson, FromJson, Debug)
+} derive(ToJson, Debug)
+
+///|
+struct SessionStartLimitWire {
+  total : Int
+  remaining : Int
+  reset_after : Double
+  max_concurrency : Int
+} derive(FromJson)
+
+///|
+pub impl @json.FromJson for SessionStartLimit with fn from_json(json, path) {
+  let wire : SessionStartLimitWire = @json.from_json(json, path~)
+  {
+    total: wire.total,
+    remaining: wire.remaining,
+    reset_after: wire.reset_after.to_int64(),
+    max_concurrency: wire.max_concurrency,
+  }
+}

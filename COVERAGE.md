@@ -169,7 +169,7 @@ The mechanical diff needs manual review afterwards:
 ## Guild templates
 
 - [x] GET /guilds/templates/{code} — Get Guild Template (`Client::get_guild_template`)
-- [x] POST /guilds/templates/{code} — Create Guild From Template (`Client::create_guild_from_template`) (documented but absent from the OpenAPI spec)
+- [x] POST /guilds/templates/{code} — Create Guild From Template (`Client::create_guild_from_template`) (removed from the developer docs; the live API refuses bot tokens with code 20001 "Bots cannot use this endpoint", verified 2026-07-16 — the wrapper is kept for user-token deployments)
 - [x] GET /guilds/{id}/templates — Get Guild Templates (`Client::get_guild_templates`)
 - [x] POST /guilds/{id}/templates — Create Guild Template (`Client::create_guild_template`)
 - [x] PUT /guilds/{id}/templates/{code} — Sync Guild Template (`Client::sync_guild_template`)

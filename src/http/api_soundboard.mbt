@@ -33,12 +33,21 @@ pub async fn Client::list_default_soundboard_sounds(
 }
 
 ///|
-/// List the custom soundboard sounds in a guild.
+priv struct SoundboardSoundItems {
+  items : Array[@model.SoundboardSound]
+} derive(FromJson)
+
+///|
+/// List the custom soundboard sounds in a guild. Unlike the default-sound
+/// listing, this endpoint wraps the array in an `items` envelope.
 pub async fn Client::list_guild_soundboard_sounds(
   self : Client,
   guild_id : @model.GuildId,
 ) -> Array[@model.SoundboardSound] raise DiscordHttpError {
-  decode(self.request(ListGuildSoundboardSounds(guild_id~)))
+  let envelope : SoundboardSoundItems = decode(
+    self.request(ListGuildSoundboardSounds(guild_id~)),
+  )
+  envelope.items
 }
 
 ///|

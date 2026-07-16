@@ -99,8 +99,8 @@ async test "message ref reaction deletions bind message and user ids" {
   let message_id : @model.MessageId = Id(150UL)
   let user_id : @model.UserId = Id(170UL)
   let message = client.message_ref(channel_id, message_id)
-  message.unreact("wave%3A160")
-  message.delete_user_reaction("wave%3A160", user_id)
+  message.unreact("wave:160")
+  message.delete_user_reaction("wave:160", user_id)
   guard captured_paths is [unreact_path, user_reaction_path] else {
     fail("expected two captured request paths")
   }

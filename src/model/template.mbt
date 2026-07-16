@@ -43,7 +43,7 @@ pub(all) struct GuildTemplateRole {
   name : String
   permissions : GuildTemplatePermissions
   color : Int
-  colors : RoleColors?
+  colors : Nullable[RoleColors]?
   hoist : Bool
   mentionable : Bool
   icon : Nullable[ImageHash]?
@@ -115,11 +115,25 @@ pub impl @json.FromJson for GuildTemplatePermissions with fn from_json(
         @string.parse_uint64(repr.to_string()) catch {
           _ =>
             raise JsonDecodeError(
-              (path, "expected template permissions (number)"),
+              (path, "expected template permissions (number or string)"),
             )
         },
       )
     Number(value, repr=None) => GuildTemplatePermissions(value.to_uint64())
-    _ => raise JsonDecodeError((path, "expected template permissions (number)"))
+    // Discord serializes role permissions inside serialized_source_guild as a
+    // decimal string (like Permissions elsewhere).
+    String(value) =>
+      GuildTemplatePermissions(
+        @string.parse_uint64(value) catch {
+          _ =>
+            raise JsonDecodeError(
+              (path, "expected template permissions (number or string)"),
+            )
+        },
+      )
+    _ =>
+      raise JsonDecodeError(
+        (path, "expected template permissions (number or string)"),
+      )
   }
 }

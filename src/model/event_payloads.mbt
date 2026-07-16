@@ -265,11 +265,28 @@ pub(all) struct TypingStartEvent {
   user_id : UserId
   timestamp : Int64
   guild_member : GuildMember?
-} derive (
-  ToJson(fields(guild_member(rename="member"))),
-  FromJson(fields(guild_member(rename="member"))),
-  Debug,
-)
+} derive(ToJson(fields(guild_member(rename="member"))), Debug)
+
+///|
+struct TypingStartEventWire {
+  channel_id : ChannelId
+  guild_id : GuildId?
+  user_id : UserId
+  timestamp : Double
+  guild_member : GuildMember?
+} derive(FromJson(fields(guild_member(rename="member"))))
+
+///|
+pub impl @json.FromJson for TypingStartEvent with fn from_json(json, path) {
+  let wire : TypingStartEventWire = @json.from_json(json, path~)
+  {
+    channel_id: wire.channel_id,
+    guild_id: wire.guild_id,
+    user_id: wire.user_id,
+    timestamp: wire.timestamp.to_int64(),
+    guild_member: wire.guild_member,
+  }
+}
 
 ///|
 /// The most recent pin timestamp changed for a channel.

@@ -232,30 +232,34 @@ pub async fn Client::group_dm_remove_recipient(
 }
 
 ///|
-/// Add a reaction. The emoji must already be URL-encoded; for custom emoji,
-/// callers should pass forms such as name%3A123456789012345678.
+/// Add a reaction. Pass the emoji in raw form: a unicode emoji such as
+/// "\u{1F525}", or name:id for custom emoji. It is percent-encoded here.
 pub async fn Client::create_reaction(
   self : Client,
   channel_id : @model.ChannelId,
   message_id : @model.MessageId,
   emoji : String,
 ) -> Unit raise DiscordHttpError {
+  let emoji = percent_encode_query_text(emoji)
   self.request(CreateReaction(channel_id~, message_id~, emoji~)) |> ignore
 }
 
 ///|
-/// Delete the bot user's reaction. The emoji must already be URL-encoded.
+/// Delete the bot user's reaction. The emoji is passed raw (unicode or
+/// name:id) and percent-encoded here.
 pub async fn Client::delete_own_reaction(
   self : Client,
   channel_id : @model.ChannelId,
   message_id : @model.MessageId,
   emoji : String,
 ) -> Unit raise DiscordHttpError {
+  let emoji = percent_encode_query_text(emoji)
   self.request(DeleteOwnReaction(channel_id~, message_id~, emoji~)) |> ignore
 }
 
 ///|
-/// Delete another user's reaction. The emoji must already be URL-encoded.
+/// Delete another user's reaction. The emoji is passed raw (unicode or
+/// name:id) and percent-encoded here.
 pub async fn Client::delete_user_reaction(
   self : Client,
   channel_id : @model.ChannelId,
@@ -263,6 +267,7 @@ pub async fn Client::delete_user_reaction(
   emoji : String,
   user_id : @model.UserId,
 ) -> Unit raise DiscordHttpError {
+  let emoji = percent_encode_query_text(emoji)
   self.request(DeleteUserReaction(channel_id~, message_id~, emoji~, user_id~))
   |> ignore
 }
@@ -278,20 +283,22 @@ pub async fn Client::delete_all_reactions(
 }
 
 ///|
-/// Delete every reaction matching an emoji. The emoji must already be
-/// URL-encoded.
+/// Delete every reaction matching an emoji. The emoji is passed raw (unicode
+/// or name:id) and percent-encoded here.
 pub async fn Client::delete_all_reactions_for_emoji(
   self : Client,
   channel_id : @model.ChannelId,
   message_id : @model.MessageId,
   emoji : String,
 ) -> Unit raise DiscordHttpError {
+  let emoji = percent_encode_query_text(emoji)
   self.request(DeleteAllReactionsForEmoji(channel_id~, message_id~, emoji~))
   |> ignore
 }
 
 ///|
-/// List users who reacted with a pre-encoded emoji.
+/// List users who reacted with an emoji. The emoji is passed raw (unicode or
+/// name:id) and percent-encoded here.
 pub async fn Client::get_reactions(
   self : Client,
   channel_id : @model.ChannelId,
@@ -300,6 +307,7 @@ pub async fn Client::get_reactions(
   limit? : Int,
   after? : @model.UserId,
 ) -> Array[@model.User] raise DiscordHttpError {
+  let emoji = percent_encode_query_text(emoji)
   validate_range("reaction limit", limit, min=1, max=100)
   let params : Array[String] = []
   if limit is Some(value) {
