@@ -134,6 +134,7 @@ pub fn GatewayCtx::channel_ref(Self, @model.Id[@model.ChannelMarker]) -> @http.C
 pub fn GatewayCtx::framework_raw(Self) -> @framework.Framework
 pub fn GatewayCtx::guild_ref(Self, @model.Id[@model.GuildMarker]) -> @http.GuildRef
 pub async fn GatewayCtx::join_voice(Self, @model.Id[@model.GuildMarker], @model.Id[@model.ChannelMarker], self_mute? : Bool, self_deaf? : Bool, timeout_ms? : Int, telemetry? : (@voice.VoiceTelemetry) -> Unit) -> @voice.VoiceConnection
+pub fn GatewayCtx::latency_ms(Self) -> Int64?
 pub fn GatewayCtx::member_ref(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker]) -> @http.MemberRef
 pub fn GatewayCtx::message_ref(Self, @model.MessageCreateEvent) -> @http.MessageRef
 pub fn GatewayCtx::ready(Self) -> @model.Ready

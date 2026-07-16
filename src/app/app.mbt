@@ -467,8 +467,13 @@ pub fn App::attach(
   client~ : @dhttp.Client,
   application_id~ : @model.ApplicationId,
   waiter? : ComponentWaiter,
+  latency_ms? : () -> Int64?,
 ) -> AppCtx {
-  let app_ctx : AppCtx = { client_: client, application_id_: application_id }
+  let app_ctx : AppCtx = {
+    client_: client,
+    application_id_: application_id,
+    latency_ms_: latency_ms,
+  }
   for command in self.commands_ {
     framework.command(command.definition, raw => {
       self.run_registered_command(app_ctx, waiter, command, raw)

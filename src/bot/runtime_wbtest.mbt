@@ -400,6 +400,46 @@ fn middleware_runtime_bot(app : @app.App, transport : BotFakeTransport) -> Bot {
 }
 
 ///|
+async test "gateway contexts expose heartbeat latency" {
+  let transport = BotFakeTransport()
+  let app = @app.App(sync=Disabled)
+  let bot = middleware_runtime_bot(app, transport)
+  let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
+  bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
+  @async.with_task_group(group => {
+    let running = group.spawn(no_wait=true, () => bot.run())
+    transport.incoming.put(BOT_HELLO)
+    guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
+      fail("expected identify")
+    }
+    transport.incoming.put(bot_ready_frame())
+    let ctx = ready_contexts.get()
+    debug_inspect(ctx.latency_ms(), content="None")
+    debug_inspect(ctx.app().latency_ms(), content="None")
+    transport.incoming.put(
+      (
+        #|{"op":1,"d":null}
+      ),
+    )
+    guard transport.outgoing.get() is { "op": Number(1, ..), .. } else {
+      fail("expected heartbeat")
+    }
+    transport.incoming.put(
+      (
+        #|{"op":11,"d":null}
+      ),
+    )
+    @async.sleep(1)
+    guard ctx.latency_ms() is Some(shard_latency) else {
+      fail("expected shard heartbeat latency")
+    }
+    assert_eq(ctx.app().latency_ms(), Some(shard_latency))
+    ctx.shutdown()
+    running.wait()
+  })
+}
+
+///|
 async test "voice credentials register both collectors before opcode 4" {
   let transport = BotFakeTransport()
   let app = @app.App(sync=Disabled)

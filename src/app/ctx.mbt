@@ -6,6 +6,7 @@
 pub struct AppCtx {
   priv client_ : @dhttp.Client
   priv application_id_ : @model.ApplicationId
+  priv latency_ms_ : (() -> Int64?)?
 }
 
 ///|
@@ -18,6 +19,19 @@ pub fn AppCtx::http(self : AppCtx) -> @dhttp.Client {
 /// The application id learned during startup.
 pub fn AppCtx::application_id(self : AppCtx) -> @model.ApplicationId {
   self.application_id_
+}
+
+///|
+/// The latest gateway heartbeat round-trip time in milliseconds. For a
+/// multi-shard bot, this is the arithmetic mean of shards that have measured
+/// latency. HTTP interaction executors and gateway connections awaiting their
+/// first heartbeat acknowledgement return `None`; use
+/// `GatewayCtx::latency_ms()` when the exact value for one shard is required.
+pub fn AppCtx::latency_ms(self : AppCtx) -> Int64? {
+  match self.latency_ms_ {
+    Some(provider) => provider()
+    None => None
+  }
 }
 
 ///|

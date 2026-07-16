@@ -29,6 +29,14 @@ pub fn GatewayCtx::ready(self : GatewayCtx) -> @model.Ready {
 }
 
 ///|
+/// The latest heartbeat round-trip time for this context's shard. Unlike
+/// `AppCtx::latency_ms()`, this is the exact shard value rather than the mean
+/// across shards with measured latency.
+pub fn GatewayCtx::latency_ms(self : GatewayCtx) -> Int64? {
+  self.shard_.latency_ms()
+}
+
+///|
 /// Access the underlying gateway shard.
 pub fn GatewayCtx::shard_raw(self : GatewayCtx) -> @gateway.Shard {
   self.shard_

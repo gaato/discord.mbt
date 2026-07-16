@@ -520,11 +520,27 @@ pub async fn Bot::run(self : Bot) -> Unit {
             let waiter : @app.ComponentWaiter = (custom_id, timeout_ms) => {
               router.wait_for_component(custom_id~, timeout_ms?)
             }
+            let latency_ms = () => {
+              let mut total = 0L
+              let mut count = 0L
+              for shard in shard_handles {
+                if shard.latency_ms() is Some(latency) {
+                  total += latency
+                  count += 1L
+                }
+              }
+              if count == 0L {
+                None
+              } else {
+                Some(total / count)
+              }
+            }
             let attached = self.app_.attach(
               router,
               client~,
               application_id=ready.application.id,
               waiter~,
+              latency_ms~,
             )
             app_ctx = Some(attached)
             framework = Some(router)

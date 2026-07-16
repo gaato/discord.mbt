@@ -5,6 +5,29 @@ fn command_options(fixture : String) -> @interaction.CommandOptions raise {
 }
 
 ///|
+async test "app context exposes an optional latency provider" {
+  let client = @dhttp.Client("test-token")
+  defer client.close()
+  let application_id : @model.ApplicationId = @model.Id::parse(
+    "400000000000000001",
+  )
+  let app = App(sync=Disabled)
+  let with_provider = app.attach(
+    @framework.Framework(client, application_id),
+    client~,
+    application_id~,
+    latency_ms=() => Some(42L),
+  )
+  let without_provider = app.attach(
+    @framework.Framework(client, application_id),
+    client~,
+    application_id~,
+  )
+  debug_inspect(with_provider.latency_ms(), content="Some(42)")
+  debug_inspect(without_provider.latency_ms(), content="None")
+}
+
+///|
 test "typed command spec derives options from Args" {
   let args = @interaction.Args::map2(
     @interaction.arg_string(name="text", description="Text to echo"),
