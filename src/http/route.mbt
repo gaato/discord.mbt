@@ -135,6 +135,21 @@ pub(all) enum Route {
   StartThreadWithoutMessage(channel_id~ : @model.ChannelId)
   JoinThread(channel_id~ : @model.ChannelId)
   LeaveThread(channel_id~ : @model.ChannelId)
+  ListThreadMembers(channel_id~ : @model.ChannelId, query~ : String)
+  GetThreadMember(
+    channel_id~ : @model.ChannelId,
+    user_id~ : @model.UserId,
+    query~ : String
+  )
+  AddThreadMember(channel_id~ : @model.ChannelId, user_id~ : @model.UserId)
+  RemoveThreadMember(channel_id~ : @model.ChannelId, user_id~ : @model.UserId)
+  ListPublicArchivedThreads(channel_id~ : @model.ChannelId, query~ : String)
+  ListPrivateArchivedThreads(channel_id~ : @model.ChannelId, query~ : String)
+  ListJoinedPrivateArchivedThreads(
+    channel_id~ : @model.ChannelId,
+    query~ : String
+  )
+  ListActiveGuildThreads(guild_id~ : @model.GuildId)
   GetGuild(guild_id~ : @model.GuildId)
   GetGuildWithCounts(guild_id~ : @model.GuildId, query~ : String)
   ModifyGuild(guild_id~ : @model.GuildId)
@@ -428,6 +443,12 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | GetPinnedMessages(..)
     | GetChannelInvites(..)
     | GetChannelWebhooks(..)
+    | ListThreadMembers(..)
+    | GetThreadMember(..)
+    | ListPublicArchivedThreads(..)
+    | ListPrivateArchivedThreads(..)
+    | ListJoinedPrivateArchivedThreads(..)
+    | ListActiveGuildThreads(..)
     | GetGuild(..)
     | GetGuildWithCounts(..)
     | GetGuildChannels(..)
@@ -524,6 +545,7 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | DeleteChannelPermission(..)
     | UnpinMessage(..)
     | LeaveThread(..)
+    | RemoveThreadMember(..)
     | DeleteGuildRole(..)
     | RemoveGuildMemberRole(..)
     | RemoveGuildMember(..)
@@ -548,6 +570,7 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | EditChannelPermissions(..)
     | PinMessage(..)
     | JoinThread(..)
+    | AddThreadMember(..)
     | AddGuildMemberRole(..)
     | CreateGuildBan(..)
     | BulkOverwriteGlobalCommands(..)
@@ -635,6 +658,20 @@ pub fn Route::path(self : Route) -> String {
     StartThreadWithoutMessage(channel_id~) => "/channels/\{channel_id}/threads"
     JoinThread(channel_id~) | LeaveThread(channel_id~) =>
       "/channels/\{channel_id}/thread-members/@me"
+    ListThreadMembers(channel_id~, query~) =>
+      "/channels/\{channel_id}/thread-members\{query}"
+    GetThreadMember(channel_id~, user_id~, query~) =>
+      "/channels/\{channel_id}/thread-members/\{user_id}\{query}"
+    AddThreadMember(channel_id~, user_id~)
+    | RemoveThreadMember(channel_id~, user_id~) =>
+      "/channels/\{channel_id}/thread-members/\{user_id}"
+    ListPublicArchivedThreads(channel_id~, query~) =>
+      "/channels/\{channel_id}/threads/archived/public\{query}"
+    ListPrivateArchivedThreads(channel_id~, query~) =>
+      "/channels/\{channel_id}/threads/archived/private\{query}"
+    ListJoinedPrivateArchivedThreads(channel_id~, query~) =>
+      "/channels/\{channel_id}/users/@me/threads/archived/private\{query}"
+    ListActiveGuildThreads(guild_id~) => "/guilds/\{guild_id}/threads/active"
     GetGuild(guild_id~) => "/guilds/\{guild_id}"
     GetGuildWithCounts(guild_id~, query~) => "/guilds/\{guild_id}\{query}"
     ModifyGuild(guild_id~) => "/guilds/\{guild_id}"
@@ -851,6 +888,22 @@ pub fn Route::bucket(self : Route) -> String {
     JoinThread(channel_id~) => "PUT:/channels/\{channel_id}/thread-members/@me"
     LeaveThread(channel_id~) =>
       "DELETE:/channels/\{channel_id}/thread-members/@me"
+    ListThreadMembers(channel_id~, ..) =>
+      "GET:/channels/\{channel_id}/thread-members"
+    GetThreadMember(channel_id~, ..) =>
+      "GET:/channels/\{channel_id}/thread-members/{}"
+    AddThreadMember(channel_id~, ..) =>
+      "PUT:/channels/\{channel_id}/thread-members/{}"
+    RemoveThreadMember(channel_id~, ..) =>
+      "DELETE:/channels/\{channel_id}/thread-members/{}"
+    ListPublicArchivedThreads(channel_id~, ..) =>
+      "GET:/channels/\{channel_id}/threads/archived/public"
+    ListPrivateArchivedThreads(channel_id~, ..) =>
+      "GET:/channels/\{channel_id}/threads/archived/private"
+    ListJoinedPrivateArchivedThreads(channel_id~, ..) =>
+      "GET:/channels/\{channel_id}/users/@me/threads/archived/private"
+    ListActiveGuildThreads(guild_id~) =>
+      "GET:/guilds/\{guild_id}/threads/active"
     GetGuild(guild_id~) | GetGuildWithCounts(guild_id~, ..) =>
       "GET:/guilds/\{guild_id}"
     ModifyGuild(guild_id~) => "PATCH:/guilds/\{guild_id}"

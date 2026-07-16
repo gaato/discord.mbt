@@ -97,15 +97,14 @@ OpenAPI spec; include it when doing this category.
 
 ## Threads
 
-- [ ] GET /channels/{id}/thread-members — List Thread Members
-- [ ] GET /channels/{id}/thread-members/{user} — Get Thread Member
-- [ ] PUT /channels/{id}/thread-members/{user} — Add Thread Member
-- [ ] DELETE /channels/{id}/thread-members/{user} — Remove Thread Member
-- [ ] GET /channels/{id}/threads/archived/public — List Public Archived Threads
-- [ ] GET /channels/{id}/threads/archived/private — List Private Archived Threads
-- [ ] GET /channels/{id}/users/@me/threads/archived/private — List Joined Private Archived Threads
-- [ ] GET /channels/{id}/threads/search — Search Threads (limited availability)
-- [ ] GET /guilds/{id}/threads/active — List Active Guild Threads
+- [x] GET /channels/{id}/thread-members — List Thread Members (`Client::list_thread_members`)
+- [x] GET /channels/{id}/thread-members/{user} — Get Thread Member (`Client::get_thread_member`)
+- [x] PUT /channels/{id}/thread-members/{user} — Add Thread Member (`Client::add_thread_member`)
+- [x] DELETE /channels/{id}/thread-members/{user} — Remove Thread Member (`Client::remove_thread_member`)
+- [x] GET /channels/{id}/threads/archived/public — List Public Archived Threads (`Client::list_public_archived_threads`)
+- [x] GET /channels/{id}/threads/archived/private — List Private Archived Threads (`Client::list_private_archived_threads`)
+- [x] GET /channels/{id}/users/@me/threads/archived/private — List Joined Private Archived Threads (`Client::list_joined_private_archived_threads`)
+- [x] GET /guilds/{id}/threads/active — List Active Guild Threads (`Client::list_active_guild_threads`)
 
 ## Guild management
 
@@ -208,3 +207,9 @@ context; both remain reachable through `Route::custom`.
 
 - GET /oauth2/keys — Get OAuth2 signing keys
 - GET /oauth2/userinfo — OAuth2 userinfo
+
+## Out of scope: undocumented endpoints
+
+- GET /channels/{id}/threads/search — Search Threads: not present in the
+  official developer docs (limited-availability endpoint); reachable via
+  `Route::custom`.

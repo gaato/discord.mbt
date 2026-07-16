@@ -154,6 +154,30 @@ test "current user voice state body distinguishes timestamp clear and omission" 
 }
 
 ///|
+test "thread member query includes values and omits absent parameters" {
+  let after : @model.UserId = Id(20UL)
+  inspect(
+    thread_members_query(Some(true), Some(after), Some(100)),
+    content="?with_member=true&after=20&limit=100",
+  )
+  inspect(thread_members_query(None, None, None), content="")
+  inspect(
+    thread_members_query(Some(false), None, None),
+    content="?with_member=false",
+  )
+}
+
+///|
+test "archived thread query includes values and omits absent parameters" {
+  inspect(
+    archived_threads_query(Some("2024-01-02T03:04:05.000000+00:00"), Some(50)),
+    content="?before=2024-01-02T03:04:05.000000%2B00:00&limit=50",
+  )
+  inspect(archived_threads_query(None, None), content="")
+  inspect(archived_threads_query(None, Some(25)), content="?limit=25")
+}
+
+///|
 test "edit application command permissions body wraps permission records" {
   let permission : @model.ApplicationCommandPermission = {
     id: Id(10UL),
@@ -380,5 +404,11 @@ async test "REST pagination limits fail before transport" {
     error => fail("unexpected error: \{to_repr(error)}")
   } noraise {
     _ => fail("expected poll voter limit validation")
+  }
+  try client.list_thread_members(channel_id, limit=0) catch {
+    Validation(_) => ()
+    error => fail("unexpected error: \{to_repr(error)}")
+  } noraise {
+    _ => fail("expected thread member limit validation")
   }
 }

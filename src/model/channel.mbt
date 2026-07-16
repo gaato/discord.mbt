@@ -295,6 +295,21 @@ pub(all) struct ThreadMember {
 )
 
 ///|
+/// Archived thread channels and their membership records.
+pub(all) struct ArchivedThreads {
+  threads : Array[Channel]
+  members : Array[ThreadMember]
+  has_more : Bool
+} derive(ToJson, FromJson, Debug)
+
+///|
+/// Active thread channels in a guild and their membership records.
+pub(all) struct ActiveGuildThreads {
+  threads : Array[Channel]
+  members : Array[ThreadMember]
+} derive(ToJson, FromJson, Debug)
+
+///|
 /// A tag available for categorizing threads in a forum or media channel.
 pub(all) struct ForumTag {
   id : GenericId

@@ -280,3 +280,148 @@ pub async fn Client::leave_thread(
 ) -> Unit raise DiscordHttpError {
   self.request(LeaveThread(channel_id~)) |> ignore
 }
+
+///|
+fn thread_members_query(
+  with_member : Bool?,
+  after : @model.UserId?,
+  limit : Int?,
+) -> String {
+  let params : Array[String] = []
+  if with_member is Some(value) {
+    params.push("with_member=\{value}")
+  }
+  if after is Some(value) {
+    params.push("after=\{value}")
+  }
+  if limit is Some(value) {
+    params.push("limit=\{value}")
+  }
+  if params.length() == 0 {
+    ""
+  } else {
+    "?" + params.join("&")
+  }
+}
+
+///|
+fn archived_threads_query(before : String?, limit : Int?) -> String {
+  let params : Array[String] = []
+  if before is Some(value) {
+    // ISO8601 offsets contain `+`, which decodes to a space in query strings.
+    params.push("before=" + value.replace(old="+", new="%2B"))
+  }
+  if limit is Some(value) {
+    params.push("limit=\{value}")
+  }
+  if params.length() == 0 {
+    ""
+  } else {
+    "?" + params.join("&")
+  }
+}
+
+///|
+/// List members of a thread channel.
+pub async fn Client::list_thread_members(
+  self : Client,
+  channel_id : @model.ChannelId,
+  with_member? : Bool,
+  after? : @model.UserId,
+  limit? : Int,
+) -> Array[@model.ThreadMember] raise DiscordHttpError {
+  if limit is Some(value) && (value < 1 || value > 100) {
+    raise Validation(message="thread member limit must be 1 through 100")
+  }
+  let query = thread_members_query(with_member, after, limit)
+  decode(self.request(ListThreadMembers(channel_id~, query~)))
+}
+
+///|
+/// Fetch a user's membership record for a thread channel.
+pub async fn Client::get_thread_member(
+  self : Client,
+  channel_id : @model.ChannelId,
+  user_id : @model.UserId,
+  with_member? : Bool,
+) -> @model.ThreadMember raise DiscordHttpError {
+  let query = thread_members_query(with_member, None, None)
+  decode(self.request(GetThreadMember(channel_id~, user_id~, query~)))
+}
+
+///|
+/// Add a user to a thread channel.
+pub async fn Client::add_thread_member(
+  self : Client,
+  channel_id : @model.ChannelId,
+  user_id : @model.UserId,
+) -> Unit raise DiscordHttpError {
+  self.request(AddThreadMember(channel_id~, user_id~)) |> ignore
+}
+
+///|
+/// Remove a user from a thread channel.
+pub async fn Client::remove_thread_member(
+  self : Client,
+  channel_id : @model.ChannelId,
+  user_id : @model.UserId,
+) -> Unit raise DiscordHttpError {
+  self.request(RemoveThreadMember(channel_id~, user_id~)) |> ignore
+}
+
+///|
+/// List public archived threads in a channel.
+pub async fn Client::list_public_archived_threads(
+  self : Client,
+  channel_id : @model.ChannelId,
+  before? : @model.Timestamp,
+  limit? : Int,
+) -> @model.ArchivedThreads raise DiscordHttpError {
+  let before_string = match before {
+    Some(value) => Some(value.to_string())
+    None => None
+  }
+  let query = archived_threads_query(before_string, limit)
+  decode(self.request(ListPublicArchivedThreads(channel_id~, query~)))
+}
+
+///|
+/// List private archived threads in a channel.
+pub async fn Client::list_private_archived_threads(
+  self : Client,
+  channel_id : @model.ChannelId,
+  before? : @model.Timestamp,
+  limit? : Int,
+) -> @model.ArchivedThreads raise DiscordHttpError {
+  let before_string = match before {
+    Some(value) => Some(value.to_string())
+    None => None
+  }
+  let query = archived_threads_query(before_string, limit)
+  decode(self.request(ListPrivateArchivedThreads(channel_id~, query~)))
+}
+
+///|
+/// List private archived threads joined by the current user.
+pub async fn Client::list_joined_private_archived_threads(
+  self : Client,
+  channel_id : @model.ChannelId,
+  before? : @model.ChannelId,
+  limit? : Int,
+) -> @model.ArchivedThreads raise DiscordHttpError {
+  let before_string = match before {
+    Some(value) => Some(value.to_string())
+    None => None
+  }
+  let query = archived_threads_query(before_string, limit)
+  decode(self.request(ListJoinedPrivateArchivedThreads(channel_id~, query~)))
+}
+
+///|
+/// List every active thread in a guild.
+pub async fn Client::list_active_guild_threads(
+  self : Client,
+  guild_id : @model.GuildId,
+) -> @model.ActiveGuildThreads raise DiscordHttpError {
+  decode(self.request(ListActiveGuildThreads(guild_id~)))
+}

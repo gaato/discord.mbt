@@ -259,6 +259,46 @@ test "current user guild REST route metadata" {
 }
 
 ///|
+test "thread REST route metadata" {
+  let channel_id : @model.ChannelId = Id(10UL)
+  let user_id : @model.UserId = Id(20UL)
+  let guild_id : @model.GuildId = Id(30UL)
+  let routes : Array[@http.Route] = [
+    ListThreadMembers(channel_id~, query="?with_member=true&after=20&limit=100"),
+    GetThreadMember(channel_id~, user_id~, query="?with_member=false"),
+    AddThreadMember(channel_id~, user_id~),
+    RemoveThreadMember(channel_id~, user_id~),
+    ListPublicArchivedThreads(
+      channel_id~,
+      query="?before=2024-01-02T03:04:05.000000+00:00&limit=50",
+    ),
+    ListPrivateArchivedThreads(channel_id~, query=""),
+    ListJoinedPrivateArchivedThreads(channel_id~, query="?before=40&limit=25"),
+    ListActiveGuildThreads(guild_id~),
+  ]
+  debug_inspect(
+    routes.map(route_signature),
+    content=(
+      #|[
+      #|  "Get /channels/10/thread-members?with_member=true&after=20&limit=100 | GET:/channels/10/thread-members | reason=false",
+      #|  "Get /channels/10/thread-members/20?with_member=false | GET:/channels/10/thread-members/{} | reason=false",
+      #|  "Put /channels/10/thread-members/20 | PUT:/channels/10/thread-members/{} | reason=false",
+      #|  "Delete /channels/10/thread-members/20 | DELETE:/channels/10/thread-members/{} | reason=false",
+      #|  "Get /channels/10/threads/archived/public?before=2024-01-02T03:04:05.000000+00:00&limit=50 | GET:/channels/10/threads/archived/public | reason=false",
+      #|  "Get /channels/10/threads/archived/private | GET:/channels/10/threads/archived/private | reason=false",
+      #|  "Get /channels/10/users/@me/threads/archived/private?before=40&limit=25 | GET:/channels/10/users/@me/threads/archived/private | reason=false",
+      #|  "Get /guilds/30/threads/active | GET:/guilds/30/threads/active | reason=false",
+      #|]
+    ),
+  )
+  for route in routes {
+    assert_true(route.needs_auth())
+    assert_false(route.is_interaction())
+    assert_false(route.supports_reason())
+  }
+}
+
+///|
 test "get current user connections REST route metadata" {
   let route = @http.Route::GetCurrentUserConnections
   inspect(

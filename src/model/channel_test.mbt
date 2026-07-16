@@ -192,6 +192,79 @@ test "channel decodes a thread fixture with metadata and membership" {
 }
 
 ///|
+test "archived threads envelope round-trips a docs-shaped fixture" {
+  let fixture =
+    #|{
+    #|  "threads": [{
+    #|    "id": "41771983423143937",
+    #|    "guild_id": "41771983423143937",
+    #|    "parent_id": "41771983423143937",
+    #|    "owner_id": "41771983423143937",
+    #|    "name": "don't buy dota-2",
+    #|    "type": 11,
+    #|    "last_message_id": "155117677105512449",
+    #|    "message_count": 1,
+    #|    "member_count": 5,
+    #|    "rate_limit_per_user": 2,
+    #|    "thread_metadata": {
+    #|      "archived": true,
+    #|      "auto_archive_duration": 1440,
+    #|      "archive_timestamp": "2021-04-12T23:40:39.855793+00:00",
+    #|      "locked": false
+    #|    },
+    #|    "total_message_sent": 1
+    #|  }],
+    #|  "members": [{
+    #|    "id": "41771983423143937",
+    #|    "user_id": "80351110224678912",
+    #|    "join_timestamp": "2021-04-12T23:40:39.855793+00:00",
+    #|    "flags": 0
+    #|  }],
+    #|  "has_more": false
+    #|}
+  let first : @model.ArchivedThreads = @json.from_json(@json.parse(fixture))
+  let second : @model.ArchivedThreads = @json.from_json(first.to_json())
+  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  inspect(first.threads.length(), content="1")
+  inspect(first.members.length(), content="1")
+  assert_false(first.has_more)
+}
+
+///|
+test "active guild threads envelope round-trips a docs-shaped fixture" {
+  let fixture =
+    #|{
+    #|  "threads": [{
+    #|    "id": "755000000000000001",
+    #|    "guild_id": "81384788765712384",
+    #|    "parent_id": "41771983423143937",
+    #|    "owner_id": "80351110224678912",
+    #|    "name": "help-thread",
+    #|    "type": 11,
+    #|    "message_count": 12,
+    #|    "member_count": 4,
+    #|    "thread_metadata": {
+    #|      "archived": false,
+    #|      "auto_archive_duration": 60,
+    #|      "archive_timestamp": "2024-01-02T03:04:05.000000+00:00",
+    #|      "locked": false
+    #|    }
+    #|  }],
+    #|  "members": [{
+    #|    "id": "755000000000000001",
+    #|    "user_id": "80351110224678912",
+    #|    "join_timestamp": "2024-01-01T03:05:00.000000+00:00",
+    #|    "flags": 1
+    #|  }]
+    #|}
+  let first : @model.ActiveGuildThreads = @json.from_json(@json.parse(fixture))
+  let second : @model.ActiveGuildThreads = @json.from_json(first.to_json())
+  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  inspect(first.threads.length(), content="1")
+  inspect(first.members.length(), content="1")
+}
+
+///|
 test "channel decodes a minimal DM" {
   let channel : @model.Channel = @json.from_json(
     @json.parse(

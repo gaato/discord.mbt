@@ -34,6 +34,11 @@ pub(all) struct ActionRow {
   components : Array[Component]
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
+pub(all) struct ActiveGuildThreads {
+  threads : Array[Channel]
+  members : Array[ThreadMember]
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) struct Activity {
   name : String
   typ : ActivityType
@@ -316,6 +321,12 @@ pub fn ApplicationRoleConnectionMetadataType::from_int(Int) -> Self
 pub fn ApplicationRoleConnectionMetadataType::to_int(Self) -> Int
 pub impl ToJson for ApplicationRoleConnectionMetadataType
 pub impl @json.FromJson for ApplicationRoleConnectionMetadataType
+
+pub(all) struct ArchivedThreads {
+  threads : Array[Channel]
+  members : Array[ThreadMember]
+  has_more : Bool
+} derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct Attachment {
   id : Id[AttachmentMarker]
