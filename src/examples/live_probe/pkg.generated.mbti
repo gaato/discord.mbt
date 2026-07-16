@@ -1,0 +1,21 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "gaato/discord/examples/live_probe"
+
+// Values
+
+// Errors
+type ProbeError
+
+// Types and methods
+type Entry
+
+type Outcome derive(Eq)
+
+type P
+
+type S
+
+// Type aliases
+
+// Traits
+
