@@ -39,6 +39,30 @@ test "edit current application REST route metadata" {
 }
 
 ///|
+test "application activity instance route metadata" {
+  let application_id : @model.ApplicationId = Id(20UL)
+  let instance_id = "i-30-gc-40-50"
+  let route = @http.Route::GetApplicationActivityInstance(
+    application_id~,
+    instance_id~,
+  )
+  debug_inspect(
+    route_metadata("get", route),
+    content=(
+      #|{
+      #|  name: "get",
+      #|  method_name: "Get",
+      #|  path: "/applications/20/activity-instances/i-30-gc-40-50",
+      #|  bucket: "GET:/applications/20/activity-instances/{}",
+      #|  needs_auth: true,
+      #|  supports_reason: false,
+      #|}
+    ),
+  )
+  assert_false(route.is_interaction())
+}
+
+///|
 test "get application role connection metadata records REST route metadata" {
   let application_id : @model.ApplicationId = Id(10UL)
   let route = @http.Route::GetApplicationRoleConnectionMetadataRecords(

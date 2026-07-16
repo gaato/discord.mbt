@@ -7,6 +7,22 @@ pub async fn Client::get_current_application(
 }
 
 ///|
+/// Fetch a live application activity instance. Requires a Bot token.
+///
+/// Returns HTTP 404 when no live instance exists for `instance_id`.
+///
+/// https://discord.com/developers/docs/resources/application#get-application-activity-instance
+pub async fn Client::get_application_activity_instance(
+  self : Client,
+  application_id : @model.ApplicationId,
+  instance_id : String,
+) -> @model.ActivityInstance raise DiscordHttpError {
+  decode(
+    self.request(GetApplicationActivityInstance(application_id~, instance_id~)),
+  )
+}
+
+///|
 fn validate_application_url(
   field : String,
   value : String?,

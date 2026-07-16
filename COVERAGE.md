@@ -44,10 +44,7 @@ The mechanical diff needs manual review afterwards:
 ## Application
 
 - [x] PATCH /applications/@me — Edit Current Application (`Client::edit_current_application`)
-- [ ] GET /applications/{id} — Get Application
-- [ ] PATCH /applications/{id} — Edit Application
-- [ ] GET /applications/{id}/activity-instances/{instance_id} — Get Application Activity Instance
-- [ ] POST /applications/{id}/attachment — Upload ephemeral application attachment
+- [x] GET /applications/{id}/activity-instances/{instance_id} — Get Application Activity Instance (`Client::get_application_activity_instance`)
 
 ## Application emojis
 
@@ -204,6 +201,15 @@ context; both remain reachable through `Route::custom`.
 
 ## Out of scope: undocumented endpoints
 
+- GET /applications/{id} — Get Application: not present in the official
+  developer docs (only the `@me` application endpoints are documented);
+  reachable via `Route::custom`.
+- PATCH /applications/{id} — Edit Application: not present in the official
+  developer docs (only the `@me` application endpoints are documented);
+  reachable via `Route::custom`.
+- POST /applications/{id}/attachment — Upload ephemeral application
+  attachment: not present in the official developer docs (only the `@me`
+  application endpoints are documented); reachable via `Route::custom`.
 - GET /guilds/{id}/requests — List guild join requests: not present in the
   official developer docs; reachable via `Route::custom`.
 - PATCH /guilds/{id}/requests/{user} — Act on a guild join request: not present

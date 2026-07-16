@@ -25,6 +25,10 @@ pub(all) enum Route {
   GetGatewayBot
   GetCurrentApplication
   EditCurrentApplication
+  GetApplicationActivityInstance(
+    application_id~ : @model.ApplicationId,
+    instance_id~ : String
+  )
   GetApplicationRoleConnectionMetadataRecords(
     application_id~ : @model.ApplicationId
   )
@@ -505,6 +509,7 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     GetGateway
     | GetGatewayBot
     | GetCurrentApplication
+    | GetApplicationActivityInstance(..)
     | GetApplicationRoleConnectionMetadataRecords(..)
     | ListApplicationEmojis(..)
     | GetApplicationEmoji(..)
@@ -718,6 +723,8 @@ pub fn Route::path(self : Route) -> String {
     GetGateway => "/gateway"
     GetGatewayBot => "/gateway/bot"
     GetCurrentApplication | EditCurrentApplication => "/applications/@me"
+    GetApplicationActivityInstance(application_id~, instance_id~) =>
+      "/applications/\{application_id}/activity-instances/\{instance_id}"
     GetApplicationRoleConnectionMetadataRecords(application_id~)
     | UpdateApplicationRoleConnectionMetadataRecords(application_id~) =>
       "/applications/\{application_id}/role-connections/metadata"
@@ -1004,6 +1011,8 @@ pub fn Route::bucket(self : Route) -> String {
     GetGatewayBot => "GET:/gateway/bot"
     GetCurrentApplication => "GET:/applications/@me"
     EditCurrentApplication => "PATCH:/applications/@me"
+    GetApplicationActivityInstance(application_id~, ..) =>
+      "GET:/applications/\{application_id}/activity-instances/{}"
     GetApplicationRoleConnectionMetadataRecords(application_id~) =>
       "GET:/applications/\{application_id}/role-connections/metadata"
     UpdateApplicationRoleConnectionMetadataRecords(application_id~) =>

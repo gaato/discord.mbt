@@ -89,6 +89,31 @@ pub impl ToJson for ActivityFlags
 pub impl @debug.Debug for ActivityFlags
 pub impl @json.FromJson for ActivityFlags
 
+pub(all) struct ActivityInstance {
+  application_id : Id[ApplicationMarker]
+  instance_id : String
+  launch_id : Id[GenericMarker]
+  location : ActivityLocation
+  users : Array[Id[UserMarker]]
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ActivityLocation {
+  id : String
+  kind : ActivityLocationKind
+  channel_id : Id[ChannelMarker]
+  guild_id : Nullable[Id[GuildMarker]]?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum ActivityLocationKind {
+  GuildChannel
+  PrivateChannel
+  Unknown(String)
+} derive(Eq, @debug.Debug)
+pub fn ActivityLocationKind::from_string(String) -> Self
+pub fn ActivityLocationKind::to_string(Self) -> String
+pub impl ToJson for ActivityLocationKind
+pub impl @json.FromJson for ActivityLocationKind
+
 pub(all) struct ActivityParty {
   id : String?
   size : Array[Int]?

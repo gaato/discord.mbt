@@ -124,6 +124,7 @@ pub async fn Client::execute_slack_compatible_webhook(Self, @model.Id[@model.Web
 pub async fn Client::execute_webhook(Self, @model.Id[@model.WebhookMarker], String, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[FileUpload], username? : String, avatar_url? : String, tts? : Bool, allowed_mentions? : @model.AllowedMentions) -> @model.Message raise DiscordHttpError
 pub async fn Client::expire_poll(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker]) -> @model.Message raise DiscordHttpError
 pub async fn Client::follow_announcement_channel(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.ChannelMarker], audit_reason? : String) -> @model.FollowedChannel raise DiscordHttpError
+pub async fn Client::get_application_activity_instance(Self, @model.Id[@model.ApplicationMarker], String) -> @model.ActivityInstance raise DiscordHttpError
 pub async fn Client::get_application_command_permissions(Self, @model.Id[@model.ApplicationMarker], @model.Id[@model.GuildMarker], @model.Id[@model.CommandMarker]) -> @model.GuildApplicationCommandPermissions raise DiscordHttpError
 pub async fn Client::get_application_emoji(Self, @model.Id[@model.ApplicationMarker], @model.Id[@model.EmojiMarker]) -> @model.Emoji raise DiscordHttpError
 pub async fn Client::get_application_role_connection_metadata_records(Self, @model.Id[@model.ApplicationMarker]) -> Array[@model.ApplicationRoleConnectionMetadata] raise DiscordHttpError
@@ -328,6 +329,7 @@ pub(all) enum Route {
   GetGatewayBot
   GetCurrentApplication
   EditCurrentApplication
+  GetApplicationActivityInstance(application_id~ : @model.Id[@model.ApplicationMarker], instance_id~ : String)
   GetApplicationRoleConnectionMetadataRecords(application_id~ : @model.Id[@model.ApplicationMarker])
   UpdateApplicationRoleConnectionMetadataRecords(application_id~ : @model.Id[@model.ApplicationMarker])
   ListApplicationEmojis(application_id~ : @model.Id[@model.ApplicationMarker])
