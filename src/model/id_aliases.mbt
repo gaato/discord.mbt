@@ -50,6 +50,9 @@ pub type ScheduledEventId = Id[ScheduledEventMarker]
 pub type SkuId = Id[SkuMarker]
 
 ///|
+pub type SubscriptionId = Id[SubscriptionMarker]
+
+///|
 pub type SoundboardSoundId = Id[SoundboardSoundMarker]
 
 ///|

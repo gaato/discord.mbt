@@ -187,6 +187,46 @@ test "current user voice state body distinguishes timestamp clear and omission" 
 }
 
 ///|
+test "guild template create bodies include values and omit absent fields" {
+  json_inspect(
+    create_guild_from_template_body(
+      "Moon Guild",
+      Some("data:image/png;base64,aWNvbg=="),
+    ),
+    content={ "name": "Moon Guild", "icon": "data:image/png;base64,aWNvbg==" },
+  )
+  json_inspect(create_guild_from_template_body("Moon Guild", None), content={
+    "name": "Moon Guild",
+  })
+  json_inspect(create_guild_template_body("Starter", Some("A starter guild")), content={
+    "name": "Starter",
+    "description": "A starter guild",
+  })
+  json_inspect(create_guild_template_body("Starter", None), content={
+    "name": "Starter",
+  })
+}
+
+///|
+test "guild template modify body distinguishes values clear and omission" {
+  json_inspect(
+    modify_guild_template_body(
+      Some("Updated"),
+      Some("Updated description"),
+      false,
+    ),
+    content={ "name": "Updated", "description": "Updated description" },
+  )
+  json_inspect(modify_guild_template_body(None, None, true), content={
+    "description": null,
+  })
+  json_inspect(
+    modify_guild_template_body(None, None, false),
+    content=Json::empty_object(),
+  )
+}
+
+///|
 test "thread member query includes values and omits absent parameters" {
   let after : @model.UserId = Id(20UL)
   inspect(
@@ -288,6 +328,52 @@ test "guild message search query percent-encodes free text" {
 ///|
 test "guild message search query is empty without parameters" {
   inspect(search_guild_messages_query(), content="")
+}
+
+///|
+test "entitlement query includes every parameter and comma-joins SKU IDs" {
+  let user_id : @model.UserId = Id(11UL)
+  let sku_ids : Array[@model.SkuId] = [Id(21UL), Id(22UL)]
+  let before : @model.EntitlementId = Id(31UL)
+  let after : @model.EntitlementId = Id(32UL)
+  let guild_id : @model.GuildId = Id(41UL)
+  inspect(
+    list_entitlements_query(
+      user_id~,
+      sku_ids~,
+      before~,
+      after~,
+      limit=100,
+      guild_id~,
+      exclude_ended=true,
+      exclude_deleted=false,
+    ),
+    content="?user_id=11&sku_ids=21,22&before=31&after=32&limit=100&guild_id=41&exclude_ended=true&exclude_deleted=false",
+  )
+  inspect(list_entitlements_query(), content="")
+}
+
+///|
+test "SKU subscription query includes every parameter and can be empty" {
+  let before : @model.SubscriptionId = Id(51UL)
+  let after : @model.SubscriptionId = Id(52UL)
+  let user_id : @model.UserId = Id(11UL)
+  inspect(
+    list_sku_subscriptions_query(before~, after~, limit=100, user_id~),
+    content="?before=51&after=52&limit=100&user_id=11",
+  )
+  inspect(list_sku_subscriptions_query(), content="")
+}
+
+///|
+test "create test entitlement body encodes snowflakes as strings" {
+  let sku_id : @model.SkuId = Id(21UL)
+  let owner_id : @model.GenericId = Id(11UL)
+  json_inspect(create_test_entitlement_body(sku_id, owner_id, Guild), content={
+    "sku_id": "21",
+    "owner_id": "11",
+    "owner_type": 1,
+  })
 }
 
 ///|

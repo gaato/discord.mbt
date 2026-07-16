@@ -45,6 +45,26 @@ pub(all) enum Route {
     application_id~ : @model.ApplicationId,
     emoji_id~ : @model.EmojiId
   )
+  ListEntitlements(application_id~ : @model.ApplicationId, query~ : String)
+  GetEntitlement(
+    application_id~ : @model.ApplicationId,
+    entitlement_id~ : @model.EntitlementId
+  )
+  CreateTestEntitlement(application_id~ : @model.ApplicationId)
+  ConsumeEntitlement(
+    application_id~ : @model.ApplicationId,
+    entitlement_id~ : @model.EntitlementId
+  )
+  DeleteTestEntitlement(
+    application_id~ : @model.ApplicationId,
+    entitlement_id~ : @model.EntitlementId
+  )
+  ListSkus(application_id~ : @model.ApplicationId)
+  ListSkuSubscriptions(sku_id~ : @model.SkuId, query~ : String)
+  GetSkuSubscription(
+    sku_id~ : @model.SkuId,
+    subscription_id~ : @model.SubscriptionId
+  )
   GetCurrentUser
   GetCurrentUserGuilds(query~ : String)
   GetCurrentUserConnections
@@ -265,6 +285,13 @@ pub(all) enum Route {
   GetUserVoiceState(guild_id~ : @model.GuildId, user_id~ : @model.UserId)
   ModifyCurrentUserVoiceState(guild_id~ : @model.GuildId)
   ModifyUserVoiceState(guild_id~ : @model.GuildId, user_id~ : @model.UserId)
+  GetGuildTemplate(template_code~ : String)
+  CreateGuildFromTemplate(template_code~ : String)
+  GetGuildTemplates(guild_id~ : @model.GuildId)
+  CreateGuildTemplate(guild_id~ : @model.GuildId)
+  SyncGuildTemplate(guild_id~ : @model.GuildId, template_code~ : String)
+  ModifyGuildTemplate(guild_id~ : @model.GuildId, template_code~ : String)
+  DeleteGuildTemplate(guild_id~ : @model.GuildId, template_code~ : String)
   CreateStageInstance
   GetStageInstance(channel_id~ : @model.ChannelId)
   ModifyStageInstance(channel_id~ : @model.ChannelId)
@@ -457,6 +484,11 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | GetApplicationRoleConnectionMetadataRecords(..)
     | ListApplicationEmojis(..)
     | GetApplicationEmoji(..)
+    | ListEntitlements(..)
+    | GetEntitlement(..)
+    | ListSkus(..)
+    | ListSkuSubscriptions(..)
+    | GetSkuSubscription(..)
     | GetCurrentUser
     | GetCurrentUserGuilds(..)
     | GetCurrentUserConnections
@@ -508,6 +540,8 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | ListVoiceRegions
     | GetCurrentUserVoiceState(..)
     | GetUserVoiceState(..)
+    | GetGuildTemplate(..)
+    | GetGuildTemplates(..)
     | GetStageInstance(..)
     | GetInvite(..)
     | GetWebhook(..)
@@ -523,6 +557,8 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | GetApplicationCommandPermissions(..) => Get
     CreateDm
     | CreateMessage(..)
+    | CreateTestEntitlement(..)
+    | ConsumeEntitlement(..)
     | ExpirePoll(..)
     | SendSoundboardSound(..)
     | BulkDeleteMessages(..)
@@ -541,6 +577,8 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | CreateGuildSticker(..)
     | CreateGuildScheduledEvent(..)
     | CreateGuildSoundboardSound(..)
+    | CreateGuildFromTemplate(..)
+    | CreateGuildTemplate(..)
     | CreateStageInstance
     | ExecuteWebhook(..)
     | ExecuteSlackCompatibleWebhook(..)
@@ -569,6 +607,7 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | ModifyGuildSoundboardSound(..)
     | ModifyCurrentUserVoiceState(..)
     | ModifyUserVoiceState(..)
+    | ModifyGuildTemplate(..)
     | ModifyStageInstance(..)
     | EditOriginalInteractionResponse(..)
     | EditFollowupMessage(..)
@@ -595,10 +634,12 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | DeleteWebhookMessage(..)
     | DeleteGuildEmoji(..)
     | DeleteApplicationEmoji(..)
+    | DeleteTestEntitlement(..)
     | DeleteAutoModerationRule(..)
     | DeleteGuildSticker(..)
     | DeleteGuildScheduledEvent(..)
     | DeleteGuildSoundboardSound(..)
+    | DeleteGuildTemplate(..)
     | DeleteStageInstance(..)
     | DeleteOriginalInteractionResponse(..)
     | DeleteFollowupMessage(..)
@@ -619,7 +660,8 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | BulkOverwriteGuildCommands(..)
     | EditApplicationCommandPermissions(..)
     | UpdateApplicationRoleConnectionMetadataRecords(..)
-    | UpdateCurrentUserApplicationRoleConnection(..) => Put
+    | UpdateCurrentUserApplicationRoleConnection(..)
+    | SyncGuildTemplate(..) => Put
   }
 }
 
@@ -642,6 +684,20 @@ pub fn Route::path(self : Route) -> String {
     | ModifyApplicationEmoji(application_id~, emoji_id~)
     | DeleteApplicationEmoji(application_id~, emoji_id~) =>
       "/applications/\{application_id}/emojis/\{emoji_id}"
+    ListEntitlements(application_id~, query~) =>
+      "/applications/\{application_id}/entitlements\{query}"
+    CreateTestEntitlement(application_id~) =>
+      "/applications/\{application_id}/entitlements"
+    GetEntitlement(application_id~, entitlement_id~)
+    | DeleteTestEntitlement(application_id~, entitlement_id~) =>
+      "/applications/\{application_id}/entitlements/\{entitlement_id}"
+    ConsumeEntitlement(application_id~, entitlement_id~) =>
+      "/applications/\{application_id}/entitlements/\{entitlement_id}/consume"
+    ListSkus(application_id~) => "/applications/\{application_id}/skus"
+    ListSkuSubscriptions(sku_id~, query~) =>
+      "/skus/\{sku_id}/subscriptions\{query}"
+    GetSkuSubscription(sku_id~, subscription_id~) =>
+      "/skus/\{sku_id}/subscriptions/\{subscription_id}"
     GetCurrentUser | ModifyCurrentUser => "/users/@me"
     GetCurrentUserGuilds(query~) => "/users/@me/guilds\{query}"
     GetCurrentUserConnections => "/users/@me/connections"
@@ -801,6 +857,15 @@ pub fn Route::path(self : Route) -> String {
     GetUserVoiceState(guild_id~, user_id~)
     | ModifyUserVoiceState(guild_id~, user_id~) =>
       "/guilds/\{guild_id}/voice-states/\{user_id}"
+    GetGuildTemplate(template_code~)
+    | CreateGuildFromTemplate(template_code~) =>
+      "/guilds/templates/\{template_code}"
+    GetGuildTemplates(guild_id~) | CreateGuildTemplate(guild_id~) =>
+      "/guilds/\{guild_id}/templates"
+    SyncGuildTemplate(guild_id~, template_code~)
+    | ModifyGuildTemplate(guild_id~, template_code~)
+    | DeleteGuildTemplate(guild_id~, template_code~) =>
+      "/guilds/\{guild_id}/templates/\{template_code}"
     CreateStageInstance => "/stage-instances"
     GetStageInstance(channel_id~)
     | ModifyStageInstance(channel_id~)
@@ -885,6 +950,19 @@ pub fn Route::bucket(self : Route) -> String {
       "PATCH:/applications/\{application_id}/emojis/{}"
     DeleteApplicationEmoji(application_id~, ..) =>
       "DELETE:/applications/\{application_id}/emojis/{}"
+    ListEntitlements(application_id~, ..) =>
+      "GET:/applications/\{application_id}/entitlements"
+    GetEntitlement(application_id~, ..) =>
+      "GET:/applications/\{application_id}/entitlements/{}"
+    CreateTestEntitlement(application_id~) =>
+      "POST:/applications/\{application_id}/entitlements"
+    ConsumeEntitlement(application_id~, ..) =>
+      "POST:/applications/\{application_id}/entitlements/{}/consume"
+    DeleteTestEntitlement(application_id~, ..) =>
+      "DELETE:/applications/\{application_id}/entitlements/{}"
+    ListSkus(application_id~) => "GET:/applications/\{application_id}/skus"
+    ListSkuSubscriptions(..) => "GET:/skus/{}/subscriptions"
+    GetSkuSubscription(..) => "GET:/skus/{}/subscriptions/{}"
     GetCurrentUser => "GET:/users/@me"
     GetCurrentUserGuilds(..) => "GET:/users/@me/guilds"
     GetCurrentUserConnections => "GET:/users/@me/connections"
@@ -1063,6 +1141,15 @@ pub fn Route::bucket(self : Route) -> String {
       "PATCH:/guilds/\{guild_id}/voice-states/@me"
     ModifyUserVoiceState(guild_id~, ..) =>
       "PATCH:/guilds/\{guild_id}/voice-states/{}"
+    GetGuildTemplate(..) => "GET:/guilds/templates/{}"
+    CreateGuildFromTemplate(..) => "POST:/guilds/templates/{}"
+    GetGuildTemplates(guild_id~) => "GET:/guilds/\{guild_id}/templates"
+    CreateGuildTemplate(guild_id~) => "POST:/guilds/\{guild_id}/templates"
+    SyncGuildTemplate(guild_id~, ..) => "PUT:/guilds/\{guild_id}/templates/{}"
+    ModifyGuildTemplate(guild_id~, ..) =>
+      "PATCH:/guilds/\{guild_id}/templates/{}"
+    DeleteGuildTemplate(guild_id~, ..) =>
+      "DELETE:/guilds/\{guild_id}/templates/{}"
     CreateStageInstance => "POST:/stage-instances"
     GetStageInstance(channel_id~) => "GET:/stage-instances/\{channel_id}"
     ModifyStageInstance(channel_id~) => "PATCH:/stage-instances/\{channel_id}"

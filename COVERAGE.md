@@ -73,17 +73,14 @@ The mechanical diff needs manual review afterwards:
 
 ## Monetization
 
-List SKUs (`GET /applications/{id}/skus`) is documented but absent from the
-OpenAPI spec; include it when doing this category.
-
-- [ ] GET /applications/{id}/entitlements — List Entitlements
-- [ ] GET /applications/{id}/entitlements/{entitlement_id} — Get Entitlement
-- [ ] POST /applications/{id}/entitlements — Create Test Entitlement
-- [ ] POST /applications/{id}/entitlements/{entitlement_id}/consume — Consume Entitlement
-- [ ] DELETE /applications/{id}/entitlements/{entitlement_id} — Delete Test Entitlement
-- [ ] GET /users/@me/applications/{id}/entitlements — List user entitlements
-- [ ] GET /skus/{sku_id}/subscriptions — List SKU Subscriptions
-- [ ] GET /skus/{sku_id}/subscriptions/{subscription_id} — Get SKU Subscription
+- [x] GET /applications/{id}/entitlements — List Entitlements (`Client::list_entitlements`)
+- [x] GET /applications/{id}/entitlements/{entitlement_id} — Get Entitlement (`Client::get_entitlement`)
+- [x] POST /applications/{id}/entitlements — Create Test Entitlement (`Client::create_test_entitlement`)
+- [x] POST /applications/{id}/entitlements/{entitlement_id}/consume — Consume Entitlement (`Client::consume_entitlement`)
+- [x] DELETE /applications/{id}/entitlements/{entitlement_id} — Delete Test Entitlement (`Client::delete_test_entitlement`)
+- [x] GET /applications/{id}/skus — List SKUs (`Client::list_skus`) (documented but absent from the OpenAPI spec)
+- [x] GET /skus/{sku_id}/subscriptions — List SKU Subscriptions (`Client::list_sku_subscriptions`)
+- [x] GET /skus/{sku_id}/subscriptions/{subscription_id} — Get SKU Subscription (`Client::get_sku_subscription`)
 
 ## Channels & messages
 
@@ -153,12 +150,13 @@ OpenAPI spec; include it when doing this category.
 
 ## Guild templates
 
-- [ ] GET /guilds/templates/{code} — Get Guild Template
-- [ ] GET /guilds/{id}/templates — Get Guild Templates
-- [ ] POST /guilds/{id}/templates — Create Guild Template
-- [ ] PUT /guilds/{id}/templates/{code} — Sync Guild Template
-- [ ] PATCH /guilds/{id}/templates/{code} — Modify Guild Template
-- [ ] DELETE /guilds/{id}/templates/{code} — Delete Guild Template
+- [x] GET /guilds/templates/{code} — Get Guild Template (`Client::get_guild_template`)
+- [x] POST /guilds/templates/{code} — Create Guild From Template (`Client::create_guild_from_template`) (documented but absent from the OpenAPI spec)
+- [x] GET /guilds/{id}/templates — Get Guild Templates (`Client::get_guild_templates`)
+- [x] POST /guilds/{id}/templates — Create Guild Template (`Client::create_guild_template`)
+- [x] PUT /guilds/{id}/templates/{code} — Sync Guild Template (`Client::sync_guild_template`)
+- [x] PATCH /guilds/{id}/templates/{code} — Modify Guild Template (`Client::modify_guild_template`)
+- [x] DELETE /guilds/{id}/templates/{code} — Delete Guild Template (`Client::delete_guild_template`)
 
 ## Webhooks (token-authenticated)
 
@@ -213,3 +211,5 @@ context; both remain reachable through `Route::custom`.
 - GET /channels/{id}/threads/search — Search Threads: not present in the
   official developer docs (limited-availability endpoint); reachable via
   `Route::custom`.
+- GET /users/@me/applications/{id}/entitlements — List user entitlements: not
+  present in the official developer docs; reachable via `Route::custom`.

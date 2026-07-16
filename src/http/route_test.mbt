@@ -119,6 +119,44 @@ test "delete current user application role connection REST route metadata" {
 }
 
 ///|
+test "monetization REST route metadata" {
+  let application_id : @model.ApplicationId = Id(10UL)
+  let entitlement_id : @model.EntitlementId = Id(20UL)
+  let sku_id : @model.SkuId = Id(30UL)
+  let subscription_id : @model.SubscriptionId = Id(40UL)
+  let routes : Array[@http.Route] = [
+    ListEntitlements(application_id~, query="?limit=25"),
+    GetEntitlement(application_id~, entitlement_id~),
+    CreateTestEntitlement(application_id~),
+    ConsumeEntitlement(application_id~, entitlement_id~),
+    DeleteTestEntitlement(application_id~, entitlement_id~),
+    ListSkus(application_id~),
+    ListSkuSubscriptions(sku_id~, query="?limit=25"),
+    GetSkuSubscription(sku_id~, subscription_id~),
+  ]
+  debug_inspect(
+    routes.map(route_signature),
+    content=(
+      #|[
+      #|  "Get /applications/10/entitlements?limit=25 | GET:/applications/10/entitlements | reason=false",
+      #|  "Get /applications/10/entitlements/20 | GET:/applications/10/entitlements/{} | reason=false",
+      #|  "Post /applications/10/entitlements | POST:/applications/10/entitlements | reason=false",
+      #|  "Post /applications/10/entitlements/20/consume | POST:/applications/10/entitlements/{}/consume | reason=false",
+      #|  "Delete /applications/10/entitlements/20 | DELETE:/applications/10/entitlements/{} | reason=false",
+      #|  "Get /applications/10/skus | GET:/applications/10/skus | reason=false",
+      #|  "Get /skus/30/subscriptions?limit=25 | GET:/skus/{}/subscriptions | reason=false",
+      #|  "Get /skus/30/subscriptions/40 | GET:/skus/{}/subscriptions/{} | reason=false",
+      #|]
+    ),
+  )
+  for route in routes {
+    assert_true(route.needs_auth())
+    assert_false(route.is_interaction())
+    assert_false(route.supports_reason())
+  }
+}
+
+///|
 test "get guild application command permissions REST route metadata" {
   let application_id : @model.ApplicationId = Id(10UL)
   let guild_id : @model.GuildId = Id(20UL)
@@ -245,6 +283,40 @@ test "modify user voice state REST route metadata" {
   )
   assert_true(route.needs_auth())
   assert_false(route.is_interaction())
+}
+
+///|
+test "guild template REST route metadata" {
+  let guild_id : @model.GuildId = Id(10UL)
+  let template_code = "abc-123_XY"
+  let routes : Array[@http.Route] = [
+    GetGuildTemplate(template_code~),
+    CreateGuildFromTemplate(template_code~),
+    GetGuildTemplates(guild_id~),
+    CreateGuildTemplate(guild_id~),
+    SyncGuildTemplate(guild_id~, template_code~),
+    ModifyGuildTemplate(guild_id~, template_code~),
+    DeleteGuildTemplate(guild_id~, template_code~),
+  ]
+  debug_inspect(
+    routes.map(route_signature),
+    content=(
+      #|[
+      #|  "Get /guilds/templates/abc-123_XY | GET:/guilds/templates/{} | reason=false",
+      #|  "Post /guilds/templates/abc-123_XY | POST:/guilds/templates/{} | reason=false",
+      #|  "Get /guilds/10/templates | GET:/guilds/10/templates | reason=false",
+      #|  "Post /guilds/10/templates | POST:/guilds/10/templates | reason=false",
+      #|  "Put /guilds/10/templates/abc-123_XY | PUT:/guilds/10/templates/{} | reason=false",
+      #|  "Patch /guilds/10/templates/abc-123_XY | PATCH:/guilds/10/templates/{} | reason=false",
+      #|  "Delete /guilds/10/templates/abc-123_XY | DELETE:/guilds/10/templates/{} | reason=false",
+      #|]
+    ),
+  )
+  for route in routes {
+    assert_true(route.needs_auth())
+    assert_false(route.is_interaction())
+    assert_false(route.supports_reason())
+  }
 }
 
 ///|

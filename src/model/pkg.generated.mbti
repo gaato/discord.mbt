@@ -1055,6 +1055,16 @@ pub(all) struct Entitlement {
 pub enum EntitlementMarker {
 }
 
+pub(all) enum EntitlementOwnerType {
+  Guild
+  User
+  Unknown(Int)
+} derive(Eq, @debug.Debug)
+pub fn EntitlementOwnerType::from_int(Int) -> Self
+pub fn EntitlementOwnerType::to_int(Self) -> Int
+pub impl ToJson for EntitlementOwnerType
+pub impl @json.FromJson for EntitlementOwnerType
+
 pub(all) enum EntitlementType {
   Purchase
   PremiumSubscription
@@ -2976,6 +2986,9 @@ pub(all) struct Subscription {
   country : String?
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
+pub enum SubscriptionMarker {
+}
+
 pub(all) enum SubscriptionStatus {
   Active
   Ending
@@ -3470,6 +3483,8 @@ pub type StageInstanceId = Id[StageInstanceMarker]
 pub type StickerId = Id[StickerMarker]
 
 pub type StickerPackId = Id[StickerPackMarker]
+
+pub type SubscriptionId = Id[SubscriptionMarker]
 
 pub type TeamId = Id[TeamMarker]
 

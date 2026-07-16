@@ -127,3 +127,15 @@ test "monetization enums and flags preserve unknown values" {
   let decoded : @model.SkuFlags = @json.from_json(@json.parse(encoded_flags))
   assert_true(decoded.bits() == bits)
 }
+
+///|
+test "entitlement owner type round-trips known and unknown values" {
+  for value in [1, 2, 99] {
+    let owner_type : @model.EntitlementOwnerType = @json.from_json(
+      @json.parse(value.to_string()),
+    )
+    assert_eq(owner_type.to_int(), value)
+    assert_eq(owner_type.to_json().stringify(), value.to_string())
+  }
+  assert_eq(@model.EntitlementOwnerType::from_int(99), Unknown(99))
+}

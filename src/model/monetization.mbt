@@ -79,6 +79,46 @@ pub impl @json.FromJson for EntitlementType with fn from_json(json, path) {
 }
 
 ///|
+/// The owner scope used when creating a test entitlement.
+pub(all) enum EntitlementOwnerType {
+  Guild
+  User
+  Unknown(Int)
+} derive(Eq, Debug)
+
+///|
+pub fn EntitlementOwnerType::to_int(self : EntitlementOwnerType) -> Int {
+  match self {
+    Guild => 1
+    User => 2
+    Unknown(value) => value
+  }
+}
+
+///|
+pub fn EntitlementOwnerType::from_int(value : Int) -> EntitlementOwnerType {
+  match value {
+    1 => Guild
+    2 => User
+    value => Unknown(value)
+  }
+}
+
+///|
+pub impl ToJson for EntitlementOwnerType with fn to_json(self) {
+  Json::number(self.to_int().to_double())
+}
+
+///|
+pub impl @json.FromJson for EntitlementOwnerType with fn from_json(json, path) {
+  match json {
+    Number(value, ..) => EntitlementOwnerType::from_int(value.to_int())
+    _ =>
+      raise JsonDecodeError((path, "expected entitlement owner type (number)"))
+  }
+}
+
+///|
 /// A purchasable Discord application product.
 pub(all) struct Sku {
   id : SkuId

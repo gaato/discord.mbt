@@ -52,6 +52,9 @@ pub enum ScheduledEventMarker {}
 pub enum SkuMarker {}
 
 ///|
+pub enum SubscriptionMarker {}
+
+///|
 pub enum SoundboardSoundMarker {}
 
 ///|

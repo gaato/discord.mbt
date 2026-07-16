@@ -172,6 +172,34 @@ test "guild message search validates ranges and array caps" {
 }
 
 ///|
+test "entitlement list validates its documented limit" {
+  expect_search_validation(
+    () => list_entitlements_query(limit=0),
+    "entitlement limit must be 1 through 100",
+  )
+  expect_search_validation(
+    () => list_entitlements_query(limit=101),
+    "entitlement limit must be 1 through 100",
+  )
+  ignore(list_entitlements_query(limit=1))
+  ignore(list_entitlements_query(limit=100))
+}
+
+///|
+test "SKU subscription list validates its documented limit" {
+  expect_search_validation(
+    () => list_sku_subscriptions_query(limit=0),
+    "SKU subscription limit must be 1 through 100",
+  )
+  expect_search_validation(
+    () => list_sku_subscriptions_query(limit=101),
+    "SKU subscription limit must be 1 through 100",
+  )
+  ignore(list_sku_subscriptions_query(limit=1))
+  ignore(list_sku_subscriptions_query(limit=100))
+}
+
+///|
 test "execute webhook requires message content" {
   try validate_execute_webhook(None, None, None, None) catch {
     err =>
@@ -217,6 +245,60 @@ test "modify webhook with token validates its name" {
   )
   ignore(
     modify_webhook_with_token_body(Some(String::make(80, 'x')), None, false),
+  )
+}
+
+///|
+test "guild template fields validate documented limits" {
+  expect_json_validation(
+    () => create_guild_from_template_body("x", None),
+    "guild name must be between 2 and 100 characters",
+  )
+  expect_json_validation(
+    () => create_guild_from_template_body(String::make(101, 'x'), None),
+    "guild name must be between 2 and 100 characters",
+  )
+  expect_json_validation(
+    () => create_guild_template_body("", None),
+    "guild template name must be between 1 and 100 characters",
+  )
+  expect_json_validation(
+    () => create_guild_template_body(String::make(101, 'x'), None),
+    "guild template name must be between 1 and 100 characters",
+  )
+  expect_json_validation(
+    () => modify_guild_template_body(Some(""), None, false),
+    "guild template name must be between 1 and 100 characters",
+  )
+  expect_json_validation(
+    () => modify_guild_template_body(Some(String::make(101, 'x')), None, false),
+    "guild template name must be between 1 and 100 characters",
+  )
+  expect_json_validation(
+    () => create_guild_template_body("valid", Some(String::make(121, 'x'))),
+    "guild template description exceeds 120 characters",
+  )
+  expect_json_validation(
+    () => modify_guild_template_body(None, Some(String::make(121, 'x')), false),
+    "guild template description exceeds 120 characters",
+  )
+  ignore(create_guild_from_template_body(String::make(2, 'x'), None))
+  ignore(create_guild_from_template_body(String::make(100, 'x'), None))
+  ignore(create_guild_template_body(String::make(1, 'x'), Some("")))
+  ignore(
+    modify_guild_template_body(
+      Some(String::make(100, 'x')),
+      Some(String::make(120, 'x')),
+      false,
+    ),
+  )
+}
+
+///|
+test "guild template description rejects value and clear together" {
+  expect_json_validation(
+    () => modify_guild_template_body(None, Some("description"), true),
+    "description and clear_description cannot both be set",
   )
 }
 
