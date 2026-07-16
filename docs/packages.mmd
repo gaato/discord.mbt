@@ -1,4 +1,5 @@
 graph TD
+  classDef nativeOnly fill:#FFE1B8,stroke:#27272A,color:#27272A
   app --> framework
   bot --> app
   bot --> cache
@@ -22,3 +23,4 @@ graph TD
   interaction --> model
   endpoint_http --> app
   endpoint_http --> verify
+  class bot,voice,gateway,coordinator,endpoint_http nativeOnly

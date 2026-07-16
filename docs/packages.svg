@@ -41,7 +41,7 @@
 <text x="140" y="302.4" font-size="14.4" fill="#27272A" font-family="Inter">framework</text>
 </g>
 <g id="bot">
-<rect x="70" y="90" width="70" height="54" rx="4" ry="4" fill="#FFFFFF" stroke="#27272A" stroke-width="1.2" />
+<rect x="70" y="90" width="70" height="54" rx="4" ry="4" fill="#FFE1B8" stroke="#27272A" stroke-width="1.2" />
 <text x="90" y="122.4" font-size="14.4" fill="#27272A" font-family="Inter">bot</text>
 </g>
 <g id="cache">
@@ -49,11 +49,11 @@
 <text x="130" y="212.4" font-size="14.4" fill="#27272A" font-family="Inter">cache</text>
 </g>
 <g id="voice">
-<rect x="240" y="180" width="90" height="54" rx="4" ry="4" fill="#FFFFFF" stroke="#27272A" stroke-width="1.2" />
+<rect x="240" y="180" width="90" height="54" rx="4" ry="4" fill="#FFE1B8" stroke="#27272A" stroke-width="1.2" />
 <text x="260" y="212.4" font-size="14.4" fill="#27272A" font-family="Inter">voice</text>
 </g>
 <g id="gateway">
-<rect x="370" y="180" width="110" height="54" rx="4" ry="4" fill="#FFFFFF" stroke="#27272A" stroke-width="1.2" />
+<rect x="370" y="180" width="110" height="54" rx="4" ry="4" fill="#FFE1B8" stroke="#27272A" stroke-width="1.2" />
 <text x="390" y="212.4" font-size="14.4" fill="#27272A" font-family="Inter">gateway</text>
 </g>
 <g id="http">
@@ -81,11 +81,11 @@
 <text x="270" y="32.4" font-size="14.4" fill="#27272A" font-family="Inter">discord</text>
 </g>
 <g id="coordinator">
-<rect x="180" y="90" width="150" height="54" rx="4" ry="4" fill="#FFFFFF" stroke="#27272A" stroke-width="1.2" />
+<rect x="180" y="90" width="150" height="54" rx="4" ry="4" fill="#FFE1B8" stroke="#27272A" stroke-width="1.2" />
 <text x="200" y="122.4" font-size="14.4" fill="#27272A" font-family="Inter">coordinator</text>
 </g>
 <g id="endpoint_http">
-<rect x="370" y="90" width="170" height="54" rx="4" ry="4" fill="#FFFFFF" stroke="#27272A" stroke-width="1.2" />
+<rect x="370" y="90" width="170" height="54" rx="4" ry="4" fill="#FFE1B8" stroke="#27272A" stroke-width="1.2" />
 <text x="390" y="122.4" font-size="14.4" fill="#27272A" font-family="Inter">endpoint_http</text>
 </g>
 <g id="queue">

@@ -104,6 +104,8 @@ The dependency graph, generated from the `moon.pkg` declarations by
 <!-- Absolute URL: mooncakes.io serves only README.md, so relative image paths break there. -->
 ![Package dependency graph](https://raw.githubusercontent.com/gaato/discord.mbt/main/docs/packages.svg)
 
+Amber nodes are native-only; every other package also runs on JS.
+
 ## Examples
 
 Runnable programs live under `src/examples/`:
