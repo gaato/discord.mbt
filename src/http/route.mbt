@@ -194,6 +194,11 @@ pub(all) enum Route {
   ListStickerPacks
   GetStickerPack(pack_id~ : @model.StickerPackId)
   ListDefaultSoundboardSounds
+  ListVoiceRegions
+  GetCurrentUserVoiceState(guild_id~ : @model.GuildId)
+  GetUserVoiceState(guild_id~ : @model.GuildId, user_id~ : @model.UserId)
+  ModifyCurrentUserVoiceState(guild_id~ : @model.GuildId)
+  ModifyUserVoiceState(guild_id~ : @model.GuildId, user_id~ : @model.UserId)
   CreateStageInstance
   GetStageInstance(channel_id~ : @model.ChannelId)
   ModifyStageInstance(channel_id~ : @model.ChannelId)
@@ -392,6 +397,9 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | ListStickerPacks
     | GetStickerPack(..)
     | ListDefaultSoundboardSounds
+    | ListVoiceRegions
+    | GetCurrentUserVoiceState(..)
+    | GetUserVoiceState(..)
     | GetStageInstance(..)
     | GetInvite(..)
     | GetWebhook(..)
@@ -441,6 +449,8 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | ModifyGuildSticker(..)
     | ModifyGuildScheduledEvent(..)
     | ModifyGuildSoundboardSound(..)
+    | ModifyCurrentUserVoiceState(..)
+    | ModifyUserVoiceState(..)
     | ModifyStageInstance(..)
     | EditOriginalInteractionResponse(..)
     | EditFollowupMessage(..)
@@ -607,6 +617,13 @@ pub fn Route::path(self : Route) -> String {
     ListStickerPacks => "/sticker-packs"
     GetStickerPack(pack_id~) => "/sticker-packs/\{pack_id}"
     ListDefaultSoundboardSounds => "/soundboard-default-sounds"
+    ListVoiceRegions => "/voice/regions"
+    GetCurrentUserVoiceState(guild_id~)
+    | ModifyCurrentUserVoiceState(guild_id~) =>
+      "/guilds/\{guild_id}/voice-states/@me"
+    GetUserVoiceState(guild_id~, user_id~)
+    | ModifyUserVoiceState(guild_id~, user_id~) =>
+      "/guilds/\{guild_id}/voice-states/\{user_id}"
     CreateStageInstance => "/stage-instances"
     GetStageInstance(channel_id~)
     | ModifyStageInstance(channel_id~)
@@ -790,6 +807,15 @@ pub fn Route::bucket(self : Route) -> String {
     ListStickerPacks => "GET:/sticker-packs"
     GetStickerPack(..) => "GET:/sticker-packs/{}"
     ListDefaultSoundboardSounds => "GET:/soundboard-default-sounds"
+    ListVoiceRegions => "GET:/voice/regions"
+    GetCurrentUserVoiceState(guild_id~) =>
+      "GET:/guilds/\{guild_id}/voice-states/@me"
+    GetUserVoiceState(guild_id~, ..) =>
+      "GET:/guilds/\{guild_id}/voice-states/{}"
+    ModifyCurrentUserVoiceState(guild_id~) =>
+      "PATCH:/guilds/\{guild_id}/voice-states/@me"
+    ModifyUserVoiceState(guild_id~, ..) =>
+      "PATCH:/guilds/\{guild_id}/voice-states/{}"
     CreateStageInstance => "POST:/stage-instances"
     GetStageInstance(channel_id~) => "GET:/stage-instances/\{channel_id}"
     ModifyStageInstance(channel_id~) => "PATCH:/stage-instances/\{channel_id}"

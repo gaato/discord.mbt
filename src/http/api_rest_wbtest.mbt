@@ -82,6 +82,44 @@ test "edit current application body distinguishes clear and omission" {
 }
 
 ///|
+test "voice state patch bodies include provided values" {
+  let channel_id : @model.ChannelId = Id(10UL)
+  let timestamp_fixture =
+    #|"2026-08-01T10:00:00Z"
+  let timestamp : @model.Timestamp = @json.from_json(
+    @json.parse(timestamp_fixture),
+  )
+  json_inspect(
+    modify_current_user_voice_state_body(
+      Some(channel_id),
+      Some(true),
+      Some(timestamp),
+      false,
+    ),
+    content={
+      "channel_id": "10",
+      "suppress": true,
+      "request_to_speak_timestamp": "2026-08-01T10:00:00Z",
+    },
+  )
+  json_inspect(modify_user_voice_state_body(channel_id, Some(false)), content={
+    "channel_id": "10",
+    "suppress": false,
+  })
+}
+
+///|
+test "current user voice state body distinguishes timestamp clear and omission" {
+  json_inspect(modify_current_user_voice_state_body(None, None, None, true), content={
+    "request_to_speak_timestamp": null,
+  })
+  json_inspect(
+    modify_current_user_voice_state_body(None, None, None, false),
+    content=Json::empty_object(),
+  )
+}
+
+///|
 test "auto moderation create and patch bodies preserve arrays" {
   let metadata : @model.TriggerMetadata = {
     keyword_filter: Some(["moonbit"]),

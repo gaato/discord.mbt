@@ -138,11 +138,11 @@ OpenAPI spec; include it when doing this category.
 
 ## Voice
 
-- [ ] GET /voice/regions — List Voice Regions
-- [ ] GET /guilds/{id}/voice-states/@me — Get Current User Voice State
-- [ ] GET /guilds/{id}/voice-states/{user} — Get User Voice State
-- [ ] PATCH /guilds/{id}/voice-states/@me — Modify Current User Voice State
-- [ ] PATCH /guilds/{id}/voice-states/{user} — Modify User Voice State
+- [x] GET /voice/regions — List Voice Regions (`Client::list_voice_regions`)
+- [x] GET /guilds/{id}/voice-states/@me — Get Current User Voice State (`Client::get_current_user_voice_state`)
+- [x] GET /guilds/{id}/voice-states/{user} — Get User Voice State (`Client::get_user_voice_state`)
+- [x] PATCH /guilds/{id}/voice-states/@me — Modify Current User Voice State (`Client::modify_current_user_voice_state`)
+- [x] PATCH /guilds/{id}/voice-states/{user} — Modify User Voice State (`Client::modify_user_voice_state`)
 
 ## Guild scheduled events
 

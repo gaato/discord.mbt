@@ -25,6 +25,28 @@ test "edit current application rejects value and clear together" {
 }
 
 ///|
+test "current user voice state rejects timestamp value and clear together" {
+  let timestamp_fixture =
+    #|"2026-08-01T10:00:00Z"
+  let timestamp : @model.Timestamp = @json.from_json(
+    @json.parse(timestamp_fixture),
+  )
+  try
+    modify_current_user_voice_state_body(None, None, Some(timestamp), true)
+  catch {
+    err =>
+      debug_inspect(
+        err,
+        content=(
+          #|Validation(message="request_to_speak_timestamp and clear_request_to_speak_timestamp cannot both be set")
+        ),
+      )
+  } noraise {
+    _ => fail("expected to fail")
+  }
+}
+
+///|
 test "edit current application validates tags" {
   expect_edit_application_validation(
     () => {

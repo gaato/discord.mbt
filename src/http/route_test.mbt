@@ -39,6 +39,77 @@ test "edit current application REST route metadata" {
 }
 
 ///|
+test "list voice regions REST route metadata" {
+  let route = @http.Route::ListVoiceRegions
+  inspect(
+    route_signature(route),
+    content=(
+      #|Get /voice/regions | GET:/voice/regions | reason=false
+    ),
+  )
+  assert_true(route.needs_auth())
+  assert_false(route.is_interaction())
+}
+
+///|
+test "get current user voice state REST route metadata" {
+  let guild_id : @model.GuildId = Id(10UL)
+  let route = @http.Route::GetCurrentUserVoiceState(guild_id~)
+  inspect(
+    route_signature(route),
+    content=(
+      #|Get /guilds/10/voice-states/@me | GET:/guilds/10/voice-states/@me | reason=false
+    ),
+  )
+  assert_true(route.needs_auth())
+  assert_false(route.is_interaction())
+}
+
+///|
+test "get user voice state REST route metadata" {
+  let guild_id : @model.GuildId = Id(10UL)
+  let user_id : @model.UserId = Id(20UL)
+  let route = @http.Route::GetUserVoiceState(guild_id~, user_id~)
+  inspect(
+    route_signature(route),
+    content=(
+      #|Get /guilds/10/voice-states/20 | GET:/guilds/10/voice-states/{} | reason=false
+    ),
+  )
+  assert_true(route.needs_auth())
+  assert_false(route.is_interaction())
+}
+
+///|
+test "modify current user voice state REST route metadata" {
+  let guild_id : @model.GuildId = Id(10UL)
+  let route = @http.Route::ModifyCurrentUserVoiceState(guild_id~)
+  inspect(
+    route_signature(route),
+    content=(
+      #|Patch /guilds/10/voice-states/@me | PATCH:/guilds/10/voice-states/@me | reason=false
+    ),
+  )
+  assert_true(route.needs_auth())
+  assert_false(route.is_interaction())
+}
+
+///|
+test "modify user voice state REST route metadata" {
+  let guild_id : @model.GuildId = Id(10UL)
+  let user_id : @model.UserId = Id(20UL)
+  let route = @http.Route::ModifyUserVoiceState(guild_id~, user_id~)
+  inspect(
+    route_signature(route),
+    content=(
+      #|Patch /guilds/10/voice-states/20 | PATCH:/guilds/10/voice-states/{} | reason=false
+    ),
+  )
+  assert_true(route.needs_auth())
+  assert_false(route.is_interaction())
+}
+
+///|
 test "current user guild REST route metadata" {
   let route = @http.Route::GetCurrentUserGuilds(query="?limit=200&before=10")
   inspect(
