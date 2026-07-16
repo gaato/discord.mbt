@@ -62,8 +62,8 @@ pub fn dm_only() -> CommandCheck {
 pub fn required_permissions(required : @model.Permissions) -> CommandCheck {
   ctx => {
     match ctx.scope() {
-      Guild(member) => {
-        guard member.permissions is Some(actual) &&
+      Guild(guild_member) => {
+        guard guild_member.permissions is Some(actual) &&
           (
             actual.contains(@model.Permissions::administrator()) ||
             actual.contains(required)

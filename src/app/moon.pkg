@@ -14,9 +14,4 @@ import {
   "gaato/discord/model",
 } for "test"
 
-// `member` is part of the public TargetUser API, but MoonBit currently marks
-// it as a possible future keyword before local warning attributes take effect.
-
-warnings = "-35"
-
 supported_targets = "js + native"

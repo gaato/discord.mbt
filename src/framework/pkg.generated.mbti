@@ -58,6 +58,8 @@ pub async fn CommandCtx::original_response(Self) -> @model.Message
 pub async fn CommandCtx::respond(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, ephemeral? : Bool) -> Unit
 pub fn CommandCtx::scope(Self) -> InvocationScope
 pub async fn CommandCtx::show_modal(Self, custom_id~ : String, title~ : String, components~ : Array[@model.Component]) -> Unit
+pub fn CommandCtx::target_message(Self) -> @model.Message?
+pub fn CommandCtx::target_user(Self) -> TargetUser?
 pub fn CommandCtx::user(Self) -> @model.User
 
 pub(all) struct ComponentCtx {
@@ -144,6 +146,11 @@ pub fn ResponseGate::capture(@model.Interaction) -> (Self, ResponseCapture)
 pub fn ResponseGate::responded(Self) -> Bool
 pub fn ResponseGate::rest(@http.Client, @model.Interaction) -> Self
 pub async fn ResponseGate::send(Self, @model.InteractionResponse, files? : Array[@http.FileUpload]) -> Unit
+
+pub(all) struct TargetUser {
+  user : @model.User
+  member : @model.GuildMember?
+}
 
 // Type aliases
 

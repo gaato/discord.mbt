@@ -66,6 +66,7 @@ pub using @framework {
   type InvocationScope,
   type ModalOrigin,
   type InteractionContextError,
+  type TargetUser,
 }
 
 ///|
@@ -97,7 +98,6 @@ pub using @app {
   type ModalSubmitHandler,
   type ModalImmediateCtx,
   type ModalDeferredCtx,
-  type TargetUser,
   type SlashChild,
   type ImmediateCtx,
   type DeferredCtx,

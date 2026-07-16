@@ -123,7 +123,7 @@ pub fn text_input(custom_id~ : String, style? : @model.TextInputStyle, placehold
 
 pub fn thumbnail(url~ : String, description? : String, spoiler? : Bool) -> @model.Component
 
-pub fn user_command(name~ : String, handler~ : @app.InteractionHandler[@app.TargetUser], default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType], name_localizations? : Map[String, String]) -> @app.Command[@app.TargetUser]
+pub fn user_command(name~ : String, handler~ : @app.InteractionHandler[@framework.TargetUser], default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType], name_localizations? : Map[String, String]) -> @app.Command[@framework.TargetUser]
 
 pub fn user_option(String, String, required? : Bool, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @model.CommandOption
 
@@ -316,7 +316,7 @@ pub using @http {type StickerRef}
 
 pub using @interaction {type SuggestCtx}
 
-pub using @app {type TargetUser}
+pub using @framework {type TargetUser}
 
 pub using @telemetry {type TelemetryEvent}
 

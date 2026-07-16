@@ -87,6 +87,30 @@ fn named_command_interaction(
 }
 
 ///|
+fn resolved_command_interaction(
+  name : String,
+  typ : @model.ApplicationCommandType,
+  target_id : String,
+  resolved : @model.ResolvedData,
+) -> @model.Interaction raise {
+  let interaction = named_command_interaction(name, typ.to_int())
+  {
+    ..interaction,
+    data: Some(
+      Command({
+        id: @model.Id::parse("600000000000000011"),
+        name,
+        typ,
+        resolved: Some(resolved),
+        options: None,
+        guild_id: None,
+        target_id: Some(@model.Id::parse(target_id)),
+      }),
+    ),
+  }
+}
+
+///|
 fn component_interaction(custom_id : String) -> @model.Interaction raise {
   let json =
     #|{
@@ -248,6 +272,90 @@ async test "framework routes same-name commands by type" {
   assert_true(fw.process(named_command_interaction("inspect", 1)))
   assert_true(fw.process(named_command_interaction("inspect", 2)))
   inspect(seen.join(","), content="slash,user")
+}
+
+///|
+async test "command contexts expose resolved context-menu targets" {
+  let fw = test_framework()
+  let seen : Array[String] = []
+  fw
+  .command(@interaction.CommandSpec::user("inspect"), ctx => {
+    guard ctx.target_user() is Some(target) else {
+      fail("expected resolved user target")
+    }
+    assert_true(ctx.target_message() is None)
+    seen.push("user:\{target.user.username}:member=\{target.member is Some(_)}")
+  })
+  .command(@interaction.CommandSpec::message("inspect"), ctx => {
+    guard ctx.target_message() is Some(target) else {
+      fail("expected resolved message target")
+    }
+    assert_true(ctx.target_user() is None)
+    seen.push("message:\{target.content}")
+  })
+  .command(@interaction.CommandSpec::slash("inspect", "Inspect"), ctx => {
+    assert_true(ctx.target_user() is None)
+    assert_true(ctx.target_message() is None)
+    seen.push("slash:none")
+  })
+  |> ignore
+  let user_id = "200000000000000001"
+  let user_resolved : @model.ResolvedData = {
+    users: Some(Map([(user_id, interaction_test_user())])),
+    members: Some(Map([(user_id, interaction_test_member())])),
+    messages: None,
+    channels: None,
+    roles: None,
+    attachments: None,
+  }
+  let message_id = "700000000000000001"
+  let message_resolved : @model.ResolvedData = {
+    users: None,
+    members: None,
+    messages: Some(Map([(message_id, interaction_test_message())])),
+    channels: None,
+    roles: None,
+    attachments: None,
+  }
+  let non_context_resolved : @model.ResolvedData = {
+    users: Some(Map([(user_id, interaction_test_user())])),
+    members: Some(Map([(user_id, interaction_test_member())])),
+    messages: Some(Map([(user_id, interaction_test_message())])),
+    channels: None,
+    roles: None,
+    attachments: None,
+  }
+  assert_true(
+    fw.process(
+      resolved_command_interaction("inspect", User, user_id, user_resolved),
+    ),
+  )
+  assert_true(
+    fw.process(
+      resolved_command_interaction(
+        "inspect",
+        Message,
+        message_id,
+        message_resolved,
+      ),
+    ),
+  )
+  assert_true(
+    fw.process(
+      resolved_command_interaction(
+        "inspect",
+        ChatInput,
+        user_id,
+        non_context_resolved,
+      ),
+    ),
+  )
+  debug_inspect(
+    seen,
+    content=(
+      #|["user:nelly:member=true", "message:component host", "slash:none"]
+    ),
+  )
 }
 
 ///|

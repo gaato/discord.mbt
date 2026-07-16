@@ -163,6 +163,13 @@ pub(all) suberror InteractionContextError {
 } derive(Debug)
 
 ///|
+/// The resolved target of a USER context-menu command.
+pub(all) struct TargetUser {
+  user : @model.User
+  member : @model.GuildMember?
+}
+
+///|
 /// Prefer the guild member when both `member` and `user` are present: the
 /// documented contract is exactly-one, but an interpretable payload should
 /// never make the interaction unanswerable.
@@ -231,6 +238,37 @@ pub fn CommandCtx::scope(self : CommandCtx) -> InvocationScope {
 /// The invoking user.
 pub fn CommandCtx::user(self : CommandCtx) -> @model.User {
   self.scope_.invoking_user()
+}
+
+///|
+/// The resolved target of a MESSAGE context-menu command, or `None` when this
+/// is not a message command or its target is unavailable.
+pub fn CommandCtx::target_message(self : CommandCtx) -> @model.Message? {
+  guard self.data.typ is Message &&
+    self.data.target_id is Some(target_id) &&
+    self.data.resolved is Some(resolved) &&
+    resolved.messages is Some(messages) else {
+    return None
+  }
+  messages.get(target_id.to_string())
+}
+
+///|
+/// The resolved target of a USER context-menu command, or `None` when this is
+/// not a user command or its target is unavailable.
+pub fn CommandCtx::target_user(self : CommandCtx) -> TargetUser? {
+  guard self.data.typ is User &&
+    self.data.target_id is Some(target_id) &&
+    self.data.resolved is Some(resolved) &&
+    resolved.users is Some(users) &&
+    users.get(target_id.to_string()) is Some(user) else {
+    return None
+  }
+  let target_member = match resolved.members {
+    Some(members) => members.get(target_id.to_string())
+    None => None
+  }
+  Some({ user, member: target_member })
 }
 
 ///|

@@ -7,13 +7,6 @@ pub(all) enum InteractionHandler[A] {
 }
 
 ///|
-/// The resolved target of a USER context-menu command.
-pub(all) struct TargetUser {
-  user : @model.User
-  member : @model.GuildMember?
-}
-
-///|
 priv struct SlashRoute {
   path : Array[String]
   dispatch : async (
@@ -151,19 +144,15 @@ fn target_key(raw : @framework.CommandCtx) -> String raise HandlerError {
 ///|
 fn decode_target_user(
   raw : @framework.CommandCtx,
-) -> TargetUser raise HandlerError {
+) -> @framework.TargetUser raise HandlerError {
   let key = target_key(raw)
-  guard raw.data.resolved is Some(resolved) else {
+  guard raw.data.resolved is Some(_) else {
     raise InvalidArgument("user target is missing resolved data")
   }
-  guard resolved.users is Some(users) && users.get(key) is Some(user) else {
+  guard raw.target_user() is Some(target) else {
     raise InvalidArgument("resolved user target \{key} was not found")
   }
-  let target_member = match resolved.members {
-    Some(members) => members.get(key)
-    None => None
-  }
-  { user, member: target_member }
+  target
 }
 
 ///|
@@ -171,11 +160,10 @@ fn decode_target_message(
   raw : @framework.CommandCtx,
 ) -> @model.Message raise HandlerError {
   let key = target_key(raw)
-  guard raw.data.resolved is Some(resolved) else {
+  guard raw.data.resolved is Some(_) else {
     raise InvalidArgument("message target is missing resolved data")
   }
-  guard resolved.messages is Some(messages) &&
-    messages.get(key) is Some(message) else {
+  guard raw.target_message() is Some(message) else {
     raise InvalidArgument("resolved message target \{key} was not found")
   }
   message
@@ -205,13 +193,13 @@ fn decode_target_message(
 /// ```
 pub fn user_command(
   name~ : String,
-  handler~ : InteractionHandler[TargetUser],
+  handler~ : InteractionHandler[@framework.TargetUser],
   default_member_permissions? : @model.Permissions,
   nsfw? : Bool,
   integration_types? : Array[@model.ApplicationIntegrationType],
   contexts? : Array[@model.InteractionContextType],
   name_localizations? : Map[String, String],
-) -> Command[TargetUser] {
+) -> Command[@framework.TargetUser] {
   {
     definition: @interaction.CommandSpec::user(
       name,
