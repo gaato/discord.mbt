@@ -52,6 +52,7 @@ pub async fn ChannelRef::add_thread_member(Self, @model.Id[@model.UserMarker]) -
 pub async fn ChannelRef::bulk_delete(Self, Array[@model.Id[@model.MessageMarker]], reason? : String) -> Unit raise DiscordHttpError
 pub async fn ChannelRef::create_invite(Self, max_age? : Int, max_uses? : Int, temporary? : Bool, unique? : Bool, reason? : String) -> @model.Invite raise DiscordHttpError
 pub async fn ChannelRef::create_stage_instance(Self, String, privacy_level? : @model.StagePrivacyLevel, send_start_notification? : Bool, guild_scheduled_event_id? : @model.Id[@model.ScheduledEventMarker], reason? : String) -> @model.StageInstance raise DiscordHttpError
+pub async fn ChannelRef::create_webhook(Self, String, avatar? : String, reason? : String) -> @model.Webhook raise DiscordHttpError
 pub async fn ChannelRef::delete(Self, reason? : String) -> @model.Channel raise DiscordHttpError
 pub async fn ChannelRef::delete_permission(Self, @model.Id[@model.GenericMarker], reason? : String) -> Unit raise DiscordHttpError
 pub async fn ChannelRef::delete_stage_instance(Self, reason? : String) -> Unit raise DiscordHttpError
@@ -81,6 +82,7 @@ pub async fn ChannelRef::start_thread(Self, String, typ? : @model.ChannelType, a
 pub async fn ChannelRef::thread_member(Self, @model.Id[@model.UserMarker], with_member? : Bool) -> @model.ThreadMember raise DiscordHttpError
 pub async fn ChannelRef::thread_members(Self, with_member? : Bool, after? : @model.Id[@model.UserMarker], limit? : Int) -> Array[@model.ThreadMember] raise DiscordHttpError
 pub async fn ChannelRef::typing(Self) -> Unit raise DiscordHttpError
+pub async fn ChannelRef::webhooks(Self) -> Array[@model.Webhook] raise DiscordHttpError
 
 pub struct Client {
   // private fields
@@ -237,6 +239,7 @@ pub async fn Client::group_dm_remove_recipient(Self, @model.Id[@model.ChannelMar
 pub fn Client::guild_ref(Self, @model.Id[@model.GuildMarker]) -> GuildRef
 pub fn Client::guild_template_ref(Self, @model.Id[@model.GuildMarker], String) -> TemplateRef
 pub fn Client::guild_widget_image_url(Self, @model.Id[@model.GuildMarker], style? : String) -> String
+pub fn Client::invite_ref(Self, String) -> InviteRef
 pub async fn Client::join_thread(Self, @model.Id[@model.ChannelMarker]) -> Unit raise DiscordHttpError
 pub async fn Client::leave_guild(Self, @model.Id[@model.GuildMarker]) -> Unit raise DiscordHttpError
 pub async fn Client::leave_thread(Self, @model.Id[@model.ChannelMarker]) -> Unit raise DiscordHttpError
@@ -320,6 +323,8 @@ pub async fn Client::update_application_role_connection_metadata_records(Self, @
 pub async fn Client::update_current_user_application_role_connection(Self, @model.Id[@model.ApplicationMarker], platform_name? : String, platform_username? : String, metadata? : Json, bearer_token~ : String) -> @model.ApplicationRoleConnection raise DiscordHttpError
 pub async fn Client::update_invite_target_users(Self, String, FileUpload) -> Unit raise DiscordHttpError
 pub fn Client::user_ref(Self, @model.Id[@model.UserMarker]) -> UserRef
+pub fn Client::webhook_ref(Self, @model.Id[@model.WebhookMarker]) -> WebhookRef
+pub fn Client::webhook_token_ref(Self, @model.Id[@model.WebhookMarker], String) -> WebhookTokenRef
 pub impl Show for Client
 
 pub struct EmojiRef {
@@ -397,6 +402,7 @@ pub fn GuildRef::template_ref(Self, String) -> TemplateRef
 pub async fn GuildRef::templates(Self) -> Array[@model.GuildTemplate] raise DiscordHttpError
 pub async fn GuildRef::vanity_url(Self) -> @model.GuildVanityUrl raise DiscordHttpError
 pub async fn GuildRef::voice_regions(Self) -> Array[@model.VoiceRegion] raise DiscordHttpError
+pub async fn GuildRef::webhooks(Self) -> Array[@model.Webhook] raise DiscordHttpError
 pub async fn GuildRef::welcome_screen(Self) -> @model.WelcomeScreen raise DiscordHttpError
 pub async fn GuildRef::widget(Self) -> @model.GuildWidget raise DiscordHttpError
 pub fn GuildRef::widget_image_url(Self, style? : String) -> String
@@ -415,6 +421,14 @@ pub(all) struct HttpResponse {
   headers : Map[String, String]
   body : Json
 }
+
+pub struct InviteRef {
+  // private fields
+}
+pub async fn InviteRef::delete(Self, reason? : String) -> @model.Invite raise DiscordHttpError
+pub async fn InviteRef::fetch(Self, with_counts? : Bool, with_expiration? : Bool, guild_scheduled_event_id? : @model.Id[@model.ScheduledEventMarker]) -> @model.Invite raise DiscordHttpError
+pub async fn InviteRef::target_users_job_status(Self) -> @model.TargetUsersJobStatus raise DiscordHttpError
+pub async fn InviteRef::update_target_users(Self, FileUpload) -> Unit raise DiscordHttpError
 
 pub struct MemberRef {
   // private fields
@@ -724,6 +738,32 @@ pub struct UserRef {
 }
 pub async fn UserRef::dm(Self) -> ChannelRef raise DiscordHttpError
 pub async fn UserRef::fetch(Self) -> @model.User raise DiscordHttpError
+
+pub struct WebhookMessageRef {
+  // private fields
+}
+pub async fn WebhookMessageRef::delete(Self) -> Unit raise DiscordHttpError
+pub async fn WebhookMessageRef::edit(Self, content? : String, clear_content? : Bool, embeds? : Array[@model.Embed], components? : Array[@model.Component], allowed_mentions? : @model.AllowedMentions, files? : Array[FileUpload]) -> @model.Message raise DiscordHttpError
+pub async fn WebhookMessageRef::fetch(Self) -> @model.Message raise DiscordHttpError
+
+pub struct WebhookRef {
+  // private fields
+}
+pub async fn WebhookRef::delete(Self, reason? : String) -> Unit raise DiscordHttpError
+pub async fn WebhookRef::edit(Self, name? : String, avatar? : String, clear_avatar? : Bool, channel_id? : @model.Id[@model.ChannelMarker], reason? : String) -> @model.Webhook raise DiscordHttpError
+pub async fn WebhookRef::fetch(Self) -> @model.Webhook raise DiscordHttpError
+pub fn WebhookRef::with_token(Self, String) -> WebhookTokenRef
+
+pub struct WebhookTokenRef {
+  // private fields
+}
+pub async fn WebhookTokenRef::delete(Self) -> Unit raise DiscordHttpError
+pub async fn WebhookTokenRef::edit(Self, name? : String, avatar? : String, clear_avatar? : Bool) -> @model.Webhook raise DiscordHttpError
+pub async fn WebhookTokenRef::fetch(Self) -> @model.Webhook raise DiscordHttpError
+pub fn WebhookTokenRef::message_ref(Self, @model.Id[@model.MessageMarker]) -> WebhookMessageRef
+pub async fn WebhookTokenRef::send(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[FileUpload], username? : String, avatar_url? : String, tts? : Bool, allowed_mentions? : @model.AllowedMentions) -> @model.Message raise DiscordHttpError
+pub async fn WebhookTokenRef::send_github(Self, Json, github_event~ : String, thread_id? : @model.Id[@model.ChannelMarker], wait? : Bool) -> Unit raise DiscordHttpError
+pub async fn WebhookTokenRef::send_slack(Self, Json, thread_id? : @model.Id[@model.ChannelMarker], wait? : Bool) -> Unit raise DiscordHttpError
 
 // Type aliases
 pub type HttpMiddleware = async (HttpRequest, async (HttpRequest) -> HttpResponse) -> HttpResponse

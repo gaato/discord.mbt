@@ -242,6 +242,8 @@ pub using @app {type InteractionOutcome}
 
 pub using @endpoint_http {type InteractionsServer}
 
+pub using @http {type InviteRef}
+
 pub using @framework {type InvocationScope}
 
 pub using @http {type MemberRef}
@@ -321,6 +323,12 @@ pub using @voice {type VoiceEvent}
 pub using @voice {type VoiceReceiveStream}
 
 pub using @voice {type VoiceTelemetry}
+
+pub using @http {type WebhookMessageRef}
+
+pub using @http {type WebhookRef}
+
+pub using @http {type WebhookTokenRef}
 
 pub using @voice {trait AudioSource}
 

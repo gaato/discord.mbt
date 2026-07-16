@@ -393,6 +393,14 @@ pub async fn GuildRef::integrations(
 }
 
 ///|
+/// List webhooks belonging to this guild.
+pub async fn GuildRef::webhooks(
+  self : GuildRef,
+) -> Array[@model.Webhook] raise DiscordHttpError {
+  self.client.get_guild_webhooks(self.guild_id)
+}
+
+///|
 /// Delete an integration from this guild.
 pub async fn GuildRef::delete_integration(
   self : GuildRef,

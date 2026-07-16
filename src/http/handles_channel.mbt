@@ -127,6 +127,30 @@ pub async fn ChannelRef::invites(
 }
 
 ///|
+/// Create an incoming webhook for this channel.
+pub async fn ChannelRef::create_webhook(
+  self : ChannelRef,
+  name : String,
+  avatar? : String,
+  reason? : String,
+) -> @model.Webhook raise DiscordHttpError {
+  self.client.create_webhook(
+    self.channel_id,
+    name,
+    avatar?,
+    audit_reason?=reason,
+  )
+}
+
+///|
+/// List webhooks created for this channel.
+pub async fn ChannelRef::webhooks(
+  self : ChannelRef,
+) -> Array[@model.Webhook] raise DiscordHttpError {
+  self.client.get_channel_webhooks(self.channel_id)
+}
+
+///|
 /// Create an invite for this channel.
 pub async fn ChannelRef::create_invite(
   self : ChannelRef,

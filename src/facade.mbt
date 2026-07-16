@@ -20,6 +20,10 @@ pub using @dhttp {
   type ScheduledEventRef,
   type AutoModerationRuleRef,
   type TemplateRef,
+  type WebhookRef,
+  type WebhookTokenRef,
+  type WebhookMessageRef,
+  type InviteRef,
 }
 
 ///|
