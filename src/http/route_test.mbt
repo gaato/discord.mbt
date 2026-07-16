@@ -890,6 +890,75 @@ test "guild emoji route metadata" {
 }
 
 ///|
+test "application emoji route metadata" {
+  let application_id : @model.ApplicationId = Id(20UL)
+  let emoji_id : @model.EmojiId = Id(60UL)
+  let routes = [
+    @http.Route::ListApplicationEmojis(application_id~),
+    GetApplicationEmoji(application_id~, emoji_id~),
+    CreateApplicationEmoji(application_id~),
+    ModifyApplicationEmoji(application_id~, emoji_id~),
+    DeleteApplicationEmoji(application_id~, emoji_id~),
+  ]
+  debug_inspect(
+    [
+      route_metadata("list", routes[0]),
+      route_metadata("get", routes[1]),
+      route_metadata("create", routes[2]),
+      route_metadata("modify", routes[3]),
+      route_metadata("delete", routes[4]),
+    ],
+    content=(
+      #|[
+      #|  {
+      #|    name: "list",
+      #|    method_name: "Get",
+      #|    path: "/applications/20/emojis",
+      #|    bucket: "GET:/applications/20/emojis",
+      #|    needs_auth: true,
+      #|    supports_reason: false,
+      #|  },
+      #|  {
+      #|    name: "get",
+      #|    method_name: "Get",
+      #|    path: "/applications/20/emojis/60",
+      #|    bucket: "GET:/applications/20/emojis/{}",
+      #|    needs_auth: true,
+      #|    supports_reason: false,
+      #|  },
+      #|  {
+      #|    name: "create",
+      #|    method_name: "Post",
+      #|    path: "/applications/20/emojis",
+      #|    bucket: "POST:/applications/20/emojis",
+      #|    needs_auth: true,
+      #|    supports_reason: false,
+      #|  },
+      #|  {
+      #|    name: "modify",
+      #|    method_name: "Patch",
+      #|    path: "/applications/20/emojis/60",
+      #|    bucket: "PATCH:/applications/20/emojis/{}",
+      #|    needs_auth: true,
+      #|    supports_reason: false,
+      #|  },
+      #|  {
+      #|    name: "delete",
+      #|    method_name: "Delete",
+      #|    path: "/applications/20/emojis/60",
+      #|    bucket: "DELETE:/applications/20/emojis/{}",
+      #|    needs_auth: true,
+      #|    supports_reason: false,
+      #|  },
+      #|]
+    ),
+  )
+  for route in routes {
+    assert_false(route.is_interaction())
+  }
+}
+
+///|
 test "interaction routes are global-exempt and unauthenticated" {
   let interaction_id : @model.InteractionId = Id(1UL)
   let callback = @http.Route::CreateInteractionResponse(

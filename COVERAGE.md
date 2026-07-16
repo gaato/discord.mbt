@@ -51,11 +51,11 @@ The mechanical diff needs manual review afterwards:
 
 ## Application emojis
 
-- [ ] GET /applications/{id}/emojis — List Application Emojis
-- [ ] GET /applications/{id}/emojis/{emoji_id} — Get Application Emoji
-- [ ] POST /applications/{id}/emojis — Create Application Emoji
-- [ ] PATCH /applications/{id}/emojis/{emoji_id} — Modify Application Emoji
-- [ ] DELETE /applications/{id}/emojis/{emoji_id} — Delete Application Emoji
+- [x] GET /applications/{id}/emojis — List Application Emojis (`Client::list_application_emojis`)
+- [x] GET /applications/{id}/emojis/{emoji_id} — Get Application Emoji (`Client::get_application_emoji`)
+- [x] POST /applications/{id}/emojis — Create Application Emoji (`Client::create_application_emoji`)
+- [x] PATCH /applications/{id}/emojis/{emoji_id} — Modify Application Emoji (`Client::modify_application_emoji`)
+- [x] DELETE /applications/{id}/emojis/{emoji_id} — Delete Application Emoji (`Client::delete_application_emoji`)
 
 ## Command permissions
 

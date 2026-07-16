@@ -31,6 +31,20 @@ pub(all) enum Route {
   UpdateApplicationRoleConnectionMetadataRecords(
     application_id~ : @model.ApplicationId
   )
+  ListApplicationEmojis(application_id~ : @model.ApplicationId)
+  GetApplicationEmoji(
+    application_id~ : @model.ApplicationId,
+    emoji_id~ : @model.EmojiId
+  )
+  CreateApplicationEmoji(application_id~ : @model.ApplicationId)
+  ModifyApplicationEmoji(
+    application_id~ : @model.ApplicationId,
+    emoji_id~ : @model.EmojiId
+  )
+  DeleteApplicationEmoji(
+    application_id~ : @model.ApplicationId,
+    emoji_id~ : @model.EmojiId
+  )
   GetCurrentUser
   GetCurrentUserGuilds(query~ : String)
   GetCurrentUserConnections
@@ -396,6 +410,8 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | GetGatewayBot
     | GetCurrentApplication
     | GetApplicationRoleConnectionMetadataRecords(..)
+    | ListApplicationEmojis(..)
+    | GetApplicationEmoji(..)
     | GetCurrentUser
     | GetCurrentUserGuilds(..)
     | GetCurrentUserConnections
@@ -465,6 +481,7 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | CreateChannelInvite(..)
     | CreateWebhook(..)
     | CreateGuildEmoji(..)
+    | CreateApplicationEmoji(..)
     | CreateAutoModerationRule(..)
     | CreateGuildSticker(..)
     | CreateGuildScheduledEvent(..)
@@ -487,6 +504,7 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | ModifyWebhook(..)
     | EditWebhookMessage(..)
     | ModifyGuildEmoji(..)
+    | ModifyApplicationEmoji(..)
     | ModifyAutoModerationRule(..)
     | ModifyGuildSticker(..)
     | ModifyGuildScheduledEvent(..)
@@ -514,6 +532,7 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | DeleteWebhook(..)
     | DeleteWebhookMessage(..)
     | DeleteGuildEmoji(..)
+    | DeleteApplicationEmoji(..)
     | DeleteAutoModerationRule(..)
     | DeleteGuildSticker(..)
     | DeleteGuildScheduledEvent(..)
@@ -551,6 +570,13 @@ pub fn Route::path(self : Route) -> String {
     GetApplicationRoleConnectionMetadataRecords(application_id~)
     | UpdateApplicationRoleConnectionMetadataRecords(application_id~) =>
       "/applications/\{application_id}/role-connections/metadata"
+    ListApplicationEmojis(application_id~)
+    | CreateApplicationEmoji(application_id~) =>
+      "/applications/\{application_id}/emojis"
+    GetApplicationEmoji(application_id~, emoji_id~)
+    | ModifyApplicationEmoji(application_id~, emoji_id~)
+    | DeleteApplicationEmoji(application_id~, emoji_id~) =>
+      "/applications/\{application_id}/emojis/\{emoji_id}"
     GetCurrentUser | ModifyCurrentUser => "/users/@me"
     GetCurrentUserGuilds(query~) => "/users/@me/guilds\{query}"
     GetCurrentUserConnections => "/users/@me/connections"
@@ -736,8 +762,9 @@ pub fn Route::path(self : Route) -> String {
 }
 
 ///|
-/// Rate-limit bucket key: method plus path template with channel, guild, and
-/// webhook ID/token majors kept while minor resource IDs are squashed.
+/// Rate-limit bucket key: method plus path template with application, channel,
+/// guild, and webhook ID/token majors kept while minor resource IDs are
+/// squashed.
 pub fn Route::bucket(self : Route) -> String {
   match self {
     Custom(bucket_key~, ..) => bucket_key
@@ -749,6 +776,16 @@ pub fn Route::bucket(self : Route) -> String {
       "GET:/applications/\{application_id}/role-connections/metadata"
     UpdateApplicationRoleConnectionMetadataRecords(application_id~) =>
       "PUT:/applications/\{application_id}/role-connections/metadata"
+    ListApplicationEmojis(application_id~) =>
+      "GET:/applications/\{application_id}/emojis"
+    GetApplicationEmoji(application_id~, ..) =>
+      "GET:/applications/\{application_id}/emojis/{}"
+    CreateApplicationEmoji(application_id~) =>
+      "POST:/applications/\{application_id}/emojis"
+    ModifyApplicationEmoji(application_id~, ..) =>
+      "PATCH:/applications/\{application_id}/emojis/{}"
+    DeleteApplicationEmoji(application_id~, ..) =>
+      "DELETE:/applications/\{application_id}/emojis/{}"
     GetCurrentUser => "GET:/users/@me"
     GetCurrentUserGuilds(..) => "GET:/users/@me/guilds"
     GetCurrentUserConnections => "GET:/users/@me/connections"

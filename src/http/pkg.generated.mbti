@@ -55,6 +55,7 @@ pub async fn Client::bulk_overwrite_global_commands(Self, @model.Id[@model.Appli
 pub async fn Client::bulk_overwrite_guild_commands(Self, @model.Id[@model.ApplicationMarker], @model.Id[@model.GuildMarker], Json) -> Array[@model.ApplicationCommand] raise DiscordHttpError
 pub fn Client::channel_ref(Self, @model.Id[@model.ChannelMarker]) -> ChannelRef
 pub fn Client::close(Self) -> Unit
+pub async fn Client::create_application_emoji(Self, @model.Id[@model.ApplicationMarker], String, String) -> @model.Emoji raise DiscordHttpError
 pub async fn Client::create_auto_moderation_rule(Self, @model.Id[@model.GuildMarker], String, @model.AutoModerationEventType, @model.AutoModerationTriggerType, @model.TriggerMetadata, Array[@model.AutoModerationAction], enabled? : Bool, exempt_roles? : Array[@model.Id[@model.RoleMarker]], exempt_channels? : Array[@model.Id[@model.ChannelMarker]], audit_reason? : String) -> @model.AutoModerationRule raise DiscordHttpError
 pub async fn Client::create_channel_invite(Self, @model.Id[@model.ChannelMarker], max_age? : Int, max_uses? : Int, temporary? : Bool, unique? : Bool, audit_reason? : String) -> @model.Invite raise DiscordHttpError
 pub async fn Client::create_dm(Self, @model.Id[@model.UserMarker]) -> @model.Channel raise DiscordHttpError
@@ -74,6 +75,7 @@ pub async fn Client::create_reaction(Self, @model.Id[@model.ChannelMarker], @mod
 pub async fn Client::create_stage_instance(Self, @model.Id[@model.ChannelMarker], String, privacy_level? : @model.StagePrivacyLevel, send_start_notification? : Bool, guild_scheduled_event_id? : @model.Id[@model.ScheduledEventMarker], audit_reason? : String) -> @model.StageInstance raise DiscordHttpError
 pub async fn Client::create_webhook(Self, @model.Id[@model.ChannelMarker], String, avatar? : String, audit_reason? : String) -> @model.Webhook raise DiscordHttpError
 pub async fn Client::delete_all_reactions(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker]) -> Unit raise DiscordHttpError
+pub async fn Client::delete_application_emoji(Self, @model.Id[@model.ApplicationMarker], @model.Id[@model.EmojiMarker]) -> Unit raise DiscordHttpError
 pub async fn Client::delete_auto_moderation_rule(Self, @model.Id[@model.GuildMarker], @model.Id[@model.AutoModerationRuleMarker], audit_reason? : String) -> Unit raise DiscordHttpError
 pub async fn Client::delete_channel(Self, @model.Id[@model.ChannelMarker], audit_reason? : String) -> @model.Channel raise DiscordHttpError
 pub async fn Client::delete_channel_permission(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.GenericMarker], audit_reason? : String) -> Unit raise DiscordHttpError
@@ -106,6 +108,7 @@ pub async fn Client::edit_webhook_message(Self, @model.Id[@model.WebhookMarker],
 pub async fn Client::execute_webhook(Self, @model.Id[@model.WebhookMarker], String, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[FileUpload], username? : String, avatar_url? : String, tts? : Bool, allowed_mentions? : @model.AllowedMentions) -> @model.Message raise DiscordHttpError
 pub async fn Client::expire_poll(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker]) -> @model.Message raise DiscordHttpError
 pub async fn Client::get_application_command_permissions(Self, @model.Id[@model.ApplicationMarker], @model.Id[@model.GuildMarker], @model.Id[@model.CommandMarker]) -> @model.GuildApplicationCommandPermissions raise DiscordHttpError
+pub async fn Client::get_application_emoji(Self, @model.Id[@model.ApplicationMarker], @model.Id[@model.EmojiMarker]) -> @model.Emoji raise DiscordHttpError
 pub async fn Client::get_application_role_connection_metadata_records(Self, @model.Id[@model.ApplicationMarker]) -> Array[@model.ApplicationRoleConnectionMetadata] raise DiscordHttpError
 pub async fn Client::get_auto_moderation_rule(Self, @model.Id[@model.GuildMarker], @model.Id[@model.AutoModerationRuleMarker]) -> @model.AutoModerationRule raise DiscordHttpError
 pub async fn Client::get_channel(Self, @model.Id[@model.ChannelMarker]) -> @model.Channel raise DiscordHttpError
@@ -156,6 +159,7 @@ pub async fn Client::get_webhook_message(Self, @model.Id[@model.WebhookMarker], 
 pub async fn Client::join_thread(Self, @model.Id[@model.ChannelMarker]) -> Unit raise DiscordHttpError
 pub async fn Client::leave_guild(Self, @model.Id[@model.GuildMarker]) -> Unit raise DiscordHttpError
 pub async fn Client::leave_thread(Self, @model.Id[@model.ChannelMarker]) -> Unit raise DiscordHttpError
+pub async fn Client::list_application_emojis(Self, @model.Id[@model.ApplicationMarker]) -> Array[@model.Emoji] raise DiscordHttpError
 pub async fn Client::list_auto_moderation_rules(Self, @model.Id[@model.GuildMarker]) -> Array[@model.AutoModerationRule] raise DiscordHttpError
 pub async fn Client::list_default_soundboard_sounds(Self) -> Array[@model.SoundboardSound] raise DiscordHttpError
 pub async fn Client::list_guild_emojis(Self, @model.Id[@model.GuildMarker]) -> Array[@model.Emoji] raise DiscordHttpError
@@ -169,6 +173,7 @@ pub async fn Client::list_voice_regions(Self) -> Array[@model.VoiceRegion] raise
 pub fn Client::member_ref(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker]) -> MemberRef
 pub fn Client::message_ref(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker]) -> MessageRef
 pub fn Client::middleware(Self, async (HttpRequest, async (HttpRequest) -> HttpResponse) -> HttpResponse) -> Unit
+pub async fn Client::modify_application_emoji(Self, @model.Id[@model.ApplicationMarker], @model.Id[@model.EmojiMarker], String) -> @model.Emoji raise DiscordHttpError
 pub async fn Client::modify_auto_moderation_rule(Self, @model.Id[@model.GuildMarker], @model.Id[@model.AutoModerationRuleMarker], name? : String, event_type? : @model.AutoModerationEventType, trigger_metadata? : @model.TriggerMetadata, actions? : Array[@model.AutoModerationAction], enabled? : Bool, exempt_roles? : Array[@model.Id[@model.RoleMarker]], exempt_channels? : Array[@model.Id[@model.ChannelMarker]], audit_reason? : String) -> @model.AutoModerationRule raise DiscordHttpError
 pub async fn Client::modify_channel(Self, @model.Id[@model.ChannelMarker], name? : String, topic? : String, clear_topic? : Bool, nsfw? : Bool, parent_id? : @model.Id[@model.ChannelMarker], clear_parent_id? : Bool, rate_limit_per_user? : Int, position? : Int, audit_reason? : String) -> @model.Channel raise DiscordHttpError
 pub async fn Client::modify_current_user(Self, username? : String, avatar? : String, clear_avatar? : Bool) -> @model.User raise DiscordHttpError
@@ -268,6 +273,11 @@ pub(all) enum Route {
   EditCurrentApplication
   GetApplicationRoleConnectionMetadataRecords(application_id~ : @model.Id[@model.ApplicationMarker])
   UpdateApplicationRoleConnectionMetadataRecords(application_id~ : @model.Id[@model.ApplicationMarker])
+  ListApplicationEmojis(application_id~ : @model.Id[@model.ApplicationMarker])
+  GetApplicationEmoji(application_id~ : @model.Id[@model.ApplicationMarker], emoji_id~ : @model.Id[@model.EmojiMarker])
+  CreateApplicationEmoji(application_id~ : @model.Id[@model.ApplicationMarker])
+  ModifyApplicationEmoji(application_id~ : @model.Id[@model.ApplicationMarker], emoji_id~ : @model.Id[@model.EmojiMarker])
+  DeleteApplicationEmoji(application_id~ : @model.Id[@model.ApplicationMarker], emoji_id~ : @model.Id[@model.EmojiMarker])
   GetCurrentUser
   GetCurrentUserGuilds(query~ : String)
   GetCurrentUserConnections

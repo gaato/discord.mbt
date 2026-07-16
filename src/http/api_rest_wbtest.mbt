@@ -82,6 +82,40 @@ test "edit current application body distinguishes clear and omission" {
 }
 
 ///|
+test "application emoji request bodies contain only supported fields" {
+  json_inspect(
+    create_application_emoji_body("wave", "data:image/png;base64,aW1hZ2U="),
+    content={ "name": "wave", "image": "data:image/png;base64,aW1hZ2U=" },
+  )
+  json_inspect(modify_application_emoji_body("hello"), content={
+    "name": "hello",
+  })
+}
+
+///|
+test "application emoji list decodes the items envelope" {
+  let items = decode_application_emoji_items(
+    @json.parse(
+      (
+        #|{
+        #|  "items": [
+        #|    {"id": "10", "name": "wave"},
+        #|    {"id": "11", "name": "party", "animated": true}
+        #|  ]
+        #|}
+      ),
+    ),
+  )
+  inspect(items.length(), content="2")
+  debug_inspect(
+    items.map(emoji => emoji.name),
+    content=(
+      #|[Value("wave"), Value("party")]
+    ),
+  )
+}
+
+///|
 test "voice state patch bodies include provided values" {
   let channel_id : @model.ChannelId = Id(10UL)
   let timestamp_fixture =
