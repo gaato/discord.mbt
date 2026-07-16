@@ -165,22 +165,17 @@ async fn sec_messages(p : P) -> Unit {
     c.delete_message(text, msg.id, audit_reason="live probe delete")
     "ok"
   })
-  // Polls: the typed create_message has no poll parameter (recorded as a
-  // coverage finding); create via the typed Route + raw request escape hatch.
-  p.probe("poll create (raw route) + get_poll_answer_voters + expire_poll", () => {
-    let body : Json = {
-      "poll": {
-        "question": { "text": "live probe poll?" },
-        "answers": [
-          { "poll_media": { "text": "yes" } },
-          { "poll_media": { "text": "no" } },
-        ],
-        "duration": 1,
-        "allow_multiselect": false,
-      },
-    }
-    let raw = c.request(@dhttp.Route::CreateMessage(channel_id=text), body~)
-    let msg : @model.Message = @json.from_json(raw)
+  p.probe("create_message (poll) + get_poll_answer_voters + expire_poll", () => {
+    let msg = c.create_message(text, poll={
+      question: { text: Some("live probe poll?"), emoji: None },
+      answers: [
+        { text: Some("yes"), emoji: None },
+        { text: Some("no"), emoji: None },
+      ],
+      duration: Some(1),
+      allow_multiselect: Some(false),
+      layout_type: None,
+    })
     let voters = c.get_poll_answer_voters(text, msg.id, 1, limit=5)
     let paged = c
       .paginate_poll_answer_voters(text, msg.id, 1, page_size=2)
@@ -190,16 +185,16 @@ async fn sec_messages(p : P) -> Unit {
     ignore(expired)
     "voters=\{voters.users.length()} poll=\{msg.poll is Some(_)}"
   })
-  p.probe("MessageRef::expire_poll (second poll)", () => {
-    let body : Json = {
-      "poll": {
-        "question": { "text": "second poll?" },
-        "answers": [{ "poll_media": { "text": "sure" } }],
-        "duration": 1,
-      },
-    }
-    let raw = c.request(@dhttp.Route::CreateMessage(channel_id=text), body~)
-    let msg : @model.Message = @json.from_json(raw)
+  p.probe("MessageRef::expire_poll (second poll via ChannelRef::send)", () => {
+    let msg = c
+      .channel_ref(text)
+      .send(poll={
+        question: { text: Some("second poll?"), emoji: None },
+        answers: [{ text: Some("sure"), emoji: None }],
+        duration: Some(1),
+        allow_multiselect: None,
+        layout_type: None,
+      })
     let expired = c.message_ref(text, msg.id).expire_poll()
     "id=\{expired.id}"
   })

@@ -237,30 +237,44 @@ test "guild prune validates documented day range" {
 
 ///|
 test "execute webhook requires message content" {
-  try validate_execute_webhook(None, None, None, None) catch {
+  try validate_execute_webhook(None, None, None, None, None) catch {
     err =>
       debug_inspect(
         err,
         content=(
-          #|Validation(message="one of content/embeds/components/files is required")
+          #|Validation(message="one of content/embeds/components/files/poll is required")
         ),
       )
   } noraise {
     _ => fail("expected to fail")
   }
-  validate_execute_webhook(Some("hello"), None, None, None)
+  validate_execute_webhook(Some("hello"), None, None, None, None)
   validate_execute_webhook(
     None,
     None,
     None,
     Some([FileUpload("hello.txt", b"hello")]),
+    None,
+  )
+  validate_execute_webhook(
+    None,
+    None,
+    None,
+    None,
+    Some({
+      question: { text: Some("poll?"), emoji: None },
+      answers: [{ text: Some("yes"), emoji: None }],
+      duration: None,
+      allow_multiselect: None,
+      layout_type: None,
+    }),
   )
 }
 
 ///|
 test "execute webhook validates content length" {
   let content = String::make(2001, 'x')
-  try validate_execute_webhook(Some(content), None, None, None) catch {
+  try validate_execute_webhook(Some(content), None, None, None, None) catch {
     err =>
       debug_inspect(
         err,

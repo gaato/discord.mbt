@@ -97,6 +97,52 @@ async fn sec_webhooks(p : P) -> Unit {
     tr.message_ref(msg.id).delete()
     "ok"
   })
+  p.probe("execute_webhook (poll body)", () => {
+    let msg = c.execute_webhook(wid, wtoken, poll={
+      question: { text: Some("webhook poll?"), emoji: None },
+      answers: [{ text: Some("yes"), emoji: None }],
+      duration: Some(1),
+      allow_multiselect: None,
+      layout_type: None,
+    })
+    c.delete_webhook_message(wid, wtoken, msg.id)
+    "poll=\{msg.poll is Some(_)}"
+  })
+  // thread_name / thread_id require a forum or media channel webhook; the
+  // returned message's channel_id is the freshly created forum post.
+  if p.s.forum is Some(forum) {
+    p.probe("execute_webhook (thread_name) + message ops via thread_id", () => {
+      let hook = c.create_webhook(forum, "probe-forum-hook")
+      let token = need(hook.token, "forum webhook token")
+      let msg = c.execute_webhook(
+        hook.id,
+        token,
+        content="forum post via webhook",
+        thread_name="probe webhook thread",
+      )
+      let thread = msg.channel_id
+      let fetched = c.get_webhook_message(hook.id, token, msg.id, thread_id=thread)
+      ignore(fetched)
+      let edited = c.edit_webhook_message(
+        hook.id,
+        token,
+        msg.id,
+        content="edited in thread",
+        thread_id=thread,
+      )
+      ignore(edited)
+      let followup = c.execute_webhook(
+        hook.id,
+        token,
+        content="second post into the same thread",
+        thread_id=thread,
+      )
+      ignore(followup)
+      c.delete_webhook_message(hook.id, token, msg.id, thread_id=thread)
+      c.delete_webhook(hook.id, audit_reason="live probe cleanup")
+      "thread=\{thread}"
+    })
+  }
   p.probe("execute_slack_compatible_webhook", () => {
     let payload : Json = { "text": "slack-compatible probe" }
     c.execute_slack_compatible_webhook(wid, wtoken, payload, wait=true)

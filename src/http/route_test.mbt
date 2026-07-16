@@ -880,15 +880,15 @@ test "webhook route metadata" {
       route_metadata("github", github),
       route_metadata(
         "get-message",
-        GetWebhookMessage(webhook_id~, token="tok", message_id~),
+        GetWebhookMessage(webhook_id~, token="tok", message_id~, query=""),
       ),
       route_metadata(
         "edit-message",
-        EditWebhookMessage(webhook_id~, token="tok", message_id~),
+        EditWebhookMessage(webhook_id~, token="tok", message_id~, query=""),
       ),
       route_metadata(
         "delete-message",
-        DeleteWebhookMessage(webhook_id~, token="tok", message_id~),
+        DeleteWebhookMessage(webhook_id~, token="tok", message_id~, query=""),
       ),
     ],
     content=(
@@ -1107,7 +1107,7 @@ test "invite route metadata squashes the minor invite code" {
         "get",
         GetInvite(
           code="moonbit",
-          query="?with_counts=true&with_expiration=true",
+          query="?with_counts=true&guild_scheduled_event_id=9",
         ),
       ),
       route_metadata("delete", DeleteInvite(code="moonbit")),
@@ -1117,7 +1117,7 @@ test "invite route metadata squashes the minor invite code" {
       #|  {
       #|    name: "get",
       #|    method_name: "Get",
-      #|    path: "/invites/moonbit?with_counts=true&with_expiration=true",
+      #|    path: "/invites/moonbit?with_counts=true&guild_scheduled_event_id=9",
       #|    bucket: "GET:/invites/{}",
       #|    needs_auth: true,
       #|    supports_reason: false,

@@ -71,11 +71,15 @@ async fn sec_threads(p : P) -> Unit {
     ignore(self_member)
     "members=\{members.length()}"
   })
-  p.probe("archive thread via raw ModifyChannel (typed gap)", () => {
-    // modify_channel exposes no archived/locked knobs; recorded as a finding.
-    let body : Json = { "archived": true }
-    let _ = c.request(@dhttp.Route::ModifyChannel(channel_id=thread), body~)
-    "archived"
+  p.probe("modify_channel (archive thread) + ChannelRef::edit (unarchive)", () => {
+    let archived = c.modify_channel(thread, archived=true)
+    let back = c
+      .channel_ref(thread)
+      .edit(archived=false, auto_archive_duration=OneHour, locked=false)
+    let again = c.modify_channel(thread, archived=true)
+    ignore(back)
+    ignore(again)
+    "archived=\{archived.thread_metadata is Some(_)}"
   })
   p.probe("list_public_archived_threads", () => {
     let archived = c.list_public_archived_threads(text, limit=5)

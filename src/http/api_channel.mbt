@@ -8,7 +8,10 @@ pub async fn Client::get_channel(
 }
 
 ///|
-/// Modify common channel settings.
+/// Modify common channel settings. `archived`, `auto_archive_duration`,
+/// `locked`, `invitable`, and `applied_tags` only apply when the channel is
+/// a thread; `flags` covers both threads (`PINNED`) and forum/media channels
+/// (`REQUIRE_TAG`).
 pub async fn Client::modify_channel(
   self : Client,
   channel_id : @model.ChannelId,
@@ -20,6 +23,12 @@ pub async fn Client::modify_channel(
   clear_parent_id? : Bool = false,
   rate_limit_per_user? : Int,
   position? : Int,
+  flags? : @model.ChannelFlags,
+  archived? : Bool,
+  auto_archive_duration? : @model.ThreadAutoArchiveDuration,
+  locked? : Bool,
+  invitable? : Bool,
+  applied_tags? : Array[@model.GenericId],
   audit_reason? : String,
 ) -> @model.Channel raise DiscordHttpError {
   validate_length("channel name", name, min=1, max=100)
@@ -32,6 +41,12 @@ pub async fn Client::modify_channel(
     .und("parent_id", patch_nullable("parent_id", parent_id, clear_parent_id))
     .opt("rate_limit_per_user", rate_limit_per_user)
     .opt("position", position)
+    .opt("flags", flags)
+    .opt("archived", archived)
+    .opt("auto_archive_duration", auto_archive_duration)
+    .opt("locked", locked)
+    .opt("invitable", invitable)
+    .opt("applied_tags", applied_tags)
     .build()
   decode(self.request(ModifyChannel(channel_id~), body~, audit_reason?))
 }

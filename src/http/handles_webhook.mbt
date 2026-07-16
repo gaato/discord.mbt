@@ -148,6 +148,11 @@ pub async fn WebhookTokenRef::send(
   avatar_url? : String,
   tts? : Bool,
   allowed_mentions? : @model.AllowedMentions,
+  thread_id? : @model.ChannelId,
+  thread_name? : String,
+  applied_tags? : Array[@model.GenericId],
+  poll? : @model.PollCreateRequest,
+  with_components? : Bool,
 ) -> @model.Message raise DiscordHttpError {
   self.client.execute_webhook(
     self.webhook_id,
@@ -160,6 +165,11 @@ pub async fn WebhookTokenRef::send(
     avatar_url?,
     tts?,
     allowed_mentions?,
+    thread_id?,
+    thread_name?,
+    applied_tags?,
+    poll?,
+    with_components?,
   )
 }
 
@@ -203,8 +213,14 @@ pub async fn WebhookTokenRef::send_github(
 /// Fetch this webhook message using the webhook's URL token.
 pub async fn WebhookMessageRef::fetch(
   self : WebhookMessageRef,
+  thread_id? : @model.ChannelId,
 ) -> @model.Message raise DiscordHttpError {
-  self.client.get_webhook_message(self.webhook_id, self.token, self.message_id)
+  self.client.get_webhook_message(
+    self.webhook_id,
+    self.token,
+    self.message_id,
+    thread_id?,
+  )
 }
 
 ///|
@@ -217,6 +233,7 @@ pub async fn WebhookMessageRef::edit(
   components? : Array[@model.Component],
   allowed_mentions? : @model.AllowedMentions,
   files? : Array[FileUpload],
+  thread_id? : @model.ChannelId,
 ) -> @model.Message raise DiscordHttpError {
   self.client.edit_webhook_message(
     self.webhook_id,
@@ -228,6 +245,7 @@ pub async fn WebhookMessageRef::edit(
     components?,
     allowed_mentions?,
     files?,
+    thread_id?,
   )
 }
 
@@ -235,10 +253,12 @@ pub async fn WebhookMessageRef::edit(
 /// Delete this webhook message using the webhook's URL token.
 pub async fn WebhookMessageRef::delete(
   self : WebhookMessageRef,
+  thread_id? : @model.ChannelId,
 ) -> Unit raise DiscordHttpError {
   self.client.delete_webhook_message(
     self.webhook_id,
     self.token,
     self.message_id,
+    thread_id?,
   )
 }

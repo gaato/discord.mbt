@@ -13,7 +13,7 @@ fn Client::with_channel_allowed_mentions(
 ///|
 /// Post a message to a channel. Labeled optional arguments replace the
 /// builder pattern; at least one of `content`, `embeds`, `components`,
-/// `sticker_ids`, or `files` must be provided.
+/// `sticker_ids`, `files`, or `poll` must be provided.
 ///
 /// Message-shaped endpoints switch to multipart automatically when `files`
 /// is present (see `FileUpload` and `attachments_json` for the wire format).
@@ -55,15 +55,17 @@ pub async fn Client::create_message(
   allowed_mentions? : @model.AllowedMentions,
   nonce? : @model.Nonce,
   enforce_nonce? : Bool,
+  poll? : @model.PollCreateRequest,
 ) -> @model.Message raise DiscordHttpError {
   validate_content(content)
   if content is None &&
     embeds is None &&
     components is None &&
     sticker_ids is None &&
-    files is None {
+    files is None &&
+    poll is None {
     raise Validation(
-      message="one of content/embeds/components/sticker_ids/files is required",
+      message="one of content/embeds/components/sticker_ids/files/poll is required",
     )
   }
   let flags = message_flags_with_components_v2(
@@ -86,6 +88,7 @@ pub async fn Client::create_message(
     )
     .opt("nonce", nonce)
     .opt("enforce_nonce", enforce_nonce)
+    .opt("poll", poll)
   if reply_to is Some(message_id) {
     body.field("message_reference", {
       "message_id": Json::string(message_id.to_string()),

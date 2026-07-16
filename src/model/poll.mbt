@@ -45,6 +45,41 @@ pub(all) struct PollAnswerVoters {
 } derive(ToJson, FromJson, Debug)
 
 ///|
+/// Poll definition attached when creating a message or executing a webhook.
+/// Answers carry their media directly; Discord assigns the answer ids.
+/// `duration` is the number of hours the poll stays open (up to 32 days,
+/// default 24).
+pub(all) struct PollCreateRequest {
+  question : PollMedia
+  answers : Array[PollMedia]
+  duration : Int?
+  allow_multiselect : Bool?
+  layout_type : PollLayoutType?
+} derive(Debug)
+
+///|
+/// Request-side poll media omits absent fields instead of sending nulls.
+fn poll_media_request_json(media : PollMedia) -> Json {
+  ObjBuilder().opt("text", media.text).opt("emoji", media.emoji).build()
+}
+
+///|
+pub impl ToJson for PollCreateRequest with fn to_json(self) {
+  ObjBuilder()
+  .field("question", poll_media_request_json(self.question))
+  .field(
+    "answers",
+    self.answers.map(media => (
+        { "poll_media": poll_media_request_json(media) } : Json
+      )),
+  )
+  .opt("duration", self.duration)
+  .opt("allow_multiselect", self.allow_multiselect)
+  .opt("layout_type", self.layout_type)
+  .build()
+}
+
+///|
 /// The presentation layout used by a poll.
 pub(all) enum PollLayoutType {
   Default

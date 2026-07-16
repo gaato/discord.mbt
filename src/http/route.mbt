@@ -352,17 +352,20 @@ pub(all) enum Route {
   GetWebhookMessage(
     webhook_id~ : @model.WebhookId,
     token~ : String,
-    message_id~ : @model.MessageId
+    message_id~ : @model.MessageId,
+    query~ : String
   )
   EditWebhookMessage(
     webhook_id~ : @model.WebhookId,
     token~ : String,
-    message_id~ : @model.MessageId
+    message_id~ : @model.MessageId,
+    query~ : String
   )
   DeleteWebhookMessage(
     webhook_id~ : @model.WebhookId,
     token~ : String,
-    message_id~ : @model.MessageId
+    message_id~ : @model.MessageId,
+    query~ : String
   )
   CreateInteractionResponse(
     interaction_id~ : @model.InteractionId,
@@ -967,10 +970,10 @@ pub fn Route::path(self : Route) -> String {
       "/webhooks/\{webhook_id}/\{token}/slack\{query}"
     ExecuteGithubCompatibleWebhook(webhook_id~, token~, query~) =>
       "/webhooks/\{webhook_id}/\{token}/github\{query}"
-    GetWebhookMessage(webhook_id~, token~, message_id~)
-    | EditWebhookMessage(webhook_id~, token~, message_id~)
-    | DeleteWebhookMessage(webhook_id~, token~, message_id~) =>
-      "/webhooks/\{webhook_id}/\{token}/messages/\{message_id}"
+    GetWebhookMessage(webhook_id~, token~, message_id~, query~)
+    | EditWebhookMessage(webhook_id~, token~, message_id~, query~)
+    | DeleteWebhookMessage(webhook_id~, token~, message_id~, query~) =>
+      "/webhooks/\{webhook_id}/\{token}/messages/\{message_id}\{query}"
     CreateInteractionResponse(interaction_id~, token~) =>
       "/interactions/\{interaction_id}/\{token}/callback"
     GetOriginalInteractionResponse(application_id~, token~)

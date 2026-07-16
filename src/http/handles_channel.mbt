@@ -21,6 +21,7 @@ pub async fn ChannelRef::send(
   allowed_mentions? : @model.AllowedMentions,
   nonce? : @model.Nonce,
   enforce_nonce? : Bool,
+  poll? : @model.PollCreateRequest,
 ) -> @model.Message raise DiscordHttpError {
   self.client.create_message(
     self.channel_id,
@@ -35,6 +36,7 @@ pub async fn ChannelRef::send(
     allowed_mentions?,
     nonce?,
     enforce_nonce?,
+    poll?,
   )
 }
 
@@ -74,7 +76,8 @@ pub fn ChannelRef::message_ref(
 }
 
 ///|
-/// Edit this channel.
+/// Edit this channel. The `archived`/`auto_archive_duration`/`locked`/
+/// `invitable`/`applied_tags` knobs only apply when this channel is a thread.
 pub async fn ChannelRef::edit(
   self : ChannelRef,
   name? : String,
@@ -85,6 +88,12 @@ pub async fn ChannelRef::edit(
   clear_parent_id? : Bool = false,
   rate_limit_per_user? : Int,
   position? : Int,
+  flags? : @model.ChannelFlags,
+  archived? : Bool,
+  auto_archive_duration? : @model.ThreadAutoArchiveDuration,
+  locked? : Bool,
+  invitable? : Bool,
+  applied_tags? : Array[@model.GenericId],
   reason? : String,
 ) -> @model.Channel raise DiscordHttpError {
   self.client.modify_channel(
@@ -97,6 +106,12 @@ pub async fn ChannelRef::edit(
     clear_parent_id~,
     rate_limit_per_user?,
     position?,
+    flags?,
+    archived?,
+    auto_archive_duration?,
+    locked?,
+    invitable?,
+    applied_tags?,
     audit_reason?=reason,
   )
 }

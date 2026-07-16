@@ -9,11 +9,16 @@ fn validate_execute_webhook(
   embeds : Array[@model.Embed]?,
   components : Array[@model.Component]?,
   files : Array[FileUpload]?,
+  poll : @model.PollCreateRequest?,
 ) -> Unit raise DiscordHttpError {
   validate_content(content)
-  if content is None && embeds is None && components is None && files is None {
+  if content is None &&
+    embeds is None &&
+    components is None &&
+    files is None &&
+    poll is None {
     raise Validation(
-      message="one of content/embeds/components/files is required",
+      message="one of content/embeds/components/files/poll is required",
     )
   }
 }
@@ -207,8 +212,14 @@ pub async fn Client::execute_github_compatible_webhook(
 }
 
 ///|
-/// Execute a webhook and wait for the created message. At least one of
-/// `content`, `embeds`, `components`, or `files` must be provided.
+/// Execute a webhook and wait for the created message (`wait=true` is fixed
+/// because the typed return is the message; fire-and-forget would have no
+/// body to decode). At least one of `content`, `embeds`, `components`,
+/// `files`, or `poll` must be provided. When the webhook channel is a forum
+/// or media channel, pass exactly one of `thread_id` (post to an existing
+/// thread) or `thread_name` (create a thread); `applied_tags` only applies
+/// with `thread_name`. `with_components` lets non-application-owned webhooks
+/// send non-interactive components.
 pub async fn Client::execute_webhook(
   self : Client,
   webhook_id : @model.WebhookId,
@@ -221,8 +232,23 @@ pub async fn Client::execute_webhook(
   avatar_url? : String,
   tts? : Bool,
   allowed_mentions? : @model.AllowedMentions,
+  thread_id? : @model.ChannelId,
+  thread_name? : String,
+  applied_tags? : Array[@model.GenericId],
+  poll? : @model.PollCreateRequest,
+  with_components? : Bool,
 ) -> @model.Message raise DiscordHttpError {
-  validate_execute_webhook(content, embeds, components, files)
+  validate_execute_webhook(content, embeds, components, files, poll)
+  if thread_id is Some(_) && thread_name is Some(_) {
+    raise Validation(message="thread_id and thread_name are mutually exclusive")
+  }
+  let query_params = ["wait=true"]
+  if thread_id is Some(value) {
+    query_params.push("thread_id=\{value}")
+  }
+  if with_components is Some(value) {
+    query_params.push("with_components=\{value}")
+  }
   let flags = message_flags_with_components_v2(
     None,
     content,
@@ -238,12 +264,15 @@ pub async fn Client::execute_webhook(
     .opt("avatar_url", avatar_url)
     .opt("tts", tts)
     .opt("allowed_mentions", allowed_mentions)
+    .opt("thread_name", thread_name)
+    .opt("applied_tags", applied_tags)
+    .opt("poll", poll)
   if files is Some(fs) && fs.length() > 0 {
     builder.field("attachments", attachments_json(fs)) |> ignore
   }
   decode(
     self.request(
-      ExecuteWebhook(webhook_id~, token~, query="?wait=true"),
+      ExecuteWebhook(webhook_id~, token~, query="?" + query_params.join("&")),
       body=builder.build(),
       files?,
     ),
@@ -251,14 +280,19 @@ pub async fn Client::execute_webhook(
 }
 
 ///|
-/// Fetch a message previously created by a webhook.
+/// Fetch a message previously created by a webhook. Pass `thread_id` when
+/// the message lives in a thread of the webhook's channel.
 pub async fn Client::get_webhook_message(
   self : Client,
   webhook_id : @model.WebhookId,
   token : String,
   message_id : @model.MessageId,
+  thread_id? : @model.ChannelId,
 ) -> @model.Message raise DiscordHttpError {
-  decode(self.request(GetWebhookMessage(webhook_id~, token~, message_id~)))
+  let query = compatible_webhook_query(thread_id, None)
+  decode(
+    self.request(GetWebhookMessage(webhook_id~, token~, message_id~, query~)),
+  )
 }
 
 ///|
@@ -275,7 +309,9 @@ pub async fn Client::edit_webhook_message(
   components? : Array[@model.Component],
   allowed_mentions? : @model.AllowedMentions,
   files? : Array[FileUpload],
+  thread_id? : @model.ChannelId,
 ) -> @model.Message raise DiscordHttpError {
+  let query = compatible_webhook_query(thread_id, None)
   let builder = message_patch_builder(
     content,
     clear_content,
@@ -288,7 +324,7 @@ pub async fn Client::edit_webhook_message(
   }
   decode(
     self.request(
-      EditWebhookMessage(webhook_id~, token~, message_id~),
+      EditWebhookMessage(webhook_id~, token~, message_id~, query~),
       body=builder.build(),
       files?,
     ),
@@ -296,12 +332,16 @@ pub async fn Client::edit_webhook_message(
 }
 
 ///|
-/// Delete a message previously created by a webhook.
+/// Delete a message previously created by a webhook. Pass `thread_id` when
+/// the message lives in a thread of the webhook's channel.
 pub async fn Client::delete_webhook_message(
   self : Client,
   webhook_id : @model.WebhookId,
   token : String,
   message_id : @model.MessageId,
+  thread_id? : @model.ChannelId,
 ) -> Unit raise DiscordHttpError {
-  self.request(DeleteWebhookMessage(webhook_id~, token~, message_id~)) |> ignore
+  let query = compatible_webhook_query(thread_id, None)
+  self.request(DeleteWebhookMessage(webhook_id~, token~, message_id~, query~))
+  |> ignore
 }
