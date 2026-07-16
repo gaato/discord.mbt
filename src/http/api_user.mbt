@@ -97,3 +97,51 @@ pub async fn Client::create_dm(
   let body = @model.ObjBuilder().field("recipient_id", recipient_id).build()
   decode(self.request(CreateDm, body~))
 }
+
+///|
+/// List the external service accounts linked to the current user.
+///
+/// Requires an OAuth2 bearer token with the `connections` scope.
+///
+/// https://discord.com/developers/docs/resources/user#get-current-user-connections
+pub async fn Client::get_current_user_connections(
+  self : Client,
+  bearer_token~ : String,
+) -> Array[@model.Connection] raise DiscordHttpError {
+  decode(
+    self.request(
+      GetCurrentUserConnections,
+      headers=bearer_headers(bearer_token),
+    ),
+  )
+}
+
+///|
+/// Fetch the current user's member record in a guild.
+///
+/// Requires an OAuth2 bearer token with the `guilds.members.read` scope.
+///
+/// https://discord.com/developers/docs/resources/user#get-current-user-guild-member
+pub async fn Client::get_current_user_guild_member(
+  self : Client,
+  guild_id : @model.GuildId,
+  bearer_token~ : String,
+) -> @model.GuildMember raise DiscordHttpError {
+  decode(
+    self.request(
+      GetCurrentUserGuildMember(guild_id~),
+      headers=bearer_headers(bearer_token),
+    ),
+  )
+}
+
+///|
+/// Leave a guild as the current user.
+///
+/// https://discord.com/developers/docs/resources/user#leave-guild
+pub async fn Client::leave_guild(
+  self : Client,
+  guild_id : @model.GuildId,
+) -> Unit raise DiscordHttpError {
+  self.request(LeaveGuild(guild_id~)) |> ignore
+}

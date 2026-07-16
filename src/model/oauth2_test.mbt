@@ -89,3 +89,34 @@ test "connection service and role metadata preserve unknown values" {
     ),
   )
 }
+
+///|
+test "authorization information round-trips the documented response shape" {
+  let fixture =
+    #|{"application":{"id":"172150183260323840","name":"Example App","icon":null,"description":"An example OAuth2 application"},"scopes":["identify","applications.commands"],"expires":"2021-01-01T00:00:00.000000+00:00","user":{"id":"80351110224678912","username":"Nelly","discriminator":"1337","global_name":"Nelly","avatar":"8342729096ea3675442027381ff50dfe","public_flags":131072}}
+  let first : @model.AuthorizationInformation = @json.from_json(
+    @json.parse(fixture),
+  )
+  json_inspect(first.to_json(), content={
+    "application": {
+      "id": "172150183260323840",
+      "name": "Example App",
+      "icon": Json::null(),
+      "description": "An example OAuth2 application",
+    },
+    "scopes": ["identify", "applications.commands"],
+    "expires": "2021-01-01T00:00:00.000000+00:00",
+    "user": {
+      "id": "80351110224678912",
+      "username": "Nelly",
+      "discriminator": "1337",
+      "global_name": "Nelly",
+      "avatar": "8342729096ea3675442027381ff50dfe",
+      "public_flags": 131072,
+    },
+  })
+  let second : @model.AuthorizationInformation = @json.from_json(
+    first.to_json(),
+  )
+  assert_eq(second.to_json().stringify(), first.to_json().stringify())
+}

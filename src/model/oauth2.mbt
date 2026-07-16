@@ -135,3 +135,16 @@ pub(all) struct ApplicationRoleConnection {
   platform_username : Nullable[String]
   metadata : Json
 } derive(ToJson, FromJson, Debug)
+
+///|
+/// Details about the OAuth2 authorization represented by an access token.
+///
+/// Discord returns a partial application object here. `Application` is safe
+/// for that payload because it requires only the guaranteed `id`, `name`,
+/// `icon`, and `description` fields; all other application fields are optional.
+pub(all) struct AuthorizationInformation {
+  application : Application
+  scopes : Array[String]
+  expires : Timestamp
+  user : User?
+} derive(ToJson, FromJson, Debug)

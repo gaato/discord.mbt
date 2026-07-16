@@ -109,20 +109,22 @@ async fn Client::perform(
 ///
 /// This is also the raw escape hatch: typed endpoint wrappers build a `Route`
 /// plus JSON body and decode the returned JSON, while unwrapped endpoints use
-/// `Route::custom`.
+/// `Route::custom`. Optional `headers` are merged after the client's base
+/// headers, so caller-supplied values such as `authorization` take precedence.
 pub async fn Client::request(
   self : Client,
   route : Route,
   body? : Json,
   audit_reason? : String,
   files? : Array[FileUpload],
+  headers? : Map[String, String],
 ) -> Json raise DiscordHttpError {
   let request : HttpRequest = {
     route,
     body,
     audit_reason,
     files,
-    headers: Map([]),
+    headers: headers.unwrap_or(Map([])),
   }
   let timed = @async.with_timeout_opt(self.request_timeout_ms_, () => {
     RequestSucceeded(self.run_middleware(0, request)) catch {

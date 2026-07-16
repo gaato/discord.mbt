@@ -109,7 +109,11 @@ pub async fn Client::get_channel_invites(Self, @model.Id[@model.ChannelMarker]) 
 pub async fn Client::get_channel_messages(Self, @model.Id[@model.ChannelMarker], limit? : Int, around? : @model.Id[@model.MessageMarker], before? : @model.Id[@model.MessageMarker], after? : @model.Id[@model.MessageMarker]) -> Array[@model.Message] raise DiscordHttpError
 pub async fn Client::get_channel_webhooks(Self, @model.Id[@model.ChannelMarker]) -> Array[@model.Webhook] raise DiscordHttpError
 pub async fn Client::get_current_application(Self) -> @model.Application raise DiscordHttpError
+pub async fn Client::get_current_authorization_information(Self, bearer_token~ : String) -> @model.AuthorizationInformation raise DiscordHttpError
+pub async fn Client::get_current_bot_application_information(Self) -> @model.Application raise DiscordHttpError
 pub async fn Client::get_current_user(Self) -> @model.User raise DiscordHttpError
+pub async fn Client::get_current_user_connections(Self, bearer_token~ : String) -> Array[@model.Connection] raise DiscordHttpError
+pub async fn Client::get_current_user_guild_member(Self, @model.Id[@model.GuildMarker], bearer_token~ : String) -> @model.GuildMember raise DiscordHttpError
 pub async fn Client::get_current_user_guilds(Self, limit? : Int, before? : @model.Id[@model.GuildMarker], after? : @model.Id[@model.GuildMarker], with_counts? : Bool) -> Array[@model.CurrentUserGuild] raise DiscordHttpError
 pub async fn Client::get_current_user_voice_state(Self, @model.Id[@model.GuildMarker]) -> @model.VoiceState raise DiscordHttpError
 pub async fn Client::get_followup(Self, @model.Id[@model.ApplicationMarker], String, @model.Id[@model.MessageMarker]) -> @model.Message raise DiscordHttpError
@@ -144,6 +148,7 @@ pub async fn Client::get_user_voice_state(Self, @model.Id[@model.GuildMarker], @
 pub async fn Client::get_webhook(Self, @model.Id[@model.WebhookMarker]) -> @model.Webhook raise DiscordHttpError
 pub async fn Client::get_webhook_message(Self, @model.Id[@model.WebhookMarker], String, @model.Id[@model.MessageMarker]) -> @model.Message raise DiscordHttpError
 pub async fn Client::join_thread(Self, @model.Id[@model.ChannelMarker]) -> Unit raise DiscordHttpError
+pub async fn Client::leave_guild(Self, @model.Id[@model.GuildMarker]) -> Unit raise DiscordHttpError
 pub async fn Client::leave_thread(Self, @model.Id[@model.ChannelMarker]) -> Unit raise DiscordHttpError
 pub async fn Client::list_auto_moderation_rules(Self, @model.Id[@model.GuildMarker]) -> Array[@model.AutoModerationRule] raise DiscordHttpError
 pub async fn Client::list_default_soundboard_sounds(Self) -> Array[@model.SoundboardSound] raise DiscordHttpError
@@ -186,7 +191,7 @@ pub fn Client::ref_of_message(Self, @model.Message) -> MessageRef
 pub async fn Client::remove_guild_ban(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker], audit_reason? : String) -> Unit raise DiscordHttpError
 pub async fn Client::remove_guild_member(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker], audit_reason? : String) -> Unit raise DiscordHttpError
 pub async fn Client::remove_member_role(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker], @model.Id[@model.RoleMarker], audit_reason? : String) -> Unit raise DiscordHttpError
-pub async fn Client::request(Self, Route, body? : Json, audit_reason? : String, files? : Array[FileUpload]) -> Json raise DiscordHttpError
+pub async fn Client::request(Self, Route, body? : Json, audit_reason? : String, files? : Array[FileUpload], headers? : Map[String, String]) -> Json raise DiscordHttpError
 pub async fn Client::search_guild_members(Self, @model.Id[@model.GuildMarker], String, limit? : Int) -> Array[@model.GuildMember] raise DiscordHttpError
 pub async fn Client::send_soundboard_sound(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.SoundboardSoundMarker], source_guild_id? : @model.Id[@model.GuildMarker]) -> Unit raise DiscordHttpError
 pub async fn Client::start_thread_from_message(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], String, auto_archive_duration? : @model.ThreadAutoArchiveDuration, rate_limit_per_user? : Int, audit_reason? : String) -> @model.Channel raise DiscordHttpError
@@ -255,9 +260,14 @@ pub(all) enum Route {
   EditCurrentApplication
   GetCurrentUser
   GetCurrentUserGuilds(query~ : String)
+  GetCurrentUserConnections
+  GetCurrentUserGuildMember(guild_id~ : @model.Id[@model.GuildMarker])
+  LeaveGuild(guild_id~ : @model.Id[@model.GuildMarker])
   GetUser(user_id~ : @model.Id[@model.UserMarker])
   ModifyCurrentUser
   CreateDm
+  GetCurrentAuthorizationInformation
+  GetCurrentBotApplicationInformation
   GetChannel(channel_id~ : @model.Id[@model.ChannelMarker])
   ModifyChannel(channel_id~ : @model.Id[@model.ChannelMarker])
   DeleteChannel(channel_id~ : @model.Id[@model.ChannelMarker])

@@ -45,6 +45,27 @@ async test "middleware request headers reach transport" {
 }
 
 ///|
+async test "request headers default to bot auth and allow bearer override" {
+  let client = Client("test-token")
+  defer client.close()
+  let captured_authorizations : Array[String] = []
+  client.perform_override_.val = Some((_route, _path, headers, _body, _files) => {
+    captured_authorizations.push(headers.get_or_default("authorization", ""))
+    { status: 200, headers: Map([]), body: Json::null() }
+  })
+  ignore(client.request(GetGateway))
+  ignore(
+    client.request(GetGateway, headers={ "authorization": "Bearer oauth-token" }),
+  )
+  debug_inspect(
+    captured_authorizations,
+    content=(
+      #|["Bot test-token", "Bearer oauth-token"]
+    ),
+  )
+}
+
+///|
 async test "middleware may short-circuit without transport" {
   let client = Client("test-token")
   defer client.close()

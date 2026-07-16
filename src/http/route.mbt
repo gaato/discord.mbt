@@ -27,9 +27,14 @@ pub(all) enum Route {
   EditCurrentApplication
   GetCurrentUser
   GetCurrentUserGuilds(query~ : String)
+  GetCurrentUserConnections
+  GetCurrentUserGuildMember(guild_id~ : @model.GuildId)
+  LeaveGuild(guild_id~ : @model.GuildId)
   GetUser(user_id~ : @model.UserId)
   ModifyCurrentUser
   CreateDm
+  GetCurrentAuthorizationInformation
+  GetCurrentBotApplicationInformation
   GetChannel(channel_id~ : @model.ChannelId)
   ModifyChannel(channel_id~ : @model.ChannelId)
   DeleteChannel(channel_id~ : @model.ChannelId)
@@ -363,6 +368,10 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | GetCurrentApplication
     | GetCurrentUser
     | GetCurrentUserGuilds(..)
+    | GetCurrentUserConnections
+    | GetCurrentUserGuildMember(..)
+    | GetCurrentAuthorizationInformation
+    | GetCurrentBotApplicationInformation
     | GetUser(..)
     | GetChannel(..)
     | GetChannelMessages(..)
@@ -480,7 +489,8 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | DeleteOriginalInteractionResponse(..)
     | DeleteFollowupMessage(..)
     | DeleteGlobalCommand(..)
-    | DeleteGuildCommand(..) => Delete
+    | DeleteGuildCommand(..)
+    | LeaveGuild(..) => Delete
     CreateReaction(..)
     | EditChannelPermissions(..)
     | PinMessage(..)
@@ -503,8 +513,14 @@ pub fn Route::path(self : Route) -> String {
     GetCurrentApplication | EditCurrentApplication => "/applications/@me"
     GetCurrentUser | ModifyCurrentUser => "/users/@me"
     GetCurrentUserGuilds(query~) => "/users/@me/guilds\{query}"
+    GetCurrentUserConnections => "/users/@me/connections"
+    GetCurrentUserGuildMember(guild_id~) =>
+      "/users/@me/guilds/\{guild_id}/member"
+    LeaveGuild(guild_id~) => "/users/@me/guilds/\{guild_id}"
     GetUser(user_id~) => "/users/\{user_id}"
     CreateDm => "/users/@me/channels"
+    GetCurrentAuthorizationInformation => "/oauth2/@me"
+    GetCurrentBotApplicationInformation => "/oauth2/applications/@me"
     GetChannel(channel_id~)
     | ModifyChannel(channel_id~)
     | DeleteChannel(channel_id~) => "/channels/\{channel_id}"
@@ -682,9 +698,15 @@ pub fn Route::bucket(self : Route) -> String {
     EditCurrentApplication => "PATCH:/applications/@me"
     GetCurrentUser => "GET:/users/@me"
     GetCurrentUserGuilds(..) => "GET:/users/@me/guilds"
+    GetCurrentUserConnections => "GET:/users/@me/connections"
+    GetCurrentUserGuildMember(guild_id~) =>
+      "GET:/users/@me/guilds/\{guild_id}/member"
+    LeaveGuild(guild_id~) => "DELETE:/users/@me/guilds/\{guild_id}"
     ModifyCurrentUser => "PATCH:/users/@me"
     GetUser(..) => "GET:/users/{}"
     CreateDm => "POST:/users/@me/channels"
+    GetCurrentAuthorizationInformation => "GET:/oauth2/@me"
+    GetCurrentBotApplicationInformation => "GET:/oauth2/applications/@me"
     GetChannel(channel_id~) => "GET:/channels/\{channel_id}"
     ModifyChannel(channel_id~) => "PATCH:/channels/\{channel_id}"
     DeleteChannel(channel_id~) => "DELETE:/channels/\{channel_id}"

@@ -177,13 +177,11 @@ OpenAPI spec; include it when doing this category.
 
 ## Users & OAuth2
 
-- [ ] GET /users/@me/connections — Get Current User Connections
-- [ ] GET /users/@me/guilds/{id}/member — Get Current User Guild Member
-- [ ] DELETE /users/@me/guilds/{id} — Leave Guild
-- [ ] GET /oauth2/@me — Get Current Authorization Information
-- [ ] GET /oauth2/applications/@me — Get Current Bot Application Information
-- [ ] GET /oauth2/keys — Get OAuth2 signing keys
-- [ ] GET /oauth2/userinfo — OAuth2 userinfo
+- [x] GET /users/@me/connections — Get Current User Connections (`Client::get_current_user_connections`)
+- [x] GET /users/@me/guilds/{id}/member — Get Current User Guild Member (`Client::get_current_user_guild_member`)
+- [x] DELETE /users/@me/guilds/{id} — Leave Guild (`Client::leave_guild`)
+- [x] GET /oauth2/@me — Get Current Authorization Information (`Client::get_current_authorization_information`)
+- [x] GET /oauth2/applications/@me — Get Current Bot Application Information (`Client::get_current_bot_application_information`)
 
 ## Out of scope (proposed): Discord Social SDK
 
@@ -201,3 +199,12 @@ remains available if someone needs them.
 - POST /partner-sdk/token · POST /partner-sdk/token/bot
 - POST /partner-sdk/provisional-accounts/unmerge · POST /partner-sdk/provisional-accounts/unmerge/bot
 - PUT /partner-sdk/dms/{a}/{b}/messages/{msg}/moderation-metadata
+
+## Out of scope: undocumented OAuth2 endpoints
+
+These endpoints are not present in the official developer docs. Discord's
+public docs reference OIDC only in the Social SDK provisional-accounts
+context; both remain reachable through `Route::custom`.
+
+- GET /oauth2/keys — Get OAuth2 signing keys
+- GET /oauth2/userinfo — OAuth2 userinfo

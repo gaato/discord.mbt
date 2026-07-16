@@ -440,6 +440,13 @@ pub fn AuditLogEvent::to_int(Self) -> Int
 pub impl ToJson for AuditLogEvent
 pub impl @json.FromJson for AuditLogEvent
 
+pub(all) struct AuthorizationInformation {
+  application : Application
+  scopes : Array[String]
+  expires : Timestamp
+  user : User?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) struct AutoModerationAction {
   typ : AutoModerationActionType
   metadata : ActionMetadata?

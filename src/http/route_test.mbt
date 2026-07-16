@@ -121,6 +121,73 @@ test "current user guild REST route metadata" {
 }
 
 ///|
+test "get current user connections REST route metadata" {
+  let route = @http.Route::GetCurrentUserConnections
+  inspect(
+    route_signature(route),
+    content=(
+      #|Get /users/@me/connections | GET:/users/@me/connections | reason=false
+    ),
+  )
+  assert_true(route.needs_auth())
+  assert_false(route.is_interaction())
+}
+
+///|
+test "get current user guild member REST route metadata" {
+  let guild_id : @model.GuildId = Id(10UL)
+  let route = @http.Route::GetCurrentUserGuildMember(guild_id~)
+  inspect(
+    route_signature(route),
+    content=(
+      #|Get /users/@me/guilds/10/member | GET:/users/@me/guilds/10/member | reason=false
+    ),
+  )
+  assert_true(route.needs_auth())
+  assert_false(route.is_interaction())
+}
+
+///|
+test "leave guild REST route metadata" {
+  let guild_id : @model.GuildId = Id(10UL)
+  let route = @http.Route::LeaveGuild(guild_id~)
+  inspect(
+    route_signature(route),
+    content=(
+      #|Delete /users/@me/guilds/10 | DELETE:/users/@me/guilds/10 | reason=false
+    ),
+  )
+  assert_true(route.needs_auth())
+  assert_false(route.is_interaction())
+}
+
+///|
+test "get current authorization information REST route metadata" {
+  let route = @http.Route::GetCurrentAuthorizationInformation
+  inspect(
+    route_signature(route),
+    content=(
+      #|Get /oauth2/@me | GET:/oauth2/@me | reason=false
+    ),
+  )
+  assert_true(route.needs_auth())
+  assert_false(route.is_interaction())
+}
+
+///|
+test "get current bot application information REST route metadata" {
+  let route = @http.Route::GetCurrentBotApplicationInformation
+  inspect(
+    route_signature(route),
+    content=(
+      #|Get /oauth2/applications/@me | GET:/oauth2/applications/@me | reason=false
+    ),
+  )
+  assert_true(route.needs_auth())
+  assert_false(route.is_interaction())
+}
+
+///|
 test "automod and sticker REST route metadata" {
   let guild_id : @model.GuildId = Id(10UL)
   let rule_id : @model.AutoModerationRuleId = Id(40UL)
