@@ -32,6 +32,13 @@ pub struct ModalHandle {
 }
 
 ///|
+/// Invalid per-show text-input prefill configuration.
+pub(all) suberror ModalPrefillError {
+  UnknownCustomId(custom_id~ : String)
+  NonTextInput(custom_id~ : String)
+} derive(Debug)
+
+///|
 fn find_modal_component(
   components : Array[@model.Component],
   custom_id : String,
@@ -80,7 +87,64 @@ fn set_modal_field_optional(component : @model.Component) -> @model.Component {
 }
 
 ///|
-/// Define a modern label-wrapped text input.
+fn modal_text_input_ids(components : Array[@model.Component]) -> Array[String] {
+  let result = []
+  for component in components {
+    match component {
+      ActionRow(row) => result.append(modal_text_input_ids(row.components))
+      Label(label) => result.append(modal_text_input_ids([label.component]))
+      TextInput(input) => result.push(input.custom_id)
+      _ => ()
+    }
+  }
+  result
+}
+
+///|
+fn prefill_modal_component(
+  component : @model.Component,
+  values : Map[String, String],
+) -> @model.Component {
+  match component {
+    ActionRow(row) =>
+      ActionRow({
+        ..row,
+        components: row.components.map(component => {
+          prefill_modal_component(component, values)
+        }),
+      })
+    Label(label) =>
+      Label({
+        ..label,
+        component: prefill_modal_component(label.component, values),
+      })
+    TextInput(input) =>
+      match values.get(input.custom_id) {
+        Some(value) => TextInput({ ..input, value: Some(value) })
+        None => component
+      }
+    _ => component
+  }
+}
+
+///|
+fn prefill_modal_components(
+  components : Array[@model.Component],
+  values : Map[String, String],
+) -> Array[@model.Component] raise ModalPrefillError {
+  for custom_id, _ in values {
+    match find_modal_component(components, custom_id) {
+      Some(TextInput(_)) => ()
+      Some(_) => raise NonTextInput(custom_id~)
+      None => raise UnknownCustomId(custom_id~)
+    }
+  }
+  components.map(component => prefill_modal_component(component, values))
+}
+
+///|
+/// Define a modern label-wrapped text input. `value` is its static prefill;
+/// `Modal::show(values=...)` can override it for one response.
 pub fn text_field(
   custom_id~ : String,
   label~ : String,
@@ -89,6 +153,7 @@ pub fn text_field(
   placeholder? : String,
   min_length? : Int,
   max_length? : Int,
+  value? : String,
 ) -> ModalField[String] {
   let input = @interaction.text_input(
     custom_id~,
@@ -97,6 +162,7 @@ pub fn text_field(
     min_length?,
     max_length?,
     required=true,
+    value?,
   )
   {
     definition_: @interaction.label(label~, component=input, description?),
@@ -338,15 +404,27 @@ pub fn[A] modal(
 }
 
 ///|
-/// Prepare a modal response, optionally appending opaque state after `:`.
-pub fn[A] Modal::show(self : Modal[A], state? : String) -> ModalHandle {
+/// Prepare a modal response, optionally appending opaque state after `:` and
+/// overriding text-input defaults by `custom_id` for this response only.
+/// Raises `ModalPrefillError` when an override key is unknown or does not name
+/// a text input.
+pub fn[A] Modal::show(
+  self : Modal[A],
+  state? : String,
+  values? : Map[String, String],
+) -> ModalHandle raise ModalPrefillError {
+  let components = match values {
+    Some(overrides) =>
+      prefill_modal_components(self.fields_.definitions_, overrides)
+    None => self.fields_.definitions_.copy()
+  }
   {
     custom_id_: match state {
       Some(value) => "\{self.custom_id_}:\{value}"
       None => self.custom_id_
     },
     title_: self.title_,
-    components_: self.fields_.definitions_.copy(),
+    components_: components,
   }
 }
 

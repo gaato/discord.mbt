@@ -93,6 +93,116 @@ test "modal field optional default and validation semantics" {
 }
 
 ///|
+test "text fields include a static prefill value" {
+  let fields = ModalFields::of(
+    text_field(custom_id="note", label="Note", value="draft"),
+  )
+  json_inspect(fields.definitions_, content=[
+    {
+      "label": "Note",
+      "component": {
+        "custom_id": "note",
+        "style": 1,
+        "required": true,
+        "value": "draft",
+        "type": 4,
+      },
+      "type": 18,
+    },
+  ])
+}
+
+///|
+test "modal show overrides prefills without changing its definition" {
+  let form = modal(
+    custom_id="feedback",
+    title="Feedback",
+    fields=ModalFields::of(
+      text_field(custom_id="note", label="Note", value="static-default"),
+    ),
+  )
+  let overridden = form.show(values={ "note": "per-request" })
+  json_inspect(overridden.components_, content=[
+    {
+      "label": "Note",
+      "component": {
+        "custom_id": "note",
+        "style": 1,
+        "required": true,
+        "value": "per-request",
+        "type": 4,
+      },
+      "type": 18,
+    },
+  ])
+  let pristine = form.show()
+  json_inspect(pristine.components_, content=[
+    {
+      "label": "Note",
+      "component": {
+        "custom_id": "note",
+        "style": 1,
+        "required": true,
+        "value": "static-default",
+        "type": 4,
+      },
+      "type": 18,
+    },
+  ])
+}
+
+///|
+test "modal show rejects unknown and non-text prefill keys" {
+  let form = modal(
+    custom_id="feedback",
+    title="Feedback",
+    fields=ModalFields::map2(
+      text_field(custom_id="note", label="Note"),
+      select_field(custom_id="color", label="Color", options=[
+        @interaction.select_option(label="Blue", value="blue"),
+      ]),
+      (note, colors) => (note, colors),
+    ),
+  )
+  try form.show(values={ "missing": "value" }) |> ignore catch {
+    UnknownCustomId(custom_id~) => inspect(custom_id, content="missing")
+    error => fail("unexpected error: \{to_repr(error)}")
+  } noraise {
+    _ => fail("expected unknown custom id error")
+  }
+  try form.show(values={ "color": "blue" }) |> ignore catch {
+    NonTextInput(custom_id~) => inspect(custom_id, content="color")
+    error => fail("unexpected error: \{to_repr(error)}")
+  } noraise {
+    _ => fail("expected non-text input error")
+  }
+}
+
+///|
+test "app validation rejects duplicate modal text input ids" {
+  let app = App(sync=Disabled)
+  let form = modal(
+    custom_id="duplicate",
+    title="Duplicate fields",
+    fields=ModalFields::map2(
+      text_field(custom_id="same", label="First"),
+      text_field(custom_id="same", label="Second"),
+      (first, second) => (first, second),
+    ),
+  )
+  app.on_modal(form, Raw(_ => ()))
+  try app.validate() catch {
+    DuplicateModalTextInput(custom_id~, field~) => {
+      inspect(custom_id, content="duplicate")
+      inspect(field, content="same")
+    }
+    error => fail("unexpected error: \{to_repr(error)}")
+  } noraise {
+    _ => fail("expected duplicate modal text input error")
+  }
+}
+
+///|
 test "modal show appends state and emits modern label components" {
   let handle = modal(
     custom_id="feedback",

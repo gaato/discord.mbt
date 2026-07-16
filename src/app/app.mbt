@@ -17,6 +17,7 @@ pub(all) suberror AppConfigError {
   ChoicesWithAutocomplete(command~ : String, path~ : String)
   RequiredOptionAfterOptional(command~ : String, path~ : String)
   InvalidModalFieldCount(custom_id~ : String, count~ : Int)
+  DuplicateModalTextInput(custom_id~ : String, field~ : String)
   InvalidCooldown(command~ : String, seconds~ : Int)
 } derive(Debug)
 
@@ -30,6 +31,7 @@ priv struct RegisteredComponent {
 priv struct RegisteredModal {
   prefix : String
   field_count : Int?
+  text_input_ids : Array[String]?
   dispatch : async (AppCtx, @framework.ModalCtx) -> Unit
 }
 
@@ -124,6 +126,7 @@ pub fn[A] App::on_modal(
   self.modals_.push({
     prefix: modal.custom_id_,
     field_count: Some(modal.fields_.definitions_.length()),
+    text_input_ids: Some(modal_text_input_ids(modal.fields_.definitions_)),
     dispatch: (bot, raw) => dispatch_modal_handler(modal, handler, bot, raw),
   })
 }
@@ -138,6 +141,7 @@ pub fn App::on_modal_raw(
   self.modals_.push({
     prefix,
     field_count: None,
+    text_input_ids: None,
     dispatch: (_, raw) => handler(raw),
   })
 }
@@ -209,10 +213,9 @@ fn validate_command_options(
 }
 
 ///|
-/// Check the declared commands for configuration errors: duplicate
-/// names or subcommand paths, nested subcommand groups, required
-/// options after optional ones, and invalid cooldowns. Executors call
-/// this at startup; call it directly in a test to fail fast.
+/// Check declarations for configuration errors: invalid command trees and
+/// cooldowns, invalid modal field counts, and duplicate modal text-input ids.
+/// Executors call this at startup; call it directly in a test to fail fast.
 pub fn App::validate(self : App) -> Unit raise AppConfigError {
   let commands : Set[String] = Set([])
   for command in self.commands_ {
@@ -240,6 +243,15 @@ pub fn App::validate(self : App) -> Unit raise AppConfigError {
   for modal in self.modals_ {
     if modal.field_count is Some(count) && (count < 1 || count > 5) {
       raise InvalidModalFieldCount(custom_id=modal.prefix, count~)
+    }
+    if modal.text_input_ids is Some(ids) {
+      let seen : Set[String] = Set([])
+      for field in ids {
+        if seen.contains(field) {
+          raise DuplicateModalTextInput(custom_id=modal.prefix, field~)
+        }
+        seen.add(field)
+      }
     }
   }
 }

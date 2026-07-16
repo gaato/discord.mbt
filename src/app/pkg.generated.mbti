@@ -33,7 +33,7 @@ pub fn[A] subcommand(name~ : String, description~ : String, args~ : @interaction
 
 pub fn subcommand_group(name~ : String, description~ : String, children~ : Array[SlashChild], name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> SlashChild
 
-pub fn text_field(custom_id~ : String, label~ : String, style? : @model.TextInputStyle, description? : String, placeholder? : String, min_length? : Int, max_length? : Int) -> ModalField[String]
+pub fn text_field(custom_id~ : String, label~ : String, style? : @model.TextInputStyle, description? : String, placeholder? : String, min_length? : Int, max_length? : Int, value? : String) -> ModalField[String]
 
 pub fn user_command(name~ : String, handler~ : InteractionHandler[TargetUser], default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType], name_localizations? : Map[String, String]) -> Command[TargetUser]
 
@@ -46,6 +46,7 @@ pub(all) suberror AppConfigError {
   ChoicesWithAutocomplete(command~ : String, path~ : String)
   RequiredOptionAfterOptional(command~ : String, path~ : String)
   InvalidModalFieldCount(custom_id~ : String, count~ : Int)
+  DuplicateModalTextInput(custom_id~ : String, field~ : String)
   InvalidCooldown(command~ : String, seconds~ : Int)
 } derive(@debug.Debug)
 
@@ -61,6 +62,11 @@ pub(all) suberror HandlerError {
   MissingPermission(@model.Permissions)
   OnCooldown(retry_after_ms~ : Int64)
   InvalidArgument(String)
+} derive(@debug.Debug)
+
+pub(all) suberror ModalPrefillError {
+  UnknownCustomId(custom_id~ : String)
+  NonTextInput(custom_id~ : String)
 } derive(@debug.Debug)
 
 // Types and methods
@@ -261,7 +267,7 @@ pub(all) enum InteractionTarget {
 pub struct Modal[A] {
   // private fields
 }
-pub fn[A] Modal::show(Self[A], state? : String) -> ModalHandle
+pub fn[A] Modal::show(Self[A], state? : String, values? : Map[String, String]) -> ModalHandle raise ModalPrefillError
 
 pub struct ModalDeferredCtx {
   // private fields
