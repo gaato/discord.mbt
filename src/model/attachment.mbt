@@ -23,6 +23,35 @@ pub(all) struct Attachment {
 } derive(ToJson, FromJson, Debug)
 
 ///|
+/// An existing attachment to retain when editing a message, per the
+/// documented attachment-request structure. `description` and `is_spoiler`
+/// may be updated in place; absent fields are omitted from the wire, leaving
+/// them unchanged. New uploads are announced by the typed wrappers from
+/// their `files` parameter instead.
+pub(all) struct AttachmentRequest {
+  id : AttachmentId
+  filename : String?
+  title : String?
+  description : String?
+  duration_secs : Double?
+  waveform : String?
+  is_spoiler : Bool?
+} derive(Debug)
+
+///|
+pub impl ToJson for AttachmentRequest with fn to_json(self) {
+  ObjBuilder()
+  .field("id", self.id)
+  .opt("filename", self.filename)
+  .opt("title", self.title)
+  .opt("description", self.description)
+  .opt("duration_secs", self.duration_secs)
+  .opt("waveform", self.waveform)
+  .opt("is_spoiler", self.is_spoiler)
+  .build()
+}
+
+///|
 /// Bit flags describing special properties of an attachment.
 pub(all) struct AttachmentFlags(UInt64) derive(Eq)
 

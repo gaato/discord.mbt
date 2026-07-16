@@ -347,3 +347,47 @@ pub impl @json.FromJson for InteractionResponseType with fn from_json(
       )
   }
 }
+
+///|
+/// The envelope returned by Create Interaction Response when the caller asks
+/// for it with `with_response=true`.
+pub(all) struct InteractionCallbackResponse {
+  interaction : InteractionCallback
+  resource : InteractionCallbackResource?
+} derive(ToJson, FromJson, Debug)
+
+///|
+/// The interaction as seen by the callback endpoint.
+pub(all) struct InteractionCallback {
+  id : InteractionId
+  typ : InteractionType
+  activity_instance_id : String?
+  response_message_id : MessageId?
+  response_message_loading : Bool?
+  response_message_ephemeral : Bool?
+} derive (
+  ToJson(fields(typ(rename="type"))),
+  FromJson(fields(typ(rename="type"))),
+  Debug,
+)
+
+///|
+/// What the interaction response created. `message` is set for message
+/// callbacks, `activity_instance` when an Activity was launched.
+pub(all) struct InteractionCallbackResource {
+  typ : InteractionResponseType
+  activity_instance : InteractionCallbackActivityInstance?
+  message : Message?
+} derive (
+  ToJson(fields(typ(rename="type"))),
+  FromJson(fields(typ(rename="type"))),
+  Debug,
+)
+
+///|
+/// The Activity instance launched by an interaction response. Distinct from
+/// the fuller `ActivityInstance` resource returned by the application
+/// endpoints.
+pub(all) struct InteractionCallbackActivityInstance {
+  id : String
+} derive(ToJson, FromJson, Debug)

@@ -607,3 +607,15 @@ test "guild message search HTTP 202 JSON round trip" {
   )
   assert_eq(round_trip.to_json().stringify(), encoded)
 }
+
+///|
+/// Pins the documented reaction type table (NORMAL=0, BURST=1).
+test "reaction type matches the documented values" {
+  let table : Array[(@model.ReactionType, Int)] = [(Normal, 0), (Burst, 1)]
+  for pair in table {
+    let (typ, value) = pair
+    assert_eq(typ.to_int(), value)
+    assert_eq(@model.ReactionType::from_int(value), typ)
+  }
+  assert_eq(@model.ReactionType::from_int(9), Unknown(9))
+}

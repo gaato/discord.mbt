@@ -69,9 +69,9 @@ pub impl ToJson for PollCreateRequest with fn to_json(self) {
   .field("question", poll_media_request_json(self.question))
   .field(
     "answers",
-    self.answers.map(media => (
-        { "poll_media": poll_media_request_json(media) } : Json
-      )),
+    self.answers.map(media => {
+      ({ "poll_media": poll_media_request_json(media) } : Json)
+    }),
   )
   .opt("duration", self.duration)
   .opt("allow_multiselect", self.allow_multiselect)

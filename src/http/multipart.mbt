@@ -6,6 +6,10 @@ pub struct FileUpload {
   priv content : Bytes
   priv content_type : String
   priv description : String?
+  priv title : String?
+  priv duration_secs : Double?
+  priv waveform : String?
+  priv is_spoiler : Bool?
 }
 
 ///|
@@ -19,7 +23,9 @@ pub impl Debug for FileUpload with fn to_repr(self) {
 
 ///|
 /// Describe one file to upload. `description` becomes the attachment's
-/// alt text where the endpoint supports it.
+/// alt text where the endpoint supports it; `title`, `duration_secs`,
+/// `waveform`, and `is_spoiler` fill the matching attachment-request fields
+/// (the latter two are required for voice messages).
 ///
 /// ```mbt check
 /// test "describe attachments in payload_json" {
@@ -29,10 +35,16 @@ pub impl Debug for FileUpload with fn to_repr(self) {
 ///       b"PNG",
 ///       content_type="image/png",
 ///       description="a cat",
+///       is_spoiler=true,
 ///     ),
 ///   ]
 ///   json_inspect(@http.attachments_json(files), content=[
-///     { "id": 0, "filename": "cat.png", "description": "a cat" },
+///     {
+///       "id": 0,
+///       "filename": "cat.png",
+///       "description": "a cat",
+///       "is_spoiler": true,
+///     },
 ///   ])
 /// }
 /// ```
@@ -41,8 +53,21 @@ pub fn FileUpload::FileUpload(
   content : Bytes,
   content_type? : String = "application/octet-stream",
   description? : String,
+  title? : String,
+  duration_secs? : Double,
+  waveform? : String,
+  is_spoiler? : Bool,
 ) -> FileUpload {
-  { filename, content, content_type, description }
+  {
+    filename,
+    content,
+    content_type,
+    description,
+    title,
+    duration_secs,
+    waveform,
+    is_spoiler,
+  }
 }
 
 ///|
@@ -75,10 +100,56 @@ pub fn attachments_json(files : Array[FileUpload]) -> Json {
       .field("id", i)
       .field("filename", file.filename)
       .opt("description", file.description)
+      .opt("title", file.title)
+      .opt("duration_secs", file.duration_secs)
+      .opt("waveform", file.waveform)
+      .opt("is_spoiler", file.is_spoiler)
       .build(),
     )
   }
   Json::array(items)
+}
+
+///|
+/// The `attachments` array for an edit: retained attachments first (by
+/// snowflake id), then one entry per new upload with the numeric ids the
+/// `files[n]` multipart parts require. `Some([])` with no files clears every
+/// attachment; `None` leaves the retained set implicit (new files replace
+/// the whole list, no files leaves it untouched).
+fn merged_attachments_json(
+  keep : Array[@model.AttachmentRequest],
+  files : Array[FileUpload],
+) -> Json {
+  let items : Array[Json] = []
+  for request in keep {
+    items.push(request.to_json())
+  }
+  match attachments_json(files) {
+    Array(uploads) => items.append(uploads)
+    _ => ()
+  }
+  Json::array(items)
+}
+
+///|
+/// Attach the edit-time `attachments` field: an explicit `keep` list is
+/// always sent (merged with any new uploads, `[]` clears), while without it
+/// the field only announces fresh uploads, matching the create path.
+fn edit_attachments_field(
+  body : @model.ObjBuilder,
+  keep : Array[@model.AttachmentRequest]?,
+  files : Array[FileUpload]?,
+) -> @model.ObjBuilder {
+  match (keep, files) {
+    (Some(kept), _) =>
+      body.field(
+        "attachments",
+        merged_attachments_json(kept, files.unwrap_or([])),
+      )
+    (None, Some(fs)) if fs.length() > 0 =>
+      body.field("attachments", attachments_json(fs))
+    _ => body
+  }
 }
 
 ///|
@@ -182,6 +253,38 @@ fn multipart_parts(
     parts.push(Text("\r\n"))
   }
   parts.push(Text("--\{boundary}--\r\n"))
+  parts
+}
+
+///|
+/// Render a multipart body with the `payload_json` part followed by one file
+/// part under a custom field name. The invite target-users upload uses this
+/// shape (`target_users_file` next to the JSON params).
+fn multipart_payload_with_named_file(
+  boundary : String,
+  payload : String,
+  file_field : String,
+  file : FileUpload,
+) -> Array[MultipartChunk] {
+  let parts : Array[MultipartChunk] = []
+  parts.push(
+    Text(
+      "--\{boundary}\r\n" +
+      "content-disposition: form-data; name=\"payload_json\"\r\n" +
+      "content-type: application/json\r\n\r\n" +
+      payload +
+      "\r\n",
+    ),
+  )
+  parts.push(
+    Text(
+      "--\{boundary}\r\n" +
+      "content-disposition: form-data; name=\"\{file_field}\"; filename=\"\{file.filename}\"\r\n" +
+      "content-type: \{file.content_type}\r\n\r\n",
+    ),
+  )
+  parts.push(Blob(file.content))
+  parts.push(Text("\r\n--\{boundary}--\r\n"))
   parts
 }
 

@@ -327,6 +327,30 @@ pub(all) struct ForumTag {
 } derive(ToJson, FromJson, Debug)
 
 ///|
+/// A forum tag as sent in `available_tags` when creating or modifying a
+/// forum or media channel. Only `name` is required; omit `id` to create a
+/// new tag, keep an existing tag's `id` to update it in place. At most one
+/// of `emoji_id` and `emoji_name` may be set.
+pub(all) struct ForumTagRequest {
+  id : GenericId?
+  name : String
+  moderated : Bool?
+  emoji_id : EmojiId?
+  emoji_name : String?
+} derive(Debug)
+
+///|
+pub impl ToJson for ForumTagRequest with fn to_json(self) {
+  ObjBuilder()
+  .opt("id", self.id)
+  .field("name", self.name)
+  .opt("moderated", self.moderated)
+  .opt("emoji_id", self.emoji_id)
+  .opt("emoji_name", self.emoji_name)
+  .build()
+}
+
+///|
 /// The default custom or Unicode reaction for a forum or media channel.
 pub(all) struct DefaultReaction {
   emoji_id : Nullable[EmojiId]

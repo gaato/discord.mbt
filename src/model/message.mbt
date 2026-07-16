@@ -234,6 +234,46 @@ pub(all) struct ReactionCountDetails {
 } derive(ToJson, FromJson, Debug)
 
 ///|
+/// Whether a reaction is a normal or a burst (super) reaction, as selected
+/// by the `type` query parameter of the reaction endpoints.
+pub(all) enum ReactionType {
+  Normal
+  Burst
+  Unknown(Int)
+} derive(Eq, Debug)
+
+///|
+pub fn ReactionType::to_int(self : ReactionType) -> Int {
+  match self {
+    Normal => 0
+    Burst => 1
+    Unknown(value) => value
+  }
+}
+
+///|
+pub fn ReactionType::from_int(value : Int) -> ReactionType {
+  match value {
+    0 => Normal
+    1 => Burst
+    value => Unknown(value)
+  }
+}
+
+///|
+pub impl ToJson for ReactionType with fn to_json(self) {
+  Json::number(self.to_int().to_double())
+}
+
+///|
+pub impl @json.FromJson for ReactionType with fn from_json(json, path) {
+  match json {
+    Number(value, ..) => ReactionType::from_int(value.to_int())
+    _ => raise JsonDecodeError((path, "expected a reaction type (number)"))
+  }
+}
+
+///|
 /// Rich Presence activity metadata attached to a message.
 pub(all) struct MessageActivity {
   typ : MessageActivityType

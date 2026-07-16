@@ -584,3 +584,36 @@ test "modal data decodes resolved attachments" {
     },
   })
 }
+
+///|
+/// Decodes the documented interaction-callback response envelope
+/// (with_response=true); no live fixture exists because probing it needs a
+/// real user-initiated interaction.
+test "interaction callback response decodes the documented shape" {
+  let json = @json.parse(
+    (
+      #|{
+      #|  "interaction": {
+      #|    "id": "1",
+      #|    "type": 2,
+      #|    "response_message_id": "2",
+      #|    "response_message_loading": false,
+      #|    "response_message_ephemeral": true
+      #|  },
+      #|  "resource": {
+      #|    "type": 4,
+      #|    "activity_instance": { "id": "inst" }
+      #|  }
+      #|}
+    ),
+  )
+  let response : @model.InteractionCallbackResponse = @json.from_json(json)
+  assert_eq(response.interaction.id, Id(1UL))
+  assert_eq(response.interaction.typ, ApplicationCommand)
+  assert_eq(response.interaction.response_message_id, Some(Id(2UL)))
+  assert_eq(response.interaction.response_message_ephemeral, Some(true))
+  let resource = response.resource.unwrap()
+  assert_eq(resource.typ, ChannelMessageWithSource)
+  assert_eq(resource.activity_instance.unwrap().id, "inst")
+  assert_true(resource.message is None)
+}

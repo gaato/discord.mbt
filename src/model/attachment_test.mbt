@@ -141,3 +141,35 @@ test "attachment flags combine and preserve unknown bits" {
   let decoded : @model.AttachmentFlags = @json.from_json(@json.parse(encoded))
   assert_true(decoded.bits() == unknown_bits)
 }
+
+///|
+test "attachment request omits absent fields" {
+  let full : @model.AttachmentRequest = {
+    id: Id(123UL),
+    filename: Some("cat.png"),
+    title: Some("Cat"),
+    description: Some("a cat"),
+    duration_secs: Some(1.5),
+    waveform: Some("AAAA"),
+    is_spoiler: Some(true),
+  }
+  json_inspect(full, content={
+    "id": "123",
+    "filename": "cat.png",
+    "title": "Cat",
+    "description": "a cat",
+    "duration_secs": 1.5,
+    "waveform": "AAAA",
+    "is_spoiler": true,
+  })
+  let keep_only : @model.AttachmentRequest = {
+    id: Id(123UL),
+    filename: None,
+    title: None,
+    description: None,
+    duration_secs: None,
+    waveform: None,
+    is_spoiler: None,
+  }
+  json_inspect(keep_only, content={ "id": "123" })
+}
