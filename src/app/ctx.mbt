@@ -21,6 +21,12 @@ pub fn AppCtx::application_id(self : AppCtx) -> @model.ApplicationId {
 }
 
 ///|
+/// The current application bound to its Discord REST client.
+pub fn AppCtx::application_ref(self : AppCtx) -> @dhttp.ApplicationRef {
+  self.client_.application_ref(self.application_id_)
+}
+
+///|
 /// Executor-provided lookup behind `wait_for_component`: resolves the
 /// next component interaction matching a custom id, with an optional
 /// timeout in milliseconds.

@@ -148,6 +148,10 @@ pub using @app {type AppConfigError}
 
 pub using @app {type AppCtx}
 
+pub using @http {type ApplicationEmojiRef}
+
+pub using @http {type ApplicationRef}
+
 pub using @interaction {type Arg}
 
 pub using @interaction {type Args}
@@ -204,6 +208,8 @@ pub using @app {type DeferredCtx}
 
 pub using @http {type EmojiRef}
 
+pub using @http {type EntitlementRef}
+
 pub type ErrorPolicy = async (@app.FailureCtx, Error) -> Unit
 
 pub using @model {type Event}
@@ -221,6 +227,10 @@ pub using @http {type FileUpload}
 pub using @framework {type Framework}
 
 pub using @bot {type GatewayCtx}
+
+pub using @http {type GlobalCommandRef}
+
+pub using @http {type GuildCommandRef}
 
 pub using @http {type GuildRef}
 
@@ -293,6 +303,8 @@ pub using @gateway {type Shard}
 pub using @bot {type ShardConfig}
 
 pub using @gateway {type ShardEvent}
+
+pub using @http {type SkuRef}
 
 pub using @app {type SlashChild}
 

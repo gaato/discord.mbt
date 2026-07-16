@@ -89,6 +89,7 @@ pub struct AppCtx {
   // private fields
 }
 pub fn AppCtx::application_id(Self) -> @model.Id[@model.ApplicationMarker]
+pub fn AppCtx::application_ref(Self) -> @http.ApplicationRef
 pub fn AppCtx::http(Self) -> @http.Client
 
 pub struct CheckCtx {
