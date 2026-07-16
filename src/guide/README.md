@@ -27,6 +27,8 @@ drift from the library.
     install the native DAVE shim.
 11. [The framework layer](11-framework.mbt.md): direct interaction routing,
     response gates, and testing handlers without a network.
+12. [Models and utilities](12-models-utilities.mbt.md): the pure data layer,
+    typed snowflakes, and permission, mention, timestamp, and CDN helpers.
 
 The guides explain normal application structure and assume the reader starts
 from an empty module. Exact type and method documentation lives in doc

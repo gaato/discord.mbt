@@ -89,7 +89,76 @@ Endpoints that support audit-log reasons expose `reason?`; the handle forwards
 it as the request's URL-encoded `X-Audit-Log-Reason` header. Webhook
 authentication is encoded in the handle type: `WebhookRef` performs bot-token
 management, while `WebhookTokenRef` is created with `with_token` and executes
-through the webhook URL token without bot authentication.
+through the webhook URL token without bot authentication. Add the URL token
+before executing, then bind the returned message for later edits:
+
+```mbt check
+///|
+async fn send_and_edit_webhook(
+  client : @dhttp.Client,
+  webhook_id : @model.WebhookId,
+  token : String,
+) -> @model.Message {
+  let webhook = client.webhook_ref(webhook_id).with_token(token)
+  let sent = webhook.send(content="hello")
+  webhook.message_ref(sent.id).edit(content="hello again")
+}
+
+///|
+test "webhook handle declarations compile" {
+  ignore(send_and_edit_webhook)
+}
+```
+
+Every REST endpoint with a resource anchor is available from the
+corresponding ref verb. The entry points:
+
+| Ref | Entry points | Representative verbs |
+|---|---|---|
+| `ChannelRef` | `Client::channel_ref`, `GatewayCtx::channel_ref` | `fetch`, `send`, `messages`, `edit`, `start_thread` |
+| `MessageRef` | `Client::message_ref`, `Client::ref_of_message`, `ChannelRef::message_ref`, `GatewayCtx::message_ref` | `fetch`, `reply`, `edit`, `react`, `poll_answer_voters` |
+| `MemberRef` | `Client::member_ref`, `GuildRef::member_ref`, `GatewayCtx::member_ref` | `fetch`, `edit`, `ban`, `unban`, `edit_voice_state` |
+| `UserRef` | `Client::user_ref`, `GatewayCtx::user_ref` | `fetch`, `dm` |
+| `GuildRef` | `Client::guild_ref`, `GatewayCtx::guild_ref` | `fetch`, `edit`, `members`, `channels`, `search_messages` |
+| `RoleRef` | `Client::role_ref`, `GuildRef::role_ref` | `fetch`, `edit`, `delete` |
+| `EmojiRef` | `Client::emoji_ref`, `GuildRef::emoji_ref` | `fetch`, `edit`, `delete` |
+| `StickerRef` | `Client::sticker_ref`, `GuildRef::sticker_ref` | `fetch`, `edit`, `delete` |
+| `SoundboardSoundRef` | `Client::soundboard_sound_ref`, `GuildRef::soundboard_sound_ref` | `fetch`, `edit`, `delete` |
+| `ScheduledEventRef` | `Client::scheduled_event_ref`, `GuildRef::scheduled_event_ref` | `fetch`, `edit`, `delete`, `users` |
+| `AutoModerationRuleRef` | `Client::auto_moderation_rule_ref`, `GuildRef::auto_moderation_rule_ref` | `fetch`, `edit`, `delete` |
+| `TemplateRef` | `Client::guild_template_ref`, `GuildRef::template_ref` | `fetch`, `sync`, `edit`, `create_guild` |
+| `InviteRef` | `Client::invite_ref` | `fetch`, `delete`, `update_target_users` |
+| `WebhookRef` | `Client::webhook_ref` | `fetch`, `edit`, `delete`, `with_token` |
+| `WebhookTokenRef` | `Client::webhook_token_ref`, `WebhookRef::with_token` | `fetch`, `edit`, `send`, `message_ref` |
+| `WebhookMessageRef` | `WebhookTokenRef::message_ref` | `fetch`, `edit`, `delete` |
+| `ApplicationRef` | `Client::application_ref`, `AppCtx::application_ref` | `emojis`, `global_commands`, `entitlements`, `skus` |
+| `ApplicationEmojiRef` | `Client::application_emoji_ref`, `ApplicationRef::emoji_ref` | `fetch`, `edit`, `delete` |
+| `GlobalCommandRef` | `Client::global_command_ref`, `ApplicationRef::global_command_ref` | `fetch`, `edit`, `delete` |
+| `GuildCommandRef` | `Client::guild_command_ref`, `ApplicationRef::guild_command_ref` | `fetch`, `edit`, `permissions`, `edit_permissions` |
+| `EntitlementRef` | `Client::entitlement_ref`, `ApplicationRef::entitlement_ref` | `fetch`, `consume`, `delete_test` |
+| `SkuRef` | `Client::sku_ref`, `ApplicationRef::sku_ref` | `subscriptions`, `subscription` |
+
+The following endpoints remain direct `Client` methods because they do not
+have a stable resource-id anchor compatible with a ref:
+
+| Client method | Why it remains direct |
+|---|---|
+| `get_current_user` | The authenticated bot user is selected by the `/users/@me` route. |
+| `modify_current_user` | The authenticated bot user is selected by the `/users/@me` route. |
+| `get_current_user_guilds` | The guild list belongs to the authenticated `/users/@me` identity. |
+| `get_current_authorization_information` | It uses a user OAuth bearer token instead of the bot client's authentication model. |
+| `get_current_user_connections` | It uses a user OAuth bearer token instead of the bot client's authentication model. |
+| `get_current_user_guild_member` | It uses a user OAuth bearer token instead of the bot client's authentication model. |
+| `get_current_user_application_role_connection` | It uses a user OAuth bearer token instead of the bot client's authentication model. |
+| `update_current_user_application_role_connection` | It uses a user OAuth bearer token instead of the bot client's authentication model. |
+| `delete_current_user_application_role_connection` | It uses a user OAuth bearer token instead of the bot client's authentication model. |
+| `edit_current_application` | The bot application is selected by an `@me` route rather than an application id. |
+| `get_current_bot_application_information` | The bot application is selected by an `@me` route rather than an application id. |
+| `get_sticker` | This is a global catalog lookup without a guild or application anchor. |
+| `get_sticker_pack` | This is a global catalog lookup without a guild or application anchor. |
+| `list_sticker_packs` | This is a global catalog listing without a resource anchor. |
+| `list_default_soundboard_sounds` | This is a global catalog listing without a guild anchor. |
+| `list_voice_regions` | This is a global catalog listing without a guild anchor. |
 
 ## Allowed mentions
 
@@ -126,6 +195,30 @@ async fn greet_without_pings(
 category supplied in both `parse` and its explicit ID list. Interaction,
 followup, and webhook methods omit `allowed_mentions` when it is not supplied,
 preserving Discord's endpoint default.
+
+## File uploads
+
+The client sends attachments as `multipart/form-data`. Pass `files` to any
+message-shaped call — `create_message`, interaction responses and followups,
+and webhook sends:
+
+```mbt check
+///|
+async fn send_report(
+  client : @dhttp.Client,
+  channel_id : @model.ChannelId,
+) -> @model.Message {
+  let report = @fs.read_file("report.png").binary()
+  client.create_message(channel_id, content="Here you go", files=[
+    @dhttp.FileUpload("report.png", report, content_type="image/png"),
+  ])
+}
+
+///|
+test "file upload declaration compiles" {
+  ignore(send_report)
+}
+```
 
 ## Pagination
 

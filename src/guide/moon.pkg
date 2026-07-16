@@ -15,6 +15,8 @@ import {
   "gaato/discord/coordinator",
   "gaato/discord/ratelimit",
   "gaato/discord/queue",
+  "gaato/discord/cache",
+  "gaato/discord/util",
   "moonbitlang/async",
   "moonbitlang/async/signal",
   "moonbitlang/async/fs",

@@ -1,0 +1,9 @@
+import {
+  "mizchi/moomaid",
+  "moonbitlang/x/fs",
+  "moonbitlang/x/sys",
+}
+
+supported_targets = "native"
+
+pkgtype(kind: "executable")

@@ -156,3 +156,71 @@ serialized according to the `max_concurrency` rules Discord returns from
 allowance cannot cover the selected shards. For multiple processes, use the
 bundled coordinator described in
 [Scaling across processes](08-scaling-processes.mbt.md).
+
+## Gateway compression
+
+Gateway `zlib-stream` transport compression is opt-in. Pass `compress=true`
+to `Bot(...)` (or `Shard::start` at the lower level):
+
+```mbt check
+///|
+fn compressed_bot(app : @discord.App, token : String) -> @discord.Bot {
+  @discord.Bot(app, token~, compress=true)
+}
+```
+
+Each Gateway connection then requests `compress=zlib-stream` and retains one
+inflate context for that connection, including across consecutive Gateway
+messages. Only server-to-client binary messages are decompressed; identify,
+heartbeat, and other client-to-server payloads remain uncompressed text.
+
+The zlib shared library is loaded at runtime (like the async runtime loads
+OpenSSL), so neither this library nor applications using it need extra link
+flags; building only requires the zlib header. If the shared library is
+missing at runtime, enabling compression raises before any connection is
+attempted. A successful compressed connection emits `ShardCompressionEnabled`
+telemetry.
+
+## Opt-in cache
+
+`gaato/discord/cache` is a portable, gateway-driven in-memory cache. Attach
+it to a `Bot` to apply every decoded event before event handlers run:
+
+```mbt check
+///|
+fn install_cache(bot : @discord.Bot) -> @cache.InMemoryCache {
+  let cache = @cache.InMemoryCache(
+    resources=@cache.CacheResources(presences=true),
+    max_messages_per_channel=100,
+  )
+  bot.attach_cache(cache)
+  cache
+}
+
+///|
+fn can_send_in(
+  cache : @cache.InMemoryCache,
+  guild_id : @model.GuildId,
+  channel_id : @model.ChannelId,
+  user_id : @model.UserId,
+) -> Bool {
+  match cache.permissions_in(guild_id, channel_id, user_id) {
+    Some(permissions) =>
+      permissions.contains(@model.Permissions::send_messages())
+    None => false
+  }
+}
+
+///|
+test "compression and cache declarations compile" {
+  ignore(compressed_bot)
+  ignore(install_cache)
+  ignore(can_send_in)
+}
+```
+
+Guilds, channels, roles, members, users, and voice states are cached by
+default. Presences and messages are opt-in because of their volume; enable
+only the resources the application reads. The cache only sees events allowed
+by the bot's configured intents. Entity getters return shared read-only model
+values, while list getters return fresh outer arrays.

@@ -19,6 +19,7 @@ import {
   "gaato/discord/model",
   "gaato/discord/telemetry",
   "gaato/discord/interaction",
+  "gaato/discord/http" @dhttp,
 } for "test"
 
 // Native-only facade imports are unused when facade_native.mbt is excluded.

@@ -71,6 +71,43 @@ bulk-overwrite endpoints. As with `App` synchronization, **a bulk overwrite
 deletes commands registered outside this `Framework`** from the selected
 scope; guild sync applies instantly, global sync can take up to an hour.
 
+A `CommandSpec` serializes to exactly the JSON Discord's registration
+endpoints expect:
+
+```mbt check
+///|
+test "command specs serialize to the registration payload" {
+  let spec = @interaction.CommandSpec::slash("echo", "Echo your text back", options=[
+    @interaction.string_option("text", "What to echo", required=true),
+    @interaction.integer_option(
+      "times",
+      "How many times",
+      min_value=1,
+      max_value=5,
+    ),
+  ])
+  json_inspect(spec, content={
+    "name": "echo",
+    "description": "Echo your text back",
+    "options": [
+      {
+        "type": 3,
+        "name": "text",
+        "description": "What to echo",
+        "required": true,
+      },
+      {
+        "type": 4,
+        "name": "times",
+        "description": "How many times",
+        "min_value": 1,
+        "max_value": 5,
+      },
+    ],
+  })
+}
+```
+
 ## Driving it from an executor
 
 An executor is anything that feeds `InteractionCreate` payloads to `process`.
@@ -166,9 +203,58 @@ async fn suggest_names(ctx : @framework.AutocompleteCtx) -> Unit {
 }
 ```
 
-For decoding command options into a struct, implement
-`@interaction.CommandModel` once and call `ctx.model()` — see
-[Commands](02-commands.mbt.md) and the README's slash-command section.
+## Typed option decoding
+
+Submitted options decode through typed accessors on `CommandOptions`
+(`ctx.options` in a handler). Required accessors raise, `_opt` accessors
+return `None` when absent, and subcommand paths flatten. The same decoding
+is available outside a handler through `CommandOptions::from_data`:
+
+```mbt check
+///|
+test "typed option decoding" {
+  let data : @model.CommandData = @json.from_json(
+    @json.parse(
+      (
+        #|{"id": "600000000000000001", "name": "echo", "type": 1,
+        #| "options": [{"name": "text", "type": 3, "value": "hi"}]}
+      ),
+    ),
+  )
+  let options = @interaction.CommandOptions::from_data(data)
+  inspect(options.string("text"), content="hi")
+  debug_inspect(options.int_opt("times"), content="None")
+}
+```
+
+For more than a couple of options, implement `@interaction.CommandModel` once
+and get a typed struct from `ctx.model()` in the handler:
+
+```mbt check
+///|
+struct Echo {
+  text : String
+  times : Int
+}
+
+///|
+impl @interaction.CommandModel for Echo with fn from_options(options) {
+  {
+    text: options.string("text"),
+    times: options.int_opt("times").unwrap_or(1L).to_int(),
+  }
+}
+
+///|
+async fn handle_echo(ctx : @framework.CommandCtx) -> Unit {
+  let echo : Echo = ctx.model()
+  ctx.respond(content=Array::make(echo.times, echo.text).join("\n"))
+}
+```
+
+The declarative `App` layer builds on the same accessors; its `Args` values
+decode without a hand-written `CommandModel` — see
+[Commands](02-commands.mbt.md).
 
 ## The response gate
 
@@ -294,6 +380,7 @@ test "framework guide declarations compile" {
   ignore(build_router)
   ignore(audit_scope)
   ignore(suggest_names)
+  ignore(handle_echo)
   ignore(ping_command_interaction)
 }
 ```

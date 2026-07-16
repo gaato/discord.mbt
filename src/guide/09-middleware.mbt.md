@@ -299,3 +299,42 @@ components, or modals.
 The installer is an ordinary function, not a plugin object. See
 [Structuring bots with feature installers](07-structuring-bots.mbt.md) for the
 package pattern and why discord.mbt does not define a `Plugin` trait.
+
+## Telemetry
+
+Middleware wraps work; telemetry observes it. `Client` and `Bot` expose
+dependency-free structured telemetry callbacks through `on_telemetry`. `Bot`
+aggregates its shard, dispatch, decode-error, and REST client events, and
+shard-scoped events carry the shard id:
+
+```mbt check
+///|
+fn install_telemetry(bot : @discord.Bot) -> Unit {
+  bot.on_telemetry(event => {
+    match event {
+      HttpRequest(route_bucket~, status~, duration_ms~, retries~, ..) =>
+        println("http \{route_bucket} \{status} \{duration_ms}ms x\{retries}")
+      ShardHeartbeatLatency(shard_id~, latency_ms~) =>
+        println("shard \{shard_id} heartbeat \{latency_ms}ms")
+      DecodeError(marker~) => println(marker)
+      _ => ()
+    }
+  })
+}
+
+///|
+test "telemetry declarations compile" {
+  ignore(install_telemetry)
+}
+```
+
+Callbacks run synchronously in the request or dispatch path — enqueue or
+record values promptly rather than perform blocking work, the same contract
+event middleware has. Unlike HTTP middleware, which returns once per logical
+call, HTTP telemetry reports per-attempt values such as `HttpRateLimited`.
+
+Telemetry is an additional channel: `App::on_warn` and `Bot::on_decode_error`
+retain their behavior, and a telemetry callback failure is reported through
+the warning hook instead of being silently discarded. Standalone clients
+install the same observer with `client.on_telemetry` and configure the
+warning sink with `client.on_warn`.
