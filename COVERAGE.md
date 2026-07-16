@@ -99,6 +99,8 @@ The mechanical diff needs manual review afterwards:
 - [x] GET /channels/{id}/threads/archived/private — List Private Archived Threads (`Client::list_private_archived_threads`)
 - [x] GET /channels/{id}/users/@me/threads/archived/private — List Joined Private Archived Threads (`Client::list_joined_private_archived_threads`)
 - [x] GET /guilds/{id}/threads/active — List Active Guild Threads (`Client::list_active_guild_threads`)
+- [x] POST /channels/{id}/threads — Start Thread without Message (`Client::start_thread_without_message`)
+- [x] POST /channels/{id}/threads — Start Thread in Forum or Media Channel (`Client::start_thread_in_forum_or_media_channel`; same path, message payload variant)
 
 ## Guild management
 
@@ -123,6 +125,8 @@ The mechanical diff needs manual review afterwards:
 - [x] PUT /guilds/{id}/incident-actions — Modify Guild Incident Actions (`Client::modify_guild_incident_actions`)
 - [x] GET /guilds/{id}/roles/{role} — Get Guild Role (`Client::get_guild_role`)
 - [x] PATCH /guilds/{id}/roles — Modify Guild Role Positions (`Client::modify_guild_role_positions`)
+- [x] PATCH /guilds/{id}/channels — Modify Guild Channel Positions (`Client::modify_guild_channel_positions`)
+- [x] PATCH /guilds/{id}/members/@me — Modify Current Member (`Client::modify_current_member`)
 - [x] PUT /guilds/{id}/members/{user} — Add Guild Member (`Client::add_guild_member`; OAuth2 `guilds.join`)
 
 ## Voice

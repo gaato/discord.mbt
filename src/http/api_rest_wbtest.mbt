@@ -792,6 +792,47 @@ test "guild role positions body is a raw array" {
 }
 
 ///|
+test "guild channel positions body omits unset fields and can null parent_id" {
+  let channel_a : @model.ChannelId = Id(30UL)
+  let channel_b : @model.ChannelId = Id(31UL)
+  let category : @model.ChannelId = Id(32UL)
+  json_inspect(
+    modify_guild_channel_positions_body([
+      GuildChannelPosition(
+        channel_a,
+        position=1,
+        lock_permissions=true,
+        parent_id=category,
+      ),
+      GuildChannelPosition(channel_b, clear_parent_id=true),
+    ]),
+    content=[
+      { "id": "30", "position": 1, "lock_permissions": true, "parent_id": "32" },
+      { "id": "31", "parent_id": null },
+    ],
+  )
+}
+
+///|
+test "guild channel position rejects parent_id together with clear_parent_id" {
+  let channel : @model.ChannelId = Id(30UL)
+  let category : @model.ChannelId = Id(32UL)
+  try
+    GuildChannelPosition(channel, parent_id=category, clear_parent_id=true)
+    |> ignore
+  catch {
+    Validation(message~) =>
+      inspect(
+        message,
+        content="parent_id and clear_parent_id cannot both be set",
+      )
+    _ => fail("expected a Validation error")
+  } noraise {
+    _ => fail("expected GuildChannelPosition to raise")
+  }
+}
+
+///|
 test "add guild member body includes OAuth token and optional fields" {
   let role_id : @model.RoleId = Id(20UL)
   json_inspect(

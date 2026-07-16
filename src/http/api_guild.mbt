@@ -227,6 +227,64 @@ pub async fn Client::create_guild_channel(
 }
 
 ///|
+/// One entry of a Modify Guild Channel Positions request. Fields left unset
+/// are omitted so Discord keeps their current value; `clear_parent_id=true`
+/// sends a JSON null that moves the channel out of its category.
+pub struct GuildChannelPosition {
+  priv id : @model.ChannelId
+  priv position : Int?
+  priv lock_permissions : Bool?
+  priv parent_id : @model.Undefinable[@model.ChannelId]
+}
+
+///|
+/// Construct one channel-position entry.
+pub fn GuildChannelPosition::GuildChannelPosition(
+  id : @model.ChannelId,
+  position? : Int,
+  lock_permissions? : Bool,
+  parent_id? : @model.ChannelId,
+  clear_parent_id? : Bool = false,
+) -> GuildChannelPosition raise DiscordHttpError {
+  {
+    id,
+    position,
+    lock_permissions,
+    parent_id: patch_nullable("parent_id", parent_id, clear_parent_id),
+  }
+}
+
+///|
+fn modify_guild_channel_positions_body(
+  positions : Array[GuildChannelPosition],
+) -> Json {
+  Json::array(
+    positions.map(entry => {
+      @model.ObjBuilder()
+      .field("id", entry.id)
+      .opt("position", entry.position)
+      .opt("lock_permissions", entry.lock_permissions)
+      .und("parent_id", entry.parent_id)
+      .build()
+    }),
+  )
+}
+
+///|
+/// Bulk-modify channel sorting positions using Discord's raw JSON array body.
+/// Include only the channels to move.
+pub async fn Client::modify_guild_channel_positions(
+  self : Client,
+  guild_id : @model.GuildId,
+  positions : Array[GuildChannelPosition],
+  audit_reason? : String,
+) -> Unit raise DiscordHttpError {
+  let body = modify_guild_channel_positions_body(positions)
+  self.request(ModifyGuildChannelPositions(guild_id~), body~, audit_reason?)
+  |> ignore
+}
+
+///|
 /// Fetch one guild member.
 pub async fn Client::get_guild_member(
   self : Client,
@@ -315,6 +373,30 @@ pub async fn Client::modify_guild_member(
   decode(
     self.request(ModifyGuildMember(guild_id~, user_id~), body~, audit_reason?),
   )
+}
+
+///|
+/// Modify the bot's own member in a guild.
+pub async fn Client::modify_current_member(
+  self : Client,
+  guild_id : @model.GuildId,
+  nick? : String,
+  clear_nick? : Bool = false,
+  avatar? : String,
+  clear_avatar? : Bool = false,
+  banner? : String,
+  clear_banner? : Bool = false,
+  bio? : String,
+  clear_bio? : Bool = false,
+  audit_reason? : String,
+) -> @model.GuildMember raise DiscordHttpError {
+  let body = @model.ObjBuilder()
+    .und("nick", patch_nullable("nick", nick, clear_nick))
+    .und("avatar", patch_nullable("avatar", avatar, clear_avatar))
+    .und("banner", patch_nullable("banner", banner, clear_banner))
+    .und("bio", patch_nullable("bio", bio, clear_bio))
+    .build()
+  decode(self.request(ModifyCurrentMember(guild_id~), body~, audit_reason?))
 }
 
 ///|

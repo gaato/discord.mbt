@@ -356,6 +356,112 @@ pub async fn Client::start_thread_from_message(
 }
 
 ///|
+/// Start a thread that is not attached to an existing message.
+///
+/// Discord currently defaults `typ` to a private thread and plans to make the
+/// field required in a future API version, so pass it explicitly.
+pub async fn Client::start_thread_without_message(
+  self : Client,
+  channel_id : @model.ChannelId,
+  name : String,
+  typ? : @model.ChannelType,
+  auto_archive_duration? : @model.ThreadAutoArchiveDuration,
+  invitable? : Bool,
+  rate_limit_per_user? : Int,
+  audit_reason? : String,
+) -> @model.Channel raise DiscordHttpError {
+  if name.length() < 1 || name.length() > 100 {
+    raise Validation(message="thread name must be between 1 and 100 characters")
+  }
+  if rate_limit_per_user is Some(value) && (value < 0 || value > 21600) {
+    raise Validation(message="rate_limit_per_user must be between 0 and 21600")
+  }
+  let body = @model.ObjBuilder()
+    .field("name", name)
+    .opt("type", typ)
+    .opt("auto_archive_duration", auto_archive_duration)
+    .opt("invitable", invitable)
+    .opt("rate_limit_per_user", rate_limit_per_user)
+    .build()
+  decode(
+    self.request(StartThreadWithoutMessage(channel_id~), body~, audit_reason?),
+  )
+}
+
+///|
+/// Start a thread in a forum or media channel. The thread's starter message
+/// is created in the same request from the message fields; at least one of
+/// `content`, `embeds`, `components`, `sticker_ids`, or `files` must be
+/// provided.
+pub async fn Client::start_thread_in_forum_or_media_channel(
+  self : Client,
+  channel_id : @model.ChannelId,
+  name : String,
+  content? : String,
+  embeds? : Array[@model.Embed],
+  components? : Array[@model.Component],
+  sticker_ids? : Array[@model.StickerId],
+  files? : Array[FileUpload],
+  flags? : @model.MessageFlags,
+  allowed_mentions? : @model.AllowedMentions,
+  auto_archive_duration? : @model.ThreadAutoArchiveDuration,
+  rate_limit_per_user? : Int,
+  applied_tags? : Array[@model.GenericId],
+  audit_reason? : String,
+) -> @model.Channel raise DiscordHttpError {
+  if name.length() < 1 || name.length() > 100 {
+    raise Validation(message="thread name must be between 1 and 100 characters")
+  }
+  if rate_limit_per_user is Some(value) && (value < 0 || value > 21600) {
+    raise Validation(message="rate_limit_per_user must be between 0 and 21600")
+  }
+  if content is Some(c) && c.length() > 4000 {
+    raise Validation(message="content exceeds 4000 UTF-16 units")
+  }
+  if content is None &&
+    embeds is None &&
+    components is None &&
+    sticker_ids is None &&
+    files is None {
+    raise Validation(
+      message="one of content/embeds/components/sticker_ids/files is required",
+    )
+  }
+  if components is Some(values) && @model.requires_components_v2(values) {
+    raise Validation(
+      message="forum thread starter messages only allow the SUPPRESS_EMBEDS and SUPPRESS_NOTIFICATIONS flags, so Components V2 is unavailable",
+    )
+  }
+  let message = self.with_channel_allowed_mentions(
+    @model.ObjBuilder()
+    .opt("content", content)
+    .opt("embeds", embeds)
+    .opt("components", components)
+    .opt("sticker_ids", sticker_ids)
+    .opt("flags", flags),
+    allowed_mentions,
+  )
+  if files is Some(fs) && fs.length() > 0 {
+    message.field("attachments", attachments_json(fs)) |> ignore
+  }
+  let body = @model.ObjBuilder()
+    .field("name", name)
+    .opt("auto_archive_duration", auto_archive_duration)
+    .opt("rate_limit_per_user", rate_limit_per_user)
+    .opt("applied_tags", applied_tags)
+    .field("message", message.build())
+    .build()
+  decode(
+    self.request(
+      StartThreadWithoutMessage(channel_id~),
+      body~,
+      audit_reason?,
+      files?,
+    ),
+  )
+}
+
+///|
 /// Join the current user to a thread channel.
 pub async fn Client::join_thread(
   self : Client,
