@@ -72,3 +72,386 @@ pub fn ChannelRef::message_ref(
 ) -> MessageRef {
   { client: self.client, channel_id: self.channel_id, message_id }
 }
+
+///|
+/// Edit this channel.
+pub async fn ChannelRef::edit(
+  self : ChannelRef,
+  name? : String,
+  topic? : String,
+  clear_topic? : Bool = false,
+  nsfw? : Bool,
+  parent_id? : @model.ChannelId,
+  clear_parent_id? : Bool = false,
+  rate_limit_per_user? : Int,
+  position? : Int,
+  reason? : String,
+) -> @model.Channel raise DiscordHttpError {
+  self.client.modify_channel(
+    self.channel_id,
+    name?,
+    topic?,
+    clear_topic~,
+    nsfw?,
+    parent_id?,
+    clear_parent_id~,
+    rate_limit_per_user?,
+    position?,
+    audit_reason?=reason,
+  )
+}
+
+///|
+/// Delete or close this channel.
+pub async fn ChannelRef::delete(
+  self : ChannelRef,
+  reason? : String,
+) -> @model.Channel raise DiscordHttpError {
+  self.client.delete_channel(self.channel_id, audit_reason?=reason)
+}
+
+///|
+/// List every pinned message in this channel.
+pub async fn ChannelRef::pins(
+  self : ChannelRef,
+) -> Array[@model.Message] raise DiscordHttpError {
+  self.client.get_pinned_messages(self.channel_id)
+}
+
+///|
+/// List invites created for this channel.
+pub async fn ChannelRef::invites(
+  self : ChannelRef,
+) -> Array[@model.Invite] raise DiscordHttpError {
+  self.client.get_channel_invites(self.channel_id)
+}
+
+///|
+/// Create an invite for this channel.
+pub async fn ChannelRef::create_invite(
+  self : ChannelRef,
+  max_age? : Int,
+  max_uses? : Int,
+  temporary? : Bool,
+  unique? : Bool,
+  reason? : String,
+) -> @model.Invite raise DiscordHttpError {
+  self.client.create_channel_invite(
+    self.channel_id,
+    max_age?,
+    max_uses?,
+    temporary?,
+    unique?,
+    audit_reason?=reason,
+  )
+}
+
+///|
+/// Create or replace a permission overwrite for this channel.
+pub async fn ChannelRef::edit_permissions(
+  self : ChannelRef,
+  overwrite_id : @model.GenericId,
+  allow : @model.Permissions,
+  deny : @model.Permissions,
+  typ : Int,
+  reason? : String,
+) -> Unit raise DiscordHttpError {
+  self.client.edit_channel_permissions(
+    self.channel_id,
+    overwrite_id,
+    allow,
+    deny,
+    typ,
+    audit_reason?=reason,
+  )
+}
+
+///|
+/// Delete a permission overwrite from this channel.
+pub async fn ChannelRef::delete_permission(
+  self : ChannelRef,
+  overwrite_id : @model.GenericId,
+  reason? : String,
+) -> Unit raise DiscordHttpError {
+  self.client.delete_channel_permission(
+    self.channel_id,
+    overwrite_id,
+    audit_reason?=reason,
+  )
+}
+
+///|
+/// Follow this announcement channel. `webhook_channel_id` is the target
+/// channel that receives messages and requires `MANAGE_WEBHOOKS` there.
+pub async fn ChannelRef::follow(
+  self : ChannelRef,
+  webhook_channel_id : @model.ChannelId,
+  reason? : String,
+) -> @model.FollowedChannel raise DiscordHttpError {
+  self.client.follow_announcement_channel(
+    self.channel_id,
+    webhook_channel_id,
+    audit_reason?=reason,
+  )
+}
+
+///|
+/// Set this voice channel's status, or clear it by omitting `status`.
+pub async fn ChannelRef::set_voice_status(
+  self : ChannelRef,
+  status? : String,
+  reason? : String,
+) -> Unit raise DiscordHttpError {
+  self.client.set_voice_channel_status(
+    self.channel_id,
+    status?,
+    audit_reason?=reason,
+  )
+}
+
+///|
+/// Add a user to this group DM.
+pub async fn ChannelRef::group_dm_add_recipient(
+  self : ChannelRef,
+  user_id : @model.UserId,
+  access_token : String,
+  nick? : String,
+) -> Unit raise DiscordHttpError {
+  self.client.group_dm_add_recipient(
+    self.channel_id,
+    user_id,
+    access_token,
+    nick?,
+  )
+}
+
+///|
+/// Remove a user from this group DM.
+pub async fn ChannelRef::group_dm_remove_recipient(
+  self : ChannelRef,
+  user_id : @model.UserId,
+) -> Unit raise DiscordHttpError {
+  self.client.group_dm_remove_recipient(self.channel_id, user_id)
+}
+
+///|
+/// Join the current user to this channel. This channel must be a thread.
+pub async fn ChannelRef::join_thread(
+  self : ChannelRef,
+) -> Unit raise DiscordHttpError {
+  self.client.join_thread(self.channel_id)
+}
+
+///|
+/// Remove the current user from this channel. This channel must be a thread.
+pub async fn ChannelRef::leave_thread(
+  self : ChannelRef,
+) -> Unit raise DiscordHttpError {
+  self.client.leave_thread(self.channel_id)
+}
+
+///|
+/// Add a user to this channel. This channel must be a thread.
+pub async fn ChannelRef::add_thread_member(
+  self : ChannelRef,
+  user_id : @model.UserId,
+) -> Unit raise DiscordHttpError {
+  self.client.add_thread_member(self.channel_id, user_id)
+}
+
+///|
+/// Remove a user from this channel. This channel must be a thread.
+pub async fn ChannelRef::remove_thread_member(
+  self : ChannelRef,
+  user_id : @model.UserId,
+) -> Unit raise DiscordHttpError {
+  self.client.remove_thread_member(self.channel_id, user_id)
+}
+
+///|
+/// Fetch a user's membership record. This channel must be a thread.
+pub async fn ChannelRef::thread_member(
+  self : ChannelRef,
+  user_id : @model.UserId,
+  with_member? : Bool,
+) -> @model.ThreadMember raise DiscordHttpError {
+  self.client.get_thread_member(self.channel_id, user_id, with_member?)
+}
+
+///|
+/// List this channel's members. This channel must be a thread.
+pub async fn ChannelRef::thread_members(
+  self : ChannelRef,
+  with_member? : Bool,
+  after? : @model.UserId,
+  limit? : Int,
+) -> Array[@model.ThreadMember] raise DiscordHttpError {
+  self.client.list_thread_members(self.channel_id, with_member?, after?, limit?)
+}
+
+///|
+/// List public archived threads in this channel.
+pub async fn ChannelRef::public_archived_threads(
+  self : ChannelRef,
+  before? : @model.Timestamp,
+  limit? : Int,
+) -> @model.ArchivedThreads raise DiscordHttpError {
+  self.client.list_public_archived_threads(self.channel_id, before?, limit?)
+}
+
+///|
+/// List private archived threads in this channel.
+pub async fn ChannelRef::private_archived_threads(
+  self : ChannelRef,
+  before? : @model.Timestamp,
+  limit? : Int,
+) -> @model.ArchivedThreads raise DiscordHttpError {
+  self.client.list_private_archived_threads(self.channel_id, before?, limit?)
+}
+
+///|
+/// List private archived threads in this channel joined by the current user.
+pub async fn ChannelRef::joined_private_archived_threads(
+  self : ChannelRef,
+  before? : @model.ChannelId,
+  limit? : Int,
+) -> @model.ArchivedThreads raise DiscordHttpError {
+  self.client.list_joined_private_archived_threads(
+    self.channel_id,
+    before?,
+    limit?,
+  )
+}
+
+///|
+/// Start a thread in this channel without attaching it to a message.
+pub async fn ChannelRef::start_thread(
+  self : ChannelRef,
+  name : String,
+  typ? : @model.ChannelType,
+  auto_archive_duration? : @model.ThreadAutoArchiveDuration,
+  invitable? : Bool,
+  rate_limit_per_user? : Int,
+  reason? : String,
+) -> @model.Channel raise DiscordHttpError {
+  self.client.start_thread_without_message(
+    self.channel_id,
+    name,
+    typ?,
+    auto_archive_duration?,
+    invitable?,
+    rate_limit_per_user?,
+    audit_reason?=reason,
+  )
+}
+
+///|
+/// Start a thread with a starter message in this forum or media channel.
+pub async fn ChannelRef::start_forum_thread(
+  self : ChannelRef,
+  name : String,
+  content? : String,
+  embeds? : Array[@model.Embed],
+  components? : Array[@model.Component],
+  sticker_ids? : Array[@model.StickerId],
+  files? : Array[FileUpload],
+  flags? : @model.MessageFlags,
+  allowed_mentions? : @model.AllowedMentions,
+  auto_archive_duration? : @model.ThreadAutoArchiveDuration,
+  rate_limit_per_user? : Int,
+  applied_tags? : Array[@model.GenericId],
+  reason? : String,
+) -> @model.Channel raise DiscordHttpError {
+  self.client.start_thread_in_forum_or_media_channel(
+    self.channel_id,
+    name,
+    content?,
+    embeds?,
+    components?,
+    sticker_ids?,
+    files?,
+    flags?,
+    allowed_mentions?,
+    auto_archive_duration?,
+    rate_limit_per_user?,
+    applied_tags?,
+    audit_reason?=reason,
+  )
+}
+
+///|
+/// Delete between 2 and 100 messages from this channel.
+pub async fn ChannelRef::bulk_delete(
+  self : ChannelRef,
+  messages : Array[@model.MessageId],
+  reason? : String,
+) -> Unit raise DiscordHttpError {
+  self.client.bulk_delete_messages(
+    self.channel_id,
+    messages,
+    audit_reason?=reason,
+  )
+}
+
+///|
+/// Play a soundboard sound in this voice channel.
+pub async fn ChannelRef::send_soundboard_sound(
+  self : ChannelRef,
+  sound_id : @model.SoundboardSoundId,
+  source_guild_id? : @model.GuildId,
+) -> Unit raise DiscordHttpError {
+  self.client.send_soundboard_sound(self.channel_id, sound_id, source_guild_id?)
+}
+
+///|
+/// Create a stage instance. This channel must be a stage channel.
+pub async fn ChannelRef::create_stage_instance(
+  self : ChannelRef,
+  topic : String,
+  privacy_level? : @model.StagePrivacyLevel,
+  send_start_notification? : Bool,
+  guild_scheduled_event_id? : @model.ScheduledEventId,
+  reason? : String,
+) -> @model.StageInstance raise DiscordHttpError {
+  self.client.create_stage_instance(
+    self.channel_id,
+    topic,
+    privacy_level?,
+    send_start_notification?,
+    guild_scheduled_event_id?,
+    audit_reason?=reason,
+  )
+}
+
+///|
+/// Fetch the stage instance. This channel must be a stage channel.
+pub async fn ChannelRef::stage_instance(
+  self : ChannelRef,
+) -> @model.StageInstance raise DiscordHttpError {
+  self.client.get_stage_instance(self.channel_id)
+}
+
+///|
+/// Edit the stage instance. This channel must be a stage channel.
+pub async fn ChannelRef::edit_stage_instance(
+  self : ChannelRef,
+  topic? : String,
+  privacy_level? : @model.StagePrivacyLevel,
+  reason? : String,
+) -> @model.StageInstance raise DiscordHttpError {
+  self.client.modify_stage_instance(
+    self.channel_id,
+    topic?,
+    privacy_level?,
+    audit_reason?=reason,
+  )
+}
+
+///|
+/// Delete the stage instance. This channel must be a stage channel.
+pub async fn ChannelRef::delete_stage_instance(
+  self : ChannelRef,
+  reason? : String,
+) -> Unit raise DiscordHttpError {
+  self.client.delete_stage_instance(self.channel_id, audit_reason?=reason)
+}

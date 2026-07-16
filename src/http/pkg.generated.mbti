@@ -41,10 +41,38 @@ pub(all) struct ApiError {
 pub struct ChannelRef {
   // private fields
 }
+pub async fn ChannelRef::add_thread_member(Self, @model.Id[@model.UserMarker]) -> Unit raise DiscordHttpError
+pub async fn ChannelRef::bulk_delete(Self, Array[@model.Id[@model.MessageMarker]], reason? : String) -> Unit raise DiscordHttpError
+pub async fn ChannelRef::create_invite(Self, max_age? : Int, max_uses? : Int, temporary? : Bool, unique? : Bool, reason? : String) -> @model.Invite raise DiscordHttpError
+pub async fn ChannelRef::create_stage_instance(Self, String, privacy_level? : @model.StagePrivacyLevel, send_start_notification? : Bool, guild_scheduled_event_id? : @model.Id[@model.ScheduledEventMarker], reason? : String) -> @model.StageInstance raise DiscordHttpError
+pub async fn ChannelRef::delete(Self, reason? : String) -> @model.Channel raise DiscordHttpError
+pub async fn ChannelRef::delete_permission(Self, @model.Id[@model.GenericMarker], reason? : String) -> Unit raise DiscordHttpError
+pub async fn ChannelRef::delete_stage_instance(Self, reason? : String) -> Unit raise DiscordHttpError
+pub async fn ChannelRef::edit(Self, name? : String, topic? : String, clear_topic? : Bool, nsfw? : Bool, parent_id? : @model.Id[@model.ChannelMarker], clear_parent_id? : Bool, rate_limit_per_user? : Int, position? : Int, reason? : String) -> @model.Channel raise DiscordHttpError
+pub async fn ChannelRef::edit_permissions(Self, @model.Id[@model.GenericMarker], @model.Permissions, @model.Permissions, Int, reason? : String) -> Unit raise DiscordHttpError
+pub async fn ChannelRef::edit_stage_instance(Self, topic? : String, privacy_level? : @model.StagePrivacyLevel, reason? : String) -> @model.StageInstance raise DiscordHttpError
 pub async fn ChannelRef::fetch(Self) -> @model.Channel raise DiscordHttpError
+pub async fn ChannelRef::follow(Self, @model.Id[@model.ChannelMarker], reason? : String) -> @model.FollowedChannel raise DiscordHttpError
+pub async fn ChannelRef::group_dm_add_recipient(Self, @model.Id[@model.UserMarker], String, nick? : String) -> Unit raise DiscordHttpError
+pub async fn ChannelRef::group_dm_remove_recipient(Self, @model.Id[@model.UserMarker]) -> Unit raise DiscordHttpError
+pub async fn ChannelRef::invites(Self) -> Array[@model.Invite] raise DiscordHttpError
+pub async fn ChannelRef::join_thread(Self) -> Unit raise DiscordHttpError
+pub async fn ChannelRef::joined_private_archived_threads(Self, before? : @model.Id[@model.ChannelMarker], limit? : Int) -> @model.ArchivedThreads raise DiscordHttpError
+pub async fn ChannelRef::leave_thread(Self) -> Unit raise DiscordHttpError
 pub fn ChannelRef::message_ref(Self, @model.Id[@model.MessageMarker]) -> MessageRef
 pub fn ChannelRef::messages(Self, before? : @model.Id[@model.MessageMarker], after? : @model.Id[@model.MessageMarker], around? : @model.Id[@model.MessageMarker], page_size? : Int) -> Paginator[@model.Message] raise DiscordHttpError
+pub async fn ChannelRef::pins(Self) -> Array[@model.Message] raise DiscordHttpError
+pub async fn ChannelRef::private_archived_threads(Self, before? : @model.Timestamp, limit? : Int) -> @model.ArchivedThreads raise DiscordHttpError
+pub async fn ChannelRef::public_archived_threads(Self, before? : @model.Timestamp, limit? : Int) -> @model.ArchivedThreads raise DiscordHttpError
+pub async fn ChannelRef::remove_thread_member(Self, @model.Id[@model.UserMarker]) -> Unit raise DiscordHttpError
 pub async fn ChannelRef::send(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], sticker_ids? : Array[@model.Id[@model.StickerMarker]], files? : Array[FileUpload], reply_to? : @model.Id[@model.MessageMarker], tts? : Bool, flags? : @model.MessageFlags, allowed_mentions? : @model.AllowedMentions, nonce? : @model.Nonce, enforce_nonce? : Bool) -> @model.Message raise DiscordHttpError
+pub async fn ChannelRef::send_soundboard_sound(Self, @model.Id[@model.SoundboardSoundMarker], source_guild_id? : @model.Id[@model.GuildMarker]) -> Unit raise DiscordHttpError
+pub async fn ChannelRef::set_voice_status(Self, status? : String, reason? : String) -> Unit raise DiscordHttpError
+pub async fn ChannelRef::stage_instance(Self) -> @model.StageInstance raise DiscordHttpError
+pub async fn ChannelRef::start_forum_thread(Self, String, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], sticker_ids? : Array[@model.Id[@model.StickerMarker]], files? : Array[FileUpload], flags? : @model.MessageFlags, allowed_mentions? : @model.AllowedMentions, auto_archive_duration? : @model.ThreadAutoArchiveDuration, rate_limit_per_user? : Int, applied_tags? : Array[@model.Id[@model.GenericMarker]], reason? : String) -> @model.Channel raise DiscordHttpError
+pub async fn ChannelRef::start_thread(Self, String, typ? : @model.ChannelType, auto_archive_duration? : @model.ThreadAutoArchiveDuration, invitable? : Bool, rate_limit_per_user? : Int, reason? : String) -> @model.Channel raise DiscordHttpError
+pub async fn ChannelRef::thread_member(Self, @model.Id[@model.UserMarker], with_member? : Bool) -> @model.ThreadMember raise DiscordHttpError
+pub async fn ChannelRef::thread_members(Self, with_member? : Bool, after? : @model.Id[@model.UserMarker], limit? : Int) -> Array[@model.ThreadMember] raise DiscordHttpError
 pub async fn ChannelRef::typing(Self) -> Unit raise DiscordHttpError
 
 pub struct Client {
@@ -317,14 +345,22 @@ pub async fn MemberRef::timeout(Self, @model.Timestamp?, reason? : String) -> @m
 pub struct MessageRef {
   // private fields
 }
+pub async fn MessageRef::crosspost(Self) -> @model.Message raise DiscordHttpError
 pub async fn MessageRef::delete(Self, reason? : String) -> Unit raise DiscordHttpError
 pub async fn MessageRef::delete_reactions(Self) -> Unit raise DiscordHttpError
+pub async fn MessageRef::delete_reactions_for(Self, String) -> Unit raise DiscordHttpError
+pub async fn MessageRef::delete_user_reaction(Self, String, @model.Id[@model.UserMarker]) -> Unit raise DiscordHttpError
 pub async fn MessageRef::edit(Self, content? : String, clear_content? : Bool, embeds? : Array[@model.Embed], components? : Array[@model.Component], flags? : @model.MessageFlags, allowed_mentions? : @model.AllowedMentions, files? : Array[FileUpload]) -> @model.Message raise DiscordHttpError
+pub async fn MessageRef::expire_poll(Self) -> @model.Message raise DiscordHttpError
 pub async fn MessageRef::fetch(Self) -> @model.Message raise DiscordHttpError
 pub async fn MessageRef::pin(Self, reason? : String) -> Unit raise DiscordHttpError
+pub fn MessageRef::poll_answer_voters(Self, Int, after? : @model.Id[@model.UserMarker], page_size? : Int) -> Paginator[@model.User] raise DiscordHttpError
 pub async fn MessageRef::react(Self, String) -> Unit raise DiscordHttpError
+pub async fn MessageRef::reactions(Self, String, limit? : Int, after? : @model.Id[@model.UserMarker]) -> Array[@model.User] raise DiscordHttpError
 pub async fn MessageRef::reply(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], sticker_ids? : Array[@model.Id[@model.StickerMarker]], files? : Array[FileUpload], tts? : Bool, flags? : @model.MessageFlags, allowed_mentions? : @model.AllowedMentions, nonce? : @model.Nonce, enforce_nonce? : Bool) -> @model.Message raise DiscordHttpError
+pub async fn MessageRef::start_thread(Self, String, auto_archive_duration? : @model.ThreadAutoArchiveDuration, rate_limit_per_user? : Int, reason? : String) -> @model.Channel raise DiscordHttpError
 pub async fn MessageRef::unpin(Self, reason? : String) -> Unit raise DiscordHttpError
+pub async fn MessageRef::unreact(Self, String) -> Unit raise DiscordHttpError
 
 pub enum MultipartChunk {
   Text(String)
