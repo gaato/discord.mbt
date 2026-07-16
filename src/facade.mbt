@@ -12,6 +12,8 @@ pub using @dhttp {
   type MessageRef,
   type MemberRef,
   type UserRef,
+  type GuildRef,
+  type RoleRef,
 }
 
 ///|

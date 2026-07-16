@@ -218,6 +218,8 @@ pub using @framework {type Framework}
 
 pub using @bot {type GatewayCtx}
 
+pub using @http {type GuildRef}
+
 pub using @app {type HandlerError}
 
 pub using @app {type ImmediateCtx}
@@ -275,6 +277,8 @@ pub using @coordinator {type RemoteIdentifyQueue}
 pub using @coordinator {type RemoteRateLimiter}
 
 pub using @app {type ResponsePhase}
+
+pub using @http {type RoleRef}
 
 pub using @gateway {type Shard}
 

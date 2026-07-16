@@ -82,6 +82,73 @@ pub async fn MemberRef::timeout(
 }
 
 ///|
+/// Edit this guild member.
+pub async fn MemberRef::edit(
+  self : MemberRef,
+  nick? : String,
+  clear_nick? : Bool = false,
+  roles? : Array[@model.RoleId],
+  mute? : Bool,
+  deaf? : Bool,
+  channel_id? : @model.ChannelId,
+  clear_channel_id? : Bool = false,
+  communication_disabled_until? : @model.Timestamp,
+  clear_communication_disabled_until? : Bool = false,
+  reason? : String,
+) -> @model.GuildMember raise DiscordHttpError {
+  self.client.modify_guild_member(
+    self.guild_id,
+    self.user_id,
+    nick?,
+    clear_nick~,
+    roles?,
+    mute?,
+    deaf?,
+    channel_id?,
+    clear_channel_id~,
+    communication_disabled_until?,
+    clear_communication_disabled_until~,
+    audit_reason?=reason,
+  )
+}
+
+///|
+/// Remove this user's ban; the target does not need to be a current member.
+pub async fn MemberRef::unban(
+  self : MemberRef,
+  reason? : String,
+) -> Unit raise DiscordHttpError {
+  self.client.remove_guild_ban(
+    self.guild_id,
+    self.user_id,
+    audit_reason?=reason,
+  )
+}
+
+///|
+/// Fetch this user's voice state in the guild.
+pub async fn MemberRef::voice_state(
+  self : MemberRef,
+) -> @model.VoiceState raise DiscordHttpError {
+  self.client.get_user_voice_state(self.guild_id, self.user_id)
+}
+
+///|
+/// Edit this user's voice state in the guild.
+pub async fn MemberRef::edit_voice_state(
+  self : MemberRef,
+  channel_id : @model.ChannelId,
+  suppress? : Bool,
+) -> Unit raise DiscordHttpError {
+  self.client.modify_user_voice_state(
+    self.guild_id,
+    self.user_id,
+    channel_id,
+    suppress?,
+  )
+}
+
+///|
 /// Fetch this user.
 pub async fn UserRef::fetch(
   self : UserRef,

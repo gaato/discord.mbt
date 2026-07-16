@@ -41,6 +41,43 @@ pub fn GatewayCtx::framework_raw(self : GatewayCtx) -> @framework.Framework {
 }
 
 ///|
+/// Bind a channel id to the gateway REST client.
+pub fn GatewayCtx::channel_ref(
+  self : GatewayCtx,
+  channel_id : @model.ChannelId,
+) -> @dhttp.ChannelRef {
+  self.app_.http().channel_ref(channel_id)
+}
+
+///|
+/// Bind a guild id to the gateway REST client.
+pub fn GatewayCtx::guild_ref(
+  self : GatewayCtx,
+  guild_id : @model.GuildId,
+) -> @dhttp.GuildRef {
+  self.app_.http().guild_ref(guild_id)
+}
+
+///|
+/// Bind a guild/user id pair to the gateway REST client.
+pub fn GatewayCtx::member_ref(
+  self : GatewayCtx,
+  guild_id : @model.GuildId,
+  user_id : @model.UserId,
+) -> @dhttp.MemberRef {
+  self.app_.http().member_ref(guild_id, user_id)
+}
+
+///|
+/// Bind a user id to the gateway REST client.
+pub fn GatewayCtx::user_ref(
+  self : GatewayCtx,
+  user_id : @model.UserId,
+) -> @dhttp.UserRef {
+  self.app_.http().user_ref(user_id)
+}
+
+///|
 /// Bind a message-create event's message to the gateway REST client.
 pub fn GatewayCtx::message_ref(
   self : GatewayCtx,
