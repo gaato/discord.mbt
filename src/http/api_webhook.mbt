@@ -1,8 +1,6 @@
 ///|
 fn validate_webhook_name(name : String) -> Unit raise DiscordHttpError {
-  if name.length() < 1 || name.length() > 80 {
-    raise Validation(message="webhook name must be between 1 and 80 characters")
-  }
+  validate_length("webhook name", Some(name), min=1, max=80)
 }
 
 ///|
@@ -12,9 +10,7 @@ fn validate_execute_webhook(
   components : Array[@model.Component]?,
   files : Array[FileUpload]?,
 ) -> Unit raise DiscordHttpError {
-  if content is Some(value) && value.length() > 4000 {
-    raise Validation(message="content exceeds 4000 UTF-16 units")
-  }
+  validate_content(content)
   if content is None && embeds is None && components is None && files is None {
     raise Validation(
       message="one of content/embeds/components/files is required",

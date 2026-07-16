@@ -22,17 +22,9 @@ pub async fn Client::modify_channel(
   position? : Int,
   audit_reason? : String,
 ) -> @model.Channel raise DiscordHttpError {
-  if name is Some(value) && (value.length() < 1 || value.length() > 100) {
-    raise Validation(
-      message="channel name must be between 1 and 100 characters",
-    )
-  }
-  if topic is Some(value) && value.length() > 4096 {
-    raise Validation(message="channel topic exceeds 4096 characters")
-  }
-  if rate_limit_per_user is Some(value) && (value < 0 || value > 21600) {
-    raise Validation(message="rate_limit_per_user must be between 0 and 21600")
-  }
+  validate_length("channel name", name, min=1, max=100)
+  validate_length("channel topic", topic, max=4096)
+  validate_range("rate_limit_per_user", rate_limit_per_user, min=0, max=21600)
   let body = @model.ObjBuilder()
     .opt("name", name)
     .und("topic", patch_nullable("topic", topic, clear_topic))
@@ -188,9 +180,7 @@ pub async fn Client::follow_announcement_channel(
 fn set_voice_channel_status_body(
   status : String?,
 ) -> Json raise DiscordHttpError {
-  if status is Some(value) && value.length() > 500 {
-    raise Validation(message="voice channel status exceeds 500 characters")
-  }
+  validate_length("voice channel status", status, max=500)
   @model.ObjBuilder()
   .field("status", @model.Nullable::from_option(status))
   .build()
@@ -310,9 +300,7 @@ pub async fn Client::get_reactions(
   limit? : Int,
   after? : @model.UserId,
 ) -> Array[@model.User] raise DiscordHttpError {
-  if limit is Some(value) && (value < 1 || value > 100) {
-    raise Validation(message="reaction limit must be 1 through 100")
-  }
+  validate_range("reaction limit", limit, min=1, max=100)
   let params : Array[String] = []
   if limit is Some(value) {
     params.push("limit=\{value}")
@@ -335,12 +323,8 @@ pub async fn Client::start_thread_from_message(
   rate_limit_per_user? : Int,
   audit_reason? : String,
 ) -> @model.Channel raise DiscordHttpError {
-  if name.length() < 1 || name.length() > 100 {
-    raise Validation(message="thread name must be between 1 and 100 characters")
-  }
-  if rate_limit_per_user is Some(value) && (value < 0 || value > 21600) {
-    raise Validation(message="rate_limit_per_user must be between 0 and 21600")
-  }
+  validate_length("thread name", Some(name), min=1, max=100)
+  validate_range("rate_limit_per_user", rate_limit_per_user, min=0, max=21600)
   let body = @model.ObjBuilder()
     .field("name", name)
     .opt("auto_archive_duration", auto_archive_duration)
@@ -370,12 +354,8 @@ pub async fn Client::start_thread_without_message(
   rate_limit_per_user? : Int,
   audit_reason? : String,
 ) -> @model.Channel raise DiscordHttpError {
-  if name.length() < 1 || name.length() > 100 {
-    raise Validation(message="thread name must be between 1 and 100 characters")
-  }
-  if rate_limit_per_user is Some(value) && (value < 0 || value > 21600) {
-    raise Validation(message="rate_limit_per_user must be between 0 and 21600")
-  }
+  validate_length("thread name", Some(name), min=1, max=100)
+  validate_range("rate_limit_per_user", rate_limit_per_user, min=0, max=21600)
   let body = @model.ObjBuilder()
     .field("name", name)
     .opt("type", typ)
@@ -409,15 +389,9 @@ pub async fn Client::start_thread_in_forum_or_media_channel(
   applied_tags? : Array[@model.GenericId],
   audit_reason? : String,
 ) -> @model.Channel raise DiscordHttpError {
-  if name.length() < 1 || name.length() > 100 {
-    raise Validation(message="thread name must be between 1 and 100 characters")
-  }
-  if rate_limit_per_user is Some(value) && (value < 0 || value > 21600) {
-    raise Validation(message="rate_limit_per_user must be between 0 and 21600")
-  }
-  if content is Some(c) && c.length() > 4000 {
-    raise Validation(message="content exceeds 4000 UTF-16 units")
-  }
+  validate_length("thread name", Some(name), min=1, max=100)
+  validate_range("rate_limit_per_user", rate_limit_per_user, min=0, max=21600)
+  validate_content(content)
   if content is None &&
     embeds is None &&
     components is None &&
@@ -528,9 +502,7 @@ pub async fn Client::list_thread_members(
   after? : @model.UserId,
   limit? : Int,
 ) -> Array[@model.ThreadMember] raise DiscordHttpError {
-  if limit is Some(value) && (value < 1 || value > 100) {
-    raise Validation(message="thread member limit must be 1 through 100")
-  }
+  validate_range("thread member limit", limit, min=1, max=100)
   let query = thread_members_query(with_member, after, limit)
   decode(self.request(ListThreadMembers(channel_id~, query~)))
 }

@@ -5,11 +5,7 @@ fn validate_auto_moderation_rule(
   exempt_roles : Array[@model.RoleId]?,
   exempt_channels : Array[@model.ChannelId]?,
 ) -> Unit raise DiscordHttpError {
-  if name is Some(value) && (value.length() < 1 || value.length() > 100) {
-    raise Validation(
-      message="auto moderation rule name must be 1 through 100 characters",
-    )
-  }
+  validate_length("auto moderation rule name", name, min=1, max=100)
   if actions is Some(value) && (value.length() < 1 || value.length() > 3) {
     raise Validation(
       message="auto moderation actions must contain 1 through 3 entries",

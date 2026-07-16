@@ -64,9 +64,7 @@ fn validate_page_limit(
   limit : Int?,
   maximum : Int,
 ) -> Unit raise DiscordHttpError {
-  if limit is Some(value) && (value < 1 || value > maximum) {
-    raise Validation(message="\{resource} limit must be 1 through \{maximum}")
-  }
+  validate_range("\{resource} limit", limit, min=1, max=maximum)
 }
 
 ///|

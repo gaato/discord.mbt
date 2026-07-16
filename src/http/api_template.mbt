@@ -2,9 +2,7 @@
 fn validate_guild_from_template_name(
   name : String,
 ) -> Unit raise DiscordHttpError {
-  if name.length() < 2 || name.length() > 100 {
-    raise Validation(message="guild name must be between 2 and 100 characters")
-  }
+  validate_length("guild name", Some(name), min=2, max=100)
 }
 
 ///|
@@ -12,16 +10,8 @@ fn validate_guild_template_fields(
   name : String?,
   description : String?,
 ) -> Unit raise DiscordHttpError {
-  if name is Some(value) && (value.length() < 1 || value.length() > 100) {
-    raise Validation(
-      message="guild template name must be between 1 and 100 characters",
-    )
-  }
-  if description is Some(value) && value.length() > 120 {
-    raise Validation(
-      message="guild template description exceeds 120 characters",
-    )
-  }
+  validate_length("guild template name", name, min=1, max=100)
+  validate_length("guild template description", description, max=120)
 }
 
 ///|

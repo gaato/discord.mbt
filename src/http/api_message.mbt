@@ -56,9 +56,7 @@ pub async fn Client::create_message(
   nonce? : @model.Nonce,
   enforce_nonce? : Bool,
 ) -> @model.Message raise DiscordHttpError {
-  if content is Some(c) && c.length() > 4000 {
-    raise Validation(message="content exceeds 4000 UTF-16 units")
-  }
+  validate_content(content)
   if content is None &&
     embeds is None &&
     components is None &&
@@ -282,18 +280,10 @@ fn search_guild_messages_query(
   attachment_filename? : Array[String],
   attachment_extension? : Array[String],
 ) -> String raise DiscordHttpError {
-  if limit is Some(value) && (value < 1 || value > 25) {
-    raise Validation(message="search limit must be between 1 and 25")
-  }
-  if offset is Some(value) && (value < 0 || value > 9975) {
-    raise Validation(message="search offset must be between 0 and 9975")
-  }
-  if slop is Some(value) && (value < 0 || value > 100) {
-    raise Validation(message="search slop must be between 0 and 100")
-  }
-  if content is Some(value) && value.length() > 1024 {
-    raise Validation(message="search content exceeds 1024 characters")
-  }
+  validate_range("search limit", limit, min=1, max=25)
+  validate_range("search offset", offset, min=0, max=9975)
+  validate_range("search slop", slop, min=0, max=100)
+  validate_length("search content", content, max=1024)
   if channel_id is Some(values) {
     validate_search_array_count("channel_id", values.length(), 500)
   }

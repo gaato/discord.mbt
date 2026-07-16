@@ -1,8 +1,6 @@
 ///|
 fn validate_stage_topic(topic : String?) -> Unit raise DiscordHttpError {
-  if topic is Some(value) && (value.length() < 1 || value.length() > 120) {
-    raise Validation(message="stage topic must be 1 through 120 characters")
-  }
+  validate_length("stage topic", topic, min=1, max=120)
 }
 
 ///|

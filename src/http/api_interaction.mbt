@@ -84,9 +84,7 @@ pub async fn Client::create_followup(
   flags? : @model.MessageFlags,
   allowed_mentions? : @model.AllowedMentions,
 ) -> @model.Message raise DiscordHttpError {
-  if content is Some(value) && value.length() > 4000 {
-    raise Validation(message="content exceeds 4000 UTF-16 units")
-  }
+  validate_content(content)
   if content is None && embeds is None && components is None && files is None {
     raise Validation(
       message="one of content/embeds/components/files is required",

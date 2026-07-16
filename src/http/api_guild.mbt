@@ -50,12 +50,8 @@ pub async fn Client::modify_guild(
   clear_safety_alerts_channel_id? : Bool = false,
   audit_reason? : String,
 ) -> @model.Guild raise DiscordHttpError {
-  if name is Some(value) && (value.length() < 2 || value.length() > 100) {
-    raise Validation(message="guild name must be between 2 and 100 characters")
-  }
-  if description is Some(value) && value.length() > 120 {
-    raise Validation(message="guild description exceeds 120 characters")
-  }
+  validate_length("guild name", name, min=2, max=100)
+  validate_length("guild description", description, max=120)
   let body = @model.ObjBuilder()
     .opt("name", name)
     .opt("verification_level", verification_level)
@@ -124,9 +120,7 @@ pub async fn Client::get_guild_audit_log(
   limit? : Int,
 ) -> @model.AuditLog raise DiscordHttpError {
   validate_cursor_pair("audit log", before, after)
-  if limit is Some(value) && (value < 1 || value > 100) {
-    raise Validation(message="audit log limit must be 1 through 100")
-  }
+  validate_range("audit log limit", limit, min=1, max=100)
   let params : Array[String] = []
   if user_id is Some(value) {
     params.push("user_id=\{value}")
@@ -156,9 +150,7 @@ pub async fn Client::get_guild_bans(
   before? : @model.UserId,
   after? : @model.UserId,
 ) -> Array[@model.GuildBan] raise DiscordHttpError {
-  if limit is Some(value) && (value < 1 || value > 1000) {
-    raise Validation(message="guild ban limit must be 1 through 1000")
-  }
+  validate_range("guild ban limit", limit, min=1, max=1000)
   validate_cursor_pair("guild ban", before, after)
   let params : Array[String] = []
   if limit is Some(value) {
@@ -200,17 +192,9 @@ pub async fn Client::create_guild_channel(
   rate_limit_per_user? : Int,
   audit_reason? : String,
 ) -> @model.Channel raise DiscordHttpError {
-  if name.length() < 1 || name.length() > 100 {
-    raise Validation(
-      message="channel name must be between 1 and 100 characters",
-    )
-  }
-  if topic is Some(value) && value.length() > 4096 {
-    raise Validation(message="channel topic exceeds 4096 characters")
-  }
-  if rate_limit_per_user is Some(value) && (value < 0 || value > 21600) {
-    raise Validation(message="rate_limit_per_user must be between 0 and 21600")
-  }
+  validate_length("channel name", Some(name), min=1, max=100)
+  validate_length("channel topic", topic, max=4096)
+  validate_range("rate_limit_per_user", rate_limit_per_user, min=0, max=21600)
   let body = @model.ObjBuilder()
     .field("name", name)
     .opt("type", typ)
@@ -302,9 +286,7 @@ pub async fn Client::list_guild_members(
   limit? : Int,
   after? : @model.UserId,
 ) -> Array[@model.GuildMember] raise DiscordHttpError {
-  if limit is Some(value) && (value < 1 || value > 1000) {
-    raise Validation(message="member limit must be 1 through 1000")
-  }
+  validate_range("member limit", limit, min=1, max=1000)
   let params : Array[String] = []
   if limit is Some(value) {
     params.push("limit=\{value}")
@@ -327,9 +309,7 @@ pub async fn Client::search_guild_members(
   if query.length() == 0 {
     raise Validation(message="member query must not be empty")
   }
-  if limit is Some(value) && (value < 1 || value > 1000) {
-    raise Validation(message="member limit must be 1 through 1000")
-  }
+  validate_range("member limit", limit, min=1, max=1000)
   let suffix = match limit {
     None => "?query=\{query}"
     Some(value) => "?query=\{query}&limit=\{value}"
@@ -448,11 +428,12 @@ pub async fn Client::create_guild_ban(
   delete_message_seconds? : Int,
   audit_reason? : String,
 ) -> Unit raise DiscordHttpError {
-  if delete_message_seconds is Some(value) && (value < 0 || value > 604800) {
-    raise Validation(
-      message="delete_message_seconds must be between 0 and 604800",
-    )
-  }
+  validate_range(
+    "delete_message_seconds",
+    delete_message_seconds,
+    min=0,
+    max=604800,
+  )
   let body = @model.ObjBuilder()
     .opt("delete_message_seconds", delete_message_seconds)
     .build()
@@ -492,9 +473,7 @@ pub async fn Client::create_guild_role(
   mentionable? : Bool,
   audit_reason? : String,
 ) -> @model.Role raise DiscordHttpError {
-  if name is Some(value) && (value.length() < 1 || value.length() > 100) {
-    raise Validation(message="role name must be between 1 and 100 characters")
-  }
+  validate_length("role name", name, min=1, max=100)
   let body = @model.ObjBuilder()
     .opt("name", name)
     .opt("permissions", permissions)
@@ -518,9 +497,7 @@ pub async fn Client::modify_guild_role(
   mentionable? : Bool,
   audit_reason? : String,
 ) -> @model.Role raise DiscordHttpError {
-  if name is Some(value) && (value.length() < 1 || value.length() > 100) {
-    raise Validation(message="role name must be between 1 and 100 characters")
-  }
+  validate_length("role name", name, min=1, max=100)
   let body = @model.ObjBuilder()
     .opt("name", name)
     .opt("permissions", permissions)
@@ -571,11 +548,12 @@ fn bulk_guild_ban_body(
   if user_ids.length() > 200 {
     raise Validation(message="bulk guild ban exceeds 200 users")
   }
-  if delete_message_seconds is Some(value) && (value < 0 || value > 604800) {
-    raise Validation(
-      message="delete_message_seconds must be between 0 and 604800",
-    )
-  }
+  validate_range(
+    "delete_message_seconds",
+    delete_message_seconds,
+    min=0,
+    max=604800,
+  )
   @model.ObjBuilder()
   .field("user_ids", user_ids)
   .opt("delete_message_seconds", delete_message_seconds)
@@ -600,9 +578,7 @@ fn guild_prune_query(
   days : Int?,
   include_roles : Array[@model.RoleId]?,
 ) -> String raise DiscordHttpError {
-  if days is Some(value) && (value < 1 || value > 30) {
-    raise Validation(message="prune days must be between 1 and 30")
-  }
+  validate_range("prune days", days, min=1, max=30)
   let params : Array[String] = []
   if days is Some(value) {
     params.push("days=\{value}")
@@ -637,9 +613,7 @@ fn begin_guild_prune_body(
   compute_prune_count : Bool?,
   include_roles : Array[@model.RoleId]?,
 ) -> Json raise DiscordHttpError {
-  if days is Some(value) && (value < 1 || value > 30) {
-    raise Validation(message="prune days must be between 1 and 30")
-  }
+  validate_range("prune days", days, min=1, max=30)
   @model.ObjBuilder()
   .opt("days", days)
   .opt("compute_prune_count", compute_prune_count)

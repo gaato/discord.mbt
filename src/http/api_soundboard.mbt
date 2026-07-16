@@ -3,11 +3,7 @@ fn validate_soundboard_fields(
   name : String?,
   volume : Double?,
 ) -> Unit raise DiscordHttpError {
-  if name is Some(value) && (value.length() < 2 || value.length() > 32) {
-    raise Validation(
-      message="soundboard sound name must be between 2 and 32 characters",
-    )
-  }
+  validate_length("soundboard sound name", name, min=2, max=32)
   if volume is Some(value) && (value < 0.0 || value > 1.0) {
     raise Validation(message="soundboard volume must be between 0 and 1")
   }

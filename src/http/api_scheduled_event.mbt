@@ -3,16 +3,8 @@ fn validate_scheduled_event_text(
   name : String?,
   description : String?,
 ) -> Unit raise DiscordHttpError {
-  if name is Some(value) && (value.length() < 1 || value.length() > 100) {
-    raise Validation(
-      message="scheduled event name must be 1 through 100 characters",
-    )
-  }
-  if description is Some(value) && value.length() > 1000 {
-    raise Validation(
-      message="scheduled event description exceeds 1000 characters",
-    )
-  }
+  validate_length("scheduled event name", name, min=1, max=100)
+  validate_length("scheduled event description", description, max=1000)
 }
 
 ///|
@@ -227,9 +219,7 @@ pub async fn Client::list_guild_scheduled_event_users(
   after? : @model.UserId,
 ) -> Array[@model.GuildScheduledEventUser] raise DiscordHttpError {
   validate_cursor_pair("scheduled event user", before, after)
-  if limit is Some(value) && (value < 1 || value > 100) {
-    raise Validation(message="scheduled event user limit must be 1 through 100")
-  }
+  validate_range("scheduled event user limit", limit, min=1, max=100)
   let params : Array[String] = []
   if limit is Some(value) {
     params.push("limit=\{value}")

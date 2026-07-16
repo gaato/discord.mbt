@@ -8,9 +8,7 @@ pub async fn Client::get_poll_answer_voters(
   after? : @model.UserId,
   limit? : Int,
 ) -> @model.PollAnswerVoters raise DiscordHttpError {
-  if limit is Some(value) && (value < 1 || value > 100) {
-    raise Validation(message="poll voter limit must be 1 through 100")
-  }
+  validate_range("poll voter limit", limit, min=1, max=100)
   let params : Array[String] = []
   if after is Some(value) {
     params.push("after=\{value}")

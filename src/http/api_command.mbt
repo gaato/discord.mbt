@@ -3,12 +3,8 @@ fn validate_command_text(
   name : String,
   description : String,
 ) -> Unit raise DiscordHttpError {
-  if name.length() < 1 || name.length() > 32 {
-    raise Validation(message="command name must be between 1 and 32 characters")
-  }
-  if description.length() > 100 {
-    raise Validation(message="command description exceeds 100 characters")
-  }
+  validate_length("command name", Some(name), min=1, max=32)
+  validate_length("command description", Some(description), max=100)
 }
 
 ///|
@@ -16,12 +12,8 @@ fn validate_command_patch(
   name : String?,
   description : String?,
 ) -> Unit raise DiscordHttpError {
-  if name is Some(value) && (value.length() < 1 || value.length() > 32) {
-    raise Validation(message="command name must be between 1 and 32 characters")
-  }
-  if description is Some(value) && value.length() > 100 {
-    raise Validation(message="command description exceeds 100 characters")
-  }
+  validate_length("command name", name, min=1, max=32)
+  validate_length("command description", description, max=100)
 }
 
 ///|

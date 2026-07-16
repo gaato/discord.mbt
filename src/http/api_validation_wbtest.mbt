@@ -175,11 +175,11 @@ test "guild message search validates ranges and array caps" {
 test "entitlement list validates its documented limit" {
   expect_search_validation(
     () => list_entitlements_query(limit=0),
-    "entitlement limit must be 1 through 100",
+    "entitlement limit must be between 1 and 100",
   )
   expect_search_validation(
     () => list_entitlements_query(limit=101),
-    "entitlement limit must be 1 through 100",
+    "entitlement limit must be between 1 and 100",
   )
   ignore(list_entitlements_query(limit=1))
   ignore(list_entitlements_query(limit=100))
@@ -189,11 +189,11 @@ test "entitlement list validates its documented limit" {
 test "SKU subscription list validates its documented limit" {
   expect_search_validation(
     () => list_sku_subscriptions_query(limit=0),
-    "SKU subscription limit must be 1 through 100",
+    "SKU subscription limit must be between 1 and 100",
   )
   expect_search_validation(
     () => list_sku_subscriptions_query(limit=101),
-    "SKU subscription limit must be 1 through 100",
+    "SKU subscription limit must be between 1 and 100",
   )
   ignore(list_sku_subscriptions_query(limit=1))
   ignore(list_sku_subscriptions_query(limit=100))
@@ -259,13 +259,13 @@ test "execute webhook requires message content" {
 
 ///|
 test "execute webhook validates content length" {
-  let content = String::make(4001, 'x')
+  let content = String::make(2001, 'x')
   try validate_execute_webhook(Some(content), None, None, None) catch {
     err =>
       debug_inspect(
         err,
         content=(
-          #|Validation(message="content exceeds 4000 UTF-16 units")
+          #|Validation(message="content exceeds 2000 characters")
         ),
       )
   } noraise {

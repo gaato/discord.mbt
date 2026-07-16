@@ -4,19 +4,9 @@ fn validate_sticker_fields(
   description : String?,
   tags : String?,
 ) -> Unit raise DiscordHttpError {
-  if name is Some(value) && (value.length() < 2 || value.length() > 30) {
-    raise Validation(message="sticker name must be between 2 and 30 characters")
-  }
-  if description is Some(value) && (value.length() < 2 || value.length() > 100) {
-    raise Validation(
-      message="sticker description must be between 2 and 100 characters",
-    )
-  }
-  if tags is Some(value) && (value.length() < 1 || value.length() > 200) {
-    raise Validation(
-      message="sticker tags must be between 1 and 200 characters",
-    )
-  }
+  validate_length("sticker name", name, min=2, max=30)
+  validate_length("sticker description", description, min=2, max=100)
+  validate_length("sticker tags", tags, min=1, max=200)
 }
 
 ///|

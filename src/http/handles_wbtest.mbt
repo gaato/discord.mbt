@@ -63,7 +63,7 @@ test "channel ref messages preserves paginator validation" {
   let channel_id : @model.ChannelId = Id(50UL)
   try client.channel_ref(channel_id).messages(page_size=0) catch {
     Validation(message~) =>
-      inspect(message, content="message limit must be 1 through 100")
+      inspect(message, content="message limit must be between 1 and 100")
     error => fail("unexpected error: \{to_repr(error)}")
   } noraise {
     _ => fail("expected paginator validation")

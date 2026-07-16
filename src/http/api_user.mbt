@@ -51,9 +51,7 @@ pub async fn Client::modify_current_user(
   avatar? : String,
   clear_avatar? : Bool = false,
 ) -> @model.User raise DiscordHttpError {
-  if username is Some(value) && (value.length() < 2 || value.length() > 32) {
-    raise Validation(message="username must be between 2 and 32 characters")
-  }
+  validate_length("username", username, min=2, max=32)
   let body = @model.ObjBuilder()
     .opt("username", username)
     .und("avatar", patch_nullable("avatar", avatar, clear_avatar))
@@ -152,12 +150,8 @@ fn update_current_user_application_role_connection_body(
   platform_username : String?,
   metadata : Json?,
 ) -> Json raise DiscordHttpError {
-  if platform_name is Some(value) && value.length() > 50 {
-    raise Validation(message="platform_name exceeds 50 characters")
-  }
-  if platform_username is Some(value) && value.length() > 100 {
-    raise Validation(message="platform_username exceeds 100 characters")
-  }
+  validate_length("platform_name", platform_name, max=50)
+  validate_length("platform_username", platform_username, max=100)
   @model.ObjBuilder()
   .opt("platform_name", platform_name)
   .opt("platform_username", platform_username)

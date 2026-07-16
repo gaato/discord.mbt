@@ -27,9 +27,7 @@ fn validate_application_url(
   field : String,
   value : String?,
 ) -> Unit raise DiscordHttpError {
-  if value is Some(url) && url.length() > 2048 {
-    raise Validation(message="\{field} exceeds 2048 characters")
-  }
+  validate_length(field, value, max=2048)
 }
 
 ///|
@@ -73,9 +71,7 @@ fn edit_current_application_body(
       raise Validation(message="application tags exceed 5 entries")
     }
     for tag in values {
-      if tag.length() > 20 {
-        raise Validation(message="application tag exceeds 20 characters")
-      }
+      validate_length("application tag", Some(tag), max=20)
     }
   }
   @model.ObjBuilder()
