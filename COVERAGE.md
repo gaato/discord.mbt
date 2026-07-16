@@ -14,6 +14,35 @@ official OpenAPI spec ([discord/discord-api-spec], `main`, fetched 2026-07-16).
 
 [discord/discord-api-spec]: https://github.com/discord/discord-api-spec
 
+## Handle layer
+
+All endpoints have typed `Client` methods, and endpoints with a resource anchor
+are also reachable through ref handles (2026-07-16). The following 16 methods
+remain direct on `Client`:
+
+| Client method | Reason |
+|---|---|
+| `get_current_user` | The authenticated bot user is selected by the `/users/@me` route. |
+| `modify_current_user` | The authenticated bot user is selected by the `/users/@me` route. |
+| `get_current_user_guilds` | The guild list belongs to the authenticated `/users/@me` identity. |
+| `get_current_authorization_information` | It uses a user OAuth bearer token rather than bot authentication. |
+| `get_current_user_connections` | It uses a user OAuth bearer token rather than bot authentication. |
+| `get_current_user_guild_member` | It uses a user OAuth bearer token rather than bot authentication. |
+| `get_current_user_application_role_connection` | It uses a user OAuth bearer token rather than bot authentication. |
+| `update_current_user_application_role_connection` | It uses a user OAuth bearer token rather than bot authentication. |
+| `delete_current_user_application_role_connection` | It uses a user OAuth bearer token rather than bot authentication. |
+| `edit_current_application` | The bot application is selected by an `@me` route rather than an application id. |
+| `get_current_bot_application_information` | The bot application is selected by an `@me` route rather than an application id. |
+| `get_sticker` | This is a global catalog lookup without a guild or application anchor. |
+| `get_sticker_pack` | This is a global catalog lookup without a guild or application anchor. |
+| `list_sticker_packs` | This is a global catalog listing without a resource anchor. |
+| `list_default_soundboard_sounds` | This is a global catalog listing without a guild anchor. |
+| `list_voice_regions` | This is a global catalog listing without a guild anchor. |
+
+Interaction callback, original-response, and followup endpoints use
+`CommandCtx`, `ComponentCtx`, and `ModalCtx` methods as their higher-level
+surface.
+
 ## Regenerating the diff
 
 ```sh

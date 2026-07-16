@@ -394,3 +394,38 @@ async test "modal contexts distinguish command and component origins" {
     ),
   )
 }
+
+///|
+async test "command context edit followup delegates token id and clear body" {
+  let client = @dhttp.Client("test-token")
+  defer client.close()
+  let captured_path = Ref("")
+  let captured_body = Ref(Json::null())
+  client.middleware((request, _next) => {
+    captured_path.val = request.route.path()
+    captured_body.val = request.body.unwrap_or(Json::null())
+    { status: 200, headers: Map([]), body: Json::null() }
+  })
+  let application_id : @model.ApplicationId = @model.Id::parse(
+    "400000000000000001",
+  )
+  let message_id : @model.MessageId = @model.Id::parse("700000000000000099")
+  let fw = @framework.Framework(client, application_id)
+  fw.command(@interaction.CommandSpec::slash("echo", "Echo"), ctx => {
+    try ctx.edit_followup(message_id, clear_content=true) catch {
+      @dhttp.DiscordHttpError::Deserialize(_) => ()
+      error => fail("unexpected error: \{to_repr(error)}")
+    } noraise {
+      _ => fail("expected the synthetic response to fail message decoding")
+    }
+  })
+  |> ignore
+  assert_true(fw.process(echo_interaction("followup")))
+  inspect(
+    captured_path.val,
+    content=(
+      #|/webhooks/400000000000000001/interaction-token/messages/700000000000000099
+    ),
+  )
+  json_inspect(captured_body.val, content={ "content": null })
+}

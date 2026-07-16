@@ -30,6 +30,67 @@ Call `client.close()` when the client is no longer needed. HTTP methods raise
 responses use `Api`, and transport, deserialization, and rate-limit failures
 have separate variants.
 
+## Handles
+
+Client-bound handles organize resource APIs into two levels. A parent ref uses
+collection verbs such as `roles`, `members`, or `create_role`; a child ref
+binds the returned resource id and uses individual verbs such as `fetch`,
+`edit`, or `delete`. Handles do not cache values or defer requests: each verb
+delegates immediately to the corresponding typed `Client` method.
+
+```mbt check
+///|
+async fn rename_guild_role(
+  client : @dhttp.Client,
+  guild_id : @model.GuildId,
+  role_id : @model.RoleId,
+) -> @model.Role {
+  let guild = client.guild_ref(guild_id)
+  let current_roles = guild.roles()
+  ignore(current_roles)
+  guild.role_ref(role_id).edit(name="moderator", reason="role cleanup")
+}
+
+///|
+async fn fetch_member(
+  client : @dhttp.Client,
+  guild_id : @model.GuildId,
+  user_id : @model.UserId,
+) -> @model.GuildMember {
+  client.guild_ref(guild_id).member_ref(user_id).fetch()
+}
+```
+
+`fetch()` is the uniform name for retrieving the individual resource bound by
+a ref. Stateful `Paginator` values are returned by
+`ChannelRef::messages`, `GuildRef::members`, `GuildRef::bans`,
+`GuildRef::audit_log`, `ScheduledEventRef::users`, and
+`MessageRef::poll_answer_voters`; their cursors advance through `next_page`,
+`collect`, or `each` just like the direct paginator constructors.
+
+```mbt check
+///|
+fn channel_history(
+  client : @dhttp.Client,
+  channel_id : @model.ChannelId,
+) -> @dhttp.Paginator[@model.Message] raise @dhttp.DiscordHttpError {
+  client.channel_ref(channel_id).messages(page_size=100)
+}
+
+///|
+test "handle declarations compile" {
+  ignore(rename_guild_role)
+  ignore(fetch_member)
+  ignore(channel_history)
+}
+```
+
+Endpoints that support audit-log reasons expose `reason?`; the handle forwards
+it as the request's URL-encoded `X-Audit-Log-Reason` header. Webhook
+authentication is encoded in the handle type: `WebhookRef` performs bot-token
+management, while `WebhookTokenRef` is created with `with_token` and executes
+through the webhook URL token without bot authentication.
+
 ## Allowed mentions
 
 Ordinary `create_message` calls default to

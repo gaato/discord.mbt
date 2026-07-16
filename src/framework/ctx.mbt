@@ -74,6 +74,70 @@ async fn respond_modal(
 }
 
 ///|
+async fn interaction_original_response(
+  client : @dhttp.Client,
+  application_id : @model.ApplicationId,
+  token : String,
+) -> @model.Message {
+  client.get_original_response(application_id, token)
+}
+
+///|
+async fn delete_interaction_response(
+  client : @dhttp.Client,
+  application_id : @model.ApplicationId,
+  token : String,
+) -> Unit {
+  client.delete_original_response(application_id, token)
+}
+
+///|
+async fn interaction_followup(
+  client : @dhttp.Client,
+  application_id : @model.ApplicationId,
+  token : String,
+  message_id : @model.MessageId,
+) -> @model.Message {
+  client.get_followup(application_id, token, message_id)
+}
+
+///|
+async fn edit_interaction_followup(
+  client : @dhttp.Client,
+  application_id : @model.ApplicationId,
+  token : String,
+  message_id : @model.MessageId,
+  content : String?,
+  clear_content : Bool,
+  embeds : Array[@model.Embed]?,
+  components : Array[@model.Component]?,
+  allowed_mentions : @model.AllowedMentions?,
+  files : Array[@dhttp.FileUpload]?,
+) -> @model.Message {
+  client.edit_followup(
+    application_id,
+    token,
+    message_id,
+    content?,
+    clear_content~,
+    embeds?,
+    components?,
+    allowed_mentions?,
+    files?,
+  )
+}
+
+///|
+async fn delete_interaction_followup(
+  client : @dhttp.Client,
+  application_id : @model.ApplicationId,
+  token : String,
+  message_id : @model.MessageId,
+) -> Unit {
+  client.delete_followup(application_id, token, message_id)
+}
+
+///|
 /// The context in which an interaction was invoked.
 pub(all) enum InvocationScope {
   Guild(@model.GuildMember)
@@ -228,6 +292,26 @@ pub async fn CommandCtx::show_modal(
 }
 
 ///|
+/// Fetch the original response to this command interaction.
+pub async fn CommandCtx::original_response(self : CommandCtx) -> @model.Message {
+  interaction_original_response(
+    self.client,
+    self.application_id,
+    self.interaction.token,
+  )
+}
+
+///|
+/// Delete the original response to this command interaction.
+pub async fn CommandCtx::delete_response(self : CommandCtx) -> Unit {
+  delete_interaction_response(
+    self.client,
+    self.application_id,
+    self.interaction.token,
+  )
+}
+
+///|
 /// Edit the original response (typically after `defer`).
 pub async fn CommandCtx::edit_response(
   self : CommandCtx,
@@ -274,6 +358,60 @@ pub async fn CommandCtx::followup(
     } else {
       @model.MessageFlags::from_bits(0)
     },
+  )
+}
+
+///|
+/// Fetch a followup message for this command interaction.
+pub async fn CommandCtx::get_followup(
+  self : CommandCtx,
+  message_id : @model.MessageId,
+) -> @model.Message {
+  interaction_followup(
+    self.client,
+    self.application_id,
+    self.interaction.token,
+    message_id,
+  )
+}
+
+///|
+/// Edit a followup message for this command interaction.
+pub async fn CommandCtx::edit_followup(
+  self : CommandCtx,
+  message_id : @model.MessageId,
+  content? : String,
+  clear_content? : Bool = false,
+  embeds? : Array[@model.Embed],
+  components? : Array[@model.Component],
+  allowed_mentions? : @model.AllowedMentions,
+  files? : Array[@dhttp.FileUpload],
+) -> @model.Message {
+  edit_interaction_followup(
+    self.client,
+    self.application_id,
+    self.interaction.token,
+    message_id,
+    content,
+    clear_content,
+    embeds,
+    components,
+    allowed_mentions,
+    files,
+  )
+}
+
+///|
+/// Delete a followup message for this command interaction.
+pub async fn CommandCtx::delete_followup(
+  self : CommandCtx,
+  message_id : @model.MessageId,
+) -> Unit {
+  delete_interaction_followup(
+    self.client,
+    self.application_id,
+    self.interaction.token,
+    message_id,
   )
 }
 
@@ -387,6 +525,28 @@ pub async fn ComponentCtx::defer_update(self : ComponentCtx) -> Unit {
 }
 
 ///|
+/// Fetch the original response to this component interaction.
+pub async fn ComponentCtx::original_response(
+  self : ComponentCtx,
+) -> @model.Message {
+  interaction_original_response(
+    self.client,
+    self.application_id,
+    self.interaction.token,
+  )
+}
+
+///|
+/// Delete the original response to this component interaction.
+pub async fn ComponentCtx::delete_response(self : ComponentCtx) -> Unit {
+  delete_interaction_response(
+    self.client,
+    self.application_id,
+    self.interaction.token,
+  )
+}
+
+///|
 /// Edit the original interaction response after deferring.
 pub async fn ComponentCtx::edit_response(
   self : ComponentCtx,
@@ -433,6 +593,60 @@ pub async fn ComponentCtx::followup(
     } else {
       @model.MessageFlags::from_bits(0)
     },
+  )
+}
+
+///|
+/// Fetch a followup message for this component interaction.
+pub async fn ComponentCtx::get_followup(
+  self : ComponentCtx,
+  message_id : @model.MessageId,
+) -> @model.Message {
+  interaction_followup(
+    self.client,
+    self.application_id,
+    self.interaction.token,
+    message_id,
+  )
+}
+
+///|
+/// Edit a followup message for this component interaction.
+pub async fn ComponentCtx::edit_followup(
+  self : ComponentCtx,
+  message_id : @model.MessageId,
+  content? : String,
+  clear_content? : Bool = false,
+  embeds? : Array[@model.Embed],
+  components? : Array[@model.Component],
+  allowed_mentions? : @model.AllowedMentions,
+  files? : Array[@dhttp.FileUpload],
+) -> @model.Message {
+  edit_interaction_followup(
+    self.client,
+    self.application_id,
+    self.interaction.token,
+    message_id,
+    content,
+    clear_content,
+    embeds,
+    components,
+    allowed_mentions,
+    files,
+  )
+}
+
+///|
+/// Delete a followup message for this component interaction.
+pub async fn ComponentCtx::delete_followup(
+  self : ComponentCtx,
+  message_id : @model.MessageId,
+) -> Unit {
+  delete_interaction_followup(
+    self.client,
+    self.application_id,
+    self.interaction.token,
+    message_id,
   )
 }
 
@@ -535,6 +749,26 @@ pub async fn ModalCtx::defer_response(
 }
 
 ///|
+/// Fetch the original response to this modal interaction.
+pub async fn ModalCtx::original_response(self : ModalCtx) -> @model.Message {
+  interaction_original_response(
+    self.client,
+    self.application_id,
+    self.interaction.token,
+  )
+}
+
+///|
+/// Delete the original response to this modal interaction.
+pub async fn ModalCtx::delete_response(self : ModalCtx) -> Unit {
+  delete_interaction_response(
+    self.client,
+    self.application_id,
+    self.interaction.token,
+  )
+}
+
+///|
 /// Edit the original modal interaction response after deferring.
 pub async fn ModalCtx::edit_response(
   self : ModalCtx,
@@ -581,6 +815,60 @@ pub async fn ModalCtx::followup(
     } else {
       @model.MessageFlags::from_bits(0)
     },
+  )
+}
+
+///|
+/// Fetch a followup message for this modal interaction.
+pub async fn ModalCtx::get_followup(
+  self : ModalCtx,
+  message_id : @model.MessageId,
+) -> @model.Message {
+  interaction_followup(
+    self.client,
+    self.application_id,
+    self.interaction.token,
+    message_id,
+  )
+}
+
+///|
+/// Edit a followup message for this modal interaction.
+pub async fn ModalCtx::edit_followup(
+  self : ModalCtx,
+  message_id : @model.MessageId,
+  content? : String,
+  clear_content? : Bool = false,
+  embeds? : Array[@model.Embed],
+  components? : Array[@model.Component],
+  allowed_mentions? : @model.AllowedMentions,
+  files? : Array[@dhttp.FileUpload],
+) -> @model.Message {
+  edit_interaction_followup(
+    self.client,
+    self.application_id,
+    self.interaction.token,
+    message_id,
+    content,
+    clear_content,
+    embeds,
+    components,
+    allowed_mentions,
+    files,
+  )
+}
+
+///|
+/// Delete a followup message for this modal interaction.
+pub async fn ModalCtx::delete_followup(
+  self : ModalCtx,
+  message_id : @model.MessageId,
+) -> Unit {
+  delete_interaction_followup(
+    self.client,
+    self.application_id,
+    self.interaction.token,
+    message_id,
   )
 }
 
