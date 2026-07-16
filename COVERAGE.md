@@ -162,11 +162,11 @@ OpenAPI spec; include it when doing this category.
 
 ## Webhooks (token-authenticated)
 
-- [ ] GET /webhooks/{id}/{token} — Get Webhook with Token
-- [ ] PATCH /webhooks/{id}/{token} — Modify Webhook with Token
-- [ ] DELETE /webhooks/{id}/{token} — Delete Webhook with Token
-- [ ] POST /webhooks/{id}/{token}/github — Execute GitHub-Compatible Webhook
-- [ ] POST /webhooks/{id}/{token}/slack — Execute Slack-Compatible Webhook
+- [x] GET /webhooks/{id}/{token} — Get Webhook with Token (`get_webhook_with_token`)
+- [x] PATCH /webhooks/{id}/{token} — Modify Webhook with Token (`modify_webhook_with_token`)
+- [x] DELETE /webhooks/{id}/{token} — Delete Webhook with Token (`delete_webhook_with_token`)
+- [x] POST /webhooks/{id}/{token}/github — Execute GitHub-Compatible Webhook (`execute_github_compatible_webhook`)
+- [x] POST /webhooks/{id}/{token}/slack — Execute Slack-Compatible Webhook (`execute_slack_compatible_webhook`)
 
 ## Invites
 

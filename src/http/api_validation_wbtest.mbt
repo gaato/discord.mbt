@@ -210,6 +210,17 @@ test "execute webhook validates content length" {
 }
 
 ///|
+test "modify webhook with token validates its name" {
+  expect_json_validation(
+    () => modify_webhook_with_token_body(Some(""), None, false),
+    "webhook name must be between 1 and 80 characters",
+  )
+  ignore(
+    modify_webhook_with_token_body(Some(String::make(80, 'x')), None, false),
+  )
+}
+
+///|
 test "application command permissions validate the record limit" {
   let permission : @model.ApplicationCommandPermission = {
     id: Id(1UL),

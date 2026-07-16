@@ -99,6 +99,118 @@ pub async fn Client::delete_webhook(
 }
 
 ///|
+fn modify_webhook_with_token_body(
+  name : String?,
+  avatar : String?,
+  clear_avatar : Bool,
+) -> Json raise DiscordHttpError {
+  if name is Some(value) {
+    validate_webhook_name(value)
+  }
+  @model.ObjBuilder()
+  .opt("name", name)
+  .und("avatar", patch_nullable("avatar", avatar, clear_avatar))
+  .build()
+}
+
+///|
+fn compatible_webhook_query(
+  thread_id : @model.ChannelId?,
+  wait : Bool?,
+) -> String {
+  let params : Array[String] = []
+  if thread_id is Some(value) {
+    params.push("thread_id=\{value}")
+  }
+  if wait is Some(value) {
+    params.push("wait=\{value}")
+  }
+  if params.length() == 0 {
+    ""
+  } else {
+    "?" + params.join("&")
+  }
+}
+
+///|
+/// Fetch a webhook using the webhook token embedded in the route.
+pub async fn Client::get_webhook_with_token(
+  self : Client,
+  webhook_id : @model.WebhookId,
+  token : String,
+) -> @model.Webhook raise DiscordHttpError {
+  decode(self.request(GetWebhookWithToken(webhook_id~, token~)))
+}
+
+///|
+/// Modify a webhook using its token. This token-authenticated variant cannot
+/// move the webhook to another channel.
+pub async fn Client::modify_webhook_with_token(
+  self : Client,
+  webhook_id : @model.WebhookId,
+  token : String,
+  name? : String,
+  avatar? : String,
+  clear_avatar? : Bool = false,
+) -> @model.Webhook raise DiscordHttpError {
+  let body = modify_webhook_with_token_body(name, avatar, clear_avatar)
+  decode(self.request(ModifyWebhookWithToken(webhook_id~, token~), body~))
+}
+
+///|
+/// Delete a webhook using its token.
+pub async fn Client::delete_webhook_with_token(
+  self : Client,
+  webhook_id : @model.WebhookId,
+  token : String,
+) -> Unit raise DiscordHttpError {
+  self.request(DeleteWebhookWithToken(webhook_id~, token~)) |> ignore
+}
+
+///|
+/// Execute a Slack-compatible webhook payload. `thread_id` targets a thread,
+/// and `wait` asks Discord to wait for server confirmation.
+pub async fn Client::execute_slack_compatible_webhook(
+  self : Client,
+  webhook_id : @model.WebhookId,
+  token : String,
+  payload : Json,
+  thread_id? : @model.ChannelId,
+  wait? : Bool,
+) -> Unit raise DiscordHttpError {
+  let query = compatible_webhook_query(thread_id, wait)
+  self.request(
+    ExecuteSlackCompatibleWebhook(webhook_id~, token~, query~),
+    body=payload,
+  )
+  |> ignore
+}
+
+///|
+/// Execute a GitHub-compatible webhook payload. Supported `github_event`
+/// values are commit_comment, create, delete, fork, issue_comment, issues,
+/// member, public, pull_request, pull_request_review,
+/// pull_request_review_comment, push, release, watch, check_run, check_suite,
+/// discussion, and discussion_comment.
+pub async fn Client::execute_github_compatible_webhook(
+  self : Client,
+  webhook_id : @model.WebhookId,
+  token : String,
+  payload : Json,
+  github_event~ : String,
+  thread_id? : @model.ChannelId,
+  wait? : Bool,
+) -> Unit raise DiscordHttpError {
+  let query = compatible_webhook_query(thread_id, wait)
+  self.request(
+    ExecuteGithubCompatibleWebhook(webhook_id~, token~, query~),
+    body=payload,
+    headers={ "x-github-event": github_event },
+  )
+  |> ignore
+}
+
+///|
 /// Execute a webhook and wait for the created message. At least one of
 /// `content`, `embeds`, `components`, or `files` must be provided.
 pub async fn Client::execute_webhook(

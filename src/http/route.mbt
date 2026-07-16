@@ -274,7 +274,20 @@ pub(all) enum Route {
   GetWebhook(webhook_id~ : @model.WebhookId)
   ModifyWebhook(webhook_id~ : @model.WebhookId)
   DeleteWebhook(webhook_id~ : @model.WebhookId)
+  GetWebhookWithToken(webhook_id~ : @model.WebhookId, token~ : String)
+  ModifyWebhookWithToken(webhook_id~ : @model.WebhookId, token~ : String)
+  DeleteWebhookWithToken(webhook_id~ : @model.WebhookId, token~ : String)
   ExecuteWebhook(
+    webhook_id~ : @model.WebhookId,
+    token~ : String,
+    query~ : String
+  )
+  ExecuteSlackCompatibleWebhook(
+    webhook_id~ : @model.WebhookId,
+    token~ : String,
+    query~ : String
+  )
+  ExecuteGithubCompatibleWebhook(
     webhook_id~ : @model.WebhookId,
     token~ : String,
     query~ : String
@@ -498,6 +511,7 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | GetStageInstance(..)
     | GetInvite(..)
     | GetWebhook(..)
+    | GetWebhookWithToken(..)
     | GetWebhookMessage(..)
     | GetOriginalInteractionResponse(..)
     | GetFollowupMessage(..)
@@ -529,6 +543,8 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | CreateGuildSoundboardSound(..)
     | CreateStageInstance
     | ExecuteWebhook(..)
+    | ExecuteSlackCompatibleWebhook(..)
+    | ExecuteGithubCompatibleWebhook(..)
     | CreateInteractionResponse(..)
     | CreateFollowupMessage(..)
     | CreateGlobalCommand(..)
@@ -543,6 +559,7 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | ModifyCurrentMember(..)
     | ModifyGuildRole(..)
     | ModifyWebhook(..)
+    | ModifyWebhookWithToken(..)
     | EditWebhookMessage(..)
     | ModifyGuildEmoji(..)
     | ModifyApplicationEmoji(..)
@@ -574,6 +591,7 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | RemoveGuildBan(..)
     | DeleteInvite(..)
     | DeleteWebhook(..)
+    | DeleteWebhookWithToken(..)
     | DeleteWebhookMessage(..)
     | DeleteGuildEmoji(..)
     | DeleteApplicationEmoji(..)
@@ -792,8 +810,16 @@ pub fn Route::path(self : Route) -> String {
     GetWebhook(webhook_id~)
     | ModifyWebhook(webhook_id~)
     | DeleteWebhook(webhook_id~) => "/webhooks/\{webhook_id}"
+    GetWebhookWithToken(webhook_id~, token~)
+    | ModifyWebhookWithToken(webhook_id~, token~)
+    | DeleteWebhookWithToken(webhook_id~, token~) =>
+      "/webhooks/\{webhook_id}/\{token}"
     ExecuteWebhook(webhook_id~, token~, query~) =>
       "/webhooks/\{webhook_id}/\{token}\{query}"
+    ExecuteSlackCompatibleWebhook(webhook_id~, token~, query~) =>
+      "/webhooks/\{webhook_id}/\{token}/slack\{query}"
+    ExecuteGithubCompatibleWebhook(webhook_id~, token~, query~) =>
+      "/webhooks/\{webhook_id}/\{token}/github\{query}"
     GetWebhookMessage(webhook_id~, token~, message_id~)
     | EditWebhookMessage(webhook_id~, token~, message_id~)
     | DeleteWebhookMessage(webhook_id~, token~, message_id~) =>
@@ -1046,8 +1072,18 @@ pub fn Route::bucket(self : Route) -> String {
     GetWebhook(webhook_id~) => "GET:/webhooks/\{webhook_id}"
     ModifyWebhook(webhook_id~) => "PATCH:/webhooks/\{webhook_id}"
     DeleteWebhook(webhook_id~) => "DELETE:/webhooks/\{webhook_id}"
+    GetWebhookWithToken(webhook_id~, token~) =>
+      "GET:/webhooks/\{webhook_id}/\{token}"
+    ModifyWebhookWithToken(webhook_id~, token~) =>
+      "PATCH:/webhooks/\{webhook_id}/\{token}"
+    DeleteWebhookWithToken(webhook_id~, token~) =>
+      "DELETE:/webhooks/\{webhook_id}/\{token}"
     ExecuteWebhook(webhook_id~, token~, ..) =>
       "POST:/webhooks/\{webhook_id}/\{token}"
+    ExecuteSlackCompatibleWebhook(webhook_id~, token~, ..) =>
+      "POST:/webhooks/\{webhook_id}/\{token}/slack"
+    ExecuteGithubCompatibleWebhook(webhook_id~, token~, ..) =>
+      "POST:/webhooks/\{webhook_id}/\{token}/github"
     GetWebhookMessage(webhook_id~, token~, ..) =>
       "GET:/webhooks/\{webhook_id}/\{token}/messages/{}"
     EditWebhookMessage(webhook_id~, token~, ..) =>
@@ -1116,6 +1152,11 @@ pub fn Route::is_interaction(self : Route) -> Bool {
     | EditFollowupMessage(..)
     | DeleteFollowupMessage(..)
     | ExecuteWebhook(..)
+    | GetWebhookWithToken(..)
+    | ModifyWebhookWithToken(..)
+    | DeleteWebhookWithToken(..)
+    | ExecuteSlackCompatibleWebhook(..)
+    | ExecuteGithubCompatibleWebhook(..)
     | GetWebhookMessage(..)
     | EditWebhookMessage(..)
     | DeleteWebhookMessage(..) => true

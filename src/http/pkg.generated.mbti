@@ -99,6 +99,7 @@ pub async fn Client::delete_stage_instance(Self, @model.Id[@model.ChannelMarker]
 pub async fn Client::delete_user_reaction(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], String, @model.Id[@model.UserMarker]) -> Unit raise DiscordHttpError
 pub async fn Client::delete_webhook(Self, @model.Id[@model.WebhookMarker], audit_reason? : String) -> Unit raise DiscordHttpError
 pub async fn Client::delete_webhook_message(Self, @model.Id[@model.WebhookMarker], String, @model.Id[@model.MessageMarker]) -> Unit raise DiscordHttpError
+pub async fn Client::delete_webhook_with_token(Self, @model.Id[@model.WebhookMarker], String) -> Unit raise DiscordHttpError
 pub async fn Client::edit_application_command_permissions(Self, @model.Id[@model.ApplicationMarker], @model.Id[@model.GuildMarker], @model.Id[@model.CommandMarker], Array[@model.ApplicationCommandPermission], bearer_token~ : String) -> @model.GuildApplicationCommandPermissions raise DiscordHttpError
 pub async fn Client::edit_channel_permissions(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.GenericMarker], @model.Permissions, @model.Permissions, Int, audit_reason? : String) -> Unit raise DiscordHttpError
 pub async fn Client::edit_current_application(Self, custom_install_url? : String, clear_custom_install_url? : Bool, description? : String, clear_description? : Bool, role_connections_verification_url? : String, clear_role_connections_verification_url? : Bool, install_params? : @model.InstallParams, clear_install_params? : Bool, integration_types_config? : Map[String, @model.ApplicationIntegrationTypeConfiguration], flags? : @model.ApplicationFlags, icon? : String, clear_icon? : Bool, cover_image? : String, clear_cover_image? : Bool, interactions_endpoint_url? : String, clear_interactions_endpoint_url? : Bool, tags? : Array[String], clear_tags? : Bool, event_webhooks_url? : String, clear_event_webhooks_url? : Bool, event_webhooks_status? : @model.ApplicationEventWebhookStatus, event_webhooks_types? : Array[String]) -> @model.Application raise DiscordHttpError
@@ -108,6 +109,8 @@ pub async fn Client::edit_guild_command(Self, @model.Id[@model.ApplicationMarker
 pub async fn Client::edit_message(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], content? : String, clear_content? : Bool, embeds? : Array[@model.Embed], components? : Array[@model.Component], flags? : @model.MessageFlags, allowed_mentions? : @model.AllowedMentions, files? : Array[FileUpload]) -> @model.Message raise DiscordHttpError
 pub async fn Client::edit_original_response(Self, @model.Id[@model.ApplicationMarker], String, content? : String, clear_content? : Bool, embeds? : Array[@model.Embed], components? : Array[@model.Component], allowed_mentions? : @model.AllowedMentions, files? : Array[FileUpload]) -> @model.Message raise DiscordHttpError
 pub async fn Client::edit_webhook_message(Self, @model.Id[@model.WebhookMarker], String, @model.Id[@model.MessageMarker], content? : String, clear_content? : Bool, embeds? : Array[@model.Embed], components? : Array[@model.Component], allowed_mentions? : @model.AllowedMentions, files? : Array[FileUpload]) -> @model.Message raise DiscordHttpError
+pub async fn Client::execute_github_compatible_webhook(Self, @model.Id[@model.WebhookMarker], String, Json, github_event~ : String, thread_id? : @model.Id[@model.ChannelMarker], wait? : Bool) -> Unit raise DiscordHttpError
+pub async fn Client::execute_slack_compatible_webhook(Self, @model.Id[@model.WebhookMarker], String, Json, thread_id? : @model.Id[@model.ChannelMarker], wait? : Bool) -> Unit raise DiscordHttpError
 pub async fn Client::execute_webhook(Self, @model.Id[@model.WebhookMarker], String, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[FileUpload], username? : String, avatar_url? : String, tts? : Bool, allowed_mentions? : @model.AllowedMentions) -> @model.Message raise DiscordHttpError
 pub async fn Client::expire_poll(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker]) -> @model.Message raise DiscordHttpError
 pub async fn Client::follow_announcement_channel(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.ChannelMarker], audit_reason? : String) -> @model.FollowedChannel raise DiscordHttpError
@@ -161,6 +164,7 @@ pub async fn Client::get_user(Self, @model.Id[@model.UserMarker]) -> @model.User
 pub async fn Client::get_user_voice_state(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker]) -> @model.VoiceState raise DiscordHttpError
 pub async fn Client::get_webhook(Self, @model.Id[@model.WebhookMarker]) -> @model.Webhook raise DiscordHttpError
 pub async fn Client::get_webhook_message(Self, @model.Id[@model.WebhookMarker], String, @model.Id[@model.MessageMarker]) -> @model.Message raise DiscordHttpError
+pub async fn Client::get_webhook_with_token(Self, @model.Id[@model.WebhookMarker], String) -> @model.Webhook raise DiscordHttpError
 pub async fn Client::group_dm_add_recipient(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.UserMarker], String, nick? : String) -> Unit raise DiscordHttpError
 pub async fn Client::group_dm_remove_recipient(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.UserMarker]) -> Unit raise DiscordHttpError
 pub async fn Client::join_thread(Self, @model.Id[@model.ChannelMarker]) -> Unit raise DiscordHttpError
@@ -200,6 +204,7 @@ pub async fn Client::modify_guild_sticker(Self, @model.Id[@model.GuildMarker], @
 pub async fn Client::modify_stage_instance(Self, @model.Id[@model.ChannelMarker], topic? : String, privacy_level? : @model.StagePrivacyLevel, audit_reason? : String) -> @model.StageInstance raise DiscordHttpError
 pub async fn Client::modify_user_voice_state(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker], @model.Id[@model.ChannelMarker], suppress? : Bool) -> Unit raise DiscordHttpError
 pub async fn Client::modify_webhook(Self, @model.Id[@model.WebhookMarker], name? : String, avatar? : String, clear_avatar? : Bool, channel_id? : @model.Id[@model.ChannelMarker], audit_reason? : String) -> @model.Webhook raise DiscordHttpError
+pub async fn Client::modify_webhook_with_token(Self, @model.Id[@model.WebhookMarker], String, name? : String, avatar? : String, clear_avatar? : Bool) -> @model.Webhook raise DiscordHttpError
 pub fn Client::on_telemetry(Self, (@telemetry.TelemetryEvent) -> Unit raise) -> Unit
 pub fn Client::on_warn(Self, (String) -> Unit) -> Unit
 pub fn Client::paginate_current_user_guilds(Self, before? : @model.Id[@model.GuildMarker], after? : @model.Id[@model.GuildMarker], with_counts? : Bool, page_size? : Int) -> Paginator[@model.CurrentUserGuild] raise DiscordHttpError
@@ -419,7 +424,12 @@ pub(all) enum Route {
   GetWebhook(webhook_id~ : @model.Id[@model.WebhookMarker])
   ModifyWebhook(webhook_id~ : @model.Id[@model.WebhookMarker])
   DeleteWebhook(webhook_id~ : @model.Id[@model.WebhookMarker])
+  GetWebhookWithToken(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String)
+  ModifyWebhookWithToken(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String)
+  DeleteWebhookWithToken(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String)
   ExecuteWebhook(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String, query~ : String)
+  ExecuteSlackCompatibleWebhook(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String, query~ : String)
+  ExecuteGithubCompatibleWebhook(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String, query~ : String)
   GetWebhookMessage(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String, message_id~ : @model.Id[@model.MessageMarker])
   EditWebhookMessage(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String, message_id~ : @model.Id[@model.MessageMarker])
   DeleteWebhookMessage(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String, message_id~ : @model.Id[@model.MessageMarker])

@@ -82,6 +82,39 @@ test "edit current application body distinguishes clear and omission" {
 }
 
 ///|
+test "modify webhook with token body distinguishes values clear and omission" {
+  json_inspect(
+    modify_webhook_with_token_body(
+      Some("discord.mbt"),
+      Some("data:image/png;base64,aXZhdGFy"),
+      false,
+    ),
+    content={
+      "name": "discord.mbt",
+      "avatar": "data:image/png;base64,aXZhdGFy",
+    },
+  )
+  json_inspect(modify_webhook_with_token_body(None, None, true), content={
+    "avatar": null,
+  })
+  json_inspect(
+    modify_webhook_with_token_body(None, None, false),
+    content=Json::empty_object(),
+  )
+}
+
+///|
+test "compatible webhook query includes values and omits absent parameters" {
+  let thread_id : @model.ChannelId = Id(20UL)
+  inspect(
+    compatible_webhook_query(Some(thread_id), Some(true)),
+    content="?thread_id=20&wait=true",
+  )
+  inspect(compatible_webhook_query(None, Some(false)), content="?wait=false")
+  inspect(compatible_webhook_query(None, None), content="")
+}
+
+///|
 test "application emoji request bodies contain only supported fields" {
   json_inspect(
     create_application_emoji_body("wave", "data:image/png;base64,aW1hZ2U="),

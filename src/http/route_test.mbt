@@ -683,6 +683,28 @@ test "webhook route metadata" {
   let guild_id : @model.GuildId = Id(20UL)
   let webhook_id : @model.WebhookId = Id(30UL)
   let message_id : @model.MessageId = Id(40UL)
+  let get_with_token = @http.Route::GetWebhookWithToken(
+    webhook_id~,
+    token="tok",
+  )
+  let modify_with_token = @http.Route::ModifyWebhookWithToken(
+    webhook_id~,
+    token="tok",
+  )
+  let delete_with_token = @http.Route::DeleteWebhookWithToken(
+    webhook_id~,
+    token="tok",
+  )
+  let slack = @http.Route::ExecuteSlackCompatibleWebhook(
+    webhook_id~,
+    token="tok",
+    query="?thread_id=50&wait=false",
+  )
+  let github = @http.Route::ExecuteGithubCompatibleWebhook(
+    webhook_id~,
+    token="tok",
+    query="?wait=true",
+  )
   debug_inspect(
     [
       route_metadata("create", CreateWebhook(channel_id~)),
@@ -695,6 +717,11 @@ test "webhook route metadata" {
         "execute",
         ExecuteWebhook(webhook_id~, token="tok", query="?wait=true"),
       ),
+      route_metadata("get-with-token", get_with_token),
+      route_metadata("modify-with-token", modify_with_token),
+      route_metadata("delete-with-token", delete_with_token),
+      route_metadata("slack", slack),
+      route_metadata("github", github),
       route_metadata(
         "get-message",
         GetWebhookMessage(webhook_id~, token="tok", message_id~),
@@ -767,6 +794,46 @@ test "webhook route metadata" {
       #|    supports_reason: false,
       #|  },
       #|  {
+      #|    name: "get-with-token",
+      #|    method_name: "Get",
+      #|    path: "/webhooks/30/tok",
+      #|    bucket: "GET:/webhooks/30/tok",
+      #|    needs_auth: false,
+      #|    supports_reason: false,
+      #|  },
+      #|  {
+      #|    name: "modify-with-token",
+      #|    method_name: "Patch",
+      #|    path: "/webhooks/30/tok",
+      #|    bucket: "PATCH:/webhooks/30/tok",
+      #|    needs_auth: false,
+      #|    supports_reason: false,
+      #|  },
+      #|  {
+      #|    name: "delete-with-token",
+      #|    method_name: "Delete",
+      #|    path: "/webhooks/30/tok",
+      #|    bucket: "DELETE:/webhooks/30/tok",
+      #|    needs_auth: false,
+      #|    supports_reason: false,
+      #|  },
+      #|  {
+      #|    name: "slack",
+      #|    method_name: "Post",
+      #|    path: "/webhooks/30/tok/slack?thread_id=50&wait=false",
+      #|    bucket: "POST:/webhooks/30/tok/slack",
+      #|    needs_auth: false,
+      #|    supports_reason: false,
+      #|  },
+      #|  {
+      #|    name: "github",
+      #|    method_name: "Post",
+      #|    path: "/webhooks/30/tok/github?wait=true",
+      #|    bucket: "POST:/webhooks/30/tok/github",
+      #|    needs_auth: false,
+      #|    supports_reason: false,
+      #|  },
+      #|  {
       #|    name: "get-message",
       #|    method_name: "Get",
       #|    path: "/webhooks/30/tok/messages/40",
@@ -793,6 +860,13 @@ test "webhook route metadata" {
       #|]
     ),
   )
+  for
+    route in [
+      get_with_token, modify_with_token, delete_with_token, slack, github,
+    ] {
+    assert_true(route.is_interaction())
+    assert_false(route.needs_auth())
+  }
 }
 
 ///|

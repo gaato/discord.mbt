@@ -66,6 +66,28 @@ async test "request headers default to bot auth and allow bearer override" {
 }
 
 ///|
+async test "github-compatible webhook sends its event without bot auth" {
+  let client = Client("test-token")
+  defer client.close()
+  let captured_github_event = Ref("")
+  let captured_authorization = Ref(false)
+  client.perform_override_.val = Some((_route, _path, headers, _body, _files) => {
+    captured_github_event.val = headers.get_or_default("x-github-event", "")
+    captured_authorization.val = headers.contains("authorization")
+    { status: 200, headers: Map([]), body: Json::null() }
+  })
+  let webhook_id : @model.WebhookId = Id(10UL)
+  client.execute_github_compatible_webhook(
+    webhook_id,
+    "webhook-token",
+    { "ref": "refs/heads/main" },
+    github_event="push",
+  )
+  inspect(captured_github_event.val, content="push")
+  assert_false(captured_authorization.val)
+}
+
+///|
 async test "middleware may short-circuit without transport" {
   let client = Client("test-token")
   defer client.close()
