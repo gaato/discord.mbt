@@ -14,6 +14,12 @@ pub using @dhttp {
   type UserRef,
   type GuildRef,
   type RoleRef,
+  type EmojiRef,
+  type StickerRef,
+  type SoundboardSoundRef,
+  type ScheduledEventRef,
+  type AutoModerationRuleRef,
+  type TemplateRef,
 }
 
 ///|

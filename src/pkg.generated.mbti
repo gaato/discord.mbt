@@ -154,6 +154,8 @@ pub using @interaction {type Args}
 
 pub using @interaction {type ArgsDecodeError}
 
+pub using @http {type AutoModerationRuleRef}
+
 pub using @framework {type AutocompleteCtx}
 
 pub using @bot {type Bot}
@@ -199,6 +201,8 @@ pub using @coordinator {type Coordinator}
 pub using @coordinator {type CoordinatorError}
 
 pub using @app {type DeferredCtx}
+
+pub using @http {type EmojiRef}
 
 pub type ErrorPolicy = async (@app.FailureCtx, Error) -> Unit
 
@@ -280,6 +284,8 @@ pub using @app {type ResponsePhase}
 
 pub using @http {type RoleRef}
 
+pub using @http {type ScheduledEventRef}
+
 pub using @gateway {type Shard}
 
 pub using @bot {type ShardConfig}
@@ -288,13 +294,19 @@ pub using @gateway {type ShardEvent}
 
 pub using @app {type SlashChild}
 
+pub using @http {type SoundboardSoundRef}
+
 pub type Spawner = async (async () -> Unit) -> Unit
+
+pub using @http {type StickerRef}
 
 pub using @interaction {type SuggestCtx}
 
 pub using @app {type TargetUser}
 
 pub using @telemetry {type TelemetryEvent}
+
+pub using @http {type TemplateRef}
 
 pub using @http {type UserRef}
 
