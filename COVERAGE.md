@@ -249,3 +249,51 @@ them.
 - GET /oauth2/keys — Get OAuth2 signing keys
 - GET /oauth2/userinfo — OAuth2 userinfo (Discord's docs reference OIDC only
   in the Social SDK provisional-accounts context)
+
+## Parameter completeness backlog (audited 2026-07-16)
+
+Endpoint coverage above is closed, but a docs cross-check audit (independent
+Codex review, findings verified against the developer docs) found typed
+wrappers whose *parameter lists* are incomplete. Everything here is reachable
+today via `Route::custom` + `Client::request`; entries are removed as the
+typed wrappers grow the parameters.
+
+Fixed immediately (2026-07-16): `SubscriptionStatus` INACTIVE/ENDING value
+swap; `get_invite` sent the removed `with_expiration` query key;
+`create_message`/`modify_channel`/`execute_webhook` poll+thread parameters.
+
+Open, by area:
+
+- **Attachments on edit**: `edit_message`, `edit_webhook_message`,
+  `edit_original_response`, `edit_followup` cannot retain existing
+  attachments alongside new uploads, nor send `attachments: []` to clear
+  (uploading currently replaces the whole list, as their docstrings state).
+- **Interactions**: `create_interaction_response` lacks `with_response`
+  (and the callback-response return shape); `create_followup` lacks `poll`;
+  `edit_original_response` lacks `flags`/`poll`; `edit_followup` lacks
+  `flags`.
+- **Commands**: create/edit (global+guild) lack `name_localizations`,
+  `description_localizations`, `integration_types`, `contexts`, `handler`;
+  `description` is wrongly mandatory (optional for non-CHAT_INPUT types);
+  list endpoints lack `with_localizations`.
+- **Channels**: `modify_channel` lacks the non-thread fields (`type`,
+  `bitrate`, `user_limit`, `permission_overwrites`, `rtc_region`,
+  `video_quality_mode`, `default_auto_archive_duration`, `available_tags`,
+  `default_reaction_emoji`, `default_thread_rate_limit_per_user`,
+  `default_sort_order`, `default_forum_layout`, group-DM `icon`);
+  `create_guild_channel` lacks the same forum/voice/default-thread family;
+  `create_channel_invite` lacks `target_type`, `target_user_id`,
+  `target_application_id`, `target_users_file`, `role_ids`;
+  `edit_channel_permissions` wrongly requires `allow`/`deny` (docs: optional,
+  default "0"); `get_reactions` lacks the `type` (burst) query key.
+- **Guilds**: `modify_guild_member` lacks `flags`; `create_guild_role`/
+  `modify_guild_role` lack `colors`, `icon`, `unicode_emoji` (+nullable
+  clears); `create_auto_moderation_rule` wrongly requires `trigger_metadata`
+  (optional for e.g. SPAM).
+- **Messages**: `create_message` reduces `message_reference` to same-channel
+  `reply_to` (no `type=FORWARD`, cross-channel reference, or
+  `fail_if_not_exists`) and lacks `shared_client_theme`.
+- **Webhooks**: `execute_webhook` lacks caller-supplied `flags`
+  (`SUPPRESS_EMBEDS`/`SUPPRESS_NOTIFICATIONS`); `edit_webhook_message` lacks
+  `flags` and the `with_components` query key.
+- **Users**: `modify_current_user` lacks `banner`.
