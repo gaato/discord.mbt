@@ -517,6 +517,7 @@ async fn[A] Command::dispatch_typed(
 ///|
 async fn dispatch_suggest(
   routes : Array[SuggestRoute],
+  warn : (String) -> Unit,
   raw : @framework.AutocompleteCtx,
 ) -> Unit {
   let path = raw.options.path()
@@ -536,6 +537,11 @@ async fn dispatch_suggest(
       }
       let choices = route.handler.suggest(ctx, input)
       let choices = if choices.length() > 25 {
+        let count = choices.length()
+        let command_path = [raw.data.name, ..path].join("/")
+        warn(
+          "autocomplete choices truncated for command path \{command_path}, option \{input.name()}: \{count} choices exceeds the limit of 25",
+        )
         choices[:25].to_owned()
       } else {
         choices

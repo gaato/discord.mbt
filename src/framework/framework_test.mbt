@@ -59,6 +59,31 @@ fn echo_interaction(text : String) -> @model.Interaction raise {
 }
 
 ///|
+fn autocomplete_interaction() -> @model.Interaction raise {
+  @json.from_json(
+    @json.parse(
+      (
+        #|{
+        #|  "id": "500000000000000012",
+        #|  "application_id": "400000000000000001",
+        #|  "type": 4,
+        #|  "token": "interaction-token",
+        #|  "version": 1,
+        #|  "data": {
+        #|    "id": "600000000000000012",
+        #|    "name": "search",
+        #|    "type": 1,
+        #|    "options": [
+        #|      {"name": "query", "type": 3, "value": "moon", "focused": true}
+        #|    ]
+        #|  }
+        #|}
+      ),
+    ),
+  )
+}
+
+///|
 fn named_command_interaction(
   name : String,
   typ : Int,
@@ -382,6 +407,32 @@ async test "process_with captures handler and ping callbacks" {
   let (ping_gate, ping_capture) = @framework.ResponseGate::capture(ping)
   assert_true(fw.process_with(ping, gate=ping_gate))
   assert_true(ping_capture.get().response.typ == Pong)
+}
+
+///|
+async test "raw autocomplete suggestions are truncated to 25 choices" {
+  let fw = test_framework()
+  fw.autocomplete("search", ctx => {
+    let choices = []
+    for i in 0..<30 {
+      choices.push(@interaction.string_choice("choice-\{i}", "value-\{i}"))
+    }
+    ctx.suggest(choices)
+  })
+  |> ignore
+  let interaction = autocomplete_interaction()
+  let (gate, capture) = @framework.ResponseGate::capture(interaction)
+  assert_true(fw.process_with(interaction, gate~))
+  let response = capture.get().response
+  assert_true(response.typ == Autocomplete)
+  guard response.data is Some(Object(data)) &&
+    data.get("choices") is Some(value) else {
+    fail("autocomplete response is missing choices")
+  }
+  let choices : Array[@model.CommandOptionChoice] = @json.from_json(value)
+  inspect(choices.length(), content="25")
+  inspect(choices[0].name, content="choice-0")
+  inspect(choices[24].name, content="choice-24")
 }
 
 ///|

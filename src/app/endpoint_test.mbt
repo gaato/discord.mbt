@@ -415,6 +415,8 @@ async test "interaction endpoint dispatches component and typed modal handlers" 
 ///|
 async test "typed autocomplete dispatches partial and nested focused options" {
   let app = @app.App(sync=Disabled)
+  let warnings : Array[String] = []
+  app.on_warn(message => warnings.push(message))
   app.command(
     @app.slash(
       name="search",
@@ -433,7 +435,7 @@ async test "typed autocomplete dispatches partial and nested focused options" {
           // intentionally absent and command decoding must not run.
           assert_false(ctx.options.has("scope"))
           let choices = []
-          for i in 0..<26 {
+          for i in 0..<30 {
             choices.push(
               @interaction.string_choice("\{value}-\{i}", "\{value}-\{i}"),
             )
@@ -506,6 +508,16 @@ async test "typed autocomplete dispatches partial and nested focused options" {
       application_id=@model.Id::parse("400000000000000001"),
       sync=false,
     )
+    match app.handle_interaction(nested) {
+      Reply(response~, files=_) => {
+        let choices = autocomplete_choices(response)
+        inspect(choices.length(), content="1")
+        inspect(choices[0].name, content="code 12")
+        inspect(choices[0].value.stringify(), content="12")
+        inspect(warnings.length(), content="0")
+      }
+      outcome => fail("expected nested autocomplete, got \{to_repr(outcome)}")
+    }
     match app.handle_interaction(top) {
       Reply(response~, files=_) => {
         assert_true(response.typ == Autocomplete)
@@ -513,18 +525,13 @@ async test "typed autocomplete dispatches partial and nested focused options" {
         inspect(choices.length(), content="25")
         inspect(choices[0].name, content="mo-0")
         inspect(choices[24].name, content="mo-24")
+        inspect(warnings.length(), content="1")
+        assert_true(warnings[0].contains("search"))
+        assert_true(warnings[0].contains("query"))
+        assert_true(warnings[0].contains("30"))
       }
       outcome =>
         fail("expected top-level autocomplete, got \{to_repr(outcome)}")
-    }
-    match app.handle_interaction(nested) {
-      Reply(response~, files=_) => {
-        let choices = autocomplete_choices(response)
-        inspect(choices.length(), content="1")
-        inspect(choices[0].name, content="code 12")
-        inspect(choices[0].value.stringify(), content="12")
-      }
-      outcome => fail("expected nested autocomplete, got \{to_repr(outcome)}")
     }
     match app.handle_interaction(manual) {
       Reply(response~, files=_) => {

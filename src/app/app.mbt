@@ -435,7 +435,7 @@ async fn App::run_registered_autocomplete(
   command : RegisteredCommand,
   raw : @framework.AutocompleteCtx,
 ) -> Unit {
-  dispatch_suggest(command.suggest_routes_, raw) catch {
+  dispatch_suggest(command.suggest_routes_, self.warn_, raw) catch {
     error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
       raise error
     error => {

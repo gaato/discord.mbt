@@ -948,11 +948,16 @@ pub(all) struct AutocompleteCtx {
 }
 
 ///|
-/// Send autocomplete suggestions (at most 25 choices).
+/// Send autocomplete suggestions. Choices beyond the first 25 are truncated.
 pub async fn AutocompleteCtx::suggest(
   self : AutocompleteCtx,
   choices : Array[@model.CommandOptionChoice],
 ) -> Unit {
+  let choices = if choices.length() > 25 {
+    choices[:25].to_owned()
+  } else {
+    choices
+  }
   self.gate.send({
     typ: Autocomplete,
     data: Some(@model.ObjBuilder().field("choices", choices).build()),
