@@ -6,6 +6,7 @@ pub struct GatewayCtx {
   priv intents_ : @model.Intents
   priv shard_ : @gateway.Shard
   priv shards_ : Array[@gateway.Shard]
+  priv cache_ : @cache.InMemoryCache?
   priv framework_ : @framework.Framework
   priv collector_ : EventCollector
   priv group_ : @async.TaskGroup[Unit]
@@ -37,6 +38,13 @@ pub fn GatewayCtx::latency_ms(self : GatewayCtx) -> Int64? {
 }
 
 ///|
+/// The cache attached with `Bot::attach_cache`, or `None` when no cache is
+/// attached.
+pub fn GatewayCtx::cache(self : GatewayCtx) -> @cache.InMemoryCache? {
+  self.cache_
+}
+
+///|
 /// Access the underlying gateway shard.
 pub fn GatewayCtx::shard_raw(self : GatewayCtx) -> @gateway.Shard {
   self.shard_
@@ -55,6 +63,36 @@ pub fn GatewayCtx::channel_ref(
   channel_id : @model.ChannelId,
 ) -> @dhttp.ChannelRef {
   self.app_.http().channel_ref(channel_id)
+}
+
+///|
+/// Resolve a channel with a cache-first lookup, including cached threads.
+/// Cache misses (including a disabled channels resource) fall back to REST.
+/// This favors speed; use `channel_ref(id).fetch()` when the latest channel
+/// state is required. A REST result is deliberately not written back because
+/// gateway events are the cache's only mutation entry point.
+///
+/// `MessageCreateEvent.channel_type` is commonly absent, so resolving the
+/// channel makes thread detection straightforward:
+///
+/// ```mbt nocheck
+/// let channel = ctx.resolve_channel(event.message.channel_id)
+///
+/// let is_thread = match channel.typ {
+///   AnnouncementThread | PublicThread | PrivateThread => true
+///   _ => false
+/// }
+/// ```
+pub async fn GatewayCtx::resolve_channel(
+  self : GatewayCtx,
+  channel_id : @model.ChannelId,
+) -> @model.Channel raise @dhttp.DiscordHttpError {
+  if self.cache_ is Some(cache) {
+    if cache.channel(channel_id) is Some(channel) {
+      return channel
+    }
+  }
+  self.channel_ref(channel_id).fetch()
 }
 
 ///|

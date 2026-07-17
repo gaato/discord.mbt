@@ -560,6 +560,7 @@ pub async fn Bot::run(self : Bot) -> Unit {
                 intents_: intents,
                 shard_: owner.shard,
                 shards_: shard_handles,
+                cache_: self.cache_,
                 framework_: router,
                 collector_: self.collector_,
                 group_: group,

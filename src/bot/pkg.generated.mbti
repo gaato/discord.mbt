@@ -130,6 +130,7 @@ pub struct GatewayCtx {
   // private fields
 }
 pub fn GatewayCtx::app(Self) -> @app.AppCtx
+pub fn GatewayCtx::cache(Self) -> @cache.InMemoryCache?
 pub fn GatewayCtx::channel_ref(Self, @model.Id[@model.ChannelMarker]) -> @http.ChannelRef
 pub fn GatewayCtx::framework_raw(Self) -> @framework.Framework
 pub fn GatewayCtx::guild_ref(Self, @model.Id[@model.GuildMarker]) -> @http.GuildRef
@@ -139,6 +140,7 @@ pub fn GatewayCtx::member_ref(Self, @model.Id[@model.GuildMarker], @model.Id[@mo
 pub fn GatewayCtx::message_ref(Self, @model.MessageCreateEvent) -> @http.MessageRef
 pub fn GatewayCtx::ready(Self) -> @model.Ready
 pub fn GatewayCtx::ref_of_message(Self, @model.Message) -> @http.MessageRef
+pub async fn GatewayCtx::resolve_channel(Self, @model.Id[@model.ChannelMarker]) -> @model.Channel raise @http.DiscordHttpError
 pub fn GatewayCtx::shard_raw(Self) -> @gateway.Shard
 pub async fn GatewayCtx::shutdown(Self) -> Unit
 pub fn GatewayCtx::user_ref(Self, @model.Id[@model.UserMarker]) -> @http.UserRef

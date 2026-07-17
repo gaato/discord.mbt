@@ -360,6 +360,15 @@ fn message_update_frame(sequence : Int, id : String) -> String {
 }
 
 ///|
+fn channel_create_frame(sequence : Int, id : String) -> String {
+  (
+    #|{"op":0,"s":SEQUENCE_PLACEHOLDER,"t":"CHANNEL_CREATE","d":{"id":"ID_PLACEHOLDER","type":11,"guild_id":"100","name":"cached-thread"}}
+  )
+  .replace(old="SEQUENCE_PLACEHOLDER", new=sequence.to_string())
+  .replace(old="ID_PLACEHOLDER", new=id)
+}
+
+///|
 fn voice_state_frame(sequence : Int, endpoint_session : String) -> String {
   (
     #|{"op":0,"s":SEQUENCE_PLACEHOLDER,"t":"VOICE_STATE_UPDATE","d":{"guild_id":"100","channel_id":"200","user_id":"1","session_id":"SESSION_PLACEHOLDER","deaf":false,"mute":false,"self_deaf":false,"self_mute":false,"suppress":false,"request_to_speak_timestamp":null}}
@@ -414,6 +423,7 @@ async test "gateway contexts expose heartbeat latency" {
     }
     transport.incoming.put(bot_ready_frame())
     let ctx = ready_contexts.get()
+    assert_true(ctx.cache() is None)
     debug_inspect(ctx.latency_ms(), content="None")
     debug_inspect(ctx.app().latency_ms(), content="None")
     transport.incoming.put(
@@ -434,6 +444,69 @@ async test "gateway contexts expose heartbeat latency" {
       fail("expected shard heartbeat latency")
     }
     assert_eq(ctx.app().latency_ms(), Some(shard_latency))
+    ctx.shutdown()
+    running.wait()
+  })
+}
+
+///|
+async test "gateway context resolves cached channels and falls back to REST" {
+  let transport = BotFakeTransport()
+  let app = @app.App(sync=Disabled)
+  let rest_calls = Ref(0)
+  let client = @dhttp.Client("test-token")
+  defer client.close()
+  client.middleware((_request, _next) => {
+    rest_calls.val += 1
+    {
+      status: 200,
+      headers: Map([]),
+      body: {
+        "id": "301",
+        "type": 0,
+        "guild_id": "100",
+        "name": "rest-channel",
+      },
+    }
+  })
+  let bot = Bot(
+    app,
+    token="test-token",
+    intents=@model.Intents::guilds(),
+    client~,
+    gateway_url="wss://gateway.example",
+  )
+  bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  let cache = @cache.InMemoryCache(resources=@cache.CacheResources::default())
+  bot.attach_cache(cache)
+  let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
+  bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
+  let resolved : @aqueue.Queue[(String, @model.ChannelType)] = Queue(
+    kind=Unbounded,
+  )
+  bot.on(Events::channel_create(), (ctx, event) => {
+    let channel = ctx.resolve_channel(event.id)
+    resolved.put((channel.id.to_string(), channel.typ))
+  })
+  @async.with_task_group(group => {
+    let running = group.spawn(no_wait=true, () => bot.run())
+    transport.incoming.put(BOT_HELLO)
+    guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
+      fail("expected identify")
+    }
+    transport.incoming.put(bot_ready_frame())
+    let ctx = ready_contexts.get()
+    assert_true(ctx.cache() is Some(_))
+    transport.incoming.put(channel_create_frame(2, "300"))
+    let (id, typ) = resolved.get()
+    inspect(id, content="300")
+    debug_inspect(typ, content="PublicThread")
+    inspect(rest_calls.val, content="0")
+    let missing_id : @model.ChannelId = @model.Id::parse("301")
+    let fetched = ctx.resolve_channel(missing_id)
+    debug_inspect(fetched.name, content="Some(Value(\"rest-channel\"))")
+    inspect(rest_calls.val, content="1")
+    assert_true(cache.channel(missing_id) is None)
     ctx.shutdown()
     running.wait()
   })
