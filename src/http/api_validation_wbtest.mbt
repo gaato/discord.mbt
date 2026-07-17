@@ -218,6 +218,76 @@ test "bulk guild ban validates user count and delete window" {
 }
 
 ///|
+test "auto moderation validates action and exemption caps" {
+  try validate_auto_moderation_rule(None, Some([]), None, None) catch {
+    Validation(message~) =>
+      inspect(
+        message,
+        content="auto moderation actions must contain 1 through 3 entries",
+      )
+    error => fail("unexpected error: \{to_repr(error)}")
+  } noraise {
+    _ => fail("expected empty actions validation")
+  }
+  let role_id : @model.RoleId = Id(1UL)
+  try
+    validate_auto_moderation_rule(
+      None,
+      None,
+      Some(Array::make(21, role_id)),
+      None,
+    )
+  catch {
+    Validation(message~) =>
+      inspect(
+        message,
+        content="auto moderation exempt_roles exceeds 20 entries",
+      )
+    error => fail("unexpected error: \{to_repr(error)}")
+  } noraise {
+    _ => fail("expected exempt role validation")
+  }
+  let channel_id : @model.ChannelId = Id(2UL)
+  try
+    validate_auto_moderation_rule(
+      None,
+      None,
+      None,
+      Some(Array::make(51, channel_id)),
+    )
+  catch {
+    Validation(message~) =>
+      inspect(
+        message,
+        content="auto moderation exempt_channels exceeds 50 entries",
+      )
+    error => fail("unexpected error: \{to_repr(error)}")
+  } noraise {
+    _ => fail("expected exempt channel validation")
+  }
+}
+
+///|
+test "sticker multipart form validation pins object and string requirements" {
+  try sticker_form_fields(Json::array([])) catch {
+    Validation(message~) =>
+      inspect(message, content="sticker form body must be an object")
+    error => fail("unexpected error: \{to_repr(error)}")
+  } noraise {
+    _ => fail("expected sticker object validation")
+  }
+  try
+    sticker_form_fields({ "name": 1, "description": "ok", "tags": "wave" })
+  catch {
+    Validation(message~) =>
+      inspect(message, content="sticker form field name must be a string")
+    error => fail("unexpected error: \{to_repr(error)}")
+  } noraise {
+    _ => fail("expected sticker field validation")
+  }
+}
+
+///|
 test "guild prune validates documented day range" {
   expect_search_validation(
     () => guild_prune_query(Some(0), None),
