@@ -14,10 +14,40 @@ fn[T] check_projection(
   guard descriptor.project(event) is Some(_) else {
     fail("\{name}: expected Some from a matching dispatch payload")
   }
+  guard event_kind(event) == descriptor.kind() else {
+    fail("\{name}: event_kind disagrees with the descriptor")
+  }
   let mismatch = @model.dispatch_event("RESUMED", @json.parse("null"))
   guard descriptor.project(mismatch) is None else {
     fail("\{name}: expected None from a mismatched event")
   }
+}
+
+///|
+test "event kinds classify the payload-free and unknown events" {
+  guard event_kind(@model.dispatch_event("RESUMED", @json.parse("null")))
+    is KResumed else {
+    fail("expected KResumed")
+  }
+  guard event_kind(@model.dispatch_event("SOMETHING_NEW", @json.parse("{}")))
+    is KUnknown else {
+    fail("expected KUnknown")
+  }
+}
+
+///|
+test "raw event handlers trigger the explicit-intents warning" {
+  let app = @app.App(sync=Disabled)
+  let warnings : Array[String] = []
+  app.on_warn(message => warnings.push(message))
+  let bot = Bot(app, token="test-token")
+  bot.on_event((_, _) => ())
+  ignore(bot.resolved_intents())
+  assert_true(
+    warnings.contains(
+      "raw event handlers do not imply gateway intents; pass intents explicitly for the events they consume",
+    ),
+  )
 }
 
 ///|

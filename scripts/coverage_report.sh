@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
 # Library test-coverage report for discord.mbt.
 #
-# Runs `moon coverage analyze -- -f summary`, restricts the result to library
-# packages (src/ minus src/examples/), prints a per-package table, and checks
-# every remaining uncovered file against the TEST_COVERAGE.md ledger: a file
-# with uncovered lines must have a ledger row whose budget covers them.
+# Runs `moon coverage analyze` in Coveralls-JSON mode (the `summary` format
+# silently omits fully covered files, which skews package totals), restricts
+# the result to library packages (src/ minus src/examples/), prints a
+# per-package table, and checks every remaining uncovered file against the
+# TEST_COVERAGE.md ledger: a file with uncovered lines must have a ledger row
+# whose budget covers them.
 #
-# Usage: scripts/coverage_report.sh [--from-summary FILE]
-#   --from-summary FILE  reuse an existing `-f summary` output instead of
-#                        re-running the (slow) instrumented test suite.
+# Usage: scripts/coverage_report.sh [--from-json FILE]
+#   --from-json FILE  reuse an existing Coveralls JSON report instead of
+#                     re-running the (slow) instrumented test suite.
 #
 # Exit status: 0 = every uncovered line is ledgered, 1 = unexplained coverage
 # gaps or over-budget files, 2 = setup/run failure.
@@ -17,13 +19,12 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 ledger="$repo_root/TEST_COVERAGE.md"
-summary_file=""
+json_file=""
 
-if [[ "${1:-}" == "--from-summary" ]]; then
-  summary_file="${2:?--from-summary needs a file}"
+if [[ "${1:-}" == "--from-json" ]]; then
+  json_file="${2:?--from-json needs a file}"
 else
-  summary_file="$(mktemp)"
-  trap 'rm -f "$summary_file"' EXIT
+  json_file="$repo_root/_build/coverage_report.json"
   # The DAVE/AEAD tests skip themselves when the voice shim is not loadable,
   # which silently under-reports src/voice coverage. Point the loader at the
   # in-tree build when present.
@@ -31,15 +32,33 @@ else
   if [[ -z "${DISCORD_VOICE_SHIM_PATH:-}" && -f "$shim" ]]; then
     export DISCORD_VOICE_SHIM_PATH="$shim"
   fi
+  # moon_cove_report merges every counter/trace file it finds under the
+  # working directory, so counters left by earlier runs and trace maps from
+  # the release profile silently corrupt the numbers (the analyze run itself
+  # builds the debug profile). Do not delete debug .trace.source files — the
+  # incremental build will not regenerate them.
+  find "$repo_root/_build" -name 'moonbit_coverage_*' -delete 2>/dev/null || true
+  find "$repo_root/_build/native/release" "$repo_root/_build/js" \
+    -name '*.trace.source' -delete 2>/dev/null || true
   # moon's bundled tcc cannot link on some hosts (openSUSE); use the system cc.
-  (cd "$repo_root" && MOON_CC="${MOON_CC:-cc}" moon coverage analyze -- -f summary) \
-    > "$summary_file" 2>/dev/null || {
+  (cd "$repo_root" &&
+    MOON_CC="${MOON_CC:-cc}" moon coverage analyze -- -f coveralls -o "$json_file") \
+    >/dev/null 2>&1 || {
       echo "error: moon coverage analyze failed" >&2
       exit 2
     }
 fi
 
-awk -v ledger="$ledger" '
+# One "file<TAB>covered<TAB>total" line per library source file.
+jq -r '
+  .source_files[]
+  | select(.name | startswith("src/"))
+  | select(.name | startswith("src/examples/") | not)
+  | [ .name,
+      ([.coverage[] | select(. != null and . > 0)] | length),
+      ([.coverage[] | select(. != null)] | length) ]
+  | @tsv
+' "$json_file" | awk -F '\t' -v ledger="$ledger" '
   # ---- ledger: rows like "| src/foo/bar.mbt | 12 | reason |" -------------
   BEGIN {
     while ((getline line < ledger) > 0) {
@@ -52,13 +71,9 @@ awk -v ledger="$ledger" '
     close(ledger)
   }
 
-  # ---- summary lines: "path: covered/total" ------------------------------
-  /^src\// {
-    split($0, halves, ": ")
-    file = halves[1]
-    if (file ~ /^src\/examples\//) next
-    split(halves[2], nums, "/")
-    cov = nums[1] + 0; tot = nums[2] + 0
+  {
+    file = $1; cov = $2 + 0; tot = $3 + 0
+    if (tot == 0) next   # declaration-only files have no executable points
     pkg = file; sub(/\/[^\/]*$/, "", pkg)
     pcov[pkg] += cov; ptot[pkg] += tot
     lcov += cov; ltot += tot
@@ -95,4 +110,4 @@ awk -v ledger="$ledger" '
     if (bad) { print "\nledger check: FAIL"; exit 1 }
     print "ledger check: OK — every uncovered line is ledgered"
   }
-' "$summary_file"
+'
