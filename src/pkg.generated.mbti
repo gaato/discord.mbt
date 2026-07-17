@@ -234,6 +234,8 @@ pub using @http {type GlobalCommandRef}
 
 pub using @http {type GuildCommandRef}
 
+pub using @framework {type GuildInvocation}
+
 pub using @http {type GuildRef}
 
 pub using @app {type HandlerError}

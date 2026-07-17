@@ -140,9 +140,26 @@ async fn delete_interaction_followup(
 }
 
 ///|
+/// Proof that an interaction was invoked in a guild: the guild id and the
+/// invoking member, both validated when the context was built.
+pub(all) struct GuildInvocation {
+  guild_id : @model.GuildId
+  member : @model.GuildMember
+} derive(Debug)
+
+///|
+/// The user who invoked this interaction.
+pub fn GuildInvocation::user(self : GuildInvocation) -> @model.User {
+  match self.member.user {
+    Some(user) => user
+    None => abort("validated guild invocation has no member user")
+  }
+}
+
+///|
 /// The context in which an interaction was invoked.
 pub(all) enum InvocationScope {
-  Guild(@model.GuildMember)
+  Guild(GuildInvocation)
   Dm(@model.User)
 } derive(Debug)
 
@@ -159,6 +176,7 @@ pub(all) enum ModalOrigin {
 pub(all) suberror InteractionContextError {
   MissingInvoker
   MissingGuildMemberUser
+  MissingGuildId
   MissingComponentMessage
 } derive(Debug)
 
@@ -179,7 +197,8 @@ fn interaction_scope(
   match (interaction.guild_member, interaction.user) {
     (Some(guild_member), _) => {
       guard guild_member.user is Some(_) else { raise MissingGuildMemberUser }
-      Guild(guild_member)
+      guard interaction.guild_id is Some(guild_id) else { raise MissingGuildId }
+      Guild({ guild_id, member: guild_member })
     }
     (None, Some(user)) => Dm(user)
     (None, None) => raise MissingInvoker
@@ -189,11 +208,7 @@ fn interaction_scope(
 ///|
 fn InvocationScope::invoking_user(self : InvocationScope) -> @model.User {
   match self {
-    Guild(guild_member) =>
-      match guild_member.user {
-        Some(user) => user
-        None => abort("validated guild invocation has no member user")
-      }
+    Guild(guild) => guild.user()
     Dm(user) => user
   }
 }
@@ -232,6 +247,15 @@ pub(all) struct CommandCtx {
 /// Whether the command was invoked in a guild or a DM.
 pub fn CommandCtx::scope(self : CommandCtx) -> InvocationScope {
   self.scope_
+}
+
+///|
+/// The validated guild invocation, or `None` when invoked in a DM.
+pub fn CommandCtx::guild_scope(self : CommandCtx) -> GuildInvocation? {
+  match self.scope_ {
+    Guild(guild) => Some(guild)
+    Dm(_) => None
+  }
 }
 
 ///|
@@ -482,6 +506,15 @@ pub fn ComponentCtx::scope(self : ComponentCtx) -> InvocationScope {
 }
 
 ///|
+/// The validated guild invocation, or `None` when invoked in a DM.
+pub fn ComponentCtx::guild_scope(self : ComponentCtx) -> GuildInvocation? {
+  match self.scope_ {
+    Guild(guild) => Some(guild)
+    Dm(_) => None
+  }
+}
+
+///|
 /// The invoking user.
 pub fn ComponentCtx::user(self : ComponentCtx) -> @model.User {
   self.scope_.invoking_user()
@@ -722,6 +755,15 @@ pub(all) struct ModalCtx {
 /// Whether the modal was submitted in a guild or a DM.
 pub fn ModalCtx::scope(self : ModalCtx) -> InvocationScope {
   self.scope_
+}
+
+///|
+/// The validated guild invocation, or `None` when invoked in a DM.
+pub fn ModalCtx::guild_scope(self : ModalCtx) -> GuildInvocation? {
+  match self.scope_ {
+    Guild(guild) => Some(guild)
+    Dm(_) => None
+  }
 }
 
 ///|

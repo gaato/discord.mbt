@@ -273,9 +273,10 @@ test "multi-guild configuration resolves destinations" {
 }
 ```
 
-The handler reads `ctx.guild_id()` and rejects an unconfigured guild with a
-user-facing `HandlerError`. One feature instance can then serve the configured
-guilds and keep shared state where needed.
+The handler uses `let guild = ctx.guild_scope()` and looks up
+`guild.guild_id`; a DM raises `GuildOnly`, while an unconfigured guild can be
+rejected with a user-facing `HandlerError`. One feature instance can then
+serve the configured guilds and keep shared state where needed.
 
 ## Add checks and cooldowns at registration
 

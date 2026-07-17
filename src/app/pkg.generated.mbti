@@ -103,6 +103,7 @@ pub struct CheckCtx {
   // private fields
 }
 pub fn CheckCtx::guild_id(Self) -> @model.Id[@model.GuildMarker]?
+pub fn CheckCtx::guild_scope(Self) -> @framework.GuildInvocation raise HandlerError
 pub fn CheckCtx::interaction(Self) -> @model.Interaction
 pub fn CheckCtx::scope(Self) -> @framework.InvocationScope
 pub fn CheckCtx::user(Self) -> @model.User
@@ -136,6 +137,7 @@ pub fn ComponentDeferredCtx::custom_id(Self) -> String
 pub async fn ComponentDeferredCtx::edit_original(Self, content? : String, clear_content? : Bool, embeds? : Array[@model.Embed], components? : Array[@model.Component], allowed_mentions? : @model.AllowedMentions, files? : Array[@http.FileUpload]) -> @model.Message
 pub async fn ComponentDeferredCtx::followup(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, ephemeral? : Bool) -> @model.Message
 pub fn ComponentDeferredCtx::guild_id(Self) -> @model.Id[@model.GuildMarker]?
+pub fn ComponentDeferredCtx::guild_scope(Self) -> @framework.GuildInvocation raise HandlerError
 pub fn ComponentDeferredCtx::interaction(Self) -> @model.Interaction
 pub fn ComponentDeferredCtx::message(Self) -> @model.Message
 pub fn ComponentDeferredCtx::raw(Self) -> @framework.ComponentCtx
@@ -161,6 +163,7 @@ pub struct ComponentImmediateCtx {
 pub fn ComponentImmediateCtx::app(Self) -> AppCtx
 pub fn ComponentImmediateCtx::custom_id(Self) -> String
 pub fn ComponentImmediateCtx::guild_id(Self) -> @model.Id[@model.GuildMarker]?
+pub fn ComponentImmediateCtx::guild_scope(Self) -> @framework.GuildInvocation raise HandlerError
 pub fn ComponentImmediateCtx::interaction(Self) -> @model.Interaction
 pub fn ComponentImmediateCtx::message(Self) -> @model.Message
 pub fn ComponentImmediateCtx::raw(Self) -> @framework.ComponentCtx
@@ -193,6 +196,7 @@ pub fn DeferredCtx::app(Self) -> AppCtx
 pub async fn DeferredCtx::edit_original(Self, content? : String, clear_content? : Bool, embeds? : Array[@model.Embed], components? : Array[@model.Component], allowed_mentions? : @model.AllowedMentions, files? : Array[@http.FileUpload]) -> @model.Message
 pub async fn DeferredCtx::followup(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, ephemeral? : Bool) -> @model.Message
 pub fn DeferredCtx::guild_id(Self) -> @model.Id[@model.GuildMarker]?
+pub fn DeferredCtx::guild_scope(Self) -> @framework.GuildInvocation raise HandlerError
 pub fn DeferredCtx::interaction(Self) -> @model.Interaction
 pub fn DeferredCtx::raw(Self) -> @framework.CommandCtx
 pub fn DeferredCtx::scope(Self) -> @framework.InvocationScope
@@ -229,6 +233,7 @@ pub struct ImmediateCtx {
 }
 pub fn ImmediateCtx::app(Self) -> AppCtx
 pub fn ImmediateCtx::guild_id(Self) -> @model.Id[@model.GuildMarker]?
+pub fn ImmediateCtx::guild_scope(Self) -> @framework.GuildInvocation raise HandlerError
 pub fn ImmediateCtx::interaction(Self) -> @model.Interaction
 pub fn ImmediateCtx::raw(Self) -> @framework.CommandCtx
 pub fn ImmediateCtx::scope(Self) -> @framework.InvocationScope
@@ -243,6 +248,7 @@ pub struct InteractionCtx {
   // private fields
 }
 pub fn InteractionCtx::guild_id(Self) -> @model.Id[@model.GuildMarker]?
+pub fn InteractionCtx::guild_scope(Self) -> @framework.GuildInvocation raise HandlerError
 pub fn InteractionCtx::interaction(Self) -> @model.Interaction
 pub async fn InteractionCtx::respond(Self, String, ephemeral? : Bool) -> Unit
 pub fn InteractionCtx::scope(Self) -> @framework.InvocationScope
@@ -286,6 +292,7 @@ pub fn ModalDeferredCtx::app(Self) -> AppCtx
 pub async fn ModalDeferredCtx::edit_original(Self, content? : String, clear_content? : Bool, embeds? : Array[@model.Embed], components? : Array[@model.Component], allowed_mentions? : @model.AllowedMentions, files? : Array[@http.FileUpload]) -> @model.Message
 pub async fn ModalDeferredCtx::followup(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, ephemeral? : Bool) -> @model.Message
 pub fn ModalDeferredCtx::guild_id(Self) -> @model.Id[@model.GuildMarker]?
+pub fn ModalDeferredCtx::guild_scope(Self) -> @framework.GuildInvocation raise HandlerError
 pub fn ModalDeferredCtx::interaction(Self) -> @model.Interaction
 pub fn ModalDeferredCtx::origin(Self) -> @framework.ModalOrigin
 pub fn ModalDeferredCtx::raw(Self) -> @framework.ModalCtx
@@ -322,6 +329,7 @@ pub struct ModalImmediateCtx {
 }
 pub fn ModalImmediateCtx::app(Self) -> AppCtx
 pub fn ModalImmediateCtx::guild_id(Self) -> @model.Id[@model.GuildMarker]?
+pub fn ModalImmediateCtx::guild_scope(Self) -> @framework.GuildInvocation raise HandlerError
 pub fn ModalImmediateCtx::interaction(Self) -> @model.Interaction
 pub fn ModalImmediateCtx::origin(Self) -> @framework.ModalOrigin
 pub fn ModalImmediateCtx::raw(Self) -> @framework.ModalCtx

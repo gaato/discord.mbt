@@ -280,6 +280,44 @@ async test "middleware CheckFailed matches a failing command check" {
 }
 
 ///|
+async test "middleware guild_scope failures flow through the error policy" {
+  let client = @dhttp.Client("test-token")
+  defer client.close()
+  let app = App(sync=Disabled)
+  app.middleware((ctx, next) => {
+    match ctx.target() {
+      Command(name~) if name == "guild-required" => {
+        ctx.guild_scope() |> ignore
+        next()
+      }
+      _ => next()
+    }
+  })
+  app.command(
+    slash(
+      name="guild-required",
+      description="Requires a guild",
+      args=@interaction.Args::unit(),
+      handler=Raw(_ => fail("guild-required handler must not run in a DM")),
+    ),
+  )
+  let framework = middleware_test_framework(app, client)
+  guard process_middleware_interaction(
+      framework,
+      middleware_command_interaction("guild-required", "500000000000000632"),
+    )
+    is Some(captured) else {
+    fail("expected guild-only error response")
+  }
+  inspect(
+    captured.response.to_json().stringify(),
+    content=(
+      #|{"type":4,"data":{"content":"This command can only be used in a server.","flags":64}}
+    ),
+  )
+}
+
+///|
 async test "interaction middleware wraps command checks" {
   let client = @dhttp.Client("test-token")
   defer client.close()

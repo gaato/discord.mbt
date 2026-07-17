@@ -228,9 +228,19 @@ async test "interaction contexts expose DM and guild invocation scopes" {
   let scopes : Array[String] = []
   fw.command(@interaction.CommandSpec::slash("echo", "Echo"), ctx => {
     match ctx.scope() {
-      Dm(user) => scopes.push("dm:\{user.id}:\{ctx.user().id}")
-      Guild(guild_invoker) =>
-        scopes.push("guild:\{guild_invoker.user.unwrap().id}:\{ctx.user().id}")
+      Dm(user) => {
+        assert_true(ctx.guild_scope() is None)
+        scopes.push("dm:\{user.id}:\{ctx.user().id}")
+      }
+      Guild(guild) => {
+        guard ctx.guild_scope() is Some(from_accessor) else {
+          fail("expected guild scope")
+        }
+        assert_true(guild.guild_id == from_accessor.guild_id)
+        assert_true(guild.guild_id == @model.Id::parse("800000000000000001"))
+        assert_true(guild.user().id == ctx.user().id)
+        scopes.push("guild:\{guild.user().id}:\{ctx.user().id}")
+      }
     }
   })
   |> ignore
@@ -254,6 +264,54 @@ async test "interaction contexts expose DM and guild invocation scopes" {
 }
 
 ///|
+async test "component and modal contexts expose optional guild scopes" {
+  let fw = test_framework()
+  let scopes : Array[String] = []
+  fw
+  .component("scope", ctx => {
+    match ctx.guild_scope() {
+      Some(guild) => scopes.push("component:guild:\{guild.guild_id}")
+      None => scopes.push("component:dm")
+    }
+  })
+  .modal("feedback", ctx => {
+    match ctx.guild_scope() {
+      Some(guild) => scopes.push("modal:guild:\{guild.guild_id}")
+      None => scopes.push("modal:dm")
+    }
+  })
+  |> ignore
+  assert_true(fw.process(component_interaction("scope:dm")))
+  assert_true(fw.process(modal_interaction()))
+  let guild_id : @model.GuildId = @model.Id::parse("800000000000000001")
+  let guild_component = {
+    ..component_interaction("scope:guild"),
+    guild_id: Some(guild_id),
+    guild_member: Some(interaction_test_member()),
+    user: None,
+  }
+  let guild_modal = {
+    ..modal_interaction(),
+    guild_id: Some(guild_id),
+    guild_member: Some(interaction_test_member()),
+    user: None,
+  }
+  assert_true(fw.process(guild_component))
+  assert_true(fw.process(guild_modal))
+  debug_inspect(
+    scopes,
+    content=(
+      #|[
+      #|  "component:dm",
+      #|  "modal:dm",
+      #|  "component:guild:800000000000000001",
+      #|  "modal:guild:800000000000000001",
+      #|]
+    ),
+  )
+}
+
+///|
 async test "interaction contexts reject invalid invoker combinations" {
   let fw = test_framework()
   fw.command(@interaction.CommandSpec::slash("echo", "Echo"), _ => ()) |> ignore
@@ -267,12 +325,14 @@ async test "interaction contexts reject invalid invoker combinations" {
   // Both member and user present: tolerated, resolved as a guild invocation.
   let ambiguous = {
     ..echo_interaction("ambiguous"),
+    guild_id: Some(@model.Id::parse("800000000000000001")),
     guild_member: Some(interaction_test_member()),
   }
   assert_true(fw.process(ambiguous))
   let member_without_user = { ..interaction_test_member(), user: None }
   let invalid_guild = {
     ..echo_interaction("missing-member-user"),
+    guild_id: Some(@model.Id::parse("800000000000000001")),
     guild_member: Some(member_without_user),
     user: None,
   }
@@ -281,6 +341,17 @@ async test "interaction contexts reject invalid invoker combinations" {
     error => fail("unexpected error: \{to_repr(error)}")
   } noraise {
     _ => fail("expected MissingGuildMemberUser")
+  }
+  let missing_guild_id = {
+    ..echo_interaction("missing-guild-id"),
+    guild_member: Some(interaction_test_member()),
+    user: None,
+  }
+  try fw.process(missing_guild_id) |> ignore catch {
+    @framework.InteractionContextError::MissingGuildId => ()
+    error => fail("unexpected error: \{to_repr(error)}")
+  } noraise {
+    _ => fail("expected MissingGuildId")
   }
 }
 

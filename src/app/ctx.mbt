@@ -55,6 +55,16 @@ pub(all) enum ResponsePhase {
 } derive(Debug, Eq)
 
 ///|
+fn require_guild(
+  scope : @framework.GuildInvocation?,
+) -> @framework.GuildInvocation raise HandlerError {
+  match scope {
+    Some(guild) => guild
+    None => raise GuildOnly
+  }
+}
+
+///|
 /// Read-only command context for handlers that return their initial response.
 pub struct ImmediateCtx {
   priv raw_ : @framework.CommandCtx
@@ -74,6 +84,15 @@ pub fn ImmediateCtx::scope(self : ImmediateCtx) -> @framework.InvocationScope {
 }
 
 ///|
+/// The validated guild invocation. In a DM this raises
+/// `HandlerError::GuildOnly`, which the error policy renders normally.
+pub fn ImmediateCtx::guild_scope(
+  self : ImmediateCtx,
+) -> @framework.GuildInvocation raise HandlerError {
+  require_guild(self.raw_.guild_scope())
+}
+
+///|
 /// The invoking user.
 pub fn ImmediateCtx::user(self : ImmediateCtx) -> @model.User {
   self.raw_.user()
@@ -86,7 +105,9 @@ pub fn ImmediateCtx::interaction(self : ImmediateCtx) -> @model.Interaction {
 }
 
 ///|
-/// The guild the interaction was invoked in, or `None` outside guilds.
+/// The guild the interaction was invoked in, or `None` outside guilds. Use
+/// `guild_scope()` for flows that require a guild; this accessor is for
+/// maybe-guild flows where DMs are valid.
 pub fn ImmediateCtx::guild_id(self : ImmediateCtx) -> @model.GuildId? {
   self.raw_.interaction.guild_id
 }
@@ -120,6 +141,15 @@ pub fn DeferredCtx::scope(self : DeferredCtx) -> @framework.InvocationScope {
 }
 
 ///|
+/// The validated guild invocation. In a DM this raises
+/// `HandlerError::GuildOnly`, which the error policy renders normally.
+pub fn DeferredCtx::guild_scope(
+  self : DeferredCtx,
+) -> @framework.GuildInvocation raise HandlerError {
+  require_guild(self.raw_.guild_scope())
+}
+
+///|
 /// The invoking user.
 pub fn DeferredCtx::user(self : DeferredCtx) -> @model.User {
   self.raw_.user()
@@ -132,7 +162,9 @@ pub fn DeferredCtx::interaction(self : DeferredCtx) -> @model.Interaction {
 }
 
 ///|
-/// The guild the interaction was invoked in, or `None` outside guilds.
+/// The guild the interaction was invoked in, or `None` outside guilds. Use
+/// `guild_scope()` for flows that require a guild; this accessor is for
+/// maybe-guild flows where DMs are valid.
 pub fn DeferredCtx::guild_id(self : DeferredCtx) -> @model.GuildId? {
   self.raw_.interaction.guild_id
 }

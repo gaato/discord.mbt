@@ -392,6 +392,55 @@ async test "built-in scope and permission checks use invocation data" {
 }
 
 ///|
+async test "command guild_scope raises in DMs and returns the guild bundle" {
+  let client = @dhttp.Client("test-token")
+  defer client.close()
+  let app = App(sync=Disabled)
+  let guild_ids : Array[String] = []
+  app.command(
+    slash(
+      name="guild-scope",
+      description="Inspect the guild scope",
+      args=@interaction.Args::unit(),
+      handler=Immediate((ctx, _) => {
+        let guild = ctx.guild_scope()
+        guild_ids.push(guild.guild_id.to_string())
+        CommandReply::message(content="guild \{guild.guild_id}")
+      }),
+    ),
+  )
+  let framework = @framework.Framework(
+    client,
+    @model.Id::parse("400000000000000001"),
+  )
+  app.attach(
+    framework,
+    client~,
+    application_id=@model.Id::parse("400000000000000001"),
+  )
+  |> ignore
+  let dm = guard_dm_interaction("guild-scope", "500000000000000020")
+  let (dm_gate, dm_capture) = @framework.ResponseGate::capture(dm)
+  assert_true(framework.process_with(dm, gate=dm_gate))
+  inspect(
+    dm_capture.get().response.to_json().stringify(),
+    content=(
+      #|{"type":4,"data":{"content":"This command can only be used in a server.","flags":64}}
+    ),
+  )
+  let guild = guard_guild_interaction("guild-scope", "500000000000000021")
+  let (guild_gate, guild_capture) = @framework.ResponseGate::capture(guild)
+  assert_true(framework.process_with(guild, gate=guild_gate))
+  inspect(
+    guild_capture.get().response.to_json().stringify(),
+    content=(
+      #|{"type":4,"data":{"content":"guild 800000000000000001"}}
+    ),
+  )
+  debug_inspect(guild_ids, content="[\"800000000000000001\"]")
+}
+
+///|
 async test "command cooldown reports retry time and recovers" {
   let client = @dhttp.Client("test-token")
   defer client.close()

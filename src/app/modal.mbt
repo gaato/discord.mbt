@@ -511,6 +511,15 @@ pub fn ModalImmediateCtx::scope(
 }
 
 ///|
+/// The validated guild invocation. In a DM this raises
+/// `HandlerError::GuildOnly`, which the error policy renders normally.
+pub fn ModalImmediateCtx::guild_scope(
+  self : ModalImmediateCtx,
+) -> @framework.GuildInvocation raise HandlerError {
+  require_guild(self.raw_.guild_scope())
+}
+
+///|
 /// The invoking user.
 pub fn ModalImmediateCtx::user(self : ModalImmediateCtx) -> @model.User {
   self.raw_.user()
@@ -534,7 +543,9 @@ pub fn ModalImmediateCtx::interaction(
 }
 
 ///|
-/// The guild the interaction was invoked in, or `None` outside guilds.
+/// The guild the interaction was invoked in, or `None` outside guilds. Use
+/// `guild_scope()` for flows that require a guild; this accessor is for
+/// maybe-guild flows where DMs are valid.
 pub fn ModalImmediateCtx::guild_id(self : ModalImmediateCtx) -> @model.GuildId? {
   self.raw_.interaction.guild_id
 }
@@ -567,6 +578,15 @@ pub fn ModalDeferredCtx::scope(
 }
 
 ///|
+/// The validated guild invocation. In a DM this raises
+/// `HandlerError::GuildOnly`, which the error policy renders normally.
+pub fn ModalDeferredCtx::guild_scope(
+  self : ModalDeferredCtx,
+) -> @framework.GuildInvocation raise HandlerError {
+  require_guild(self.raw_.guild_scope())
+}
+
+///|
 /// The invoking user.
 pub fn ModalDeferredCtx::user(self : ModalDeferredCtx) -> @model.User {
   self.raw_.user()
@@ -590,7 +610,9 @@ pub fn ModalDeferredCtx::interaction(
 }
 
 ///|
-/// The guild the interaction was invoked in, or `None` outside guilds.
+/// The guild the interaction was invoked in, or `None` outside guilds. Use
+/// `guild_scope()` for flows that require a guild; this accessor is for
+/// maybe-guild flows where DMs are valid.
 pub fn ModalDeferredCtx::guild_id(self : ModalDeferredCtx) -> @model.GuildId? {
   self.raw_.interaction.guild_id
 }

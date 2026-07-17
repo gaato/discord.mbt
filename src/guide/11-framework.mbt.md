@@ -166,23 +166,28 @@ response gate; everything after it is an ordinary REST call against the
 interaction token, which Discord keeps valid for 15 minutes.
 
 They also share invoker accessors. `user()` returns the invoking user, and
-`scope()` distinguishes guild invocations (with the full member) from DMs:
+`scope()` distinguishes validated guild invocations (with both the guild id
+and full member) from DMs. `guild_scope()` is the non-raising shortcut when
+only the guild case matters:
 
 ```mbt check
 ///|
 async fn audit_scope(ctx : @framework.CommandCtx) -> Unit {
   match ctx.scope() {
-    Guild(invoker) =>
-      ctx.respond(content="from \{invoker.user.unwrap().username}'s guild")
+    Guild(guild) =>
+      ctx.respond(
+        content="\{guild.user().username} invoked from guild \{guild.guild_id}",
+      )
     Dm(user) => ctx.respond(content="from a DM with \{user.username}")
   }
 }
 ```
 
 A payload that cannot satisfy these guarantees — no invoker, a guild member
-without its user, a component interaction without its host message — raises
-`InteractionContextError` from `process` before the handler runs, so inside a
-handler `user()`, `scope()`, and `ComponentCtx::message()` never fail.
+without its user or guild id, a component interaction without its host
+message — raises `InteractionContextError` (`MissingGuildId` for the missing
+guild id case) from `process` before the handler runs. Inside a handler,
+`user()`, `scope()`, and `ComponentCtx::message()` therefore never fail.
 
 `ModalCtx::origin()` reports what opened the modal: `FromComponent(message)`
 carries the message that hosted the component, `FromCommand` means there is

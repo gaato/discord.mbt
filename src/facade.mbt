@@ -67,6 +67,7 @@ pub using @framework {
   type ModalOrigin,
   type InteractionContextError,
   type TargetUser,
+  type GuildInvocation,
 }
 
 ///|

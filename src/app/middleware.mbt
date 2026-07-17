@@ -54,7 +54,23 @@ pub fn InteractionCtx::scope(
 }
 
 ///|
-/// The guild the interaction was invoked in, or `None` outside guilds.
+/// The validated guild invocation. In a DM this raises
+/// `HandlerError::GuildOnly`, which the error policy renders normally.
+pub fn InteractionCtx::guild_scope(
+  self : InteractionCtx,
+) -> @framework.GuildInvocation raise HandlerError {
+  let scope = match self.raw_ {
+    RawCommand(ctx) => ctx.guild_scope()
+    RawComponent(ctx) => ctx.guild_scope()
+    RawModal(ctx) => ctx.guild_scope()
+  }
+  require_guild(scope)
+}
+
+///|
+/// The guild the interaction was invoked in, or `None` outside guilds. Use
+/// `guild_scope()` for flows that require a guild; this accessor is for
+/// maybe-guild flows where DMs are valid.
 pub fn InteractionCtx::guild_id(self : InteractionCtx) -> @model.GuildId? {
   self.interaction().guild_id
 }

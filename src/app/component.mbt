@@ -177,6 +177,15 @@ pub fn ComponentImmediateCtx::scope(
 }
 
 ///|
+/// The validated guild invocation. In a DM this raises
+/// `HandlerError::GuildOnly`, which the error policy renders normally.
+pub fn ComponentImmediateCtx::guild_scope(
+  self : ComponentImmediateCtx,
+) -> @framework.GuildInvocation raise HandlerError {
+  require_guild(self.raw_.guild_scope())
+}
+
+///|
 /// The full interaction payload.
 pub fn ComponentImmediateCtx::interaction(
   self : ComponentImmediateCtx,
@@ -185,7 +194,9 @@ pub fn ComponentImmediateCtx::interaction(
 }
 
 ///|
-/// The guild the interaction was invoked in, or `None` outside guilds.
+/// The guild the interaction was invoked in, or `None` outside guilds. Use
+/// `guild_scope()` for flows that require a guild; this accessor is for
+/// maybe-guild flows where DMs are valid.
 pub fn ComponentImmediateCtx::guild_id(
   self : ComponentImmediateCtx,
 ) -> @model.GuildId? {
@@ -275,6 +286,15 @@ pub fn ComponentDeferredCtx::scope(
 }
 
 ///|
+/// The validated guild invocation. In a DM this raises
+/// `HandlerError::GuildOnly`, which the error policy renders normally.
+pub fn ComponentDeferredCtx::guild_scope(
+  self : ComponentDeferredCtx,
+) -> @framework.GuildInvocation raise HandlerError {
+  require_guild(self.raw_.guild_scope())
+}
+
+///|
 /// The full interaction payload.
 pub fn ComponentDeferredCtx::interaction(
   self : ComponentDeferredCtx,
@@ -283,7 +303,9 @@ pub fn ComponentDeferredCtx::interaction(
 }
 
 ///|
-/// The guild the interaction was invoked in, or `None` outside guilds.
+/// The guild the interaction was invoked in, or `None` outside guilds. Use
+/// `guild_scope()` for flows that require a guild; this accessor is for
+/// maybe-guild flows where DMs are valid.
 pub fn ComponentDeferredCtx::guild_id(
   self : ComponentDeferredCtx,
 ) -> @model.GuildId? {

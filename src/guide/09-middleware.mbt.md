@@ -97,7 +97,8 @@ required.
 
 `App::middleware` is application-global. It runs for commands, components,
 and modals, but not autocomplete. `InteractionCtx` exposes the routed target,
-interaction, user, invocation scope, and guild ID.
+interaction, user, invocation scope, optional guild ID, and `guild_scope()`
+for a validated guild id/member bundle (raising `GuildOnly` in DMs).
 
 A ban list can reject an interaction with the same error used by a failed
 command check:

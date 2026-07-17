@@ -167,6 +167,31 @@ test "command declarations compile" {
 
 ## Handler modes
 
+App-level contexts expose a validated guild bundle. `guild_scope()` returns
+both the guild id and invoking member; in a DM it raises
+`HandlerError::GuildOnly`, which the error policy renders like any other
+expected handler failure:
+
+```mbt check
+///|
+let guild_info : @discord.Command[Unit] = @discord.slash(
+  name="guild-info",
+  description="Show the invoking guild",
+  args=@discord.Args::unit(),
+  handler=Immediate((ctx, _) => {
+    let guild = ctx.guild_scope()
+    @discord.CommandReply::message(
+      content="guild=\{guild.guild_id}, user=\{guild.user().username}",
+    )
+  }),
+)
+
+///|
+test "guild command declaration compiles" {
+  ignore(guild_info.spec())
+}
+```
+
 - `Immediate((ctx, value) => CommandReply)` returns the initial response.
 - `Deferred(ephemeral=..., (ctx, value) => Unit)` acknowledges first; use
   `ctx.edit_original`, `ctx.followup`, or `ctx.wait_for_component` afterward.

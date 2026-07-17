@@ -12,6 +12,15 @@ pub fn CheckCtx::scope(self : CheckCtx) -> @framework.InvocationScope {
 }
 
 ///|
+/// The validated guild invocation. In a DM this raises
+/// `HandlerError::GuildOnly`, which the error policy renders normally.
+pub fn CheckCtx::guild_scope(
+  self : CheckCtx,
+) -> @framework.GuildInvocation raise HandlerError {
+  require_guild(self.raw_.guild_scope())
+}
+
+///|
 /// The invoking user.
 pub fn CheckCtx::user(self : CheckCtx) -> @model.User {
   self.raw_.user()
@@ -24,7 +33,9 @@ pub fn CheckCtx::interaction(self : CheckCtx) -> @model.Interaction {
 }
 
 ///|
-/// The guild the interaction was invoked in, or `None` outside guilds.
+/// The guild the interaction was invoked in, or `None` outside guilds. Use
+/// `guild_scope()` for flows that require a guild; this accessor is for
+/// maybe-guild flows where DMs are valid.
 pub fn CheckCtx::guild_id(self : CheckCtx) -> @model.GuildId? {
   self.raw_.interaction.guild_id
 }
@@ -61,19 +72,15 @@ pub fn dm_only() -> CommandCheck {
 /// Discord does not provide member permissions for DM invocations.
 pub fn required_permissions(required : @model.Permissions) -> CommandCheck {
   ctx => {
-    match ctx.scope() {
-      Guild(guild_member) => {
-        guard guild_member.permissions is Some(actual) &&
-          (
-            actual.contains(@model.Permissions::administrator()) ||
-            actual.contains(required)
-          ) else {
-          raise MissingPermission(required)
-        }
-        true
-      }
-      Dm(_) => raise GuildOnly
+    let guild = ctx.guild_scope()
+    guard guild.member.permissions is Some(actual) &&
+      (
+        actual.contains(@model.Permissions::administrator()) ||
+        actual.contains(required)
+      ) else {
+      raise MissingPermission(required)
     }
+    true
   }
 }
 
