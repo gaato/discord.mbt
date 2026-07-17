@@ -1,36 +1,28 @@
 ///|
 /// Rich content embedded in a Discord message.
 ///
-/// Embed models are public records. Set fields that Discord should receive
-/// and use `None` for the rest, then pass the value to
+/// Use `Embed(...)` to construct outgoing embeds from fields Discord accepts
+/// when sending. Embed models remain public records so received metadata can
+/// be inspected. Pass outgoing values to
 /// `Client::create_message(embeds=[...])`, `CommandReply::message(embeds=[...])`,
 /// `ctx.respond`, or a followup method. Discord applies its documented embed
 /// count and text-length limits.
 ///
 /// ```mbt check
-/// test "set only the fields discord should receive" {
-///   let embed : @model.Embed = {
-///     title: Some("Build complete"),
-///     typ: None,
-///     url: Some("https://example.com/builds/42"),
-///     description: Some("All checks passed."),
-///     timestamp: Some(@model.Timestamp("2026-07-15T00:00:00Z")),
-///     color: Some(0x57F287),
-///     footer: Some({ text: "build 42", icon_url: None, proxy_icon_url: None }),
-///     image: None,
-///     thumbnail: None,
-///     video: None,
-///     provider: None,
-///     author: None,
-///     fields: Some([
-///       { name: "Target", value: "native", inline: Some(true) },
-///       { name: "Tests", value: "325 passed", inline: Some(true) },
-///     ]),
-///     flags: None,
-///   }
+/// test "construct an outgoing embed" {
+///   let embed = @model.Embed(
+///     title="Build complete",
+///     description="All checks passed.",
+///     timestamp=@model.Timestamp("2026-07-15T00:00:00Z"),
+///     color=0x57F287,
+///     footer=@model.EmbedFooter("build 42"),
+///     fields=[
+///       @model.EmbedField("Target", "native", inline=true),
+///       @model.EmbedField("Tests", "325 passed", inline=true),
+///     ],
+///   )
 ///   json_inspect(embed, content={
 ///     "title": "Build complete",
-///     "url": "https://example.com/builds/42",
 ///     "description": "All checks passed.",
 ///     "timestamp": "2026-07-15T00:00:00Z",
 ///     "color": 5763719,
@@ -63,6 +55,40 @@ pub(all) struct Embed {
   FromJson(fields(typ(rename="type"))),
   Debug,
 )
+
+///|
+/// Construct an embed containing only fields accepted in outgoing payloads.
+/// Receive-only fields are left unset. The `fields` array is copied so later
+/// mutations of the caller's array do not affect the embed.
+pub fn Embed::Embed(
+  title? : String,
+  description? : String,
+  url? : String,
+  timestamp? : Timestamp,
+  color? : Int,
+  footer? : EmbedFooter,
+  image? : EmbedImage,
+  thumbnail? : EmbedThumbnail,
+  author? : EmbedAuthor,
+  fields? : Array[EmbedField],
+) -> Embed {
+  {
+    title,
+    typ: None,
+    url,
+    description,
+    timestamp,
+    color,
+    footer,
+    image,
+    thumbnail,
+    video: None,
+    provider: None,
+    author,
+    fields: fields.map(values => values.copy()),
+    flags: None,
+  }
+}
 
 ///|
 /// Bit flags describing special rendering behavior of an embed.
@@ -173,6 +199,15 @@ pub(all) struct EmbedFooter {
 } derive(ToJson, FromJson, Debug)
 
 ///|
+/// Construct footer content for an outgoing embed.
+pub fn EmbedFooter::EmbedFooter(
+  text : String,
+  icon_url? : String,
+) -> EmbedFooter {
+  { text, icon_url, proxy_icon_url: None }
+}
+
+///|
 /// Image media displayed within an embed.
 pub(all) struct EmbedImage {
   url : String
@@ -182,6 +217,12 @@ pub(all) struct EmbedImage {
 } derive(ToJson, FromJson, Debug)
 
 ///|
+/// Construct image media for an outgoing embed.
+pub fn EmbedImage::EmbedImage(url : String) -> EmbedImage {
+  { url, proxy_url: None, height: None, width: None }
+}
+
+///|
 /// Thumbnail media displayed beside an embed.
 pub(all) struct EmbedThumbnail {
   url : String
@@ -189,6 +230,12 @@ pub(all) struct EmbedThumbnail {
   height : Int?
   width : Int?
 } derive(ToJson, FromJson, Debug)
+
+///|
+/// Construct thumbnail media for an outgoing embed.
+pub fn EmbedThumbnail::EmbedThumbnail(url : String) -> EmbedThumbnail {
+  { url, proxy_url: None, height: None, width: None }
+}
 
 ///|
 /// Video media attached to an embed.
@@ -216,9 +263,29 @@ pub(all) struct EmbedAuthor {
 } derive(ToJson, FromJson, Debug)
 
 ///|
+/// Construct author information for an outgoing embed.
+pub fn EmbedAuthor::EmbedAuthor(
+  name : String,
+  url? : String,
+  icon_url? : String,
+) -> EmbedAuthor {
+  { name, url, icon_url, proxy_icon_url: None }
+}
+
+///|
 /// A named value displayed in an embed's field grid.
 pub(all) struct EmbedField {
   name : String
   value : String
   inline : Bool?
 } derive(ToJson, FromJson, Debug)
+
+///|
+/// Construct a field for an outgoing embed.
+pub fn EmbedField::EmbedField(
+  name : String,
+  value : String,
+  inline? : Bool,
+) -> EmbedField {
+  { name, value, inline }
+}

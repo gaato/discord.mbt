@@ -159,6 +159,50 @@ test "embed encode omits absent optional fields" {
 }
 
 ///|
+test "embed constructors expose only outgoing fields and copy field arrays" {
+  let fields = [@model.EmbedField("Status", "Operational", inline=true)]
+  let embed = @model.Embed(
+    title="Discord API",
+    description="A rich embed example",
+    url="https://discord.com/developers/docs/resources/message",
+    timestamp=@model.Timestamp("2024-01-02T03:04:05Z"),
+    color=5793266,
+    footer=@model.EmbedFooter(
+      "Footer text",
+      icon_url="https://cdn.example/footer.png",
+    ),
+    image=@model.EmbedImage("https://cdn.example/image.png"),
+    thumbnail=@model.EmbedThumbnail("https://cdn.example/thumb.png"),
+    author=@model.EmbedAuthor(
+      "Nelly",
+      url="https://example.com/nelly",
+      icon_url="https://cdn.example/author.png",
+    ),
+    fields~,
+  )
+  fields.push(@model.EmbedField("Late mutation", "not included"))
+  json_inspect(embed, content={
+    "title": "Discord API",
+    "url": "https://discord.com/developers/docs/resources/message",
+    "description": "A rich embed example",
+    "timestamp": "2024-01-02T03:04:05Z",
+    "color": 5793266,
+    "footer": {
+      "text": "Footer text",
+      "icon_url": "https://cdn.example/footer.png",
+    },
+    "image": { "url": "https://cdn.example/image.png" },
+    "thumbnail": { "url": "https://cdn.example/thumb.png" },
+    "author": {
+      "name": "Nelly",
+      "url": "https://example.com/nelly",
+      "icon_url": "https://cdn.example/author.png",
+    },
+    "fields": [{ "name": "Status", "value": "Operational", "inline": true }],
+  })
+}
+
+///|
 test "embed type string enum preserves unknown values" {
   let known : @model.EmbedType = @json.from_json(Json::string("gifv"))
   debug_inspect(

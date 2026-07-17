@@ -996,6 +996,7 @@ pub(all) struct Embed {
   fields : Array[EmbedField]?
   flags : EmbedFlags?
 } derive(ToJson, @debug.Debug, @json.FromJson)
+pub fn Embed::Embed(title? : String, description? : String, url? : String, timestamp? : Timestamp, color? : Int, footer? : EmbedFooter, image? : EmbedImage, thumbnail? : EmbedThumbnail, author? : EmbedAuthor, fields? : Array[EmbedField]) -> Self
 
 pub(all) struct EmbedAuthor {
   name : String
@@ -1003,12 +1004,14 @@ pub(all) struct EmbedAuthor {
   icon_url : String?
   proxy_icon_url : String?
 } derive(ToJson, @debug.Debug, @json.FromJson)
+pub fn EmbedAuthor::EmbedAuthor(String, url? : String, icon_url? : String) -> Self
 
 pub(all) struct EmbedField {
   name : String
   value : String
   inline : Bool?
 } derive(ToJson, @debug.Debug, @json.FromJson)
+pub fn EmbedField::EmbedField(String, String, inline? : Bool) -> Self
 
 pub(all) struct EmbedFlags(UInt64) derive(Eq)
 pub fn EmbedFlags::bits(Self) -> UInt64
@@ -1023,6 +1026,7 @@ pub(all) struct EmbedFooter {
   icon_url : String?
   proxy_icon_url : String?
 } derive(ToJson, @debug.Debug, @json.FromJson)
+pub fn EmbedFooter::EmbedFooter(String, icon_url? : String) -> Self
 
 pub(all) struct EmbedImage {
   url : String
@@ -1030,6 +1034,7 @@ pub(all) struct EmbedImage {
   height : Int?
   width : Int?
 } derive(ToJson, @debug.Debug, @json.FromJson)
+pub fn EmbedImage::EmbedImage(String) -> Self
 
 pub(all) struct EmbedProvider {
   name : String?
@@ -1042,6 +1047,7 @@ pub(all) struct EmbedThumbnail {
   height : Int?
   width : Int?
 } derive(ToJson, @debug.Debug, @json.FromJson)
+pub fn EmbedThumbnail::EmbedThumbnail(String) -> Self
 
 pub(all) enum EmbedType {
   Rich
