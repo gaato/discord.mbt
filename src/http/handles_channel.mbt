@@ -71,6 +71,39 @@ pub async fn ChannelRef::typing(
 }
 
 ///|
+/// Run an asynchronous operation while keeping this channel's typing
+/// indicator active.
+///
+/// A typing request is sent immediately, then refreshed every 8 seconds while
+/// `body` runs because Discord's indicator expires after 10 seconds. Failure
+/// of the initial request is raised and prevents `body` from running. Failure
+/// of a later keepalive request only stops further refreshes. When `body`
+/// returns or raises, the keepalive task is cancelled and its result or error
+/// is propagated unchanged.
+///
+/// ```mbt nocheck
+/// let answer = channel.with_typing(() => call_llm(prompt))
+/// channel.send(content=answer)
+/// ```
+pub async fn[T] ChannelRef::with_typing(
+  self : ChannelRef,
+  body : async () -> T,
+) -> T {
+  self.typing()
+  @async.with_task_group(group => {
+    group.spawn_bg(no_wait=true, () => {
+      for ;; {
+        @async.sleep(8000)
+        self.typing() catch {
+          _ => break
+        }
+      }
+    })
+    body()
+  })
+}
+
+///|
 /// Bind a message id in this channel to the client.
 pub fn ChannelRef::message_ref(
   self : ChannelRef,

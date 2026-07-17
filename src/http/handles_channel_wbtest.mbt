@@ -87,6 +87,85 @@ async test "channel ref create stage instance binds the channel id" {
 }
 
 ///|
+priv suberror TypingBodyError {
+  TypingBodyError
+} derive(Debug)
+
+///|
+async test "channel ref with typing sends before body and returns its value" {
+  let client = Client("test-token")
+  defer client.close()
+  let calls = Ref(0)
+  let captured_method = Ref("")
+  let captured_path = Ref("")
+  client.perform_override_.val = Some((route, path, _headers, _body, _files) => {
+    calls.val += 1
+    captured_method.val = @debug.to_string(route.method_())
+    captured_path.val = path
+    { status: 204, headers: Map([]), body: Json::null() }
+  })
+  let channel_id : @model.ChannelId = Id(135UL)
+  let result = client
+    .channel_ref(channel_id)
+    .with_typing(() => {
+      inspect(calls.val, content="1")
+      "complete"
+    })
+  inspect(result, content="complete")
+  inspect(captured_method.val, content="Post")
+  inspect(captured_path.val, content="/api/v10/channels/135/typing")
+  inspect(calls.val, content="1")
+}
+
+///|
+async test "channel ref with typing propagates body errors without hanging" {
+  let client = Client("test-token")
+  defer client.close()
+  let calls = Ref(0)
+  client.perform_override_.val = Some((_route, _path, _headers, _body, _files) => {
+    calls.val += 1
+    { status: 204, headers: Map([]), body: Json::null() }
+  })
+  let channel_id : @model.ChannelId = Id(136UL)
+  try {
+    let _ : Unit = @async.with_timeout(100, () => {
+      client.channel_ref(channel_id).with_typing(() => raise TypingBodyError)
+    })
+  } catch {
+    TypingBodyError => ()
+    error => fail("unexpected error: \{to_repr(error)}")
+  } noraise {
+    _ => fail("expected body error")
+  }
+  inspect(calls.val, content="1")
+}
+
+///|
+async test "channel ref with typing propagates the initial typing failure" {
+  let client = Client("test-token")
+  defer client.close()
+  let body_ran = Ref(false)
+  client.perform_override_.val = Some((_route, _path, _headers, _body, _files) => {
+    status: 403,
+    headers: Map([]),
+    body: { "code": 50013, "message": "Missing Permissions" },
+  })
+  let channel_id : @model.ChannelId = Id(137UL)
+  try
+    client.channel_ref(channel_id).with_typing(() => body_ran.val = true)
+  catch {
+    Api(status=403, error~) => {
+      inspect(error.code, content="50013")
+      inspect(error.message, content="Missing Permissions")
+    }
+    error => fail("unexpected error: \{to_repr(error)}")
+  } noraise {
+    _ => fail("expected initial typing failure")
+  }
+  assert_false(body_ran.val)
+}
+
+///|
 async test "message ref reaction deletions bind message and user ids" {
   let client = Client("test-token")
   defer client.close()

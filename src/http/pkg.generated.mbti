@@ -114,6 +114,7 @@ pub async fn ChannelRef::thread_member(Self, @model.Id[@model.UserMarker], with_
 pub async fn ChannelRef::thread_members(Self, with_member? : Bool, after? : @model.Id[@model.UserMarker], limit? : Int) -> Array[@model.ThreadMember] raise DiscordHttpError
 pub async fn ChannelRef::typing(Self) -> Unit raise DiscordHttpError
 pub async fn ChannelRef::webhooks(Self) -> Array[@model.Webhook] raise DiscordHttpError
+pub async fn[T] ChannelRef::with_typing(Self, async () -> T) -> T
 
 pub struct Client {
   // private fields
