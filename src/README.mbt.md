@@ -16,9 +16,21 @@ drift from the library. Task-focused recipes are docstring examples on the
 relevant symbols — look anything up with `moon ide doc` (see
 [Development](#development)).
 
+## Prerequisites
+
+On a clean machine, install `git` and run `moon update` before resolving the
+module dependencies. Moon uses `git` to clone the package registry.
+
+Every native build compiles the Gateway package's `zlib_stream.c`, which
+always includes `<zlib.h>` even when `compress=false`. The zlib development
+headers are therefore required for all native builds: install `zlib1g-dev` on
+Debian/Ubuntu or `zlib-devel` on Fedora/openSUSE. The zlib shared library is
+additionally required at runtime when Gateway zlib-stream compression is used.
+
 ## Install
 
 ```sh
+moon update
 moon add gaato/discord
 ```
 

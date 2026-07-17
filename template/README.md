@@ -18,6 +18,13 @@ After `gaato/discord` is published, replace `gaato/discord@0.1.0` in
 moon update
 ```
 
+Install `git` before running `moon update`; Moon uses it to clone the package
+registry. Native builds also require the zlib development headers because the
+Gateway package always compiles a C source that includes `<zlib.h>`, even when
+compression is disabled. Install `zlib1g-dev` on Debian/Ubuntu or `zlib-devel`
+on Fedora/openSUSE. The zlib shared library is required at runtime when using
+Gateway zlib-stream compression.
+
 Before publication, use a Moon workspace to resolve `gaato/discord` from a
 local checkout. Current Moon represents local path dependencies as workspace
 members rather than paths inside `moon.mod`. From a directory containing (or

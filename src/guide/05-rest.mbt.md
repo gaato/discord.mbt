@@ -85,6 +85,39 @@ test "handle declarations compile" {
 }
 ```
 
+### Typing during long operations
+
+`ChannelRef::with_typing` sends a typing request immediately, refreshes it
+every eight seconds while the body runs, then stops when the body returns or
+raises. The initial typing failure is propagated; a later refresh failure only
+stops the keepalive loop.
+
+```mbt check
+///|
+async fn produce_slow_answer(prompt : String) -> String {
+  @async.sleep(1)
+  "answer to: \{prompt}"
+}
+
+///|
+async fn send_slow_answer(
+  channel : @dhttp.ChannelRef,
+  prompt : String,
+) -> @model.Message {
+  let answer = channel.with_typing(() => produce_slow_answer(prompt))
+  channel.send(content=answer)
+}
+
+///|
+test "typing keepalive declaration compiles" {
+  ignore(send_slow_answer)
+}
+```
+
+Discord expires a typing indicator after about ten seconds, which is why the
+keepalive interval is eight seconds. Structured concurrency ensures the
+background refresh task does not survive the wrapped operation.
+
 Endpoints that support audit-log reasons expose `reason?`; the handle forwards
 it as the request's URL-encoded `X-Audit-Log-Reason` header. Webhook
 authentication is encoded in the handle type: `WebhookRef` performs bot-token

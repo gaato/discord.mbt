@@ -29,6 +29,71 @@ object. Their descriptors expose wrapper types such as `MessageCreateEvent`,
 `ThreadCreateEvent`, and `GuildMemberAddEvent`; access the embedded object
 through the wrapper field shown by `moon ide doc`.
 
+## Gateway latency
+
+Interaction handlers read the most recent heartbeat round-trip time through
+`AppCtx`. With multiple shards this is the arithmetic mean of shards that
+have received an acknowledgement; HTTP interaction executors and a Gateway
+connection before its first acknowledgement return `None`:
+
+```mbt check
+///|
+fn latency_text(value : Int64?) -> String {
+  match value {
+    Some(milliseconds) => "\{milliseconds} ms"
+    None => "measuring"
+  }
+}
+
+///|
+let gateway_ping : @discord.Command[Unit] = @discord.slash(
+  name="ping",
+  description="Show Gateway latency",
+  args=@discord.Args::unit(),
+  handler=Immediate((ctx, _) => {
+    @discord.CommandReply::message(content=latency_text(ctx.app().latency_ms()))
+  }),
+)
+
+///|
+fn observe_shard_latency(bot : @discord.Bot) -> Unit {
+  bot.on(@discord.Events::ready(), (ctx, _) => {
+    println("this shard: \{latency_text(ctx.latency_ms())}")
+  })
+}
+```
+
+`GatewayCtx::latency_ms()` is the exact value for the shard that delivered
+the event, while `AppCtx::latency_ms()` is the application-wide mean described
+above.
+
+## Message updates and edits
+
+Discord sends `MESSAGE_UPDATE` for more than user edits, including link
+unfurls and pin changes. Gate edit-only work with `is_edit()`:
+
+```mbt check
+///|
+fn register_message_edits(bot : @discord.Bot) -> Unit {
+  bot.on(@discord.Events::message_update(), (_, event) => {
+    if event.is_edit() {
+      match event.before {
+        Some(previous) =>
+          println("\{previous.content} -> \{event.message.content}")
+        None => println("edited message: \{event.message.content}")
+      }
+    }
+  })
+}
+```
+
+`before` is available only when an attached cache retains messages with
+`CacheResources(messages=true)` and the previous revision is still within
+its retention window. Without `before`, `is_edit()` falls back to checking
+whether `edited_timestamp` has a value. That heuristic can misclassify an
+unfurl or pin update to an already-edited message, so applications needing
+exact edit detection should enable the messages cache.
+
 ## Automatic intent derivation
 
 When `Bot(...)` omits `intents`, `Bot` unions the delivery intents required by
@@ -190,7 +255,7 @@ it to a `Bot` to apply every decoded event before event handlers run:
 ///|
 fn install_cache(bot : @discord.Bot) -> @cache.InMemoryCache {
   let cache = @cache.InMemoryCache(
-    resources=@cache.CacheResources(presences=true),
+    resources=@cache.CacheResources(presences=true, messages=true),
     max_messages_per_channel=100,
   )
   bot.attach_cache(cache)
@@ -216,6 +281,9 @@ test "compression and cache declarations compile" {
   ignore(compressed_bot)
   ignore(install_cache)
   ignore(can_send_in)
+  ignore(register_message_edits)
+  ignore(gateway_ping)
+  ignore(observe_shard_latency)
 }
 ```
 
@@ -224,3 +292,35 @@ default. Presences and messages are opt-in because of their volume; enable
 only the resources the application reads. The cache only sees events allowed
 by the bot's configured intents. Entity getters return shared read-only model
 values, while list getters return fresh outer arrays.
+
+Gateway handlers can access the attached cache directly and resolve a channel
+with a cache-first lookup. This is useful because
+`MessageCreateEvent.channel_type` is commonly absent:
+
+```mbt check
+///|
+fn register_channel_resolution(bot : @discord.Bot) -> Unit {
+  bot.on(@discord.Events::message_create(), (ctx, event) => {
+    if ctx.cache() is Some(cache) {
+      ignore(cache.channel(event.message.channel_id))
+    }
+    let channel = ctx.resolve_channel(event.message.channel_id)
+    match channel.typ {
+      AnnouncementThread | PublicThread | PrivateThread =>
+        println("message arrived in a thread")
+      _ => ()
+    }
+  })
+}
+
+///|
+test "cache-aware channel resolution compiles" {
+  ignore(register_channel_resolution)
+}
+```
+
+`GatewayCtx::cache()` is `None` when no cache was attached. `resolve_channel`
+falls back to `channel_ref(id).fetch()` on a miss or when channel retention is
+disabled, and deliberately does not write REST results into the gateway-owned
+cache. Call `channel_ref(id).fetch()` directly when freshness matters more
+than cache-first speed.

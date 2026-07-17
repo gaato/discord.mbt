@@ -135,18 +135,32 @@ let feedback : @discord.Modal[Feedback] = @discord.modal(
   custom_id="feedback",
   title="Feedback",
   fields=@discord.ModalFields::map2(
-    @discord.text_field(custom_id="topic", label="Topic"),
+    @discord.text_field(
+      custom_id="topic",
+      label="Topic",
+      value="General feedback",
+    ),
     @discord.text_field(custom_id="details", label="Details", style=Paragraph).optional(),
     (topic, details) => { topic, details },
   ),
 )
 
 ///|
+fn show_feedback(
+  topic : String,
+  state? : String,
+) -> @discord.ModalHandle raise @app.ModalPrefillError {
+  feedback.show(state?, values={ "topic": topic })
+}
+
+///|
 fn register_feedback(app : @discord.App) -> Unit {
   app.on_component(
     prefix="feedback:",
     Immediate(ctx => {
-      @discord.ComponentReply::ShowModal(feedback.show(state=ctx.suffix()))
+      @discord.ComponentReply::ShowModal(
+        show_feedback("Follow-up", state=ctx.suffix()),
+      )
     }),
   )
   app.on_modal(
@@ -160,6 +174,13 @@ fn register_feedback(app : @discord.App) -> Unit {
   )
 }
 ```
+
+`text_field(value=...)` sets the reusable static default.
+`Modal::show(values=...)` overrides selected text inputs for one response and
+does not mutate the modal definition, so later calls return to the static
+default. Override keys are text-input `custom_id` values. An unknown key or a
+key naming a non-text field raises `ModalPrefillError` instead of being
+silently ignored.
 
 `ModalImmediateCtx::origin()` distinguishes a modal opened from a component
 from one opened from a command. `state()` is the value passed to `show`.

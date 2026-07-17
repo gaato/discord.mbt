@@ -161,6 +161,63 @@ middleware when it owns the result, or call `next()` promptly into a
 `Deferred` handler so the handler can acknowledge before doing slow work.
 `InteractionCtx` itself has no defer method.
 
+## Rich error-policy responses
+
+The error policy receives the invoking user and, for interaction failures, an
+optional raw context. Prefer `respond_error` for replies because it selects an
+initial response or followup according to the current response phase:
+
+```mbt check
+///|
+fn install_rich_error_policy(app : @discord.App) -> Unit {
+  app.error_policy((failure, error) => {
+    let username = match failure.user() {
+      Some(user) => user.username
+      None => "unknown user"
+    }
+    let source = match failure.raw() {
+      Some(@app.FailureRaw::RawCommand(_)) => "command"
+      Some(@app.FailureRaw::RawComponent(_)) => "component"
+      Some(@app.FailureRaw::RawModal(_)) => "modal"
+      None => "event or service"
+    }
+    failure.respond_error(
+      embeds=[
+        @model.Embed(
+          title="Request failed",
+          description="source: \{source}\nuser: \{username}\n\{to_repr(error)}",
+          color=0xED4245,
+        ),
+      ],
+      components=[
+        @discord.action_row([
+          @discord.button(
+            custom_id="error:dismiss",
+            label="Dismiss",
+            style=Danger,
+          ),
+        ]),
+      ],
+      ephemeral=true,
+    )
+  })
+}
+
+///|
+test "rich error policy declaration compiles" {
+  ignore(install_rich_error_policy)
+}
+```
+
+`FailureCtx::user()` and `raw()` return `None` for Gateway event and service
+failures. In that case `respond_error` sends a summary to the warning hook
+because there is no interaction response target. The raw command, component,
+and modal contexts are escape hatches; responding through them directly can
+violate the response phase, so ordinary policies should continue to use
+`respond_error`. Its optional `content`, `embeds`, `components`, `files`, and
+`allowed_mentions` parameters are passed through for both initial responses
+and followups.
+
 ## Gateway event middleware
 
 `Bot::middleware` is native-only. It receives the `GatewayCtx`, a decoded

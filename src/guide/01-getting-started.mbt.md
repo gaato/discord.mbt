@@ -2,11 +2,23 @@
 
 This guide creates a native Gateway bot with one `/echo` command.
 
+## Prerequisites
+
+On a clean machine, install `git` and run `moon update` first; Moon clones its
+package registry with `git` when resolving dependencies.
+
+All native builds compile the Gateway package's `zlib_stream.c`, which always
+includes `<zlib.h>`, regardless of whether Gateway compression is enabled.
+Install the zlib development headers (`zlib1g-dev` on Debian/Ubuntu or
+`zlib-devel` on Fedora/openSUSE). The zlib shared library is also needed at
+runtime if the bot enables zlib-stream compression.
+
 ## Install
 
 From a MoonBit module root:
 
 ```sh
+moon update
 moon add gaato/discord
 moon add moonbitlang/async
 ```

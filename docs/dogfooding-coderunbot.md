@@ -8,6 +8,8 @@ prefix コマンド + slash + モーダル + message context menu + コンポー
 
 ## 1. @util に escape_markdown / escape_mentions がない
 
+**Resolved**: Pycord parity の `@util.escape_markdown()` / `escape_mentions()` を追加した。
+
 `src/util/format.mbt` は mention/timestamp/CDN URL 系のみ。message context command「escape」
 (メッセージ内容をエスケープして ephemeral 返信)のため、Pycord の
 `discord.utils.escape_markdown` / `escape_mentions` 相当(URL スキップ、markdown リンク保全、
@@ -18,6 +20,10 @@ coderunbot の `mbt/src/core/escaping.mbt` + テストが流用可能。
 
 ## 2. Embed にビルダー/コンストラクタがない
 
+**Resolved**: 送信可能フィールドだけを受ける `Embed(...)` と
+`EmbedAuthor` / `EmbedFooter` / `EmbedImage` / `EmbedThumbnail` / `EmbedField`
+コンストラクタを追加した。
+
 `@model.Embed` は 14 フィールドの `pub(all)` struct でデフォルト構築手段がなく、
 生成のたびに全フィールドの列挙が必要。利用側で
 `embed(title?, description?, color?, author_name?, image_url?, fields?)` ヘルパーを書いた
@@ -26,6 +32,9 @@ coderunbot の `mbt/src/core/escaping.mbt` + テストが流用可能。
 **修正案**: `Embed::new(...?)` かビルダー。`EmbedAuthor` / `EmbedImage` / `EmbedField` も同様。
 
 ## 3. error policy から rich な応答が返せない
+
+**Resolved**: `FailureCtx::respond_error()` が embeds / components / files 等を受け取り、
+`user()` / `interaction()` / `raw()` も利用できる。
 
 `FailureCtx::respond_error` はプレーンテキストのみで、interaction 本体(user、embeds、
 components)にも触れないため、Python 版の「Unhandled Error embed + Delete ボタン」を
@@ -36,6 +45,9 @@ error policy 内で再現できない。想定内エラー(未対応言語、レ
 interaction ctx への脱出口を用意する。
 
 ## 4. MESSAGE_UPDATE に before がなく、非編集更新の識別も利用側任せ
+
+**Resolved**: messages cache から `MessageUpdateEvent.before` を供給し、
+`is_edit()` で timestamp 差分または fallback heuristic を判定する。
 
 Pycord は message cache による before/after を提供するが、`Events::message_update()` には
 before がない。編集追従(編集されたコマンドの再実行 + 旧返信の削除)のため、
@@ -49,12 +61,18 @@ MESSAGE_UPDATE が飛ぶため、追跡外メッセージは `edited_timestamp` 
 
 ## 5. autocomplete の 25 件制限をライブラリが clamp しない
 
+**Resolved**: framework 最終送信と app の suggest dispatch で 25 件に clamp し、
+app 経路では command path・option・元件数を `on_warn` へ通知する。
+
 suggest コールバックから 25 件超を返すと Discord 側に拒否される(Wandbox の言語一覧は
 25 を超える)。利用側で cap した。
 
 **修正案**: 送信前にライブラリ側で 25 件に clamp(+ `on_warn` で通知)。
 
 ## nekosama メモとの重複(coderunbot でも該当を確認)
+
+**Resolved**: modal は `text_field(value=...)` / `Modal::show(values=...)`、typing は
+`ChannelRef::with_typing()`、ビルド前提は README / guide / template で解消した。
 
 - **typed modal の value プリフィルなし**(nekosama #2): `/tex` の `\begin{env}` プリフィルで
   同じ回避(`handler=Raw` + `show_modal` + `text_input(value=...)` + `on_modal_raw`)。

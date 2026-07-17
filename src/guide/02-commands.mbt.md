@@ -35,6 +35,47 @@ Use `.optional()` for `T?`, `.with_default(value)` for a defaulted value,
 conversion. For more than eight arguments, compose `Args` values with `zip`
 and `map`.
 
+## Localization
+
+Commands, subcommands, and options accept name and description localization
+maps. Choices accept name localizations. Locale keys use Discord's locale
+strings, and the unlocalized name and description remain the fallback:
+
+```mbt check
+///|
+let localized_greeting : @discord.Command[String] = @discord.slash(
+  name="greet",
+  description="Send a greeting",
+  name_localizations={ "ja": "あいさつ" },
+  description_localizations={ "ja": "あいさつを送信します" },
+  args=@discord.Args::of(
+    @discord.arg_string(
+      name="style",
+      description="Greeting style",
+      name_localizations={ "ja": "スタイル" },
+      description_localizations={ "ja": "あいさつの種類" },
+      choices=[
+        @discord.string_choice("Friendly", "friendly", name_localizations={
+          "ja": "フレンドリー",
+        }),
+      ],
+    ),
+  ),
+  handler=Immediate((_, style) => {
+    @discord.CommandReply::message(content="style=\{style}")
+  }),
+)
+
+///|
+test "localized command declaration compiles" {
+  ignore(localized_greeting.spec().to_json())
+}
+```
+
+Command synchronization fetches Discord's localization dictionaries, so an
+unchanged localized declaration remains in sync rather than being rewritten
+on every startup.
+
 ## Autocomplete
 
 Attach autocomplete to the argument that owns it. Do not combine `choices` and

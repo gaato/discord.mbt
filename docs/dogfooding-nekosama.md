@@ -6,6 +6,9 @@ nekosama(Py-cord 製の翻訳+ChatGPT ボット、348行)を discord.mbt で書�
 
 ## 1. コマンド説明の localization が typed builder から設定できない
 
+**Resolved**: `slash` / subcommand / option / choice builder の
+`name_localizations`・`description_localizations` で登録 JSON まで貫通する。
+
 `@model.ApplicationCommand` は `name_localizations` / `description_localizations` を持つが、
 `CommandSpec`(`src/interaction/spec.mbt:5`)と `slash` / `slash_group` / `subcommand` builder
 (`src/app/command.mbt`)に対応フィールドがなく、登録 JSON にも载らない。
@@ -15,6 +18,9 @@ nekosama の `/role list` などにあった日本語 `description_localizations
 登録時の `ToJson` に反映。オプション(`Arg`)側も同様。
 
 ## 2. typed modal に実行時の value プリフィルがない
+
+**Resolved**: `text_field(value=...)` と `Modal::show(values=...)` を追加し、
+不正なキーは `ModalPrefillError` で報告する。
 
 `text_field`(`src/app/modal.mbt:84`)は `value` を受けず、`Modal::show`(state は custom_id 末尾に
 載せられるが)フィールド値の差し替え手段がない。低レベルの `@interaction.text_input(value?=...)`
@@ -28,6 +34,9 @@ nekosama の「翻訳 Edit」(現訳文をプリフィルしたモーダル)は 
 
 ## 3. interaction ctx から gateway latency を取得できない
 
+**Resolved**: interaction では `AppCtx::latency_ms()`、Gateway handler では
+shard 固有の `GatewayCtx::latency_ms()` を利用できる。
+
 `Shard::latency_ms()`(`src/gateway/shard.mbt:34`)は `GatewayCtx::shard_raw()` からしか届かず、
 `ImmediateCtx` 等のコマンド ctx に露出していない。`/ping` のために `Events::ready` ハンドラで
 `GatewayCtx` をモジュールの `Ref` に保存して読む回避策が必要だった。
@@ -36,12 +45,23 @@ nekosama の「翻訳 Edit」(現訳文をプリフィルしたモーダル)は 
 
 ## 4. MessageUpdateEvent が完全な Message を前提にしている
 
+**Resolved**: 公式仕様に合わせて strict な full `Message` を維持し、
+編集識別用に `MessageUpdateEvent::before` / `is_edit()` を追加した。
+live probe(`src/examples/update_probe`、2026-07-17)で unfurl・編集・ピンの
+MESSAGE_UPDATE がいずれも full payload で decode エラーなしと実証済み。
+なお実機では編集 dispatch の `edited_timestamp` がマイクロ秒精度、後続の
+pin/unfurl 更新ではミリ秒精度で echo されるため、`is_edit()` はミリ秒精度で
+インスタント比較する。
+
 `MessageUpdateEvent.message`(`src/model/message_event.mbt`)は完全な `Message` としてデコードするが、
 Discord の `MESSAGE_UPDATE` は部分 payload になり得る(embed 展開時など)。デコードが strict だと
 実機で落ちる可能性がある。**未実証**(nekosama の実機検証時に要確認)。落ちる場合は
 partial message 型か `Unknown` 相当の許容が必要。
 
 ## 5. 2000文字分割ヘルパーがない
+
+**Resolved**: UTF-16・サロゲートペア・CRLF 境界を扱う
+`@util.split_content()` を追加した。
 
 Discord の content 上限(2000 コードポイント)向けの分割・分割送信ヘルパーがなく、
 MoonBit 文字列が UTF-16 コード単位なこともあり利用側で書くと事故りやすい。
@@ -51,11 +71,16 @@ nekosama では codepoint 安全な chunker を自前実装した。
 
 ## 6. zlib.h のビルド前提が未文書化
 
+**Resolved**: README・getting-started guide・template に、全 native build で必要な
+zlib 開発ヘッダと `moon update` / `git` の前提を追記した。
+
 native gateway の `zlib-stream` 圧縮(`src/gateway/zlib_stream.c`)がビルド時に `zlib.h` を要求するが、
 README / template / CI に zlib 開発パッケージ(`zlib1g-dev` 等)の前提が明記されていない。
 クリーンな Docker(debian bookworm-slim)でのビルドで発覚。
 
 ## 7. Raw ハンドラで message context command の resolved 対象が取れない
+
+**Resolved**: `CommandCtx::target_message()` / `target_user()` を framework 層に追加した。
 
 Raw コマンドハンドラに切り替えると、context menu の対象メッセージが型付きで渡らず、
 `target_id` と `resolved.messages` を手動でデコードする必要があった。
@@ -64,12 +89,18 @@ Raw コマンドハンドラに切り替えると、context menu の対象メッ
 
 ## 8. typing の keepalive がない
 
+**Resolved**: `ChannelRef::with_typing()` が即時送信と 8 秒間隔の keepalive を
+structured concurrency で管理する。
+
 `ChannelRef::typing()` は一回限り(約10秒)で、長い LLM 呼び出しの間 typing を維持する
 スコープ付きヘルパーがない。
 
 **修正案**: `channel_ref.with_typing(async fn() -> T)` のような、完了まで定期再送するラッパー。
 
 ## 9. MessageCreateEvent.channel_type が通常欠落し、スレッド判定が面倒
+
+**Resolved**: `GatewayCtx::cache()` と cache-first + REST fallback の
+`GatewayCtx::resolve_channel()` を追加した。
 
 `channel_type` が None の場合、スレッド判定のたびに cache 参照または `ChannelRef::fetch()` への
 フォールバックを利用側で書く必要がある。cache-aware なチャンネル解決ヘルパー

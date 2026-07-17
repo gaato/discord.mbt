@@ -85,6 +85,65 @@ test "format timestamps" {
 }
 ```
 
+## Safe message content
+
+Escape user-controlled markdown and mentions before including them in a
+message, then split the result to Discord's 2000 UTF-16-code-unit content
+limit:
+
+```mbt check
+///|
+test "escape and split user content" {
+  let source = "**hello** @everyone https://example.test/a_b"
+  let safe = @util.escape_mentions(@util.escape_markdown(source))
+  assert_false(safe.contains("@everyone"))
+  let chunks = @util.split_content(safe, limit=20)
+  assert_eq(chunks.join(""), safe)
+  for chunk in chunks {
+    assert_true(chunk.length() <= 20)
+  }
+}
+```
+
+`escape_markdown` preserves HTTP, HTTPS, and Steam URLs and markdown-link
+destinations while escaping markdown syntax elsewhere. `escape_mentions`
+neutralizes `@everyone`, `@here`, and user or role mentions by inserting a
+zero-width space. `split_content` preserves every code unit, prefers newline
+and space boundaries, and never splits a surrogate pair or CRLF sequence.
+
+## Outgoing embeds
+
+The model constructors accept only fields Discord permits in outgoing
+payloads, so receive-only fields do not need to be filled with `None`:
+
+```mbt check
+///|
+let build_complete_embed : @model.Embed = @model.Embed(
+  title="Build complete",
+  description="All checks passed.",
+  color=0x57F287,
+  author=@model.EmbedAuthor("CI", icon_url="https://example.test/ci.png"),
+  footer=@model.EmbedFooter("discord.mbt"),
+  image=@model.EmbedImage("https://example.test/result.png"),
+  thumbnail=@model.EmbedThumbnail("https://example.test/status.png"),
+  fields=[
+    @model.EmbedField("Target", "native", inline=true),
+    @model.EmbedField("Tests", "1273 passed", inline=true),
+  ],
+)
+
+///|
+test "outgoing embed constructor compiles" {
+  let encoded = build_complete_embed.to_json()
+  assert_true(encoded.stringify().contains("Build complete"))
+  assert_false(encoded.stringify().contains("proxy_url"))
+}
+```
+
+Unspecified optional fields are omitted from JSON. The `fields` array is
+copied by `Embed(...)`, so mutating the caller's array later does not alter the
+embed.
+
 ## CDN URLs
 
 CDN helpers build image URLs from an entity id and its `ImageHash`. Animated
