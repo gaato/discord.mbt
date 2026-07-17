@@ -56,6 +56,40 @@ PATCH methods expose plain optional arguments: omit one to leave the field
 unchanged, pass `[]` to clear an array, or use the corresponding
 `clear_<field>=true` flag to clear a nullable scalar.
 
+Use `@model.flatten` when reading a `Nullable[T]?` field and both absence and
+JSON `null` should mean `None`:
+
+```mbt check
+///|
+test "read an optional nullable guild nickname" {
+  let fixtures = [
+    (
+      #|{"roles":[],"joined_at":null}
+    ),
+    (
+      #|{"roles":[],"joined_at":null,"nick":null}
+    ),
+    (
+      #|{"roles":[],"joined_at":null,"nick":"Moon"}
+    ),
+  ]
+  let nicknames = fixtures.map(fixture => {
+    let decoded : @model.GuildMember = @json.from_json(@json.parse(fixture))
+    @model.flatten(decoded.nick)
+  })
+  debug_inspect(
+    nicknames,
+    content=(
+      #|[None, None, Some("Moon")]
+    ),
+  )
+}
+```
+
+`flatten` is deliberately lossy. Keep the original `Nullable[T]?` when a
+PATCH body, cache merge, or other operation must distinguish a missing key
+from an explicit `null`.
+
 ## Mentions and timestamps
 
 Mention helpers format the `<...>` forms Discord renders in message content:

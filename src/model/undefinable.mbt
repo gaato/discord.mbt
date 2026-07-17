@@ -44,6 +44,38 @@ pub fn[T] Nullable::from_option(opt : T?) -> Nullable[T] {
 }
 
 ///|
+/// Collapse an optional nullable field to a plain option: `None` for both an
+/// absent key and JSON `null`, `Some(v)` for a present value.
+///
+/// This is a lossy view. Do not use it when the distinction between a missing
+/// key and JSON `null` matters, such as when building PATCH bodies or merging
+/// cache updates.
+///
+/// ```mbt check
+/// test "flatten optional nullable fields" {
+///   let absent : @model.Nullable[String]? = None
+///   let null_value : @model.Nullable[String]? = Some(Null)
+///   let present : @model.Nullable[String]? = Some(Value("Moon"))
+///   debug_inspect(
+///     [
+///       @model.flatten(absent),
+///       @model.flatten(null_value),
+///       @model.flatten(present),
+///     ],
+///     content=(
+///       #|[None, None, Some("Moon")]
+///     ),
+///   )
+/// }
+/// ```
+pub fn[T] flatten(field : Nullable[T]?) -> T? {
+  match field {
+    Some(Value(v)) => Some(v)
+    _ => None
+  }
+}
+
+///|
 pub impl[T : ToJson] ToJson for Nullable[T] with fn to_json(self) {
   match self {
     Null => Json::null()
