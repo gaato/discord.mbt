@@ -1,5 +1,8 @@
 # discord.mbt
 
+[![CI](https://github.com/gaato/discord.mbt/actions/workflows/ci.yml/badge.svg)](https://github.com/gaato/discord.mbt/actions/workflows/ci.yml)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/gaato/discord.mbt)
+
 A Discord application library for [MoonBit](https://www.moonbitlang.com/):
 typed interaction declarations, API models, a rate-limited REST client,
 JS/serverless HTTP interactions, and a native WebSocket gateway shard.
