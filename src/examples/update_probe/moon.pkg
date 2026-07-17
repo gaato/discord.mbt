@@ -1,0 +1,19 @@
+import {
+  "gaato/discord",
+  "gaato/discord/model",
+  "gaato/discord/cache",
+  "gaato/discord/interaction",
+  "gaato/discord/http" @dhttp,
+  "moonbitlang/async",
+  "moonbitlang/async/aqueue",
+  "moonbitlang/async/signal",
+  "moonbitlang/core/env",
+}
+
+supported_targets = "native"
+
+pkgtype(kind: "executable")
+
+options(
+  targets: { "main.mbt": [ "native" ] },
+)
