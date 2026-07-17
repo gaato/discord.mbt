@@ -23,6 +23,10 @@ pub fn default_user_avatar_url(@model.Id[@model.UserMarker]) -> String
 
 pub fn emoji_url(@model.Id[@model.EmojiMarker], format? : CdnImageFormat, size? : Int) -> String raise CdnUrlError
 
+pub fn escape_markdown(String) -> String
+
+pub fn escape_mentions(String) -> String
+
 pub fn guild_banner_url(@model.Id[@model.GuildMarker], @model.ImageHash, format? : CdnImageFormat, size? : Int) -> String raise CdnUrlError
 
 pub fn guild_icon_url(@model.Id[@model.GuildMarker], @model.ImageHash, format? : CdnImageFormat, size? : Int) -> String raise CdnUrlError
@@ -34,6 +38,8 @@ pub fn legacy_default_user_avatar_url(Int) -> String
 pub fn role_mention(@model.Id[@model.RoleMarker]) -> String
 
 pub fn slash_command_mention(name~ : String, command_id~ : @model.Id[@model.CommandMarker]) -> String
+
+pub fn split_content(String, limit? : Int) -> Array[String]
 
 pub fn sticker_url(@model.Id[@model.StickerMarker], format~ : @model.StickerFormatType, size? : Int) -> String raise CdnUrlError
 
