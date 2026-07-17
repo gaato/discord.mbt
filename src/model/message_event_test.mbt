@@ -16,6 +16,7 @@ test "MessageUpdateEvent::is_edit uses before or the timestamp heuristic" {
   assert_true(unedited.before is None)
   assert_false(unedited.is_edit())
   assert_true(edited.is_edit())
+  assert_false({ ..unedited, before: Some(unedited.message) }.is_edit())
   assert_true({ ..unedited, before: Some(edited.message) }.is_edit())
   assert_false({ ..edited, before: Some(edited.message) }.is_edit())
 }
