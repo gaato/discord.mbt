@@ -198,6 +198,9 @@ test "guild command declaration compiles" {
 - `Raw(ctx => Unit)` exposes the lower-level `framework.CommandCtx`; see
   [The framework layer](11-framework.mbt.md) for its full response surface.
 
+`edit_original` and `followup` return the resulting message; append
+`|> ignore` when the handler does not need it.
+
 Register every command with `app.command(command)`. Command synchronization is
 controlled by `App(sync=...)`: `Global`, `Guild(id)`, `Guilds(ids)`, or
 `Disabled`.

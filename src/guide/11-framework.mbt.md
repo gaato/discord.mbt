@@ -165,6 +165,13 @@ token-authenticated REST calls — `edit_response`, `followup`,
 response gate; everything after it is an ordinary REST call against the
 interaction token, which Discord keeps valid for 15 minutes.
 
+`edit_response`, `followup`, and `edit_followup` return the resulting
+`@model.Message`; for a followup, that return value is the only way to obtain
+the id needed by a later `edit_followup` or `delete_followup`. When the message
+is not needed, explicitly discard it with `|> ignore`, the idiom used
+throughout this library. `respond`, `defer_*`, and `delete_*` already return
+`Unit`, so a handler that never edits its followups remains uncluttered.
+
 They also share invoker accessors. `user()` returns the invoking user, and
 `scope()` distinguishes validated guild invocations (with both the guild id
 and full member) from DMs. `guild_scope()` is the non-raising shortcut when
