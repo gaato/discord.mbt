@@ -24,6 +24,13 @@ if [[ "${1:-}" == "--from-summary" ]]; then
 else
   summary_file="$(mktemp)"
   trap 'rm -f "$summary_file"' EXIT
+  # The DAVE/AEAD tests skip themselves when the voice shim is not loadable,
+  # which silently under-reports src/voice coverage. Point the loader at the
+  # in-tree build when present.
+  shim="$repo_root/voice-shim/target/release/libdiscord_voice_shim.so"
+  if [[ -z "${DISCORD_VOICE_SHIM_PATH:-}" && -f "$shim" ]]; then
+    export DISCORD_VOICE_SHIM_PATH="$shim"
+  fi
   # moon's bundled tcc cannot link on some hosts (openSUSE); use the system cc.
   (cd "$repo_root" && MOON_CC="${MOON_CC:-cc}" moon coverage analyze -- -f summary) \
     > "$summary_file" 2>/dev/null || {
