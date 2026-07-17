@@ -17,6 +17,18 @@ import {
   "gaato/discord/model",
 } for "test"
 
+import {
+  "moonbitlang/async/socket",
+  "moonbitlang/async/io",
+} for "wbtest"
+
 // REST transport depends on async HTTP, available on native and JavaScript.
 
 supported_targets = "js + native"
+
+options(
+  targets: {
+    // The loopback @ahttp.Server used by the wire tests is native-only.
+    "loopback_server_wbtest.mbt": [ "native" ],
+  },
+)

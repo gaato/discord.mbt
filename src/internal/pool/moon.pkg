@@ -3,6 +3,18 @@ import {
   "moonbitlang/async/http",
 }
 
+import {
+  "moonbitlang/async/socket",
+  "moonbitlang/async/io",
+} for "wbtest"
+
 // The async HTTP client is implemented by the native and JavaScript runtimes.
 
 supported_targets = "js + native"
+
+options(
+  targets: {
+    // The loopback @http.Server used by the pool tests is native-only.
+    "pool_wbtest.mbt": [ "native" ],
+  },
+)
