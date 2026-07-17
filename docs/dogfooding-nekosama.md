@@ -106,6 +106,42 @@ structured concurrency で管理する。
 フォールバックを利用側で書く必要がある。cache-aware なチャンネル解決ヘルパー
 (cache hit → REST fallback を一発でやる)があると使い勝手が良い。
 
+## 第2ラウンド (2026-07-17)
+
+第2ラウンドは、移植完了後に nekosama と coderunbot の両方から出た使い勝手の
+フィードバックをまとめた。低レベル層(interaction builders / http / gateway)の完成度は高く、
+遅れていた App 層の使い勝手も第1ラウンドでほぼ追いついた。coderunbot では回避策を外した結果、
+正味で145行減り、escaping と embed の自前実装ファイルを丸ごと削除できた。
+
+### 1. `Nullable[T]?` の読み出しが冗長
+
+optional nullable field を読むたびに `member.nick.bind(n => n.to_option())` と書く必要があり、
+値だけ欲しい箇所でも欠落と JSON `null` の二段階を手で畳んでいた。
+
+**Resolved**: `@model.flatten()` を追加し、guide 12 に読み出しイディオムを記載した。
+これは欠落と `null` を区別しない lossy view なので、PATCH body や cache merge には使わない。
+
+### 2. fire-and-forget の response 呼び出しにも `|> ignore` が必要
+
+戻り値を使わない `followup` などでも、呼び出し側が毎回 `|> ignore` を付ける必要がある。
+
+**Resolved (wontfix)**: `Message` の戻り値は followup id を得る唯一の経路であり、後から
+`edit_followup` / `delete_followup` するために必要なので維持する。Unit 版の併設は同じ操作の
+二通り目となり、API の採否基準に抵触する。`|> ignore` を公式イディオムとして guide 02 / 11 に
+明記した。
+
+### 3. `guild_only()` の保証が handler の型に伝わらない
+
+`guild_only()` を付けたコマンドでも `guild_id` と member を個別に guard する必要があり、
+guild command ごとに同じボイラープレートが残っていた。
+
+**Resolved**: breaking change として `InvocationScope::Guild` が `GuildInvocation`
+(`guild_id` + `member`、`user()` 便宜メソッド付き)を運ぶようにした。全8個の app ctx と
+`CheckCtx`、framework の3 ctx に `guild_scope()` を追加した。framework 版は Option を返し、
+app 版は DM で `HandlerError::GuildOnly` を raise するため、既存の error policy がそのまま
+応答を描画する。`required_permissions` も内部でこの bundle を使う。member があるのに
+guild_id がない壊れた payload は、新設した `InteractionContextError::MissingGuildId` で拒否する。
+
 ---
 
 ## 環境メモ(ライブラリの問題ではない)
