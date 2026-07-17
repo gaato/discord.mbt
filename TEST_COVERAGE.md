@@ -1,9 +1,9 @@
 # Test coverage ledger
 
 Line coverage of the library packages (`src/` minus `src/examples/`), measured
-with `moon coverage analyze`. Companion to [COVERAGE.md](COVERAGE.md), which
-tracks REST *endpoint* coverage; this file tracks *test* coverage and applies
-the same closed-ledger rule:
+with `moon coverage analyze` in Coveralls-JSON mode. Companion to
+[COVERAGE.md](COVERAGE.md), which tracks REST *endpoint* coverage; this file
+tracks *test* coverage and applies the same closed-ledger rule:
 
 > **Every uncovered line is either covered by a test or listed below with a
 > reason.** `scripts/coverage_report.sh` enforces this: a file with uncovered
@@ -11,9 +11,18 @@ the same closed-ledger rule:
 > the script fails otherwise. Rows for fully covered files are flagged as
 > stale so budgets only ever shrink.
 
-Run `scripts/coverage_report.sh` for the per-package table and the current
-check result. On hosts where moon's bundled tcc cannot link (openSUSE), the
-script already sets `MOON_CC=cc`.
+Run `scripts/coverage_report.sh` for the per-package table and the check
+result. The script pins the measurement pitfalls discovered while building
+this ledger: it cleans stale `moonbit_coverage_*` counters and release-profile
+`.trace.source` maps before measuring (leftovers silently corrupt the merge),
+uses the Coveralls JSON format because `-f summary` omits fully covered files,
+sets `MOON_CC=cc` for hosts where moon's bundled tcc cannot link, and points
+`DISCORD_VOICE_SHIM_PATH` at the in-tree voice shim so the DAVE/AEAD tests do
+not skip themselves.
+
+Snapshot at the last full measurement (2026-07-18): **90.3 %** across the
+library (7462/8268 coverage points; http 95.4 %, model 94.9 %, bot 93.0 %,
+interaction 91.0 %, cache 90.4 %).
 
 ## Policy
 
@@ -22,21 +31,144 @@ Must be covered by tests:
 - pure logic: codecs, projections, query/body assembly, parsers, state
   machines behind trait seams (fakes exist for gateway and voice transports);
 - every `raise` arm reachable through the public API;
-- wire boundaries via `perform_override_` wbtests (exact method/path/body).
+- wire boundaries via `perform_override_` wbtests (exact method/path/body),
+  or a loopback `@ahttp.Server` where the real connection path itself is the
+  subject (multipart request arms, the connection pool).
 
 Accepted as uncovered (needs a ledger row):
 
 - thin adapters over live sockets/websockets and extern/FFI glue — their
-  behavior is exercised by the live probe sweeps recorded in COVERAGE.md and
-  the live-probe run logs (run 11: 242 PASS / 0 FAIL, 2026-07-16);
-- `abort(...)` arms that are unreachable by construction;
-- example `main`s (excluded from the report entirely).
+  behavior is exercised by the live probe sweeps recorded in COVERAGE.md
+  (run 11: 242 PASS / 0 FAIL, 2026-07-16) and the live voice session checks
+  (playback + recording, 2026-07-15);
+- reconnect/backoff/heartbeat timing loops that would need a clock/jitter
+  seam to test deterministically;
+- defensive arms that are unreachable by construction (`abort`, fallbacks
+  behind emitters that always produce the expected shape);
+- error/cancellation plumbing deep inside async dispatch flows.
+
+Budgets are exact uncovered counts at the last measurement; when a future
+change covers lines, the script reports the row as slack/stale — tighten or
+drop it.
 
 ## Accepted uncovered
 
+Live socket, websocket, and FFI adapters (live-verified; no unit seam):
+
 | File | Budget | Reason |
 | --- | --- | --- |
-| src/voice/transport.mbt | 41 | Thin adapter over a live websocket connection; verified live (voice join + soundboard, 2026-07-15). |
+| src/gateway/transport.mbt | 31 | Real websocket adapter behind the GatewayTransport trait; every consumer is tested against FakeTransport. |
+| src/voice/transport.mbt | 32 | Real voice websocket adapter behind the VoiceTransport trait. |
+| src/voice/udp.mbt | 4 | SocketVoiceUdp impls and `open_voice_udp` over a real UDP socket; parse and retry logic is covered via fakes. |
+| src/voice/shim_ffi.mbt | 3 | Extern-C glue whose arms depend on host library state. |
+| src/voice/crypto.mbt | 5 | Shim error-status translation paths; round-trips and geometry checks are covered with the shim loaded. |
+| src/http/client.mbt | 4 | Connection teardown paths on live pools. |
+| src/http/request.mbt | 24 | Cancellation/timeout plumbing on live connections; the JSON, body-less, 204, non-JSON-error, and all three multipart named-file arms are covered by the loopback server tests. |
+| src/endpoint_http/endpoint_http.mbt | 17 | HTTP server error/cancellation arms (send failures, teardown); the request paths are covered by the signed-request e2e tests. |
+| src/coordinator/protocol.mbt | 4 | Cross-process wire error arms. |
+| src/coordinator/remote.mbt | 10 | Reconnecting remote client against a real coordinator socket. |
+| src/coordinator/server.mbt | 17 | Per-connection cleanup on real disconnects (the existing socket test is retry-flaky; see project notes). |
 
-(The list grows/shrinks per batch; the report script is the source of truth
-for what still needs a row.)
+Voice session state machine (verified live 2026-07-15: ffmpeg streaming
+playback and a 72-second recording against real Discord voice):
+
+| File | Budget | Reason |
+| --- | --- | --- |
+| src/voice/connection.mbt | 94 | Join/handshake/reconnect orchestration needing a full live voice session. |
+| src/voice/gateway.mbt | 18 | Heartbeat/resume/cancellation arms of the live voice gateway loop. |
+| src/voice/dave.mbt | 28 | DAVE/MLS transitions that need a second member and real davey epoch state. |
+| src/voice/audio.mbt | 11 | Real-time pacing loop (deadline sleeps) and DAVE encrypt-drop telemetry arms. |
+| src/voice/subscribe.mbt | 4 | Silence-timeout stream end arms. |
+| src/voice/receive.mbt | 6 | Decrypt arms needing real DAVE frames from a second member. |
+| src/voice/reorder.mbt | 3 | Arrival-time flush arms. |
+| src/voice/rtp.mbt | 3 | Header arms only produced by real senders (CSRC counts). |
+| src/voice/ogg_opus.mbt | 4 | Constructor `abort`s (unreachable by construction) and one reader break arm. |
+
+Reconnect/backoff and timed-wait loops (need a clock seam to test
+deterministically; exercised in every live gateway run):
+
+| File | Budget | Reason |
+| --- | --- | --- |
+| src/gateway/shard.mbt | 35 | Reconnect loop with jittered backoff, resume URL switching, and close classification on live sockets. |
+| src/gateway/compression.mbt | 3 | zlib failure statuses require a corrupted native stream state. |
+| src/gateway/command_limit.mbt | 2 | 60-second window wait path. |
+| src/ratelimit/ratelimit.mbt | 4 | Global-window sleep and gate release-on-error paths. |
+| src/queue/queue.mbt | 2 | Identify-bucket gate release-on-error path. |
+| src/http/handles_channel.mbt | 2 | `with_typing` refresh-failure arm sits behind the real 8-second cadence. |
+| src/bot/middleware.mbt | 1 | Middleware chain cancellation arm. |
+| src/bot/shard_manager.mbt | 6 | Multi-shard session-start-limit and staggered-identify paths over live gateways. |
+| src/bot/bot.mbt | 19 | Gateway run-loop teardown/cancellation arms; startup, intents, telemetry, and event routing are covered. |
+| src/bot/voice.mbt | 27 | join_voice credential/timeout error arms beyond the fake-transport happy path. |
+
+Defensive arms unreachable by construction:
+
+| File | Budget | Reason |
+| --- | --- | --- |
+| src/http/multipart.mbt | 3 | `attachments_json` always returns an array and boundary search never gets an empty needle. |
+| src/model/interaction.mbt | 4 | Fallbacks behind emitters that always produce objects. |
+| src/model/component.mbt | 14 | Non-object fallback plus emit arms for component kinds Discord never sends in the covered contexts. |
+| src/model/message.mbt | 3 | Timestamp-parse fallback for values the Timestamp decoder already rejects. |
+| src/model/id.mbt | 1 | Phantom-id debug fallback. |
+| src/model/command.mbt | 1 | Unknown handler-type emit arm. |
+| src/util/cdn.mbt | 1 | Unreachable extension fallback. |
+| src/verify/hex.mbt | 1 | Odd-length guard unreachable from fixed-size signatures. |
+
+Receive-side model residuals (emit arms of receive-only structs and unknown
+variant fallbacks; decode is pinned by fixtures):
+
+| File | Budget | Reason |
+| --- | --- | --- |
+| src/model/application.mbt | 2 | Unknown-variant emit fallbacks. |
+| src/model/auto_moderation.mbt | 9 | Emit arms of receive-only structs. |
+| src/model/channel.mbt | 5 | Emit arms of receive-only fields. |
+| src/model/command_permissions.mbt | 3 | Emit arms of receive-only structs. |
+| src/model/embed.mbt | 13 | Emit arms of receive-only sub-objects (provider/video). |
+| src/model/gateway_presence.mbt | 16 | Activity emit arms for fields bots never send. |
+| src/model/guild_create.mbt | 2 | Emit arms of the gateway-only guild-create extras. |
+| src/model/integration.mbt | 8 | Emit arms of receive-only integration fields. |
+| src/model/integration_context.mbt | 2 | Unknown-variant emit fallbacks. |
+| src/model/intents.mbt | 2 | Debug rendering arms. |
+| src/model/invite.mbt | 8 | Emit arms of receive-only invite metadata. |
+| src/model/monetization.mbt | 17 | Emit arms of receive-only entitlement/subscription fields. |
+| src/model/role_connection_metadata.mbt | 2 | Unknown-variant emit fallbacks. |
+| src/model/scheduled_event.mbt | 6 | Emit arms of receive-only recurrence fields. |
+| src/model/webhook_event.mbt | 2 | Lossless raw emit arms for lobby payloads. |
+
+Deep dispatch branches in the interaction stack (error/cancellation arms and
+show-flows beyond the covered happy and failing paths):
+
+| File | Budget | Reason |
+| --- | --- | --- |
+| src/app/app.mbt | 20 | Cancellation re-raise arms and per-kind failure plumbing beyond the covered component/modal policy flows. |
+| src/app/check.mbt | 2 | Permission-check arms needing resolved member permissions in a guild payload. |
+| src/app/command.mbt | 11 | Group/subcommand registration arms beyond the covered paths. |
+| src/app/component.mbt | 21 | Deferred-ctx accessor duplicates and waiter arms behind a live gateway. |
+| src/app/ctx.mbt | 5 | Waiter plumbing behind a live gateway. |
+| src/app/endpoint.mbt | 8 | `serve` startup with an owned token/client (creates a real Client and fetches the application id). |
+| src/app/middleware.mbt | 4 | Component-scope middleware arms not reachable in the covered flows. |
+| src/app/modal.mbt | 27 | Show/prefill dispatch arms beyond the covered decode, validation, and error flows. |
+| src/app/policy.mbt | 13 | Followup-with-files arms and member-user extraction beyond the covered flows. |
+| src/app/sync.mbt | 3 | Option-comparison early exits not hit by the covered spec shapes. |
+| src/framework/ctx.mbt | 17 | Autocomplete/modal response variants beyond the covered response-management flows. |
+| src/framework/framework.mbt | 12 | Dispatch fallbacks for unroutable interactions. |
+| src/framework/gate.mbt | 2 | Double-response guard arms. |
+| src/interaction/args.mbt | 8 | Suggest-handler closures that only run inside a live autocomplete dispatch. |
+| src/interaction/builders.mbt | 12 | Builder arms for option kinds not used by any covered command shape. |
+| src/interaction/options.mbt | 8 | Focused-option accessors for kinds not used by any covered command shape. |
+| src/cache/cache.mbt | 24 | Permission-overwrite computation arms needing full guild channel fixtures. |
+| src/http/api_application.mbt | 3 | Emit arms of optional request fields not exercised by the pinned shapes. |
+| src/http/api_channel.mbt | 15 | Remaining optional-parameter emit arms. |
+| src/http/api_guild.mbt | 4 | Remaining optional-parameter emit arms. |
+| src/http/api_interaction.mbt | 3 | Callback-with-files arms needing a live token. |
+| src/http/api_message.mbt | 5 | Remaining optional-parameter emit arms. |
+| src/http/api_oauth2.mbt | 4 | Bearer-token flows (401-checked live only). |
+| src/http/api_poll.mbt | 1 | One optional-parameter emit arm. |
+| src/http/api_sticker.mbt | 4 | Multipart validation arms covered live (see COVERAGE.md notes). |
+| src/http/api_voice.mbt | 4 | Remaining optional-parameter emit arms. |
+| src/http/api_webhook.mbt | 2 | Remaining optional-parameter emit arms. |
+| src/http/handles_application.mbt | 1 | One delegation arm. |
+| src/http/handles_guild.mbt | 1 | One delegation arm. |
+| src/http/handles_member_user.mbt | 6 | Bearer-token delegations (401-checked live only). |
+| src/http/handles_message.mbt | 4 | Delegations whose params only differ on live-only flags. |
+| src/http/paginator.mbt | 3 | Defensive cursor arms not reachable through the wrapped endpoints. |
+| src/http/route.mbt | 1 | One custom-route arm. |
