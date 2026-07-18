@@ -107,6 +107,8 @@ pub fn[X] VoiceGateway::start(
   connector? : async (String) -> &VoiceTransport = connect_voice_websocket,
   queue_capacity? : Int = 256,
   telemetry? : (VoiceGatewayEvent) -> Unit = _ => (),
+  sleeper? : async (Int) -> Unit = @async.sleep,
+  rand? : @random.Rand = @random.Rand::chacha8(),
 ) -> VoiceGateway {
   let gateway : VoiceGateway = {
     events: Queue(kind=Blocking(queue_capacity)),
@@ -128,6 +130,8 @@ pub fn[X] VoiceGateway::start(
       endpoint~,
       select_protocol~,
       connector~,
+      sleeper~,
+      rand~,
     )
   })
   gateway
@@ -183,8 +187,9 @@ async fn VoiceGateway::run(
     String,
   ),
   connector~ : async (String) -> &VoiceTransport,
+  sleeper~ : async (Int) -> Unit,
+  rand~ : @random.Rand,
 ) -> Unit noraise {
-  let rand = @random.Rand::chacha8()
   let mut attempts = 0
   while !self.closing {
     if attempts > 0 {
@@ -192,7 +197,7 @@ async fn VoiceGateway::run(
       let exponent = if attempts > 5 { 5 } else { attempts }
       let max_delay = 1000 * (1 << exponent)
       let capped = if max_delay > 30000 { 30000 } else { max_delay }
-      @async.sleep(rand.int(limit=capped) + 250) catch {
+      sleeper(rand.int(limit=capped) + 250) catch {
         _ => return
       }
     }
@@ -218,6 +223,7 @@ async fn VoiceGateway::run(
         session_id~,
         token~,
         select_protocol~,
+        sleeper~,
       )
       VoiceConnectionEnded(code=Some(1000), reason="connection loop exited")
     } catch {
@@ -283,6 +289,7 @@ async fn VoiceGateway::run_connection(
     Int,
     String,
   ),
+  sleeper~ : async (Int) -> Unit,
 ) -> Unit {
   let (hello, hello_seq) = recv_voice_message(transport)
   if hello_seq is Some(seq) {
@@ -297,7 +304,7 @@ async fn VoiceGateway::run_connection(
   @async.with_task_group(connection_group => {
     connection_group.spawn_bg(no_wait=true, () => {
       // Voice v8 does not require the gateway-identify jitter used by op 2.
-      @async.sleep(heartbeat_interval)
+      sleeper(heartbeat_interval)
       for ;; {
         if !heartbeat_acked.val {
           transport.close(code=4000) catch {
@@ -313,7 +320,7 @@ async fn VoiceGateway::run_connection(
           encode_heartbeat(t=nonce, seq_ack=self.last_seq),
         )
         heartbeat_acked.val = false
-        @async.sleep(heartbeat_interval)
+        sleeper(heartbeat_interval)
       }
     })
 

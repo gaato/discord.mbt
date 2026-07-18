@@ -89,3 +89,56 @@ async test "IP discovery re-raises non-timeout receive errors" {
     _ => fail("expected the receive error to propagate")
   }
 }
+
+///|
+struct SilentVoiceUdp {
+  sends : Array[Bytes]
+}
+
+///|
+impl @voice.VoiceUdp for SilentVoiceUdp with fn recv(_self, _buffer) {
+  // never responds: the caller's receive timeout must fire
+  @async.sleep(3_600_000)
+  0
+}
+
+///|
+impl @voice.VoiceUdp for SilentVoiceUdp with fn send(self, bytes) {
+  self.sends.push(bytes)
+}
+
+///|
+impl @voice.VoiceUdp for SilentVoiceUdp with fn close(_self) {
+
+}
+
+///|
+async test "IP discovery retries receive timeouts and then raises" {
+  let udp = SilentVoiceUdp::{ sends: [] }
+  try
+    @voice.discover_external_address(udp, 42U, retries=2, timeout_ms=5)
+  catch {
+    @voice.VoiceUdpError::IpDiscoveryFailed(attempts~, reason~) => {
+      assert_eq(attempts, 2)
+      assert_true(reason.contains("timed out"))
+    }
+    error => fail("unexpected discovery error: \{to_repr(error)}")
+  } noraise {
+    _ => fail("expected discovery to fail")
+  }
+  // one request per attempt went out before each timeout
+  assert_eq(udp.sends.length(), 2)
+}
+
+///|
+async test "IP discovery rejects non-positive retries and timeouts" {
+  let udp = SilentVoiceUdp::{ sends: [] }
+  try @voice.discover_external_address(udp, 42U, retries=0) catch {
+    @voice.VoiceUdpError::IpDiscoveryFailed(attempts~, ..) =>
+      assert_eq(attempts, 0)
+    error => fail("unexpected discovery error: \{to_repr(error)}")
+  } noraise {
+    _ => fail("expected discovery to fail fast")
+  }
+  assert_eq(udp.sends.length(), 0)
+}

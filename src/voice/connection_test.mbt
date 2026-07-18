@@ -767,3 +767,44 @@ async test "manual voice subscription waits across a long gap" {
     connection.disconnect()
   })
 }
+
+///|
+async test "voice keepalive cadence runs through the injected sleeper" {
+  let transport = ConnectionTestTransport::new()
+  let udp = ConnectionTestUdp::new()
+  let gate = SleepGate()
+  @async.with_task_group(group => {
+    let connection = @voice.VoiceConnection::start(
+      group,
+      connection_credentials(),
+      user_id="self",
+      channel_id=7UL,
+      leave=() => (),
+      rejoin=() => connection_credentials(),
+      connector=_ => (transport : &@voice.VoiceTransport),
+      udp_opener=(_, _) => (udp : &@voice.VoiceUdp),
+      receive=false,
+      // only the keepalive loop sleeps exactly 5000ms; park everything else
+      sleeper=ms => {
+        if ms == 5000 {
+          gate.sleep(ms)
+        } else {
+          @async.sleep(3_600_000)
+        }
+      },
+    )
+    // tick 1 elapses before the UDP socket exists: nothing is sent
+    assert_eq(gate.requests.get(), 5000)
+    gate.release()
+    assert_eq(gate.requests.get(), 5000)
+    // bring the socket up, then let tick 2 elapse: the 8-byte counter goes out
+    connection_finish_protocol_selection(transport, udp)
+    gate.release()
+    assert_eq(udp.outgoing.get(), b"\x00\x00\x00\x00\x00\x00\x00\x00")
+    // tick 3: the counter increments little-endian
+    assert_eq(gate.requests.get(), 5000)
+    gate.release()
+    assert_eq(udp.outgoing.get(), b"\x01\x00\x00\x00\x00\x00\x00\x00")
+    connection.disconnect()
+  })
+}

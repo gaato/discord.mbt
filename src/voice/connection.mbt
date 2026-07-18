@@ -52,6 +52,8 @@ pub struct VoiceConnection {
   priv udp_opener_ : async (String, Int) -> &VoiceUdp
   priv dave_factory_ : (Int, String, UInt64) -> &DaveProvider raise
   priv telemetry_ : (VoiceTelemetry) -> Unit
+  priv sleeper_ : async (Int) -> Unit
+  priv rand_ : @random.Rand
   priv receiver : ReceivePipeline
   priv roster : Set[String]
   priv mut gateway : VoiceGateway?
@@ -177,6 +179,8 @@ fn[X] VoiceConnection::new_gateway(
     },
     connector=self.connector_,
     telemetry=event => (self.telemetry_)(GatewayEvent(event)),
+    sleeper=self.sleeper_,
+    rand=self.rand_,
   )
 }
 
@@ -443,7 +447,7 @@ fn keepalive_packet(counter : UInt64) -> Bytes {
 async fn VoiceConnection::run_keepalive(self : VoiceConnection) -> Unit noraise {
   let mut counter = 0UL
   while !self.closing {
-    @async.sleep(5000) catch {
+    (self.sleeper_)(5000) catch {
       _ => return
     }
     if self.udp is Some(udp) {
@@ -520,6 +524,8 @@ pub fn[X] VoiceConnection::start(
   ) => new_dave_provider(protocol_version~, user_id~, channel_id~),
   receive? : Bool = true,
   telemetry? : (VoiceTelemetry) -> Unit = _ => (),
+  sleeper? : async (Int) -> Unit = @async.sleep,
+  rand? : @random.Rand = @random.Rand::chacha8(),
 ) -> VoiceConnection {
   let receiver = ReceivePipeline::new(telemetry)
   let connection : VoiceConnection = {
@@ -534,6 +540,8 @@ pub fn[X] VoiceConnection::start(
     udp_opener_: udp_opener,
     dave_factory_: dave_factory,
     telemetry_: telemetry,
+    sleeper_: sleeper,
+    rand_: rand,
     receiver,
     roster: Set([]),
     gateway: None,

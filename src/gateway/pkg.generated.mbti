@@ -7,6 +7,7 @@ import {
   "gaato/discord/telemetry",
   "moonbitlang/async",
   "moonbitlang/core/debug",
+  "moonbitlang/core/random",
 }
 
 // Values
@@ -28,7 +29,7 @@ pub(all) suberror TransportClosed {
 pub struct CommandLimiter {
   // private fields
 }
-pub fn CommandLimiter::CommandLimiter(limit? : Int) -> Self
+pub fn CommandLimiter::CommandLimiter(limit? : Int, sleeper? : async (Int) -> Unit) -> Self
 pub async fn CommandLimiter::acquire(Self) -> Unit
 
 pub(all) enum GatewayFrame {
@@ -55,7 +56,7 @@ pub async fn Shard::close(Self) -> Unit noraise
 pub fn Shard::latency_ms(Self) -> Int64?
 pub async fn Shard::next(Self) -> ShardEvent
 pub async fn Shard::send(Self, Json) -> Unit
-pub fn[X] Shard::start(@async.TaskGroup[X], token~ : String, intents~ : @model.Intents, gateway_url? : String, shard_id? : Int, shard_count? : Int, identify_queue? : &@queue.IdentifyQueue, event_filter? : (@model.EventKind) -> Bool, connector? : async (String) -> &GatewayTransport, compress? : Bool, inflater_factory? : () -> &Inflater raise, queue_capacity? : Int, telemetry? : (@telemetry.TelemetryEvent) -> Unit) -> Self
+pub fn[X] Shard::start(@async.TaskGroup[X], token~ : String, intents~ : @model.Intents, gateway_url? : String, shard_id? : Int, shard_count? : Int, identify_queue? : &@queue.IdentifyQueue, event_filter? : (@model.EventKind) -> Bool, connector? : async (String) -> &GatewayTransport, compress? : Bool, inflater_factory? : () -> &Inflater raise, queue_capacity? : Int, telemetry? : (@telemetry.TelemetryEvent) -> Unit, sleeper? : async (Int) -> Unit, rand? : @random.Rand) -> Self
 pub fn Shard::state(Self) -> ShardState
 
 pub(all) enum ShardEvent {

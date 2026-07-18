@@ -29,6 +29,7 @@ options(
   "native-stub": [ "zlib_stream.c" ],
   targets: {
     "command_limit.mbt": [ "native" ],
+    "command_limit_wbtest.mbt": [ "native" ],
     "compression.mbt": [ "native" ],
     "compression_wbtest.mbt": [ "native" ],
     "gateway_test.mbt": [ "native" ],

@@ -471,3 +471,78 @@ async test "4014 is fatal" {
     assert_eq(gateway.state(), FatallyClosed(code=4014))
   })
 }
+
+///|
+/// Gated sleeper shared by the voice timing tests: each requested delay is
+/// observed on `requests` and only completes when the test calls `release`.
+struct SleepGate {
+  requests : @aqueue.Queue[Int]
+  releases : @aqueue.Queue[Unit]
+}
+
+///|
+fn SleepGate::SleepGate() -> SleepGate {
+  { requests: Queue(kind=Unbounded), releases: Queue(kind=Unbounded) }
+}
+
+///|
+async fn SleepGate::sleep(self : SleepGate, ms : Int) -> Unit {
+  self.requests.put(ms)
+  self.releases.get()
+}
+
+///|
+async fn SleepGate::release(self : SleepGate) -> Unit {
+  self.releases.put(())
+}
+
+///|
+async test "voice reconnect backoff runs through the injected sleeper" {
+  let first = FakeVoiceTransport()
+  let second = FakeVoiceTransport()
+  let pending : Array[FakeVoiceTransport] = [second, first]
+  let connects = Ref(0)
+  let gate = SleepGate()
+  @async.with_task_group(group => {
+    let gateway = @voice.VoiceGateway::start(
+      group,
+      server_id="guild",
+      user_id="user",
+      session_id="session",
+      token="token",
+      endpoint="voice.example",
+      select_protocol=(_, _, _, _) => {
+        ("203.0.113.8", 62000, "aead_aes256_gcm_rtpsize")
+      },
+      connector=_ => {
+        connects.val += 1
+        match pending.pop() {
+          Some(transport) => (transport : &@voice.VoiceTransport)
+          None => raise @voice.VoiceTransportClosed(code=None, reason="no more")
+        }
+      },
+      // 1ms heartbeat sleeps park; only the backoff (>= 250ms) hits the gate
+      sleeper=ms => {
+        if ms <= 1 {
+          @async.sleep(3_600_000)
+        } else {
+          gate.sleep(ms)
+        }
+      },
+    )
+    finish_handshake(gateway, first, heartbeat_interval=1)
+    first.server_close(Some(4000))
+    guard gateway.next() is Disconnected(code=Some(4000), resuming=true)
+    let backoff = gate.requests.get()
+    // attempts=1: full jitter over 2000ms plus the 250ms floor
+    assert_true(backoff >= 250 && backoff < 2250)
+    // the reconnect is gated on the backoff sleep
+    assert_eq(connects.val, 1)
+    gate.release()
+    second.incoming.put(hello_frame(1))
+    guard second.outgoing_text.get()
+      is { "op": Number(7, ..), "d": { "seq_ack": Number(2, ..), .. }, .. }
+    assert_eq(connects.val, 2)
+    gateway.close()
+  })
+}

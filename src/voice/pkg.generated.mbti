@@ -5,6 +5,7 @@ import {
   "moonbitlang/async",
   "moonbitlang/async/io",
   "moonbitlang/core/debug",
+  "moonbitlang/core/random",
   "moonbitlang/core/ref",
 }
 
@@ -193,7 +194,7 @@ pub fn VoiceConnection::latency_ms(Self) -> Int64?
 pub async fn VoiceConnection::next_event(Self) -> VoiceEvent
 pub async fn VoiceConnection::play(Self, &AudioSource) -> Unit
 pub async fn VoiceConnection::set_speaking(Self, Int) -> Unit
-pub fn[X] VoiceConnection::start(@async.TaskGroup[X], VoiceCredentials, user_id~ : String, channel_id~ : UInt64, leave~ : async () -> Unit, rejoin~ : async () -> VoiceCredentials, connector? : async (String) -> &VoiceTransport, udp_opener? : async (String, Int) -> &VoiceUdp, dave_factory? : (Int, String, UInt64) -> &DaveProvider raise, receive? : Bool, telemetry? : (VoiceTelemetry) -> Unit) -> Self
+pub fn[X] VoiceConnection::start(@async.TaskGroup[X], VoiceCredentials, user_id~ : String, channel_id~ : UInt64, leave~ : async () -> Unit, rejoin~ : async () -> VoiceCredentials, connector? : async (String) -> &VoiceTransport, udp_opener? : async (String, Int) -> &VoiceUdp, dave_factory? : (Int, String, UInt64) -> &DaveProvider raise, receive? : Bool, telemetry? : (VoiceTelemetry) -> Unit, sleeper? : async (Int) -> Unit, rand? : @random.Rand) -> Self
 pub fn VoiceConnection::state(Self) -> VoiceConnectionState
 pub async fn VoiceConnection::stop(Self) -> Unit
 pub fn VoiceConnection::subscribe(Self, user_id~ : String, end_after_silence_ms? : Int?) -> VoiceReceiveStream
@@ -237,7 +238,7 @@ pub fn VoiceGateway::latency_ms(Self) -> Int64?
 pub async fn VoiceGateway::next(Self) -> VoiceGatewayEvent
 pub async fn VoiceGateway::send_binary(Self, op~ : Int, Bytes) -> Unit
 pub async fn VoiceGateway::send_json(Self, Json) -> Unit
-pub fn[X] VoiceGateway::start(@async.TaskGroup[X], server_id~ : String, user_id~ : String, session_id~ : String, token~ : String, endpoint~ : String, select_protocol~ : async (UInt, String, Int, Array[String]) -> (String, Int, String), connector? : async (String) -> &VoiceTransport, queue_capacity? : Int, telemetry? : (VoiceGatewayEvent) -> Unit) -> Self
+pub fn[X] VoiceGateway::start(@async.TaskGroup[X], server_id~ : String, user_id~ : String, session_id~ : String, token~ : String, endpoint~ : String, select_protocol~ : async (UInt, String, Int, Array[String]) -> (String, Int, String), connector? : async (String) -> &VoiceTransport, queue_capacity? : Int, telemetry? : (VoiceGatewayEvent) -> Unit, sleeper? : async (Int) -> Unit, rand? : @random.Rand) -> Self
 pub fn VoiceGateway::state(Self) -> VoiceGatewayState
 
 pub(all) enum VoiceGatewayEvent {

@@ -5,12 +5,16 @@
 pub struct CommandLimiter {
   priv timestamps : Array[Int64]
   priv limit : Int
+  priv sleeper_ : async (Int) -> Unit
 }
 
 ///|
 /// Create a limiter allowing `limit` sends per 60-second sliding window.
-pub fn CommandLimiter::CommandLimiter(limit? : Int = 115) -> CommandLimiter {
-  { timestamps: [], limit }
+pub fn CommandLimiter::CommandLimiter(
+  limit? : Int = 115,
+  sleeper? : async (Int) -> Unit = @async.sleep,
+) -> CommandLimiter {
+  { timestamps: [], limit, sleeper_: sleeper }
 }
 
 ///|
@@ -26,6 +30,6 @@ pub async fn CommandLimiter::acquire(self : CommandLimiter) -> Unit {
       break
     }
     let wait = self.timestamps[0] + 60000L - now
-    @async.sleep(wait.to_int() + 1)
+    (self.sleeper_)(wait.to_int() + 1)
   }
 }

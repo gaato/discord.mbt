@@ -346,6 +346,184 @@ async test "identify queue spaces buckets" {
 }
 
 ///|
+/// Hello with a 1ms heartbeat interval: the heartbeat task's sleeps are
+/// always <= 1ms, so a test sleeper can tell them apart from reconnect
+/// backoff (>= 250ms) and the op9 re-identify delay (>= 1000ms).
+const HELLO_FAST : String =
+  #|{"op":10,"d":{"heartbeat_interval":1}}
+
+///|
+/// Gated sleeper: every requested delay is observed on `requests` and only
+/// completes when the test calls `release`.
+struct SleepGate {
+  requests : @aqueue.Queue[Int]
+  releases : @aqueue.Queue[Unit]
+}
+
+///|
+fn SleepGate::SleepGate() -> SleepGate {
+  { requests: Queue(kind=Unbounded), releases: Queue(kind=Unbounded) }
+}
+
+///|
+async fn SleepGate::sleep(self : SleepGate, ms : Int) -> Unit {
+  self.requests.put(ms)
+  self.releases.get()
+}
+
+///|
+async fn SleepGate::release(self : SleepGate) -> Unit {
+  self.releases.put(())
+}
+
+///|
+async test "shard backoff, resume url switch, and op9 delay run through the sleeper" {
+  let first = FakeTransport()
+  let second = FakeTransport()
+  let third = FakeTransport()
+  let pending : Array[FakeTransport] = [third, second, first]
+  let urls : Array[String] = []
+  let gate = SleepGate()
+  @async.with_task_group(group => {
+    let shard = @gateway.Shard::start(
+      group,
+      token="tok-9",
+      intents=@model.Intents::none(),
+      connector=url => {
+        urls.push(url)
+        match pending.pop() {
+          Some(t) => (t : &@gateway.GatewayTransport)
+          None => raise @gateway.TransportClosed(code=None, reason="no more")
+        }
+      },
+      sleeper=ms => {
+        if ms <= 1 {
+          // park the heartbeat task; cancelled with the connection group
+          @async.sleep(3_600_000)
+        } else {
+          gate.sleep(ms)
+        }
+      },
+    )
+    // --- connection 1: identify, ready ---
+    first.incoming.put(HELLO_FAST)
+    guard first.outgoing.get() is { "op": Number(2, ..), .. } else {
+      fail("expected identify")
+    }
+    first.incoming.put(ready_frame())
+    guard shard.next() is Connected(resumed=false)
+    guard shard.next() is Dispatch(Ready(_))
+    // --- resumable drop: the reconnect is gated on the backoff sleep ---
+    first.server_close(Some(4000))
+    guard shard.next() is Disconnected(code=Some(4000), resuming=true)
+    let backoff1 = gate.requests.get()
+    // attempts=1: full jitter over 2000ms plus the 250ms floor
+    assert_true(backoff1 >= 250 && backoff1 < 2250)
+    assert_eq(urls.length(), 1)
+    gate.release()
+    // --- connection 2: switches to the resume url and resumes ---
+    second.incoming.put(HELLO_FAST)
+    guard second.outgoing.get() is { "op": Number(6, ..), .. } else {
+      fail("expected resume")
+    }
+    assert_eq(urls.length(), 2)
+    assert_true(urls[1].has_prefix("wss://resume.example/"))
+    // --- op9 non-resumable: documented 1-5s wait, then re-identify ---
+    second.incoming.put(
+      (
+        #|{"op":9,"d":false}
+      ),
+    )
+    let op9_wait = gate.requests.get()
+    assert_true(op9_wait >= 1000 && op9_wait < 5000)
+    gate.release()
+    guard shard.next() is Disconnected(code=None, resuming=false)
+    let backoff2 = gate.requests.get()
+    // attempts=2: full jitter over 4000ms plus the 250ms floor
+    assert_true(backoff2 >= 250 && backoff2 < 4250)
+    gate.release()
+    // --- connection 3: session was cleared, back to the configured url ---
+    third.incoming.put(HELLO_FAST)
+    guard third.outgoing.get() is { "op": Number(2, ..), .. } else {
+      fail("expected re-identify")
+    }
+    assert_eq(urls.length(), 3)
+    assert_true(urls[2].has_prefix("wss://gateway.discord.gg/"))
+    shard.close()
+  })
+}
+
+///|
+async test "shard heartbeat loop beats, tracks acks, and zombie-closes" {
+  let first = FakeTransport()
+  let second = FakeTransport()
+  let pending : Array[FakeTransport] = [second, first]
+  let latencies : Array[Int64] = []
+  let gate = SleepGate()
+  @async.with_task_group(group => {
+    let shard = @gateway.Shard::start(
+      group,
+      token="tok",
+      intents=@model.Intents::none(),
+      connector=_ => {
+        match pending.pop() {
+          Some(t) => (t : &@gateway.GatewayTransport)
+          None => raise @gateway.TransportClosed(code=None, reason="no more")
+        }
+      },
+      telemetry=event => {
+        if event is ShardHeartbeatLatency(latency_ms~, ..) {
+          latencies.push(latency_ms)
+        }
+      },
+      sleeper=ms => gate.sleep(ms),
+    )
+    first.incoming.put(HELLO)
+    guard first.outgoing.get() is { "op": Number(2, ..), .. } else {
+      fail("expected identify")
+    }
+    first.incoming.put(ready_frame())
+    guard shard.next() is Connected(resumed=false)
+    guard shard.next() is Dispatch(Ready(_))
+    // the first beat waits out the documented jitter
+    let jitter = gate.requests.get()
+    assert_true(jitter >= 0 && jitter < 60000)
+    gate.release()
+    let beat = first.outgoing.get()
+    guard beat is { "op": Number(1, ..), "d": Number(1, ..), .. } else {
+      fail("expected heartbeat with seq 1, got \{beat.stringify()}")
+    }
+    first.incoming.put("{\"op\":11,\"d\":null}")
+    @async.sleep(1) // let the read loop process the ack
+    guard latencies.get(0) is Some(latency) else {
+      fail("expected heartbeat latency telemetry")
+    }
+    assert_true(latency >= 0L)
+    // acked: the steady-state interval elapses and the next beat goes out
+    let steady = gate.requests.get()
+    assert_eq(steady, 60000)
+    gate.release()
+    guard first.outgoing.get() is { "op": Number(1, ..), .. } else {
+      fail("expected second heartbeat")
+    }
+    // not acked this time: the loop declares a zombie and closes with 4000
+    let steady2 = gate.requests.get()
+    assert_eq(steady2, 60000)
+    gate.release()
+    guard shard.next() is Disconnected(code=Some(4000), resuming=true)
+    // and the reconnect resumes after the gated backoff
+    let backoff = gate.requests.get()
+    assert_true(backoff >= 250 && backoff < 2250)
+    gate.release()
+    second.incoming.put(HELLO)
+    guard second.outgoing.get() is { "op": Number(6, ..), .. } else {
+      fail("expected resume after the zombie close")
+    }
+    shard.close()
+  })
+}
+
+///|
 async test "command limiter admits under the limit immediately" {
   let limiter = @gateway.CommandLimiter(limit=5)
   let start = @clock.now_ms()

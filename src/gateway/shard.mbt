@@ -90,10 +90,12 @@ pub fn[X] Shard::start(
   inflater_factory? : () -> &Inflater raise = new_zlib_stream_inflater,
   queue_capacity? : Int = 256,
   telemetry? : (@telemetry.TelemetryEvent) -> Unit = _ => (),
+  sleeper? : async (Int) -> Unit = @async.sleep,
+  rand? : @random.Rand = @random.Rand::chacha8(),
 ) -> Shard {
   let shard : Shard = {
     events: Queue(kind=Blocking(queue_capacity)),
-    command_limiter: CommandLimiter(),
+    command_limiter: CommandLimiter(sleeper~),
     send_gate: Semaphore(1),
     transport: None,
     state: Disconnected(reconnect_attempts=0),
@@ -114,6 +116,8 @@ pub fn[X] Shard::start(
       connector~,
       compress~,
       inflater_factory~,
+      sleeper~,
+      rand~,
     )
   })
   shard
@@ -147,15 +151,16 @@ async fn Shard::run(
   connector~ : async (String) -> &GatewayTransport,
   compress~ : Bool,
   inflater_factory~ : () -> &Inflater raise,
+  sleeper~ : async (Int) -> Unit,
+  rand~ : @random.Rand,
 ) -> Unit noraise {
-  let rand = @random.Rand::chacha8()
   let mut attempts = 0
   while !self.closing {
     if attempts > 0 {
       // full-jitter exponential backoff, capped at 30s
       let max_delay = 1000 * (1 << (if attempts > 5 { 5 } else { attempts }))
       let capped = if max_delay > 30000 { 30000 } else { max_delay }
-      @async.sleep(rand.int(limit=capped) + 250) catch {
+      sleeper(rand.int(limit=capped) + 250) catch {
         _ => return
       }
     }
@@ -193,7 +198,8 @@ async fn Shard::run(
         shard_count~,
         identify_queue?,
         event_filter~,
-        rand,
+        sleeper~,
+        rand~,
       )
       ConnectionEnded(code=Some(1000), reason="loop exited")
     } catch {
@@ -268,7 +274,8 @@ async fn Shard::run_connection(
   shard_count~ : Int,
   identify_queue? : &@queue.IdentifyQueue,
   event_filter~ : (@model.EventKind) -> Bool,
-  rand : @random.Rand,
+  sleeper~ : async (Int) -> Unit,
+  rand~ : @random.Rand,
 ) -> Unit {
   // --- Hello ---
   let hello_frame = @json.parse(recv_payload(transport, inflater~))
@@ -288,7 +295,7 @@ async fn Shard::run_connection(
     // --- heartbeat task (single writer discipline via send_gate) ---
     conn_group.spawn_bg(no_wait=true, () => {
       // jittered first beat per the docs
-      @async.sleep(rand.int(limit=heartbeat_interval))
+      sleeper(rand.int(limit=heartbeat_interval))
       for ;; {
         if !heartbeat_state.val {
           // previous beat never acked: the connection is a zombie
@@ -300,7 +307,7 @@ async fn Shard::run_connection(
         self.send_heartbeat(transport)
         heartbeat_state.val = false
         heartbeat_sent_at.val = @clock.now_ms()
-        @async.sleep(heartbeat_interval)
+        sleeper(heartbeat_interval)
       }
     })
 
@@ -411,7 +418,7 @@ async fn Shard::run_connection(
           if !resumable {
             self.session = None
             // wait 1-5s before re-identifying, per the docs
-            @async.sleep(1000 + rand.int(limit=4000))
+            sleeper(1000 + rand.int(limit=4000))
           }
           raise ConnectionEnded(code=None, reason="invalid session")
         }
