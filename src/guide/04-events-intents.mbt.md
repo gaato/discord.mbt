@@ -256,7 +256,10 @@ it to a `Bot` to apply every decoded event before event handlers run:
 fn install_cache(bot : @discord.Bot) -> @cache.InMemoryCache {
   let cache = @cache.InMemoryCache(
     resources=@cache.CacheResources(presences=true, messages=true),
-    max_messages_per_channel=100,
+    limits=@cache.CacheLimits(
+      presences=@cache.CacheLimit(max_entries=5_000, ttl_ms=300_000L),
+      messages=@cache.CacheLimit(max_entries=100, ttl_ms=900_000L),
+    ),
   )
   bot.attach_cache(cache)
   cache
@@ -292,6 +295,19 @@ default. Presences and messages are opt-in because of their volume; enable
 only the resources the application reads. The cache only sees events allowed
 by the bot's configured intents. Entity getters return shared read-only model
 values, while list getters return fresh outer arrays.
+
+`CacheLimits` can set an entry cap, TTL, or both for each resource. Guild,
+channel, and user limits are global; role, member, voice-state, and presence
+limits are per guild; message limits are per channel. Entry caps evict in
+FIFO insertion order, and re-storing an entity refreshes its position. TTLs
+use fixed, non-sliding deadlines set at write time: reads do not extend them,
+and lazy expiry requires no background timer. Messages default to 100 entries
+per channel when enabled.
+
+Limit guilds, roles, or voice states only when degraded derived-state accuracy
+is acceptable. Missing required guild or role data makes `permissions()`
+return `None`, and missing voice states can hide occupancy. Evicted members,
+users, presences, and messages otherwise behave as ordinary cache misses.
 
 Gateway handlers can access the attached cache directly and resolve a channel
 with a cache-first lookup. This is useful because

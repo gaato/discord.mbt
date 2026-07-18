@@ -20,9 +20,9 @@ sets `MOON_CC=cc` for hosts where moon's bundled tcc cannot link, and points
 `DISCORD_VOICE_SHIM_PATH` at the in-tree voice shim so the DAVE/AEAD tests do
 not skip themselves.
 
-Snapshot at the last full measurement (2026-07-18, after the sleeper/rand
-seams): **90.4 %** across the library (7474/8270 coverage points; http
-95.5 %, model 94.9 %, bot 93.0 %, interaction 91.0 %, cache 90.4 %).
+Snapshot at the last full measurement (2026-07-18, after the per-resource
+cache limits): **90.5 %** across the library (7478/8267 coverage points; http
+95.5 %, model 94.9 %, bot 93.0 %, interaction 91.0 %, cache 93.1 %).
 
 ## Policy
 
@@ -157,7 +157,7 @@ show-flows beyond the covered happy and failing paths):
 | src/interaction/args.mbt | 8 | Suggest-handler closures that only run inside a live autocomplete dispatch. |
 | src/interaction/builders.mbt | 12 | Builder arms for option kinds not used by any covered command shape. |
 | src/interaction/options.mbt | 8 | Focused-option accessors for kinds not used by any covered command shape. |
-| src/cache/cache.mbt | 24 | Permission-overwrite computation arms needing full guild channel fixtures. |
+| src/cache/cache.mbt | 17 | Permission-overwrite computation arms needing full guild channel fixtures. |
 | src/http/api_application.mbt | 3 | Emit arms of optional request fields not exercised by the pinned shapes. |
 | src/http/api_channel.mbt | 15 | Remaining optional-parameter emit arms. |
 | src/http/api_guild.mbt | 4 | Remaining optional-parameter emit arms. |

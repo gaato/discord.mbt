@@ -10,6 +10,17 @@ import {
 // Errors
 
 // Types and methods
+pub struct CacheLimit {
+  // private fields
+}
+pub fn CacheLimit::CacheLimit(max_entries? : Int, ttl_ms? : Int64) -> Self
+
+pub struct CacheLimits {
+  // private fields
+}
+pub fn CacheLimits::CacheLimits(guilds? : CacheLimit, channels? : CacheLimit, users? : CacheLimit, roles? : CacheLimit, members? : CacheLimit, voice_states? : CacheLimit, presences? : CacheLimit, messages? : CacheLimit) -> Self
+pub fn CacheLimits::default() -> Self
+
 pub struct CacheResources {
   // private fields
 }
@@ -21,7 +32,7 @@ pub fn CacheResources::none() -> Self
 pub struct InMemoryCache {
   // private fields
 }
-pub fn InMemoryCache::InMemoryCache(resources~ : CacheResources, max_messages_per_channel? : Int) -> Self
+pub fn InMemoryCache::InMemoryCache(resources~ : CacheResources, limits? : CacheLimits, now? : () -> Int64) -> Self
 pub fn InMemoryCache::channel(Self, @model.Id[@model.ChannelMarker]) -> @model.Channel?
 pub fn InMemoryCache::channels(Self) -> Array[@model.Channel]
 pub fn InMemoryCache::guild(Self, @model.Id[@model.GuildMarker]) -> @model.Guild?

@@ -1,6 +1,7 @@
 import {
   "gaato/discord/model",
   "gaato/discord/util",
+  "gaato/discord/internal/clock",
 }
 
 import {

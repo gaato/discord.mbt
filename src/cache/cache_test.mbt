@@ -220,7 +220,7 @@ test "permissions use owner administrator and channel overwrites" {
 test "message updates replace retained entries without changing eviction order" {
   let cache = @cache.InMemoryCache(
     resources=CacheResources::all(),
-    max_messages_per_channel=2,
+    limits=@cache.CacheLimits(messages=@cache.CacheLimit(max_entries=2)),
   )
   let channel_id : @model.ChannelId = @model.Id::parse("400")
   let first_id : @model.MessageId = @model.Id::parse("500")
