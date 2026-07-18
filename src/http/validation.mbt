@@ -1,12 +1,18 @@
 ///|
 /// Raises `Validation` when an optional string's UTF-16 length falls outside
-/// `min..=max`. Pass `Some(value)` to validate a required string.
+/// `min..=max`. Pass `Some(value)` to validate a required string. Set
+/// `allow_empty` for fields Discord documents as "empty or min-max
+/// characters".
 fn validate_length(
   field : String,
   value : String?,
   min? : Int = 0,
   max~ : Int,
+  allow_empty? : Bool = false,
 ) -> Unit raise DiscordHttpError {
+  if allow_empty && value is Some("") {
+    return
+  }
   if value is Some(v) && (v.length() < min || v.length() > max) {
     if min > 0 {
       raise Validation(

@@ -3,9 +3,18 @@ fn validate_sticker_fields(
   name : String?,
   description : String?,
   tags : String?,
+  allow_empty_description~ : Bool,
 ) -> Unit raise DiscordHttpError {
   validate_length("sticker name", name, min=2, max=30)
-  validate_length("sticker description", description, min=2, max=100)
+  // Create documents "empty or 2-100 characters"; modify documents 2-100
+  // with null (clear_description) as the way to drop it.
+  validate_length(
+    "sticker description",
+    description,
+    min=2,
+    max=100,
+    allow_empty=allow_empty_description,
+  )
   validate_length("sticker tags", tags, min=1, max=200)
 }
 
@@ -82,7 +91,12 @@ pub async fn Client::create_guild_sticker(
   tags : String,
   audit_reason? : String,
 ) -> @model.Sticker raise DiscordHttpError {
-  validate_sticker_fields(Some(name), Some(description), Some(tags))
+  validate_sticker_fields(
+    Some(name),
+    Some(description),
+    Some(tags),
+    allow_empty_description=true,
+  )
   if file.content.length() > 512 * 1024 {
     raise Validation(message="guild sticker file exceeds 512 KiB")
   }
@@ -110,7 +124,12 @@ pub async fn Client::modify_guild_sticker(
   tags? : String,
   audit_reason? : String,
 ) -> @model.Sticker raise DiscordHttpError {
-  validate_sticker_fields(name, description, tags)
+  validate_sticker_fields(
+    name,
+    description,
+    tags,
+    allow_empty_description=false,
+  )
   let body = @model.ObjBuilder()
     .opt("name", name)
     .und(

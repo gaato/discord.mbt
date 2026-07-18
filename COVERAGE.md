@@ -262,6 +262,12 @@ exercised against the live API by `src/examples/live_probe`.
 Fixed in the same audit: `SubscriptionStatus` INACTIVE/ENDING value swap;
 `get_invite` sent the removed `with_expiration` query key.
 
+Fixed in a follow-up (2026-07-18): `create_guild_sticker` rejected an empty
+`description`, but the docs say "empty or 2-100 characters" — verified live
+(create with `description=""` succeeded and echoed the empty string back).
+`modify_guild_sticker` keeps the 2-100 rule; the documented way to drop a
+description there is null, exposed as `clear_description`.
+
 Intentionally not exposed (still reachable via `Route::custom`):
 
 - Command params `dm_permission` / `default_permission` — deprecated in the

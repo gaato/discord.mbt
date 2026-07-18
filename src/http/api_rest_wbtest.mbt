@@ -583,7 +583,14 @@ test "stage sticker and soundboard validation is pre-IO" {
   } noraise {
     _ => fail("expected stage topic validation")
   }
-  try validate_sticker_fields(Some("x"), None, None) catch {
+  try
+    validate_sticker_fields(
+      Some("x"),
+      None,
+      None,
+      allow_empty_description=false,
+    )
+  catch {
     Validation(_) => ()
     error => fail("unexpected error: \{to_repr(error)}")
   } noraise {

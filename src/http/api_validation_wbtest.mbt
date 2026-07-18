@@ -288,6 +288,48 @@ test "sticker multipart form validation pins object and string requirements" {
 }
 
 ///|
+test "sticker description accepts empty only where documented" {
+  // Create Guild Sticker documents "empty or 2-100 characters".
+  validate_sticker_fields(
+    Some("wave"),
+    Some(""),
+    Some("greeting"),
+    allow_empty_description=true,
+  )
+  try
+    validate_sticker_fields(
+      Some("wave"),
+      Some("x"),
+      Some("greeting"),
+      allow_empty_description=true,
+    )
+  catch {
+    Validation(message~) =>
+      inspect(
+        message,
+        content="sticker description must be between 2 and 100 characters",
+      )
+    error => fail("unexpected error: \{to_repr(error)}")
+  } noraise {
+    _ => fail("expected one-character description validation")
+  }
+  // Modify Guild Sticker documents 2-100 with null (clear_description) as
+  // the way to drop a description, so empty strings stay rejected.
+  try
+    validate_sticker_fields(None, Some(""), None, allow_empty_description=false)
+  catch {
+    Validation(message~) =>
+      inspect(
+        message,
+        content="sticker description must be between 2 and 100 characters",
+      )
+    error => fail("unexpected error: \{to_repr(error)}")
+  } noraise {
+    _ => fail("expected empty description validation on modify")
+  }
+}
+
+///|
 test "guild prune validates documented day range" {
   expect_search_validation(
     () => guild_prune_query(Some(0), None),
