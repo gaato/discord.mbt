@@ -605,6 +605,27 @@ test "stage sticker and soundboard validation is pre-IO" {
 }
 
 ///|
+async test "guild sticker upload rejects files over 512 KiB before transport" {
+  let client = Client("test-token", base_url="http://127.0.0.1:1")
+  defer client.close()
+  let guild_id : @model.GuildId = Id(10UL)
+  let file = FileUpload(
+    "big.png",
+    Bytes::make(512 * 1024 + 1, b'0'),
+    content_type="image/png",
+  )
+  try
+    client.create_guild_sticker(guild_id, file, "wave", "", "greeting")
+  catch {
+    Validation(message~) =>
+      inspect(message, content="guild sticker file exceeds 512 KiB")
+    error => fail("unexpected error: \{to_repr(error)}")
+  } noraise {
+    _ => fail("expected sticker file size validation")
+  }
+}
+
+///|
 async test "REST pagination limits fail before transport" {
   let client = Client("test-token", base_url="http://127.0.0.1:1")
   defer client.close()

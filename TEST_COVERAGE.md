@@ -20,9 +20,9 @@ sets `MOON_CC=cc` for hosts where moon's bundled tcc cannot link, and points
 `DISCORD_VOICE_SHIM_PATH` at the in-tree voice shim so the DAVE/AEAD tests do
 not skip themselves.
 
-Snapshot at the last full measurement (2026-07-18): **90.3 %** across the
-library (7462/8268 coverage points; http 95.4 %, model 94.9 %, bot 93.0 %,
-interaction 91.0 %, cache 90.4 %).
+Snapshot at the last full measurement (2026-07-18, after the sleeper/rand
+seams): **90.4 %** across the library (7474/8270 coverage points; http
+95.5 %, model 94.9 %, bot 93.0 %, interaction 91.0 %, cache 90.4 %).
 
 ## Policy
 
@@ -41,8 +41,11 @@ Accepted as uncovered (needs a ledger row):
   behavior is exercised by the live probe sweeps recorded in COVERAGE.md
   (run 11: 242 PASS / 0 FAIL, 2026-07-16) and the live voice session checks
   (playback + recording, 2026-07-15);
-- reconnect/backoff/heartbeat timing loops that would need a clock/jitter
-  seam to test deterministically;
+- timed-wait loops without an injectable sleeper (ratelimit, queue,
+  `with_typing`, shard_manager). The gateway shard, voice gateway, voice
+  connection, and command limiter loops take `sleeper?`/`rand?` since
+  2026-07-18 and their backoff/heartbeat/keepalive cadences are tested
+  deterministically — their rows below now cover only defensive arms;
 - defensive arms that are unreachable by construction (`abort`, fallbacks
   behind emitters that always produce the expected shape);
 - error/cancellation plumbing deep inside async dispatch flows.
@@ -74,8 +77,8 @@ playback and a 72-second recording against real Discord voice):
 
 | File | Budget | Reason |
 | --- | --- | --- |
-| src/voice/connection.mbt | 94 | Join/handshake/reconnect orchestration needing a full live voice session. |
-| src/voice/gateway.mbt | 18 | Heartbeat/resume/cancellation arms of the live voice gateway loop. |
+| src/voice/connection.mbt | 92 | Error/cancellation plumbing of the pump, receiver, and playback tasks plus rejoin credential arms beyond the fake-session and seamed-keepalive tests. |
+| src/voice/gateway.mbt | 18 | Send-gate error arms, teardown catches, and malformed-frame guards; backoff and heartbeat cadence are tested via the injected sleeper. |
 | src/voice/dave.mbt | 28 | DAVE/MLS transitions that need a second member and real davey epoch state. |
 | src/voice/audio.mbt | 11 | Real-time pacing loop (deadline sleeps) and DAVE encrypt-drop telemetry arms. |
 | src/voice/subscribe.mbt | 4 | Silence-timeout stream end arms. |
@@ -84,14 +87,13 @@ playback and a 72-second recording against real Discord voice):
 | src/voice/rtp.mbt | 3 | Header arms only produced by real senders (CSRC counts). |
 | src/voice/ogg_opus.mbt | 4 | Constructor `abort`s (unreachable by construction) and one reader break arm. |
 
-Reconnect/backoff and timed-wait loops (need a clock seam to test
-deterministically; exercised in every live gateway run):
+Reconnect/backoff and timed-wait loops (exercised in every live gateway
+run; the gateway/voice loops are additionally tested via injected sleepers):
 
 | File | Budget | Reason |
 | --- | --- | --- |
-| src/gateway/shard.mbt | 35 | Reconnect loop with jittered backoff, resume URL switching, and close classification on live sockets. |
+| src/gateway/shard.mbt | 30 | Defensive arms around the seamed loops: send-gate release on transport errors, event-queue teardown catches, malformed Hello/frame guards, and cancellation returns. |
 | src/gateway/compression.mbt | 3 | zlib failure statuses require a corrupted native stream state. |
-| src/gateway/command_limit.mbt | 2 | 60-second window wait path. |
 | src/ratelimit/ratelimit.mbt | 4 | Global-window sleep and gate release-on-error paths. |
 | src/queue/queue.mbt | 2 | Identify-bucket gate release-on-error path. |
 | src/http/handles_channel.mbt | 2 | `with_typing` refresh-failure arm sits behind the real 8-second cadence. |
@@ -163,7 +165,7 @@ show-flows beyond the covered happy and failing paths):
 | src/http/api_message.mbt | 5 | Remaining optional-parameter emit arms. |
 | src/http/api_oauth2.mbt | 4 | Bearer-token flows (401-checked live only). |
 | src/http/api_poll.mbt | 1 | One optional-parameter emit arm. |
-| src/http/api_sticker.mbt | 4 | Multipart validation arms covered live (see COVERAGE.md notes). |
+| src/http/api_sticker.mbt | 3 | Global catalog delegations (get_sticker, sticker packs) without a guild anchor; ENV-LIMITED live. |
 | src/http/api_voice.mbt | 4 | Remaining optional-parameter emit arms. |
 | src/http/api_webhook.mbt | 2 | Remaining optional-parameter emit arms. |
 | src/http/handles_application.mbt | 1 | One delegation arm. |
