@@ -7,17 +7,41 @@ through an `App`, and keeps deferred handlers alive with `ctx.waitUntil`.
 
 From the repository root:
 
-```sh
-moon build --target js src/examples/workers_echo
+```fish
+moon build --target js --release --deny-warn src/examples/workers_echo
 cd src/examples/workers_echo
-wrangler secret put DISCORD_TOKEN
-wrangler secret put DISCORD_PUBLIC_KEY
-wrangler deploy
+npx wrangler secret put DISCORD_TOKEN
+npx wrangler secret put DISCORD_PUBLIC_KEY
+npx wrangler deploy
 ```
 
 The MoonBit build emits
-`_build/js/debug/build/examples/workers_echo/workers_echo.js`. `entry.js`
+`_build/js/release/build/examples/workers_echo/workers_echo.js`. `entry.js`
 imports that ESM artifact, and Wrangler bundles it into the Worker.
+
+The `/file` command returns `hello.txt` as a streamed multipart callback.
+Multipart framing is emitted chunk by chunk and existing `Bytes` file contents
+are not concatenated into one body. `FileUpload` still owns its bytes in
+memory; this is not filesystem request-body streaming.
+
+## Test locally
+
+The test suite generates a temporary Ed25519 key pair and runs signed requests
+inside Cloudflare's local `workerd` runtime. It does not read `.dev.vars` and
+does not send requests to Discord or Cloudflare:
+
+```fish
+cd src/examples/workers_echo
+npm ci
+env WRANGLER_SEND_METRICS=false npm test
+npm run bundle:check -- --outdir /tmp/discord-mbt-workers-echo
+```
+
+The published `moonbitlang/async@0.21.0` JavaScript Fetch transport currently
+cannot finish 204, 205, or HEAD responses because those Web API responses have
+a null body. This repository keeps the published dependency pinned and tests
+an upstream fix separately; avoid those response shapes in Worker-side REST
+calls until a fixed async release is available.
 
 Set the deployed Worker's URL as the Interactions Endpoint URL in the Discord
 developer portal. Discord sends a signed PING request while validating the URL;
@@ -30,9 +54,9 @@ one-shot: `register/` builds the same `App` as the Worker (one definition in
 `app.mbt`, no drift possible) and diff-syncs it — nothing is sent when the
 registered commands already match. Run it after `wrangler deploy` (or from CI):
 
-```sh
-DISCORD_TOKEN=... moon run --target native src/examples/workers_echo/register
-GUILD_ID=... DISCORD_TOKEN=... moon run --target native src/examples/workers_echo/register  # one guild only
+```fish
+env DISCORD_TOKEN=... moon run --target native src/examples/workers_echo/register
+env GUILD_ID=... DISCORD_TOKEN=... moon run --target native src/examples/workers_echo/register # one guild only
 ```
 
 Deployment and configuring the Discord developer portal are manual steps. The

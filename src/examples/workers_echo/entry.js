@@ -1,4 +1,4 @@
-// From this directory, run `moon build --target js .` first. Wrangler bundles
+// From this directory, run `moon build --target js --release .` first. Wrangler bundles
 // the generated ESM artifact imported below when it deploys entry.js.
 //
 // The import is dynamic because MoonBit's generated module seeds its hasher
@@ -8,7 +8,7 @@
 let workerModule;
 function loadWorkerModule() {
   workerModule ??= import(
-    "../../../_build/js/debug/build/examples/workers_echo/workers_echo.js"
+    "../../../_build/js/release/build/examples/workers_echo/workers_echo.js"
   );
   return workerModule;
 }
@@ -55,10 +55,14 @@ export default {
 
     switch (outcome.kind) {
       case "Reply":
-        return new Response(outcome.body, {
+        return new Response(outcome.stream ?? outcome.body, {
           status: 200,
-          headers: { "content-type": "application/json" },
+          headers: { "content-type": outcome.contentType },
         });
+      case "InvalidPayload":
+        return new Response("Invalid interaction payload", { status: 400 });
+      case "DispatchFailed":
+        return new Response("Interaction dispatch failed", { status: 500 });
       case "NoRoute":
         return new Response("No interaction route", { status: 404 });
       case "NoResponse":

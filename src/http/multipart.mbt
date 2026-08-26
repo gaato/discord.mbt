@@ -71,7 +71,7 @@ pub fn FileUpload::FileUpload(
 }
 
 ///|
-/// Reject filenames that could break out of the multipart part header.
+/// Reject upload metadata that could break out of a multipart part header.
 fn validate_files(files : Array[FileUpload]) -> Unit raise DiscordHttpError {
   for file in files {
     if file.filename.is_empty() {
@@ -83,6 +83,9 @@ fn validate_files(files : Array[FileUpload]) -> Unit raise DiscordHttpError {
       raise Validation(
         message="filename must not contain CR, LF, or double quotes",
       )
+    }
+    if file.content_type.contains("\r") || file.content_type.contains("\n") {
+      raise Validation(message="content_type must not contain CR or LF")
     }
   }
 }

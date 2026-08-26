@@ -8,3 +8,4 @@ moon.work
 .env
 .dev.vars
 .wrangler/
+node_modules/

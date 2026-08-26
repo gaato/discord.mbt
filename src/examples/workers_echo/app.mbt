@@ -24,10 +24,28 @@ fn slow_command() -> @discord.Command[Unit] {
 }
 
 ///|
+fn file_command() -> @discord.Command[Unit] {
+  @discord.slash(
+    name="file",
+    description="Return a small attachment from a Cloudflare Worker",
+    args=@discord.Args::unit(),
+    handler=Immediate((_, _) => {
+      @discord.CommandReply::message(content="Attached from MoonBit.", files=[
+        @discord.FileUpload(
+          "hello.txt",
+          b"hello from MoonBit\n",
+          content_type="text/plain",
+        ),
+      ])
+    }),
+  )
+}
+
+///|
 /// The worker's command set. The `register` runner builds the same app on
 /// native, so the deployed worker and the registered commands cannot drift.
 pub fn worker_app(sync? : @discord.CommandSync = Disabled) -> @discord.App {
   let app = @discord.App(sync~)
-  app..command(echo_command()).command(slow_command())
+  app..command(echo_command())..command(file_command()).command(slow_command())
   app
 }

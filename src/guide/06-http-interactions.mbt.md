@@ -177,3 +177,25 @@ The `src/examples/workers_echo` adapter exports two promises:
 The adapter should preserve the raw body for verification, answer Discord
 PING requests through the endpoint, return a JSON callback with HTTP 200, and
 map `NoRoute`, `NoResponse`, and `TimedOut` according to its deployment policy.
+The example maps malformed interaction payloads to 400, `NoRoute` to 404,
+`NoResponse` to 202, internal dispatch failures to 500, and `TimedOut` to 504.
+
+Replies containing `FileUpload` values become a multipart callback body. The
+adapter exposes a Web `ReadableStream` that emits the existing multipart text
+and `Bytes` chunks in order, without concatenating them. Cancelling that stream
+drops unsent chunks and does not leave a MoonBit producer task behind.
+
+Run its signed endpoint tests in Cloudflare's local runtime with:
+
+```fish
+cd src/examples/workers_echo
+npm ci
+env WRANGLER_SEND_METRICS=false npm test
+```
+
+Gateway and Voice transports remain native-only. The JavaScript backend is for
+the REST client, signature verification, and gateway-free HTTP interactions.
+In the pinned `moonbitlang/async@0.21.0`, JS Fetch also has a known limitation:
+204, 205, and HEAD responses expose a null Web API body and fail before the
+client can inspect the status. A fixed async release must pass those regression
+cases before this module updates its dependency.

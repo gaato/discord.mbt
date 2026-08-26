@@ -100,3 +100,16 @@ test "validate_files rejects header-breaking filenames" {
   // a normal filename passes
   validate_files([FileUpload("ok.png", b"x")])
 }
+
+///|
+test "validate_files rejects header-breaking content types" {
+  for bad in ["text/plain\r\nx-injected: true", "text/plain\n"] {
+    try validate_files([FileUpload("ok.txt", b"x", content_type=bad)]) catch {
+      Validation(_) => ()
+      e => fail("unexpected error: \{Repr(e)}")
+    } noraise {
+      _ => fail("expected Validation for \{Repr(bad)}")
+    }
+  }
+  validate_files([FileUpload("ok.txt", b"x", content_type="text/plain")])
+}

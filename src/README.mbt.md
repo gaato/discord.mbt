@@ -249,11 +249,18 @@ async fn handle_http_interaction(
 Serverless targets such as Cloudflare Workers are first class: adapters
 verify the raw request with `@discord.verify_signature` (WebCrypto Ed25519 on
 JavaScript — Workers and Node 19+ — runtime-loaded libcrypto on native)
-before parsing. On native,
+before parsing. The `workers_echo` example is tested inside Cloudflare's local
+`workerd` runtime and supports streamed multipart callbacks for in-memory
+`FileUpload` values. On native,
 `@discord.serve_interactions(group, app, addr~, public_key~, token~)` is a
 complete signed-interactions HTTP server. See the
 [HTTP interactions guide](src/guide/06-http-interactions.mbt.md) and the
 `interactions_http` and `workers_echo` examples.
+
+The pinned `moonbitlang/async@0.21.0` JS Fetch transport cannot yet finish
+204, 205, or HEAD responses whose Web API body is null. The dependency remains
+pinned until the upstream regression tests and this repository's workerd tests
+pass against a fixed release. Gateway and Voice transports remain native-only.
 
 ## Typed models
 

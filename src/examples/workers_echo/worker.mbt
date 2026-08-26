@@ -6,8 +6,49 @@ pub type WorkerResponse
 extern "js" fn WorkerResponse::WorkerResponse(
   kind : String,
   body : String,
+  content_type : String,
 ) -> Self =
-  #| (kind, body) => ({ kind, body })
+  #| (kind, body, contentType) => ({
+  #|   kind,
+  #|   body,
+  #|   contentType,
+  #|   stream: null,
+  #| })
+
+///|
+extern "js" fn utf8_encode(text : String) -> Bytes =
+  #| (text) => new TextEncoder().encode(text)
+
+///|
+extern "js" fn WorkerResponse::multipart(
+  kind : String,
+  content_type : String,
+  chunks : FixedArray[Bytes],
+) -> Self =
+  #| (kind, contentType, chunks) => {
+  #|   let pending = chunks;
+  #|   let index = 0;
+  #|   const stream = new ReadableStream({
+  #|     pull(controller) {
+  #|       if (index >= pending.length) {
+  #|         controller.close();
+  #|         pending = [];
+  #|         return;
+  #|       }
+  #|       controller.enqueue(pending[index]);
+  #|       index += 1;
+  #|       if (index >= pending.length) {
+  #|         controller.close();
+  #|         pending = [];
+  #|       }
+  #|     },
+  #|     cancel() {
+  #|       pending = [];
+  #|       index = 0;
+  #|     },
+  #|   });
+  #|   return { kind, body: "", contentType, stream };
+  #| }
 
 ///|
 pub extern "js" fn WorkerResponse::kind(self : Self) -> String =
@@ -16,6 +57,10 @@ pub extern "js" fn WorkerResponse::kind(self : Self) -> String =
 ///|
 pub extern "js" fn WorkerResponse::body(self : Self) -> String =
   #| (response) => response.body
+
+///|
+pub extern "js" fn WorkerResponse::content_type(self : Self) -> String =
+  #| (response) => response.contentType
 
 ///|
 #external
@@ -41,13 +86,37 @@ pub extern "js" fn WorkerDispatch::background(
   #| (dispatch) => dispatch.background
 
 ///|
-fn encode_outcome(outcome : @discord.InteractionOutcome) -> WorkerResponse {
+fn encode_outcome(
+  outcome : @discord.InteractionOutcome,
+) -> WorkerResponse raise @dhttp.DiscordHttpError {
   match outcome {
-    Reply(response~, files=_) =>
-      WorkerResponse("Reply", response.to_json().stringify())
-    NoRoute => WorkerResponse("NoRoute", "")
-    NoResponse => WorkerResponse("NoResponse", "")
-    TimedOut => WorkerResponse("TimedOut", "")
+    Reply(response~, files=None) =>
+      WorkerResponse(
+        "Reply",
+        response.to_json().stringify(),
+        "application/json",
+      )
+    Reply(response~, files=Some(files)) => {
+      let (content_type, parts) = @dhttp.encode_multipart_body(
+        response.to_json().stringify(),
+        files,
+      )
+      let chunks : Array[Bytes] = []
+      for part in parts {
+        match part {
+          Text(text) => chunks.push(utf8_encode(text))
+          Blob(bytes) => chunks.push(bytes)
+        }
+      }
+      WorkerResponse::multipart(
+        "Reply",
+        content_type,
+        FixedArray::from_array(chunks),
+      )
+    }
+    NoRoute => WorkerResponse("NoRoute", "", "text/plain; charset=utf-8")
+    NoResponse => WorkerResponse("NoResponse", "", "")
+    TimedOut => WorkerResponse("TimedOut", "", "text/plain; charset=utf-8")
   }
 }
 
@@ -60,11 +129,21 @@ async fn run_interaction(
   let mut response_sent = false
   errdefer @async.protect_from_cancel(() => {
     if !response_sent {
-      responses.put(WorkerResponse("NoResponse", ""))
+      responses.put(
+        WorkerResponse("DispatchFailed", "", "text/plain; charset=utf-8"),
+      )
     }
   })
   @async.with_task_group(group => {
-    let interaction : @model.Interaction = @json.from_json(@json.parse(body))
+    let interaction : @model.Interaction = @json.from_json(@json.parse(body)) catch {
+      _ => {
+        responses.put(
+          WorkerResponse("InvalidPayload", "", "text/plain; charset=utf-8"),
+        )
+        response_sent = true
+        return
+      }
+    }
     let client = @discord.Client(token)
     group.add_defer(() => client.close())
     let endpoint = worker_app().serve(
@@ -77,6 +156,18 @@ async fn run_interaction(
     response_sent = true
   })
 }
+
+///|
+extern "js" fn abort_signal_aborted(signal : @js_async.AbortSignal) -> Bool =
+  #| (signal) => signal.aborted
+
+///|
+extern "js" fn rejected_abort_response(
+  signal : @js_async.AbortSignal,
+) -> @js_async.Promise[WorkerResponse] =
+  #| (signal) => Promise.reject(
+  #|   signal.reason ?? new DOMException("The operation was aborted", "AbortError"),
+  #| )
 
 ///|
 /// Start one interaction dispatch as two JavaScript promises.
@@ -96,10 +187,11 @@ pub fn start_interaction(
   // A client disconnect only cancels the initial-response waiter. The task
   // group belongs to the waitUntil background promise and must keep running
   // so deferred handlers can finish after the HTTP request ends.
-  let response = @js_async.Promise::from_async(
-    () => responses.get(),
-    abort_signal~,
-  )
+  let response = if abort_signal_aborted(abort_signal) {
+    rejected_abort_response(abort_signal)
+  } else {
+    @js_async.Promise::from_async(() => responses.get(), abort_signal~)
+  }
   WorkerDispatch(response, background)
 }
 

@@ -1,0 +1,15 @@
+{
+  "name": "discord-mbt-workers-echo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "pretest": "moon build --target js --release --deny-warn .",
+    "test": "vitest run",
+    "bundle:check": "wrangler deploy --dry-run"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "1.1.0",
+    "vitest": "4.1.11",
+    "wrangler": "4.126.0"
+  }
+}
