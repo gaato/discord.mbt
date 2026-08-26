@@ -526,6 +526,34 @@ async test "framework error hook captures handler failures" {
 }
 
 ///|
+async test "framework cancellation bypasses the error hook" {
+  let fw = test_framework()
+  let hook_called = Ref(false)
+  let handler_started : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  fw
+  .command(@interaction.CommandSpec::slash("echo", "Echo text back"), _ctx => {
+    handler_started.put(())
+    @async.sleep(60_000)
+  })
+  .on_error((_label, _error) => hook_called.val = true)
+  |> ignore
+  @async.with_task_group(group => {
+    let processing = group.spawn(no_wait=true, allow_failure=true, () => {
+      fw.process(echo_interaction("cancel"))
+    })
+    handler_started.get()
+    processing.cancel()
+    try processing.wait() catch {
+      error if @async.is_cancellation_error(error) => ()
+      error => fail("unexpected cancellation error: \{Repr(error)}")
+    } noraise {
+      _ => fail("cancelled framework handler unexpectedly completed")
+    }
+  })
+  assert_false(hook_called.val)
+}
+
+///|
 async test "component waiters beat prefix handlers and time out cleanly" {
   @async.with_task_group((group : @async.TaskGroup[Unit]) => {
     let fw = test_framework()
@@ -555,6 +583,16 @@ async test "component waiters beat prefix handlers and time out cleanly" {
     // timeout path returns None
     guard! fw.wait_for_component(custom_id="never", timeout_ms=20) is None
   })
+}
+
+///|
+async test "longest component prefix wins regardless of registration order" {
+  let fw = test_framework()
+  let routed = Ref("")
+  fw.component("item:", _ctx => routed.val = "short") |> ignore
+  fw.component("item:special:", _ctx => routed.val = "long") |> ignore
+  assert_true(fw.process(component_interaction("item:special:42")))
+  assert_eq(routed.val, "long")
 }
 
 ///|

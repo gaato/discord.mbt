@@ -434,7 +434,10 @@ fn[A] raise_failure(
   command : String,
   phase : ResponsePhase,
   source : Error,
-) -> A raise AppDispatchError {
+) -> A raise {
+  if @async.is_being_cancelled() || @async.is_cancellation_error(source) {
+    raise source
+  }
   raise Failure(command~, phase~, source~)
 }
 

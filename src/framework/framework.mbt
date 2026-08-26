@@ -80,23 +80,37 @@ pub fn Framework::autocomplete(
 
 ///|
 /// Register a component handler for custom ids starting with `prefix`.
-/// Handlers are tried in registration order; waiters take precedence.
+/// Longer prefixes win; equally long prefixes retain registration order.
+/// Exact-id waiters take precedence over all registered handlers.
 pub fn Framework::component(
   self : Framework,
   prefix : String,
   handler : async (ComponentCtx) -> Unit,
 ) -> Framework {
+  for index, entry in self.components {
+    if prefix.length() > entry.0.length() {
+      self.components.insert(index, (prefix, handler))
+      return self
+    }
+  }
   self.components.push((prefix, handler))
   self
 }
 
 ///|
 /// Register a modal-submit handler for custom ids starting with `prefix`.
+/// Longer prefixes win; equally long prefixes retain registration order.
 pub fn Framework::modal(
   self : Framework,
   prefix : String,
   handler : async (ModalCtx) -> Unit,
 ) -> Framework {
+  for index, entry in self.modals {
+    if prefix.length() > entry.0.length() {
+      self.modals.insert(index, (prefix, handler))
+      return self
+    }
+  }
   self.modals.push((prefix, handler))
   self
 }
@@ -156,7 +170,12 @@ async fn Framework::guard_errors(
   body : async () -> Unit,
 ) -> Unit {
   match self.error_hook {
-    Some(hook) => body() catch { error => hook(label, error) }
+    Some(hook) =>
+      body() catch {
+        error if @async.is_being_cancelled() ||
+          @async.is_cancellation_error(error) => raise error
+        error => hook(label, error)
+      }
     None => body()
   }
 }

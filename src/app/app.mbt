@@ -19,6 +19,7 @@ pub(all) suberror AppConfigError {
   InvalidModalFieldCount(custom_id~ : String, count~ : Int)
   DuplicateModalTextInput(custom_id~ : String, field~ : String)
   InvalidCooldown(command~ : String, seconds~ : Int)
+  InvalidMaxInFlight(value~ : Int)
 } derive(Debug)
 
 ///|
@@ -217,6 +218,9 @@ fn validate_command_options(
 /// cooldowns, invalid modal field counts, and duplicate modal text-input ids.
 /// Executors call this at startup; call it directly in a test to fail fast.
 pub fn App::validate(self : App) -> Unit raise AppConfigError {
+  if self.max_in_flight_ <= 0 {
+    raise InvalidMaxInFlight(value=self.max_in_flight_)
+  }
   let commands : Set[String] = Set([])
   for command in self.commands_ {
     let command_key = command_key(command.definition.typ, command.name_)
