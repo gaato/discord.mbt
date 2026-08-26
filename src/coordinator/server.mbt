@@ -9,14 +9,21 @@ pub struct Coordinator {
 priv struct CoordinatorState {
   identify : @queue.InMemoryQueue
   limiter : @ratelimit.InMemoryRateLimiter
-  owners : Map[String, ConnectionState]
+  owners : Map[String, BucketOwner]
   next_connection_id : Ref[Int]
+  next_lease_id : Ref[Int]
 }
 
 ///|
 priv struct ConnectionState {
   id : Int
-  held_buckets : Map[String, Bool]
+  held_buckets : Ref[Map[String, Int]]
+}
+
+///|
+priv struct BucketOwner {
+  connection : ConnectionState
+  lease : Int
 }
 
 ///|
@@ -52,11 +59,14 @@ pub async fn[X] Coordinator::serve(
     limiter: InMemoryRateLimiter(global_limit~),
     owners: Map([]),
     next_connection_id: Ref(0),
+    next_lease_id: Ref(0),
   }
   let runner : Ref[@async.TaskGroup[Unit]?] = Ref(None)
+  let started = @async.Semaphore(1, initial_value=0)
   group.spawn_bg(allow_failure=true, () => {
     @async.with_task_group(inner => {
       runner.val = Some(inner)
+      started.release()
       inner.spawn_bg(() => {
         server.run_forever(allow_failure=true, (conn, _) => {
           serve_connection(conn, state)
@@ -64,6 +74,7 @@ pub async fn[X] Coordinator::serve(
       })
     })
   })
+  started.acquire()
   { address: server.addr.to_string(), runner }
 }
 
@@ -92,7 +103,7 @@ pub fn Coordinator::close(self : Coordinator) -> Unit {
 async fn serve_connection(conn : @socket.Tcp, state : CoordinatorState) -> Unit {
   let connection = ConnectionState::{
     id: state.next_connection_id.val,
-    held_buckets: Map([]),
+    held_buckets: Ref(Map([])),
   }
   state.next_connection_id.val += 1
   defer @async.protect_from_cancel(() => {
@@ -119,13 +130,14 @@ async fn cleanup_connection(
   state : CoordinatorState,
   connection : ConnectionState,
 ) -> Unit {
-  let held = [ for bucket, _ in connection.held_buckets => bucket ]
+  let held = [ for bucket, _lease in connection.held_buckets.val => bucket ]
   for bucket in held {
-    if state.owners.get(bucket) is Some(owner) && owner.id == connection.id {
+    if state.owners.get(bucket) is Some(owner) &&
+      owner.connection.id == connection.id {
       state.owners.remove(bucket)
       state.limiter.release(bucket, status=0, headers=Map([]))
     }
-    connection.held_buckets.remove(bucket)
+    connection.held_buckets.val.remove(bucket)
   }
 }
 
@@ -159,29 +171,33 @@ async fn dispatch_request(
         )
       }
       state.limiter.acquire(bucket, global_exempt~)
-      state.owners[bucket] = connection
-      connection.held_buckets[bucket] = true
-      ok_response()
+      let lease = state.next_lease_id.val
+      state.next_lease_id.val += 1
+      state.owners[bucket] = BucketOwner::{ connection, lease }
+      connection.held_buckets.val[bucket] = lease
+      { "ok": true, "lease": lease }
     }
     "http_release" => {
       guard request
         is {
           "bucket": String(bucket),
+          "lease": lease_json,
           "status": status_json,
           "headers": Object(header_fields),
           ..
         } &&
-        json_nonnegative_int(status_json) is Some(status) else {
+        json_nonnegative_int(status_json) is Some(status) &&
+        json_nonnegative_int(lease_json) is Some(lease) else {
         return error_response(
-          "http_release requires bucket, non-negative integer status, and headers object",
+          "http_release requires bucket, lease, non-negative integer status, and headers object",
         )
       }
       let headers = decode_headers(header_fields) catch {
         error => return error_response("invalid headers: \{error}")
       }
-      if state.owners.get(bucket) is Some(owner) {
+      if state.owners.get(bucket) is Some(owner) && owner.lease == lease {
         state.limiter.release(bucket, status~, headers~)
-        owner.held_buckets.remove(bucket)
+        owner.connection.held_buckets.val.remove(bucket)
         state.owners.remove(bucket)
       }
       ok_response()

@@ -3,6 +3,7 @@ priv struct CoordinatorClient {
   addr : @socket.Addr
   conn : Ref[@socket.Tcp?]
   gate : @async.Semaphore
+  closed : Ref[Bool]
 }
 
 ///|
@@ -11,11 +12,12 @@ async fn CoordinatorClient::connect(addr : String) -> CoordinatorClient {
     error => raise CoordinatorError::Transport(message="\{error}")
   }
   let conn = CoordinatorClient::dial(addr)
-  { addr, conn: Ref(Some(conn)), gate: Semaphore(1) }
+  { addr, conn: Ref(Some(conn)), gate: Semaphore(1), closed: Ref(false) }
 }
 
 ///|
 fn CoordinatorClient::close(self : CoordinatorClient) -> Unit {
+  self.closed.val = true
   self.drop_connection()
 }
 
@@ -30,6 +32,9 @@ async fn CoordinatorClient::dial(addr : @socket.Addr) -> @socket.Tcp {
 
 ///|
 async fn CoordinatorClient::connection(self : CoordinatorClient) -> @socket.Tcp {
+  if self.closed.val {
+    raise CoordinatorError::Disconnected
+  }
   match self.conn.val {
     Some(conn) => conn
     None => {
@@ -64,7 +69,7 @@ fn coordinator_fatal(error : Error) -> Bool {
 async fn CoordinatorClient::request_once(
   self : CoordinatorClient,
   request : Json,
-) -> Unit {
+) -> Json {
   let conn = self.connection()
   let response_line = try {
     conn.write(request.stringify() + "\n")
@@ -85,7 +90,7 @@ async fn CoordinatorClient::request_once(
       raise CoordinatorError::InvalidResponse(message="invalid JSON: \{error}")
   }
   match response {
-    { "ok": True, .. } => ()
+    { "ok": True, .. } => response
     { "ok": False, "error": String(message), .. } =>
       raise CoordinatorError::Remote(message~)
     _ =>
@@ -97,9 +102,12 @@ async fn CoordinatorClient::request_once(
 async fn CoordinatorClient::request(
   self : CoordinatorClient,
   request : Json,
-) -> Unit {
+) -> Json {
   self.gate.acquire()
   defer self.gate.release()
+  if self.closed.val {
+    raise CoordinatorError::Disconnected
+  }
   // Replaying is safe: identify requests hold no connection-owned state,
   // disconnect cleanup releases acquired HTTP buckets, and releasing an
   // already-cleaned bucket is a server-side no-op. A lost identify response
@@ -148,7 +156,7 @@ pub fn RemoteIdentifyQueue::close(self : RemoteIdentifyQueue) -> Unit {
 ///|
 /// Round-trip a ping through the coordinator to verify connectivity.
 pub async fn RemoteIdentifyQueue::ping(self : RemoteIdentifyQueue) -> Unit {
-  self.client.request({ "op": "ping" })
+  self.client.request({ "op": "ping" }) |> ignore
 }
 
 ///|
@@ -158,6 +166,7 @@ pub impl @queue.IdentifyQueue for RemoteIdentifyQueue with fn wait_for_identify(
   shard_id,
 ) {
   self.client.request({ "op": "identify_acquire", "shard_id": shard_id })
+  |> ignore
 }
 
 ///|
@@ -165,6 +174,7 @@ pub impl @queue.IdentifyQueue for RemoteIdentifyQueue with fn wait_for_identify(
 pub struct RemoteRateLimiter {
   priv acquire_client : CoordinatorClient
   priv release_client : CoordinatorClient
+  priv leases : Map[String, Int]
 }
 
 ///|
@@ -183,7 +193,7 @@ async fn RemoteRateLimiter::connect_with(
   let acquire_client = connector(addr)
   errdefer acquire_client.close()
   let release_client = connector(addr)
-  { acquire_client, release_client }
+  { acquire_client, release_client, leases: Map([]) }
 }
 
 ///|
@@ -191,12 +201,13 @@ async fn RemoteRateLimiter::connect_with(
 pub fn RemoteRateLimiter::close(self : RemoteRateLimiter) -> Unit {
   self.acquire_client.close()
   self.release_client.close()
+  self.leases.clear()
 }
 
 ///|
 /// Round-trip a ping through the coordinator to verify connectivity.
 pub async fn RemoteRateLimiter::ping(self : RemoteRateLimiter) -> Unit {
-  self.acquire_client.request({ "op": "ping" })
+  self.acquire_client.request({ "op": "ping" }) |> ignore
 }
 
 ///|
@@ -206,11 +217,16 @@ pub impl @ratelimit.RateLimiter for RemoteRateLimiter with fn acquire(
   bucket_key,
   global_exempt~,
 ) {
-  self.acquire_client.request({
+  let response = self.acquire_client.request({
     "op": "http_acquire",
     "bucket": Json::string(bucket_key),
     "global_exempt": global_exempt,
   })
+  guard response is { "lease": lease_json, .. } &&
+    coordinator_nonnegative_int(lease_json) is Some(lease) else {
+    raise CoordinatorError::InvalidResponse(message="missing integer lease")
+  }
+  self.leases[bucket_key] = lease
 }
 
 ///|
@@ -221,10 +237,34 @@ pub impl @ratelimit.RateLimiter for RemoteRateLimiter with fn release(
   status~,
   headers~,
 ) {
-  self.release_client.request({
-    "op": "http_release",
-    "bucket": Json::string(bucket_key),
-    "status": status,
-    "headers": headers.to_json(),
-  })
+  guard self.leases.get(bucket_key) is Some(lease) else {
+    raise CoordinatorError::InvalidResponse(message="bucket is not acquired")
+  }
+  errdefer {
+    // The acquire connection owns the server-side gate. If release cannot be
+    // confirmed, dropping it makes EOF cleanup release that ownership.
+    self.acquire_client.drop_connection()
+    self.leases.remove(bucket_key)
+  }
+  ignore(
+    self.release_client.request({
+      "op": "http_release",
+      "bucket": Json::string(bucket_key),
+      "lease": lease,
+      "status": status,
+      "headers": headers.to_json(),
+    }),
+  )
+  self.leases.remove(bucket_key)
+}
+
+///|
+fn coordinator_nonnegative_int(value : Json) -> Int? {
+  guard value is Number(number, ..) else { return None }
+  let integer = number.to_int()
+  if integer >= 0 && integer.to_double() == number {
+    Some(integer)
+  } else {
+    None
+  }
 }

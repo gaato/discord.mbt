@@ -32,6 +32,7 @@ pub async fn[T] Pool::with_conn(
   guard !self.closed else { raise PoolClosed }
   self.slots.acquire()
   defer self.slots.release()
+  guard !self.closed else { raise PoolClosed }
   let conn = match self.idle.pop() {
     Some(c) => c
     None => Client(self.uri)

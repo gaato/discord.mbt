@@ -290,7 +290,11 @@ async fn Client::request_inner(
       )
     catch {
       e => {
-        self.limiter.release(bucket, status=0, headers=Map([]))
+        @async.protect_from_cancel(() => {
+          self.limiter.release(bucket, status=0, headers=Map([])) catch {
+            _ => ()
+          }
+        })
         self.emit_telemetry(
           HttpRequest(
             route_bucket=bucket,

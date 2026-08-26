@@ -66,7 +66,7 @@ async test "coordinator serializes identify and HTTP limits across clients" {
     } noraise {
       _ => fail("unknown op should fail")
     }
-    raw.request({ "op": "ping" })
+    raw.request({ "op": "ping" }) |> ignore
 
     coordinator.close()
     @async.sleep(10)
@@ -173,5 +173,93 @@ async test "remote rate limiter closes its first client when the second connecti
       fail("first coordinator client was not captured")
     }
     assert_true(client.conn.val is None)
+  })
+}
+
+///|
+async test "a stale HTTP release lease cannot release the current owner" {
+  let state = CoordinatorState::{
+    identify: InMemoryQueue(max_concurrency=1, spacing_ms=0),
+    limiter: InMemoryRateLimiter(global_limit=50),
+    owners: Map([]),
+    next_connection_id: Ref(2),
+    next_lease_id: Ref(0),
+  }
+  let first = ConnectionState::{ id: 0, held_buckets: Ref(Map([])) }
+  let second = ConnectionState::{ id: 1, held_buckets: Ref(Map([])) }
+  let bucket = "POST:/channels/lease-test/messages"
+  let acquired_first = dispatch_request(
+    { "op": "http_acquire", "bucket": bucket, "global_exempt": false },
+    state,
+    first,
+  )
+  guard acquired_first is { "lease": first_lease_json, .. } &&
+    json_nonnegative_int(first_lease_json) is Some(first_lease) else {
+    fail("first acquire did not return a lease")
+  }
+  dispatch_request(
+    {
+      "op": "http_release",
+      "bucket": bucket,
+      "lease": first_lease,
+      "status": 200,
+      "headers": {},
+    },
+    state,
+    first,
+  )
+  |> ignore
+  let acquired_second = dispatch_request(
+    { "op": "http_acquire", "bucket": bucket, "global_exempt": false },
+    state,
+    second,
+  )
+  guard acquired_second is { "lease": second_lease_json, .. } &&
+    json_nonnegative_int(second_lease_json) is Some(second_lease) else {
+    fail("second acquire did not return a lease")
+  }
+  dispatch_request(
+    {
+      "op": "http_release",
+      "bucket": bucket,
+      "lease": first_lease,
+      "status": 200,
+      "headers": {},
+    },
+    state,
+    first,
+  )
+  |> ignore
+  guard state.owners.get(bucket) is Some(owner) else {
+    fail("stale release removed the current owner")
+  }
+  assert_eq(owner.lease, second_lease)
+  dispatch_request(
+    {
+      "op": "http_release",
+      "bucket": bucket,
+      "lease": second_lease,
+      "status": 200,
+      "headers": {},
+    },
+    state,
+    second,
+  )
+  |> ignore
+}
+
+///|
+async test "a closed remote client never reconnects" {
+  @async.with_task_group(group => {
+    let coordinator = Coordinator::serve(group, addr="127.0.0.1:0")
+    defer coordinator.close()
+    let remote = RemoteIdentifyQueue::connect(coordinator.addr())
+    remote.close()
+    try remote.ping() catch {
+      CoordinatorError::Disconnected => ()
+      error => fail("unexpected close error: \{Repr(error)}")
+    } noraise {
+      _ => fail("closed client unexpectedly reconnected")
+    }
   })
 }

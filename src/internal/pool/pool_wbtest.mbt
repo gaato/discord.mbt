@@ -160,3 +160,43 @@ async test "a cancelled checkout drops its connection and releases the slot" {
     assert_eq(pool.idle.length(), 1)
   })
 }
+
+///|
+async test "closing a pool rejects a checkout already waiting for a slot" {
+  let server = @http.Server(@socket.Addr::parse("127.0.0.1:0"))
+  defer server.close()
+  let pool = Pool("http://\{server.addr}", max_connections=1)
+  let first_entered = @async.Semaphore(1, initial_value=0)
+  let release_first = @async.Semaphore(1, initial_value=0)
+  let second_called = Ref(false)
+  @async.with_task_group(group => {
+    group.spawn_bg(no_wait=true, () => {
+      server.run_forever(allow_failure=true, (_request, body_reader, conn) => {
+        ignore(body_reader.read_all().text())
+        conn.send_response(200, "OK")
+        conn.end_response()
+      })
+    })
+    let first = group.spawn(no_wait=true, () => {
+      pool.with_conn(_conn => {
+        first_entered.release()
+        release_first.acquire()
+      })
+    })
+    first_entered.acquire()
+    let second = group.spawn(no_wait=true, allow_failure=true, () => {
+      pool.with_conn(_conn => second_called.val = true)
+    })
+    @async.sleep(1)
+    pool.close()
+    release_first.release()
+    first.wait()
+    try second.wait() catch {
+      PoolClosed => ()
+      error => fail("unexpected waiting checkout error: \{Repr(error)}")
+    } noraise {
+      _ => fail("waiting checkout unexpectedly succeeded")
+    }
+  })
+  assert_false(second_called.val)
+}

@@ -154,7 +154,10 @@ pub impl RateLimiter for InMemoryRateLimiter with fn release(
       None => 1000L
     }
     if headers.get("x-ratelimit-global") is Some(_) {
-      self.global_blocked_until = @clock.now_ms() + retry_after_ms
+      let blocked_until = @clock.now_ms() + retry_after_ms
+      if blocked_until > self.global_blocked_until {
+        self.global_blocked_until = blocked_until
+      }
     } else {
       bucket.known = true
       bucket.remaining = 0

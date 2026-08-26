@@ -45,3 +45,24 @@ async test "a cancelled bucket reset wait releases its gate" {
     RateLimiter::release(limiter, key, status=200, headers=Map([]))
   })
 }
+
+///|
+async test "a shorter global 429 never shortens an existing block" {
+  let limiter = InMemoryRateLimiter()
+  let key = "POST:/channels/global/messages"
+  RateLimiter::acquire(limiter, key, global_exempt=true)
+  RateLimiter::release(limiter, key, status=429, headers={
+    "x-ratelimit-global": "true",
+    "retry-after": "60",
+  })
+  let first_deadline = limiter.global_blocked_until
+  guard limiter.buckets.get(key) is Some(bucket) else {
+    fail("rate-limit bucket was not created")
+  }
+  bucket.gate.acquire()
+  RateLimiter::release(limiter, key, status=429, headers={
+    "x-ratelimit-global": "true",
+    "retry-after": "1",
+  })
+  assert_true(limiter.global_blocked_until >= first_deadline)
+}
