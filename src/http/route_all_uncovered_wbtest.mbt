@@ -44,8 +44,8 @@ test "route regression table covers every previously uncovered metadata arm" {
     (
       UnpinMessage(channel_id~, message_id~),
       "Delete",
-      "/channels/30/pins/40",
-      "DELETE:/channels/30/pins/{}",
+      "/channels/30/messages/pins/40",
+      "DELETE:/channels/30/messages/pins/{}",
     ),
     (
       StartThreadFromMessage(channel_id~, message_id~),

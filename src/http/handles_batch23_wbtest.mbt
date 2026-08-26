@@ -79,7 +79,7 @@ async test "handle unit delegations pin every bound id at the wire boundary" {
     "Put /api/v10/guilds/20/members/50/roles/60", "Delete /api/v10/guilds/20/members/50/roles/60",
     "Delete /api/v10/guilds/20/integrations/70", "Delete /api/v10/users/@me/guilds/20",
     "Delete /api/v10/guilds/20/roles/60", "Delete /api/v10/channels/30/messages/40",
-    "Delete /api/v10/channels/30/pins/40", "Put /api/v10/channels/30/messages/40/reactions/wave%3A80/@me",
+    "Delete /api/v10/channels/30/messages/pins/40", "Put /api/v10/channels/30/messages/40/reactions/wave%3A80/@me",
     "Delete /api/v10/channels/30/messages/40/reactions", "Delete /api/v10/channels/30/messages/40/reactions/wave%3A80",
     "Delete /api/v10/webhooks/80", "Delete /api/v10/webhooks/80/tok", "Post /api/v10/webhooks/80/tok/slack?thread_id=30&wait=false",
     "Post /api/v10/webhooks/80/tok/github?thread_id=30&wait=true", "Delete /api/v10/guilds/20/stickers/90",

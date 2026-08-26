@@ -144,10 +144,10 @@ pub(all) enum Route {
   ExpirePoll(channel_id~ : @model.ChannelId, message_id~ : @model.MessageId)
   SendSoundboardSound(channel_id~ : @model.ChannelId)
   TriggerTypingIndicator(channel_id~ : @model.ChannelId)
-  // TODO(pins-v2): Discord added /channels/{id}/messages/pins; these legacy
-  // /channels/{id}/pins routes still work but should migrate eventually.
   PinMessage(channel_id~ : @model.ChannelId, message_id~ : @model.MessageId)
   UnpinMessage(channel_id~ : @model.ChannelId, message_id~ : @model.MessageId)
+  GetChannelPins(channel_id~ : @model.ChannelId, query~ : String)
+  // Kept for source compatibility with the deprecated array-returning API.
   GetPinnedMessages(channel_id~ : @model.ChannelId)
   EditChannelPermissions(
     channel_id~ : @model.ChannelId,
@@ -539,6 +539,7 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | SearchGuildMessages(..)
     | GetReactions(..)
     | GetPollAnswerVoters(..)
+    | GetChannelPins(..)
     | GetPinnedMessages(..)
     | GetChannelInvites(..)
     | GetChannelWebhooks(..)
@@ -806,7 +807,9 @@ pub fn Route::path(self : Route) -> String {
     TriggerTypingIndicator(channel_id~) => "/channels/\{channel_id}/typing"
     PinMessage(channel_id~, message_id~)
     | UnpinMessage(channel_id~, message_id~) =>
-      "/channels/\{channel_id}/pins/\{message_id}"
+      "/channels/\{channel_id}/messages/pins/\{message_id}"
+    GetChannelPins(channel_id~, query~) =>
+      "/channels/\{channel_id}/messages/pins\{query}"
     GetPinnedMessages(channel_id~) => "/channels/\{channel_id}/pins"
     EditChannelPermissions(channel_id~, overwrite_id~)
     | DeleteChannelPermission(channel_id~, overwrite_id~) =>
@@ -1105,8 +1108,12 @@ pub fn Route::bucket(self : Route) -> String {
     SendSoundboardSound(channel_id~) =>
       "POST:/channels/\{channel_id}/send-soundboard-sound"
     TriggerTypingIndicator(channel_id~) => "POST:/channels/\{channel_id}/typing"
-    PinMessage(channel_id~, ..) => "PUT:/channels/\{channel_id}/pins/{}"
-    UnpinMessage(channel_id~, ..) => "DELETE:/channels/\{channel_id}/pins/{}"
+    PinMessage(channel_id~, ..) =>
+      "PUT:/channels/\{channel_id}/messages/pins/{}"
+    UnpinMessage(channel_id~, ..) =>
+      "DELETE:/channels/\{channel_id}/messages/pins/{}"
+    GetChannelPins(channel_id~, ..) =>
+      "GET:/channels/\{channel_id}/messages/pins"
     GetPinnedMessages(channel_id~) => "GET:/channels/\{channel_id}/pins"
     EditChannelPermissions(channel_id~, ..) =>
       "PUT:/channels/\{channel_id}/permissions/{}"

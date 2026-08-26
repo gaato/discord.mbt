@@ -142,6 +142,20 @@ pub fn BaseTheme::to_int(self : BaseTheme) -> Int {
 }
 
 ///|
+/// One entry returned by the paginated channel-pins endpoint.
+pub(all) struct MessagePin {
+  pinned_at : Timestamp
+  message : Message
+} derive(ToJson, FromJson, Debug)
+
+///|
+/// One page from `GET /channels/{channel.id}/messages/pins`.
+pub(all) struct ChannelPins {
+  items : Array[MessagePin]
+  has_more : Bool
+} derive(ToJson, FromJson, Debug)
+
+///|
 pub fn BaseTheme::from_int(value : Int) -> BaseTheme {
   match value {
     0 => Unset

@@ -588,6 +588,42 @@ async test "voice connection rebuilds the whole session after NeedsRejoin" {
 }
 
 ///|
+async test "fatal voice close performs terminal teardown" {
+  let transport = ConnectionTestTransport::new()
+  let leave_calls = Ref(0)
+  @async.with_task_group(group => {
+    let connection = @voice.VoiceConnection::start(
+      group,
+      connection_credentials(),
+      user_id="self",
+      channel_id=7UL,
+      leave=() => leave_calls.val += 1,
+      rejoin=() => connection_credentials(),
+      connector=_ => (transport : &@voice.VoiceTransport),
+      receive=false,
+    )
+    transport.incoming.put(connection_hello())
+    transport.outgoing_text.get() |> ignore
+    transport.server_close(4014)
+    @async.with_timeout(1000, () => {
+      while !(connection.state() is Closed(..)) {
+        @async.sleep(1)
+      }
+    })
+    assert_eq(connection.state(), Closed(code=Some(4014)))
+    assert_eq(leave_calls.val, 1)
+    try connection.next_event() |> ignore catch {
+      VoiceError::Disconnected => ()
+      error => fail("unexpected terminal queue error: \{Repr(error)}")
+    } noraise {
+      _ => fail("terminal event queue unexpectedly remained open")
+    }
+    connection.disconnect()
+    assert_eq(leave_calls.val, 1)
+  })
+}
+
+///|
 async test "voice connection wait_ready reports JoinTimeout" {
   let transport = ConnectionTestTransport::new()
   @async.with_task_group(group => {

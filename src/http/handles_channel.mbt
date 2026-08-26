@@ -205,6 +205,16 @@ pub async fn ChannelRef::pins(
 }
 
 ///|
+/// Fetch one page from Discord's current paginated channel-pins endpoint.
+pub async fn ChannelRef::pins_page(
+  self : ChannelRef,
+  before? : @model.Timestamp,
+  limit? : Int,
+) -> @model.ChannelPins raise DiscordHttpError {
+  self.client.get_channel_pins(self.channel_id, before?, limit?)
+}
+
+///|
 /// List invites created for this channel.
 pub async fn ChannelRef::invites(
   self : ChannelRef,

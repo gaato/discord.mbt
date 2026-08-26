@@ -84,9 +84,22 @@ pub async fn VoiceGateway::send_binary(
 pub async fn VoiceGateway::close(self : VoiceGateway) -> Unit noraise {
   self.closing = true
   if self.transport is Some(transport) {
-    transport.close(code=1000) catch {
-      _ => ()
-    }
+    self.finish_transport(transport, code=1000)
+  }
+}
+
+///|
+async fn VoiceGateway::finish_transport(
+  self : VoiceGateway,
+  transport : &VoiceTransport,
+  code~ : Int,
+) -> Unit noraise {
+  guard self.transport is Some(current) && physical_equal(current, transport) else {
+    return
+  }
+  self.transport = None
+  transport.close(code~) catch {
+    _ => ()
   }
 }
 
@@ -216,9 +229,7 @@ async fn VoiceGateway::run(
     let is_resuming = self.has_session
     let ended = try {
       defer @async.protect_from_cancel(() => {
-        transport.close(code=1000) catch {
-          _ => ()
-        }
+        self.finish_transport(transport, code=1000)
       })
       self.run_connection(
         transport,
@@ -312,9 +323,7 @@ async fn VoiceGateway::run_connection(
       sleeper(heartbeat_interval)
       for ;; {
         if !heartbeat_acked.val {
-          transport.close(code=4000) catch {
-            _ => ()
-          }
+          self.finish_transport(transport, code=4000)
           break
         }
         let nonce = @clock.now_ms()

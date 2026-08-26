@@ -217,8 +217,8 @@ test "every user flag constant pins its exact bit" {
 test "numeric flag decoders reject non-numbers and negative representations" {
   let non_number = Json::string("flags")
   expect_model_decode_error(
-    non_number,
-    "expected application flags (number)",
+    Json::string("flags"),
+    "expected application flags (integer string), got flags",
     @model.ApplicationFlags::none(),
   )
   expect_model_decode_error(

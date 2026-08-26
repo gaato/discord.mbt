@@ -62,9 +62,22 @@ pub async fn Shard::close(self : Shard) -> Unit noraise {
   self.closing = true
   if self.transport is Some(t) {
     // the driver's read loop observes the close and exits
-    t.close(code=1000) catch {
-      _ => ()
-    }
+    self.finish_transport(t, code=1000)
+  }
+}
+
+///|
+async fn Shard::finish_transport(
+  self : Shard,
+  transport : &GatewayTransport,
+  code~ : Int,
+) -> Unit noraise {
+  guard self.transport is Some(current) && physical_equal(current, transport) else {
+    return
+  }
+  self.transport = None
+  transport.close(code~) catch {
+    _ => ()
   }
 }
 
@@ -180,9 +193,7 @@ async fn Shard::run(
     self.transport = Some(transport)
     let ended = try {
       defer @async.protect_from_cancel(() => {
-        transport.close(code=1000) catch {
-          _ => ()
-        }
+        self.finish_transport(transport, code=1000)
       })
       let inflater = if compress { Some(inflater_factory()) } else { None }
       if compress {
@@ -298,9 +309,7 @@ async fn Shard::run_connection(
       for ;; {
         if !heartbeat_state.val {
           // previous beat never acked: the connection is a zombie
-          transport.close(code=4000) catch {
-            _ => ()
-          }
+          self.finish_transport(transport, code=4000)
           break
         }
         heartbeat_state.val = false

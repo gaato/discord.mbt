@@ -156,6 +156,31 @@ pub async fn Client::get_pinned_messages(
 }
 
 ///|
+/// Fetch one page of channel pins, newest first. Use the final entry's
+/// `pinned_at` as `before` while `has_more` is true.
+pub async fn Client::get_channel_pins(
+  self : Client,
+  channel_id : @model.ChannelId,
+  before? : @model.Timestamp,
+  limit? : Int,
+) -> @model.ChannelPins raise DiscordHttpError {
+  if limit is Some(value) && (value < 1 || value > 50) {
+    raise DiscordHttpError::Validation(
+      message="channel pin limit must be between 1 and 50",
+    )
+  }
+  let params : Array[String] = []
+  if before is Some(value) {
+    params.push("before=\{percent_encode_query_text(value.to_string())}")
+  }
+  if limit is Some(value) {
+    params.push("limit=\{value}")
+  }
+  let query = if params.is_empty() { "" } else { "?" + params.join("&") }
+  decode(self.request(GetChannelPins(channel_id~, query~)))
+}
+
+///|
 /// Create or replace a channel permission overwrite. Omitted `allow`/`deny`
 /// default to no permissions on the Discord side.
 pub async fn Client::edit_channel_permissions(

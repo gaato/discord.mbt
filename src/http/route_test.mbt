@@ -1033,6 +1033,7 @@ test "channel miscellaneous route metadata" {
     [
       route_metadata("bulk-delete", BulkDeleteMessages(channel_id~)),
       route_metadata("pins", GetPinnedMessages(channel_id~)),
+      route_metadata("pins-v2", GetChannelPins(channel_id~, query="?limit=25")),
       route_metadata(
         "edit-permissions",
         EditChannelPermissions(channel_id~, overwrite_id~),
@@ -1059,6 +1060,14 @@ test "channel miscellaneous route metadata" {
       #|    method_name: "Get",
       #|    path: "/channels/10/pins",
       #|    bucket: "GET:/channels/10/pins",
+      #|    needs_auth: true,
+      #|    supports_reason: false,
+      #|  },
+      #|  {
+      #|    name: "pins-v2",
+      #|    method_name: "Get",
+      #|    path: "/channels/10/messages/pins?limit=25",
+      #|    bucket: "GET:/channels/10/messages/pins",
       #|    needs_auth: true,
       #|    supports_reason: false,
       #|  },

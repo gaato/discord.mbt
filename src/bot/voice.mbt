@@ -139,8 +139,22 @@ pub async fn GatewayCtx::join_voice(
   if !self.intents_.contains(required_intents) {
     raise @voice.VoiceError::MissingIntent(intent="GUILD_VOICE_STATES")
   }
+  let join_gate = match self.voice_join_gates_.get(guild_id) {
+    Some(gate) => gate
+    None => {
+      let gate = @async.Semaphore(1)
+      self.voice_join_gates_[guild_id] = gate
+      gate
+    }
+  }
+  join_gate.acquire()
+  defer join_gate.release()
   if self.voice_connections_.get(guild_id) is Some(existing) {
-    return existing
+    if existing.state() is Closed(..) {
+      self.voice_connections_.remove(guild_id)
+    } else {
+      return existing
+    }
   }
   let credentials = self.request_voice_credentials(
     guild_id, channel_id, self_mute, self_deaf, timeout_ms,

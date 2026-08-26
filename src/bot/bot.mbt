@@ -565,6 +565,7 @@ pub async fn Bot::run(self : Bot) -> Unit {
                 collector_: self.collector_,
                 group_: group,
                 voice_connections_: Map([]),
+                voice_join_gates_: Map([]),
                 shutdown_requested_: shutdown_requested,
               }
               owner.context = Some(created)

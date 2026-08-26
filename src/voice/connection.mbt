@@ -117,6 +117,40 @@ async fn VoiceConnection::reset_session(self : VoiceConnection) -> Unit noraise 
 }
 
 ///|
+async fn VoiceConnection::terminal_teardown(
+  self : VoiceConnection,
+  notify_leave~ : Bool,
+) -> Unit noraise {
+  if self.closing {
+    return
+  }
+  // Publish the terminal flag before any await so every worker stops even if
+  // one of the best-effort transport cleanups stalls or fails.
+  self.closing = true
+  self.disconnecting = true
+  if !(self.state_ is Closed(..)) {
+    self.state_ = Closed(code=None)
+  }
+  self.playback_generation += 1
+  if self.playback_stop is Some(stop) {
+    stop.val = true
+  }
+  if notify_leave {
+    (self.leave_)() catch {
+      _ => ()
+    }
+  }
+  if self.gateway is Some(gateway) {
+    gateway.close()
+  }
+  self.gateway = None
+  self.close_udp()
+  self.close_subscriptions()
+  self.playback.close(error=VoiceError::Disconnected)
+  self.events.close(error=VoiceError::Disconnected)
+}
+
+///|
 async fn VoiceConnection::select_protocol(
   self : VoiceConnection,
   ssrc : UInt,
@@ -320,6 +354,7 @@ async fn[X] VoiceConnection::run_event_pump(
   self : VoiceConnection,
   group : @async.TaskGroup[X],
 ) -> Unit noraise {
+  defer self.terminal_teardown(notify_leave=true)
   while !self.closing {
     guard self.gateway is Some(gateway) else {
       @async.sleep(5) catch {
@@ -384,8 +419,6 @@ async fn[X] VoiceConnection::run_event_pump(
       FatallyClosed(code~) => {
         self.set_failure(GatewayClosed(code=Some(code)), code=Some(code))
         self.reset_session()
-        self.close_subscriptions()
-        self.events.close(error=VoiceError::Disconnected)
         return
       }
     }
@@ -670,20 +703,5 @@ pub async fn VoiceConnection::disconnect(self : VoiceConnection) -> Unit {
     return
   }
   self.disconnecting = true
-  (self.leave_)() catch {
-    _ => ()
-  }
-  self.closing = true
-  self.state_ = Closed(code=None)
-  self.playback_generation += 1
-  if self.playback_stop is Some(stop) {
-    stop.val = true
-  }
-  if self.gateway is Some(gateway) {
-    gateway.close()
-  }
-  self.close_udp()
-  self.close_subscriptions()
-  self.playback.close(error=VoiceError::Disconnected)
-  self.events.close(error=VoiceError::Disconnected)
+  self.terminal_teardown(notify_leave=true)
 }

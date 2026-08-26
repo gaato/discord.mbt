@@ -9,6 +9,9 @@ pub(all) struct Application {
   bot : User?
   owner : User?
   flags : ApplicationFlags?
+  /// Full application flag bitfield returned as `flags_new` when Discord uses
+  /// bits above 30. Request payloads must continue to use `flags`.
+  flags_new : ApplicationFlags?
   approximate_guild_count : Int?
   approximate_user_install_count : Int?
   rpc_origins : Array[String]?
@@ -38,6 +41,16 @@ pub(all) struct Application {
   ]?
   custom_install_url : String?
 } derive(ToJson, FromJson, Debug)
+
+///|
+/// Return Discord's full response bitfield when present, falling back to the
+/// legacy numeric `flags` field for older payloads.
+pub fn Application::effective_flags(self : Application) -> ApplicationFlags? {
+  match self.flags_new {
+    Some(flags) => Some(flags)
+    None => self.flags
+  }
+}
 
 ///|
 /// Default OAuth2 installation scopes and bot permissions for an application.
@@ -155,6 +168,15 @@ pub impl ToJson for ApplicationFlags with fn to_json(self) {
 ///|
 pub impl @json.FromJson for ApplicationFlags with fn from_json(json, path) {
   match json {
+    String(repr) =>
+      ApplicationFlags(
+        @string.parse_uint64(repr) catch {
+          _ =>
+            raise JsonDecodeError(
+              (path, "expected application flags (integer string), got \{repr}"),
+            )
+        },
+      )
     Number(_, repr=Some(repr)) =>
       ApplicationFlags(
         @string.parse_uint64(repr.to_string()) catch {

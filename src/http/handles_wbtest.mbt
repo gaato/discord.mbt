@@ -70,7 +70,7 @@ async test "message ref pin delegates the audit reason header" {
   let channel_id : @model.ChannelId = Id(50UL)
   let message_id : @model.MessageId = Id(60UL)
   client.message_ref(channel_id, message_id).pin(reason="spam")
-  inspect(captured_path.val, content="/api/v10/channels/50/pins/60")
+  inspect(captured_path.val, content="/api/v10/channels/50/messages/pins/60")
   guard captured_headers.val is Some(headers) else {
     fail("expected request headers")
   }

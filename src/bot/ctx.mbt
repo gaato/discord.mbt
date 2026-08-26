@@ -14,6 +14,7 @@ pub struct GatewayCtx {
     @model.Id[@model.GuildMarker],
     @voice.VoiceConnection,
   ]
+  priv voice_join_gates_ : Map[@model.Id[@model.GuildMarker], @async.Semaphore]
   priv shutdown_requested_ : Ref[Bool]
 }
 

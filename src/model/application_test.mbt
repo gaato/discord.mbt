@@ -84,6 +84,7 @@ test "application decodes a minimal interaction-ready fixture" {
       #|    },
       #|  ),
       #|  flags: Some(8388608),
+      #|  flags_new: None,
       #|  approximate_guild_count: Some(42),
       #|  approximate_user_install_count: Some(120),
       #|  rpc_origins: None,
@@ -130,4 +131,18 @@ test "application flags combine and preserve unknown bits" {
   )
   let decoded : @model.ApplicationFlags = @json.from_json(@json.parse(encoded))
   assert_true(decoded.bits() == bits)
+}
+
+///|
+test "application flags_new preserves bits above the legacy numeric field" {
+  let application : @model.Application = @json.from_json(
+    @json.parse(
+      (
+        #|{"id":"1","name":"flags","icon":null,"description":"","flags":1,"flags_new":"2147483649"}
+      ),
+    ),
+  )
+  assert_eq(application.flags.unwrap().bits(), 1UL)
+  assert_eq(application.flags_new.unwrap().bits(), 2147483649UL)
+  assert_eq(application.effective_flags().unwrap().bits(), 2147483649UL)
 }
