@@ -110,3 +110,62 @@ async test "remote client reconnects after coordinator restart" {
     }
   })
 }
+
+///|
+async test "coordinator EOF releases a held HTTP bucket" {
+  @async.with_task_group(group => {
+    let coordinator = Coordinator::serve(group, addr="127.0.0.1:0")
+    defer coordinator.close()
+    let first = RemoteRateLimiter::connect(coordinator.addr())
+    let second = RemoteRateLimiter::connect(coordinator.addr())
+    defer first.close()
+    defer second.close()
+    let bucket = "POST:/channels/9/messages"
+    @ratelimit.RateLimiter::acquire(first, bucket, global_exempt=true)
+    first.acquire_client.close()
+
+    @async.with_timeout(1000, () => {
+      @ratelimit.RateLimiter::acquire(second, bucket, global_exempt=true)
+    })
+    @ratelimit.RateLimiter::release(second, bucket, status=0, headers=Map([]))
+  })
+}
+
+///|
+priv suberror CoordinatorConnectTestError {
+  SecondConnectionFailed
+} derive(Debug)
+
+///|
+async test "remote rate limiter closes its first client when the second connection fails" {
+  @async.with_task_group(group => {
+    let coordinator = Coordinator::serve(group, addr="127.0.0.1:0")
+    defer coordinator.close()
+    let warmup = RemoteIdentifyQueue::connect(coordinator.addr())
+    defer warmup.close()
+    warmup.ping()
+    let attempts = Ref(0)
+    let first_client : Ref[CoordinatorClient?] = Ref(None)
+    try
+      RemoteRateLimiter::connect_with(coordinator.addr(), addr => {
+        attempts.val += 1
+        if attempts.val == 2 {
+          raise CoordinatorConnectTestError::SecondConnectionFailed
+        }
+        let client = CoordinatorClient::connect(addr)
+        first_client.val = Some(client)
+        client
+      })
+    catch {
+      CoordinatorConnectTestError::SecondConnectionFailed => ()
+      error => fail("unexpected connection error: \{Repr(error)}")
+    } noraise {
+      _ => fail("second connection unexpectedly succeeded")
+    }
+    assert_eq(attempts.val, 2)
+    guard first_client.val is Some(client) else {
+      fail("first coordinator client was not captured")
+    }
+    assert_true(client.conn.val is None)
+  })
+}

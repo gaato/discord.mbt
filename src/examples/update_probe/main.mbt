@@ -103,6 +103,12 @@ async fn main {
       .create_channel("probe-msg-update", typ=GuildText)
     println("[probe] created channel \{channel.id}")
     let ch = ctx.channel_ref(channel.id)
+    errdefer @async.protect_from_cancel(() => {
+      try ch.delete(reason="update probe cleanup") |> ignore catch {
+        _ => ()
+      }
+      ctx.shutdown()
+    })
     try {
       // 1. Unfurl: a URL-only message gains embeds without an edit.
       let sent = ch.send(content="probe https://github.com/gaato/discord.mbt")
@@ -143,12 +149,9 @@ async fn main {
       }
       println("[latency] GatewayCtx::latency_ms() = \{to_repr(latency)}")
     } catch {
+      error if @async.is_being_cancelled() => raise error
       error => {
         println("[probe] FAILED: \{to_repr(error)}")
-        try ch.delete(reason="update probe cleanup") |> ignore catch {
-          _ => ()
-        }
-        ctx.shutdown()
         raise error
       }
     }

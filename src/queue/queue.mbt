@@ -45,19 +45,12 @@ pub impl IdentifyQueue for InMemoryQueue with fn wait_for_identify(
 ) {
   let bucket = self.buckets[shard_id % self.buckets.length()]
   bucket.gate.acquire()
-  try {
-    let wait = bucket.last_identify_ms +
-      self.spacing_ms.to_int64() -
-      @clock.now_ms()
-    if wait > 0 {
-      @async.sleep(wait.to_int())
-    }
-    bucket.last_identify_ms = @clock.now_ms()
-  } catch {
-    e => {
-      bucket.gate.release()
-      raise e
-    }
+  defer bucket.gate.release()
+  let wait = bucket.last_identify_ms +
+    self.spacing_ms.to_int64() -
+    @clock.now_ms()
+  if wait > 0 {
+    @async.sleep(wait.to_int())
   }
-  bucket.gate.release()
+  bucket.last_identify_ms = @clock.now_ms()
 }

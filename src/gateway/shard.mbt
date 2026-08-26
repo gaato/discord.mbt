@@ -51,14 +51,8 @@ pub async fn Shard::send(self : Shard, command : Json) -> Unit {
     raise TransportClosed(code=None, reason="shard is not connected")
   }
   self.send_gate.acquire()
-  try transport.send(command.stringify()) catch {
-    e => {
-      self.send_gate.release()
-      raise e
-    }
-  } noraise {
-    _ => self.send_gate.release()
-  }
+  defer self.send_gate.release()
+  transport.send(command.stringify())
 }
 
 ///|
@@ -487,12 +481,6 @@ async fn Shard::raw_send(
   payload : Json,
 ) -> Unit {
   self.send_gate.acquire()
-  try transport.send(payload.stringify()) catch {
-    e => {
-      self.send_gate.release()
-      raise e
-    }
-  } noraise {
-    _ => self.send_gate.release()
-  }
+  defer self.send_gate.release()
+  transport.send(payload.stringify())
 }

@@ -403,14 +403,8 @@ async fn VoiceGateway::raw_send_json(
   payload : Json,
 ) -> Unit {
   self.send_gate.acquire()
-  try transport.send_text(payload.stringify()) catch {
-    error => {
-      self.send_gate.release()
-      raise error
-    }
-  } noraise {
-    _ => self.send_gate.release()
-  }
+  defer self.send_gate.release()
+  transport.send_text(payload.stringify())
 }
 
 ///|
@@ -420,12 +414,6 @@ async fn VoiceGateway::raw_send_binary(
   payload : Bytes,
 ) -> Unit {
   self.send_gate.acquire()
-  try transport.send_binary(payload) catch {
-    error => {
-      self.send_gate.release()
-      raise error
-    }
-  } noraise {
-    _ => self.send_gate.release()
-  }
+  defer self.send_gate.release()
+  transport.send_binary(payload)
 }

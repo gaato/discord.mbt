@@ -89,6 +89,39 @@ impl @voice.VoiceUdp for ConnectionTestUdp with fn close(self) {
 }
 
 ///|
+struct CancelledDiscoveryUdp {
+  outgoing : @aqueue.Queue[Bytes]
+  recv_started : @aqueue.Queue[Unit]
+  close_calls : Ref[Int]
+}
+
+///|
+fn CancelledDiscoveryUdp::new() -> CancelledDiscoveryUdp {
+  {
+    outgoing: Queue(kind=Unbounded),
+    recv_started: Queue(kind=Unbounded),
+    close_calls: Ref(0),
+  }
+}
+
+///|
+impl @voice.VoiceUdp for CancelledDiscoveryUdp with fn recv(self, _buffer) {
+  self.recv_started.put(())
+  @async.sleep(3_600_000)
+  0
+}
+
+///|
+impl @voice.VoiceUdp for CancelledDiscoveryUdp with fn send(self, bytes) {
+  self.outgoing.put(bytes)
+}
+
+///|
+impl @voice.VoiceUdp for CancelledDiscoveryUdp with fn close(self) {
+  self.close_calls.val += 1
+}
+
+///|
 struct OneConnectionFrame {
   mut sent : Bool
 }
@@ -262,6 +295,59 @@ async fn wait_for_proposal_calls(
   @async.with_timeout(1000, () => {
     while fake.proposal_calls.length() < expected {
       @async.sleep(1)
+    }
+  })
+}
+
+///|
+async test "cancelled voice discovery closes only its candidate UDP" {
+  let transport = ConnectionTestTransport::new()
+  let udp = CancelledDiscoveryUdp::new()
+  let connections : @aqueue.Queue[@voice.VoiceConnection] = Queue(
+    kind=Unbounded,
+  )
+  @async.with_task_group(group => {
+    let owner = group.spawn(no_wait=true, allow_failure=true, () => {
+      @async.with_task_group(connection_group => {
+        let connection = @voice.VoiceConnection::start(
+          connection_group,
+          connection_credentials(),
+          user_id="self",
+          channel_id=7UL,
+          leave=() => (),
+          rejoin=() => connection_credentials(),
+          connector=_ => (transport : &@voice.VoiceTransport),
+          udp_opener=(_, _) => (udp : &@voice.VoiceUdp),
+          receive=false,
+        )
+        connections.put(connection)
+        @async.sleep(3_600_000)
+      })
+    })
+    let connection = connections.get()
+    transport.incoming.put(connection_hello())
+    guard transport.outgoing_text.get() is { "op": Number(0, ..), .. } else {
+      fail("expected voice identify before discovery")
+    }
+    transport.incoming.put(connection_ready(1))
+    assert_eq(udp.outgoing.get(), @voice.build_ip_discovery_request(42U))
+    udp.recv_started.get()
+
+    owner.cancel()
+    try owner.wait() catch {
+      error if @async.is_cancellation_error(error) => ()
+      error => fail("unexpected discovery cancellation error: \{Repr(error)}")
+    } noraise {
+      _ => fail("cancelled discovery unexpectedly completed")
+    }
+    assert_eq(udp.close_calls.val, 1)
+    try connection.wait_ready(timeout_ms=10) catch {
+      IpDiscoveryFailed(reason~) =>
+        fail("cancellation was converted to IpDiscoveryFailed: \{reason}")
+      JoinTimeout | Disconnected => ()
+      error => fail("unexpected post-cancellation error: \{Repr(error)}")
+    } noraise {
+      _ => fail("cancelled discovery unexpectedly became ready")
     }
   })
 }

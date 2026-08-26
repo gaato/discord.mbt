@@ -112,3 +112,51 @@ async test "a failed dial releases the connection slot" {
   }
   inspect(pool.idle.length(), content="0")
 }
+
+///|
+async test "a cancelled checkout drops its connection and releases the slot" {
+  let server = @http.Server(@socket.Addr::parse("127.0.0.1:0"))
+  defer server.close()
+  @async.with_task_group(group => {
+    group.spawn_bg(no_wait=true, () => {
+      server.run_forever(allow_failure=true, (_request, body_reader, conn) => {
+        ignore(body_reader.read_all().text())
+        conn.send_response(200, "OK")
+        conn.write_string("pong")
+        conn.end_response()
+      })
+    })
+    let pool = Pool("http://\{server.addr}", max_connections=1)
+    defer pool.close()
+    let entered = @async.Semaphore(1, initial_value=0)
+    let checked_out : Array[@http.Client] = []
+    let running = group.spawn(no_wait=true, allow_failure=true, () => {
+      pool.with_conn(conn => {
+        checked_out.push(conn)
+        entered.release()
+        @async.sleep(60_000)
+        0
+      })
+    })
+    entered.acquire()
+    running.cancel()
+    try running.wait() catch {
+      error if @async.is_cancellation_error(error) => ()
+      error => fail("unexpected cancellation error: \{Repr(error)}")
+    } noraise {
+      _ => fail("cancelled checkout unexpectedly completed")
+    }
+
+    // max_connections=1 makes this time out if cancellation leaked the slot.
+    let code = @async.with_timeout(1000, () => {
+      pool.with_conn(conn => {
+        checked_out.push(conn)
+        exchange_once(conn)
+      })
+    })
+    assert_eq(code, 200)
+    assert_eq(checked_out.length(), 2)
+    assert_false(physical_equal(checked_out[0], checked_out[1]))
+    assert_eq(pool.idle.length(), 1)
+  })
+}

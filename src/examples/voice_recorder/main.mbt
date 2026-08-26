@@ -40,44 +40,41 @@ async fn main {
     let bot = @discord.Bot(app, token~, intents~)
     bot.service(name="voice-recorder", ctx => {
       let connection = ctx.join_voice(guild_id, channel_id)
+      errdefer @async.protect_from_cancel(() => {
+        connection.disconnect() catch {
+          _ => ()
+        }
+      })
       let stream = connection.subscribe(
         user_id=target_user_id,
         end_after_silence_ms=Some(1000),
       )
+      errdefer stream.close()
       let audio : &@discord.AudioSource = stream
-      try {
-        guard audio.next_frame() is Some(first) else {
-          connection.disconnect()
-          ctx.shutdown()
-          return
-        }
-        println("[voice] recording \{target_user_id} ...")
-        let output = @fs.create(output_path)
-        defer output.close()
-        let writer = @discord.OggOpusWriter::new(channels=2)
-        let mut frame_count = 1
-        writer.write_frame(first)
-        output.write(writer.take_output())
-        while audio.next_frame() is Some(frame) {
-          writer.write_frame(frame)
-          frame_count += 1
-          output.write(writer.take_output())
-        }
-        writer.finish()
-        output.write(writer.take_output())
-        println("[voice] saved \{output_path} (\{frame_count} frames)")
+      guard audio.next_frame() is Some(first) else {
         stream.close()
         connection.disconnect()
         ctx.shutdown()
-      } catch {
-        error => {
-          stream.close()
-          connection.disconnect() catch {
-            _ => ()
-          }
-          raise error
-        }
+        return
       }
+      println("[voice] recording \{target_user_id} ...")
+      let output = @fs.create(output_path)
+      defer output.close()
+      let writer = @discord.OggOpusWriter::new(channels=2)
+      let mut frame_count = 1
+      writer.write_frame(first)
+      output.write(writer.take_output())
+      while audio.next_frame() is Some(frame) {
+        writer.write_frame(frame)
+        frame_count += 1
+        output.write(writer.take_output())
+      }
+      writer.finish()
+      output.write(writer.take_output())
+      println("[voice] saved \{output_path} (\{frame_count} frames)")
+      stream.close()
+      connection.disconnect()
+      ctx.shutdown()
     })
     bot.run()
   } catch {

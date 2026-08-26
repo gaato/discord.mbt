@@ -37,6 +37,7 @@ async fn[X] load_audio_source(
     (@discord.OggOpusSource::from_bytes(audio), () => ())
   } else {
     let (stdout, process_stdout) = @process.read_from_process()
+    errdefer stdout.close()
     @process.spawn(
       group,
       "ffmpeg",
@@ -48,12 +49,7 @@ async fn[X] load_audio_source(
       no_wait=true,
     )
     |> ignore
-    let source = @discord.OggOpusSource::from_reader(stdout) catch {
-      error => {
-        stdout.close()
-        raise error
-      }
-    }
+    let source = @discord.OggOpusSource::from_reader(stdout)
     (source, () => stdout.close())
   }
 }
@@ -93,22 +89,18 @@ async fn main {
       let bot = @discord.Bot(app, token~, intents~)
       bot.service(name="voice-player", ctx => {
         let connection = ctx.join_voice(guild_id, channel_id)
-        try {
-          println("[voice] connected; playing \{audio_path}")
-          connection.play((tracked : &@discord.AudioSource))
-          done.get()
-          connection.stop()
-          println("[voice] playback complete")
-          connection.disconnect()
-          ctx.shutdown()
-        } catch {
-          error => {
-            connection.disconnect() catch {
-              _ => ()
-            }
-            raise error
+        errdefer @async.protect_from_cancel(() => {
+          connection.disconnect() catch {
+            _ => ()
           }
-        }
+        })
+        println("[voice] connected; playing \{audio_path}")
+        connection.play((tracked : &@discord.AudioSource))
+        done.get()
+        connection.stop()
+        println("[voice] playback complete")
+        connection.disconnect()
+        ctx.shutdown()
       })
       bot.run()
     })

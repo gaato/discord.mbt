@@ -172,13 +172,17 @@ pub struct RemoteRateLimiter {
 ///
 /// Later transport failures reconnect automatically with bounded backoff.
 pub async fn RemoteRateLimiter::connect(addr : String) -> RemoteRateLimiter {
-  let acquire_client = CoordinatorClient::connect(addr)
-  let release_client = CoordinatorClient::connect(addr) catch {
-    error => {
-      acquire_client.close()
-      raise error
-    }
-  }
+  RemoteRateLimiter::connect_with(addr, addr => CoordinatorClient::connect(addr))
+}
+
+///|
+async fn RemoteRateLimiter::connect_with(
+  addr : String,
+  connector : async (String) -> CoordinatorClient,
+) -> RemoteRateLimiter {
+  let acquire_client = connector(addr)
+  errdefer acquire_client.close()
+  let release_client = connector(addr)
   { acquire_client, release_client }
 }
 

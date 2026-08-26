@@ -95,6 +95,25 @@ async fn GatewayCtx::watch_voice_server_updates(
 }
 
 ///|
+async fn wait_ready_or_disconnect(
+  connection : @voice.VoiceConnection,
+  timeout_ms : Int,
+) -> Unit {
+  errdefer @async.protect_from_cancel(() => {
+    connection.disconnect() catch {
+      _ => ()
+    }
+  })
+  connection.wait_ready(timeout_ms~) catch {
+    error if @async.is_being_cancelled() => {
+      @async.pause()
+      raise error
+    }
+    error => raise error
+  }
+}
+
+///|
 /// Join a guild voice channel and wait until its voice transport is ready.
 ///
 /// A second call for the same guild returns the registered connection; moving
@@ -149,12 +168,7 @@ pub async fn GatewayCtx::join_voice(
     rejoin~,
     telemetry~,
   )
-  connection.wait_ready(timeout_ms~) catch {
-    error => {
-      connection.disconnect()
-      raise error
-    }
-  }
+  wait_ready_or_disconnect(connection, timeout_ms)
   self.voice_connections_[guild_id] = connection
   self.group_.spawn_bg(no_wait=true, allow_failure=true, () => {
     self.watch_voice_server_updates(

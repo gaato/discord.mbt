@@ -26,7 +26,7 @@ fn ManagerFakeTransport::server_close(
 
 ///|
 impl @gateway.GatewayTransport for ManagerFakeTransport with fn recv(self) {
-  Text(self.incoming.get() catch { error => raise error })
+  Text(self.incoming.get())
 }
 
 ///|

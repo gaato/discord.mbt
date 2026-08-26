@@ -289,7 +289,7 @@ fn BotFakeTransport::BotFakeTransport() -> BotFakeTransport {
 
 ///|
 impl @gateway.GatewayTransport for BotFakeTransport with fn recv(self) {
-  Text(self.incoming.get() catch { error => raise error })
+  Text(self.incoming.get())
 }
 
 ///|

@@ -117,12 +117,10 @@ pub async fn ResponseGate::send(
     raise ResponseGateError::InvalidCallback(kind=self.kind, typ=response.typ)
   }
   self.state = Sent
-  (self.sink)(response, files) catch {
-    error => {
-      self.state = Failed
-      raise error
-    }
+  errdefer {
+    self.state = Failed
   }
+  (self.sink)(response, files)
 }
 
 ///|

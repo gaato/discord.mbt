@@ -4,6 +4,9 @@ struct FakeVoiceTransport {
   incoming : @aqueue.Queue[@voice.VoiceFrame]
   outgoing_text : @aqueue.Queue[Json]
   outgoing_binary : @aqueue.Queue[Bytes]
+  block_next_text_send : Ref[Bool]
+  block_next_binary_send : Ref[Bool]
+  send_started : @aqueue.Queue[Unit]
 }
 
 ///|
@@ -12,6 +15,9 @@ fn FakeVoiceTransport::FakeVoiceTransport() -> FakeVoiceTransport {
     incoming: Queue(kind=Unbounded),
     outgoing_text: Queue(kind=Unbounded),
     outgoing_binary: Queue(kind=Unbounded),
+    block_next_text_send: Ref(false),
+    block_next_binary_send: Ref(false),
+    send_started: Queue(kind=Unbounded),
   }
 }
 
@@ -32,6 +38,11 @@ impl @voice.VoiceTransport for FakeVoiceTransport with fn recv(self) {
 
 ///|
 impl @voice.VoiceTransport for FakeVoiceTransport with fn send_text(self, text) {
+  if self.block_next_text_send.val {
+    self.block_next_text_send.val = false
+    self.send_started.put(())
+    @async.sleep(3_600_000)
+  }
   self.outgoing_text.put(@json.parse(text))
 }
 
@@ -40,6 +51,11 @@ impl @voice.VoiceTransport for FakeVoiceTransport with fn send_binary(
   self,
   bytes,
 ) {
+  if self.block_next_binary_send.val {
+    self.block_next_binary_send.val = false
+    self.send_started.put(())
+    @async.sleep(3_600_000)
+  }
   self.outgoing_binary.put(bytes)
 }
 
@@ -295,6 +311,62 @@ async test "voice gateway completes identify and protocol selection" {
     guard transport.outgoing_text.get() is { "op": Number(5, ..), .. }
     gateway.send_binary(op=26, b"key")
     assert_eq(transport.outgoing_binary.get(), b"\x1akey")
+    gateway.close()
+  })
+}
+
+///|
+async test "cancelled voice gateway sends release the serialized send gate" {
+  let transport = FakeVoiceTransport()
+  @async.with_task_group(group => {
+    let gateway = @voice.VoiceGateway::start(
+      group,
+      server_id="guild",
+      user_id="user",
+      session_id="session",
+      token="token",
+      endpoint="voice.example",
+      select_protocol=(_, _, _, _) => {
+        ("203.0.113.8", 62000, "aead_aes256_gcm_rtpsize")
+      },
+      connector=_ => (transport : &@voice.VoiceTransport),
+    )
+    finish_handshake(gateway, transport)
+
+    transport.block_next_text_send.val = true
+    let text_send = group.spawn(no_wait=true, allow_failure=true, () => {
+      gateway.send_json(@voice.encode_speaking(ssrc=42, flags=1))
+    })
+    transport.send_started.get()
+    text_send.cancel()
+    try text_send.wait() catch {
+      error if @async.is_cancellation_error(error) => ()
+      error => fail("unexpected text send error: \{Repr(error)}")
+    } noraise {
+      _ => fail("cancelled text send unexpectedly completed")
+    }
+    @async.with_timeout(100, () => {
+      gateway.send_json(@voice.encode_speaking(ssrc=42, flags=0))
+    })
+    guard transport.outgoing_text.get()
+      is { "op": Number(5, ..), "d": { "speaking": Number(0, ..), .. }, .. } else {
+      fail("expected the text send after cancellation")
+    }
+
+    transport.block_next_binary_send.val = true
+    let binary_send = group.spawn(no_wait=true, allow_failure=true, () => {
+      gateway.send_binary(op=26, b"blocked")
+    })
+    transport.send_started.get()
+    binary_send.cancel()
+    try binary_send.wait() catch {
+      error if @async.is_cancellation_error(error) => ()
+      error => fail("unexpected binary send error: \{Repr(error)}")
+    } noraise {
+      _ => fail("cancelled binary send unexpectedly completed")
+    }
+    @async.with_timeout(100, () => gateway.send_binary(op=26, b"after-cancel"))
+    assert_eq(transport.outgoing_binary.get(), b"\x1aafter-cancel")
     gateway.close()
   })
 }

@@ -31,32 +31,19 @@ pub async fn[T] Pool::with_conn(
 ) -> T {
   guard !self.closed else { raise PoolClosed }
   self.slots.acquire()
+  defer self.slots.release()
   let conn = match self.idle.pop() {
     Some(c) => c
-    None =>
-      Client(self.uri) catch {
-        e => {
-          self.slots.release()
-          raise e
-        }
-      }
+    None => Client(self.uri)
   }
-  try {
-    let result = f(conn)
-    if self.closed {
-      conn.close()
-    } else {
-      self.idle.push(conn)
-    }
-    self.slots.release()
-    result
-  } catch {
-    e => {
-      conn.close()
-      self.slots.release()
-      raise e
-    }
+  errdefer conn.close()
+  let result = f(conn)
+  if self.closed {
+    conn.close()
+  } else {
+    self.idle.push(conn)
   }
+  result
 }
 
 ///|

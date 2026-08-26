@@ -375,3 +375,123 @@ test "all typed event descriptors report their matching kind" {
     assert_true(actual[i] == expected[i])
   }
 }
+
+///|
+priv struct PendingBotVoiceTransport {
+  incoming : @aqueue.Queue[@voice.VoiceFrame]
+  recv_started : @aqueue.Queue[Unit]
+  close_calls : Ref[Int]
+}
+
+///|
+fn PendingBotVoiceTransport::new() -> PendingBotVoiceTransport {
+  {
+    incoming: Queue(kind=Unbounded),
+    recv_started: Queue(kind=Unbounded),
+    close_calls: Ref(0),
+  }
+}
+
+///|
+impl @voice.VoiceTransport for PendingBotVoiceTransport with fn recv(self) {
+  self.recv_started.put(())
+  self.incoming.get()
+}
+
+///|
+impl @voice.VoiceTransport for PendingBotVoiceTransport with fn send_text(
+  _self,
+  _text,
+) {
+
+}
+
+///|
+impl @voice.VoiceTransport for PendingBotVoiceTransport with fn send_binary(
+  _self,
+  _bytes,
+) {
+
+}
+
+///|
+impl @voice.VoiceTransport for PendingBotVoiceTransport with fn close(
+  self,
+  code~,
+) {
+  self.close_calls.val += 1
+  self.incoming.close(
+    error=@voice.VoiceTransportClosed(code=Some(code), reason="client close"),
+  )
+}
+
+///|
+fn bot_voice_test_credentials() -> @voice.VoiceCredentials {
+  {
+    server_id: "guild",
+    session_id: "session",
+    token: "token",
+    endpoint: "voice.example",
+  }
+}
+
+///|
+fn[X] pending_bot_voice_connection(
+  group : @async.TaskGroup[X],
+  transport : PendingBotVoiceTransport,
+  leave_calls : Ref[Int],
+) -> @voice.VoiceConnection {
+  @voice.VoiceConnection::start(
+    group,
+    bot_voice_test_credentials(),
+    user_id="user",
+    channel_id=7UL,
+    leave=() => leave_calls.val += 1,
+    rejoin=() => bot_voice_test_credentials(),
+    connector=_ => (transport : &@voice.VoiceTransport),
+    receive=false,
+  )
+}
+
+///|
+async test "voice ready timeout disconnects the pending connection" {
+  let transport = PendingBotVoiceTransport::new()
+  let leave_calls = Ref(0)
+  @async.with_task_group(group => {
+    let connection = pending_bot_voice_connection(group, transport, leave_calls)
+    transport.recv_started.get()
+    try wait_ready_or_disconnect(connection, 10) catch {
+      @voice.VoiceError::JoinTimeout => ()
+      error => fail("unexpected ready-wait error: \{Repr(error)}")
+    } noraise {
+      _ => fail("voice ready wait unexpectedly succeeded")
+    }
+    assert_eq(leave_calls.val, 1)
+    assert_eq(transport.close_calls.val, 1)
+    assert_eq(connection.state(), Closed(code=None))
+  })
+}
+
+///|
+async test "voice ready cancellation disconnects the pending connection" {
+  let transport = PendingBotVoiceTransport::new()
+  let leave_calls = Ref(0)
+  @async.with_task_group(group => {
+    let connection = pending_bot_voice_connection(group, transport, leave_calls)
+    transport.recv_started.get()
+    let waiting = group.spawn(no_wait=true, allow_failure=true, () => {
+      wait_ready_or_disconnect(connection, 60_000)
+    })
+    @async.sleep(10)
+    waiting.cancel()
+    try waiting.wait() catch {
+      error if @async.is_cancellation_error(error) => ()
+      error => fail("unexpected ready-wait cancellation error: \{Repr(error)}")
+    } noraise {
+      _ => fail("cancelled voice ready wait unexpectedly completed")
+    }
+    assert_eq(leave_calls.val, 1)
+    assert_eq(transport.close_calls.val, 1)
+    assert_eq(connection.state(), Closed(code=None))
+  })
+}

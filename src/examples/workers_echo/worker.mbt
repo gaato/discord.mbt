@@ -58,6 +58,11 @@ async fn run_interaction(
   responses : @aqueue.Queue[WorkerResponse],
 ) -> Unit {
   let mut response_sent = false
+  errdefer @async.protect_from_cancel(() => {
+    if !response_sent {
+      responses.put(WorkerResponse("NoResponse", ""))
+    }
+  })
   @async.with_task_group(group => {
     let interaction : @model.Interaction = @json.from_json(@json.parse(body))
     let client = @discord.Client(token)
@@ -70,14 +75,7 @@ async fn run_interaction(
     )
     responses.put(encode_outcome(endpoint.handle_interaction(interaction)))
     response_sent = true
-  }) catch {
-    error => {
-      if !response_sent {
-        responses.put(WorkerResponse("NoResponse", ""))
-      }
-      raise error
-    }
-  }
+  })
 }
 
 ///|

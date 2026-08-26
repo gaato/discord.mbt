@@ -95,28 +95,22 @@ async fn serve_connection(conn : @socket.Tcp, state : CoordinatorState) -> Unit 
     held_buckets: Map([]),
   }
   state.next_connection_id.val += 1
-  try {
-    while conn.read_until("\n") is Some(line) {
-      let response = try
-        dispatch_request(@json.parse(line), state, connection)
-      catch {
-        error if @async.is_being_cancelled() ||
-          @async.is_cancellation_error(error) => raise error
-        error => error_response("invalid request: \{error}")
-      } noraise {
-        response => response
-      }
-      conn.write(response.stringify() + "\n")
+  defer @async.protect_from_cancel(() => {
+    cleanup_connection(state, connection) catch {
+      _ => ()
     }
-  } catch {
-    error => {
-      cleanup_connection(state, connection) catch {
-        _ => ()
-      }
-      raise error
+  })
+  while conn.read_until("\n") is Some(line) {
+    let response = try
+      dispatch_request(@json.parse(line), state, connection)
+    catch {
+      error if @async.is_being_cancelled() ||
+        @async.is_cancellation_error(error) => raise error
+      error => error_response("invalid request: \{error}")
+    } noraise {
+      response => response
     }
-  } noraise {
-    _ => cleanup_connection(state, connection) catch { _ => () }
+    conn.write(response.stringify() + "\n")
   }
 }
 

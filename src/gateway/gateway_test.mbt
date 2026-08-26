@@ -3,11 +3,18 @@
 struct FakeTransport {
   incoming : @aqueue.Queue[String]
   outgoing : @aqueue.Queue[Json]
+  block_next_send : Ref[Bool]
+  send_started : @aqueue.Queue[Unit]
 }
 
 ///|
 fn FakeTransport::FakeTransport() -> FakeTransport {
-  { incoming: Queue(kind=Unbounded), outgoing: Queue(kind=Unbounded) }
+  {
+    incoming: Queue(kind=Unbounded),
+    outgoing: Queue(kind=Unbounded),
+    block_next_send: Ref(false),
+    send_started: Queue(kind=Unbounded),
+  }
 }
 
 ///|
@@ -19,11 +26,16 @@ fn FakeTransport::server_close(self : FakeTransport, code : Int?) -> Unit {
 
 ///|
 impl @gateway.GatewayTransport for FakeTransport with fn recv(self) {
-  Text(self.incoming.get() catch { e => raise e })
+  Text(self.incoming.get())
 }
 
 ///|
 impl @gateway.GatewayTransport for FakeTransport with fn send(self, text) {
+  if self.block_next_send.val {
+    self.block_next_send.val = false
+    self.send_started.put(())
+    @async.sleep(3_600_000)
+  }
   self.outgoing.put(@json.parse(text) catch { _ => Json::null() })
 }
 
@@ -271,6 +283,51 @@ async test "shard identifies, dispatches, and resumes across a drop" {
         ShardConnected(shard_id=0),
       ] else {
       fail("unexpected shard telemetry: \{to_repr(telemetry)}")
+    }
+    shard.close()
+  })
+}
+
+///|
+async test "cancelled shard send releases the serialized send gate" {
+  let transport = FakeTransport()
+  @async.with_task_group(group => {
+    let shard = @gateway.Shard::start(
+      group,
+      token="tok",
+      intents=@model.Intents::none(),
+      connector=_ => (transport : &@gateway.GatewayTransport),
+    )
+    transport.incoming.put(HELLO)
+    guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
+      fail("expected identify")
+    }
+    transport.incoming.put(ready_frame())
+    guard shard.next() is Connected(resumed=false) else {
+      fail("expected a fresh gateway connection")
+    }
+    guard shard.next() is Dispatch(Ready(_)) else {
+      fail("expected the ready dispatch")
+    }
+
+    transport.block_next_send.val = true
+    let blocked = group.spawn(no_wait=true, allow_failure=true, () => {
+      shard.send({ "op": 3, "d": { "since": 0 } })
+    })
+    transport.send_started.get()
+    blocked.cancel()
+    try blocked.wait() catch {
+      error if @async.is_cancellation_error(error) => ()
+      error => fail("unexpected send error: \{Repr(error)}")
+    } noraise {
+      _ => fail("cancelled send unexpectedly completed")
+    }
+
+    @async.with_timeout(100, () => {
+      shard.send({ "op": 4, "d": { "guild_id": "1" } })
+    })
+    guard transport.outgoing.get() is { "op": Number(4, ..), .. } else {
+      fail("expected the send after cancellation")
     }
     shard.close()
   })

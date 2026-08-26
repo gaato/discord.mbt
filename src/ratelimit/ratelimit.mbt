@@ -115,20 +115,14 @@ pub impl RateLimiter for InMemoryRateLimiter with fn acquire(
   bucket.gate.acquire()
   // From here on the gate is held; make sure a cancellation while waiting
   // for the bucket reset releases it.
-  try {
-    if bucket.known && bucket.remaining <= 0 {
-      let wait = bucket.reset_at_ms - @clock.now_ms()
-      if wait > 0 {
-        @async.sleep(wait.to_int() + 1)
-      }
-      // optimistic: the window has reset; the next response corrects us
-      bucket.remaining = 1
+  errdefer bucket.gate.release()
+  if bucket.known && bucket.remaining <= 0 {
+    let wait = bucket.reset_at_ms - @clock.now_ms()
+    if wait > 0 {
+      @async.sleep(wait.to_int() + 1)
     }
-  } catch {
-    e => {
-      bucket.gate.release()
-      raise e
-    }
+    // optimistic: the window has reset; the next response corrects us
+    bucket.remaining = 1
   }
 }
 

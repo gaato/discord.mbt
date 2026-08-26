@@ -85,3 +85,32 @@ async test "response gate remains terminal after sink failure" {
     _ => fail("expected AlreadyResponded")
   }
 }
+
+///|
+async test "response gate remains terminal after sink cancellation" {
+  let sink_started : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  let gate = @framework.ResponseGate(ApplicationCommand, (_, _) => {
+    sink_started.put(())
+    @async.sleep(3_600_000)
+  })
+  @async.with_task_group(group => {
+    let send_task = group.spawn(no_wait=true, allow_failure=true, () => {
+      gate.send({ typ: ChannelMessageWithSource, data: None })
+    })
+    sink_started.get()
+    send_task.cancel()
+    try send_task.wait() catch {
+      error if @async.is_cancellation_error(error) => ()
+      error => fail("unexpected cancellation error: \{Repr(error)}")
+    } noraise {
+      _ => fail("cancelled send unexpectedly completed")
+    }
+    assert_true(gate.responded())
+    try gate.send({ typ: ChannelMessageWithSource, data: None }) catch {
+      @framework.ResponseGateError::AlreadyResponded => ()
+      error => fail("unexpected error: \{Repr(error)}")
+    } noraise {
+      _ => fail("expected AlreadyResponded")
+    }
+  })
+}
