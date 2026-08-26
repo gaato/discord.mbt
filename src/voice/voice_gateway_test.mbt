@@ -7,6 +7,7 @@ struct FakeVoiceTransport {
   block_next_text_send : Ref[Bool]
   block_next_binary_send : Ref[Bool]
   send_started : @aqueue.Queue[Unit]
+  close_calls : Ref[Int]
 }
 
 ///|
@@ -18,6 +19,7 @@ fn FakeVoiceTransport::FakeVoiceTransport() -> FakeVoiceTransport {
     block_next_text_send: Ref(false),
     block_next_binary_send: Ref(false),
     send_started: Queue(kind=Unbounded),
+    close_calls: Ref(0),
   }
 }
 
@@ -61,9 +63,36 @@ impl @voice.VoiceTransport for FakeVoiceTransport with fn send_binary(
 
 ///|
 impl @voice.VoiceTransport for FakeVoiceTransport with fn close(self, code~) {
+  if self.close_calls.val > 0 {
+    return
+  }
+  self.close_calls.val += 1
   self.incoming.close(
     error=@voice.VoiceTransportClosed(code=Some(code), reason="client closed"),
   )
+}
+
+///|
+async test "cancelling a voice gateway closes its transport exactly once" {
+  let transport = FakeVoiceTransport()
+  @async.with_task_group(group => {
+    @voice.VoiceGateway::start(
+      group,
+      server_id="guild",
+      user_id="user",
+      session_id="session",
+      token="token",
+      endpoint="voice.example",
+      select_protocol=(_, _, _, _) => {
+        ("203.0.113.8", 62000, "aead_aes256_gcm_rtpsize")
+      },
+      connector=_ => (transport : &@voice.VoiceTransport),
+    )
+    |> ignore
+    transport.incoming.put(hello_frame(60000))
+    transport.outgoing_text.get() |> ignore
+  })
+  assert_eq(transport.close_calls.val, 1)
 }
 
 ///|

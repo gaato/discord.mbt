@@ -25,11 +25,14 @@ pub(all) suberror TransportClosed {
 ///|
 priv struct WsTransport {
   conn : @websocket.Conn
+  closed : Ref[Bool]
 }
 
 ///|
 impl GatewayTransport for WsTransport with fn recv(self) {
   let message = self.conn.recv() catch {
+    error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
+      raise error
     @websocket.WebSocketError::ConnectionClosed(code, reason) =>
       raise TransportClosed(
         code=Some(close_code_to_int(code)),
@@ -38,12 +41,16 @@ impl GatewayTransport for WsTransport with fn recv(self) {
     e => raise TransportClosed(code=None, reason="\{e}")
   }
   let data = message.read_all() catch {
+    error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
+      raise error
     e => raise TransportClosed(code=None, reason="\{e}")
   }
   match message.kind {
     Text =>
       Text(
         data.text() catch {
+          error if @async.is_being_cancelled() ||
+            @async.is_cancellation_error(error) => raise error
           e => raise TransportClosed(code=None, reason="\{e}")
         },
       )
@@ -58,12 +65,19 @@ impl GatewayTransport for WsTransport with fn send(self, text) {
 
 ///|
 impl GatewayTransport for WsTransport with fn close(self, code~) {
+  if self.closed.val {
+    return
+  }
+  self.closed.val = true
+  // `send_close` only writes the WebSocket close frame. The underlying
+  // transport must be closed even when that write fails or is cancelled.
+  defer self.conn.close()
   let ws_code : @websocket.CloseCode = match code {
     1000 => Normal
     1001 => GoingAway
     other => Other(other.to_uint16())
   }
-  self.conn.send_close(code=ws_code)
+  @async.with_timeout(1000, () => self.conn.send_close(code=ws_code))
 }
 
 ///|
@@ -87,5 +101,5 @@ fn close_code_to_int(code : @websocket.CloseCode) -> Int {
 /// Connect to the gateway over WebSocket (the default connector).
 pub async fn connect_websocket(url : String) -> &GatewayTransport {
   let conn = @websocket.connect(url)
-  WsTransport::{ conn, }
+  WsTransport::{ conn, closed: Ref(false) }
 }

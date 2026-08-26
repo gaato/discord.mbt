@@ -24,11 +24,14 @@ pub(all) suberror VoiceTransportClosed {
 ///|
 priv struct VoiceWsTransport {
   conn : @websocket.Conn
+  closed : Ref[Bool]
 }
 
 ///|
 impl VoiceTransport for VoiceWsTransport with fn recv(self) {
   let message = self.conn.recv() catch {
+    error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
+      raise error
     @websocket.WebSocketError::ConnectionClosed(code, reason) =>
       raise VoiceTransportClosed(
         code=Some(voice_close_code_to_int(code)),
@@ -37,12 +40,16 @@ impl VoiceTransport for VoiceWsTransport with fn recv(self) {
     error => raise VoiceTransportClosed(code=None, reason="\{error}")
   }
   let data = message.read_all() catch {
+    error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
+      raise error
     error => raise VoiceTransportClosed(code=None, reason="\{error}")
   }
   match message.kind {
     Text =>
       Text(
         data.text() catch {
+          error if @async.is_being_cancelled() ||
+            @async.is_cancellation_error(error) => raise error
           error => raise VoiceTransportClosed(code=None, reason="\{error}")
         },
       )
@@ -62,12 +69,19 @@ impl VoiceTransport for VoiceWsTransport with fn send_binary(self, bytes) {
 
 ///|
 impl VoiceTransport for VoiceWsTransport with fn close(self, code~) {
+  if self.closed.val {
+    return
+  }
+  self.closed.val = true
+  // A close frame does not close the underlying stream. Always finish with a
+  // hard close, including timeout, I/O failure, and task cancellation paths.
+  defer self.conn.close()
   let ws_code : @websocket.CloseCode = match code {
     1000 => Normal
     1001 => GoingAway
     other => Other(other.to_uint16())
   }
-  self.conn.send_close(code=ws_code)
+  @async.with_timeout(1000, () => self.conn.send_close(code=ws_code))
 }
 
 ///|
@@ -92,5 +106,5 @@ fn voice_close_code_to_int(code : @websocket.CloseCode) -> Int {
 /// v8 URL, normally `wss://<endpoint>?v=8`.
 pub async fn connect_voice_websocket(url : String) -> &VoiceTransport {
   let conn = @websocket.connect(url)
-  VoiceWsTransport::{ conn, }
+  VoiceWsTransport::{ conn, closed: Ref(false) }
 }

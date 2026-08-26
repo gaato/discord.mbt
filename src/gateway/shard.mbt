@@ -179,6 +179,11 @@ async fn Shard::run(
     }
     self.transport = Some(transport)
     let ended = try {
+      defer @async.protect_from_cancel(() => {
+        transport.close(code=1000) catch {
+          _ => ()
+        }
+      })
       let inflater = if compress { Some(inflater_factory()) } else { None }
       if compress {
         self.emit_telemetry(ShardCompressionEnabled(shard_id~))
@@ -197,10 +202,10 @@ async fn Shard::run(
       )
       ConnectionEnded(code=Some(1000), reason="loop exited")
     } catch {
-      ConnectionEnded(code~, reason~) => ConnectionEnded(code~, reason~)
-      TransportClosed(code~, reason~) => ConnectionEnded(code~, reason~)
       error if @async.is_being_cancelled() ||
         @async.is_cancellation_error(error) => return
+      ConnectionEnded(code~, reason~) => ConnectionEnded(code~, reason~)
+      TransportClosed(code~, reason~) => ConnectionEnded(code~, reason~)
       e => ConnectionEnded(code=None, reason="\{e}")
     } noraise {
       ended => ended
@@ -298,9 +303,9 @@ async fn Shard::run_connection(
           }
           break
         }
-        self.send_heartbeat(transport)
         heartbeat_state.val = false
         heartbeat_sent_at.val = @clock.now_ms()
+        self.send_heartbeat(transport)
         sleeper(heartbeat_interval)
       }
     })
@@ -347,6 +352,8 @@ async fn Shard::run_connection(
     // --- read loop ---
     for ;; {
       let frame = @json.parse(recv_payload(transport, inflater~)) catch {
+        error if @async.is_being_cancelled() ||
+          @async.is_cancellation_error(error) => raise error
         TransportClosed(code~, reason~) => raise ConnectionEnded(code~, reason~)
         e => raise ConnectionEnded(code=None, reason="bad frame: \{e}")
       }
@@ -400,9 +407,9 @@ async fn Shard::run_connection(
           }
         }
         1 => {
-          self.send_heartbeat(transport)
           heartbeat_state.val = false
           heartbeat_sent_at.val = @clock.now_ms()
+          self.send_heartbeat(transport)
         }
         7 =>
           // Reconnect request: close and resume

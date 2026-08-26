@@ -5,6 +5,7 @@ struct FakeTransport {
   outgoing : @aqueue.Queue[Json]
   block_next_send : Ref[Bool]
   send_started : @aqueue.Queue[Unit]
+  close_calls : Ref[Int]
 }
 
 ///|
@@ -14,6 +15,7 @@ fn FakeTransport::FakeTransport() -> FakeTransport {
     outgoing: Queue(kind=Unbounded),
     block_next_send: Ref(false),
     send_started: Queue(kind=Unbounded),
+    close_calls: Ref(0),
   }
 }
 
@@ -41,9 +43,27 @@ impl @gateway.GatewayTransport for FakeTransport with fn send(self, text) {
 
 ///|
 impl @gateway.GatewayTransport for FakeTransport with fn close(self, code~) {
+  if self.close_calls.val > 0 {
+    return
+  }
+  self.close_calls.val += 1
   self.incoming.close(
     error=@gateway.TransportClosed(code=Some(code), reason="client closed"),
   )
+}
+
+///|
+async test "cancelling a shard closes its transport exactly once" {
+  let transport = FakeTransport()
+  @async.with_task_group(group => {
+    @gateway.Shard::start(group, token="tok", intents=@model.Intents::none(), connector=_ => {
+      (transport : &@gateway.GatewayTransport)
+    })
+    |> ignore
+    transport.incoming.put(HELLO)
+    transport.outgoing.get() |> ignore
+  })
+  assert_eq(transport.close_calls.val, 1)
 }
 
 ///|

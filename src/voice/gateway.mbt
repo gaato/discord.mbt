@@ -215,6 +215,11 @@ async fn VoiceGateway::run(
     self.transport = Some(transport)
     let is_resuming = self.has_session
     let ended = try {
+      defer @async.protect_from_cancel(() => {
+        transport.close(code=1000) catch {
+          _ => ()
+        }
+      })
       self.run_connection(
         transport,
         is_resuming~,
@@ -227,12 +232,12 @@ async fn VoiceGateway::run(
       )
       VoiceConnectionEnded(code=Some(1000), reason="connection loop exited")
     } catch {
+      error if @async.is_being_cancelled() ||
+        @async.is_cancellation_error(error) => return
       VoiceConnectionEnded(code~, reason~) =>
         VoiceConnectionEnded(code~, reason~)
       VoiceTransportClosed(code~, reason~) =>
         VoiceConnectionEnded(code~, reason~)
-      error if @async.is_being_cancelled() ||
-        @async.is_cancellation_error(error) => return
       error => VoiceConnectionEnded(code=None, reason="\{error}")
     } noraise {
       ended => ended
@@ -315,11 +320,11 @@ async fn VoiceGateway::run_connection(
         let nonce = @clock.now_ms()
         heartbeat_nonce.val = nonce
         heartbeat_sent_at.val = nonce
+        heartbeat_acked.val = false
         self.raw_send_json(
           transport,
           encode_heartbeat(t=nonce, seq_ack=self.last_seq),
         )
-        heartbeat_acked.val = false
         sleeper(heartbeat_interval)
       }
     })
@@ -340,6 +345,8 @@ async fn VoiceGateway::run_connection(
 
     for ;; {
       let (message, seq) = recv_voice_message(transport) catch {
+        error if @async.is_being_cancelled() ||
+          @async.is_cancellation_error(error) => raise error
         VoiceTransportClosed(code~, reason~) =>
           raise VoiceConnectionEnded(code~, reason~)
         error =>
