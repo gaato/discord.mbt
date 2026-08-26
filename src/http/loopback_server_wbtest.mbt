@@ -2,6 +2,7 @@
 priv struct RecordedExchange {
   meth : String
   path : String
+  authorization : String?
   content_type : String?
   body : String
 }
@@ -22,6 +23,7 @@ async fn with_recording_server(
         exchanges.push({
           meth: @debug.to_string(request.meth),
           path: request.path,
+          authorization: request.headers.get("authorization"),
           content_type: request.headers.get("content-type"),
           body: body_reader.read_all().text(),
         })
@@ -50,6 +52,22 @@ fn reason_of(status : Int) -> String {
     502 => "Bad Gateway"
     _ => "Status \{status}"
   }
+}
+
+///|
+async test "mixed-case authorization override wins on the wire" {
+  with_recording_server(_ => (200, "{}"), (client, exchanges) => {
+    ignore(
+      client.request(GetGateway, headers={
+        "Authorization": "Bearer oauth-token",
+      }),
+    )
+    guard exchanges is [exchange] else { fail("expected exactly one exchange") }
+    guard exchange.authorization is Some(authorization) else {
+      fail("expected authorization header")
+    }
+    inspect(authorization, content="Bearer oauth-token")
+  })
 }
 
 ///|

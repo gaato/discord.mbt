@@ -69,6 +69,15 @@ fn signed_headers(
 }
 
 ///|
+fn to_async_headers(headers : Map[String, String]) -> @ahttp.Headers {
+  let converted : @ahttp.Headers = Map([])
+  for name, value in headers {
+    converted[name] = value
+  }
+  converted
+}
+
+///|
 async fn http_request(
   addr : String,
   meth : @ahttp.RequestMethod,
@@ -78,7 +87,7 @@ async fn http_request(
 ) -> (@ahttp.Response, String) {
   let client = @ahttp.Client("http://\{addr}")
   defer client.close()
-  client.request(meth, path, extra_headers=headers)
+  client.request(meth, path, extra_headers=to_async_headers(headers))
   if meth is Post {
     @io.Writer::write(client, body)
   }

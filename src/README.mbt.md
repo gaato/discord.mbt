@@ -109,8 +109,8 @@ async fn run_echo_bot(token : String) -> Unit {
 | `gaato/discord/coordinator` | Native TCP coordinator for multi-process Identify and REST limits | Yes | No |
 
 \* The facade's gateway and HTTP-server exports exist only on native.
-WebAssembly is not a supported application target for the current async
-executors.
+WebAssembly is not currently enabled or validated as an application target in
+this repository.
 
 Packages remain usable on their own. A REST-only tool needs `http` and `model`.
 The dependency graph, generated from the `moon.pkg` declarations by
@@ -254,13 +254,6 @@ before parsing. On native,
 complete signed-interactions HTTP server. See the
 [HTTP interactions guide](src/guide/06-http-interactions.mbt.md) and the
 `interactions_http` and `workers_echo` examples.
-
-> **Known issue**: on the JavaScript target, `moonbitlang/async` can stop
-> running scheduler rounds after `Promise::from_async` resolves, so pending
-> tasks may never resume. The upstream fix
-> ([moonbitlang/async#500](https://github.com/moonbitlang/async/pull/500)) is
-> merged but not yet in a release; until this library's dependency moves past
-> it, Workers deployments need that patch applied to the vendored dependency.
 
 ## Typed models
 

@@ -128,7 +128,7 @@ async fn send_response(
 ) -> Unit {
   match response {
     TextResponse(status, reason, body, content_type) => {
-      let headers : Map[String, String] = Map([])
+      let headers : @ahttp.Headers = Map([])
       if content_type is Some(value) {
         headers["Content-Type"] = value
       }

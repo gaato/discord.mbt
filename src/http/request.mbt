@@ -24,6 +24,15 @@ fn Client::request_headers(
 }
 
 ///|
+fn to_http_headers(headers : Map[String, String]) -> @ahttp.Headers {
+  let converted : @ahttp.Headers = Map([])
+  for name, value in headers {
+    converted[name] = value
+  }
+  converted
+}
+
+///|
 /// Execute one HTTP exchange on a pooled connection. The response body is
 /// fully consumed before the connection returns to the pool.
 async fn Client::perform(
@@ -47,7 +56,11 @@ async fn Client::perform(
         let seed = "\{@clock.now_ms()}-\{next_multipart_seq()}"
         let boundary = fresh_boundary(seed, payload, [file])
         headers["content-type"] = "multipart/form-data; boundary=\{boundary}"
-        conn.request(route.method_(), path, extra_headers=headers)
+        conn.request(
+          route.method_(),
+          path,
+          extra_headers=to_http_headers(headers),
+        )
         for
           part in multipart_form_parts(
             boundary,
@@ -67,7 +80,11 @@ async fn Client::perform(
         let seed = "\{@clock.now_ms()}-\{next_multipart_seq()}"
         let boundary = fresh_boundary(seed, payload, [file])
         headers["content-type"] = "multipart/form-data; boundary=\{boundary}"
-        conn.request(route.method_(), path, extra_headers=headers)
+        conn.request(
+          route.method_(),
+          path,
+          extra_headers=to_http_headers(headers),
+        )
         for
           part in multipart_payload_with_named_file(
             boundary, payload, "target_users_file", file,
@@ -83,7 +100,11 @@ async fn Client::perform(
         let seed = "\{@clock.now_ms()}-\{next_multipart_seq()}"
         let boundary = fresh_boundary(seed, "", [file])
         headers["content-type"] = "multipart/form-data; boundary=\{boundary}"
-        conn.request(route.method_(), path, extra_headers=headers)
+        conn.request(
+          route.method_(),
+          path,
+          extra_headers=to_http_headers(headers),
+        )
         for
           part in multipart_form_parts(boundary, [], "target_users_file", file) {
           match part {
@@ -98,7 +119,11 @@ async fn Client::perform(
         let seed = "\{@clock.now_ms()}-\{next_multipart_seq()}"
         let boundary = fresh_boundary(seed, payload, fs)
         headers["content-type"] = "multipart/form-data; boundary=\{boundary}"
-        conn.request(route.method_(), path, extra_headers=headers)
+        conn.request(
+          route.method_(),
+          path,
+          extra_headers=to_http_headers(headers),
+        )
         for part in multipart_parts(boundary, payload, fs) {
           match part {
             Text(text) => conn.write(text)
@@ -110,18 +135,22 @@ async fn Client::perform(
       (_, _, Some(json)) => {
         headers["content-type"] = "application/json"
         conn
-        ..request(route.method_(), path, extra_headers=headers)
+        ..request(route.method_(), path, extra_headers=to_http_headers(headers))
         ..write(json)
         .end_request()
       }
       (_, _, None) => {
-        conn.request(route.method_(), path, extra_headers=headers)
+        conn.request(
+          route.method_(),
+          path,
+          extra_headers=to_http_headers(headers),
+        )
         conn.end_request()
       }
     }
     let lower_headers : Map[String, String] = Map([])
     for name, value in response.headers {
-      lower_headers[name.to_lower()] = value
+      lower_headers[name.to_string().to_lower()] = value
     }
     let body_data = conn.read_all()
     let body_json = if response.code == 204 {
