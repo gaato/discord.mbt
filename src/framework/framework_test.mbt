@@ -553,7 +553,7 @@ async test "component waiters beat prefix handlers and time out cleanly" {
       ),
     )
     // timeout path returns None
-    guard fw.wait_for_component(custom_id="never", timeout_ms=20) is None
+    guard! fw.wait_for_component(custom_id="never", timeout_ms=20) is None
   })
 }
 

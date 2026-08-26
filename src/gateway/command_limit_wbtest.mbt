@@ -4,7 +4,7 @@ async test "command limiter waits out the sliding window when full" {
   let holder : Ref[CommandLimiter?] = Ref(None)
   let limiter = CommandLimiter(limit=1, sleeper=ms => {
     waits.push(ms)
-    guard holder.val is Some(limiter)
+    guard! holder.val is Some(limiter)
     // simulate the window passing while asleep
     limiter.timestamps[0] = limiter.timestamps[0] - 61000L
   })

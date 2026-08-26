@@ -92,24 +92,24 @@ async fn finish_handshake(
   heartbeat_interval? : Int = 60000,
 ) -> Unit {
   transport.incoming.put(hello_frame(heartbeat_interval))
-  guard transport.outgoing_text.get()
+  guard! transport.outgoing_text.get()
     is {
       "op": Number(0, ..),
       "d": { "max_dave_protocol_version": Number(1, ..), .. },
       ..
     }
   transport.incoming.put(ready_frame(1))
-  guard gateway.next() is ReadyReceived
-  guard transport.outgoing_text.get()
+  guard! gateway.next() is ReadyReceived
+  guard! transport.outgoing_text.get()
     is { "op": Number(1, ..), "d": { "protocol": String("udp"), .. }, .. }
   transport.incoming.put(session_description_frame(2))
-  guard gateway.next()
+  guard! gateway.next()
     is SessionEstablished(
       mode="aead_aes256_gcm_rtpsize",
       secret_key=b"\x01\x02\x03\x04",
       dave_protocol_version=1
     )
-  guard gateway.next() is Connected(resumed=false)
+  guard! gateway.next() is Connected(resumed=false)
 }
 
 ///|
@@ -134,7 +134,7 @@ async fn captured_gateway_url(endpoint : String) -> String {
     )
     let url = connected_urls.get()
     transport.server_close(None)
-    guard gateway.next() is NeedsRejoin(code=None)
+    guard! gateway.next() is NeedsRejoin(code=None)
     url
   })
 }
@@ -227,12 +227,12 @@ async test "missing heartbeat ACK closes with 4000 and reconnects" {
       },
     )
     finish_handshake(gateway, first, heartbeat_interval=100)
-    guard first.outgoing_text.get()
+    guard! first.outgoing_text.get()
       is { "op": Number(3, ..), "d": { "seq_ack": Number(2, ..), .. }, .. }
     // Do not ACK: the following heartbeat deadline closes the fake with 4000.
-    guard gateway.next() is Disconnected(code=Some(4000), resuming=true)
+    guard! gateway.next() is Disconnected(code=Some(4000), resuming=true)
     second.incoming.put(hello_frame(60000))
-    guard second.outgoing_text.get()
+    guard! second.outgoing_text.get()
       is { "op": Number(7, ..), "d": { "seq_ack": Number(2, ..), .. }, .. }
     gateway.close()
   })
@@ -282,7 +282,7 @@ async test "voice gateway completes identify and protocol selection" {
       fail("unexpected identify: \{identify.stringify()}")
     }
     transport.incoming.put(ready_frame(10))
-    guard gateway.next() is ReadyReceived
+    guard! gateway.next() is ReadyReceived
     let select = transport.outgoing_text.get()
     guard select
       is {
@@ -303,12 +303,12 @@ async test "voice gateway completes identify and protocol selection" {
     }
     assert_true(selected.val)
     transport.incoming.put(session_description_frame(11))
-    guard gateway.next() is SessionEstablished(..)
-    guard gateway.next() is Connected(resumed=false)
+    guard! gateway.next() is SessionEstablished(..)
+    guard! gateway.next() is Connected(resumed=false)
     assert_eq(gateway.state(), Active)
     assert_eq(connected_url.val, "wss://voice.example/?v=8")
     gateway.send_json(@voice.encode_speaking(ssrc=42, flags=1))
-    guard transport.outgoing_text.get() is { "op": Number(5, ..), .. }
+    guard! transport.outgoing_text.get() is { "op": Number(5, ..), .. }
     gateway.send_binary(op=26, b"key")
     assert_eq(transport.outgoing_binary.get(), b"\x1akey")
     gateway.close()
@@ -408,7 +408,7 @@ async test "voice heartbeat tracks JSON and binary sequence numbers" {
         ),
       ),
     )
-    guard gateway.next() is Message(Speaking(..))
+    guard! gateway.next() is Message(Speaking(..))
     let second_beat = transport.outgoing_text.get()
     guard second_beat
       is {
@@ -422,7 +422,7 @@ async test "voice heartbeat tracks JSON and binary sequence numbers" {
       Text("{\"op\":6,\"d\":{\"t\":\{second_nonce.to_int64()}}}"),
     )
     transport.incoming.put(Binary(b"\x00\x0A\x19external"))
-    guard gateway.next() is Message(DaveMlsExternalSender(payload=b"external"))
+    guard! gateway.next() is Message(DaveMlsExternalSender(payload=b"external"))
     let third_beat = transport.outgoing_text.get()
     guard third_beat
       is {
@@ -472,7 +472,7 @@ async test "4015 resumes with seq_ack and skips protocol selection" {
     finish_handshake(gateway, first)
     assert_eq(select_calls.val, 1)
     first.server_close(Some(4015))
-    guard gateway.next() is Disconnected(code=Some(4015), resuming=true)
+    guard! gateway.next() is Disconnected(code=Some(4015), resuming=true)
     second.incoming.put(hello_frame(60000))
     let resume_payload = second.outgoing_text.get()
     guard resume_payload
@@ -490,7 +490,7 @@ async test "4015 resumes with seq_ack and skips protocol selection" {
       fail("unexpected Resume: \{resume_payload.stringify()}")
     }
     second.incoming.put(Text("{\"op\":9,\"seq\":3,\"d\":null}"))
-    guard gateway.next() is Connected(resumed=true)
+    guard! gateway.next() is Connected(resumed=true)
     assert_eq(select_calls.val, 1)
     assert_eq(gateway.state(), Active)
     gateway.close()
@@ -515,8 +515,8 @@ async test "4006 requests a fresh voice join" {
     )
     finish_handshake(gateway, transport)
     transport.server_close(Some(4006))
-    guard gateway.next() is NeedsRejoin(code=Some(4006))
-    guard gateway.state() is Disconnected(reconnect_attempts=1)
+    guard! gateway.next() is NeedsRejoin(code=Some(4006))
+    guard! gateway.state() is Disconnected(reconnect_attempts=1)
   })
 }
 
@@ -539,7 +539,7 @@ async test "4014 is fatal" {
     transport.incoming.put(hello_frame(60000))
     transport.outgoing_text.get() |> ignore
     transport.server_close(Some(4014))
-    guard gateway.next() is FatallyClosed(code=4014)
+    guard! gateway.next() is FatallyClosed(code=4014)
     assert_eq(gateway.state(), FatallyClosed(code=4014))
   })
 }
@@ -604,7 +604,7 @@ async test "voice reconnect backoff runs through the injected sleeper" {
     )
     finish_handshake(gateway, first, heartbeat_interval=1)
     first.server_close(Some(4000))
-    guard gateway.next() is Disconnected(code=Some(4000), resuming=true)
+    guard! gateway.next() is Disconnected(code=Some(4000), resuming=true)
     let backoff = gate.requests.get()
     // attempts=1: full jitter over 2000ms plus the 250ms floor
     assert_true(backoff >= 250 && backoff < 2250)
@@ -612,7 +612,7 @@ async test "voice reconnect backoff runs through the injected sleeper" {
     assert_eq(connects.val, 1)
     gate.release()
     second.incoming.put(hello_frame(1))
-    guard second.outgoing_text.get()
+    guard! second.outgoing_text.get()
       is { "op": Number(7, ..), "d": { "seq_ack": Number(2, ..), .. }, .. }
     assert_eq(connects.val, 2)
     gateway.close()

@@ -153,8 +153,8 @@ async test "compressed shard buffers suffix fragments and decodes messages" {
       fail("expected an uncompressed identify payload")
     }
     transport.incoming.put(Binary(b"\x01\x00\x00\xff\xff"))
-    guard shard.next() is Connected(resumed=false)
-    guard shard.next() is Dispatch(Ready(_))
+    guard! shard.next() is Connected(resumed=false)
+    guard! shard.next() is Dispatch(Ready(_))
     transport.incoming.put(Binary(b"\x02\x00\x00\xff\xff"))
     guard shard.next() is Dispatch(MessageDelete(deleted)) else {
       fail("expected decoded message delete")
@@ -220,7 +220,7 @@ async test "shard identifies, dispatches, and resumes across a drop" {
       fail("expected identify, got \{identify.stringify()}")
     }
     first.incoming.put(ready_frame())
-    guard shard.next() is Connected(resumed=false)
+    guard! shard.next() is Connected(resumed=false)
     debug_inspect(shard.state(), content="Active")
     guard shard.next() is Dispatch(Ready(ready)) else {
       fail("expected Ready dispatch")
@@ -248,7 +248,7 @@ async test "shard identifies, dispatches, and resumes across a drop" {
     inspect(t, content="SOME_FUTURE_EVENT")
     // --- server drops the connection with a resumable code ---
     first.server_close(Some(4000))
-    guard shard.next() is Disconnected(code=Some(4000), resuming=true)
+    guard! shard.next() is Disconnected(code=Some(4000), resuming=true)
     // --- connection 2: resume with the stored session and sequence ---
     second.incoming.put(HELLO)
     let resume_payload = second.outgoing.get()
@@ -270,7 +270,7 @@ async test "shard identifies, dispatches, and resumes across a drop" {
         #|{"op":0,"s":4,"t":"RESUMED","d":null}
       ),
     )
-    guard shard.next() is Connected(resumed=true)
+    guard! shard.next() is Connected(resumed=true)
     debug_inspect(shard.state(), content="Active")
     guard telemetry
       is [
@@ -359,8 +359,8 @@ async test "shard answers heartbeat requests and tracks op9" {
     first.incoming.put(HELLO)
     first.outgoing.get() |> ignore // identify
     first.incoming.put(ready_frame())
-    guard shard.next() is Connected(resumed=false)
-    guard shard.next() is Dispatch(Ready(_))
+    guard! shard.next() is Connected(resumed=false)
+    guard! shard.next() is Dispatch(Ready(_))
     // op 1 from the server must be answered immediately with a heartbeat
     first.incoming.put(
       (
@@ -383,7 +383,7 @@ async test "shard answers heartbeat requests and tracks op9" {
         #|{"op":9,"d":false}
       ),
     )
-    guard shard.next() is Disconnected(..)
+    guard! shard.next() is Disconnected(..)
     second.incoming.put(HELLO)
     let second_payload = second.outgoing.get()
     guard second_payload is { "op": Number(2, ..), .. } else {
@@ -468,11 +468,11 @@ async test "shard backoff, resume url switch, and op9 delay run through the slee
       fail("expected identify")
     }
     first.incoming.put(ready_frame())
-    guard shard.next() is Connected(resumed=false)
-    guard shard.next() is Dispatch(Ready(_))
+    guard! shard.next() is Connected(resumed=false)
+    guard! shard.next() is Dispatch(Ready(_))
     // --- resumable drop: the reconnect is gated on the backoff sleep ---
     first.server_close(Some(4000))
-    guard shard.next() is Disconnected(code=Some(4000), resuming=true)
+    guard! shard.next() is Disconnected(code=Some(4000), resuming=true)
     let backoff1 = gate.requests.get()
     // attempts=1: full jitter over 2000ms plus the 250ms floor
     assert_true(backoff1 >= 250 && backoff1 < 2250)
@@ -494,7 +494,7 @@ async test "shard backoff, resume url switch, and op9 delay run through the slee
     let op9_wait = gate.requests.get()
     assert_true(op9_wait >= 1000 && op9_wait < 5000)
     gate.release()
-    guard shard.next() is Disconnected(code=None, resuming=false)
+    guard! shard.next() is Disconnected(code=None, resuming=false)
     let backoff2 = gate.requests.get()
     // attempts=2: full jitter over 4000ms plus the 250ms floor
     assert_true(backoff2 >= 250 && backoff2 < 4250)
@@ -540,8 +540,8 @@ async test "shard heartbeat loop beats, tracks acks, and zombie-closes" {
       fail("expected identify")
     }
     first.incoming.put(ready_frame())
-    guard shard.next() is Connected(resumed=false)
-    guard shard.next() is Dispatch(Ready(_))
+    guard! shard.next() is Connected(resumed=false)
+    guard! shard.next() is Dispatch(Ready(_))
     // the first beat waits out the documented jitter
     let jitter = gate.requests.get()
     assert_true(jitter >= 0 && jitter < 60000)
@@ -567,7 +567,7 @@ async test "shard heartbeat loop beats, tracks acks, and zombie-closes" {
     let steady2 = gate.requests.get()
     assert_eq(steady2, 60000)
     gate.release()
-    guard shard.next() is Disconnected(code=Some(4000), resuming=true)
+    guard! shard.next() is Disconnected(code=Some(4000), resuming=true)
     // and the reconnect resumes after the gated backoff
     let backoff = gate.requests.get()
     assert_true(backoff >= 250 && backoff < 2250)

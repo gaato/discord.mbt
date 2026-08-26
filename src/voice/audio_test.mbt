@@ -187,21 +187,21 @@ async test "send loop encrypts advancing RTP packets after voice handshake" {
         "{\"op\":2,\"seq\":1,\"d\":{\"ssrc\":42,\"ip\":\"198.51.100.1\",\"port\":5000,\"modes\":[\"aead_aes256_gcm_rtpsize\"]}}",
       ),
     )
-    guard gateway.next() is ReadyReceived
+    guard! gateway.next() is ReadyReceived
     transport.outgoing.get() |> ignore
     transport.incoming.put(
       Text(
         "{\"op\":4,\"seq\":2,\"d\":{\"mode\":\"aead_aes256_gcm_rtpsize\",\"secret_key\":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],\"dave_protocol_version\":1}}",
       ),
     )
-    guard gateway.next()
+    guard! gateway.next()
       is SessionEstablished(
         mode="aead_aes256_gcm_rtpsize",
         secret_key=session_key,
         ..
       )
     assert_eq(session_key, secret_key)
-    guard gateway.next() is Connected(resumed=false)
+    guard! gateway.next() is Connected(resumed=false)
     let cipher = @voice.TransportCipher::new(AeadAes256GcmRtpsize, session_key)
     let source : &@voice.AudioSource = ThreeFrameSource::{ frames, cursor: 0 }
     let dave_provider = AudioTestDave::{ encrypted: [] }
@@ -228,7 +228,7 @@ async test "send loop encrypts advancing RTP packets after voice handshake" {
       frame_duration_ms=0,
       dave~,
     )
-    guard transport.outgoing.get()
+    guard! transport.outgoing.get()
       is { "op": Number(5, ..), "d": { "speaking": Number(1, ..), .. }, .. }
     for index in 0..<8 {
       let encrypted = udp.outgoing.get()
@@ -253,7 +253,7 @@ async test "send loop encrypts advancing RTP packets after voice handshake" {
         @voice.SILENCE_FRAME,
       ],
     )
-    guard transport.outgoing.get()
+    guard! transport.outgoing.get()
       is { "op": Number(5, ..), "d": { "speaking": Number(0, ..), .. }, .. }
     gateway.close()
   })

@@ -418,8 +418,8 @@ async fn Shard::run_connection(
         }
         11 => {
           heartbeat_state.val = true
-          self.latency = Some(@clock.now_ms() - heartbeat_sent_at.val)
-          guard self.latency is Some(latency_ms)
+          let latency_ms = @clock.now_ms() - heartbeat_sent_at.val
+          self.latency = Some(latency_ms)
           self.emit_telemetry(ShardHeartbeatLatency(shard_id~, latency_ms~))
         }
         _ => ()

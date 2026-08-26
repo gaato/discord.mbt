@@ -280,11 +280,11 @@ async fn connection_finish_protocol_selection(
   udp : ConnectionTestUdp,
 ) -> Unit {
   transport.incoming.put(connection_hello())
-  guard transport.outgoing_text.get() is { "op": Number(0, ..), .. }
+  guard! transport.outgoing_text.get() is { "op": Number(0, ..), .. }
   transport.incoming.put(connection_ready(1))
   assert_eq(udp.outgoing.get(), @voice.build_ip_discovery_request(42U))
   udp.incoming.put(connection_discovery_response(42U))
-  guard transport.outgoing_text.get() is { "op": Number(1, ..), .. }
+  guard! transport.outgoing_text.get() is { "op": Number(1, ..), .. }
 }
 
 ///|
@@ -430,7 +430,7 @@ async test "voice connection becomes ready, plays, receives, and disconnects ide
 
     let source : &@voice.AudioSource = OneConnectionFrame::{ sent: false }
     connection.play(source)
-    guard transport.outgoing_text.get()
+    guard! transport.outgoing_text.get()
       is { "op": Number(5, ..), "d": { "speaking": Number(1, ..), .. }, .. }
     let encrypted = udp.outgoing.get()
     let decryptor = @voice.TransportCipher::new(
@@ -525,7 +525,7 @@ async test "voice connection reports reordered packet loss" {
       sender.seal(header~, b"opus-\{sequence}")
     }
     udp.incoming.put(packet(1, 960U))
-    guard connection.next_event() is OpusReceived(sequence=1, ..)
+    guard! connection.next_event() is OpusReceived(sequence=1, ..)
     udp.incoming.put(packet(3, 2880U))
     @async.sleep(65)
     udp.incoming.put(packet(4, 3840U))
@@ -533,8 +533,8 @@ async test "voice connection reports reordered packet loss" {
       connection.next_event(),
       PacketsLost(user_id=None, ssrc=55U, count=1),
     )
-    guard connection.next_event() is OpusReceived(sequence=3, ..)
-    guard connection.next_event() is OpusReceived(sequence=4, ..)
+    guard! connection.next_event() is OpusReceived(sequence=3, ..)
+    guard! connection.next_event() is OpusReceived(sequence=4, ..)
     connection.disconnect()
   })
 }
@@ -575,7 +575,7 @@ async test "voice connection rebuilds the whole session after NeedsRejoin" {
     first_transport.server_close(4006)
     second_transport.incoming.put(connection_hello())
     let identify = second_transport.outgoing_text.get()
-    guard identify
+    guard! identify
       is {
         "op": Number(0, ..),
         "d": { "session_id": String("session-2"), .. },
@@ -767,11 +767,11 @@ async test "voice subscription ends and unregisters after silence" {
     )
     let audio : &@voice.AudioSource = stream
     udp.incoming.put(connection_opus_datagram(77U, 1, b"first"))
-    guard connection.next_event() is OpusReceived(opus=b"first", ..)
+    guard! connection.next_event() is OpusReceived(opus=b"first", ..)
     assert_eq(audio.next_frame(), Some(b"first"))
     assert_eq(@async.with_timeout(200, () => audio.next_frame()), None)
     udp.incoming.put(connection_opus_datagram(77U, 2, b"too-late"))
-    guard connection.next_event() is OpusReceived(opus=b"too-late", ..)
+    guard! connection.next_event() is OpusReceived(opus=b"too-late", ..)
     assert_eq(audio.next_frame(), None)
     connection.disconnect()
   })
@@ -844,7 +844,7 @@ async test "manual voice subscription waits across a long gap" {
     let blocked = group.spawn(() => audio.next_frame())
     @async.sleep(60)
     udp.incoming.put(connection_opus_datagram(77U, 1, b"after-gap"))
-    guard connection.next_event() is OpusReceived(opus=b"after-gap", ..)
+    guard! connection.next_event() is OpusReceived(opus=b"after-gap", ..)
     assert_eq(
       @async.with_timeout(200, () => blocked.wait()),
       Some(b"after-gap"),

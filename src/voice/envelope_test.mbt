@@ -91,7 +91,7 @@ test "client JSON encoders produce the v8 wire shapes" {
     session_id="session",
     token="token",
   )
-  guard identify
+  guard! identify
     is {
       "op": Number(0, ..),
       "d": {
@@ -105,7 +105,7 @@ test "client JSON encoders produce the v8 wire shapes" {
       ..
     }
   let heartbeat = @voice.encode_heartbeat(t=123L, seq_ack=-1)
-  guard heartbeat
+  guard! heartbeat
     is {
       "op": Number(3, ..),
       "d": { "t": Number(123, ..), "seq_ack": Number(-1, ..), .. },
@@ -116,7 +116,7 @@ test "client JSON encoders produce the v8 wire shapes" {
     port=6000,
     mode="aead_xchacha20_poly1305_rtpsize",
   )
-  guard selected
+  guard! selected
     is {
       "op": Number(1, ..),
       "d": {
@@ -131,7 +131,7 @@ test "client JSON encoders produce the v8 wire shapes" {
       },
       ..
     }
-  guard @voice.encode_speaking(ssrc=42, flags=1)
+  guard! @voice.encode_speaking(ssrc=42, flags=1)
     is {
       "op": Number(5, ..),
       "d": {
@@ -142,16 +142,16 @@ test "client JSON encoders produce the v8 wire shapes" {
       },
       ..
     }
-  guard @voice.encode_resume(
+  guard! @voice.encode_resume(
       server_id="guild",
       session_id="session",
       token="token",
       seq_ack=12,
     )
     is { "op": Number(7, ..), "d": { "seq_ack": Number(12, ..), .. }, .. }
-  guard @voice.encode_transition_ready(transition_id=9)
+  guard! @voice.encode_transition_ready(transition_id=9)
     is { "op": Number(23, ..), "d": { "transition_id": Number(9, ..), .. }, .. }
-  guard @voice.encode_invalid_commit_welcome(transition_id=9)
+  guard! @voice.encode_invalid_commit_welcome(transition_id=9)
     is { "op": Number(31, ..), "d": { "transition_id": Number(9, ..), .. }, .. }
   // Stringification and parsing preserve the complete public encoder value.
   assert_eq(@json.parse(identify.stringify()), identify)
