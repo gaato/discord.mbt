@@ -33,11 +33,11 @@ jobs:
             target: aarch64-unknown-linux-gnu
             built_library: libdiscord_voice_shim.so
             artifact: libdiscord_voice_shim-linux-arm64.so
-          - runner: macos-13
+          - runner: macos-15-intel
             target: x86_64-apple-darwin
             built_library: libdiscord_voice_shim.dylib
             artifact: libdiscord_voice_shim-macos-x64.dylib
-          - runner: macos-14
+          - runner: macos-15
             target: aarch64-apple-darwin
             built_library: libdiscord_voice_shim.dylib
             artifact: libdiscord_voice_shim-macos-arm64.dylib
@@ -48,6 +48,7 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
+          components: clippy, rustfmt
           targets: ${{ matrix.target }}
 
       - name: Cache Cargo
@@ -57,11 +58,18 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             voice-shim/target
-          key: voice-shim-${{ runner.os }}-${{ matrix.target }}-${{ hashFiles('voice-shim/Cargo.toml') }}
+          key: voice-shim-${{ runner.os }}-${{ matrix.target }}-${{ hashFiles('voice-shim/Cargo.toml', 'voice-shim/Cargo.lock') }}
+
+      - name: Check source
+        working-directory: voice-shim
+        run: |
+          cargo fmt -- --check
+          cargo clippy --all-targets --locked -- -D warnings
+          cargo test --locked
 
       - name: Build release library
         working-directory: voice-shim
-        run: cargo build --release --target "${{ matrix.target }}"
+        run: cargo build --release --locked --target "${{ matrix.target }}"
 
       - name: Rename library
         env:

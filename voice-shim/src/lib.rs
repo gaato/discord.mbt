@@ -12,6 +12,13 @@
 //! - `-21`: an obsolete or already-applied DAVE transition can be ignored
 //! - `-22`: another DAVE commit/welcome failure occurred
 
+// These functions are consumed through a C ABI, where Rust's `unsafe fn`
+// contract is not expressible. Every exported entry point validates nullness
+// and lengths before constructing references; the actual dereferences remain
+// in documented `unsafe` blocks below.
+#![allow(clippy::not_unsafe_ptr_arg_deref)]
+#![deny(unsafe_op_in_unsafe_fn)]
+
 use std::cell::RefCell;
 use std::ffi::{c_char, CStr, CString};
 use std::num::NonZeroU16;
@@ -426,6 +433,11 @@ fn open(
     }
 }
 
+#[allow(
+    clippy::too_many_arguments,
+    clippy::type_complexity,
+    reason = "the adapter deliberately mirrors the C AEAD ABI"
+)]
 unsafe fn run_aead(
     mode: i32,
     key: *const u8,

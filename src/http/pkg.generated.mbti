@@ -101,6 +101,7 @@ pub async fn ChannelRef::leave_thread(Self) -> Unit raise DiscordHttpError
 pub fn ChannelRef::message_ref(Self, @model.Id[@model.MessageMarker]) -> MessageRef
 pub fn ChannelRef::messages(Self, before? : @model.Id[@model.MessageMarker], after? : @model.Id[@model.MessageMarker], around? : @model.Id[@model.MessageMarker], page_size? : Int) -> Paginator[@model.Message] raise DiscordHttpError
 pub async fn ChannelRef::pins(Self) -> Array[@model.Message] raise DiscordHttpError
+pub async fn ChannelRef::pins_page(Self, before? : @model.Timestamp, limit? : Int) -> @model.ChannelPins raise DiscordHttpError
 pub async fn ChannelRef::private_archived_threads(Self, before? : @model.Timestamp, limit? : Int) -> @model.ArchivedThreads raise DiscordHttpError
 pub async fn ChannelRef::public_archived_threads(Self, before? : @model.Timestamp, limit? : Int) -> @model.ArchivedThreads raise DiscordHttpError
 pub async fn ChannelRef::remove_thread_member(Self, @model.Id[@model.UserMarker]) -> Unit raise DiscordHttpError
@@ -209,6 +210,7 @@ pub async fn Client::get_auto_moderation_rule(Self, @model.Id[@model.GuildMarker
 pub async fn Client::get_channel(Self, @model.Id[@model.ChannelMarker]) -> @model.Channel raise DiscordHttpError
 pub async fn Client::get_channel_invites(Self, @model.Id[@model.ChannelMarker]) -> Array[@model.Invite] raise DiscordHttpError
 pub async fn Client::get_channel_messages(Self, @model.Id[@model.ChannelMarker], limit? : Int, around? : @model.Id[@model.MessageMarker], before? : @model.Id[@model.MessageMarker], after? : @model.Id[@model.MessageMarker]) -> Array[@model.Message] raise DiscordHttpError
+pub async fn Client::get_channel_pins(Self, @model.Id[@model.ChannelMarker], before? : @model.Timestamp, limit? : Int) -> @model.ChannelPins raise DiscordHttpError
 pub async fn Client::get_channel_webhooks(Self, @model.Id[@model.ChannelMarker]) -> Array[@model.Webhook] raise DiscordHttpError
 pub async fn Client::get_current_application(Self) -> @model.Application raise DiscordHttpError
 pub async fn Client::get_current_authorization_information(Self, bearer_token~ : String) -> @model.AuthorizationInformation raise DiscordHttpError
@@ -603,6 +605,7 @@ pub(all) enum Route {
   TriggerTypingIndicator(channel_id~ : @model.Id[@model.ChannelMarker])
   PinMessage(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])
   UnpinMessage(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])
+  GetChannelPins(channel_id~ : @model.Id[@model.ChannelMarker], query~ : String)
   GetPinnedMessages(channel_id~ : @model.Id[@model.ChannelMarker])
   EditChannelPermissions(channel_id~ : @model.Id[@model.ChannelMarker], overwrite_id~ : @model.Id[@model.GenericMarker])
   DeleteChannelPermission(channel_id~ : @model.Id[@model.ChannelMarker], overwrite_id~ : @model.Id[@model.GenericMarker])
@@ -840,4 +843,3 @@ pub type HttpMiddleware = async (HttpRequest, async (HttpRequest) -> HttpRespons
 pub using @moonbitlang/async/http {type RequestMethod}
 
 // Traits
-

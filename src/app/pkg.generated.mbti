@@ -48,6 +48,7 @@ pub(all) suberror AppConfigError {
   InvalidModalFieldCount(custom_id~ : String, count~ : Int)
   DuplicateModalTextInput(custom_id~ : String, field~ : String)
   InvalidCooldown(command~ : String, seconds~ : Int)
+  InvalidMaxInFlight(value~ : Int)
 } derive(@debug.Debug)
 
 pub(all) suberror AppDispatchError {
@@ -370,4 +371,3 @@ pub type InteractionMiddleware = async (InteractionCtx, async () -> Unit) -> Uni
 pub type Spawner = async (async () -> Unit) -> Unit
 
 // Traits
-

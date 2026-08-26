@@ -6,7 +6,7 @@ ABI-compatible dynamic library.
 
 Build it with:
 
-```sh
+```fish
 cargo build --release
 ```
 
@@ -21,3 +21,11 @@ discord.mbt tests or applications. When the variable is set, the loader tries
 only that path. Without it, the loader searches the platform library path for
 `libdiscord_voice_shim.so`, `libdiscord_voice_shim.dylib`, then
 `discord_voice_shim.dll`.
+
+Before changing the ABI, run the same checks as CI:
+
+```fish
+cargo fmt -- --check
+cargo clippy --all-targets --locked -- -D warnings
+cargo test --locked
+```

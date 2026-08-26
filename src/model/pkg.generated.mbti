@@ -175,6 +175,7 @@ pub(all) struct Application {
   bot : User?
   owner : User?
   flags : ApplicationFlags?
+  flags_new : ApplicationFlags?
   approximate_guild_count : Int?
   approximate_user_install_count : Int?
   rpc_origins : Array[String]?
@@ -201,6 +202,7 @@ pub(all) struct Application {
   integration_types_config : Map[String, ApplicationIntegrationTypeConfiguration]?
   custom_install_url : String?
 } derive(ToJson, @debug.Debug, @json.FromJson)
+pub fn Application::effective_flags(Self) -> ApplicationFlags?
 
 pub(all) struct ApplicationAuthorizedEvent {
   integration_type : ApplicationIntegrationType?
@@ -745,6 +747,11 @@ pub(all) struct ChannelMention {
   guild_id : Id[GuildMarker]
   typ : ChannelType
   name : String
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ChannelPins {
+  items : Array[MessagePin]
+  has_more : Bool
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct ChannelPinsUpdateEvent {
@@ -2399,6 +2406,11 @@ pub(all) struct MessageInteractionMetadata {
 pub enum MessageMarker {
 }
 
+pub(all) struct MessagePin {
+  pinned_at : Timestamp
+  message : Message
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) struct MessagePollVoteEvent {
   user_id : Id[UserMarker]
   channel_id : Id[ChannelMarker]
@@ -3725,4 +3737,3 @@ pub type UserId = Id[UserMarker]
 pub type WebhookId = Id[WebhookMarker]
 
 // Traits
-

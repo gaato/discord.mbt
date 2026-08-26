@@ -28,18 +28,34 @@ jobs:
         run: moon update && moon install
 
       - name: Type check
-        run: moon check --target native
+        run: moon check --target native --deny-warn
 
-      - name: Test
-        run: moon test --target native
+      - name: Test with coverage
+        run: |
+          moon test --target native --enable-coverage
+          moon coverage report -f summary
 
       - name: Format check
-        run: moon fmt --check
+        run: |
+          moon fmt --check
+          moon -C template fmt --check
+          moon -C tools/package_graph fmt --check
+
+      - name: Check nested modules
+        run: |
+          moon -C tools/package_graph check --target native --deny-warn
+          moon -C tools/package_graph run -- --check
+          workdir="$(mktemp -d)"
+          cd "$workdir"
+          moon work init "$GITHUB_WORKSPACE" "$GITHUB_WORKSPACE/template"
+          moon check "$GITHUB_WORKSPACE/template/src/main" --target native --deny-warn
 
       - name: Public API drift check
         run: |
           moon info --target native
-          git diff --exit-code -- '*.mbti'
+          # Current moon removes a legacy trailing blank line from generated
+          # interfaces; ignore blank-only churn while still rejecting API edits.
+          git diff --exit-code --ignore-blank-lines -- '*.mbti'
 
   js:
     runs-on: ubuntu-latest
@@ -61,7 +77,7 @@ jobs:
         run: moon update && moon install
 
       - name: Type check
-        run: moon check --target js
+        run: moon check --target js --deny-warn
 
       - name: Test
         run: moon test --target js
@@ -78,6 +94,8 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
 
       - name: Cache Cargo
         uses: actions/cache@v6
@@ -86,11 +104,18 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             voice-shim/target
-          key: voice-shim-ci-${{ runner.os }}-${{ hashFiles('voice-shim/Cargo.toml') }}
+          key: voice-shim-ci-${{ runner.os }}-${{ hashFiles('voice-shim/Cargo.toml', 'voice-shim/Cargo.lock') }}
+
+      - name: Check voice shim
+        working-directory: voice-shim
+        run: |
+          cargo fmt -- --check
+          cargo clippy --all-targets --locked -- -D warnings
+          cargo test --locked
 
       - name: Build voice shim
         working-directory: voice-shim
-        run: cargo build --release
+        run: cargo build --release --locked
 
       - name: Install MoonBit
         run: |

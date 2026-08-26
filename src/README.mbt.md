@@ -315,17 +315,21 @@ Also in the box, each with its guide chapter:
 
 ## Development
 
-```sh
-moon check --target native
+```fish
+moon check --target native --deny-warn
+moon check --target js --deny-warn
 moon test --target native --release   # debug native builds need a working tcc setup
+moon test --target js --release
 moon fmt
-moon info                             # regenerate pkg.generated.mbti (API review signal)
+moon -C template fmt --check
+moon -C tools/package_graph fmt --check
+moon info --target native             # regenerate pkg.generated.mbti (API review signal)
 ```
 
 Look up any package, type, or symbol — including its docstring examples —
 from the terminal:
 
-```sh
+```fish
 moon ide doc "@discord"
 moon ide doc "@http.Client::create_message"
 moon ide doc "@model.Message"
