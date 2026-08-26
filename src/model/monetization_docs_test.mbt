@@ -31,7 +31,7 @@ test "discord docs: entitlement example (line 36)" {
     #|}
   let first : @model.Entitlement = @json.from_json(@json.parse(fixture))
   let second : @model.Entitlement = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(first.id.to_string(), content="1019653849998299136")
   inspect(first.typ.to_int(), content="8")
 }
@@ -56,7 +56,7 @@ test "discord docs: sku example (line 30)" {
     #|}
   let first : @model.Sku = @json.from_json(@json.parse(fixture))
   let second : @model.Sku = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(first.id.to_string(), content="1088510058284990888")
   inspect(first.typ.to_int(), content="5")
 }
@@ -98,7 +98,7 @@ test "discord docs: list skus (line 85)" {
     #|]
   let first : Array[@model.Sku] = @json.from_json(@json.parse(fixture))
   let second : Array[@model.Sku] = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(first.length(), content="2")
   inspect(first[0].typ.to_int(), content="6")
 }

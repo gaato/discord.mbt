@@ -55,7 +55,7 @@ fn subscribe_message_create(bot : @discord.Bot) -> Unit {
 
 ///|
 fn auto_sharded_bot(app : @discord.App, token : String) -> @discord.Bot {
-  @discord.Bot(app, token~, shards=Auto)
+  Bot(app, token~, shards=Auto)
 }
 
 // README "HTTP interactions (experimental)"

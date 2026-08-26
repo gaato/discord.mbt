@@ -88,7 +88,7 @@ test "attachment decodes required fields only" {
 
 ///|
 test "attachment encode omits absent optional fields" {
-  let attachment : @model.Attachment = {
+  let attachment = @model.Attachment::{
     id: Id(1UL),
     filename: "notes.txt",
     title: None,
@@ -144,7 +144,7 @@ test "attachment flags combine and preserve unknown bits" {
 
 ///|
 test "attachment request omits absent fields" {
-  let full : @model.AttachmentRequest = {
+  let full = @model.AttachmentRequest::{
     id: Id(123UL),
     filename: Some("cat.png"),
     title: Some("Cat"),
@@ -162,7 +162,7 @@ test "attachment request omits absent fields" {
     "waveform": "AAAA",
     "is_spoiler": true,
   })
-  let keep_only : @model.AttachmentRequest = {
+  let keep_only = @model.AttachmentRequest::{
     id: Id(123UL),
     filename: None,
     title: None,

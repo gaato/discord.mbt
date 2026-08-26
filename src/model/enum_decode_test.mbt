@@ -84,7 +84,7 @@ test "all channel type variants used by rare Discord channels round-trip" {
     let (wire, expected) = item
     let value = @model.ChannelType::from_int(wire)
     assert_eq(value.to_int(), wire)
-    assert_eq(to_repr(value).to_string(), expected)
+    assert_eq(Repr(value).to_string(), expected)
   }
 }
 

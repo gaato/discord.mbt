@@ -18,7 +18,7 @@ test "discord docs: example sticker (line 56)" {
     #|}
   let first : @model.Sticker = @json.from_json(@json.parse(fixture))
   let second : @model.Sticker = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(first.id.to_string(), content="749054660769218631")
   inspect(first.format_type.to_int(), content="3")
 }
@@ -37,7 +37,7 @@ test "discord docs: example sticker pack (line 101)" {
     #|}
   let first : @model.StickerPack = @json.from_json(@json.parse(fixture))
   let second : @model.StickerPack = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(first.id.to_string(), content="847199849233514549")
   assert_eq(first.name, "Wumpus Beyond")
 }

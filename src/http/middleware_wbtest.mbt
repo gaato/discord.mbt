@@ -146,7 +146,7 @@ async test "middleware failures surface as transport errors" {
   client.middleware((_request, _next) => raise MiddlewareFailure)
   try client.request(GetGateway) catch {
     Transport(message~) => assert_true(message.contains("MiddlewareFailure"))
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected transport error")
   }
@@ -176,7 +176,7 @@ async test "middleware observes wire errors before API mapping" {
       inspect(status, content="404")
       inspect(error.code, content="10003")
     }
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected API error")
   }

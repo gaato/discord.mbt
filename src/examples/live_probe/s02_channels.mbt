@@ -143,7 +143,7 @@ async fn sec_base_channels(p : P) -> Unit {
   })
   p.probe("edit_channel_permissions (deny send for @everyone)", () => {
     // @everyone role id == guild id
-    let everyone : @model.GenericId = @model.Id(p.guild_id.value())
+    let everyone : @model.GenericId = Id(p.guild_id.value())
     c.edit_channel_permissions(
       text,
       everyone,
@@ -154,7 +154,7 @@ async fn sec_base_channels(p : P) -> Unit {
     "ok"
   })
   p.probe("delete_channel_permission", () => {
-    let everyone : @model.GenericId = @model.Id(p.guild_id.value())
+    let everyone : @model.GenericId = Id(p.guild_id.value())
     c.delete_channel_permission(text, everyone)
     "ok"
   })
@@ -195,7 +195,7 @@ async fn sec_base_channels(p : P) -> Unit {
       max_uses=1,
       unique=true,
       role_ids=[role.id],
-      target_users_file=@dhttp.FileUpload(
+      target_users_file=FileUpload(
         "users.csv",
         b"159985870458322944\n",
         content_type="text/csv",

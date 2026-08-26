@@ -131,29 +131,28 @@ async fn sec_members(p : P) -> Unit {
     c.member_ref(g, p.bot_id).timeout(Some(until)) |> ignore
   })
   p.probe("remove_guild_member (absent user; kick is idempotent)", () => {
-    c.remove_guild_member(g, @model.Id(ABSENT_USER))
+    c.remove_guild_member(g, Id(ABSENT_USER))
     "204 for non-member"
   })
   p.probe("MemberRef::kick (absent user; idempotent)", () => {
-    c.member_ref(g, @model.Id(ABSENT_USER)).kick(reason="live probe")
+    c.member_ref(g, Id(ABSENT_USER)).kick(reason="live probe")
     "204 for non-member"
   })
   p.probe_err("add_guild_member (bogus oauth token)", expect=[400, 401, 403], () => {
-    c.add_guild_member(g, @model.Id(ABSENT_USER), "bogus-access-token")
-    |> ignore
+    c.add_guild_member(g, Id(ABSENT_USER), "bogus-access-token") |> ignore
   })
   // Bans on a real-but-absent user id.
   p.probe("create_guild_ban", () => {
     c.create_guild_ban(
       g,
-      @model.Id(ABSENT_USER),
+      Id(ABSENT_USER),
       delete_message_seconds=0,
       audit_reason="live probe ban",
     )
     "ok"
   })
   p.probe("get_guild_ban", () => {
-    let ban = c.get_guild_ban(g, @model.Id(ABSENT_USER))
+    let ban = c.get_guild_ban(g, Id(ABSENT_USER))
     "user=\{ban.user.username}"
   })
   p.probe("get_guild_bans + paginate_guild_bans", () => {
@@ -162,19 +161,15 @@ async fn sec_members(p : P) -> Unit {
     "list=\{bans.length()} paged=\{paged.length()}"
   })
   p.probe("GuildRef::fetch_ban", () => {
-    let ban = gr.fetch_ban(@model.Id(ABSENT_USER))
+    let ban = gr.fetch_ban(Id(ABSENT_USER))
     "user=\{ban.user.username}"
   })
   p.probe("remove_guild_ban", () => {
-    c.remove_guild_ban(
-      g,
-      @model.Id(ABSENT_USER),
-      audit_reason="live probe unban",
-    )
+    c.remove_guild_ban(g, Id(ABSENT_USER), audit_reason="live probe unban")
     "ok"
   })
   p.probe("MemberRef::ban/unban", () => {
-    let r = c.member_ref(g, @model.Id(ABSENT_USER))
+    let r = c.member_ref(g, Id(ABSENT_USER))
     r.ban(delete_message_seconds=0, reason="live probe")
     r.unban(reason="live probe")
     "ok"
@@ -182,7 +177,7 @@ async fn sec_members(p : P) -> Unit {
   p.probe("bulk_guild_ban + unban cleanup", () => {
     let response = c.bulk_guild_ban(
       g,
-      [@model.Id(ABSENT_USER)],
+      [Id(ABSENT_USER)],
       audit_reason="live probe bulk ban",
     )
     for user in response.banned_users {

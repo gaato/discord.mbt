@@ -60,7 +60,7 @@ test "discord docs: example guild (line 193)" {
     #|}
   let first : @model.Guild = @json.from_json(@json.parse(fixture))
   let second : @model.Guild = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(first.id.to_string(), content="197038439483310086")
   assert_eq(first.name, "Discord Testers")
 }
@@ -74,7 +74,7 @@ test "discord docs: example unavailable guild (line 247)" {
     #|}
   let first : @model.UnavailableGuild = @json.from_json(@json.parse(fixture))
   let second : @model.UnavailableGuild = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(first.id.to_string(), content="41771983423143937")
   assert_true(first.unavailable)
 }
@@ -94,7 +94,7 @@ test "discord docs: example ban (line 518)" {
     #|}
   let first : @model.GuildBan = @json.from_json(@json.parse(fixture))
   let second : @model.GuildBan = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   assert_true(first.reason == Value("mentioning b1nzy"))
   inspect(first.user.id.to_string(), content="53908099506183680")
 }
@@ -139,7 +139,7 @@ test "discord docs: example welcome screen (line 554)" {
     #|}
   let first : @model.WelcomeScreen = @json.from_json(@json.parse(fixture))
   let second : @model.WelcomeScreen = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(first.welcome_channels.length(), content="5")
   inspect(
     first.welcome_channels[0].channel_id.to_string(),
@@ -223,7 +223,7 @@ test "discord docs: example response (line 761)" {
     #|}
   let first : @model.Guild = @json.from_json(@json.parse(fixture))
   let second : @model.Guild = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(first.id.to_string(), content="2909267986263572999")
   assert_eq(first.name, "Mason's Test Server")
 }

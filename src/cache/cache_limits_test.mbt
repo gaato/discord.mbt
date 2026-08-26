@@ -86,7 +86,7 @@ fn limit_guild_fixture() -> String {
 ///|
 test "default message limit retains the newest 100 entries" {
   let cache = @cache.InMemoryCache(
-    resources=@cache.CacheResources(messages=true),
+    resources=CacheResources(messages=true),
     limits=@cache.CacheLimits::default(),
   )
   let channel_id : @model.ChannelId = @model.Id::parse("400")
@@ -106,7 +106,7 @@ test "default message limit retains the newest 100 entries" {
 test "FIFO limits refresh position when an entity is re-stored" {
   let cache = @cache.InMemoryCache(
     resources=@cache.CacheResources::default(),
-    limits=@cache.CacheLimits(users=@cache.CacheLimit(max_entries=2)),
+    limits=CacheLimits(users=CacheLimit(max_entries=2)),
   )
   cache.update(limit_cached_event("USER_UPDATE", limit_user_fixture("1", "a")))
   cache.update(limit_cached_event("USER_UPDATE", limit_user_fixture("2", "b")))
@@ -126,7 +126,7 @@ test "single getters expire entries at the TTL boundary" {
   let now = Ref(0L)
   let cache = @cache.InMemoryCache(
     resources=@cache.CacheResources::default(),
-    limits=@cache.CacheLimits(users=@cache.CacheLimit(ttl_ms=1000L)),
+    limits=CacheLimits(users=CacheLimit(ttl_ms=1000L)),
     now=() => now.val,
   )
   let user_id : @model.UserId = @model.Id::parse("1")
@@ -143,7 +143,7 @@ test "list getters sweep only the expired insertion-order prefix" {
   let now = Ref(0L)
   let cache = @cache.InMemoryCache(
     resources=@cache.CacheResources::default(),
-    limits=@cache.CacheLimits(members=@cache.CacheLimit(ttl_ms=1000L)),
+    limits=CacheLimits(members=CacheLimit(ttl_ms=1000L)),
     now=() => now.val,
   )
   let guild_id : @model.GuildId = @model.Id::parse("100")
@@ -165,8 +165,8 @@ test "list getters sweep only the expired insertion-order prefix" {
 test "writes sweep expired messages before inserting" {
   let now = Ref(0L)
   let cache = @cache.InMemoryCache(
-    resources=@cache.CacheResources(messages=true),
-    limits=@cache.CacheLimits(messages=@cache.CacheLimit(ttl_ms=1000L)),
+    resources=CacheResources(messages=true),
+    limits=CacheLimits(messages=CacheLimit(ttl_ms=1000L)),
     now=() => now.val,
   )
   let channel_id : @model.ChannelId = @model.Id::parse("400")
@@ -187,10 +187,8 @@ test "writes sweep expired messages before inserting" {
 test "entry limits apply after expired messages are swept" {
   let now = Ref(0L)
   let cache = @cache.InMemoryCache(
-    resources=@cache.CacheResources(messages=true),
-    limits=@cache.CacheLimits(
-      messages=@cache.CacheLimit(max_entries=2, ttl_ms=1000L),
-    ),
+    resources=CacheResources(messages=true),
+    limits=CacheLimits(messages=CacheLimit(max_entries=2, ttl_ms=1000L)),
     now=() => now.val,
   )
   let channel_id : @model.ChannelId = @model.Id::parse("400")
@@ -215,7 +213,7 @@ test "entry limits apply after expired messages are swept" {
 test "per-guild member limits are independent" {
   let cache = @cache.InMemoryCache(
     resources=@cache.CacheResources::default(),
-    limits=@cache.CacheLimits(members=@cache.CacheLimit(max_entries=1)),
+    limits=CacheLimits(members=CacheLimit(max_entries=1)),
   )
   let first_guild : @model.GuildId = @model.Id::parse("100")
   let second_guild : @model.GuildId = @model.Id::parse("101")
@@ -233,10 +231,10 @@ test "per-guild member limits are independent" {
 test "expired entries are not resurrected by partial updates" {
   let now = Ref(0L)
   let cache = @cache.InMemoryCache(
-    resources=@cache.CacheResources(presences=true, messages=true),
-    limits=@cache.CacheLimits(
-      presences=@cache.CacheLimit(ttl_ms=1000L),
-      messages=@cache.CacheLimit(ttl_ms=1000L),
+    resources=CacheResources(presences=true, messages=true),
+    limits=CacheLimits(
+      presences=CacheLimit(ttl_ms=1000L),
+      messages=CacheLimit(ttl_ms=1000L),
     ),
     now=() => now.val,
   )
@@ -282,9 +280,9 @@ test "expired roles make permissions unavailable" {
   let now = Ref(0L)
   let cache = @cache.InMemoryCache(
     resources=@cache.CacheResources::all(),
-    limits=@cache.CacheLimits(
-      channels=@cache.CacheLimit(ttl_ms=1000L),
-      roles=@cache.CacheLimit(ttl_ms=1000L),
+    limits=CacheLimits(
+      channels=CacheLimit(ttl_ms=1000L),
+      roles=CacheLimit(ttl_ms=1000L),
     ),
     now=() => now.val,
   )
@@ -309,7 +307,7 @@ test "expired roles make permissions unavailable" {
 test "negative cache limits clamp to zero" {
   let no_entries = @cache.InMemoryCache(
     resources=@cache.CacheResources::default(),
-    limits=@cache.CacheLimits(users=@cache.CacheLimit(max_entries=-5)),
+    limits=CacheLimits(users=CacheLimit(max_entries=-5)),
   )
   no_entries.update(
     limit_cached_event("USER_UPDATE", limit_user_fixture("1", "a")),
@@ -318,7 +316,7 @@ test "negative cache limits clamp to zero" {
   let now = Ref(0L)
   let immediate_expiry = @cache.InMemoryCache(
     resources=@cache.CacheResources::default(),
-    limits=@cache.CacheLimits(users=@cache.CacheLimit(ttl_ms=-1L)),
+    limits=CacheLimits(users=CacheLimit(ttl_ms=-1L)),
     now=() => now.val,
   )
   let user_id : @model.UserId = @model.Id::parse("2")

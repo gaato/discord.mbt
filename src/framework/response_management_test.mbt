@@ -1,5 +1,5 @@
 ///|
-fn message_stub_client(paths : Array[String]) -> @dhttp.Client raise {
+fn message_stub_client(paths : Array[String]) -> @dhttp.Client {
   let client = @dhttp.Client("test-token")
   client.middleware((request, _next) => {
     paths.push(

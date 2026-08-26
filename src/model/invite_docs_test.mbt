@@ -18,7 +18,7 @@ test "discord docs: example partial invite object (line 1407)" {
     #|}
   let first : @model.Invite = @json.from_json(@json.parse(fixture))
   let second : @model.Invite = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   assert_eq(first.code, "abc")
   assert_true(first.uses == Some(12))
 }
@@ -65,7 +65,7 @@ test "discord docs: example invite object (line 63)" {
     #|}
   let first : @model.Invite = @json.from_json(@json.parse(fixture))
   let second : @model.Invite = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   assert_eq(first.code, "0vCdhLbwjZZTWZLD")
   assert_true(first.typ == Some(Guild))
   assert_eq(first.guild.unwrap().name.unwrap(), "CS:GO Fraggers Only")

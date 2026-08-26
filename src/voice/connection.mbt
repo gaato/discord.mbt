@@ -215,7 +215,7 @@ async fn VoiceConnection::establish_session(
       return
     }
     error => {
-      self.set_failure(ShimUnavailable(reason="\{to_repr(error)}"), code=None)
+      self.set_failure(ShimUnavailable(reason="\{Repr(error)}"), code=None)
       return
     }
   }
@@ -225,7 +225,7 @@ async fn VoiceConnection::establish_session(
       return
     }
     error => {
-      self.set_failure(ShimUnavailable(reason="\{to_repr(error)}"), code=None)
+      self.set_failure(ShimUnavailable(reason="\{Repr(error)}"), code=None)
       return
     }
   }
@@ -237,7 +237,7 @@ async fn VoiceConnection::establish_session(
       self.channel_id,
     ) catch {
       error => {
-        self.set_failure(ShimUnavailable(reason="\{to_repr(error)}"), code=None)
+        self.set_failure(ShimUnavailable(reason="\{Repr(error)}"), code=None)
         return
       }
     }
@@ -250,7 +250,7 @@ async fn VoiceConnection::establish_session(
       SessionDescription(mode=mode_name, secret_key~, dave_protocol_version~),
     ) catch {
       error => {
-        self.set_failure(ShimUnavailable(reason="\{to_repr(error)}"), code=None)
+        self.set_failure(ShimUnavailable(reason="\{Repr(error)}"), code=None)
         return
       }
     }
@@ -258,7 +258,7 @@ async fn VoiceConnection::establish_session(
     self.dave = dave
     self.apply_dave_actions(actions) catch {
       error =>
-        (self.telemetry_)(PacketDropped(reason="DAVE send: \{to_repr(error)}"))
+        (self.telemetry_)(PacketDropped(reason="DAVE send: \{Repr(error)}"))
     }
   }
   self.cipher = Some(cipher)
@@ -301,15 +301,13 @@ async fn VoiceConnection::handle_message(
   if self.dave is Some(machine) {
     let actions = machine.handle(message) catch {
       error => {
-        (self.telemetry_)(
-          PacketDropped(reason="DAVE control: \{to_repr(error)}"),
-        )
+        (self.telemetry_)(PacketDropped(reason="DAVE control: \{Repr(error)}"))
         []
       }
     }
     self.apply_dave_actions(actions) catch {
       error =>
-        (self.telemetry_)(PacketDropped(reason="DAVE send: \{to_repr(error)}"))
+        (self.telemetry_)(PacketDropped(reason="DAVE send: \{Repr(error)}"))
     }
   }
   for event in self.receiver.handle_gateway_message(message) {
@@ -497,7 +495,7 @@ async fn VoiceConnection::run_playback(self : VoiceConnection) -> Unit noraise {
       on_dave_error=reason => (self.telemetry_)(DaveEncryptDropped(reason~)),
     ) catch {
       error =>
-        (self.telemetry_)(PacketDropped(reason="send loop: \{to_repr(error)}"))
+        (self.telemetry_)(PacketDropped(reason="send loop: \{Repr(error)}"))
     }
     self.playback_stop = None
   }
@@ -525,7 +523,7 @@ pub fn[X] VoiceConnection::start(
   rand? : @random.Rand = @random.Rand::chacha8(),
 ) -> VoiceConnection {
   let receiver = ReceivePipeline::new(telemetry)
-  let connection : VoiceConnection = {
+  let connection = VoiceConnection::{
     events: Queue(kind=Unbounded),
     playback: Queue(kind=Unbounded),
     subscriptions: [],

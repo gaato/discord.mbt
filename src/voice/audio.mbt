@@ -78,7 +78,7 @@ pub async fn run_send_loop(
   dave? : DaveMachine,
   on_dave_error? : (String) -> Unit = _ => (),
 ) -> Unit {
-  let state : SendLoopState = {
+  let state = SendLoopState::{
     sequence: initial_sequence,
     timestamp: initial_timestamp,
     deadline: @clock.now_ms(),

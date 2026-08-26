@@ -23,7 +23,7 @@ test "discord docs: example guild text channel (line 121)" {
     #|}
   let first : @model.Channel = @json.from_json(@json.parse(fixture))
   let second : @model.Channel = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(first.id.to_string(), content="41771983423143937")
   inspect(first.typ.to_int(), content="0")
 }
@@ -46,7 +46,7 @@ test "discord docs: example guild announcement channel (line 143)" {
     #|}
   let first : @model.Channel = @json.from_json(@json.parse(fixture))
   let second : @model.Channel = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   assert_true(first.name == Some(Value("important-news")))
   inspect(first.typ.to_int(), content="5")
 }
@@ -69,7 +69,7 @@ test "discord docs: example dm channel (line 183)" {
     #|}
   let first : @model.Channel = @json.from_json(@json.parse(fixture))
   let second : @model.Channel = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(first.id.to_string(), content="319674150115610528")
   inspect(first.recipients.unwrap_or([]).length(), content="1")
 }
@@ -101,7 +101,7 @@ test "discord docs: example group dm channel (line 202)" {
     #|}
   let first : @model.Channel = @json.from_json(@json.parse(fixture))
   let second : @model.Channel = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   assert_true(first.name == Some(Value("Some test channel")))
   inspect(first.recipients.unwrap_or([]).length(), content="2")
 }
@@ -121,7 +121,7 @@ test "discord docs: example channel category (line 230)" {
     #|}
   let first : @model.Channel = @json.from_json(@json.parse(fixture))
   let second : @model.Channel = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(first.id.to_string(), content="399942396007890945")
   inspect(first.typ.to_int(), content="4")
 }
@@ -150,7 +150,7 @@ test "discord docs: example thread channel (line 256)" {
     #|}
   let first : @model.Channel = @json.from_json(@json.parse(fixture))
   let second : @model.Channel = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(first.id.to_string(), content="41771983423143937")
   inspect(first.typ.to_int(), content="11")
 }

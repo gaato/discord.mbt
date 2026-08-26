@@ -158,17 +158,10 @@ test "guild onboarding and integer enums round trip" {
     "enabled": true,
     "mode": 1,
   })
-  assert_true(
-    round_tripped.prompts[0].typ == @model.OnboardingPromptType::Dropdown,
-  )
-  assert_true(round_tripped.mode == @model.OnboardingMode::Advanced)
-  assert_true(
-    @model.OnboardingPromptType::from_int(99) ==
-    @model.OnboardingPromptType::Unknown(99),
-  )
-  assert_true(
-    @model.OnboardingMode::from_int(99) == @model.OnboardingMode::Unknown(99),
-  )
+  assert_true(round_tripped.prompts[0].typ == Dropdown)
+  assert_true(round_tripped.mode == Advanced)
+  assert_true(@model.OnboardingPromptType::from_int(99) == Unknown(99))
+  assert_true(@model.OnboardingMode::from_int(99) == Unknown(99))
   inspect(@model.OnboardingPromptType::Unknown(99).to_int(), content="99")
   inspect(@model.OnboardingMode::Unknown(99).to_int(), content="99")
 }

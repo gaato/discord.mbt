@@ -78,7 +78,7 @@ test "discord docs: example interaction (line 852)" {
     #|}
   let first : @model.Interaction = @json.from_json(@json.parse(fixture))
   let second : @model.Interaction = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(first.id.to_string(), content="867794291820986368")
   inspect(first.typ.to_int(), content="2")
 }
@@ -153,7 +153,7 @@ test "discord docs: example interaction (line 946)" {
     #|}
   let first : @model.Interaction = @json.from_json(@json.parse(fixture))
   let second : @model.Interaction = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(first.id.to_string(), content="867793873336926249")
   inspect(first.typ.to_int(), content="2")
 }

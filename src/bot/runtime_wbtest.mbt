@@ -597,7 +597,7 @@ async test "join_voice fails before opcode 4 without guild voice states intent" 
         inspect(intent, content="GUILD_VOICE_STATES")
       @voice.VoiceError::JoinTimeout =>
         fail("join_voice waited instead of diagnosing the missing intent")
-      error => fail("unexpected voice join error: \{to_repr(error)}")
+      error => fail("unexpected voice join error: \{Repr(error)}")
     } noraise {
       _ => fail("join_voice unexpectedly succeeded")
     }
@@ -910,9 +910,7 @@ async test "message update handlers receive no before when messages are disabled
   let transport = BotFakeTransport()
   let app = @app.App(sync=Disabled)
   let bot = middleware_runtime_bot(app, transport)
-  bot.attach_cache(
-    @cache.InMemoryCache(resources=@cache.CacheResources::default()),
-  )
+  bot.attach_cache(InMemoryCache(resources=@cache.CacheResources::default()))
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
   let observed : @aqueue.Queue[Bool] = Queue(kind=Unbounded)
@@ -939,7 +937,7 @@ async test "bot run dispatches concurrently, survives handlers, and shuts down" 
   let empty_app = @app.App(sync=Disabled)
   try Bot(empty_app, token="").run() catch {
     @app.AppConfigError::EmptyToken => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected empty token error")
   }
@@ -993,9 +991,7 @@ async test "bot run dispatches concurrently, survives handlers, and shuts down" 
     }
   })
   let policy_calls : @aqueue.Queue[String] = Queue(kind=Unbounded)
-  app.error_policy((failure, _) => {
-    policy_calls.put("\{to_repr(failure.origin())}")
-  })
+  app.error_policy((failure, _) => policy_calls.put("\{Repr(failure.origin())}"))
   // No raw event handler is registered, so the gateway filter can reject
   // unrelated events before decoding/queuing them.
   let filter = bot.event_filter()

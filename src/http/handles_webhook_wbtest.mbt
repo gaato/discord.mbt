@@ -16,7 +16,7 @@ async test "webhook token ref send delegates bound credentials and body" {
     client.webhook_token_ref(webhook_id, "token-a").send(content="hello")
   catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail message decoding")
   }
@@ -45,7 +45,7 @@ async test "webhook ref edit delegates bot-authenticated audit reason" {
     client.webhook_ref(webhook_id).edit(name="renamed", reason="audit")
   catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail webhook decoding")
   }
@@ -87,7 +87,7 @@ async test "webhook message ref edit delegates nullable content" {
     .edit(clear_content=true)
   catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail message decoding")
   }

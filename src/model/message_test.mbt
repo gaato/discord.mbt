@@ -450,7 +450,7 @@ test "message decodes an integer nonce without losing precision" {
 
 ///|
 test "message encode omits absent optional fields" {
-  let author : @model.User = {
+  let author = @model.User::{
     id: Id(2UL),
     username: "neko",
     discriminator: "0",
@@ -472,7 +472,7 @@ test "message encode omits absent optional fields" {
     collectibles: None,
     primary_guild: None,
   }
-  let message : @model.Message = {
+  let message = @model.Message::{
     id: Id(1UL),
     channel_id: Id(3UL),
     author,

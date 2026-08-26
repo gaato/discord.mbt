@@ -79,7 +79,7 @@ fn message_fixture(id : String, content : String) -> String {
 
 ///|
 test "guild create seeds selected resources and updates replace state" {
-  let cache = @cache.InMemoryCache(resources=CacheResources::all())
+  let cache = @cache.InMemoryCache(resources=@cache.CacheResources::all())
   cache.update(cached_event("GUILD_CREATE", guild_create_fixture()))
   let guild_id : @model.GuildId = @model.Id::parse("100")
   let channel_id : @model.ChannelId = @model.Id::parse("400")
@@ -186,7 +186,7 @@ test "guild create seeds selected resources and updates replace state" {
 
 ///|
 test "permissions use owner administrator and channel overwrites" {
-  let cache = @cache.InMemoryCache(resources=CacheResources::all())
+  let cache = @cache.InMemoryCache(resources=@cache.CacheResources::all())
   cache.update(cached_event("GUILD_CREATE", guild_create_fixture()))
   let guild_id : @model.GuildId = @model.Id::parse("100")
   let channel_id : @model.ChannelId = @model.Id::parse("400")
@@ -219,8 +219,8 @@ test "permissions use owner administrator and channel overwrites" {
 ///|
 test "message updates replace retained entries without changing eviction order" {
   let cache = @cache.InMemoryCache(
-    resources=CacheResources::all(),
-    limits=@cache.CacheLimits(messages=@cache.CacheLimit(max_entries=2)),
+    resources=@cache.CacheResources::all(),
+    limits=CacheLimits(messages=CacheLimit(max_entries=2)),
   )
   let channel_id : @model.ChannelId = @model.Id::parse("400")
   let first_id : @model.MessageId = @model.Id::parse("500")
@@ -255,7 +255,7 @@ test "message updates replace retained entries without changing eviction order" 
 
 ///|
 test "message update cache misses are not inserted" {
-  let cache = @cache.InMemoryCache(resources=CacheResources::all())
+  let cache = @cache.InMemoryCache(resources=@cache.CacheResources::all())
   let channel_id : @model.ChannelId = @model.Id::parse("400")
   let message_id : @model.MessageId = @model.Id::parse("599")
   cache.update(cached_event("MESSAGE_UPDATE", message_fixture("599", "old")))
@@ -265,7 +265,7 @@ test "message update cache misses are not inserted" {
 
 ///|
 test "disabled resources never retain events" {
-  let cache = @cache.InMemoryCache(resources=CacheResources::none())
+  let cache = @cache.InMemoryCache(resources=@cache.CacheResources::none())
   cache.update(cached_event("GUILD_CREATE", guild_create_fixture()))
   cache.update(cached_event("MESSAGE_CREATE", message_fixture("500", "one")))
   let guild_id : @model.GuildId = @model.Id::parse("100")
@@ -281,7 +281,7 @@ test "disabled resources never retain events" {
 
 ///|
 test "default resources exclude presence and message churn" {
-  let cache = @cache.InMemoryCache(resources=CacheResources::default())
+  let cache = @cache.InMemoryCache(resources=@cache.CacheResources::default())
   cache.update(cached_event("GUILD_CREATE", guild_create_fixture()))
   cache.update(cached_event("MESSAGE_CREATE", message_fixture("500", "one")))
   let guild_id : @model.GuildId = @model.Id::parse("100")
@@ -296,7 +296,7 @@ test "default resources exclude presence and message churn" {
 
 ///|
 test "unavailable guilds retain data until a permanent delete" {
-  let cache = @cache.InMemoryCache(resources=CacheResources::default())
+  let cache = @cache.InMemoryCache(resources=@cache.CacheResources::default())
   let guild_id : @model.GuildId = @model.Id::parse("100")
   cache.update(cached_event("GUILD_CREATE", guild_create_fixture()))
   cache.update(

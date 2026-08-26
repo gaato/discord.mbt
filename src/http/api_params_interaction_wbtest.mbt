@@ -25,7 +25,7 @@ async test "create interaction response with callback asks for the envelope" {
     }
   })
   let interaction_id : @model.InteractionId = Id(1UL)
-  let response : @model.InteractionResponse = {
+  let response = @model.InteractionResponse::{
     typ: ChannelMessageWithSource,
     data: Some({ "content": "hi" }),
   }
@@ -53,7 +53,7 @@ async test "create followup forwards the poll body" {
     { status: 200, headers: Map([]), body: Json::null() }
   })
   let application_id : @model.ApplicationId = Id(1UL)
-  let poll : @model.PollCreateRequest = {
+  let poll = @model.PollCreateRequest::{
     question: { text: Some("q?"), emoji: None },
     answers: [{ text: Some("a"), emoji: None }],
     duration: None,
@@ -62,7 +62,7 @@ async test "create followup forwards the poll body" {
   }
   try client.create_followup(application_id, "tok", poll~) catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail message decoding")
   }
@@ -84,7 +84,7 @@ async test "edit original response forwards flags, poll, and kept attachments" {
     { status: 200, headers: Map([]), body: Json::null() }
   })
   let application_id : @model.ApplicationId = Id(1UL)
-  let poll : @model.PollCreateRequest = {
+  let poll = @model.PollCreateRequest::{
     question: { text: Some("q?"), emoji: None },
     answers: [{ text: Some("a"), emoji: None }],
     duration: None,
@@ -111,7 +111,7 @@ async test "edit original response forwards flags, poll, and kept attachments" {
     )
   catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail message decoding")
   }
@@ -146,7 +146,7 @@ async test "edit followup forwards flags" {
     )
   catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail message decoding")
   }

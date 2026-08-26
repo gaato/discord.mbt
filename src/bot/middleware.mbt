@@ -47,6 +47,6 @@ async fn Bot::dispatch_event(
   self.run_event_middleware(spawner, ctx, 0, event) catch {
     error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
       raise error
-    error => self.app_.warn("event middleware failed: \{to_repr(error)}")
+    error => self.app_.warn("event middleware failed: \{Repr(error)}")
   }
 }

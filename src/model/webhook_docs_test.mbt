@@ -25,7 +25,7 @@ test "discord docs: example incoming webhook (line 55)" {
     #|}
   let first : @model.Webhook = @json.from_json(@json.parse(fixture))
   let second : @model.Webhook = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(first.id.to_string(), content="223704706495545344")
   inspect(first.typ.to_int(), content="1")
 }
@@ -60,7 +60,7 @@ test "discord docs: example channel follower webhook (line 78)" {
     #|}
   let first : @model.Webhook = @json.from_json(@json.parse(fixture))
   let second : @model.Webhook = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(first.id.to_string(), content="752831914402115456")
   inspect(first.typ.to_int(), content="2")
   assert_eq(first.source_guild.unwrap().name.unwrap(), "Guildy name")
@@ -83,7 +83,7 @@ test "discord docs: example application webhook (line 109)" {
     #|}
   let first : @model.Webhook = @json.from_json(@json.parse(fixture))
   let second : @model.Webhook = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(first.id.to_string(), content="658822586720976555")
   inspect(first.typ.to_int(), content="3")
 }

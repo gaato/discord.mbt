@@ -2,7 +2,7 @@
 /// Wire-shape coverage for the poll and thread parameters added after the
 /// 2026-07-16 live sweep (the probe had to fall back to raw routes for these).
 test "poll create request serializes request-side media without nulls" {
-  let poll : @model.PollCreateRequest = {
+  let poll = @model.PollCreateRequest::{
     question: { text: Some("live probe poll?"), emoji: None },
     answers: [
       { text: Some("yes"), emoji: None },
@@ -34,7 +34,7 @@ async test "create message forwards the poll body" {
     { status: 200, headers: Map([]), body: Json::null() }
   })
   let channel_id : @model.ChannelId = Id(10UL)
-  let poll : @model.PollCreateRequest = {
+  let poll = @model.PollCreateRequest::{
     question: { text: Some("q?"), emoji: None },
     answers: [{ text: Some("a"), emoji: None }],
     duration: None,
@@ -43,7 +43,7 @@ async test "create message forwards the poll body" {
   }
   try client.create_message(channel_id, poll~) catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail message decoding")
   }
@@ -78,7 +78,7 @@ async test "modify channel forwards the thread-only fields" {
     )
   catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail channel decoding")
   }
@@ -114,7 +114,7 @@ async test "execute webhook builds thread query and body params" {
     )
   catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail message decoding")
   }
@@ -132,7 +132,7 @@ async test "execute webhook builds thread query and body params" {
     )
   catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail message decoding")
   }
@@ -163,7 +163,7 @@ async test "execute webhook rejects thread_id together with thread_name" {
         message,
         content="thread_id and thread_name are mutually exclusive",
       )
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected a validation error")
   }

@@ -103,9 +103,9 @@ async fn sec_webhooks(p : P) -> Unit {
       wtoken,
       content="quiet webhook message",
       flags=@model.MessageFlags::suppress_notifications(),
-      files=[@dhttp.FileUpload("keep.txt", b"keep", content_type="text/plain")],
+      files=[FileUpload("keep.txt", b"keep", content_type="text/plain")],
     )
-    let keep : @model.AttachmentRequest = {
+    let keep = @model.AttachmentRequest::{
       id: msg.attachments[0].id,
       filename: None,
       title: None,

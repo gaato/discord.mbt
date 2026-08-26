@@ -87,7 +87,7 @@ pub async fn InteractionEndpoint::handle_interaction(
       error if @async.is_being_cancelled() ||
         @async.is_cancellation_error(error) => raise error
       error => {
-        (self.warn)("interaction processing failed: \{to_repr(error)}")
+        (self.warn)("interaction processing failed: \{Repr(error)}")
         true
       }
     }

@@ -31,7 +31,7 @@ async test "http telemetry reports 429 and retry attempts" {
       HttpRateLimited(global=true, retry_after_ms=0L, ..),
       HttpRequest(status=200, retries=1, ..),
     ] else {
-    fail("unexpected telemetry: \{to_repr(events)}")
+    fail("unexpected telemetry: \{Repr(events)}")
   }
 }
 
@@ -45,7 +45,7 @@ async test "whole request timeout cancels a delayed transport" {
   })
   try client.request(GetGateway) catch {
     Timeout(timeout_ms~) => inspect(timeout_ms, content="10")
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected timeout")
   }

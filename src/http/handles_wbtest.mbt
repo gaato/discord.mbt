@@ -13,7 +13,7 @@ async test "message ref reply delegates a message reference" {
   let message_id : @model.MessageId = Id(20UL)
   try client.message_ref(channel_id, message_id).reply(content="hello") catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail message decoding")
   }
@@ -104,7 +104,7 @@ async test "channel ref send preserves create message parameters" {
     )
   catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail message decoding")
   }
@@ -131,7 +131,7 @@ async test "channel ref fetch delegates a GET request" {
   let channel_id : @model.ChannelId = Id(80UL)
   try client.channel_ref(channel_id).fetch() catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail channel decoding")
   }
@@ -147,7 +147,7 @@ test "channel ref messages preserves paginator validation" {
   try client.channel_ref(channel_id).messages(page_size=0) catch {
     Validation(message~) =>
       inspect(message, content="message limit must be between 1 and 100")
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected paginator validation")
   }

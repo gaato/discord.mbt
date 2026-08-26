@@ -5,7 +5,7 @@ priv suberror PoolWbtestFailure {
 
 ///|
 async fn exchange_once(conn : @http.Client) -> Int {
-  conn.request(@http.Get, "/ping")
+  conn.request(Get, "/ping")
   let response = conn.end_request()
   ignore(conn.read_all().text())
   response.code

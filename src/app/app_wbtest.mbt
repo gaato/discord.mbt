@@ -13,13 +13,13 @@ async test "app context exposes an optional latency provider" {
   )
   let app = App(sync=Disabled)
   let with_provider = app.attach(
-    @framework.Framework(client, application_id),
+    Framework(client, application_id),
     client~,
     application_id~,
     latency_ms=() => Some(42L),
   )
   let without_provider = app.attach(
-    @framework.Framework(client, application_id),
+    Framework(client, application_id),
     client~,
     application_id~,
   )
@@ -452,7 +452,7 @@ async test "command cooldown reports retry time and recovers" {
   app.error_policy((_, error) => {
     match error {
       HandlerError::OnCooldown(retry_after_ms~) => retries.push(retry_after_ms)
-      _ => fail("unexpected guard error: \{to_repr(error)}")
+      _ => fail("unexpected guard error: \{Repr(error)}")
     }
   })
   app.command(
@@ -507,7 +507,7 @@ async test "guild and global cooldown buckets share the intended scope" {
   app.error_policy((_, error) => {
     match error {
       HandlerError::OnCooldown(_) => cooldowns.val += 1
-      _ => fail("unexpected bucket error: \{to_repr(error)}")
+      _ => fail("unexpected bucket error: \{Repr(error)}")
     }
   })
   app.command(
@@ -589,7 +589,7 @@ test "command validation rejects non-positive cooldowns" {
       inspect(command, content="invalid-cooldown")
       inspect(seconds, content="0")
     }
-    error => fail("unexpected validation error: \{to_repr(error)}")
+    error => fail("unexpected validation error: \{Repr(error)}")
   } noraise {
     _ => fail("expected invalid cooldown error")
   }
@@ -636,7 +636,7 @@ test "app validates command type names and slash child structure" {
   duplicate.command(command)
   try duplicate.validate() catch {
     DuplicateCommand(name~) => inspect(name, content="same")
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected duplicate command error")
   }
@@ -673,7 +673,7 @@ test "app validates command type names and slash child structure" {
       inspect(command, content="admin")
       inspect(path, content="ping")
     }
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected duplicate path error")
   }
@@ -690,7 +690,7 @@ test "app validates command type names and slash child structure" {
       inspect(command, content="admin")
       inspect(path, content="outer/inner")
     }
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected nested group error")
   }
@@ -715,7 +715,7 @@ test "app validates command type names and slash child structure" {
       inspect(command, content="search")
       inspect(path, content="query")
     }
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected choices and autocomplete error")
   }
@@ -737,7 +737,7 @@ test "app validates command type names and slash child structure" {
       inspect(command, content="ordered")
       inspect(path, content="required")
     }
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected required-after-optional error")
   }

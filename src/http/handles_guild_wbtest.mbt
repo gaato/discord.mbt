@@ -18,7 +18,7 @@ async test "guild ref edit delegates nullable fields and audit reason" {
     client.guild_ref(guild_id).edit(name="nn", clear_icon=true, reason="r")
   catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail guild decoding")
   }
@@ -44,7 +44,7 @@ test "guild ref members preserves paginator validation" {
   try client.guild_ref(guild_id).members(page_size=0) catch {
     Validation(message~) =>
       inspect(message, content="guild member limit must be between 1 and 1000")
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected paginator validation")
   }
@@ -100,7 +100,7 @@ async test "role ref edit delegates bound ids and audit reason" {
     client.role_ref(guild_id, role_id).edit(name="moderator", reason="r")
   catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail role decoding")
   }
@@ -137,7 +137,7 @@ async test "guild ref search messages preserves query parameters" {
     ])
   catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail search result decoding")
   }

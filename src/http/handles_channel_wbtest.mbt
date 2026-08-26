@@ -18,7 +18,7 @@ async test "channel ref edit delegates nullable fields and audit reason" {
     client.channel_ref(channel_id).edit(name="n", clear_topic=true, reason="r")
   catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail channel decoding")
   }
@@ -53,7 +53,7 @@ async test "channel ref follow keeps announcement and target direction" {
     client.channel_ref(announcement_channel_id).follow(target_channel_id)
   catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail followed channel decoding")
   }
@@ -75,7 +75,7 @@ async test "channel ref create stage instance binds the channel id" {
   let channel_id : @model.ChannelId = Id(130UL)
   try client.channel_ref(channel_id).create_stage_instance("town hall") catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail stage instance decoding")
   }
@@ -133,7 +133,7 @@ async test "channel ref with typing propagates body errors without hanging" {
     })
   } catch {
     TypingBodyError => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected body error")
   }
@@ -158,7 +158,7 @@ async test "channel ref with typing propagates the initial typing failure" {
       inspect(error.code, content="50013")
       inspect(error.message, content="Missing Permissions")
     }
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected initial typing failure")
   }
@@ -206,7 +206,7 @@ test "message ref poll voters preserves paginator validation" {
   catch {
     Validation(message~) =>
       inspect(message, content="poll voter limit must be between 1 and 100")
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected paginator validation")
   }

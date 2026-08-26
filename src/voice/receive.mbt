@@ -147,14 +147,14 @@ fn ReceivePipeline::process_udp_packet(
     return []
   }
   let encrypted_rtp = parse_rtp_packet(datagram) catch {
-    error => return self.drop_packet("invalid RTP packet: \{to_repr(error)}")
+    error => return self.drop_packet("invalid RTP packet: \{Repr(error)}")
   }
   let decrypted = cipher.open(datagram, header_len=encrypted_rtp.header_len) catch {
-    error => return self.drop_packet("RTP decryption failed: \{to_repr(error)}")
+    error => return self.drop_packet("RTP decryption failed: \{Repr(error)}")
   }
   let rtp = parse_rtp_packet(decrypted) catch {
     error =>
-      return self.drop_packet("invalid decrypted RTP packet: \{to_repr(error)}")
+      return self.drop_packet("invalid decrypted RTP packet: \{Repr(error)}")
   }
   guard rtp_payload_without_extension(rtp, decrypted) is Some(payload) else {
     return self.drop_packet("RTP extension data is truncated")
@@ -181,7 +181,7 @@ fn ReceivePipeline::process_udp_packet(
             user_id~,
             ssrc=rtp.ssrc,
             count=self.dave_drop_count,
-            reason="\{to_repr(error)}",
+            reason="\{Repr(error)}",
           ),
         )
         return []
@@ -190,7 +190,7 @@ fn ReceivePipeline::process_udp_packet(
   } else {
     payload
   }
-  let packet : ReceivedOpus = {
+  let packet = ReceivedOpus::{
     user_id,
     ssrc: rtp.ssrc,
     sequence: rtp.sequence.to_int(),

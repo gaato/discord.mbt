@@ -181,7 +181,7 @@ pub async fn Client::request(
   files? : Array[FileUpload],
   headers? : Map[String, String],
 ) -> Json raise DiscordHttpError {
-  let request : HttpRequest = {
+  let request = HttpRequest::{
     route,
     body,
     audit_reason,

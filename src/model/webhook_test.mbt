@@ -107,7 +107,7 @@ test "webhook decodes required fields only" {
 
 ///|
 test "webhook encode omits absent optional fields" {
-  let webhook : @model.Webhook = {
+  let webhook = @model.Webhook::{
     id: Id(1UL),
     typ: Incoming,
     guild_id: None,

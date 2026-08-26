@@ -8,7 +8,7 @@ test "webhook PING envelope has no event body" {
     #|}
   let first : @model.WebhookEventPayload = @json.from_json(@json.parse(fixture))
   let second : @model.WebhookEventPayload = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   assert_true(first.typ == Ping)
   assert_true(first.event is None)
 }
@@ -28,7 +28,7 @@ test "unknown webhook event type preserves its name and data" {
     #|}
   let first : @model.WebhookEventPayload = @json.from_json(@json.parse(fixture))
   let second : @model.WebhookEventPayload = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   guard first.event is Some(body) else {
     fail("event webhook payload is missing its body")
   }
@@ -40,7 +40,7 @@ test "unknown webhook event type preserves its name and data" {
       }
       inspect(data.stringify(), content="{\"future\":true,\"value\":42}")
     }
-    event => fail("expected unknown webhook event, got \{to_repr(event)}")
+    event => fail("expected unknown webhook event, got \{Repr(event)}")
   }
 }
 

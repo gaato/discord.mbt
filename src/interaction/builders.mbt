@@ -430,7 +430,7 @@ fn auto_select(
   disabled : Bool?,
   channel_types : Array[@model.ChannelType]?,
 ) -> @model.Component {
-  let menu : @model.SelectMenu = {
+  let menu = @model.SelectMenu::{
     id: None,
     custom_id,
     placeholder,

@@ -2,7 +2,7 @@
 async fn expect_round2_deserialize(call : async () -> Unit) -> Unit {
   try call() catch {
     Deserialize(_) => ()
-    error => fail("unexpected fake-response error: \{to_repr(error)}")
+    error => fail("unexpected fake-response error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the null fake response to fail decoding")
   }
@@ -127,22 +127,19 @@ async test "guild asset handles delegate remaining collections and item methods"
   expect_round2_deserialize(() => {
     guild.create_scheduled_event(
       "Meetup",
-      @model.GuildScheduledEventPrivacyLevel::GuildOnly,
-      @model.Timestamp("2026-08-01T10:00:00Z"),
-      @model.GuildScheduledEventEntityType::External,
+      GuildOnly,
+      Timestamp("2026-08-01T10:00:00Z"),
+      External,
       entity_metadata={ location: Some("Hall") },
-      scheduled_end_time=@model.Timestamp("2026-08-01T12:00:00Z"),
+      scheduled_end_time=Timestamp("2026-08-01T12:00:00Z"),
     )
     |> ignore
   })
   expect_round2_deserialize(() => guild.auto_moderation_rules() |> ignore)
   expect_round2_deserialize(() => {
-    guild.create_auto_moderation_rule(
-      "block",
-      @model.AutoModerationEventType::MessageSend,
-      @model.AutoModerationTriggerType::Keyword,
-      [{ typ: @model.AutoModerationActionType::BlockMessage, metadata: None }],
-    )
+    guild.create_auto_moderation_rule("block", MessageSend, Keyword, [
+      { typ: BlockMessage, metadata: None },
+    ])
     |> ignore
   })
   expect_round2_deserialize(() => guild.templates() |> ignore)
@@ -225,14 +222,14 @@ async test "channel handles exercise remaining channel API routes and builders" 
   })
   expect_round2_deserialize(() => {
     channel.public_archived_threads(
-      before=@model.Timestamp("2026-07-18T00:00:00Z"),
+      before=Timestamp("2026-07-18T00:00:00Z"),
       limit=2,
     )
     |> ignore
   })
   expect_round2_deserialize(() => {
     channel.private_archived_threads(
-      before=@model.Timestamp("2026-07-18T00:00:00Z"),
+      before=Timestamp("2026-07-18T00:00:00Z"),
       limit=2,
     )
     |> ignore
@@ -244,8 +241,8 @@ async test "channel handles exercise remaining channel API routes and builders" 
   expect_round2_deserialize(() => {
     channel.start_thread(
       "discussion",
-      typ=@model.ChannelType::PrivateThread,
-      auto_archive_duration=@model.ThreadAutoArchiveDuration::OneDay,
+      typ=PrivateThread,
+      auto_archive_duration=OneDay,
       invitable=true,
       rate_limit_per_user=5,
     )
@@ -256,7 +253,7 @@ async test "channel handles exercise remaining channel API routes and builders" 
       "release",
       content="Release notes",
       files=[FileUpload("notes.txt", b"notes", content_type="text/plain")],
-      auto_archive_duration=@model.ThreadAutoArchiveDuration::OneDay,
+      auto_archive_duration=OneDay,
       rate_limit_per_user=5,
       applied_tags=[overwrite_id],
     )
@@ -266,10 +263,7 @@ async test "channel handles exercise remaining channel API routes and builders" 
   channel.send_soundboard_sound(sound_id)
   expect_round2_deserialize(() => channel.stage_instance() |> ignore)
   expect_round2_deserialize(() => {
-    channel.edit_stage_instance(
-      topic="Updated topic",
-      privacy_level=@model.StagePrivacyLevel::GuildOnly,
-    )
+    channel.edit_stage_instance(topic="Updated topic", privacy_level=GuildOnly)
     |> ignore
   })
   assert_eq(calls.length(), 19)
@@ -334,7 +328,7 @@ async test "guild handles exercise remaining guild API routes" {
   })
   expect_round2_deserialize(() => guild.channels() |> ignore)
   expect_round2_deserialize(() => {
-    guild.create_channel("general", typ=@model.ChannelType::GuildText) |> ignore
+    guild.create_channel("general", typ=GuildText) |> ignore
   })
   guild.edit_channel_positions([GuildChannelPosition(channel_id, position=1)])
   expect_round2_deserialize(() => {
@@ -376,17 +370,11 @@ async test "guild handles exercise remaining guild API routes" {
   })
   expect_round2_deserialize(() => guild.onboarding() |> ignore)
   expect_round2_deserialize(() => {
-    guild.edit_onboarding(
-      [],
-      [channel_id],
-      true,
-      @model.OnboardingMode::Default,
-    )
-    |> ignore
+    guild.edit_onboarding([], [channel_id], true, Default) |> ignore
   })
   expect_round2_deserialize(() => {
     guild.edit_incident_actions(
-      invites_disabled_until=@model.Timestamp("2026-07-18T01:00:00Z"),
+      invites_disabled_until=Timestamp("2026-07-18T01:00:00Z"),
     )
     |> ignore
   })
@@ -474,7 +462,7 @@ async test "user command webhook invite and gateway long-tail routes are pinned"
   catch {
     Validation(message~) =>
       assert_eq(message, "bulk command payload must be a JSON array")
-    error => fail("unexpected bulk command error: \{to_repr(error)}")
+    error => fail("unexpected bulk command error: \{Repr(error)}")
   } noraise {
     _ => fail("expected object bulk command payload to be rejected")
   }
@@ -496,7 +484,7 @@ async test "user command webhook invite and gateway long-tail routes are pinned"
   try client.get_gateway() |> ignore catch {
     Deserialize(message~) =>
       assert_eq(message, "expected gateway url, got null")
-    error => fail("unexpected gateway error: \{to_repr(error)}")
+    error => fail("unexpected gateway error: \{Repr(error)}")
   } noraise {
     _ => fail("expected gateway response without url to fail")
   }

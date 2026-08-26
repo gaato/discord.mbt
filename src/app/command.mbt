@@ -67,7 +67,7 @@ fn[A] decode_command_args(
   options : @interaction.CommandOptions,
 ) -> A raise HandlerError {
   args.decode(options) catch {
-    source => raise InvalidArgument("\{to_repr(source)}")
+    source => raise InvalidArgument("\{Repr(source)}")
   }
 }
 
@@ -529,7 +529,7 @@ async fn dispatch_suggest(
   for route in routes {
     if path_key(route.path) == path_key(path) &&
       route.option_name == input.name() {
-      let ctx : @interaction.SuggestCtx = {
+      let ctx = @interaction.SuggestCtx::{
         interaction: raw.interaction,
         options: raw.options,
         guild_id: raw.interaction.guild_id,

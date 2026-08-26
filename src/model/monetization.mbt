@@ -217,7 +217,7 @@ pub impl BitAnd for SkuFlags with fn land(a, b) {
 
 ///|
 pub impl Debug for SkuFlags with fn to_repr(self) {
-  to_repr(self.0)
+  Repr(self.0)
 }
 
 ///|

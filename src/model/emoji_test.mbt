@@ -90,7 +90,7 @@ test "emoji decodes required nullable fields only" {
 
 ///|
 test "emoji encode omits absent optional fields" {
-  let emoji : @model.Emoji = {
+  let emoji = @model.Emoji::{
     id: Some(Null),
     name: Value("wave"),
     animated: None,

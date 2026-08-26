@@ -134,7 +134,7 @@ pub fn Bot::on_telemetry(
 fn Bot::emit_telemetry(self : Bot, event : @telemetry.TelemetryEvent) -> Unit {
   for hook in self.telemetry_ {
     hook(event) catch {
-      error => self.app_.warn("telemetry hook failed: \{to_repr(error)}")
+      error => self.app_.warn("telemetry hook failed: \{Repr(error)}")
     }
   }
 }
@@ -242,7 +242,7 @@ fn Bot::resolved_intents(self : Bot) -> @model.Intents {
         let required = subscription.required_intents
         if required.bits() != 0U && (required & explicit).bits() == 0U {
           self.app_.warn(
-            "event \{to_repr(subscription.kind)} may not be delivered; add one of its required intents explicitly",
+            "event \{Repr(subscription.kind)} may not be delivered; add one of its required intents explicitly",
           )
         }
       }
@@ -255,7 +255,7 @@ fn Bot::resolved_intents(self : Bot) -> @model.Intents {
         let required = subscription.required_intents
         if (required & privileged).bits() != 0U {
           self.app_.warn(
-            "event \{to_repr(subscription.kind)} requires a privileged intent; pass intents explicitly",
+            "event \{Repr(subscription.kind)} requires a privileged intent; pass intents explicitly",
           )
         }
         derived = derived | required
@@ -410,7 +410,7 @@ async fn Bot::spawn_event_handlers(
       handler_count += 1
     }
   }
-  self.emit_telemetry(EventDispatched(kind="\{to_repr(kind)}", handler_count~))
+  self.emit_telemetry(EventDispatched(kind="\{Repr(kind)}", handler_count~))
   for subscription in self.typed_events_ {
     if subscription.kind == kind {
       spawner(() => {
@@ -446,7 +446,7 @@ async fn Bot::spawn_interaction(
         error if @async.is_being_cancelled() ||
           @async.is_cancellation_error(error) => raise error
         error => {
-          self.app_.warn("interaction processing failed: \{to_repr(error)}")
+          self.app_.warn("interaction processing failed: \{Repr(error)}")
           false
         }
       },
@@ -554,7 +554,7 @@ pub async fn Bot::run(self : Bot) -> Unit {
               existing
             }
             None => {
-              let created : GatewayCtx = {
+              let created = GatewayCtx::{
                 app_: attached,
                 ready_: ready,
                 intents_: intents,
@@ -619,7 +619,7 @@ pub async fn Bot::run(self : Bot) -> Unit {
             }
             None =>
               self.app_.warn(
-                "dropping \{to_repr(event_kind(event))} received before shard \{owner.id} READY",
+                "dropping \{Repr(event_kind(event))} received before shard \{owner.id} READY",
               )
           }
         }

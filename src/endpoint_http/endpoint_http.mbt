@@ -172,7 +172,7 @@ async fn handle_request(
     error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
       raise error
     error => {
-      warn("interaction HTTP request failed: \{to_repr(error)}")
+      warn("interaction HTTP request failed: \{Repr(error)}")
       text_response(
         500,
         "Internal Server Error",
@@ -187,7 +187,7 @@ async fn handle_request(
     error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
       raise error
     error => {
-      warn("interaction HTTP response failed: \{to_repr(error)}")
+      warn("interaction HTTP response failed: \{Repr(error)}")
       conn.close()
     }
   }
@@ -258,7 +258,7 @@ pub async fn[X] serve_interactions(
         @async.is_cancellation_error(error) => raise error
       error =>
         if ready {
-          warn("interaction HTTP server stopped: \{to_repr(error)}")
+          warn("interaction HTTP server stopped: \{Repr(error)}")
         } else {
           startup.put(Failed(error))
         }

@@ -53,7 +53,7 @@ async test "component and modal failures flow through the error policy" {
             #|{"type":4,"data":{"content":"component exploded","flags":64}}
           ),
         )
-      outcome => fail("expected a policy reply, got \{to_repr(outcome)}")
+      outcome => fail("expected a policy reply, got \{Repr(outcome)}")
     }
     // A failing modal handler renders the fixed guild-only message.
     match
@@ -66,7 +66,7 @@ async test "component and modal failures flow through the error policy" {
           rendered.contains("This command can only be used in a server."),
         )
       }
-      outcome => fail("expected a modal policy reply, got \{to_repr(outcome)}")
+      outcome => fail("expected a modal policy reply, got \{Repr(outcome)}")
     }
     // A failure after a deferred update must use a followup; with no REST
     // backend reachable the policy failure lands in the warn hook instead of
@@ -76,7 +76,7 @@ async test "component and modal failures flow through the error policy" {
         app_component("late-boom:now", "500000000000000403"),
       ) {
       Reply(response~, ..) => assert_true(response.typ == DeferredUpdateMessage)
-      outcome => fail("expected a deferred update, got \{to_repr(outcome)}")
+      outcome => fail("expected a deferred update, got \{Repr(outcome)}")
     }
     for _attempt in 0..<200 {
       if warnings.iter().any(warning => warning.contains("error policy failed")) {

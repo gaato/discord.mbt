@@ -257,7 +257,7 @@ pub fn Client::paginate_messages(
 ///   ) -> Unit {
 ///     client
 ///     .paginate_guild_members(guild_id)
-///     .each(guild_member => println("\{to_repr(guild_member.user)}"))
+///     .each(guild_member => println("\{Repr(guild_member.user)}"))
 ///   }
 ///
 ///   ignore(print_members)

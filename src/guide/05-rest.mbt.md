@@ -21,7 +21,7 @@ Create a client with a raw bot token:
 ```mbt check
 ///|
 fn make_client(token : String) -> @dhttp.Client {
-  @dhttp.Client(token, max_connections=4)
+  Client(token, max_connections=4)
 }
 ```
 
@@ -243,7 +243,7 @@ async fn send_report(
 ) -> @model.Message {
   let report = @fs.read_file("report.png").binary()
   client.create_message(channel_id, content="Here you go", files=[
-    @dhttp.FileUpload("report.png", report, content_type="image/png"),
+    FileUpload("report.png", report, content_type="image/png"),
   ])
 }
 
@@ -269,7 +269,7 @@ async fn walk_history(
   let newest_250 = history.collect(max=250)
   ignore(newest_250)
   let members = client.paginate_guild_members(guild_id, page_size=1000)
-  members.each(guild_member => println("\{to_repr(guild_member.user)}"))
+  members.each(guild_member => println("\{Repr(guild_member.user)}"))
 }
 ```
 
@@ -286,7 +286,7 @@ Use `Route::custom` for an endpoint that does not yet have a typed wrapper:
 ///|
 test "custom routes derive stable metadata" {
   let route = @dhttp.Route::custom(
-    request_method=@dhttp.RequestMethod::Get,
+    request_method=Get,
     path="/guilds/123/widgets/456",
     bucket="GET:/guilds/123/widgets/{}",
   )
@@ -332,7 +332,7 @@ exchange, and bounded 429 retries all run inside `next`:
 ///|
 fn wire_logging(client : @dhttp.Client) -> Unit {
   client.middleware((request, next) => {
-    let req_method = to_repr(request.route.method_())
+    let req_method = Repr(request.route.method_())
     let path = request.route.path()
     println("http -> \{req_method} \{path}")
     let response = next(request)

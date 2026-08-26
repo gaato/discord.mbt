@@ -10,7 +10,7 @@ pub fn Timestamp::to_string(self : Timestamp) -> String {
 
 ///|
 pub impl Debug for Timestamp with fn to_repr(self) {
-  to_repr(self.0)
+  Repr(self.0)
 }
 
 ///|
@@ -149,7 +149,7 @@ pub fn ImageHash::is_animated(self : ImageHash) -> Bool {
 
 ///|
 pub impl Debug for ImageHash with fn to_repr(self) {
-  to_repr(self.0)
+  Repr(self.0)
 }
 
 ///|

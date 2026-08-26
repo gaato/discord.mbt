@@ -101,7 +101,7 @@ test "derived struct composes core types (decode)" {
 
 ///|
 test "derived struct composes core types (encode, absent optional omitted)" {
-  let entity : SampleEntity = {
+  let entity = SampleEntity::{
     id: Id(1UL),
     guild_id: None,
     nick: Value("neko"),
@@ -109,7 +109,7 @@ test "derived struct composes core types (encode, absent optional omitted)" {
     typ: Unknown(99),
   }
   inspect(
-    entity.to_json().stringify(),
+    ToJson::to_json(entity).stringify(),
     content=(
       #|{"id":"1","nick":"neko","avatar":null,"type":99}
     ),

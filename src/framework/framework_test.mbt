@@ -318,7 +318,7 @@ async test "interaction contexts reject invalid invoker combinations" {
   let missing = { ..echo_interaction("missing"), user: None }
   try fw.process(missing) |> ignore catch {
     @framework.InteractionContextError::MissingInvoker => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected MissingInvoker")
   }
@@ -338,7 +338,7 @@ async test "interaction contexts reject invalid invoker combinations" {
   }
   try fw.process(invalid_guild) |> ignore catch {
     @framework.InteractionContextError::MissingGuildMemberUser => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected MissingGuildMemberUser")
   }
@@ -349,7 +349,7 @@ async test "interaction contexts reject invalid invoker combinations" {
   }
   try fw.process(missing_guild_id) |> ignore catch {
     @framework.InteractionContextError::MissingGuildId => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected MissingGuildId")
   }
@@ -396,7 +396,7 @@ async test "command contexts expose resolved context-menu targets" {
   })
   |> ignore
   let user_id = "200000000000000001"
-  let user_resolved : @model.ResolvedData = {
+  let user_resolved = @model.ResolvedData::{
     users: Some(Map([(user_id, interaction_test_user())])),
     members: Some(Map([(user_id, interaction_test_member())])),
     messages: None,
@@ -405,7 +405,7 @@ async test "command contexts expose resolved context-menu targets" {
     attachments: None,
   }
   let message_id = "700000000000000001"
-  let message_resolved : @model.ResolvedData = {
+  let message_resolved = @model.ResolvedData::{
     users: None,
     members: None,
     messages: Some(Map([(message_id, interaction_test_message())])),
@@ -413,7 +413,7 @@ async test "command contexts expose resolved context-menu targets" {
     roles: None,
     attachments: None,
   }
-  let non_context_resolved : @model.ResolvedData = {
+  let non_context_resolved = @model.ResolvedData::{
     users: Some(Map([(user_id, interaction_test_user())])),
     members: Some(Map([(user_id, interaction_test_member())])),
     messages: Some(Map([(user_id, interaction_test_message())])),
@@ -514,7 +514,7 @@ async test "framework error hook captures handler failures" {
   .command(@interaction.CommandSpec::slash("echo", "Echo text back"), ctx => {
     ctx.options.string("no-such-option") |> ignore
   })
-  .on_error((label, error) => errors.push("\{label}: \{to_repr(error)}"))
+  .on_error((label, error) => errors.push("\{label}: \{Repr(error)}"))
   |> ignore
   assert_true(fw.process(echo_interaction("boom")))
   debug_inspect(
@@ -575,7 +575,7 @@ async test "component contexts require and expose their attached message" {
   let malformed = { ..component_interaction("inspect:missing"), message: None }
   try fw.process(malformed) |> ignore catch {
     @framework.InteractionContextError::MissingComponentMessage => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected MissingComponentMessage")
   }
@@ -644,7 +644,7 @@ async test "command context edit followup delegates token id and clear body" {
   fw.command(@interaction.CommandSpec::slash("echo", "Echo"), ctx => {
     try ctx.edit_followup(message_id, clear_content=true) catch {
       @dhttp.DiscordHttpError::Deserialize(_) => ()
-      error => fail("unexpected error: \{to_repr(error)}")
+      error => fail("unexpected error: \{Repr(error)}")
     } noraise {
       _ => fail("expected the synthetic response to fail message decoding")
     }

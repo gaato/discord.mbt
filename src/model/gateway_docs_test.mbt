@@ -30,7 +30,7 @@ test "discord docs: example voice server update payload (line 1539)" {
     @json.parse(fixture),
   )
   let second : @model.VoiceServerUpdateEvent = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(first.guild_id.to_string(), content="41771983423143937")
   assert_true(first.endpoint == Value("sweetwater-12345.discord.media:2048"))
 }

@@ -37,7 +37,7 @@ pub impl BitAnd for Permissions with fn land(a, b) {
 
 ///|
 pub impl Debug for Permissions with fn to_repr(self) {
-  to_repr(self.0)
+  Repr(self.0)
 }
 
 ///|

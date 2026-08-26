@@ -47,17 +47,17 @@ async fn main {
                   reply_to=message.id,
                 ) catch {
                   e => {
-                    println("[rest] reply failed: \{to_repr(e)}")
+                    println("[rest] reply failed: \{Repr(e)}")
                     continue
                   }
                 }
                 println("[rest] replied with message \{sent.id}")
               }
             }
-            Dispatch(event) => println("[shard] event: \{to_repr(event)}")
+            Dispatch(event) => println("[shard] event: \{Repr(event)}")
             Disconnected(code~, resuming~) =>
               println(
-                "[shard] disconnected code=\{to_repr(code)} resuming=\{resuming}",
+                "[shard] disconnected code=\{Repr(code)} resuming=\{resuming}",
               )
             FatallyClosed(code~) => {
               println("[shard] fatally closed: code=\{code}")

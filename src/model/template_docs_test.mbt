@@ -78,7 +78,7 @@ test "discord docs: example guild template object (line 35)" {
     #|}
   let first : @model.GuildTemplate = @json.from_json(@json.parse(fixture))
   let second : @model.GuildTemplate = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   assert_eq(first.code, "hgM48av5Q69A")
   inspect(first.source_guild_id.to_string(), content="678070694164299796")
   assert_eq(first.serialized_source_guild.name.unwrap(), "Friends & Family")

@@ -144,7 +144,7 @@ pub impl BitAnd for ApplicationFlags with fn land(a, b) {
 
 ///|
 pub impl Debug for ApplicationFlags with fn to_repr(self) {
-  to_repr(self.0)
+  Repr(self.0)
 }
 
 ///|

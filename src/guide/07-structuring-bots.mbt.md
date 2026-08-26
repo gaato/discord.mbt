@@ -87,7 +87,7 @@ fn feedback_command(
     name="feedback",
     description="Send feedback",
     args=@discord.Args::unit(),
-    handler=Immediate((_, _) => @discord.CommandReply::ShowModal(modal.show())),
+    handler=Immediate((_, _) => ShowModal(modal.show())),
   )
 }
 
@@ -293,7 +293,7 @@ fn register_guarded_feedback(
       name="feedback",
       description="Send feedback",
       args=@discord.Args::unit(),
-      handler=Immediate((_, _) => @discord.CommandReply::ShowModal(modal.show())),
+      handler=Immediate((_, _) => ShowModal(modal.show())),
     )
     .check(@discord.guild_only())
     .cooldown(seconds=config.cooldown_seconds, bucket=User)

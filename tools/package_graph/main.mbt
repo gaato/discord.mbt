@@ -265,7 +265,7 @@ fn run(check~ : Bool) -> Unit raise {
 
 ///|
 fn main {
-  run(check=@sys.get_cli_args().contains("--check")) catch {
+  run(check=@env.args().contains("--check")) catch {
     err => {
       println("package_graph failed: \{err}")
       @sys.exit(1)

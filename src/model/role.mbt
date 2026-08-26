@@ -43,16 +43,16 @@ pub(all) struct RoleTags {
 pub impl ToJson for RoleTags with fn to_json(self) {
   let fields : Map[String, Json] = Map([])
   if self.bot_id is Some(value) {
-    fields["bot_id"] = value.to_json()
+    fields["bot_id"] = ToJson::to_json(value)
   }
   if self.premium_subscriber {
     fields["premium_subscriber"] = Json::null()
   }
   if self.integration_id is Some(value) {
-    fields["integration_id"] = value.to_json()
+    fields["integration_id"] = ToJson::to_json(value)
   }
   if self.subscription_listing_id is Some(value) {
-    fields["subscription_listing_id"] = value.to_json()
+    fields["subscription_listing_id"] = ToJson::to_json(value)
   }
   if self.available_for_purchase {
     fields["available_for_purchase"] = Json::null()
@@ -144,7 +144,7 @@ pub impl BitAnd for RoleFlags with fn land(a, b) {
 
 ///|
 pub impl Debug for RoleFlags with fn to_repr(self) {
-  to_repr(self.0)
+  Repr(self.0)
 }
 
 ///|

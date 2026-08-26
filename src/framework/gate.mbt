@@ -67,7 +67,7 @@ pub fn ResponseGate::capture(
   interaction : @model.Interaction,
 ) -> (ResponseGate, ResponseCapture) {
   let queue : @aqueue.Queue[CapturedResponse] = Queue(kind=Blocking(1))
-  let capture : ResponseCapture = { queue, }
+  let capture = ResponseCapture::{ queue, }
   let gate = ResponseGate(interaction.typ, (response, files) => {
     queue.put({ response, files })
   })

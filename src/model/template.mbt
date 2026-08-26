@@ -96,7 +96,7 @@ pub fn GuildTemplatePermissions::bits(
 
 ///|
 pub impl Debug for GuildTemplatePermissions with fn to_repr(self) {
-  to_repr(self.0)
+  Repr(self.0)
 }
 
 ///|

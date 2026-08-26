@@ -161,7 +161,7 @@ test "invite decodes required fields only" {
 
 ///|
 test "invite encode omits absent optional fields" {
-  let invite : @model.Invite = {
+  let invite = @model.Invite::{
     typ: None,
     code: "abc123",
     guild: None,

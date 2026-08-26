@@ -44,13 +44,13 @@ async test "current user body pins every set option and all omitted" {
     )
   catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("fake user response should not decode")
   }
   try client.modify_current_user() catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("fake user response should not decode")
   }
@@ -75,12 +75,12 @@ async test "scheduled event modify body pins every set option and all omitted" {
   let guild_id : @model.GuildId = Id(30UL)
   let event_id : @model.ScheduledEventId = Id(40UL)
   let channel_id : @model.ChannelId = Id(50UL)
-  let recurrence : @model.GuildScheduledEventRecurrenceRule = {
-    start: @model.Timestamp("2026-08-01T10:00:00Z"),
-    end: Some(Value(@model.Timestamp("2026-09-01T10:00:00Z"))),
-    frequency: @model.GuildScheduledEventRecurrenceRuleFrequency::Weekly,
+  let recurrence = @model.GuildScheduledEventRecurrenceRule::{
+    start: Timestamp("2026-08-01T10:00:00Z"),
+    end: Some(Value(Timestamp("2026-09-01T10:00:00Z"))),
+    frequency: Weekly,
     interval: 1,
-    by_weekday: Some([@model.GuildScheduledEventRecurrenceRuleWeekday::Monday]),
+    by_weekday: Some([Monday]),
     by_n_weekday: None,
     by_month: None,
     by_month_day: None,
@@ -94,24 +94,24 @@ async test "scheduled event modify body pins every set option and all omitted" {
       channel_id~,
       entity_metadata={ location: Some("Town hall") },
       name="Weekly meetup",
-      privacy_level=@model.GuildScheduledEventPrivacyLevel::GuildOnly,
-      scheduled_start_time=@model.Timestamp("2026-08-01T10:00:00Z"),
-      scheduled_end_time=@model.Timestamp("2026-08-01T12:00:00Z"),
+      privacy_level=GuildOnly,
+      scheduled_start_time=Timestamp("2026-08-01T10:00:00Z"),
+      scheduled_end_time=Timestamp("2026-08-01T12:00:00Z"),
       description="Meet everyone",
-      entity_type=@model.GuildScheduledEventEntityType::Voice,
-      status=@model.GuildScheduledEventStatus::Active,
+      entity_type=Voice,
+      status=Active,
       image="data:image/png;base64,AAAA",
       recurrence_rule=recurrence,
     )
   catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("fake event response should not decode")
   }
   try client.modify_guild_scheduled_event(guild_id, event_id) catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("fake event response should not decode")
   }
@@ -160,13 +160,13 @@ async test "sticker modify body pins every set option and all omitted" {
     )
   catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("fake sticker response should not decode")
   }
   try client.modify_guild_sticker(guild_id, sticker_id) catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("fake sticker response should not decode")
   }
@@ -204,7 +204,7 @@ async test "sticker field validations reject each out-of-range value" {
       |> ignore
     catch {
       Validation(message~) => assert_eq(message, expected)
-      error => fail("unexpected error: \{to_repr(error)}")
+      error => fail("unexpected error: \{Repr(error)}")
     } noraise {
       _ => fail("expected sticker validation for \{field}")
     }

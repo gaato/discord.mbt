@@ -110,7 +110,7 @@ pub fn[X] VoiceGateway::start(
   sleeper? : async (Int) -> Unit = @async.sleep,
   rand? : @random.Rand = @random.Rand::chacha8(),
 ) -> VoiceGateway {
-  let gateway : VoiceGateway = {
+  let gateway = VoiceGateway::{
     events: Queue(kind=Blocking(queue_capacity)),
     send_gate: Semaphore(1),
     transport: None,
@@ -206,7 +206,7 @@ async fn VoiceGateway::run(
       error if @async.is_being_cancelled() ||
         @async.is_cancellation_error(error) => return
       error => {
-        (self.telemetry_)(ConnectFailed(reason="\{to_repr(error)}"))
+        (self.telemetry_)(ConnectFailed(reason="\{Repr(error)}"))
         attempts += 1
         self.state_ = Disconnected(reconnect_attempts=attempts)
         continue

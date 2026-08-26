@@ -143,7 +143,7 @@ test "guild member decodes the partial shape from interaction resolved data" {
 
 ///|
 test "guild member encode omits absent optional fields" {
-  let guild_member : @model.GuildMember = {
+  let guild_member = @model.GuildMember::{
     user: None,
     nick: None,
     avatar: None,

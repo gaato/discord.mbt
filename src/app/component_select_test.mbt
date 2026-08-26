@@ -101,7 +101,7 @@ async test "component selects expose values, resolved objects, and reply kinds" 
           ),
         )
       }
-      outcome => fail("expected select reply, got \{to_repr(outcome)}")
+      outcome => fail("expected select reply, got \{Repr(outcome)}")
     }
     match
       served.handle_interaction(
@@ -112,7 +112,7 @@ async test "component selects expose values, resolved objects, and reply kinds" 
         ),
       ) {
       Reply(response~, ..) => assert_true(response.typ == UpdateMessage)
-      outcome => fail("expected update reply, got \{to_repr(outcome)}")
+      outcome => fail("expected update reply, got \{Repr(outcome)}")
     }
     match
       served.handle_interaction(
@@ -120,7 +120,7 @@ async test "component selects expose values, resolved objects, and reply kinds" 
       ) {
       Reply(response~, ..) =>
         assert_true(response.typ == DeferredChannelMessageWithSource)
-      outcome => fail("expected deferred reply, got \{to_repr(outcome)}")
+      outcome => fail("expected deferred reply, got \{Repr(outcome)}")
     }
   })
 }
@@ -157,7 +157,7 @@ async test "dm_only checks pass for direct-message invocations" {
       served.handle_interaction(app_command("dm-ok", "500000000000000304")) {
       Reply(response~, ..) =>
         assert_true(response.typ == ChannelMessageWithSource)
-      outcome => fail("expected DM command reply, got \{to_repr(outcome)}")
+      outcome => fail("expected DM command reply, got \{Repr(outcome)}")
     }
     assert_eq(handled, ["dm-ok"])
   })

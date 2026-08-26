@@ -1,5 +1,6 @@
 import {
   "mizchi/moomaid",
+  "moonbitlang/core/env",
   "moonbitlang/x/fs",
   "moonbitlang/x/sys",
 }

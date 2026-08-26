@@ -14,19 +14,19 @@ async test "guild audit, ban, and member queries pin set and omitted parameters"
     client.get_guild_audit_log(
       guild_id,
       user_id~,
-      action_type=@model.AuditLogEvent::ChannelDelete,
+      action_type=ChannelDelete,
       after=entry_id,
       limit=100,
     )
   catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("fake audit response should not decode")
   }
   try client.get_guild_audit_log(guild_id) catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("fake audit response should not decode")
   }
@@ -100,13 +100,13 @@ async test "scheduled event queries pin set and omitted parameters" {
     client.get_guild_scheduled_event(guild_id, event_id, with_user_count=false)
   catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("fake scheduled event response should not decode")
   }
   try client.get_guild_scheduled_event(guild_id, event_id) catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("fake scheduled event response should not decode")
   }
@@ -148,13 +148,13 @@ async test "invite poll thread and archived-thread queries pin optional arms" {
     )
   catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("fake invite response should not decode")
   }
   try client.get_invite("real-code") catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("fake invite response should not decode")
   }
@@ -168,13 +168,13 @@ async test "invite poll thread and archived-thread queries pin optional arms" {
     )
   catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("fake poll response should not decode")
   }
   try client.get_poll_answer_voters(channel_id, message_id, 2) catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("fake poll response should not decode")
   }
@@ -188,19 +188,19 @@ async test "invite poll thread and archived-thread queries pin optional arms" {
   client.list_thread_members(channel_id) |> ignore
   try client.get_thread_member(channel_id, user_id, with_member=false) catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("fake thread member response should not decode")
   }
   try
     client.list_public_archived_threads(
       channel_id,
-      before=@model.Timestamp("2026-07-16T00:00:00Z"),
+      before=Timestamp("2026-07-16T00:00:00Z"),
       limit=50,
     )
   catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("fake archive response should not decode")
   }
@@ -230,14 +230,14 @@ async test "new query validations reject invalid limits and cursor pairs before 
         message,
         content="audit log pagination cannot use before and after together",
       )
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected audit cursor validation")
   }
   try client.get_guild_bans(guild_id, limit=1001) catch {
     Validation(message~) =>
       inspect(message, content="guild ban limit must be between 1 and 1000")
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected ban limit validation")
   }
@@ -247,14 +247,14 @@ async test "new query validations reject invalid limits and cursor pairs before 
         message,
         content="current user guild limit must be between 1 and 200",
       )
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected current user guild limit validation")
   }
   try client.get_poll_answer_voters(channel_id, message_id, 1, limit=0) catch {
     Validation(message~) =>
       inspect(message, content="poll voter limit must be between 1 and 100")
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected poll voter limit validation")
   }
@@ -271,7 +271,7 @@ async test "new query validations reject invalid limits and cursor pairs before 
         message,
         content="scheduled event user pagination cannot use before and after together",
       )
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected scheduled event cursor validation")
   }

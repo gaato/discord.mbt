@@ -16,7 +16,7 @@ async test "non-json error bodies surface verbatim in the Api error" {
       inspect(error.code, content="0")
       inspect(error.message, content="HTTP 502: <html>bad gateway</html>")
     }
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected an Api error")
   }
@@ -38,7 +38,7 @@ async test "unshaped json error bodies fall back to a stringified message" {
       inspect(status, content="400")
       inspect(error.message, content="HTTP 400: null")
     }
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected an Api error")
   }

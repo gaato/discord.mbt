@@ -203,7 +203,7 @@ fn describe(err : Error) -> String {
     @dhttp.Api(status~, error~) =>
       "status=\{status} code=\{error.code} \{error.message} \{error.errors.map_or("", e => e.stringify())}"
     ProbeError(msg) => "probe: \{msg}"
-    _ => to_repr(err).to_string()
+    _ => Repr(err).to_string()
   }
 }
 
@@ -222,7 +222,7 @@ fn attach_payload_log(p : P) -> Unit {
   p.client.middleware((request, next) => {
     let response = next(request)
     let line = @model.ObjBuilder()
-      .field("method", to_repr(request.route.method_()).to_string())
+      .field("method", Repr(request.route.method_()).to_string())
       .field("path", redact_path(request.route.path()))
       .field("bucket", redact_path(request.route.bucket()))
       .field("request", request.body.unwrap_or(Json::null()))
@@ -262,7 +262,7 @@ fn iso8601(ms : Int64) -> @model.Timestamp {
   let d = doy - (153L * mp + 2L) / 5L + 1L
   let m = mp + (if mp < 10L { 3L } else { -9L })
   let y = yoe + era * 400L + (if m <= 2L { 1L } else { 0L })
-  @model.Timestamp(
+  Timestamp(
     "\{pad(y, 4)}-\{pad(m, 2)}-\{pad(d, 2)}T\{pad(hh, 2)}:\{pad(mi, 2)}:\{pad(ss, 2)}Z",
   )
 }
@@ -320,12 +320,12 @@ async fn main {
     }
   }
   println("target guild: \{guild_id}")
-  let p : P = {
+  let p = P::{
     client,
-    app_id: @model.Id(0UL),
+    app_id: Id(0UL),
     guild_id,
-    bot_id: @model.Id(0UL),
-    owner_id: @model.Id(0UL),
+    bot_id: Id(0UL),
+    owner_id: Id(0UL),
     report: [],
     payloads: [],
     s: S(),
@@ -355,7 +355,7 @@ async fn main {
   )
   let body = p.payloads.join("\n") + "\n"
   @fs.write_file(log_path, body, create_mode=CreateOrTruncate) catch {
-    err => println("payload log write failed: \{to_repr(err)}")
+    err => println("payload log write failed: \{Repr(err)}")
   }
   println("payload log: \{log_path} (\{p.payloads.length()} calls)")
 }

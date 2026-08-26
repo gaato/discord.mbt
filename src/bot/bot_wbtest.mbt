@@ -210,7 +210,7 @@ test "event descriptors delegate required intents" {
 
 ///|
 test "all typed event descriptors report their matching kind" {
-  let actual = [
+  let actual : ReadOnlyArray[@model.EventKind] = [
     Events::application_command_permissions_update().kind(),
     Events::auto_moderation_action_execution().kind(),
     Events::auto_moderation_rule_create().kind(),
@@ -290,8 +290,8 @@ test "all typed event descriptors report their matching kind" {
     Events::voice_state_update().kind(),
     Events::webhooks_update().kind(),
   ]
-  let expected = [
-    @model.EventKind::KApplicationCommandPermissionsUpdate,
+  let expected : ReadOnlyArray[@model.EventKind] = [
+    KApplicationCommandPermissionsUpdate,
     KAutoModerationActionExecution,
     KAutoModerationRuleCreate,
     KAutoModerationRuleDelete,

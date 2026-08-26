@@ -19,7 +19,7 @@ async test "modify guild member forwards flags" {
     )
   catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail member decoding")
   }
@@ -51,7 +51,7 @@ async test "role wrappers forward colors, icon, and unicode emoji" {
     )
   catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail role decoding")
   }
@@ -74,7 +74,7 @@ async test "role wrappers forward colors, icon, and unicode emoji" {
     )
   catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail role decoding")
   }
@@ -104,7 +104,7 @@ async test "auto moderation create omits trigger metadata when absent" {
     )
   catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail rule decoding")
   }

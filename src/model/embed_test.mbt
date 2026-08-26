@@ -134,7 +134,7 @@ test "embed decodes an empty object" {
 
 ///|
 test "embed encode omits absent optional fields" {
-  let embed : @model.Embed = {
+  let embed = @model.Embed::{
     title: None,
     typ: None,
     url: None,
@@ -165,22 +165,19 @@ test "embed constructors expose only outgoing fields and copy field arrays" {
     title="Discord API",
     description="A rich embed example",
     url="https://discord.com/developers/docs/resources/message",
-    timestamp=@model.Timestamp("2024-01-02T03:04:05Z"),
+    timestamp=Timestamp("2024-01-02T03:04:05Z"),
     color=5793266,
-    footer=@model.EmbedFooter(
-      "Footer text",
-      icon_url="https://cdn.example/footer.png",
-    ),
-    image=@model.EmbedImage("https://cdn.example/image.png"),
-    thumbnail=@model.EmbedThumbnail("https://cdn.example/thumb.png"),
-    author=@model.EmbedAuthor(
+    footer=EmbedFooter("Footer text", icon_url="https://cdn.example/footer.png"),
+    image=EmbedImage("https://cdn.example/image.png"),
+    thumbnail=EmbedThumbnail("https://cdn.example/thumb.png"),
+    author=EmbedAuthor(
       "Nelly",
       url="https://example.com/nelly",
       icon_url="https://cdn.example/author.png",
     ),
     fields~,
   )
-  fields.push(@model.EmbedField("Late mutation", "not included"))
+  fields.push(EmbedField("Late mutation", "not included"))
   json_inspect(embed, content={
     "title": "Discord API",
     "url": "https://discord.com/developers/docs/resources/message",

@@ -69,7 +69,7 @@ test "discord docs: displaying a modal (line 26)" {
     #|}
   let first : @model.InteractionResponse = @json.from_json(@json.parse(fixture))
   let second : @model.InteractionResponse = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(first.typ.to_int(), content="9")
   guard first.data is Some(Object(data)) &&
     data.get("components") is Some(component_json) else {
@@ -79,6 +79,6 @@ test "discord docs: displaying a modal (line 26)" {
   let components_again : Array[@model.Component] = @json.from_json(
     components.to_json(),
   )
-  assert_eq("\{to_repr(components)}", "\{to_repr(components_again)}")
+  assert_eq("\{Repr(components)}", "\{Repr(components_again)}")
   inspect(components.length(), content="2")
 }

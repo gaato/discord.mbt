@@ -33,7 +33,7 @@ test "discord docs: application authorized example (line 171)" {
     #|}
   let first : @model.WebhookEventPayload = @json.from_json(@json.parse(fixture))
   let second : @model.WebhookEventPayload = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(first.application_id.to_string(), content="1234560123453231555")
   assert_true(first.typ == Event)
   guard first.event is Some(body) else {
@@ -44,7 +44,7 @@ test "discord docs: application authorized example (line 171)" {
       inspect(data.user.id.to_string(), content="111178765189277770")
       inspect(data.scopes.length(), content="1")
     }
-    event => fail("expected application authorized, got \{to_repr(event)}")
+    event => fail("expected application authorized, got \{Repr(event)}")
   }
 }
 
@@ -72,7 +72,7 @@ test "discord docs: application deauthorized example (line 206)" {
     #|}
   let first : @model.WebhookEventPayload = @json.from_json(@json.parse(fixture))
   let second : @model.WebhookEventPayload = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(first.application_id.to_string(), content="1234560123453231555")
   assert_true(first.typ == Event)
   guard first.event is Some(body) else {
@@ -81,7 +81,7 @@ test "discord docs: application deauthorized example (line 206)" {
   match body.project() {
     ApplicationDeauthorized(data) =>
       inspect(data.user.id.to_string(), content="111178765189277770")
-    event => fail("expected application deauthorized, got \{to_repr(event)}")
+    event => fail("expected application deauthorized, got \{Repr(event)}")
   }
 }
 
@@ -110,7 +110,7 @@ test "discord docs: entitlement create example (line 246)" {
     #|}
   let first : @model.WebhookEventPayload = @json.from_json(@json.parse(fixture))
   let second : @model.WebhookEventPayload = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(first.application_id.to_string(), content="1234560123453231555")
   assert_true(first.typ == Event)
   guard first.event is Some(body) else {
@@ -121,7 +121,7 @@ test "discord docs: entitlement create example (line 246)" {
       inspect(data.id.to_string(), content="1234505980407808808")
       assert_false(data.deleted)
     }
-    event => fail("expected entitlement create, got \{to_repr(event)}")
+    event => fail("expected entitlement create, got \{Repr(event)}")
   }
 }
 
@@ -150,7 +150,7 @@ test "discord docs: entitlement update example (line 279)" {
     #|}
   let first : @model.WebhookEventPayload = @json.from_json(@json.parse(fixture))
   let second : @model.WebhookEventPayload = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(first.application_id.to_string(), content="1234560123453231555")
   assert_true(first.typ == Event)
   guard first.event is Some(body) else {
@@ -161,7 +161,7 @@ test "discord docs: entitlement update example (line 279)" {
       inspect(data.id.to_string(), content="1234505980407808808")
       assert_false(data.deleted)
     }
-    event => fail("expected entitlement update, got \{to_repr(event)}")
+    event => fail("expected entitlement update, got \{Repr(event)}")
   }
 }
 
@@ -190,7 +190,7 @@ test "discord docs: entitlement delete example (line 312)" {
     #|}
   let first : @model.WebhookEventPayload = @json.from_json(@json.parse(fixture))
   let second : @model.WebhookEventPayload = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(first.application_id.to_string(), content="1234560123453231555")
   assert_true(first.typ == Event)
   guard first.event is Some(body) else {
@@ -201,7 +201,7 @@ test "discord docs: entitlement delete example (line 312)" {
       inspect(data.id.to_string(), content="1234505980407808808")
       assert_true(data.deleted)
     }
-    event => fail("expected entitlement delete, got \{to_repr(event)}")
+    event => fail("expected entitlement delete, got \{Repr(event)}")
   }
 }
 
@@ -236,7 +236,7 @@ test "discord docs: lobby message create example (line 353)" {
     #|}
   let first : @model.WebhookEventPayload = @json.from_json(@json.parse(fixture))
   let second : @model.WebhookEventPayload = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(first.application_id.to_string(), content="1234567765431056709")
   assert_true(first.typ == Event)
   guard first.event is Some(body) else {
@@ -247,7 +247,7 @@ test "discord docs: lobby message create example (line 353)" {
       inspect(data.lobby_id.to_string(), content="1397729744753266719")
       assert_eq(data.content, "welcome to the party!")
     }
-    event => fail("expected lobby message create, got \{to_repr(event)}")
+    event => fail("expected lobby message create, got \{Repr(event)}")
   }
 }
 
@@ -283,7 +283,7 @@ test "discord docs: lobby message update example (line 387)" {
     #|}
   let first : @model.WebhookEventPayload = @json.from_json(@json.parse(fixture))
   let second : @model.WebhookEventPayload = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(first.application_id.to_string(), content="1234567765431056709")
   assert_true(first.typ == Event)
   guard first.event is Some(body) else {
@@ -294,7 +294,7 @@ test "discord docs: lobby message update example (line 387)" {
       inspect(data.id.to_string(), content="1402390388030832792")
       assert_eq(data.content, "noice")
     }
-    event => fail("expected lobby message update, got \{to_repr(event)}")
+    event => fail("expected lobby message update, got \{Repr(event)}")
   }
 }
 
@@ -316,7 +316,7 @@ test "discord docs: lobby message delete example (line 425)" {
     #|}
   let first : @model.WebhookEventPayload = @json.from_json(@json.parse(fixture))
   let second : @model.WebhookEventPayload = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(first.application_id.to_string(), content="1234567765431056709")
   assert_true(first.typ == Event)
   guard first.event is Some(body) else {
@@ -327,7 +327,7 @@ test "discord docs: lobby message delete example (line 425)" {
       inspect(data.id.to_string(), content="1402406637632884857")
       inspect(data.lobby_id.to_string(), content="1402399883394285659")
     }
-    event => fail("expected lobby message delete, got \{to_repr(event)}")
+    event => fail("expected lobby message delete, got \{Repr(event)}")
   }
 }
 
@@ -362,7 +362,7 @@ test "discord docs: game direct message create example (line 451)" {
     #|}
   let first : @model.WebhookEventPayload = @json.from_json(@json.parse(fixture))
   let second : @model.WebhookEventPayload = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(first.application_id.to_string(), content="1234567765431056709")
   assert_true(first.typ == Event)
   guard first.event is Some(body) else {
@@ -373,7 +373,7 @@ test "discord docs: game direct message create example (line 451)" {
       inspect(data.id.to_string(), content="1405614357781545021")
       assert_true(data.attachments is Some([]))
     }
-    event => fail("expected game direct message create, got \{to_repr(event)}")
+    event => fail("expected game direct message create, got \{Repr(event)}")
   }
 }
 
@@ -405,7 +405,7 @@ test "discord docs: game direct message update example (line 485)" {
     #|}
   let first : @model.WebhookEventPayload = @json.from_json(@json.parse(fixture))
   let second : @model.WebhookEventPayload = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(first.application_id.to_string(), content="1234567765431056709")
   assert_true(first.typ == Event)
   guard first.event is Some(body) else {
@@ -416,7 +416,7 @@ test "discord docs: game direct message update example (line 485)" {
       inspect(data.id.to_string(), content="1405591838810706081")
       assert_true(data.content == Some("almost ready to queue?"))
     }
-    event => fail("expected game direct message update, got \{to_repr(event)}")
+    event => fail("expected game direct message update, got \{Repr(event)}")
   }
 }
 
@@ -452,7 +452,7 @@ test "discord docs: game direct message delete example (line 516)" {
     #|}
   let first : @model.WebhookEventPayload = @json.from_json(@json.parse(fixture))
   let second : @model.WebhookEventPayload = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(first.application_id.to_string(), content="1234567765431056709")
   assert_true(first.typ == Event)
   guard first.event is Some(body) else {
@@ -463,6 +463,6 @@ test "discord docs: game direct message delete example (line 516)" {
       inspect(data.id.to_string(), content="1407771600643686503")
       assert_true(data.components is Some([]))
     }
-    event => fail("expected game direct message delete, got \{to_repr(event)}")
+    event => fail("expected game direct message delete, got \{Repr(event)}")
   }
 }

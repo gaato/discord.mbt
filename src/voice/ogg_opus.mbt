@@ -192,7 +192,7 @@ fn OggPacketReader::has_incomplete_input(self : OggPacketReader) -> Bool {
 
 ///|
 fn has_magic(bytes : Bytes, magic : Bytes) -> Bool {
-  bytes.length() >= magic.length() && bytes[:magic.length()] == magic[:]
+  bytes.length() >= magic.length() && bytes[:magic.length()] == magic
 }
 
 ///|
@@ -390,18 +390,18 @@ fn OggOpusWriter::emit_page(
   push_u32_le(page, self.page_sequence)
   push_u32_le(page, 0U)
   page.push(laces.length().to_byte())
-  page.append(laces[:])
+  page.append(laces)
   for packet in packets {
     for byte in packet {
       page.push(byte)
     }
   }
-  let checksum = ogg_page_crc(page[:])
+  let checksum = ogg_page_crc(page)
   page[22] = checksum.to_byte()
   page[23] = (checksum >> 8).to_byte()
   page[24] = (checksum >> 16).to_byte()
   page[25] = (checksum >> 24).to_byte()
-  self.output.append(page[:])
+  self.output.append(page)
   self.page_sequence += 1
 }
 
@@ -461,7 +461,7 @@ pub fn OggOpusWriter::new(
   if max_packets_per_page <= 0 {
     abort("OggOpusWriter max_packets_per_page must be positive")
   }
-  let writer : OggOpusWriter = {
+  let writer = OggOpusWriter::{
     serial,
     max_packets_per_page,
     page_sequence: 0U,

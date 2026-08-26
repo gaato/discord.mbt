@@ -79,14 +79,14 @@ test "modal field optional default and validation semantics" {
   )
   try validated.decode(invalid) catch {
     InvalidArgument(message) => inspect(message, content="code must be ok")
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected validation failure")
   }
   try validated.decode([]) catch {
     InvalidArgument(message) =>
       inspect(message, content="missing modal field: code")
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected required-field failure")
   }
@@ -166,13 +166,13 @@ test "modal show rejects unknown and non-text prefill keys" {
   )
   try form.show(values={ "missing": "value" }) |> ignore catch {
     UnknownCustomId(custom_id~) => inspect(custom_id, content="missing")
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected unknown custom id error")
   }
   try form.show(values={ "color": "blue" }) |> ignore catch {
     NonTextInput(custom_id~) => inspect(custom_id, content="color")
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected non-text input error")
   }
@@ -196,7 +196,7 @@ test "app validation rejects duplicate modal text input ids" {
       inspect(custom_id, content="duplicate")
       inspect(field, content="same")
     }
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected duplicate modal text input error")
   }

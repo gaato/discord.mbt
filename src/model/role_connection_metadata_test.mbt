@@ -15,7 +15,7 @@ test "application role connection metadata round-trips a docs-shaped fixture" {
   let second : Array[@model.ApplicationRoleConnectionMetadata] = @json.from_json(
     first.to_json(),
   )
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(
     first.to_json().stringify(),
     content=(

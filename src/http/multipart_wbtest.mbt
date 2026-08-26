@@ -92,9 +92,9 @@ test "validate_files rejects header-breaking filenames" {
   for bad in ["evil\r\n.txt", "quote\".txt", ""] {
     try validate_files([FileUpload(bad, b"x")]) catch {
       Validation(_) => ()
-      e => fail("unexpected error: \{to_repr(e)}")
+      e => fail("unexpected error: \{Repr(e)}")
     } noraise {
-      _ => fail("expected Validation for \{to_repr(bad)}")
+      _ => fail("expected Validation for \{Repr(bad)}")
     }
   }
   // a normal filename passes

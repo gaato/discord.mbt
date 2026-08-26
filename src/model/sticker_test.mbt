@@ -100,7 +100,7 @@ test "sticker decodes required fields only" {
 
 ///|
 test "sticker encode omits absent optional fields" {
-  let sticker : @model.Sticker = {
+  let sticker = @model.Sticker::{
     id: Id(1UL),
     pack_id: None,
     name: "Wave",

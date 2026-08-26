@@ -102,7 +102,7 @@ pub impl RateLimiter for InMemoryRateLimiter with fn acquire(
   let bucket = match self.buckets.get(bucket_key) {
     Some(b) => b
     None => {
-      let b : Bucket = {
+      let b = Bucket::{
         gate: Semaphore(1),
         known: false,
         remaining: 0,

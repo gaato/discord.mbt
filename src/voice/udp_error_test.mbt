@@ -24,8 +24,7 @@ impl @voice.VoiceUdp for FailingVoiceUdp with fn close(_self) {
 ///|
 fn expect_discovery_error(bytes : Bytes, expected : String) -> Unit raise {
   try @voice.parse_ip_discovery_response(bytes, expected_ssrc=7U) catch {
-    @voice.VoiceUdpError::InvalidDiscoveryPacket(reason~) =>
-      assert_eq(reason, expected)
+    InvalidDiscoveryPacket(reason~) => assert_eq(reason, expected)
     _ => fail("unexpected UDP error for: \{expected}")
   } noraise {
     _ => fail("expected a discovery parse error: \{expected}")
@@ -122,7 +121,7 @@ async test "IP discovery retries receive timeouts and then raises" {
       assert_eq(attempts, 2)
       assert_true(reason.contains("timed out"))
     }
-    error => fail("unexpected discovery error: \{to_repr(error)}")
+    error => fail("unexpected discovery error: \{Repr(error)}")
   } noraise {
     _ => fail("expected discovery to fail")
   }
@@ -136,7 +135,7 @@ async test "IP discovery rejects non-positive retries and timeouts" {
   try @voice.discover_external_address(udp, 42U, retries=0) catch {
     @voice.VoiceUdpError::IpDiscoveryFailed(attempts~, ..) =>
       assert_eq(attempts, 0)
-    error => fail("unexpected discovery error: \{to_repr(error)}")
+    error => fail("unexpected discovery error: \{Repr(error)}")
   } noraise {
     _ => fail("expected discovery to fail fast")
   }

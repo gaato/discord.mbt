@@ -88,7 +88,7 @@ fn Client::emit_telemetry(
 ) -> Unit {
   for hook in self.telemetry_ {
     hook(event) catch {
-      error => (self.warn_.val)("telemetry hook failed: \{to_repr(error)}")
+      error => (self.warn_.val)("telemetry hook failed: \{Repr(error)}")
     }
   }
 }

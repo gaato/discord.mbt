@@ -797,7 +797,7 @@ test "custom route rejects invalid paths and empty buckets" {
     @http.Route::custom(request_method=Get, path="guilds/100/stickers")
   catch {
     InvalidPath(path~) => inspect(path, content="guilds/100/stickers")
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected invalid path")
   }
@@ -809,7 +809,7 @@ test "custom route rejects invalid paths and empty buckets" {
     )
   catch {
     EmptyBucket => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected empty bucket")
   }

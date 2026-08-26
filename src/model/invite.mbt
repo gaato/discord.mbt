@@ -43,7 +43,7 @@ pub fn InviteFlags::bits(self : InviteFlags) -> UInt64 {
 
 ///|
 pub impl Debug for InviteFlags with fn to_repr(self) {
-  to_repr(self.0)
+  Repr(self.0)
 }
 
 ///|

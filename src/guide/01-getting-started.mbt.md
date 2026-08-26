@@ -26,6 +26,7 @@ moon add moonbitlang/async
 The resulting `moon.mod` contains module dependencies equivalent to:
 
 ```mbt nocheck
+///|
 import {
   "gaato/discord",
   "moonbitlang/async",
@@ -44,9 +45,7 @@ import {
 
 supported_targets = "native"
 
-options(
-  "is-main": true,
-)
+pkgtype(kind: "executable")
 ```
 
 ## Define the command and bot

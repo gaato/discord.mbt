@@ -39,14 +39,14 @@ test "CDN asset URLs and defaults" {
 test "CDN URLs reject invalid size and unknown sticker format" {
   try @util.emoji_url(Id(1UL), size=100) catch {
     InvalidSize(size) => inspect(size, content="100")
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected invalid size")
   }
 
   try @util.sticker_url(Id(1UL), format=Unknown(99)) catch {
     UnsupportedStickerFormat(value) => inspect(value, content="99")
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected unsupported sticker format")
   }

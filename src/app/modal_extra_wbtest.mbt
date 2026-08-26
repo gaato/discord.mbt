@@ -5,7 +5,7 @@ test "select fields raise on missing submissions and map transforms values" {
   ])
   let empty : Array[@model.Component] = []
   try (colors.decode_)(empty) |> ignore catch {
-    HandlerError::InvalidArgument(message) =>
+    InvalidArgument(message) =>
       inspect(message, content="missing modal field: color")
     _ => fail("unexpected modal error")
   } noraise {
@@ -71,7 +71,7 @@ test "legacy action rows thread through ids, prefill, and optional marking" {
       TextInput({
         id: None,
         custom_id: "note",
-        style: Some(@model.TextInputStyle::Short),
+        style: Some(Short),
         label: Some("Note"),
         min_length: None,
         max_length: None,
@@ -100,7 +100,7 @@ test "modal state parsing accepts bare and suffixed ids and rejects others" {
   assert_true(modal_state("feedback", "feedback") is None)
   assert_true(modal_state("feedback", "feedback:s-1") is Some("s-1"))
   try modal_state("feedback", "different") |> ignore catch {
-    HandlerError::InvalidArgument(message) =>
+    InvalidArgument(message) =>
       inspect(message, content="modal custom_id does not match feedback")
     _ => fail("unexpected modal state error")
   } noraise {

@@ -104,7 +104,7 @@ test "user decodes required fields only" {
 
 ///|
 test "user encode omits absent optional fields" {
-  let user : @model.User = {
+  let user = @model.User::{
     id: Id(1UL),
     username: "neko",
     discriminator: "0",

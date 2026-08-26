@@ -170,7 +170,7 @@ async test "interaction endpoint dispatches captured responses and completion ou
   @async.with_task_group(group => {
     try app.serve(group, token="") catch {
       @app.AppConfigError::EmptyToken => ()
-      error => fail("unexpected error: \{to_repr(error)}")
+      error => fail("unexpected error: \{Repr(error)}")
     } noraise {
       _ => fail("expected an empty token error")
     }
@@ -194,7 +194,7 @@ async test "interaction endpoint dispatches captured responses and completion ou
         assert_true(response.typ == Pong)
         assert_true(files is None)
       }
-      outcome => fail("expected Pong reply, got \{to_repr(outcome)}")
+      outcome => fail("expected Pong reply, got \{Repr(outcome)}")
     }
     match
       app.handle_interaction(app_command("immediate", "500000000000000101")) {
@@ -208,24 +208,24 @@ async test "interaction endpoint dispatches captured responses and completion ou
           ),
         )
       }
-      outcome => fail("expected command reply, got \{to_repr(outcome)}")
+      outcome => fail("expected command reply, got \{Repr(outcome)}")
     }
     match app.handle_interaction(app_command("missing", "500000000000000102")) {
       NoRoute => ()
-      outcome => fail("expected NoRoute, got \{to_repr(outcome)}")
+      outcome => fail("expected NoRoute, got \{Repr(outcome)}")
     }
     match
       @async.with_timeout_opt(250, () => {
         app.handle_interaction(app_command("silent", "500000000000000103"))
       }) {
       Some(NoResponse) => ()
-      outcome => fail("expected prompt NoResponse, got \{to_repr(outcome)}")
+      outcome => fail("expected prompt NoResponse, got \{Repr(outcome)}")
     }
     match
       app.handle_interaction(app_command("deferred", "500000000000000106")) {
       Reply(response~, files=_) =>
         assert_true(response.typ == DeferredChannelMessageWithSource)
-      outcome => fail("expected deferred reply, got \{to_repr(outcome)}")
+      outcome => fail("expected deferred reply, got \{Repr(outcome)}")
     }
     assert_true(waiter_results.get())
     assert_true(
@@ -239,7 +239,7 @@ async test "interaction endpoint dispatches captured responses and completion ou
         deadline_ms=10,
       ) {
       TimedOut => ()
-      outcome => fail("expected TimedOut, got \{to_repr(outcome)}")
+      outcome => fail("expected TimedOut, got \{Repr(outcome)}")
     }
     guard @async.with_timeout_opt(500, () => slow_finished.get()) is Some(_) else {
       fail("timed-out handler did not continue in the app task group")
@@ -344,7 +344,7 @@ async test "interaction endpoint dispatches component and typed modal handlers" 
           content="\"feedback:from-command\"",
         )
       }
-      outcome => fail("expected command modal reply, got \{to_repr(outcome)}")
+      outcome => fail("expected command modal reply, got \{Repr(outcome)}")
     }
     match
       app.handle_interaction(
@@ -359,7 +359,7 @@ async test "interaction endpoint dispatches component and typed modal handlers" 
           ),
         )
       }
-      outcome => fail("expected update reply, got \{to_repr(outcome)}")
+      outcome => fail("expected update reply, got \{Repr(outcome)}")
     }
     match
       app.handle_interaction(
@@ -373,7 +373,7 @@ async test "interaction endpoint dispatches component and typed modal handlers" 
         inspect(data["custom_id"].stringify(), content="\"feedback:ticket-7\"")
         inspect(data["title"].stringify(), content="\"Feedback\"")
       }
-      outcome => fail("expected modal reply, got \{to_repr(outcome)}")
+      outcome => fail("expected modal reply, got \{Repr(outcome)}")
     }
     match
       app.handle_interaction(
@@ -390,7 +390,7 @@ async test "interaction endpoint dispatches component and typed modal handlers" 
           ),
         )
       }
-      outcome => fail("expected modal submit reply, got \{to_repr(outcome)}")
+      outcome => fail("expected modal submit reply, got \{Repr(outcome)}")
     }
     match
       app.handle_interaction(
@@ -398,7 +398,7 @@ async test "interaction endpoint dispatches component and typed modal handlers" 
       ) {
       Reply(response~, files=_) =>
         assert_true(response.typ == DeferredUpdateMessage)
-      outcome => fail("expected deferred update, got \{to_repr(outcome)}")
+      outcome => fail("expected deferred update, got \{Repr(outcome)}")
     }
     let component_modal = {
       ..app_modal_submit("deferred-feedback", "later", "500000000000000405"),
@@ -407,7 +407,7 @@ async test "interaction endpoint dispatches component and typed modal handlers" 
     match app.handle_interaction(component_modal) {
       Reply(response~, files=_) =>
         assert_true(response.typ == DeferredChannelMessageWithSource)
-      outcome => fail("expected deferred modal reply, got \{to_repr(outcome)}")
+      outcome => fail("expected deferred modal reply, got \{Repr(outcome)}")
     }
   })
 }
@@ -516,7 +516,7 @@ async test "typed autocomplete dispatches partial and nested focused options" {
         inspect(choices[0].value.stringify(), content="12")
         inspect(warnings.length(), content="0")
       }
-      outcome => fail("expected nested autocomplete, got \{to_repr(outcome)}")
+      outcome => fail("expected nested autocomplete, got \{Repr(outcome)}")
     }
     match app.handle_interaction(top) {
       Reply(response~, files=_) => {
@@ -530,15 +530,14 @@ async test "typed autocomplete dispatches partial and nested focused options" {
         assert_true(warnings[0].contains("query"))
         assert_true(warnings[0].contains("30"))
       }
-      outcome =>
-        fail("expected top-level autocomplete, got \{to_repr(outcome)}")
+      outcome => fail("expected top-level autocomplete, got \{Repr(outcome)}")
     }
     match app.handle_interaction(manual) {
       Reply(response~, files=_) => {
         let choices = autocomplete_choices(response)
         inspect(choices[0].name, content="raw")
       }
-      outcome => fail("expected raw autocomplete, got \{to_repr(outcome)}")
+      outcome => fail("expected raw autocomplete, got \{Repr(outcome)}")
     }
   })
 }
@@ -705,7 +704,7 @@ async test "context menu commands decode resolved targets" {
             #|{"type":4,"data":{"content":"user:Nelly:member=true"}}
           ),
         )
-      outcome => fail("expected user command reply, got \{to_repr(outcome)}")
+      outcome => fail("expected user command reply, got \{Repr(outcome)}")
     }
     match app.handle_interaction(message_interaction) {
       Reply(response~, files=_) =>
@@ -715,7 +714,7 @@ async test "context menu commands decode resolved targets" {
             #|{"type":4,"data":{"content":"message:target text"}}
           ),
         )
-      outcome => fail("expected message command reply, got \{to_repr(outcome)}")
+      outcome => fail("expected message command reply, got \{Repr(outcome)}")
     }
     match app.handle_interaction(unresolved_interaction) {
       Reply(response~, files=_) =>
@@ -725,7 +724,7 @@ async test "context menu commands decode resolved targets" {
           .stringify()
           .contains("Invalid argument: user target is missing resolved data"),
         )
-      outcome => fail("expected invalid target reply, got \{to_repr(outcome)}")
+      outcome => fail("expected invalid target reply, got \{Repr(outcome)}")
     }
   })
 }
@@ -830,7 +829,7 @@ async test "slash groups emit nested specs and dispatch direct and grouped paths
       match app.handle_interaction(interaction) {
         Reply(response~, files=_) =>
           assert_true(response.to_json().stringify().contains(expected))
-        outcome => fail("expected slash group reply, got \{to_repr(outcome)}")
+        outcome => fail("expected slash group reply, got \{Repr(outcome)}")
       }
     }
   })

@@ -70,7 +70,7 @@ async fn sec_guild(p : P) -> Unit {
     "count=\{integrations.length()}"
   })
   p.probe_err("delete_guild_integration (bogus id)", expect=[404], () => {
-    c.delete_guild_integration(g, @model.Id(1234567890123456789UL))
+    c.delete_guild_integration(g, Id(1234567890123456789UL))
   })
   p.probe_env("get_guild_vanity_url", () => {
     let vanity = c.get_guild_vanity_url(g)
@@ -122,13 +122,7 @@ async fn sec_guild(p : P) -> Unit {
     "enabled=\{ob.enabled}"
   })
   p.probe_env("modify_guild_onboarding (disable)", () => {
-    let ob = c.modify_guild_onboarding(
-      g,
-      [],
-      [],
-      false,
-      @model.OnboardingMode::Default,
-    )
+    let ob = c.modify_guild_onboarding(g, [], [], false, Default)
     "enabled=\{ob.enabled}"
   })
   p.probe("modify_guild_incident_actions (set + clear)", () => {
@@ -173,6 +167,6 @@ async fn sec_guild(p : P) -> Unit {
   p.probe_err(
     "leave_guild (must not actually leave; bogus guild)",
     expect=[404],
-    () => c.leave_guild(@model.Id(1234567890123456789UL)),
+    () => c.leave_guild(Id(1234567890123456789UL)),
   )
 }

@@ -107,7 +107,7 @@ async fn main {
   } catch {
     error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
       ()
-    error => println("[voice] failed: \{to_repr(error)}")
+    error => println("[voice] failed: \{Repr(error)}")
   }
   println("[voice] disconnected")
 }

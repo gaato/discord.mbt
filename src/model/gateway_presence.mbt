@@ -278,7 +278,7 @@ pub fn ActivityFlags::bits(self : ActivityFlags) -> UInt64 {
 
 ///|
 pub impl Debug for ActivityFlags with fn to_repr(self) {
-  to_repr(self.0)
+  Repr(self.0)
 }
 
 ///|

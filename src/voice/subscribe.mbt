@@ -68,7 +68,7 @@ pub fn VoiceConnection::subscribe(
   user_id~ : String,
   end_after_silence_ms? : Int? = None,
 ) -> VoiceReceiveStream {
-  let stream : VoiceReceiveStream = {
+  let stream = VoiceReceiveStream::{
     connection: self,
     user_id,
     queue: Queue(kind=Unbounded),

@@ -1,6 +1,6 @@
 ///|
 test "edit current application body includes provided values" {
-  let install_params : @model.InstallParams = {
+  let install_params = @model.InstallParams::{
     scopes: ["bot", "applications.commands"],
     permissions: @model.Permissions::none(),
   }
@@ -378,7 +378,7 @@ test "create test entitlement body encodes snowflakes as strings" {
 
 ///|
 test "edit application command permissions body wraps permission records" {
-  let permission : @model.ApplicationCommandPermission = {
+  let permission = @model.ApplicationCommandPermission::{
     id: Id(10UL),
     typ: Role,
     permission: true,
@@ -430,7 +430,7 @@ test "update current user application role connection body handles values and om
 
 ///|
 test "auto moderation create and patch bodies preserve arrays" {
-  let metadata : @model.TriggerMetadata = {
+  let metadata = @model.TriggerMetadata::{
     keyword_filter: Some(["moonbit"]),
     presets: None,
     allow_list: Some([]),
@@ -579,7 +579,7 @@ test "invite target users multipart uses only target_users_file" {
 test "stage sticker and soundboard validation is pre-IO" {
   try validate_stage_topic(Some("")) catch {
     Validation(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected stage topic validation")
   }
@@ -592,13 +592,13 @@ test "stage sticker and soundboard validation is pre-IO" {
     )
   catch {
     Validation(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected sticker name validation")
   }
   try validate_soundboard_fields(Some("ok"), Some(1.1)) catch {
     Validation(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected soundboard volume validation")
   }
@@ -619,7 +619,7 @@ async test "guild sticker upload rejects files over 512 KiB before transport" {
   catch {
     Validation(message~) =>
       inspect(message, content="guild sticker file exceeds 512 KiB")
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected sticker file size validation")
   }
@@ -635,7 +635,7 @@ async test "REST pagination limits fail before transport" {
   let message_id : @model.MessageId = Id(40UL)
   try client.get_guild_audit_log(guild_id, limit=0) catch {
     Validation(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected audit limit validation")
   }
@@ -643,7 +643,7 @@ async test "REST pagination limits fail before transport" {
     client.list_guild_scheduled_event_users(guild_id, event_id, limit=101)
   catch {
     Validation(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected scheduled event user limit validation")
   }
@@ -651,13 +651,13 @@ async test "REST pagination limits fail before transport" {
     client.get_poll_answer_voters(channel_id, message_id, 1, limit=101)
   catch {
     Validation(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected poll voter limit validation")
   }
   try client.list_thread_members(channel_id, limit=0) catch {
     Validation(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected thread member limit validation")
   }
@@ -701,7 +701,7 @@ test "modify guild widget body distinguishes values and clear" {
 
 ///|
 test "modify guild welcome screen body handles values clears and omission" {
-  let channel : @model.WelcomeScreenChannel = {
+  let channel = @model.WelcomeScreenChannel::{
     channel_id: Id(30UL),
     description: "Read the rules",
     emoji_id: Null,
@@ -741,7 +741,7 @@ test "modify guild welcome screen body handles values clears and omission" {
 
 ///|
 test "modify guild onboarding body encodes required fields" {
-  let option : @model.OnboardingPromptOption = {
+  let option = @model.OnboardingPromptOption::{
     id: Id(41UL),
     channel_ids: [Id(30UL)],
     role_ids: [Id(20UL)],
@@ -752,7 +752,7 @@ test "modify guild onboarding body encodes required fields" {
     title: "Announcements",
     description: Value("Choose this to receive updates"),
   }
-  let prompt : @model.OnboardingPrompt = {
+  let prompt = @model.OnboardingPrompt::{
     id: Id(40UL),
     typ: MultipleChoice,
     options: [option],
@@ -762,12 +762,7 @@ test "modify guild onboarding body encodes required fields" {
     in_onboarding: true,
   }
   json_inspect(
-    modify_guild_onboarding_body(
-      [prompt],
-      [Id(30UL)],
-      true,
-      @model.OnboardingMode::Advanced,
-    ),
+    modify_guild_onboarding_body([prompt], [Id(30UL)], true, Advanced),
     content={
       "prompts": [
         {

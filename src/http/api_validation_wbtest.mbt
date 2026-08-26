@@ -5,7 +5,7 @@ fn expect_edit_application_validation(
 ) -> Unit raise {
   try run() catch {
     Validation(message~) => assert_eq(message, expected_message)
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected to fail")
   }
@@ -18,7 +18,7 @@ fn expect_json_validation(
 ) -> Unit raise {
   try run() catch {
     Validation(message~) => assert_eq(message, expected_message)
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected to fail")
   }
@@ -31,7 +31,7 @@ fn expect_search_validation(
 ) -> Unit raise {
   try run() catch {
     Validation(message~) => assert_eq(message, expected_message)
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected to fail")
   }
@@ -225,7 +225,7 @@ test "auto moderation validates action and exemption caps" {
         message,
         content="auto moderation actions must contain 1 through 3 entries",
       )
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected empty actions validation")
   }
@@ -243,7 +243,7 @@ test "auto moderation validates action and exemption caps" {
         message,
         content="auto moderation exempt_roles exceeds 20 entries",
       )
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected exempt role validation")
   }
@@ -261,7 +261,7 @@ test "auto moderation validates action and exemption caps" {
         message,
         content="auto moderation exempt_channels exceeds 50 entries",
       )
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected exempt channel validation")
   }
@@ -272,7 +272,7 @@ test "sticker multipart form validation pins object and string requirements" {
   try sticker_form_fields(Json::array([])) catch {
     Validation(message~) =>
       inspect(message, content="sticker form body must be an object")
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected sticker object validation")
   }
@@ -281,7 +281,7 @@ test "sticker multipart form validation pins object and string requirements" {
   catch {
     Validation(message~) =>
       inspect(message, content="sticker form field name must be a string")
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected sticker field validation")
   }
@@ -309,7 +309,7 @@ test "sticker description accepts empty only where documented" {
         message,
         content="sticker description must be between 2 and 100 characters",
       )
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected one-character description validation")
   }
@@ -323,7 +323,7 @@ test "sticker description accepts empty only where documented" {
         message,
         content="sticker description must be between 2 and 100 characters",
       )
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected empty description validation on modify")
   }
@@ -466,7 +466,7 @@ test "guild template description rejects value and clear together" {
 
 ///|
 test "application command permissions validate the record limit" {
-  let permission : @model.ApplicationCommandPermission = {
+  let permission = @model.ApplicationCommandPermission::{
     id: Id(1UL),
     typ: Role,
     permission: true,

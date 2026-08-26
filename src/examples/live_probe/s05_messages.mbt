@@ -22,7 +22,7 @@ async fn sec_messages(p : P) -> Unit {
     "id=\{msg.id}"
   })
   p.probe("create_message (embeds + components + allowed_mentions)", () => {
-    let embed : @model.Embed = {
+    let embed = @model.Embed::{
       title: Some("live probe"),
       typ: None,
       url: None,
@@ -38,7 +38,7 @@ async fn sec_messages(p : P) -> Unit {
       fields: Some([{ name: "field", value: "value", inline: Some(true) }]),
       flags: None,
     }
-    let button : @model.Button = {
+    let button = @model.Button::{
       id: None,
       style: Primary,
       label: Some("probe"),
@@ -97,10 +97,10 @@ async fn sec_messages(p : P) -> Unit {
   })
   p.probe("edit_message (keep_attachments merge + clear)", () => {
     let msg = c.create_message(text, content="attachment edit target", files=[
-      @dhttp.FileUpload("one.txt", b"one", content_type="text/plain"),
-      @dhttp.FileUpload("two.txt", b"two", content_type="text/plain"),
+      FileUpload("one.txt", b"one", content_type="text/plain"),
+      FileUpload("two.txt", b"two", content_type="text/plain"),
     ])
-    let keep : @model.AttachmentRequest = {
+    let keep = @model.AttachmentRequest::{
       id: msg.attachments[0].id,
       filename: None,
       title: None,
@@ -112,7 +112,7 @@ async fn sec_messages(p : P) -> Unit {
     let merged = c
       .message_ref(text, msg.id)
       .edit(keep_attachments=[keep], files=[
-        @dhttp.FileUpload("three.txt", b"three", content_type="text/plain"),
+        FileUpload("three.txt", b"three", content_type="text/plain"),
       ])
     let cleared = c.edit_message(text, msg.id, keep_attachments=[])
     c.delete_message(text, msg.id)

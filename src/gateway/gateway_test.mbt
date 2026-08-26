@@ -117,7 +117,7 @@ impl @gateway.GatewayTransport for BinaryFakeTransport with fn close(
 ///|
 async test "compressed shard buffers suffix fragments and decodes messages" {
   let transport = BinaryFakeTransport()
-  let inflater : FakeInflater = {
+  let inflater = FakeInflater::{
     // pop() consumes from the end: Hello, Ready, then dispatch.
     messages: [
       (
@@ -282,7 +282,7 @@ async test "shard identifies, dispatches, and resumes across a drop" {
         ShardResumed(shard_id=0),
         ShardConnected(shard_id=0),
       ] else {
-      fail("unexpected shard telemetry: \{to_repr(telemetry)}")
+      fail("unexpected shard telemetry: \{Repr(telemetry)}")
     }
     shard.close()
   })

@@ -201,7 +201,7 @@ pub fn channel_permissions(
 ///     @model.Permissions::send_messages()
 ///   let effective = @util.apply_communication_timeout(
 ///     permissions~,
-///     communication_disabled_until=@model.Timestamp("2100-01-01T00:00:00Z"),
+///     communication_disabled_until=Timestamp("2100-01-01T00:00:00Z"),
 ///     now_unix_ms=0L,
 ///   )
 ///   assert_true(effective.contains(@model.Permissions::view_channel()))

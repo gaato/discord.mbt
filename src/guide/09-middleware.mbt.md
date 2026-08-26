@@ -50,7 +50,7 @@ This middleware logs the logical call and adds an extra wire header:
 ///|
 fn http_logging() -> @dhttp.HttpMiddleware {
   (request, next) => {
-    let req_method = to_repr(request.route.method_())
+    let req_method = Repr(request.route.method_())
     let path = request.route.path()
     println("http -> \{req_method} \{path}")
     request.headers["x-client-feature"] = "example-bot"
@@ -77,7 +77,7 @@ useful for a test double or a carefully scoped cache:
 fn mock_gateway(body : Json) -> @dhttp.HttpMiddleware {
   (request, next) => {
     match request.route {
-      @dhttp.Route::GetGateway =>
+      GetGateway =>
         { status: 200, headers: { "x-middleware-cache": "hit" }, body }
       _ => next(request)
     }
@@ -177,16 +177,16 @@ fn install_rich_error_policy(app : @discord.App) -> Unit {
       None => "unknown user"
     }
     let source = match failure.raw() {
-      Some(@app.FailureRaw::RawCommand(_)) => "command"
-      Some(@app.FailureRaw::RawComponent(_)) => "component"
-      Some(@app.FailureRaw::RawModal(_)) => "modal"
+      Some(RawCommand(_)) => "command"
+      Some(RawComponent(_)) => "component"
+      Some(RawModal(_)) => "modal"
       None => "event or service"
     }
     failure.respond_error(
       embeds=[
-        @model.Embed(
+        Embed(
           title="Request failed",
-          description="source: \{source}\nuser: \{username}\n\{to_repr(error)}",
+          description="source: \{source}\nuser: \{username}\n\{Repr(error)}",
           color=0xED4245,
         ),
       ],
@@ -232,8 +232,7 @@ This filter ignores messages authored by bots:
 fn ignore_bot_messages() -> @bot.EventMiddleware {
   (_, event, next) => {
     match event {
-      @model.Event::MessageCreate(created) if created.message.author.bot
-        is Some(true) => ()
+      MessageCreate(created) if created.message.author.bot is Some(true) => ()
       _ => next(event)
     }
   }
@@ -248,12 +247,12 @@ handlers:
 fn tag_message_content() -> @bot.EventMiddleware {
   (_, event, next) => {
     match event {
-      @model.Event::MessageCreate(created) => {
+      MessageCreate(created) => {
         let message = {
           ..created.message,
           content: "[gateway] \{created.message.content}",
         }
-        next(@model.Event::MessageCreate({ ..created, message, }))
+        next(MessageCreate({ ..created, message, }))
       }
       _ => next(event)
     }

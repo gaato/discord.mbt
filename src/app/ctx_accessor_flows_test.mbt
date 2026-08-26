@@ -14,7 +14,7 @@ test "app validation rejects modals with more than five fields" {
     Raw(_ => ()),
   )
   try app.validate() catch {
-    @app.AppConfigError::InvalidModalFieldCount(custom_id~, count~) => {
+    InvalidModalFieldCount(custom_id~, count~) => {
       inspect(custom_id, content="too-big")
       inspect(count, content="6")
     }
@@ -82,13 +82,13 @@ async test "command contexts expose their interaction and REST surfaces" {
       served.handle_interaction(app_command("inspect", "500000000000000501")) {
       Reply(response~, ..) =>
         assert_true(response.typ == ChannelMessageWithSource)
-      outcome => fail("expected inspect reply, got \{to_repr(outcome)}")
+      outcome => fail("expected inspect reply, got \{Repr(outcome)}")
     }
     match
       served.handle_interaction(app_command("after", "500000000000000502")) {
       Reply(response~, ..) =>
         assert_true(response.typ == DeferredChannelMessageWithSource)
-      outcome => fail("expected deferred reply, got \{to_repr(outcome)}")
+      outcome => fail("expected deferred reply, got \{Repr(outcome)}")
     }
     for _attempt in 0..<200 {
       if rest_paths.length() >= 2 {

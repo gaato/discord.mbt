@@ -56,7 +56,7 @@ pub impl[M] Compare for Id[M] with fn compare(a, b) {
 
 ///|
 pub impl[M] Hash for Id[M] with fn hash_combine(self, hasher) {
-  self.0.hash_combine(hasher)
+  Hash::hash_combine(self.0, hasher)
 }
 
 ///|
@@ -66,7 +66,7 @@ pub impl[M] Show for Id[M] with fn output(self, logger) {
 
 ///|
 pub impl[M] Debug for Id[M] with fn to_repr(self) {
-  to_repr(self.0)
+  Repr(self.0)
 }
 
 ///|

@@ -12,7 +12,7 @@ test "text envelopes decode v8 voice and DAVE opcodes" {
       port=5000,
       modes=["aead_aes256_gcm_rtpsize", ..]
     ) else {
-    fail("unexpected Ready: \{to_repr(ready)}")
+    fail("unexpected Ready: \{Repr(ready)}")
   }
   assert_eq(seq, Some(7))
   let cases : Array[(String, @voice.VoiceMessage)] = [

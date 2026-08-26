@@ -120,7 +120,7 @@ fn RegisteredCommand::run_checks_and_cooldown(
   raw : @framework.CommandCtx,
   now_ms : Int64,
 ) -> Unit raise HandlerError {
-  let ctx : CheckCtx = { raw_: raw }
+  let ctx = CheckCtx::{ raw_: raw }
   for check in self.checks_ {
     if !check(ctx) {
       raise CheckFailed

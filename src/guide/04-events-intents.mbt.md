@@ -19,7 +19,7 @@ fn register_handlers(bot : @discord.Bot) -> Unit {
   })
   bot.on(@discord.Events::guild_member_add(), (_, event) => {
     let joined = event.guild_member
-    println("member joined guild \{event.guild_id}: \{to_repr(joined.user)}")
+    println("member joined guild \{event.guild_id}: \{Repr(joined.user)}")
   })
 }
 ```
@@ -121,7 +121,7 @@ fn bot_with_explicit_intents(
   app : @discord.App,
   token : String,
 ) -> @discord.Bot {
-  @discord.Bot(app, token~, intents=explicit_intents)
+  Bot(app, token~, intents=explicit_intents)
 }
 
 ///|
@@ -171,14 +171,13 @@ event passed to typed and raw handlers:
 fn filter_and_tag(bot : @discord.Bot) -> Unit {
   bot.middleware((_, event, next) => {
     match event {
-      @model.Event::MessageCreate(created) if created.message.author.bot
-        is Some(true) => ()
-      @model.Event::MessageCreate(created) => {
+      MessageCreate(created) if created.message.author.bot is Some(true) => ()
+      MessageCreate(created) => {
         let message = {
           ..created.message,
           content: "[gateway] \{created.message.content}",
         }
-        next(@model.Event::MessageCreate({ ..created, message, }))
+        next(MessageCreate({ ..created, message, }))
       }
       _ => next(event)
     }
@@ -230,7 +229,7 @@ to `Bot(...)` (or `Shard::start` at the lower level):
 ```mbt check
 ///|
 fn compressed_bot(app : @discord.App, token : String) -> @discord.Bot {
-  @discord.Bot(app, token~, compress=true)
+  Bot(app, token~, compress=true)
 }
 ```
 
@@ -255,10 +254,10 @@ it to a `Bot` to apply every decoded event before event handlers run:
 ///|
 fn install_cache(bot : @discord.Bot) -> @cache.InMemoryCache {
   let cache = @cache.InMemoryCache(
-    resources=@cache.CacheResources(presences=true, messages=true),
-    limits=@cache.CacheLimits(
-      presences=@cache.CacheLimit(max_entries=5_000, ttl_ms=300_000L),
-      messages=@cache.CacheLimit(max_entries=100, ttl_ms=900_000L),
+    resources=CacheResources(presences=true, messages=true),
+    limits=CacheLimits(
+      presences=CacheLimit(max_entries=5_000, ttl_ms=300_000L),
+      messages=CacheLimit(max_entries=100, ttl_ms=900_000L),
     ),
   )
   bot.attach_cache(cache)

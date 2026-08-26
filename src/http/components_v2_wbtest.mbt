@@ -36,7 +36,7 @@ async test "create followup combines ephemeral and Components V2 flags" {
     |> ignore
   catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail message decoding")
   }
@@ -61,7 +61,7 @@ async test "create message adds Components V2 and rejects stickers" {
   ]
   try client.create_message(channel_id, components~) |> ignore catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail message decoding")
   }
@@ -104,7 +104,7 @@ async test "execute webhook adds Components V2 and rejects content" {
     client.execute_webhook(webhook_id, "webhook-token", components~) |> ignore
   catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail message decoding")
   }

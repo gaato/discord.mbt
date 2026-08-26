@@ -157,11 +157,7 @@ fn show_feedback(
 fn register_feedback(app : @discord.App) -> Unit {
   app.on_component(
     prefix="feedback:",
-    Immediate(ctx => {
-      @discord.ComponentReply::ShowModal(
-        show_feedback("Follow-up", state=ctx.suffix()),
-      )
-    }),
+    Immediate(ctx => ShowModal(show_feedback("Follow-up", state=ctx.suffix()))),
   )
   app.on_modal(
     feedback,

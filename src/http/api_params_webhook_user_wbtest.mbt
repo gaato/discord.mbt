@@ -19,7 +19,7 @@ async test "execute webhook forwards caller-supplied flags" {
     )
   catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail message decoding")
   }
@@ -61,7 +61,7 @@ async test "edit webhook message forwards flags, query, and kept attachments" {
     )
   catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail message decoding")
   }
@@ -86,7 +86,7 @@ async test "modify current user forwards and clears the banner" {
   })
   try client.modify_current_user(banner="data:image/png;base64,AAAA") catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail user decoding")
   }
@@ -95,7 +95,7 @@ async test "modify current user forwards and clears the banner" {
   })
   try client.modify_current_user(clear_banner=true) catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail user decoding")
   }

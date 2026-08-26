@@ -210,7 +210,7 @@ fn default_error_policy(warn : (String) -> Unit) -> ErrorPolicy {
         ctx.respond_error(content="You cannot use this command.")
       HandlerError::MissingPermission(permissions) =>
         ctx.respond_error(
-          content="Missing required permission: \{to_repr(permissions)}",
+          content="Missing required permission: \{Repr(permissions)}",
         )
       HandlerError::OnCooldown(retry_after_ms~) =>
         ctx.respond_error(
@@ -218,10 +218,7 @@ fn default_error_policy(warn : (String) -> Unit) -> ErrorPolicy {
         )
       HandlerError::InvalidArgument(message) =>
         ctx.respond_error(content="Invalid argument: \{message}")
-      _ =>
-        warn(
-          "unhandled app failure (\{to_repr(ctx.origin())}): \{to_repr(error)}",
-        )
+      _ => warn("unhandled app failure (\{Repr(ctx.origin())}): \{Repr(error)}")
     }
   }
 }
@@ -235,6 +232,6 @@ async fn invoke_error_policy(
   policy(ctx, error) catch {
     policy_error if @async.is_being_cancelled() ||
       @async.is_cancellation_error(policy_error) => raise policy_error
-    policy_error => (ctx.warn_)("error policy failed: \{to_repr(policy_error)}")
+    policy_error => (ctx.warn_)("error policy failed: \{Repr(policy_error)}")
   }
 }

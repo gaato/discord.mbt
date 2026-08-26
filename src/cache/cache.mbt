@@ -588,7 +588,7 @@ fn InMemoryCache::update_member(
   self.store_user(update.user)
   guard self.resources_.members_ else { return }
   let previous = self.member(update.guild_id, update.user.id)
-  let cached_member : @model.GuildMember = {
+  let cached_member = @model.GuildMember::{
     user: Some(update.user),
     nick: prefer_update(update.nick, previous.bind(value => value.nick)),
     avatar: Some(update.avatar),

@@ -21,7 +21,7 @@ async test "create message forwards a full message reference" {
     })
   catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail message decoding")
   }
@@ -55,7 +55,7 @@ async test "create message rejects reply_to together with message_reference" {
         message,
         content="reply_to and message_reference are mutually exclusive",
       )
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected a validation error")
   }
@@ -71,7 +71,7 @@ async test "create message forwards a shared client theme" {
     { status: 200, headers: Map([]), body: Json::null() }
   })
   let channel_id : @model.ChannelId = Id(10UL)
-  let theme : @model.SharedClientTheme = {
+  let theme = @model.SharedClientTheme::{
     colors: ["ff0000", "00ff00"],
     gradient_angle: 45,
     base_mix: 50,
@@ -79,7 +79,7 @@ async test "create message forwards a shared client theme" {
   }
   try client.create_message(channel_id, shared_client_theme=theme) catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail message decoding")
   }
@@ -105,7 +105,7 @@ async test "edit message merges kept attachments with new uploads" {
   })
   let channel_id : @model.ChannelId = Id(10UL)
   let message_id : @model.MessageId = Id(20UL)
-  let keep : @model.AttachmentRequest = {
+  let keep = @model.AttachmentRequest::{
     id: Id(555UL),
     filename: None,
     title: None,
@@ -120,7 +120,7 @@ async test "edit message merges kept attachments with new uploads" {
     ])
   catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail message decoding")
   }
@@ -134,7 +134,7 @@ async test "edit message merges kept attachments with new uploads" {
   // an explicit empty keep list with no files clears every attachment
   try client.edit_message(channel_id, message_id, keep_attachments=[]) catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail message decoding")
   }
@@ -191,7 +191,7 @@ async test "message ref forwards a message as a snapshot reference" {
   })
   try client.channel_ref(Id(2UL)).message_ref(Id(1UL)).forward(Id(30UL)) catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail message decoding")
   }

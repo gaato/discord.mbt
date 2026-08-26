@@ -16,7 +16,7 @@ test "discord docs: example default soundboard sound (line 36)" {
     #|}
   let first : @model.SoundboardSound = @json.from_json(@json.parse(fixture))
   let second : @model.SoundboardSound = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(first.sound_id.to_string(), content="1")
   assert_eq(first.name, "quack")
 }
@@ -35,7 +35,7 @@ test "discord docs: example guild soundboard sound (line 50)" {
     #|}
   let first : @model.SoundboardSound = @json.from_json(@json.parse(fixture))
   let second : @model.SoundboardSound = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(first.sound_id.to_string(), content="1106714396018884649")
   assert_eq(first.name, "Yay")
 }

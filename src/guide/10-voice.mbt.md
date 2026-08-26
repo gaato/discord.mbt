@@ -37,7 +37,7 @@ uses that intent to deliver the bot's `VOICE_STATE_UPDATE`:
 ///|
 fn voice_bot(app : @discord.App, token : String) -> @discord.Bot {
   let intents = @model.Intents::guilds() | @model.Intents::guild_voice_states()
-  @discord.Bot(app, token~, intents~)
+  Bot(app, token~, intents~)
 }
 ```
 
@@ -90,7 +90,7 @@ async fn receive_opus(
       OpusReceived(user_id~, ssrc~, sequence~, timestamp~, opus~) =>
         consume_opus(user_id, ssrc, sequence, timestamp, opus)
       PacketsLost(user_id~, ssrc~, count~) =>
-        println("lost \{count} packet(s) from \{to_repr(user_id)} / \{ssrc}")
+        println("lost \{count} packet(s) from \{Repr(user_id)} / \{ssrc}")
       _ => ()
     }
   }

@@ -603,7 +603,7 @@ async test "voice connection wait_ready reports JoinTimeout" {
     )
     try connection.wait_ready(timeout_ms=10) catch {
       JoinTimeout => ()
-      error => fail("unexpected wait_ready error: \{to_repr(error)}")
+      error => fail("unexpected wait_ready error: \{Repr(error)}")
     } noraise {
       _ => fail("expected JoinTimeout")
     }
@@ -636,7 +636,7 @@ async test "voice connection surfaces ShimUnavailable through wait_ready" {
     )
     try connection.wait_ready(timeout_ms=1000) catch {
       ShimUnavailable(reason~) => assert_true(!reason.is_empty())
-      error => fail("unexpected wait_ready error: \{to_repr(error)}")
+      error => fail("unexpected wait_ready error: \{Repr(error)}")
     } noraise {
       _ => fail("expected ShimUnavailable")
     }

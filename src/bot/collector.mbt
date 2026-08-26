@@ -78,7 +78,7 @@ fn[T] EventCollector::register(
   event_type : EventType[T],
   predicate : (T) -> Bool,
 ) -> EventRegistration[T] {
-  let waiter : EventWaiter = {
+  let waiter = EventWaiter::{
     kind: event_type.kind(),
     matches: event => event_type.project(event).map(predicate).unwrap_or(false),
     queue: Queue(kind=Unbounded),

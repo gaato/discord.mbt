@@ -92,7 +92,7 @@ test "voice state decodes required fields only" {
 
 ///|
 test "voice state encode omits absent optional fields" {
-  let voice_state : @model.VoiceState = {
+  let voice_state = @model.VoiceState::{
     guild_id: None,
     channel_id: Null,
     user_id: Id(1UL),

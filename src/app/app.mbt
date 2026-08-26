@@ -304,7 +304,7 @@ async fn App::run_registered_command(
   raw : @framework.CommandCtx,
 ) -> Unit {
   let failure_raw = RawCommand(raw)
-  let ctx : InteractionCtx = {
+  let ctx = InteractionCtx::{
     target_: Command(name=command.name_),
     raw_: failure_raw,
   }
@@ -348,7 +348,7 @@ async fn App::run_registered_component(
   raw : @framework.ComponentCtx,
 ) -> Unit {
   let failure_raw = RawComponent(raw)
-  let ctx : InteractionCtx = {
+  let ctx = InteractionCtx::{
     target_: Component(custom_id=raw.data.custom_id),
     raw_: failure_raw,
   }
@@ -397,7 +397,7 @@ async fn App::run_registered_modal(
   raw : @framework.ModalCtx,
 ) -> Unit {
   let failure_raw = RawModal(raw)
-  let ctx : InteractionCtx = {
+  let ctx = InteractionCtx::{
     target_: Modal(custom_id=raw.data.custom_id),
     raw_: failure_raw,
   }
@@ -469,7 +469,7 @@ pub fn App::attach(
   waiter? : ComponentWaiter,
   latency_ms? : () -> Int64?,
 ) -> AppCtx {
-  let app_ctx : AppCtx = {
+  let app_ctx = AppCtx::{
     client_: client,
     application_id_: application_id,
     latency_ms_: latency_ms,
@@ -506,7 +506,7 @@ pub fn App::attach(
     if @async.is_being_cancelled() || @async.is_cancellation_error(error) {
       raise error
     }
-    (self.warn_)("framework handler failed (\{label}): \{to_repr(error)}")
+    (self.warn_)("framework handler failed (\{label}): \{Repr(error)}")
   })
   |> ignore
   app_ctx

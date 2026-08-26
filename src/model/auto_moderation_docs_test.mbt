@@ -37,7 +37,7 @@ test "discord docs: example auto moderation rule (line 36)" {
     #|}
   let first : @model.AutoModerationRule = @json.from_json(@json.parse(fixture))
   let second : @model.AutoModerationRule = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(first.id.to_string(), content="969707018069872670")
   inspect(first.actions.length(), content="3")
 }

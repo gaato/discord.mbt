@@ -534,7 +534,7 @@ pub impl BitAnd for SystemChannelFlags with fn land(a, b) {
 
 ///|
 pub impl Debug for SystemChannelFlags with fn to_repr(self) {
-  to_repr(self.0)
+  Repr(self.0)
 }
 
 ///|

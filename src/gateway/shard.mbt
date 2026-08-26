@@ -87,7 +87,7 @@ pub fn[X] Shard::start(
   sleeper? : async (Int) -> Unit = @async.sleep,
   rand? : @random.Rand = @random.Rand::chacha8(),
 ) -> Shard {
-  let shard : Shard = {
+  let shard = Shard::{
     events: Queue(kind=Blocking(queue_capacity)),
     command_limiter: CommandLimiter(sleeper~),
     send_gate: Semaphore(1),

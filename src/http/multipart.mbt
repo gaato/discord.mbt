@@ -16,7 +16,7 @@ pub struct FileUpload {
 /// Keep uploaded bytes out of diagnostics while allowing captured interaction
 /// outcomes to derive Debug.
 pub impl Debug for FileUpload with fn to_repr(self) {
-  to_repr(
+  Repr(
     (self.filename, self.content.length(), self.content_type, self.description),
   )
 }

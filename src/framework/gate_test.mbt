@@ -18,7 +18,7 @@ fn gate_interaction(kind : Int) -> @model.Interaction raise {
 ///|
 async test "response gate captures one valid callback" {
   let (gate, capture) = @framework.ResponseGate::capture(gate_interaction(2))
-  let response : @model.InteractionResponse = {
+  let response = @model.InteractionResponse::{
     typ: ChannelMessageWithSource,
     data: Some({ "content": "hello" }),
   }
@@ -41,7 +41,7 @@ async test "response gate rejects a second callback" {
   gate.send({ typ: ChannelMessageWithSource, data: None })
   try gate.send({ typ: DeferredChannelMessageWithSource, data: None }) catch {
     @framework.ResponseGateError::AlreadyResponded => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected AlreadyResponded")
   }
@@ -56,7 +56,7 @@ async test "response gate rejects modal callbacks for modal submits" {
       assert_true(typ == Modal)
       assert_false(gate.responded())
     }
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected InvalidCallback")
   }
@@ -74,13 +74,13 @@ async test "response gate remains terminal after sink failure" {
   })
   try gate.send({ typ: ChannelMessageWithSource, data: None }) catch {
     GateSinkError => assert_true(gate.responded())
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected sink failure")
   }
   try gate.send({ typ: ChannelMessageWithSource, data: None }) catch {
     @framework.ResponseGateError::AlreadyResponded => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected AlreadyResponded")
   }

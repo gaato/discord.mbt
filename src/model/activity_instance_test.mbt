@@ -4,7 +4,7 @@ test "application activity instance round-trips the docs example" {
     #|{"application_id":"1215413995645968394","instance_id":"i-1276580072400224306-gc-912952092627435520-912954213460484116","launch_id":"1276580072400224306","location":{"id":"gc-912952092627435520-912954213460484116","kind":"gc","channel_id":"912954213460484116","guild_id":"912952092627435520"},"users":["205519959982473217"]}
   let first : @model.ActivityInstance = @json.from_json(@json.parse(fixture))
   let second : @model.ActivityInstance = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(first.to_json().stringify(), content=fixture)
 }
 

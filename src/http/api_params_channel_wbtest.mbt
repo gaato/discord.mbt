@@ -44,7 +44,7 @@ async test "modify channel forwards voice and forum fields" {
     )
   catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail channel decoding")
   }
@@ -78,7 +78,7 @@ async test "modify channel forwards voice and forum fields" {
     )
   catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail channel decoding")
   }
@@ -124,7 +124,7 @@ async test "create guild channel forwards forum defaults" {
     )
   catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail channel decoding")
   }
@@ -162,7 +162,7 @@ async test "create channel invite forwards targets and roles" {
     )
   catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail invite decoding")
   }
@@ -176,7 +176,7 @@ async test "create channel invite forwards targets and roles" {
   try client.create_channel_invite(channel_id, target_type=Stream) catch {
     Validation(message~) =>
       inspect(message, content="target_type Stream requires target_user_id")
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected a validation error")
   }
@@ -188,7 +188,7 @@ async test "create channel invite forwards targets and roles" {
         message,
         content="target_type EmbeddedApplication requires target_application_id",
       )
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected a validation error")
   }
@@ -214,7 +214,7 @@ async test "create channel invite uploads the target-users file as multipart" {
     )
   catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail invite decoding")
   }

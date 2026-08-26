@@ -98,9 +98,9 @@ test "Ogg packet reader accepts one-byte streaming chunks" {
     }
   }
   assert_eq(packets.length(), 5)
-  assert_eq(packets[0][:8], b"OpusHead"[:])
-  assert_eq(packets[1][:8], b"OpusTags"[:])
-  assert_eq(packets[2:], [b"one", b"two", b"three"][:])
+  assert_eq(packets[0][:8], b"OpusHead")
+  assert_eq(packets[1][:8], b"OpusTags")
+  assert_eq(packets[2:], [b"one", b"two", b"three"])
 }
 
 ///|

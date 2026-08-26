@@ -12,7 +12,7 @@ async test "template ref fetch resolves by code without the bound guild id" {
   let guild_id : @model.GuildId = Id(300UL)
   try client.guild_ref(guild_id).template_ref("code-a").fetch() catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail template decoding")
   }
@@ -34,7 +34,7 @@ async test "template ref sync uses the bound guild id" {
   let guild_id : @model.GuildId = Id(310UL)
   try client.guild_template_ref(guild_id, "code-b").sync() catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail template decoding")
   }
@@ -90,7 +90,7 @@ async test "soundboard sound ref edit delegates nullable emoji id" {
     client.soundboard_sound_ref(guild_id, sound_id).edit(clear_emoji_id=true)
   catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail soundboard sound decoding")
   }
@@ -114,7 +114,7 @@ test "scheduled event ref users preserves paginator validation" {
         message,
         content="scheduled event user limit must be between 1 and 100",
       )
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected paginator validation")
   }

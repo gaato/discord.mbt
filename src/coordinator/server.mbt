@@ -47,7 +47,7 @@ pub async fn[X] Coordinator::serve(
     )
   }
   let server = @socket.TcpServer(@socket.Addr::parse(addr), reuse_addr=true)
-  let state : CoordinatorState = {
+  let state = CoordinatorState::{
     identify: InMemoryQueue(max_concurrency~, spacing_ms=identify_spacing_ms),
     limiter: InMemoryRateLimiter(global_limit~),
     owners: Map([]),
@@ -90,7 +90,7 @@ pub fn Coordinator::close(self : Coordinator) -> Unit {
 
 ///|
 async fn serve_connection(conn : @socket.Tcp, state : CoordinatorState) -> Unit {
-  let connection : ConnectionState = {
+  let connection = ConnectionState::{
     id: state.next_connection_id.val,
     held_buckets: Map([]),
   }

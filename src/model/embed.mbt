@@ -13,12 +13,12 @@
 ///   let embed = @model.Embed(
 ///     title="Build complete",
 ///     description="All checks passed.",
-///     timestamp=@model.Timestamp("2026-07-15T00:00:00Z"),
+///     timestamp=Timestamp("2026-07-15T00:00:00Z"),
 ///     color=0x57F287,
-///     footer=@model.EmbedFooter("build 42"),
+///     footer=EmbedFooter("build 42"),
 ///     fields=[
-///       @model.EmbedField("Target", "native", inline=true),
-///       @model.EmbedField("Tests", "325 passed", inline=true),
+///       EmbedField("Target", "native", inline=true),
+///       EmbedField("Tests", "325 passed", inline=true),
 ///     ],
 ///   )
 ///   json_inspect(embed, content={
@@ -106,7 +106,7 @@ pub fn EmbedFlags::bits(self : EmbedFlags) -> UInt64 {
 
 ///|
 pub impl Debug for EmbedFlags with fn to_repr(self) {
-  to_repr(self.0)
+  Repr(self.0)
 }
 
 ///|

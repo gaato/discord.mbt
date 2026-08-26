@@ -14,8 +14,8 @@ async fn sec_commands(p : P) -> Unit {
   // Global commands
   let mut global_cmd : @model.CommandId? = None
   p.probe("create_global_command", () => {
-    let option : @model.CommandOption = {
-      typ: @model.CommandOptionType::String,
+    let option = @model.CommandOption::{
+      typ: String,
       name: "text",
       name_localizations: None,
       description: "some text",
@@ -165,7 +165,7 @@ async fn sec_commands(p : P) -> Unit {
     "count=\{records.length()}"
   })
   p.probe("update_application_role_connection_metadata_records", () => {
-    let record : @model.ApplicationRoleConnectionMetadata = {
+    let record = @model.ApplicationRoleConnectionMetadata::{
       typ: IntegerGreaterThanOrEqual,
       key: "probe_score",
       name: "Probe Score",
@@ -211,11 +211,10 @@ async fn sec_commands(p : P) -> Unit {
   // Interaction endpoints need a live interaction token; bogus targets verify
   // wiring (they were exercised for real via kitchen_sink previously).
   p.probe_err("create_interaction_response (bogus)", expect=[404], () => {
-    c.create_interaction_response(
-      @model.Id(1234567890123456789UL),
-      "bogus-token",
-      { typ: Pong, data: None },
-    )
+    c.create_interaction_response(Id(1234567890123456789UL), "bogus-token", {
+      typ: Pong,
+      data: None,
+    })
   })
   p.probe_err("get_original_response (bogus token)", expect=[404, 401], () => {
     c.get_original_response(a, "bogus-token") |> ignore
@@ -230,19 +229,14 @@ async fn sec_commands(p : P) -> Unit {
     c.create_followup(a, "bogus-token", content="x") |> ignore
   })
   p.probe_err("get_followup (bogus token)", expect=[404, 401], () => {
-    c.get_followup(a, "bogus-token", @model.Id(1234567890123456789UL)) |> ignore
+    c.get_followup(a, "bogus-token", Id(1234567890123456789UL)) |> ignore
   })
   p.probe_err("edit_followup (bogus token)", expect=[404, 401], () => {
-    c.edit_followup(
-      a,
-      "bogus-token",
-      @model.Id(1234567890123456789UL),
-      content="x",
-    )
+    c.edit_followup(a, "bogus-token", Id(1234567890123456789UL), content="x")
     |> ignore
   })
   p.probe_err("delete_followup (bogus token)", expect=[404, 401], () => {
-    c.delete_followup(a, "bogus-token", @model.Id(1234567890123456789UL))
+    c.delete_followup(a, "bogus-token", Id(1234567890123456789UL))
   })
   p.probe_err("get_application_activity_instance (bogus)", expect=[400, 404], () => {
     c.get_application_activity_instance(a, "i-bogus") |> ignore
@@ -255,9 +249,9 @@ async fn sec_commands(p : P) -> Unit {
 async fn sec_monetization(p : P) -> Unit {
   let c = p.client
   let a = p.app_id
-  let bogus_sku : @model.SkuId = @model.Id(1234567890123456789UL)
-  let bogus_ent : @model.EntitlementId = @model.Id(1234567890123456789UL)
-  let bogus_sub : @model.SubscriptionId = @model.Id(1234567890123456789UL)
+  let bogus_sku : @model.SkuId = Id(1234567890123456789UL)
+  let bogus_ent : @model.EntitlementId = Id(1234567890123456789UL)
+  let bogus_sub : @model.SubscriptionId = Id(1234567890123456789UL)
   p.probe("list_skus + ApplicationRef::skus", () => {
     let skus = c.list_skus(a)
     ignore(c.application_ref(a).skus())
@@ -275,12 +269,7 @@ async fn sec_monetization(p : P) -> Unit {
     c.consume_entitlement(a, bogus_ent)
   })
   p.probe_err("create_test_entitlement (bogus sku)", expect=[400, 404], () => {
-    c.create_test_entitlement(
-      a,
-      bogus_sku,
-      @model.Id(p.guild_id.value()),
-      @model.EntitlementOwnerType::Guild,
-    )
+    c.create_test_entitlement(a, bogus_sku, Id(p.guild_id.value()), Guild)
     |> ignore
   })
   p.probe_err("delete_test_entitlement (bogus)", expect=[404], () => {

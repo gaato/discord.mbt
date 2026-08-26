@@ -191,7 +191,7 @@ pub async fn Framework::process_with(
         return false
       }
       let scope = interaction_scope(interaction)
-      let ctx : CommandCtx = {
+      let ctx = CommandCtx::{
         client: self.client,
         application_id: self.application_id,
         interaction,
@@ -208,7 +208,7 @@ pub async fn Framework::process_with(
       guard self.autocompletes.get(data.name) is Some(handler) else {
         return false
       }
-      let ctx : AutocompleteCtx = {
+      let ctx = AutocompleteCtx::{
         client: self.client,
         application_id: self.application_id,
         interaction,
@@ -225,7 +225,7 @@ pub async fn Framework::process_with(
       // routes can observe this interaction.
       let scope = interaction_scope(interaction)
       let message = component_message(interaction)
-      let ctx : ComponentCtx = {
+      let ctx = ComponentCtx::{
         client: self.client,
         application_id: self.application_id,
         interaction,
@@ -257,7 +257,7 @@ pub async fn Framework::process_with(
       for entry in self.modals {
         let (prefix, handler) = entry
         if data.custom_id.has_prefix(prefix) {
-          let ctx : ModalCtx = {
+          let ctx = ModalCtx::{
             client: self.client,
             application_id: self.application_id,
             interaction,
@@ -286,7 +286,7 @@ pub async fn Framework::wait_for_component(
   custom_id~ : String,
   timeout_ms? : Int,
 ) -> ComponentCtx? {
-  let waiter : ComponentWaiter = { custom_id, queue: Queue(kind=Unbounded) }
+  let waiter = ComponentWaiter::{ custom_id, queue: Queue(kind=Unbounded) }
   self.waiters.push(waiter)
   defer (for i, pending in self.waiters {
     if physical_equal(pending, waiter) {

@@ -1,8 +1,5 @@
 ///|
-fn sync_stub_client(
-  requests : Array[String],
-  fetched : Json,
-) -> @dhttp.Client raise {
+fn sync_stub_client(requests : Array[String], fetched : Json) -> @dhttp.Client {
   let client = @dhttp.Client("test-token")
   client.middleware((request, _next) => {
     requests.push(

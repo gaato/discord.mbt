@@ -1,8 +1,7 @@
 ///|
 fn expect_text_error(text : String, expected : String) -> Unit raise {
   try @voice.parse_text_frame(text) catch {
-    @voice.VoiceEnvelopeError::InvalidTextFrame(reason~) =>
-      assert_eq(reason, expected)
+    InvalidTextFrame(reason~) => assert_eq(reason, expected)
     _ => fail("unexpected envelope error for: \{expected}")
   } noraise {
     _ => fail("expected invalid text frame: \{expected}")
@@ -12,8 +11,7 @@ fn expect_text_error(text : String, expected : String) -> Unit raise {
 ///|
 test "text envelope parsing reports each malformed payload" {
   try @voice.parse_text_frame("not-json") catch {
-    @voice.VoiceEnvelopeError::InvalidTextFrame(reason~) =>
-      assert_true(reason.has_prefix("invalid JSON:"))
+    InvalidTextFrame(reason~) => assert_true(reason.has_prefix("invalid JSON:"))
     _ => fail("unexpected envelope error")
   } noraise {
     _ => fail("expected a JSON parse failure")
@@ -171,14 +169,14 @@ test "unrecognized opcodes stay decodable instead of raising" {
 ///|
 test "binary envelope parsing rejects truncated frames" {
   try @voice.parse_binary_frame(b"\x00\x01") catch {
-    @voice.VoiceEnvelopeError::InvalidBinaryFrame(reason~) =>
+    InvalidBinaryFrame(reason~) =>
       assert_eq(reason, "frame is shorter than sequence and opcode")
     _ => fail("unexpected envelope error")
   } noraise {
     _ => fail("expected a short binary frame error")
   }
   try @voice.parse_binary_frame(b"\x00\x01\x1D\x00") catch {
-    @voice.VoiceEnvelopeError::InvalidBinaryFrame(reason~) =>
+    InvalidBinaryFrame(reason~) =>
       assert_eq(reason, "opcode 29 payload is missing transition_id")
     _ => fail("unexpected envelope error")
   } noraise {

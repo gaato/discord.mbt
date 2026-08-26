@@ -125,13 +125,13 @@ test "pagination validation is pre-IO" {
   let second : @model.MessageId = Id(3UL)
   try client.paginate_messages(channel_id, before=first, after=second) catch {
     Validation(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected cursor validation")
   }
   try client.paginate_messages(channel_id, page_size=101) catch {
     Validation(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected page size validation")
   }

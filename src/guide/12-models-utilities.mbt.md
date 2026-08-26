@@ -152,17 +152,17 @@ payloads, so receive-only fields do not need to be filled with `None`:
 
 ```mbt check
 ///|
-let build_complete_embed : @model.Embed = @model.Embed(
+let build_complete_embed : @model.Embed = Embed(
   title="Build complete",
   description="All checks passed.",
   color=0x57F287,
-  author=@model.EmbedAuthor("CI", icon_url="https://example.test/ci.png"),
-  footer=@model.EmbedFooter("discord.mbt"),
-  image=@model.EmbedImage("https://example.test/result.png"),
-  thumbnail=@model.EmbedThumbnail("https://example.test/status.png"),
+  author=EmbedAuthor("CI", icon_url="https://example.test/ci.png"),
+  footer=EmbedFooter("discord.mbt"),
+  image=EmbedImage("https://example.test/result.png"),
+  thumbnail=EmbedThumbnail("https://example.test/status.png"),
   fields=[
-    @model.EmbedField("Target", "native", inline=true),
-    @model.EmbedField("Tests", "1273 passed", inline=true),
+    EmbedField("Target", "native", inline=true),
+    EmbedField("Tests", "1273 passed", inline=true),
   ],
 )
 
@@ -189,7 +189,7 @@ override and `size` for a power-of-two size:
 test "build CDN URLs" {
   let user_id : @model.UserId = @model.Id::parse("80351110224678912")
   inspect(
-    @util.user_avatar_url(user_id, @model.ImageHash("deadbeef"), size=128),
+    @util.user_avatar_url(user_id, ImageHash("deadbeef"), size=128),
     content="https://cdn.discordapp.com/avatars/80351110224678912/deadbeef.png?size=128",
   )
 }

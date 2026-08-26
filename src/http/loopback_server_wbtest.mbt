@@ -192,7 +192,7 @@ async test "plain json requests round-trip and non-json error bodies surface" {
       let message = client.create_message(@model.Id::parse("400"), content="hi")
       inspect(message.content, content="hi")
       guard exchanges is [posted] else { fail("expected one exchange so far") }
-      inspect(posted.content_type, content="Some(application/json)")
+      assert_eq(posted.content_type, Some("application/json"))
       assert_true(posted.body.contains("\"content\":\"hi\""))
 
       // Body-less arm plus the non-JSON error body fallback: the HTML page

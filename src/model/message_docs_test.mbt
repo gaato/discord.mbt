@@ -52,7 +52,7 @@ test "discord docs: example message (line 167)" {
     #|}
   let first : @model.Message = @json.from_json(@json.parse(fixture))
   let second : @model.Message = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(first.id.to_string(), content="334385199974967042")
   assert_eq(first.content, "Supa Hot")
 }
@@ -114,7 +114,7 @@ test "discord docs: example crossposted message (line 210)" {
     #|}
   let first : @model.Message = @json.from_json(@json.parse(fixture))
   let second : @model.Message = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(first.id.to_string(), content="334385199974967042")
   inspect(first.mention_channels.unwrap_or([]).length(), content="1")
 }

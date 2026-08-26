@@ -22,7 +22,7 @@ async test "create global command forwards localizations and installation scopes
     )
   catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail command decoding")
   }
@@ -52,7 +52,7 @@ async test "create command requires a description only for chat input" {
         message,
         content="description is required for CHAT_INPUT commands",
       )
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected a validation error")
   }
@@ -64,7 +64,7 @@ async test "create command requires a description only for chat input" {
   })
   try client.create_global_command(application_id, "probe", typ=User) catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail command decoding")
   }
@@ -92,7 +92,7 @@ async test "edit global command clears localizations with explicit nulls" {
     )
   catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail command decoding")
   }

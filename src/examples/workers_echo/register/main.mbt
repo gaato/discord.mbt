@@ -34,6 +34,6 @@ async fn main {
     group.add_defer(() => client.close())
     let application_id = client.get_current_application().id
     app.sync_commands(client, application_id)
-    println("[register] commands synced (\{to_repr(sync)})")
+    println("[register] commands synced (\{Repr(sync)})")
   })
 }

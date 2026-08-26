@@ -18,11 +18,7 @@ async test "guild command ref edit permissions delegates bearer authorization" {
   let command_id : @model.CommandId = Id(520UL)
   let target_id : @model.GenericId = Id(530UL)
   let permissions : Array[@model.ApplicationCommandPermission] = [
-    {
-      id: target_id,
-      typ: @model.ApplicationCommandPermissionType::User,
-      permission: true,
-    },
+    { id: target_id, typ: User, permission: true },
   ]
   try
     client
@@ -30,7 +26,7 @@ async test "guild command ref edit permissions delegates bearer authorization" {
     .edit_permissions(permissions, bearer_token="oauth-token")
   catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail permissions decoding")
   }
@@ -70,14 +66,10 @@ async test "application ref create test entitlement delegates owner body" {
   try
     client
     .application_ref(application_id)
-    .create_test_entitlement(
-      sku_id,
-      owner_id,
-      @model.EntitlementOwnerType::User,
-    )
+    .create_test_entitlement(sku_id, owner_id, User)
   catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail entitlement decoding")
   }
@@ -104,7 +96,7 @@ async test "sku ref subscriptions delegates the bound sku path" {
   let sku_id : @model.SkuId = Id(570UL)
   try client.sku_ref(sku_id).subscriptions() catch {
     Deserialize(_) => ()
-    error => fail("unexpected error: \{to_repr(error)}")
+    error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the fake response to fail subscriptions decoding")
   }

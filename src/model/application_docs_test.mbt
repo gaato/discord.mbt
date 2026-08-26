@@ -73,7 +73,7 @@ test "discord docs: example application object (line 56)" {
     #|}
   let first : @model.Application = @json.from_json(@json.parse(fixture))
   let second : @model.Application = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(first.id.to_string(), content="172150183260323840")
   assert_eq(first.name, "Baba O-Riley")
   assert_true(first.bot_public == Some(true))

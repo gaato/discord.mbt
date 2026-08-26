@@ -105,7 +105,7 @@ test "role decodes required fields only" {
 
 ///|
 test "role encode omits absent optional fields" {
-  let role : @model.Role = {
+  let role = @model.Role::{
     id: Id(1UL),
     name: "members",
     color: 0,

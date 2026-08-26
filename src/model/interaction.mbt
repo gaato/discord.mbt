@@ -86,9 +86,9 @@ pub(all) enum InteractionData {
 ///|
 pub impl ToJson for InteractionData with fn to_json(self) {
   match self {
-    Command(value) => value.to_json()
-    Component(value) => value.to_json()
-    Modal(value) => value.to_json()
+    Command(value) => ToJson::to_json(value)
+    Component(value) => ToJson::to_json(value)
+    Modal(value) => ToJson::to_json(value)
     Unknown(value) => value
   }
 }
@@ -165,7 +165,7 @@ pub impl ToJson for Interaction with fn to_json(self) {
   match ToJson::to_json(self.fields()) {
     Object(fields) => {
       if self.data is Some(data) {
-        fields["data"] = data.to_json()
+        fields["data"] = ToJson::to_json(data)
       }
       Json::object(fields)
     }

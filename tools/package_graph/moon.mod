@@ -10,5 +10,5 @@ preferred_target = "native"
 
 import {
   "mizchi/moomaid@0.1.3",
-  "moonbitlang/x@0.4.46",
+  "moonbitlang/x@0.5.1",
 }

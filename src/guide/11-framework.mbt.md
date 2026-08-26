@@ -47,7 +47,7 @@ fn build_router(
       ephemeral=true,
     )
   })
-  .on_error((label, error) => println("\{label} failed: \{to_repr(error)}"))
+  .on_error((label, error) => println("\{label} failed: \{Repr(error)}"))
 }
 ```
 

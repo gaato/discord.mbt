@@ -224,7 +224,7 @@ test "archived threads envelope round-trips a docs-shaped fixture" {
     #|}
   let first : @model.ArchivedThreads = @json.from_json(@json.parse(fixture))
   let second : @model.ArchivedThreads = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(first.threads.length(), content="1")
   inspect(first.members.length(), content="1")
   assert_false(first.has_more)
@@ -259,7 +259,7 @@ test "active guild threads envelope round-trips a docs-shaped fixture" {
     #|}
   let first : @model.ActiveGuildThreads = @json.from_json(@json.parse(fixture))
   let second : @model.ActiveGuildThreads = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(first.threads.length(), content="1")
   inspect(first.members.length(), content="1")
 }
@@ -322,7 +322,7 @@ test "channel decodes a minimal DM" {
 
 ///|
 test "channel encode omits every absent variant field" {
-  let channel : @model.Channel = {
+  let channel = @model.Channel::{
     id: Id(1UL),
     typ: Dm,
     guild_id: None,

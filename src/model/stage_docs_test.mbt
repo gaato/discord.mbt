@@ -17,7 +17,7 @@ test "discord docs: example stage instance (line 39)" {
     #|}
   let first : @model.StageInstance = @json.from_json(@json.parse(fixture))
   let second : @model.StageInstance = @json.from_json(first.to_json())
-  assert_eq("\{to_repr(first)}", "\{to_repr(second)}")
+  assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(first.id.to_string(), content="840647391636226060")
   inspect(first.privacy_level.to_int(), content="1")
 }

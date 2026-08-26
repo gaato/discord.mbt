@@ -74,7 +74,7 @@ async fn main {
               let fw = @framework.Framework(client, ready.application.id)
                 .command(echo_spec(), handle_echo)
                 .on_error((label, error) => {
-                  println("[fw] \{label} failed: \{to_repr(error)}")
+                  println("[fw] \{label} failed: \{Repr(error)}")
                 })
               match @env.get_env_var("GUILD_ID") {
                 Some(raw) => {

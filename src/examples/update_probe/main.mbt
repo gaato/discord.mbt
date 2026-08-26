@@ -16,7 +16,7 @@ fn describe_update(event : @model.MessageUpdateEvent) -> String {
   }
   let embeds = event.message.embeds.length()
   let pinned = event.message.pinned
-  "is_edit=\{event.is_edit()} before=\{before} embeds=\{embeds} pinned=\{pinned} edited_ts=\{to_repr(event.message.edited_timestamp)}"
+  "is_edit=\{event.is_edit()} before=\{before} embeds=\{embeds} pinned=\{pinned} edited_ts=\{Repr(event.message.edited_timestamp)}"
 }
 
 ///|
@@ -83,9 +83,7 @@ async fn main {
   let client = @dhttp.Client(token)
   let app = @discord.App(sync=Disabled)
   let bot = @discord.Bot(app, token~, client~)
-  bot.attach_cache(
-    @cache.InMemoryCache(resources=@cache.CacheResources(messages=true)),
-  )
+  bot.attach_cache(InMemoryCache(resources=CacheResources(messages=true)))
   let updates : @aqueue.Queue[@model.MessageUpdateEvent] = Queue(kind=Unbounded)
   let decode_errors : Array[String] = []
   bot.on_decode_error((marker, _payload) => {
@@ -96,7 +94,7 @@ async fn main {
   bot.service(name="probe", ctx => {
     println("[probe] ready as \{ctx.ready().user.username}")
     probe_localizations(client, ctx.ready().application.id, guild_id) catch {
-      error => println("[loc] FAILED: \{to_repr(error)}")
+      error => println("[loc] FAILED: \{Repr(error)}")
     }
     let channel = ctx
       .guild_ref(guild_id)
@@ -136,7 +134,7 @@ async fn main {
         ch.with_typing(() => @async.sleep(12000))
         println("[typing] with_typing over 12s completed without error")
       } catch {
-        error => println("[typing] FAILED: \{to_repr(error)}")
+        error => println("[typing] FAILED: \{Repr(error)}")
       }
       // 5. Heartbeat latency.
       let mut latency = None
@@ -147,11 +145,11 @@ async fn main {
         }
         @async.sleep(1000)
       }
-      println("[latency] GatewayCtx::latency_ms() = \{to_repr(latency)}")
+      println("[latency] GatewayCtx::latency_ms() = \{Repr(latency)}")
     } catch {
       error if @async.is_being_cancelled() => raise error
       error => {
-        println("[probe] FAILED: \{to_repr(error)}")
+        println("[probe] FAILED: \{Repr(error)}")
         raise error
       }
     }
@@ -163,7 +161,7 @@ async fn main {
   try @async.with_timeout_opt(180_000, () => bot.run()) catch {
     error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
       ()
-    error => println("[probe] run failed: \{to_repr(error)}")
+    error => println("[probe] run failed: \{Repr(error)}")
   } noraise {
     _ => ()
   }
