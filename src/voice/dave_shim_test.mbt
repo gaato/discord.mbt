@@ -1,68 +1,60 @@
 ///|
-test "libdave shim creates, resets, and generates key packages" {
-  if !@voice.shim_available() {
+test "official libdave backend creates a key package and starts in passthrough" {
+  if !@dave.available() {
+    if @env.get_env_var("MBT_DAVE_REQUIRE_NATIVE") == Some("1") {
+      fail(@dave.unavailable_reason().unwrap_or("libdave is unavailable"))
+    }
     return
   }
-  let provider = @voice.new_dave_provider(
+  let machine = @voice.DaveMachine::new(
     protocol_version=1,
-    user_id="100",
+    self_user_id="100",
     channel_id=42UL,
   )
-  assert_eq(provider.status(), 0)
-  let first = provider.key_package()
-  assert_true(first.length() > 0)
-  provider.reinit(protocol_version=1)
-  let second = provider.key_package()
-  assert_true(second.length() > 0)
-  assert_true(first != second)
+  let actions = machine.handle(
+    SessionDescription(
+      mode="aead_aes256_gcm_rtpsize",
+      secret_key=Bytes::new(32),
+      dave_protocol_version=1,
+    ),
+  )
+  match actions {
+    [SendBinary(op=26, payload~)] => assert_true(payload.length() > 0)
+    _ => fail("unexpected DAVE initialization actions: \{Repr(actions)}")
+  }
+  assert_eq(machine.active_protocol_version(), 0)
+  assert_eq(
+    machine.encrypt_opus_frame(ssrc=0x12345678U, b"plain-opus"),
+    b"plain-opus",
+  )
 }
 
 ///|
-test "libdave shim rejects media before an MLS group is active" {
-  if !@voice.shim_available() {
-    return
-  }
-  let provider = @voice.new_dave_provider(
-    protocol_version=1,
-    user_id="100",
-    channel_id=42UL,
-  )
-  try provider.encrypt_frame(b"opus") catch {
-    @voice.DaveError::DaveInternal(status=-4, ..) => ()
-    error => fail("unexpected encrypt error: \{error}")
-  } noraise {
-    _ => fail("expected inactive DAVE encryption to fail")
-  }
-  try provider.decrypt_frame(user_id="200", b"encrypted") catch {
-    @voice.DaveError::DaveInternal(status=-4, ..) => ()
-    error => fail("unexpected decrypt error: \{error}")
-  } noraise {
-    _ => fail("expected inactive DAVE decryption to fail")
-  }
-}
-
-///|
-test "libdave shim accepts recognized user IDs across the C array boundary" {
-  if !@voice.shim_available() {
-    return
-  }
-  let provider = @voice.new_dave_provider(
-    protocol_version=1,
-    user_id="100",
-    channel_id=42UL,
-  )
+test "official libdave backend rejects invalid constructor inputs" {
   try
-    provider.process_proposals(op_type=0, b"not-an-mls-proposal", recognized=[
-      "100", "200",
-    ])
+    @voice.DaveMachine::new(
+      protocol_version=65536,
+      self_user_id="100",
+      channel_id=42UL,
+    )
     |> ignore
   catch {
-    @voice.DaveError::DaveInternal(reason~, ..) =>
-      if reason.contains("is not UTF-8") {
-        fail("recognized user IDs were marshaled incorrectly: \{reason}")
-      }
-    error => fail("unexpected proposals error: \{error}")
+    DaveInvalid(..) => ()
+    error => fail("unexpected protocol-version error: \{Repr(error)}")
   } noraise {
-    _ => fail("expected malformed proposals to fail")
+    _ => fail("expected an invalid protocol-version error")
+  }
+  try
+    @voice.DaveMachine::new(
+      protocol_version=1,
+      self_user_id="not-a-snowflake",
+      channel_id=42UL,
+    )
+    |> ignore
+  catch {
+    DaveInvalid(..) => ()
+    error => fail("unexpected user-ID error: \{Repr(error)}")
+  } noraise {
+    _ => fail("expected an invalid user-ID error")
   }
 }

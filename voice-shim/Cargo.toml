@@ -1,9 +1,9 @@
 [package]
 name = "discord-voice-shim"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 license = "Apache-2.0"
-description = "Native AEAD and DAVE shim for discord.mbt"
+description = "Native transport AEAD shim for discord.mbt"
 publish = false
 
 [lib]
@@ -12,9 +12,3 @@ crate-type = ["cdylib"]
 [dependencies]
 aes-gcm = "=0.10.3"
 chacha20poly1305 = "=0.10.1"
-davey = "0.1.4"
-openmls = "=0.8.1"
-
-[dev-dependencies]
-openmls_basic_credential = "=0.5.0"
-openmls_rust_crypto = "=0.5.1"

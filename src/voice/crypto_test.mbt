@@ -1,4 +1,16 @@
 ///|
+test "transport shim availability can be required by coverage" {
+  if @env.get_env_var("DISCORD_VOICE_REQUIRE_SHIM") == Some("1") &&
+    !@voice.shim_available() {
+    fail(
+      @voice.shim_unavailable_reason().unwrap_or(
+        "transport AEAD shim is unavailable",
+      ),
+    )
+  }
+}
+
+///|
 test "voice encryption mode negotiation prefers AES and requires a common mode" {
   assert_eq(
     @voice.EncryptionMode::negotiate([

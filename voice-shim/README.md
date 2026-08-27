@@ -1,10 +1,11 @@
-# discord.mbt voice shim
+# discord.mbt voice transport shim
 
-This crate builds the native cryptographic shim used by `gaato/discord/voice`.
-It provides transport AEAD and the davey-based DAVE session API through one C
-ABI-compatible dynamic library.
+This crate builds the native transport AEAD shim used by
+`gaato/discord/voice`. It implements AES-256-GCM and XChaCha20-Poly1305 behind
+a small C ABI. DAVE MLS and media encryption are provided separately by the
+`gaato/dave` MoonBit module and official libdave.
 
-Build it with:
+Build the shim with:
 
 ```fish
 cargo build --release
@@ -19,8 +20,33 @@ The output is one of:
 Set `DISCORD_VOICE_SHIM_PATH` to the absolute path of that file when running
 discord.mbt tests or applications. When the variable is set, the loader tries
 only that path. Without it, the loader searches the platform library path for
-`libdiscord_voice_shim.so`, `libdiscord_voice_shim.dylib`, then
-`discord_voice_shim.dll`.
+the native filename: `.so` on Linux, `.dylib` on macOS, or `.dll` on Windows.
+
+## C ABI
+
+Crate version 0.2 uses transport-only ABI version 3. The loader requires only:
+
+- `vs_abi_version`
+- `vs_free`
+- `vs_last_error`
+- `vs_aead_seal`
+- `vs_aead_open`
+
+ABI version 2 also exposed an in-shim DAVE session API and is intentionally
+incompatible. Every exported Rust entry point catches unwinding panics. Output
+buffers remain Rust-owned until the caller passes the exact pointer/length pair
+to `vs_free`; the MoonBit C adapter copies them before releasing them.
+
+AEAD mode `0` is AES-256-GCM with a 32-byte key and 12-byte nonce. Mode `1` is
+XChaCha20-Poly1305 with a 32-byte key and 24-byte nonce. Input buffers are
+borrowed only for the synchronous call. Output slots are initialized to null
+and zero before processing; opening an authenticated empty plaintext succeeds
+with that empty representation.
+
+Status codes are `0` for success, `-1` for an invalid argument, `-2` for an
+unsupported mode, `-3` for authentication failure, `-4` for another
+cryptographic failure, and `-5` for a caught Rust panic. Loader-only statuses
+are `-100` (unavailable), `-101` (ABI mismatch), and `-102` (missing symbol).
 
 Before changing the ABI, run the same checks as CI:
 
@@ -28,4 +54,5 @@ Before changing the ABI, run the same checks as CI:
 cargo fmt -- --check
 cargo clippy --all-targets --locked -- -D warnings
 cargo test --locked
+cargo build --release --locked
 ```

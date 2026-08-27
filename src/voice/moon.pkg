@@ -1,4 +1,5 @@
 import {
+  "gaato/dave",
   "gaato/discord/internal/clock",
   "moonbitlang/async",
   "moonbitlang/async/aqueue",
@@ -8,6 +9,7 @@ import {
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/json",
   "moonbitlang/core/random",
+  "moonbitlang/core/string",
 }
 
 import {
@@ -15,6 +17,7 @@ import {
   "moonbitlang/async/aqueue",
   "moonbitlang/async/pipe",
   "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/env",
   "moonbitlang/core/json",
 } for "test"
 
@@ -22,6 +25,8 @@ import {
 // This package is intentionally empty on non-native targets.
 
 warnings = "-29"
+
+supported_targets = "js + native"
 
 options(
   "native-stub": [ "shim_stub.c" ],
@@ -35,7 +40,7 @@ options(
     "connection_test.mbt": [ "native" ],
     "dave.mbt": [ "native" ],
     "dave_shim_test.mbt": [ "native" ],
-    "dave_state_test.mbt": [ "native" ],
+    "dave_state_wbtest.mbt": [ "native" ],
     "envelope.mbt": [ "native" ],
     "envelope_test.mbt": [ "native" ],
     "envelope_error_test.mbt": [ "native" ],
