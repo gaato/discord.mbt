@@ -1,0 +1,18 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "gaato/discord/examples/dave_probe"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+
+// Errors
+type DaveProbeError derive(@debug.Debug)
+
+// Types and methods
+type SilenceProbeSource
+
+// Type aliases
+
+// Traits

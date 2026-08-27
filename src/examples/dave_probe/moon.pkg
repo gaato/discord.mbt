@@ -1,0 +1,20 @@
+import {
+  "gaato/discord",
+  "gaato/discord/internal/clock",
+  "gaato/discord/model",
+  "gaato/discord/voice",
+  "moonbitlang/async",
+  "moonbitlang/async/aqueue",
+  "moonbitlang/async/fs",
+  "moonbitlang/async/io",
+  "moonbitlang/async/signal",
+  "moonbitlang/core/env",
+}
+
+supported_targets = "native"
+
+pkgtype(kind: "executable")
+
+options(
+  targets: { "main.mbt": [ "native" ] },
+)
