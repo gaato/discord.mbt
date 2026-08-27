@@ -70,8 +70,8 @@ implementation used by discord.js and discord.py. discord.mbt does not bind
 the C++ libdave library.
 
 The shim also owns transport AEAD. Keeping DAVE and transport crypto in one
-library gives applications one runtime dependency and avoids a separate
-OpenSSL/libcrypto loader.
+library gives voice applications one native runtime dependency; interaction
+signature verification is implemented separately in pure MoonBit.
 
 Build the shim from the repository root:
 

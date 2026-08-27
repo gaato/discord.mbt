@@ -1,12 +1,4 @@
 ///|
-#borrow(private_key, message, out_signature)
-extern "C" fn sign_ed25519_native(
-  private_key : Bytes,
-  message : Bytes,
-  out_signature : Bytes,
-) -> Int = "discord_verify_ed25519_sign"
-
-///|
 fn hex_nibble(code : UInt16) -> Byte? {
   if code >= '0' && code <= '9' {
     Some((code - '0').to_byte())
@@ -40,30 +32,35 @@ fn encode_hex(bytes : Bytes) -> String {
 
 ///|
 fn sign_body(
-  private_key : Bytes,
+  private_seed : Bytes,
   timestamp : String,
   body : String,
 ) -> String raise {
-  let signature = Bytes::make(64, b'\x00')
-  guard sign_ed25519_native(
-      private_key,
-      @utf8.encode(timestamp + body),
-      signature,
-    ) ==
-    1 else {
-    fail("libcrypto failed to sign the request")
-  }
-  encode_hex(signature)
+  encode_hex(@ed25519.sign(private_seed, @utf8.encode(timestamp + body)))
 }
 
 ///|
 fn signed_headers(
-  private_key : Bytes,
+  private_seed : Bytes,
   timestamp : String,
   body : String,
 ) -> Map[String, String] raise {
   {
-    "X-Signature-Ed25519": sign_body(private_key, timestamp, body),
+    "X-Signature-Ed25519": sign_body(private_seed, timestamp, body),
+    "X-Signature-Timestamp": timestamp,
+  }
+}
+
+///|
+fn signed_headers_bytes(
+  private_seed : Bytes,
+  timestamp : String,
+  body : Bytes,
+) -> Map[String, String] raise {
+  {
+    "X-Signature-Ed25519": encode_hex(
+      @ed25519.sign(private_seed, @utf8.encode(timestamp) + body),
+    ),
     "X-Signature-Timestamp": timestamp,
   }
 }
@@ -96,6 +93,21 @@ async fn http_request(
 }
 
 ///|
+async fn http_request_bytes(
+  addr : String,
+  path : String,
+  body : Bytes,
+  headers : Map[String, String],
+) -> (@ahttp.Response, String) {
+  let client = @ahttp.Client("http://\{addr}")
+  defer client.close()
+  client.request(Post, path, extra_headers=to_async_headers(headers))
+  @io.Writer::write(client, body)
+  let response = client.end_request()
+  (response, client.read_all().text())
+}
+
+///|
 fn ping_body() -> String {
   (
     #|{"id":"500000000000000100","application_id":"400000000000000001","type":1,"token":"interaction-token","version":1}
@@ -117,7 +129,7 @@ async test "native interactions server authenticates and dispatches HTTP request
   guard decode_hex(
       "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60",
     )
-    is Some(private_key) else {
+    is Some(private_seed) else {
     fail("invalid RFC 8032 private key fixture")
   }
   let public_key = "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a"
@@ -172,7 +184,7 @@ async test "native interactions server authenticates and dispatches HTTP request
       Post,
       "/interactions",
       ping,
-      signed_headers(private_key, timestamp, ping),
+      signed_headers(private_seed, timestamp, ping),
     )
     assert_eq(ping_response.code, 200)
     assert_eq(ping_result, "{\"type\":1}")
@@ -183,12 +195,12 @@ async test "native interactions server authenticates and dispatches HTTP request
       Post,
       "/interactions",
       command,
-      signed_headers(private_key, timestamp, command),
+      signed_headers(private_seed, timestamp, command),
     )
     assert_eq(command_response.code, 200)
     assert_eq(command_result, "{\"type\":4,\"data\":{\"content\":\"hello\"}}")
 
-    let bad_headers = signed_headers(private_key, timestamp, ping)
+    let bad_headers = signed_headers(private_seed, timestamp, ping)
     let valid_signature = bad_headers["X-Signature-Ed25519"]
     let flipped_nibble = if valid_signature[0] == '0' { "1" } else { "0" }
     bad_headers["X-Signature-Ed25519"] = flipped_nibble +
@@ -216,7 +228,7 @@ async test "native interactions server authenticates and dispatches HTTP request
       Post,
       "/wrong",
       ping,
-      signed_headers(private_key, timestamp, ping),
+      signed_headers(private_seed, timestamp, ping),
     )
     assert_eq(wrong_path.code, 404)
 
@@ -235,9 +247,18 @@ async test "native interactions server authenticates and dispatches HTTP request
       Post,
       "/interactions",
       malformed,
-      signed_headers(private_key, timestamp, malformed),
+      signed_headers(private_seed, timestamp, malformed),
     )
     assert_eq(malformed_response.code, 400)
+
+    let invalid_utf8 = b"\xFF{}"
+    let (invalid_utf8_response, _) = http_request_bytes(
+      server.addr(),
+      "/interactions",
+      invalid_utf8,
+      signed_headers_bytes(private_seed, timestamp, invalid_utf8),
+    )
+    assert_eq(invalid_utf8_response.code, 400)
 
     let unknown = command_body("missing", "hello", "500000000000000102")
     let (unknown_response, _) = http_request(
@@ -245,7 +266,7 @@ async test "native interactions server authenticates and dispatches HTTP request
       Post,
       "/interactions",
       unknown,
-      signed_headers(private_key, timestamp, unknown),
+      signed_headers(private_seed, timestamp, unknown),
     )
     assert_eq(unknown_response.code, 404)
 
@@ -255,7 +276,7 @@ async test "native interactions server authenticates and dispatches HTTP request
       Post,
       "/interactions",
       attach,
-      signed_headers(private_key, timestamp, attach),
+      signed_headers(private_seed, timestamp, attach),
     )
     assert_eq(attach_response.code, 200)
     guard attach_response.headers.get("content-type") is Some(content_type) else {
@@ -268,5 +289,28 @@ async test "native interactions server authenticates and dispatches HTTP request
       attach_result.contains("name=\"files[0]\"; filename=\"hello.txt\""),
     )
     assert_true(attach_result.contains("hello file contents"))
+  })
+}
+
+///|
+async test "native interactions server rejects invalid keys before startup" {
+  let app = @app.App(sync=Disabled)
+  @async.with_task_group(group => {
+    try
+      serve_interactions(
+        group,
+        app,
+        addr="127.0.0.1:0",
+        public_key="00",
+        token="",
+        sync=false,
+      )
+      |> ignore
+    catch {
+      @verify.InvalidPublicKeyLength(got~) => assert_eq(got, 2)
+      error => fail("unexpected startup error: \{Repr(error)}")
+    } noraise {
+      _ => fail("invalid public key was accepted")
+    }
   })
 }

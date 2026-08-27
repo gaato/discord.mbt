@@ -125,6 +125,14 @@ pub using @app {
 }
 
 ///|
+/// Pure MoonBit verification for Discord HTTP interaction signatures.
+pub using @verify {
+  type InteractionVerifier,
+  type InteractionVerifierError,
+  verify_signature,
+}
+
+///|
 /// Typed option constructors and combinators. Re-exporting these values keeps
 /// command definitions on the facade while `interaction` remains their owner.
 pub using @interaction {

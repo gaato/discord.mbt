@@ -2,6 +2,8 @@
 
 This Worker verifies Discord's request signature, dispatches interactions
 through an `App`, and keeps deferred handlers alive with `ctx.waitUntil`.
+It passes the exact request bytes to a pure MoonBit verifier and caches the
+expanded public key between requests.
 
 ## Build and deploy
 

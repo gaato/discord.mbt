@@ -12,6 +12,7 @@ import {
   "gaato/discord/interaction",
   "gaato/discord/model",
   "gaato/discord/telemetry",
+  "gaato/discord/verify",
   "gaato/discord/voice",
   "moonbitlang/async",
 }
@@ -129,7 +130,7 @@ pub fn user_option(String, String, required? : Bool, name_localizations? : Map[S
 
 pub fn user_select(custom_id~ : String, placeholder? : String, min_values? : Int, max_values? : Int, disabled? : Bool) -> @model.Component
 
-pub async fn verify_signature(public_key~ : String, signature~ : String, timestamp~ : String, body~ : String) -> Bool
+pub fn verify_signature(public_key~ : String, signature~ : String, timestamp~ : String, body~ : BytesView) -> Bool
 
 // Errors
 
@@ -254,6 +255,10 @@ pub using @app {type InteractionHandler}
 
 pub using @app {type InteractionOutcome}
 
+pub using @verify {type InteractionVerifier}
+
+pub using @verify {type InteractionVerifierError}
+
 pub using @endpoint_http {type InteractionsServer}
 
 pub using @http {type InviteRef}
@@ -351,4 +356,3 @@ pub using @voice {trait AudioSource}
 pub using @interaction {trait CommandModel}
 
 // Traits
-

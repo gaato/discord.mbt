@@ -1,8 +1,4 @@
 ///|
-/// Verify Discord HTTP interaction signatures with libcrypto Ed25519.
-pub using @verify {verify_signature}
-
-///|
 /// Native Discord HTTP-interactions server.
 pub using @endpoint_http {type InteractionsServer, serve_interactions}
 

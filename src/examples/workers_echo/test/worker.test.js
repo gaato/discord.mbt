@@ -11,6 +11,8 @@ const timestamp = "1787716800";
 
 let privateKey;
 let publicKeyHex;
+let rotatedPrivateKey;
+let rotatedPublicKeyHex;
 
 function hex(bytes) {
   return Array.from(new Uint8Array(bytes), (byte) =>
@@ -26,17 +28,32 @@ beforeAll(async () => {
   );
   privateKey = keys.privateKey;
   publicKeyHex = hex(await crypto.subtle.exportKey("raw", keys.publicKey));
+  const rotatedKeys = await crypto.subtle.generateKey(
+    { name: "Ed25519" },
+    true,
+    ["sign", "verify"],
+  );
+  rotatedPrivateKey = rotatedKeys.privateKey;
+  rotatedPublicKeyHex = hex(
+    await crypto.subtle.exportKey("raw", rotatedKeys.publicKey),
+  );
 });
 
 afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-async function signedRequest(body, { signal } = {}) {
+async function signedRequest(body, { signal, signingKey = privateKey } = {}) {
+  const bodyBytes =
+    typeof body === "string" ? encoder.encode(body) : new Uint8Array(body);
+  const timestampBytes = encoder.encode(timestamp);
+  const message = new Uint8Array(timestampBytes.length + bodyBytes.length);
+  message.set(timestampBytes);
+  message.set(bodyBytes, timestampBytes.length);
   const signature = await crypto.subtle.sign(
     { name: "Ed25519" },
-    privateKey,
-    encoder.encode(timestamp + body),
+    signingKey,
+    message,
   );
   return new Request(workerUrl, {
     method: "POST",
@@ -45,7 +62,7 @@ async function signedRequest(body, { signal } = {}) {
       "x-signature-ed25519": hex(signature),
       "x-signature-timestamp": timestamp,
     },
-    body,
+    body: bodyBytes,
     signal,
   });
 }
@@ -137,6 +154,39 @@ describe("Cloudflare Worker interaction endpoint", () => {
       "Invalid interaction payload",
     );
     await waitOnExecutionContext(invalidInteraction.ctx);
+  });
+
+  it("verifies raw bytes before rejecting invalid UTF-8", async () => {
+    const invalidUtf8 = new Uint8Array([0xff, 0x7b, 0x7d]);
+    const { ctx, response } = await dispatch(
+      await signedRequest(invalidUtf8),
+    );
+    expect(response.status).toBe(400);
+    expect(await response.text()).toBe("Invalid JSON");
+    await waitOnExecutionContext(ctx);
+  });
+
+  it("rebuilds the cached verifier when the public key changes", async () => {
+    const body = pingBody();
+    const first = await dispatch(await signedRequest(body));
+    expect(first.response.status).toBe(200);
+    await waitOnExecutionContext(first.ctx);
+
+    const rotated = await dispatch(
+      await signedRequest(body, { signingKey: rotatedPrivateKey }),
+      { DISCORD_PUBLIC_KEY: rotatedPublicKeyHex },
+    );
+    expect(rotated.response.status).toBe(200);
+    await waitOnExecutionContext(rotated.ctx);
+  });
+
+  it("does not reuse a cached verifier for invalid configuration", async () => {
+    const { ctx, response } = await dispatch(
+      await signedRequest(pingBody()),
+      { DISCORD_PUBLIC_KEY: "z".repeat(64) },
+    );
+    expect(response.status).toBe(401);
+    await waitOnExecutionContext(ctx);
   });
 
   it("answers signed PING requests", async () => {

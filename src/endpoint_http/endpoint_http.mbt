@@ -38,7 +38,7 @@ async fn route_request(
   body_reader : &@io.Reader,
   conn : @ahttp.ServerConnection,
   endpoint : @app.InteractionEndpoint,
-  public_key : String,
+  verifier : @verify.InteractionVerifier,
   path : String,
   deadline_ms : Int,
 ) -> EndpointResponse {
@@ -71,6 +71,14 @@ async fn route_request(
     )
   }
   let body_bytes = body_reader.read_all().binary()
+  if !verifier.verify(signature~, timestamp~, body=body_bytes) {
+    return text_response(
+      401,
+      "Unauthorized",
+      "invalid signature",
+      Some("text/plain; charset=utf-8"),
+    )
+  }
   let body = @utf8.decode(body_bytes) catch {
     _ =>
       return text_response(
@@ -79,14 +87,6 @@ async fn route_request(
         "invalid UTF-8 body",
         Some("text/plain; charset=utf-8"),
       )
-  }
-  if !@verify.verify_signature(public_key~, signature~, timestamp~, body~) {
-    return text_response(
-      401,
-      "Unauthorized",
-      "invalid signature",
-      Some("text/plain; charset=utf-8"),
-    )
   }
   let interaction : @model.Interaction? = Some(
     @json.from_json(@json.parse(body)),
@@ -159,14 +159,14 @@ async fn handle_request(
   body_reader : &@io.Reader,
   conn : @ahttp.ServerConnection,
   endpoint : @app.InteractionEndpoint,
-  public_key : String,
+  verifier : @verify.InteractionVerifier,
   path : String,
   deadline_ms : Int,
   warn : (String) -> Unit,
 ) -> Unit {
   let response = try
     route_request(
-      request, body_reader, conn, endpoint, public_key, path, deadline_ms,
+      request, body_reader, conn, endpoint, verifier, path, deadline_ms,
     )
   catch {
     error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
@@ -233,6 +233,7 @@ pub async fn[X] serve_interactions(
   path? : String = "/",
   deadline_ms? : Int = 2500,
 ) -> InteractionsServer {
+  let verifier = @verify.InteractionVerifier::new(public_key)
   let server = @ahttp.Server(@socket.Addr::parse(addr))
   let address = server.addr.to_string()
   let runner : Ref[@async.TaskGroup[Unit]?] = Ref(None)
@@ -246,8 +247,7 @@ pub async fn[X] serve_interactions(
       inner.spawn_bg(() => {
         server.run_forever(allow_failure=true, (request, body_reader, conn) => {
           handle_request(
-            request, body_reader, conn, endpoint, public_key, path, deadline_ms,
-            warn,
+            request, body_reader, conn, endpoint, verifier, path, deadline_ms, warn,
           )
         })
       })

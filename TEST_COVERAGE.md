@@ -67,7 +67,7 @@ Live socket, websocket, and FFI adapters (live-verified; no unit seam):
 | src/voice/crypto.mbt | 5 | Shim error-status translation paths; round-trips and geometry checks are covered with the shim loaded. |
 | src/http/client.mbt | 4 | Connection teardown paths on live pools. |
 | src/http/request.mbt | 24 | Cancellation/timeout plumbing on live connections; the JSON, body-less, 204, non-JSON-error, and all three multipart named-file arms are covered by the loopback server tests. |
-| src/endpoint_http/endpoint_http.mbt | 17 | HTTP server error/cancellation arms (send failures, teardown); the request paths are covered by the signed-request e2e tests. |
+| src/endpoint_http/endpoint_http.mbt | 16 | HTTP server error/cancellation arms (send failures, teardown); the request paths are covered by the signed-request e2e tests. |
 | src/coordinator/protocol.mbt | 4 | Cross-process wire error arms. |
 | src/coordinator/remote.mbt | 10 | Reconnecting remote client against a real coordinator socket. |
 | src/coordinator/server.mbt | 17 | Per-connection cleanup on real disconnects (the existing socket test is retry-flaky; see project notes). |

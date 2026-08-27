@@ -103,7 +103,7 @@ async fn run_echo_bot(token : String) -> Unit {
 | `gaato/discord/endpoint_http` | Native signed-interactions HTTP server (`serve_interactions`) | Yes | No |
 | `gaato/discord/cache` | Opt-in, gateway-driven in-memory cache | Yes | Yes |
 | `gaato/discord/util` | Pure helpers: permissions, mentions, timestamps, CDN URLs | Yes | Yes |
-| `gaato/discord/verify` | Ed25519 request verification (WebCrypto on JS, libcrypto on native) | Yes | Yes |
+| `gaato/discord/verify` | Pure MoonBit Ed25519 request verification | Yes | Yes |
 | `gaato/discord/ratelimit` | Rate limiter trait + in-memory implementation | Yes | Yes |
 | `gaato/discord/queue` | Identify queue trait + in-memory implementation | Yes | Yes |
 | `gaato/discord/coordinator` | Native TCP coordinator for multi-process Identify and REST limits | Yes | No |
@@ -246,12 +246,11 @@ async fn handle_http_interaction(
 }
 ```
 
-Serverless targets such as Cloudflare Workers are first class: adapters
-verify the raw request with `@discord.verify_signature` (WebCrypto Ed25519 on
-JavaScript — Workers and Node 19+ — runtime-loaded libcrypto on native)
-before parsing. The `workers_echo` example is tested inside Cloudflare's local
-`workerd` runtime and supports streamed multipart callbacks for in-memory
-`FileUpload` values. On native,
+Serverless targets such as Cloudflare Workers are first class: adapters verify
+the raw request bytes with the reusable pure MoonBit
+`@discord.InteractionVerifier` before parsing. The `workers_echo` example is
+tested inside Cloudflare's local `workerd` runtime and supports streamed
+multipart callbacks for in-memory `FileUpload` values. On native,
 `@discord.serve_interactions(group, app, addr~, public_key~, token~)` is a
 complete signed-interactions HTTP server. See the
 [HTTP interactions guide](src/guide/06-http-interactions.mbt.md) and the

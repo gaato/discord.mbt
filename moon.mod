@@ -18,4 +18,5 @@ preferred_target = "native"
 
 import {
   "moonbitlang/async@0.21.0",
+  "hustcer/ed25519@0.6.0",
 }

@@ -1,14 +1,27 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "gaato/discord/verify"
 
+import {
+  "moonbitlang/core/debug",
+}
+
 // Values
-pub async fn verify_signature(public_key~ : String, signature~ : String, timestamp~ : String, body~ : String) -> Bool
+pub fn verify_signature(public_key~ : String, signature~ : String, timestamp~ : String, body~ : BytesView) -> Bool
 
 // Errors
+pub(all) suberror InteractionVerifierError {
+  InvalidPublicKeyLength(got~ : Int)
+  InvalidPublicKeyHex
+  InvalidPublicKeyEncoding
+} derive(Eq, @debug.Debug)
 
 // Types and methods
+pub struct InteractionVerifier {
+  // private fields
+}
+pub fn InteractionVerifier::new(String) -> Self raise InteractionVerifierError
+pub fn InteractionVerifier::verify(Self, signature~ : String, timestamp~ : String, body~ : BytesView) -> Bool
 
 // Type aliases
 
 // Traits
-

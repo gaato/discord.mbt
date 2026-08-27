@@ -196,14 +196,40 @@ pub fn start_interaction(
 }
 
 ///|
-/// Expose the JS-only facade signature verifier as a JavaScript promise.
+priv struct CachedInteractionVerifier {
+  public_key : String
+  verifier : @discord.InteractionVerifier
+}
+
+///|
+let interaction_verifier_cache : Ref[CachedInteractionVerifier?] = Ref(None)
+
+///|
+fn cached_interaction_verifier(
+  public_key : String,
+) -> @discord.InteractionVerifier? {
+  match interaction_verifier_cache.val {
+    Some(cached) if cached.public_key == public_key => Some(cached.verifier)
+    _ => {
+      let verifier = @discord.InteractionVerifier::new(public_key) catch {
+        _ => return None
+      }
+      interaction_verifier_cache.val = Some({ public_key, verifier })
+      Some(verifier)
+    }
+  }
+}
+
+///|
+/// Verify raw request bytes with a key-aware reusable verifier cache.
 pub fn verify_signature(
   public_key : String,
   signature : String,
   timestamp : String,
-  body : String,
-) -> @js_async.Promise[Bool] {
-  @js_async.Promise::from_async(() => {
-    @discord.verify_signature(public_key~, signature~, timestamp~, body~)
-  })
+  body : Bytes,
+) -> Bool {
+  guard cached_interaction_verifier(public_key) is Some(verifier) else {
+    return false
+  }
+  verifier.verify(signature~, timestamp~, body~)
 }

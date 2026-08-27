@@ -104,27 +104,26 @@ dispatch. This adapter returns `None` for an unauthorized request:
 
 ```mbt check
 ///|
-async fn parse_verified(
-  public_key : String,
+fn parse_verified(
+  verifier : @discord.InteractionVerifier,
   signature : String,
   timestamp : String,
-  raw_body : String,
-) -> Json? {
-  let verified = @discord.verify_signature(
-    public_key~,
-    signature~,
-    timestamp~,
-    body=raw_body,
-  )
+  raw_body : BytesView,
+) -> Json? raise {
+  let verified = verifier.verify(signature~, timestamp~, body=raw_body)
   if !verified {
     return None
   }
-  Some(@json.parse(raw_body))
+  Some(@json.parse(@utf8.decode(raw_body)))
 }
 ```
 
-`verify_signature` uses WebCrypto on JavaScript and runtime-loaded libcrypto on
-native. It returns `false` for malformed hex input or verification failures.
+Construct `InteractionVerifier` once from the application's hexadecimal public
+key and reuse it across requests. Verification is synchronous and implemented
+entirely in MoonBit on both JavaScript and native. Invalid public-key
+configuration raises `InteractionVerifierError`; malformed request signatures
+and verification failures return `false`. The one-shot `verify_signature`
+helper is available when retaining a verifier is impractical.
 
 ## Native HTTP server
 
@@ -162,9 +161,11 @@ test "http interaction declarations compile" {
 }
 ```
 
-The server verifies signatures against the raw body, handles Discord PINGs,
-dispatches through `App::serve`, returns 404 for `NoRoute`, and returns 202 for
-`NoResponse` or `TimedOut`. Use a reverse proxy for public HTTPS termination.
+The server validates and expands the public key before binding its socket, then
+reuses that verifier for every request. It verifies signatures against the raw
+body, handles Discord PINGs, dispatches through `App::serve`, returns 404 for
+`NoRoute`, and returns 202 for `NoResponse` or `TimedOut`. Use a reverse proxy
+for public HTTPS termination.
 
 ## Cloudflare Workers
 

@@ -22,18 +22,20 @@ export default {
 
     const signature = request.headers.get("X-Signature-Ed25519") ?? "";
     const timestamp = request.headers.get("X-Signature-Timestamp") ?? "";
-    const body = await request.text();
-    const verified = await verify_signature(
+    const bodyBytes = new Uint8Array(await request.arrayBuffer());
+    const verified = verify_signature(
       env.DISCORD_PUBLIC_KEY ?? "",
       signature,
       timestamp,
-      body,
+      bodyBytes,
     );
     if (!verified) {
       return new Response("Invalid request signature", { status: 401 });
     }
 
+    let body;
     try {
+      body = new TextDecoder("utf-8", { fatal: true }).decode(bodyBytes);
       JSON.parse(body);
     } catch {
       return new Response("Invalid JSON", { status: 400 });
