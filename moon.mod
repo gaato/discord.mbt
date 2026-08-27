@@ -17,6 +17,7 @@ source = "src"
 preferred_target = "native"
 
 import {
-  "moonbitlang/async@0.21.0",
+  "moonbitlang/async@0.21.2",
   "hustcer/ed25519@0.6.0",
+  "gaato/dave@0.1.0",
 }
