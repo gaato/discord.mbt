@@ -39,11 +39,9 @@ env WRANGLER_SEND_METRICS=false npm test
 npm run bundle:check -- --outdir /tmp/discord-mbt-workers-echo
 ```
 
-The published `moonbitlang/async@0.21.0` JavaScript Fetch transport currently
-cannot finish 204, 205, or HEAD responses because those Web API responses have
-a null body. This repository keeps the published dependency pinned and tests
-an upstream fix separately; avoid those response shapes in Worker-side REST
-calls until a fixed async release is available.
+The `/vanish` command exercises a deferred Worker-side REST call that deletes
+its original response. Its workerd test returns a real null-body 204 response,
+covering the Fetch behavior fixed in `moonbitlang/async@0.21.2`.
 
 Set the deployed Worker's URL as the Interactions Endpoint URL in the Discord
 developer portal. Discord sends a signed PING request while validating the URL;

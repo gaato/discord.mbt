@@ -196,7 +196,6 @@ env WRANGLER_SEND_METRICS=false npm test
 
 Gateway and Voice transports remain native-only. The JavaScript backend is for
 the REST client, signature verification, and gateway-free HTTP interactions.
-In the pinned `moonbitlang/async@0.21.0`, JS Fetch also has a known limitation:
-204, 205, and HEAD responses expose a null Web API body and fail before the
-client can inspect the status. A fixed async release must pass those regression
-cases before this module updates its dependency.
+With `moonbitlang/async@0.21.2`, the JS Fetch transport also completes
+null-body 204 responses. The `workers_echo` suite covers this with a deferred
+interaction-response deletion that runs to completion under `waitUntil`.

@@ -306,6 +306,30 @@ describe("Cloudflare Worker interaction endpoint", () => {
     });
   });
 
+  it("finishes a deferred REST call when a 204 response has a null body", async () => {
+    const calls = [];
+    const fetchMock = vi.fn(async (input, init) => {
+      const url = typeof input === "string" ? input : input.url;
+      const method = init?.method ?? input.method;
+      calls.push({ method, url });
+      return new Response(null, { status: 204 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { ctx, response } = await dispatch(
+      await signedRequest(commandBody("vanish")),
+    );
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe('{"type":5,"data":{}}');
+    await waitOnExecutionContext(ctx);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(calls[0]).toEqual({
+      method: "DELETE",
+      url: "https://discord.com/api/v10/webhooks/400000000000000001/interaction-token/messages/@original",
+    });
+  });
+
   it("rejects a pre-aborted response waiter but completes the background", async () => {
     const moonbit = await import(
       "../../../../_build/js/release/build/examples/workers_echo/workers_echo.js"

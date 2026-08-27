@@ -24,6 +24,16 @@ fn slow_command() -> @discord.Command[Unit] {
 }
 
 ///|
+fn vanish_command() -> @discord.Command[Unit] {
+  @discord.slash(
+    name="vanish",
+    description="Acknowledge, then delete the original response",
+    args=@discord.Args::unit(),
+    handler=Deferred(ephemeral=false, (ctx, _) => ctx.raw().delete_response()),
+  )
+}
+
+///|
 fn file_command() -> @discord.Command[Unit] {
   @discord.slash(
     name="file",
@@ -46,6 +56,10 @@ fn file_command() -> @discord.Command[Unit] {
 /// native, so the deployed worker and the registered commands cannot drift.
 pub fn worker_app(sync? : @discord.CommandSync = Disabled) -> @discord.App {
   let app = @discord.App(sync~)
-  app..command(echo_command())..command(file_command()).command(slow_command())
+  app
+  ..command(echo_command())
+  ..command(file_command())
+  ..command(slow_command())
+  .command(vanish_command())
   app
 }
