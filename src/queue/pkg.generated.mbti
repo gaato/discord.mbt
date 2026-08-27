@@ -18,4 +18,3 @@ pub impl IdentifyQueue for InMemoryQueue
 pub(open) trait IdentifyQueue {
   async fn wait_for_identify(Self, Int) -> Unit
 }
-

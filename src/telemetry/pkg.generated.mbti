@@ -27,4 +27,3 @@ pub(all) enum TelemetryEvent {
 // Type aliases
 
 // Traits
-

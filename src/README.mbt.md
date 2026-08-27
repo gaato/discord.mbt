@@ -204,10 +204,14 @@ limits through the bundled TCP coordinator. See the
 
 Native builds can join voice gateway v8 calls, play 20 ms Opus frames, and
 receive per-user Opus streams. Discord requires DAVE encryption, so voice
-applications also need the Rust shim from `voice-shim/` (prebuilt libraries
-will be attached to GitHub Releases once releases start). See the
-[voice guide](src/guide/10-voice.mbt.md), the `voice_player` and
-`voice_recorder` examples, and the accepted design in
+applications use the native-only
+[`gaato/dave`](https://github.com/gaato/dave.mbt) binding to Discord's
+official `libdave` for MLS and media encryption. The separate Rust library in
+`voice-shim/` handles RTP transport AEAD only. `gaato/dave` currently pins
+upstream `v1.2.0/cpp`; its official binaries and the Rust shim must both be
+available for the host platform. See the
+[voice guide](src/guide/10-voice.mbt.md) for installation and runtime limits,
+the `dave_probe`, `voice_player`, and `voice_recorder` examples, and the accepted design in
 [`src/voice/DESIGN.md`](src/voice/DESIGN.md).
 
 ### Synchronization and failures
@@ -256,10 +260,10 @@ complete signed-interactions HTTP server. See the
 [HTTP interactions guide](src/guide/06-http-interactions.mbt.md) and the
 `interactions_http` and `workers_echo` examples.
 
-The pinned `moonbitlang/async@0.21.0` JS Fetch transport cannot yet finish
-204, 205, or HEAD responses whose Web API body is null. The dependency remains
-pinned until the upstream regression tests and this repository's workerd tests
-pass against a fixed release. Gateway and Voice transports remain native-only.
+The JavaScript REST client supports null-body 204 responses through
+`moonbitlang/async@0.21.2`; the `workers_echo` workerd suite covers a deferred
+interaction-response deletion end to end. Gateway and Voice transports remain
+native-only.
 
 ## Typed models
 

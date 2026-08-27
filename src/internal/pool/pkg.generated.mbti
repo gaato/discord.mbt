@@ -26,4 +26,3 @@ pub async fn[T] Pool::with_conn(Self, async (@http.Client) -> T) -> T
 // Type aliases
 
 // Traits
-

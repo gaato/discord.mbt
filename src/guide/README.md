@@ -24,7 +24,7 @@ drift from the library.
 9. [Middleware](09-middleware.mbt.md): wrap REST calls, routed interactions,
    and Gateway handler fan-out.
 10. [Voice](10-voice.mbt.md): join channels, play and receive Opus, and
-    install the native DAVE shim.
+    install official libdave and the transport AEAD shim.
 11. [The framework layer](11-framework.mbt.md): direct interaction routing,
     response gates, and testing handlers without a network.
 12. [Models and utilities](12-models-utilities.mbt.md): the pure data layer,

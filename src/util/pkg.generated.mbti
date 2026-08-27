@@ -78,4 +78,3 @@ pub(all) enum TimestampStyle {
 // Type aliases
 
 // Traits
-

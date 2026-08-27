@@ -23,4 +23,3 @@ pub(open) trait RateLimiter {
   async fn acquire(Self, String, global_exempt~ : Bool) -> Unit
   async fn release(Self, String, status~ : Int, headers~ : Map[String, String]) -> Unit
 }
-

@@ -58,4 +58,3 @@ pub fn InMemoryCache::voice_states(Self, @model.Id[@model.GuildMarker]) -> Array
 // Type aliases
 
 // Traits
-

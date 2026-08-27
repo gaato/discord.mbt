@@ -87,4 +87,3 @@ pub(open) trait GatewayTransport {
 pub(open) trait Inflater {
   fn push(Self, Bytes) -> String? raise
 }
-

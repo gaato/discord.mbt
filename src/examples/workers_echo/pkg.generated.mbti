@@ -15,4 +15,3 @@ pub fn worker_app(sync? : @app.CommandSync) -> @app.App
 // Type aliases
 
 // Traits
-

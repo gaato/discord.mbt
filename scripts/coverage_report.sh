@@ -10,7 +10,8 @@
 #
 # Usage: scripts/coverage_report.sh [--from-json FILE]
 #   --from-json FILE  reuse an existing Coveralls JSON report instead of
-#                     re-running the (slow) instrumented test suite.
+#                     re-running the (slow) instrumented test suite; native
+#                     bootstrap and load checks are not repeated.
 #
 # Exit status: 0 = every uncovered line is ledgered, 1 = unexplained coverage
 # gaps or over-budget files, 2 = setup/run failure.
@@ -25,13 +26,41 @@ if [[ "${1:-}" == "--from-json" ]]; then
   json_file="${2:?--from-json needs a file}"
 else
   json_file="$repo_root/_build/coverage_report.json"
-  # The DAVE/AEAD tests skip themselves when the voice shim is not loadable,
-  # which silently under-reports src/voice coverage. Point the loader at the
-  # in-tree build when present.
-  shim="$repo_root/voice-shim/target/release/libdiscord_voice_shim.so"
-  if [[ -z "${DISCORD_VOICE_SHIM_PATH:-}" && -f "$shim" ]]; then
-    export DISCORD_VOICE_SHIM_PATH="$shim"
+  # DAVE and transport AEAD use separate native libraries. Require gaato/dave's
+  # verified libdave bootstrap and a current in-tree Rust transport shim.
+  if [[ -n "${MBT_DAVE_NATIVE_LIB:-}" ]]; then
+    echo "error: unset MBT_DAVE_NATIVE_LIB; coverage requires the pinned, verified libdave asset" >&2
+    exit 2
   fi
+  export MBT_DAVE_REQUIRE_NATIVE=1
+  export DISCORD_VOICE_REQUIRE_SHIM=1
+  (cd "$repo_root/voice-shim" && cargo build --release --locked) >/dev/null || {
+    echo "error: release transport shim build failed" >&2
+    exit 2
+  }
+  case "$(uname -s)" in
+    Linux*) shim="$repo_root/voice-shim/target/release/libdiscord_voice_shim.so" ;;
+    Darwin*) shim="$repo_root/voice-shim/target/release/libdiscord_voice_shim.dylib" ;;
+    MINGW*|MSYS*|CYGWIN*) shim="$repo_root/voice-shim/target/release/discord_voice_shim.dll" ;;
+    *)
+      echo "error: unsupported coverage host: $(uname -s)" >&2
+      exit 2
+      ;;
+  esac
+  if [[ ! -f "$shim" ]]; then
+    echo "error: built transport shim not found at $shim" >&2
+    exit 2
+  fi
+  export DISCORD_VOICE_SHIM_PATH="$shim"
+  # Run a native voice build before measurement so the dependency prebuild
+  # downloads or verifies the pinned libdave asset. The require-native test
+  # then fails closed if that verified library cannot be loaded at runtime.
+  (cd "$repo_root" &&
+    MOON_CC="${MOON_CC:-cc}" moon build --target native --release --deny-warn \
+      src/voice) >/dev/null || {
+      echo "error: pinned libdave bootstrap/native voice build failed" >&2
+      exit 2
+    }
   # moon_cove_report merges every counter/trace file it finds under the
   # working directory, so counters left by earlier runs and trace maps from
   # the release profile silently corrupt the numbers (the analyze run itself
@@ -43,7 +72,7 @@ else
   # moon's bundled tcc cannot link on some hosts (openSUSE); use the system cc.
   (cd "$repo_root" &&
     MOON_CC="${MOON_CC:-cc}" moon coverage analyze -- -f coveralls -o "$json_file") \
-    >/dev/null 2>&1 || {
+    >/dev/null || {
       echo "error: moon coverage analyze failed" >&2
       exit 2
     }

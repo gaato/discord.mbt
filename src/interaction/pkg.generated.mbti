@@ -200,4 +200,3 @@ pub fn SuggestInput::name(Self) -> String
 pub(open) trait CommandModel {
   fn from_options(CommandOptions) -> Self raise
 }
-

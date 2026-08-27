@@ -23,4 +23,3 @@ pub fn InteractionsServer::close(Self) -> Unit
 // Type aliases
 
 // Traits
-

@@ -7,22 +7,40 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  MOONBIT_INSTALL_VERSION: "0.10.10+f8a486b6f"
+
 jobs:
   check:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
 
     steps:
-      - uses: actions/checkout@v7
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Install MoonBit
+        shell: bash
         run: |
-          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          curl --proto '=https' --tlsv1.2 --fail --show-error --silent --location \
+            https://cli.moonbitlang.com/install/unix.sh \
+            --output "$RUNNER_TEMP/install-moonbit.sh"
+          actual="$(shasum -a 256 "$RUNNER_TEMP/install-moonbit.sh" | awk '{print $1}')"
+          test "$actual" = "46495f8cdc0050f79b6cb195d66478d101cb3601d68506568fbe377fcdf2a9fe"
+          bash "$RUNNER_TEMP/install-moonbit.sh"
           echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
 
       - name: Version
-        run: moon version
+        run: moon version --all
 
       - name: Install dependencies
         run: moon update && moon install
@@ -58,27 +76,35 @@ jobs:
           git diff --exit-code --ignore-blank-lines -- '*.mbti'
 
   js:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
 
     steps:
-      - uses: actions/checkout@v7
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
           cache: npm
           cache-dependency-path: src/examples/workers_echo/package-lock.json
 
       - name: Install MoonBit
+        shell: bash
         run: |
-          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          curl --proto '=https' --tlsv1.2 --fail --show-error --silent --location \
+            https://cli.moonbitlang.com/install/unix.sh \
+            --output "$RUNNER_TEMP/install-moonbit.sh"
+          actual="$(shasum -a 256 "$RUNNER_TEMP/install-moonbit.sh" | awk '{print $1}')"
+          test "$actual" = "46495f8cdc0050f79b6cb195d66478d101cb3601d68506568fbe377fcdf2a9fe"
+          bash "$RUNNER_TEMP/install-moonbit.sh"
           echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
 
       - name: Version
-        run: moon version
+        run: moon version --all
 
       - name: Install dependencies
         run: moon update && moon install
@@ -106,22 +132,25 @@ jobs:
         run: npm run bundle:check -- --outdir "$RUNNER_TEMP/workers-echo"
 
   voice-shim:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     env:
       DISCORD_VOICE_SHIM_PATH: ${{ github.workspace }}/voice-shim/target/release/libdiscord_voice_shim.so
+      MBT_DAVE_REQUIRE_NATIVE: "1"
 
     steps:
-      - uses: actions/checkout@v7
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c # stable (2026-08-05)
         with:
           components: clippy, rustfmt
 
       - name: Cache Cargo
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             ~/.cargo/registry
@@ -129,7 +158,7 @@ jobs:
             voice-shim/target
           key: voice-shim-ci-${{ runner.os }}-${{ hashFiles('voice-shim/Cargo.toml', 'voice-shim/Cargo.lock') }}
 
-      - name: Check voice shim
+      - name: Check transport-only voice shim
         working-directory: voice-shim
         run: |
           cargo fmt -- --check
@@ -141,12 +170,21 @@ jobs:
         run: cargo build --release --locked
 
       - name: Install MoonBit
+        shell: bash
         run: |
-          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          curl --proto '=https' --tlsv1.2 --fail --show-error --silent --location \
+            https://cli.moonbitlang.com/install/unix.sh \
+            --output "$RUNNER_TEMP/install-moonbit.sh"
+          actual="$(shasum -a 256 "$RUNNER_TEMP/install-moonbit.sh" | awk '{print $1}')"
+          test "$actual" = "46495f8cdc0050f79b6cb195d66478d101cb3601d68506568fbe377fcdf2a9fe"
+          bash "$RUNNER_TEMP/install-moonbit.sh"
           echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+
+      - name: Version
+        run: moon version --all
 
       - name: Install dependencies
         run: moon update && moon install
 
-      - name: Test with voice shim
-        run: moon test --target native --release
+      - name: Test with transport shim and official libdave
+        run: moon test --target native --release --deny-warn

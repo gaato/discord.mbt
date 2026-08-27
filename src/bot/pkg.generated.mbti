@@ -158,4 +158,3 @@ pub(all) enum ShardConfig {
 pub type EventMiddleware = async (GatewayCtx, @model.Event, async (@model.Event) -> Unit) -> Unit
 
 // Traits
-

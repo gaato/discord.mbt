@@ -16,13 +16,20 @@ result. The script pins the measurement pitfalls discovered while building
 this ledger: it cleans stale `moonbit_coverage_*` counters and release-profile
 `.trace.source` maps before measuring (leftovers silently corrupt the merge),
 uses the Coveralls JSON format because `-f summary` omits fully covered files,
-sets `MOON_CC=cc` for hosts where moon's bundled tcc cannot link, and points
-`DISCORD_VOICE_SHIM_PATH` at the in-tree voice shim so the DAVE/AEAD tests do
-not skip themselves.
+sets `MOON_CC=cc` for hosts where moon's bundled tcc cannot link, requires
+`gaato/dave`'s pinned libdave bootstrap with `MBT_DAVE_REQUIRE_NATIVE=1`, and
+runs a native voice build before measurement. The require-native test fails
+closed if libdave cannot be loaded; an inherited `MBT_DAVE_NATIVE_LIB`
+override is rejected because it bypasses pinned-asset verification.
+Separately, the script builds the in-tree Rust shim with
+`cargo build --release --locked`, points `DISCORD_VOICE_SHIM_PATH` at that
+artifact, and requires it to load so transport AEAD tests cannot skip.
+`--from-json` only rechecks a stored report against the ledger; it does not
+repeat either native bootstrap or runtime load check.
 
-Snapshot at the last full measurement (2026-07-18, after the per-resource
-cache limits): **90.5 %** across the library (7478/8267 coverage points; http
-95.5 %, model 94.9 %, bot 93.0 %, interaction 91.0 %, cache 93.1 %).
+Snapshot at the last full measurement (2026-08-27, after the official-libdave
+extraction): **90.5 %** across the library (7636/8440 coverage points; http
+95.4 %, model 94.8 %, bot 92.3 %, interaction 91.0 %, voice 79.6 %).
 
 ## Policy
 
@@ -60,29 +67,32 @@ Live socket, websocket, and FFI adapters (live-verified; no unit seam):
 
 | File | Budget | Reason |
 | --- | --- | --- |
-| src/gateway/transport.mbt | 31 | Real websocket adapter behind the GatewayTransport trait; every consumer is tested against FakeTransport. |
-| src/voice/transport.mbt | 32 | Real voice websocket adapter behind the VoiceTransport trait. |
+| src/gateway/transport.mbt | 37 | Real websocket adapter behind the GatewayTransport trait; every consumer is tested against FakeTransport. |
+| src/voice/transport.mbt | 38 | Real voice websocket adapter behind the VoiceTransport trait. |
 | src/voice/udp.mbt | 4 | SocketVoiceUdp impls and `open_voice_udp` over a real UDP socket; parse and retry logic is covered via fakes. |
 | src/voice/shim_ffi.mbt | 3 | Extern-C glue whose arms depend on host library state. |
 | src/voice/crypto.mbt | 5 | Shim error-status translation paths; round-trips and geometry checks are covered with the shim loaded. |
 | src/http/client.mbt | 4 | Connection teardown paths on live pools. |
-| src/http/request.mbt | 24 | Cancellation/timeout plumbing on live connections; the JSON, body-less, 204, non-JSON-error, and all three multipart named-file arms are covered by the loopback server tests. |
+| src/http/request.mbt | 27 | Cancellation/timeout plumbing on live connections; the JSON, body-less, 204, non-JSON-error, and all three multipart named-file arms are covered by the loopback server tests. |
 | src/endpoint_http/endpoint_http.mbt | 16 | HTTP server error/cancellation arms (send failures, teardown); the request paths are covered by the signed-request e2e tests. |
-| src/coordinator/protocol.mbt | 4 | Cross-process wire error arms. |
-| src/coordinator/remote.mbt | 10 | Reconnecting remote client against a real coordinator socket. |
-| src/coordinator/server.mbt | 17 | Per-connection cleanup on real disconnects (the existing socket test is retry-flaky; see project notes). |
+| src/coordinator/protocol.mbt | 3 | Cross-process wire error arms. |
+| src/coordinator/remote.mbt | 14 | Reconnecting remote client against a real coordinator socket. |
+| src/coordinator/server.mbt | 12 | Per-connection cleanup on real disconnects (the existing socket test is retry-flaky; see project notes). |
 
-Voice session state machine (verified live 2026-07-15: ffmpeg streaming
-playback and a 72-second recording against real Discord voice):
+Voice session state machine (transport and session flow verified live
+2026-07-15 with the pre-libdave backend: ffmpeg streaming playback and a
+72-second recording against real Discord voice; current official-libdave
+single-member paths are native-tested, while multi-member paths remain
+ledgered):
 
 | File | Budget | Reason |
 | --- | --- | --- |
-| src/voice/connection.mbt | 92 | Error/cancellation plumbing of the pump, receiver, and playback tasks plus rejoin credential arms beyond the fake-session and seamed-keepalive tests. |
-| src/voice/gateway.mbt | 18 | Send-gate error arms, teardown catches, and malformed-frame guards; backoff and heartbeat cadence are tested via the injected sleeper. |
-| src/voice/dave.mbt | 28 | DAVE/MLS transitions that need a second member and real davey epoch state. |
-| src/voice/audio.mbt | 11 | Real-time pacing loop (deadline sleeps) and DAVE encrypt-drop telemetry arms. |
+| src/voice/connection.mbt | 78 | Error/cancellation plumbing of the pump, receiver, and playback tasks plus rejoin credential arms beyond the fake-session and seamed-keepalive tests. |
+| src/voice/gateway.mbt | 13 | Send-gate error arms, teardown catches, and malformed-frame guards; backoff and heartbeat cadence are tested via the injected sleeper. |
+| src/voice/dave.mbt | 52 | DAVE/MLS transitions that need a second member and real libdave group state. |
+| src/voice/audio.mbt | 9 | Real-time pacing loop (deadline sleeps) and DAVE encrypt-drop telemetry arms. |
 | src/voice/subscribe.mbt | 4 | Silence-timeout stream end arms. |
-| src/voice/receive.mbt | 6 | Decrypt arms needing real DAVE frames from a second member. |
+| src/voice/receive.mbt | 7 | Decrypt arms needing real DAVE frames from a second member. |
 | src/voice/reorder.mbt | 3 | Arrival-time flush arms. |
 | src/voice/rtp.mbt | 3 | Header arms only produced by real senders (CSRC counts). |
 | src/voice/ogg_opus.mbt | 4 | Constructor `abort`s (unreachable by construction) and one reader break arm. |
@@ -92,15 +102,14 @@ run; the gateway/voice loops are additionally tested via injected sleepers):
 
 | File | Budget | Reason |
 | --- | --- | --- |
-| src/gateway/shard.mbt | 30 | Defensive arms around the seamed loops: send-gate release on transport errors, event-queue teardown catches, malformed Hello/frame guards, and cancellation returns. |
+| src/gateway/shard.mbt | 24 | Defensive arms around the seamed loops: send-gate release on transport errors, event-queue teardown catches, malformed Hello/frame guards, and cancellation returns. |
 | src/gateway/compression.mbt | 3 | zlib failure statuses require a corrupted native stream state. |
-| src/ratelimit/ratelimit.mbt | 4 | Global-window sleep and gate release-on-error paths. |
-| src/queue/queue.mbt | 2 | Identify-bucket gate release-on-error path. |
-| src/http/handles_channel.mbt | 2 | `with_typing` refresh-failure arm sits behind the real 8-second cadence. |
+| src/ratelimit/ratelimit.mbt | 2 | Global-window sleep and gate release-on-error paths. |
+| src/http/handles_channel.mbt | 3 | `with_typing` refresh-failure arm sits behind the real 8-second cadence. |
 | src/bot/middleware.mbt | 1 | Middleware chain cancellation arm. |
 | src/bot/shard_manager.mbt | 6 | Multi-shard session-start-limit and staggered-identify paths over live gateways. |
 | src/bot/bot.mbt | 19 | Gateway run-loop teardown/cancellation arms; startup, intents, telemetry, and event routing are covered. |
-| src/bot/voice.mbt | 27 | join_voice credential/timeout error arms beyond the fake-transport happy path. |
+| src/bot/voice.mbt | 33 | join_voice credential/timeout error arms beyond the fake-transport happy path. |
 
 Defensive arms unreachable by construction:
 
@@ -120,7 +129,7 @@ variant fallbacks; decode is pinned by fixtures):
 
 | File | Budget | Reason |
 | --- | --- | --- |
-| src/model/application.mbt | 2 | Unknown-variant emit fallbacks. |
+| src/model/application.mbt | 4 | Unknown-variant emit fallbacks. |
 | src/model/auto_moderation.mbt | 9 | Emit arms of receive-only structs. |
 | src/model/channel.mbt | 5 | Emit arms of receive-only fields. |
 | src/model/command_permissions.mbt | 3 | Emit arms of receive-only structs. |

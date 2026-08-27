@@ -28,4 +28,3 @@ pub fn FeedbackFeature::stored_count(Self) -> Int
 // Type aliases
 
 // Traits
-
