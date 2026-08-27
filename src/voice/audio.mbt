@@ -30,12 +30,8 @@ async fn send_opus_packet(
   let header = build_rtp_header(sequence~, timestamp~, ssrc~)
   let encrypted_frame = match dave {
     Some(machine) =>
-      Some(machine.encrypt_opus_frame(frame)) catch {
+      Some(machine.encrypt_opus_frame(ssrc~, frame)) catch {
         DaveInvalid(reason~) => {
-          on_dave_error(reason)
-          None
-        }
-        DaveStale(reason~) => {
           on_dave_error(reason)
           None
         }
@@ -43,11 +39,10 @@ async fn send_opus_packet(
           on_dave_error(reason)
           None
         }
-        DaveInternal(status~, reason~) => {
-          on_dave_error("DAVE status \{status}: \{reason}")
+        DaveInternal(reason~) => {
+          on_dave_error(reason)
           None
         }
-        error => raise error
       }
     None => Some(frame)
   }

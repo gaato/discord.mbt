@@ -137,90 +137,6 @@ impl @voice.AudioSource for OneConnectionFrame with fn next_frame(self) {
 }
 
 ///|
-struct ConnectionTestDave {
-  proposal_calls : Array[Array[String]]
-}
-
-///|
-impl @voice.DaveProvider for ConnectionTestDave with fn max_protocol_version(
-  _self,
-) {
-  1
-}
-
-///|
-impl @voice.DaveProvider for ConnectionTestDave with fn reinit(
-  _self,
-  protocol_version~,
-) {
-  assert_eq(protocol_version, 1)
-}
-
-///|
-impl @voice.DaveProvider for ConnectionTestDave with fn set_external_sender(
-  _self,
-  _payload,
-) {
-
-}
-
-///|
-impl @voice.DaveProvider for ConnectionTestDave with fn key_package(_self) {
-  b"connection-key-package"
-}
-
-///|
-impl @voice.DaveProvider for ConnectionTestDave with fn process_proposals(
-  self,
-  op_type~,
-  _payload,
-  recognized~,
-) {
-  assert_eq(op_type, 0)
-  self.proposal_calls.push(recognized.copy())
-  (None, None)
-}
-
-///|
-impl @voice.DaveProvider for ConnectionTestDave with fn process_commit(
-  _self,
-  _payload,
-) {
-
-}
-
-///|
-impl @voice.DaveProvider for ConnectionTestDave with fn process_welcome(
-  _self,
-  _payload,
-) {
-
-}
-
-///|
-impl @voice.DaveProvider for ConnectionTestDave with fn encrypt_frame(
-  _self,
-  frame,
-) {
-  frame
-}
-
-///|
-impl @voice.DaveProvider for ConnectionTestDave with fn decrypt_frame(
-  _self,
-  user_id~,
-  frame,
-) {
-  ignore(user_id)
-  frame
-}
-
-///|
-impl @voice.DaveProvider for ConnectionTestDave with fn status(_self) {
-  0
-}
-
-///|
 fn connection_credentials(
   session_id? : String = "session",
   endpoint? : String = "voice.example",
@@ -275,6 +191,14 @@ fn connection_session_description(
 }
 
 ///|
+fn connection_external_sender() -> Bytes {
+  // RFC 9420 ExternalSender using the P-256 generator point and a basic
+  // credential. The value is valid MLS TLS presentation data, not keying
+  // material used by the test client.
+  b"\x40\x41\x04\x6b\x17\xd1\xf2\xe1\x2c\x42\x47\xf8\xbc\xe6\xe5\x63\xa4\x40\xf2\x77\x03\x7d\x81\x2d\xeb\x33\xa0\xf4\xa1\x39\x45\xd8\x98\xc2\x96\x4f\xe3\x42\xe2\xfe\x1a\x7f\x9b\x8e\xe7\xeb\x4a\x7c\x0f\x9e\x16\x2b\xce\x33\x57\x6b\x31\x5e\xce\xcb\xb6\x40\x68\x37\xbf\x51\xf5\x00\x01\x05\x04\x00\x01\x01\x00"
+}
+
+///|
 async fn connection_finish_protocol_selection(
   transport : ConnectionTestTransport,
   udp : ConnectionTestUdp,
@@ -285,18 +209,6 @@ async fn connection_finish_protocol_selection(
   assert_eq(udp.outgoing.get(), @voice.build_ip_discovery_request(42U))
   udp.incoming.put(connection_discovery_response(42U))
   guard! transport.outgoing_text.get() is { "op": Number(1, ..), .. }
-}
-
-///|
-async fn wait_for_proposal_calls(
-  fake : ConnectionTestDave,
-  expected : Int,
-) -> Unit {
-  @async.with_timeout(1000, () => {
-    while fake.proposal_calls.length() < expected {
-      @async.sleep(1)
-    }
-  })
 }
 
 ///|
@@ -312,7 +224,7 @@ async test "cancelled voice discovery closes only its candidate UDP" {
         let connection = @voice.VoiceConnection::start(
           connection_group,
           connection_credentials(),
-          user_id="self",
+          user_id="100",
           channel_id=7UL,
           leave=() => (),
           rejoin=() => connection_credentials(),
@@ -353,52 +265,150 @@ async test "cancelled voice discovery closes only its candidate UDP" {
 }
 
 ///|
-async test "voice connection seeds its pre-session DAVE roster and sends key packages" {
-  if !@voice.shim_available() {
+async test "voice connection constructs official DAVE and sends a key package" {
+  if !@voice.shim_available() || !@dave.available() {
     return
   }
   let transport = ConnectionTestTransport::new()
   let udp = ConnectionTestUdp::new()
-  let fake = ConnectionTestDave::{ proposal_calls: [] }
+  let telemetry : Array[@voice.VoiceTelemetry] = []
   @async.with_task_group(group => {
     let connection = @voice.VoiceConnection::start(
       group,
       connection_credentials(),
-      user_id="self",
+      user_id="100",
       channel_id=7UL,
       leave=() => (),
       rejoin=() => connection_credentials(),
       connector=_ => (transport : &@voice.VoiceTransport),
       udp_opener=(_, _) => (udp : &@voice.VoiceUdp),
-      dave_factory=(protocol_version, user_id, channel_id) => {
-        assert_eq(protocol_version, 1)
-        assert_eq(user_id, "self")
-        assert_eq(channel_id, 7UL)
-        (fake : &@voice.DaveProvider)
-      },
       receive=false,
+      telemetry=event => telemetry.push(event),
     )
     connection_finish_protocol_selection(transport, udp)
     transport.incoming.put(
-      Text("{\"op\":11,\"seq\":2,\"d\":{\"user_ids\":[\"member\"]}}"),
+      Text("{\"op\":11,\"seq\":2,\"d\":{\"user_ids\":[\"200\"]}}"),
     )
     transport.incoming.put(
-      connection_session_description(3, dave_protocol_version=1),
+      Binary(b"\x00\x03\x19" + connection_external_sender()),
+    )
+    transport.incoming.put(
+      connection_session_description(4, dave_protocol_version=1),
     )
     connection.wait_ready(timeout_ms=1000)
-    assert_eq(transport.outgoing_binary.get(), b"\x1Aconnection-key-package")
-    transport.incoming.put(Binary(b"\x00\x04\x1B\x00proposal"))
-    wait_for_proposal_calls(fake, 1)
-    assert_eq(fake.proposal_calls[0], ["member", "self"])
-
-    // A newly established DAVE machine receives the connection's same roster.
-    transport.incoming.put(
-      connection_session_description(5, dave_protocol_version=1),
+    let key_package_frame = transport.outgoing_binary.get()
+    assert_true(key_package_frame.length() > 1)
+    assert_eq(key_package_frame[0], 26)
+    assert_true(
+      telemetry.any(event => {
+        event is DaveBinaryControlSent(opcode=26, payload_bytes~) &&
+        payload_bytes == key_package_frame.length() - 1
+      }),
     )
-    assert_eq(transport.outgoing_binary.get(), b"\x1Aconnection-key-package")
-    transport.incoming.put(Binary(b"\x00\x06\x1B\x00proposal"))
-    wait_for_proposal_calls(fake, 2)
-    assert_eq(fake.proposal_calls[1], ["member", "self"])
+    for event in telemetry {
+      if event is PacketDropped(reason~) && reason.contains("DAVE") {
+        fail("unexpected DAVE control failure: \{reason}")
+      }
+    }
+    connection.disconnect()
+  })
+}
+
+///|
+async test "voice connection retains DAVE across an initial v0 upgrade" {
+  if !@voice.shim_available() || !@dave.available() {
+    return
+  }
+  let transport = ConnectionTestTransport::new()
+  let udp = ConnectionTestUdp::new()
+  let telemetry : Array[@voice.VoiceTelemetry] = []
+  @async.with_task_group(group => {
+    let connection = @voice.VoiceConnection::start(
+      group,
+      connection_credentials(),
+      user_id="100",
+      channel_id=7UL,
+      leave=() => (),
+      rejoin=() => connection_credentials(),
+      connector=_ => (transport : &@voice.VoiceTransport),
+      udp_opener=(_, _) => (udp : &@voice.VoiceUdp),
+      receive=false,
+      telemetry=event => telemetry.push(event),
+    )
+    connection_finish_protocol_selection(transport, udp)
+    transport.incoming.put(connection_session_description(2))
+    connection.wait_ready(timeout_ms=1000)
+    assert_true(
+      telemetry.any(event => {
+        event is DaveMediaContextActivated(protocol_version=0)
+      }),
+    )
+    transport.incoming.put(
+      Binary(b"\x00\x03\x19" + connection_external_sender()),
+    )
+    transport.incoming.put(
+      Text("{\"op\":24,\"seq\":4,\"d\":{\"epoch\":1,\"protocol_version\":1}}"),
+    )
+    let key_package_frame = @async.with_timeout(1000, () => {
+      transport.outgoing_binary.get()
+    })
+    assert_true(key_package_frame.length() > 1)
+    assert_eq(key_package_frame[0], 26)
+    assert_true(
+      telemetry.any(event => {
+        event is DaveBinaryControlSent(opcode=26, payload_bytes~) &&
+        payload_bytes == key_package_frame.length() - 1
+      }),
+    )
+    for event in telemetry {
+      if event is PacketDropped(reason~) && reason.contains("DAVE") {
+        fail("unexpected DAVE control failure: \{reason}")
+      }
+    }
+    connection.disconnect()
+  })
+}
+
+///|
+async test "voice connection reuses DAVE for a later v1 Session Description" {
+  if !@voice.shim_available() || !@dave.available() {
+    return
+  }
+  let transport = ConnectionTestTransport::new()
+  let udp = ConnectionTestUdp::new()
+  let telemetry : Array[@voice.VoiceTelemetry] = []
+  @async.with_task_group(group => {
+    let connection = @voice.VoiceConnection::start(
+      group,
+      connection_credentials(),
+      user_id="100",
+      channel_id=7UL,
+      leave=() => (),
+      rejoin=() => connection_credentials(),
+      connector=_ => (transport : &@voice.VoiceTransport),
+      udp_opener=(_, _) => (udp : &@voice.VoiceUdp),
+      receive=false,
+      telemetry=event => telemetry.push(event),
+    )
+    connection_finish_protocol_selection(transport, udp)
+    transport.incoming.put(connection_session_description(2))
+    connection.wait_ready(timeout_ms=1000)
+    transport.incoming.put(
+      Binary(b"\x00\x03\x19" + connection_external_sender()),
+    )
+    transport.incoming.put(
+      connection_session_description(4, dave_protocol_version=1),
+    )
+    let key_package_frame = @async.with_timeout(1000, () => {
+      transport.outgoing_binary.get()
+    })
+    assert_true(key_package_frame.length() > 1)
+    assert_eq(key_package_frame[0], 26)
+    for event in telemetry {
+      if event is PacketDropped(reason~) && reason.contains("DAVE") {
+        fail("unexpected DAVE control failure: \{reason}")
+      }
+    }
     connection.disconnect()
   })
 }
@@ -415,7 +425,7 @@ async test "voice connection becomes ready, plays, receives, and disconnects ide
     let connection = @voice.VoiceConnection::start(
       group,
       connection_credentials(),
-      user_id="self",
+      user_id="100",
       channel_id=7UL,
       leave=() => leave_calls.val += 1,
       rejoin=() => connection_credentials(),
@@ -442,12 +452,12 @@ async test "voice connection becomes ready, plays, receives, and disconnects ide
 
     transport.incoming.put(
       Text(
-        "{\"op\":5,\"seq\":3,\"d\":{\"ssrc\":77,\"user_id\":\"speaker\",\"speaking\":1}}",
+        "{\"op\":5,\"seq\":3,\"d\":{\"ssrc\":77,\"user_id\":\"200\",\"speaking\":1}}",
       ),
     )
     assert_eq(
       connection.next_event(),
-      SpeakingChanged(user_id="speaker", ssrc=77U, flags=1),
+      SpeakingChanged(user_id="200", ssrc=77U, flags=1),
     )
     let sender = @voice.TransportCipher::new(
       AeadAes256GcmRtpsize,
@@ -458,7 +468,7 @@ async test "voice connection becomes ready, plays, receives, and disconnects ide
     assert_eq(
       connection.next_event(),
       OpusReceived(
-        user_id=Some("speaker"),
+        user_id=Some("200"),
         ssrc=77U,
         sequence=10,
         timestamp=960U,
@@ -501,7 +511,7 @@ async test "voice connection reports reordered packet loss" {
     let connection = @voice.VoiceConnection::start(
       group,
       connection_credentials(),
-      user_id="self",
+      user_id="100",
       channel_id=7UL,
       leave=() => (),
       rejoin=() => connection_credentials(),
@@ -552,7 +562,7 @@ async test "voice connection rebuilds the whole session after NeedsRejoin" {
     let connection = @voice.VoiceConnection::start(
       group,
       connection_credentials(),
-      user_id="self",
+      user_id="100",
       channel_id=7UL,
       leave=() => (),
       rejoin=() => {
@@ -588,6 +598,76 @@ async test "voice connection rebuilds the whole session after NeedsRejoin" {
 }
 
 ///|
+async test "voice rejoin clears a pre-session external sender" {
+  if !@voice.shim_available() || !@dave.available() {
+    return
+  }
+  let first_transport = ConnectionTestTransport::new()
+  let second_transport = ConnectionTestTransport::new()
+  let first_udp = ConnectionTestUdp::new()
+  let second_udp = ConnectionTestUdp::new()
+  let pending_transports : Array[ConnectionTestTransport] = [
+    second_transport, first_transport,
+  ]
+  let pending_udps : Array[ConnectionTestUdp] = [second_udp, first_udp]
+  @async.with_task_group(group => {
+    let connection = @voice.VoiceConnection::start(
+      group,
+      connection_credentials(),
+      user_id="100",
+      channel_id=7UL,
+      leave=() => (),
+      rejoin=() => {
+        connection_credentials(
+          session_id="session-2",
+          endpoint="voice-2.example",
+        )
+      },
+      connector=_ => {
+        guard pending_transports.pop() is Some(transport) else {
+          raise @voice.VoiceTransportClosed(code=None, reason="no transport")
+        }
+        (transport : &@voice.VoiceTransport)
+      },
+      udp_opener=(_, _) => {
+        guard pending_udps.pop() is Some(udp) else {
+          raise @voice.VoiceUdpError::IpDiscoveryFailed(
+            attempts=0,
+            reason="no UDP transport",
+          )
+        }
+        (udp : &@voice.VoiceUdp)
+      },
+      receive=false,
+    )
+    connection_finish_protocol_selection(first_transport, first_udp)
+    first_transport.incoming.put(Binary(b"\x00\x02\x19invalid"))
+    first_transport.incoming.put(
+      Text(
+        "{\"op\":5,\"seq\":3,\"d\":{\"ssrc\":77,\"user_id\":\"200\",\"speaking\":1}}",
+      ),
+    )
+    assert_eq(
+      connection.next_event(),
+      SpeakingChanged(user_id="200", ssrc=77U, flags=1),
+    )
+    first_transport.server_close(4006)
+
+    connection_finish_protocol_selection(second_transport, second_udp)
+    second_transport.incoming.put(
+      connection_session_description(2, dave_protocol_version=1),
+    )
+    connection.wait_ready(timeout_ms=1000)
+    let key_package_frame = @async.with_timeout(1000, () => {
+      second_transport.outgoing_binary.get()
+    })
+    assert_true(key_package_frame.length() > 1)
+    assert_eq(key_package_frame[0], 26)
+    connection.disconnect()
+  })
+}
+
+///|
 async test "fatal voice close performs terminal teardown" {
   let transport = ConnectionTestTransport::new()
   let leave_calls = Ref(0)
@@ -595,7 +675,7 @@ async test "fatal voice close performs terminal teardown" {
     let connection = @voice.VoiceConnection::start(
       group,
       connection_credentials(),
-      user_id="self",
+      user_id="100",
       channel_id=7UL,
       leave=() => leave_calls.val += 1,
       rejoin=() => connection_credentials(),
@@ -630,7 +710,7 @@ async test "voice connection wait_ready reports JoinTimeout" {
     let connection = @voice.VoiceConnection::start(
       group,
       connection_credentials(),
-      user_id="self",
+      user_id="100",
       channel_id=7UL,
       leave=() => (),
       rejoin=() => connection_credentials(),
@@ -658,7 +738,7 @@ async test "voice connection surfaces ShimUnavailable through wait_ready" {
     let connection = @voice.VoiceConnection::start(
       group,
       connection_credentials(),
-      user_id="self",
+      user_id="100",
       channel_id=7UL,
       leave=() => (),
       rejoin=() => connection_credentials(),
@@ -689,7 +769,7 @@ async fn[X] ready_receive_connection(
   let connection = @voice.VoiceConnection::start(
     group,
     connection_credentials(),
-    user_id="self",
+    user_id="100",
     channel_id=7UL,
     leave=() => (),
     rejoin=() => connection_credentials(),
@@ -743,9 +823,9 @@ async test "voice subscriptions filter users without consuming main events" {
   let udp = ConnectionTestUdp::new()
   @async.with_task_group(group => {
     let connection = ready_receive_connection(group, transport, udp)
-    map_connection_speaker(connection, transport, "target", 77U, 3)
-    map_connection_speaker(connection, transport, "other", 88U, 4)
-    let stream = connection.subscribe(user_id="target")
+    map_connection_speaker(connection, transport, "200", 77U, 3)
+    map_connection_speaker(connection, transport, "300", 88U, 4)
+    let stream = connection.subscribe(user_id="200")
     let audio : &@voice.AudioSource = stream
     udp.incoming.put(connection_opus_datagram(77U, 1, b"target-one"))
     udp.incoming.put(connection_opus_datagram(88U, 1, b"other"))
@@ -753,7 +833,7 @@ async test "voice subscriptions filter users without consuming main events" {
     assert_eq(
       connection.next_event(),
       OpusReceived(
-        user_id=Some("target"),
+        user_id=Some("200"),
         ssrc=77U,
         sequence=1,
         timestamp=960U,
@@ -763,7 +843,7 @@ async test "voice subscriptions filter users without consuming main events" {
     assert_eq(
       connection.next_event(),
       OpusReceived(
-        user_id=Some("other"),
+        user_id=Some("300"),
         ssrc=88U,
         sequence=1,
         timestamp=960U,
@@ -773,7 +853,7 @@ async test "voice subscriptions filter users without consuming main events" {
     assert_eq(
       connection.next_event(),
       OpusReceived(
-        user_id=Some("target"),
+        user_id=Some("200"),
         ssrc=77U,
         sequence=2,
         timestamp=1920U,
@@ -796,9 +876,9 @@ async test "voice subscription ends and unregisters after silence" {
   let udp = ConnectionTestUdp::new()
   @async.with_task_group(group => {
     let connection = ready_receive_connection(group, transport, udp)
-    map_connection_speaker(connection, transport, "target", 77U, 3)
+    map_connection_speaker(connection, transport, "200", 77U, 3)
     let stream = connection.subscribe(
-      user_id="target",
+      user_id="200",
       end_after_silence_ms=Some(20),
     )
     let audio : &@voice.AudioSource = stream
@@ -820,7 +900,7 @@ async test "closing a voice subscription wakes a blocked reader" {
     let connection = @voice.VoiceConnection::start(
       group,
       connection_credentials(),
-      user_id="self",
+      user_id="100",
       channel_id=7UL,
       leave=() => (),
       rejoin=() => connection_credentials(),
@@ -844,7 +924,7 @@ async test "disconnect ends every voice subscription" {
     let connection = @voice.VoiceConnection::start(
       group,
       connection_credentials(),
-      user_id="self",
+      user_id="100",
       channel_id=7UL,
       leave=() => (),
       rejoin=() => connection_credentials(),
@@ -871,11 +951,8 @@ async test "manual voice subscription waits across a long gap" {
   let udp = ConnectionTestUdp::new()
   @async.with_task_group(group => {
     let connection = ready_receive_connection(group, transport, udp)
-    map_connection_speaker(connection, transport, "target", 77U, 3)
-    let stream = connection.subscribe(
-      user_id="target",
-      end_after_silence_ms=None,
-    )
+    map_connection_speaker(connection, transport, "200", 77U, 3)
+    let stream = connection.subscribe(user_id="200", end_after_silence_ms=None)
     let audio : &@voice.AudioSource = stream
     let blocked = group.spawn(() => audio.next_frame())
     @async.sleep(60)
@@ -899,7 +976,7 @@ async test "voice keepalive cadence runs through the injected sleeper" {
     let connection = @voice.VoiceConnection::start(
       group,
       connection_credentials(),
-      user_id="self",
+      user_id="100",
       channel_id=7UL,
       leave=() => (),
       rejoin=() => connection_credentials(),

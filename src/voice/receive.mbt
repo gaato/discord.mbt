@@ -20,6 +20,13 @@ pub(all) enum VoiceEvent {
 /// Non-fatal diagnostics from the connection's gateway and media paths.
 pub(all) enum VoiceTelemetry {
   GatewayEvent(VoiceGatewayEvent)
+  /// A DAVE media context became active after its local key ratchet was
+  /// installed successfully. Version zero denotes passthrough; positive
+  /// versions encrypt outbound Opus frames through libdave.
+  DaveMediaContextActivated(protocol_version~ : Int)
+  /// A binary DAVE control message was accepted by the voice transport.
+  /// `payload_bytes` excludes the one-byte opcode prefix.
+  DaveBinaryControlSent(opcode~ : Int, payload_bytes~ : Int)
   PacketDropped(reason~ : String)
   DaveEncryptDropped(reason~ : String)
   DaveDecryptDropped(
@@ -134,12 +141,25 @@ fn ReceivePipeline::drop_packet(
 }
 
 ///|
+fn ReceivePipeline::drop_dave_packet(
+  self : ReceivePipeline,
+  user_id : String?,
+  ssrc : UInt,
+  reason : String,
+) -> Array[VoiceEvent] {
+  self.dave_drop_count += 1
+  (self.telemetry)(
+    DaveDecryptDropped(user_id~, ssrc~, count=self.dave_drop_count, reason~),
+  )
+  []
+}
+
+///|
 fn ReceivePipeline::process_udp_packet(
   self : ReceivePipeline,
   datagram : Bytes,
   cipher : TransportCipher,
   dave : DaveMachine?,
-  dave_enabled~ : Bool,
   arrival_ms~ : Int64,
 ) -> Array[VoiceEvent] {
   if datagram.length() == 0 ||
@@ -160,35 +180,56 @@ fn ReceivePipeline::process_udp_packet(
     return self.drop_packet("RTP extension data is truncated")
   }
   let user_id = self.users_by_ssrc.get(rtp.ssrc)
-  let opus = if dave_enabled && has_dave_magic(payload) {
-    guard dave is Some(machine) && user_id is Some(sender) else {
-      self.dave_drop_count += 1
-      (self.telemetry)(
-        DaveDecryptDropped(
-          user_id~,
-          ssrc=rtp.ssrc,
-          count=self.dave_drop_count,
-          reason="DAVE frame has no mapped sender",
-        ),
-      )
-      return []
-    }
-    machine.decrypt_opus_frame(user_id=sender, payload) catch {
-      error => {
-        self.dave_drop_count += 1
-        (self.telemetry)(
-          DaveDecryptDropped(
-            user_id~,
-            ssrc=rtp.ssrc,
-            count=self.dave_drop_count,
-            reason="\{Repr(error)}",
-          ),
-        )
-        return []
+  let dave_magic = has_dave_magic(payload)
+  let opus = match dave {
+    Some(machine) => {
+      let has_decryptor = match user_id {
+        Some(sender) =>
+          machine.has_remote_decryptor(user_id=sender) catch {
+            error =>
+              return self.drop_dave_packet(user_id, rtp.ssrc, "\{Repr(error)}")
+          }
+        None => false
+      }
+      if has_decryptor {
+        match user_id {
+          Some(sender) =>
+            machine.decrypt_opus_frame(user_id=sender, payload) catch {
+              error =>
+                return self.drop_dave_packet(
+                  user_id,
+                  rtp.ssrc,
+                  "\{Repr(error)}",
+                )
+            }
+          None =>
+            return self.drop_dave_packet(
+              user_id,
+              rtp.ssrc,
+              "DAVE frame has no mapped sender",
+            )
+        }
+      } else if machine.active_protocol_version() == 0 && !dave_magic {
+        payload
+      } else {
+        let reason = match user_id {
+          None => "DAVE frame has no mapped sender"
+          Some(_) if dave_magic => "DAVE frame has no decryptor"
+          Some(_) => "DAVE media is active but sender has no decryptor"
+        }
+        return self.drop_dave_packet(user_id, rtp.ssrc, reason)
       }
     }
-  } else {
-    payload
+    None =>
+      if dave_magic {
+        return self.drop_dave_packet(
+          user_id,
+          rtp.ssrc,
+          "DAVE frame has no mapped sender",
+        )
+      } else {
+        payload
+      }
   }
   let packet = ReceivedOpus::{
     user_id,

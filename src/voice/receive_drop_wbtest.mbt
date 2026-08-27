@@ -37,7 +37,6 @@ test "receive pipeline drops undecodable datagrams with telemetry" {
       b"\x80\x00\x00\x00\x00\x00",
       cipher,
       None,
-      dave_enabled=false,
       arrival_ms=0L,
     ),
     [],
@@ -51,13 +50,7 @@ test "receive pipeline drops undecodable datagrams with telemetry" {
   let header = build_rtp_header(sequence=1, timestamp=960U, ssrc=9U)
   let tampered = header + Bytes::new(24)
   assert_eq(
-    pipeline.process_udp_packet(
-      tampered,
-      cipher,
-      None,
-      dave_enabled=false,
-      arrival_ms=1L,
-    ),
+    pipeline.process_udp_packet(tampered, cipher, None, arrival_ms=1L),
     [],
   )
   assert_eq(telemetry.length(), 2)

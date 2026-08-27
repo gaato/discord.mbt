@@ -27,6 +27,7 @@ pub struct VoiceGateway {
   priv mut closing : Bool
   priv mut has_session : Bool
   priv mut last_seq : Int
+  priv mut runner : @async.Task[Unit]?
   priv telemetry_ : (VoiceGatewayEvent) -> Unit
 }
 
@@ -82,9 +83,40 @@ pub async fn VoiceGateway::send_binary(
 ///|
 /// Request graceful shutdown of the voice WebSocket.
 pub async fn VoiceGateway::close(self : VoiceGateway) -> Unit noraise {
+  if self.closing {
+    @async.protect_from_cancel(() => self.wait_runner()) catch {
+      _ => ()
+    }
+    return
+  }
   self.closing = true
-  if self.transport is Some(transport) {
-    self.finish_transport(transport, code=1000)
+  @async.protect_from_cancel(() => self.stop_runner()) catch {
+    _ => ()
+  }
+}
+
+///|
+async fn VoiceGateway::wait_runner(self : VoiceGateway) -> Unit noraise {
+  if self.runner is Some(runner) {
+    runner.wait() catch {
+      _ => ()
+    }
+  }
+}
+
+///|
+async fn VoiceGateway::stop_runner(self : VoiceGateway) -> Unit noraise {
+  if self.runner is Some(runner) {
+    runner.cancel()
+    self.wait_runner()
+  }
+  self.runner = None
+  self.transport = None
+  self.latency = None
+  self.state_ = Disconnected(reconnect_attempts=0)
+  (self.telemetry_)(Disconnected(code=Some(1000), resuming=false))
+  (self.events.try_put(Disconnected(code=Some(1000), resuming=false)) |> ignore) catch {
+    _ => ()
   }
 }
 
@@ -94,6 +126,10 @@ async fn VoiceGateway::finish_transport(
   transport : &VoiceTransport,
   code~ : Int,
 ) -> Unit noraise {
+  self.send_gate.acquire() catch {
+    _ => return
+  }
+  defer self.send_gate.release()
   guard self.transport is Some(current) && physical_equal(current, transport) else {
     return
   }
@@ -105,6 +141,9 @@ async fn VoiceGateway::finish_transport(
 
 ///|
 /// Spawn a voice gateway driver into `group` and return its handle.
+/// `max_dave_protocol_version` is advertised in Identify. It defaults to zero
+/// so low-level callers do not negotiate DAVE without an active backend; pass
+/// a supported maximum explicitly to enable it.
 pub fn[X] VoiceGateway::start(
   group : @async.TaskGroup[X],
   server_id~ : String,
@@ -112,6 +151,7 @@ pub fn[X] VoiceGateway::start(
   session_id~ : String,
   token~ : String,
   endpoint~ : String,
+  max_dave_protocol_version? : UInt16 = 0,
   select_protocol~ : async (UInt, String, Int, Array[String]) -> (
     String,
     Int,
@@ -132,21 +172,24 @@ pub fn[X] VoiceGateway::start(
     closing: false,
     has_session: false,
     last_seq: -1,
+    runner: None,
     telemetry_: telemetry,
   }
-  group.spawn_bg(no_wait=true, () => {
+  let runner = group.spawn(no_wait=true, () => {
     gateway.run(
       server_id~,
       user_id~,
       session_id~,
       token~,
       endpoint~,
+      max_dave_protocol_version~,
       select_protocol~,
       connector~,
       sleeper~,
       rand~,
     )
   })
+  gateway.runner = Some(runner)
   gateway
 }
 
@@ -194,6 +237,7 @@ async fn VoiceGateway::run(
   session_id~ : String,
   token~ : String,
   endpoint~ : String,
+  max_dave_protocol_version~ : UInt16,
   select_protocol~ : async (UInt, String, Int, Array[String]) -> (
     String,
     Int,
@@ -238,6 +282,7 @@ async fn VoiceGateway::run(
         user_id~,
         session_id~,
         token~,
+        max_dave_protocol_version~,
         select_protocol~,
         sleeper~,
       )
@@ -300,6 +345,7 @@ async fn VoiceGateway::run_connection(
   user_id~ : String,
   session_id~ : String,
   token~ : String,
+  max_dave_protocol_version~ : UInt16,
   select_protocol~ : async (UInt, String, Int, Array[String]) -> (
     String,
     Int,
@@ -323,8 +369,10 @@ async fn VoiceGateway::run_connection(
       sleeper(heartbeat_interval)
       for ;; {
         if !heartbeat_acked.val {
-          self.finish_transport(transport, code=4000)
-          break
+          raise VoiceConnectionEnded(
+            code=Some(4000),
+            reason="heartbeat ACK timed out",
+          )
         }
         let nonce = @clock.now_ms()
         heartbeat_nonce.val = nonce
@@ -348,7 +396,13 @@ async fn VoiceGateway::run_connection(
       self.state_ = Identifying
       self.raw_send_json(
         transport,
-        encode_identify(server_id~, user_id~, session_id~, token~),
+        encode_identify(
+          server_id~,
+          user_id~,
+          session_id~,
+          token~,
+          max_dave_protocol_version~,
+        ),
       )
     }
 
@@ -420,6 +474,14 @@ async fn VoiceGateway::raw_send_json(
 ) -> Unit {
   self.send_gate.acquire()
   defer self.send_gate.release()
+  guard !self.closing &&
+    self.transport is Some(current) &&
+    physical_equal(current, transport) else {
+    raise VoiceTransportClosed(
+      code=None,
+      reason="voice gateway is not connected",
+    )
+  }
   transport.send_text(payload.stringify())
 }
 
@@ -431,5 +493,13 @@ async fn VoiceGateway::raw_send_binary(
 ) -> Unit {
   self.send_gate.acquire()
   defer self.send_gate.release()
+  guard !self.closing &&
+    self.transport is Some(current) &&
+    physical_equal(current, transport) else {
+    raise VoiceTransportClosed(
+      code=None,
+      reason="voice gateway is not connected",
+    )
+  }
   transport.send_binary(payload)
 }

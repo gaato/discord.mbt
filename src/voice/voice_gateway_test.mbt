@@ -7,6 +7,10 @@ struct FakeVoiceTransport {
   block_next_text_send : Ref[Bool]
   block_next_binary_send : Ref[Bool]
   send_started : @aqueue.Queue[Unit]
+  send_in_flight : Ref[Bool]
+  recv_in_flight : Ref[Bool]
+  close_during_send : Ref[Bool]
+  close_during_recv : Ref[Bool]
   close_calls : Ref[Int]
 }
 
@@ -19,6 +23,10 @@ fn FakeVoiceTransport::FakeVoiceTransport() -> FakeVoiceTransport {
     block_next_text_send: Ref(false),
     block_next_binary_send: Ref(false),
     send_started: Queue(kind=Unbounded),
+    send_in_flight: Ref(false),
+    recv_in_flight: Ref(false),
+    close_during_send: Ref(false),
+    close_during_recv: Ref(false),
     close_calls: Ref(0),
   }
 }
@@ -35,11 +43,19 @@ fn FakeVoiceTransport::server_close(
 
 ///|
 impl @voice.VoiceTransport for FakeVoiceTransport with fn recv(self) {
+  self.recv_in_flight.val = true
+  defer {
+    self.recv_in_flight.val = false
+  }
   self.incoming.get()
 }
 
 ///|
 impl @voice.VoiceTransport for FakeVoiceTransport with fn send_text(self, text) {
+  self.send_in_flight.val = true
+  defer {
+    self.send_in_flight.val = false
+  }
   if self.block_next_text_send.val {
     self.block_next_text_send.val = false
     self.send_started.put(())
@@ -53,6 +69,10 @@ impl @voice.VoiceTransport for FakeVoiceTransport with fn send_binary(
   self,
   bytes,
 ) {
+  self.send_in_flight.val = true
+  defer {
+    self.send_in_flight.val = false
+  }
   if self.block_next_binary_send.val {
     self.block_next_binary_send.val = false
     self.send_started.put(())
@@ -63,6 +83,12 @@ impl @voice.VoiceTransport for FakeVoiceTransport with fn send_binary(
 
 ///|
 impl @voice.VoiceTransport for FakeVoiceTransport with fn close(self, code~) {
+  if self.send_in_flight.val {
+    self.close_during_send.val = true
+  }
+  if self.recv_in_flight.val {
+    self.close_during_recv.val = true
+  }
   if self.close_calls.val > 0 {
     return
   }
@@ -83,6 +109,7 @@ async test "cancelling a voice gateway closes its transport exactly once" {
       session_id="session",
       token="token",
       endpoint="voice.example",
+      max_dave_protocol_version=1,
       select_protocol=(_, _, _, _) => {
         ("203.0.113.8", 62000, "aead_aes256_gcm_rtpsize")
       },
@@ -98,6 +125,46 @@ async test "cancelling a voice gateway closes its transport exactly once" {
 ///|
 fn hello_frame(interval : Int) -> @voice.VoiceFrame {
   Text("{\"op\":8,\"d\":{\"heartbeat_interval\":\{interval}}}")
+}
+
+///|
+async fn capture_identify(max_dave_protocol_version : UInt16) -> Json {
+  let transport = FakeVoiceTransport()
+  @async.with_task_group(group => {
+    let gateway = @voice.VoiceGateway::start(
+      group,
+      server_id="guild",
+      user_id="user",
+      session_id="session",
+      token="token",
+      endpoint="voice.example",
+      max_dave_protocol_version~,
+      select_protocol=(_, _, _, _) => {
+        ("203.0.113.8", 62000, "aead_aes256_gcm_rtpsize")
+      },
+      connector=_ => (transport : &@voice.VoiceTransport),
+    )
+    transport.incoming.put(hello_frame(60000))
+    let identify = transport.outgoing_text.get()
+    gateway.close()
+    identify
+  })
+}
+
+///|
+async test "voice gateway advertises the configured DAVE protocol limit" {
+  guard! capture_identify(0)
+    is {
+      "op": Number(0, ..),
+      "d": { "max_dave_protocol_version": Number(0, ..), .. },
+      ..
+    }
+  guard! capture_identify(1)
+    is {
+      "op": Number(0, ..),
+      "d": { "max_dave_protocol_version": Number(1, ..), .. },
+      ..
+    }
 }
 
 ///|
@@ -153,6 +220,7 @@ async fn captured_gateway_url(endpoint : String) -> String {
       session_id="session",
       token="token",
       endpoint~,
+      max_dave_protocol_version=1,
       select_protocol=(_, _, _, _) => {
         ("203.0.113.8", 62000, "aead_aes256_gcm_rtpsize")
       },
@@ -201,6 +269,7 @@ async test "voice gateway reports connector failures through telemetry and retri
       session_id="session",
       token="token",
       endpoint="voice.example",
+      max_dave_protocol_version=1,
       select_protocol=(_, _, _, _) => {
         ("203.0.113.8", 62000, "aead_aes256_gcm_rtpsize")
       },
@@ -245,6 +314,7 @@ async test "missing heartbeat ACK closes with 4000 and reconnects" {
       session_id="session",
       token="token",
       endpoint="voice.example",
+      max_dave_protocol_version=1,
       select_protocol=(_, _, _, _) => {
         ("203.0.113.8", 62000, "aead_aes256_gcm_rtpsize")
       },
@@ -303,7 +373,7 @@ async test "voice gateway completes identify and protocol selection" {
           "user_id": String("user"),
           "session_id": String("session"),
           "token": String("token"),
-          "max_dave_protocol_version": Number(1, ..),
+          "max_dave_protocol_version": Number(0, ..),
           ..
         },
         ..
@@ -355,12 +425,18 @@ async test "cancelled voice gateway sends release the serialized send gate" {
       session_id="session",
       token="token",
       endpoint="voice.example",
+      max_dave_protocol_version=1,
       select_protocol=(_, _, _, _) => {
         ("203.0.113.8", 62000, "aead_aes256_gcm_rtpsize")
       },
       connector=_ => (transport : &@voice.VoiceTransport),
     )
     finish_handshake(gateway, transport)
+    @async.with_timeout(100, () => {
+      while !transport.recv_in_flight.val {
+        @async.pause()
+      }
+    })
 
     transport.block_next_text_send.val = true
     let text_send = group.spawn(no_wait=true, allow_failure=true, () => {
@@ -401,6 +477,78 @@ async test "cancelled voice gateway sends release the serialized send gate" {
 }
 
 ///|
+async test "closing a voice gateway drains an in-flight writer before transport close" {
+  let transport = FakeVoiceTransport()
+  @async.with_task_group(group => {
+    let gateway = @voice.VoiceGateway::start(
+      group,
+      server_id="guild",
+      user_id="user",
+      session_id="session",
+      token="token",
+      endpoint="voice.example",
+      max_dave_protocol_version=1,
+      select_protocol=(_, _, _, _) => {
+        ("203.0.113.8", 62000, "aead_aes256_gcm_rtpsize")
+      },
+      connector=_ => (transport : &@voice.VoiceTransport),
+    )
+    finish_handshake(gateway, transport)
+
+    transport.block_next_text_send.val = true
+    let blocked = group.spawn(no_wait=true, allow_failure=true, () => {
+      gateway.send_json(@voice.encode_speaking(ssrc=42, flags=1))
+    })
+    transport.send_started.get()
+    let queued = group.spawn(no_wait=true, allow_failure=true, () => {
+      gateway.send_json(@voice.encode_speaking(ssrc=42, flags=0))
+    })
+    let close_started : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+    let closing = group.spawn(no_wait=true, () => {
+      close_started.try_put(()) |> ignore
+      gateway.close()
+    })
+    close_started.get()
+    @async.with_timeout(100, () => {
+      while transport.recv_in_flight.val {
+        @async.pause()
+      }
+    })
+    let queued_binary = group.spawn(no_wait=true, allow_failure=true, () => {
+      gateway.send_binary(op=26, b"after-close")
+    })
+    assert_eq(transport.close_calls.val, 0)
+    let closed_early = @async.with_timeout_opt(10, () => closing.wait())
+    assert_true(closed_early is None)
+
+    blocked.cancel()
+    try blocked.wait() catch {
+      error if @async.is_cancellation_error(error) => ()
+      error => fail("unexpected voice send error: \{Repr(error)}")
+    } noraise {
+      _ => fail("blocked voice send unexpectedly completed")
+    }
+    try queued.wait() catch {
+      @voice.VoiceTransportClosed(..) => ()
+      error => fail("unexpected queued voice send error: \{Repr(error)}")
+    } noraise {
+      _ => fail("queued voice send crossed the closing boundary")
+    }
+    try queued_binary.wait() catch {
+      @voice.VoiceTransportClosed(..) => ()
+      error => fail("unexpected queued binary send error: \{Repr(error)}")
+    } noraise {
+      _ => fail("queued binary send crossed the closing boundary")
+    }
+    @async.with_timeout(100, () => closing.wait())
+    assert_eq(transport.close_calls.val, 1)
+    assert_false(transport.close_during_send.val)
+    assert_false(transport.close_during_recv.val)
+    guard! gateway.next() is Disconnected(code=Some(1000), resuming=false)
+  })
+}
+
+///|
 async test "voice heartbeat tracks JSON and binary sequence numbers" {
   let transport = FakeVoiceTransport()
   @async.with_task_group(group => {
@@ -411,6 +559,7 @@ async test "voice heartbeat tracks JSON and binary sequence numbers" {
       session_id="session",
       token="token",
       endpoint="voice.example",
+      max_dave_protocol_version=1,
       select_protocol=(_, _, _, _) => {
         ("203.0.113.8", 62000, "aead_aes256_gcm_rtpsize")
       },
@@ -487,6 +636,7 @@ async test "4015 resumes with seq_ack and skips protocol selection" {
       session_id="session",
       token="token",
       endpoint="voice.example",
+      max_dave_protocol_version=1,
       select_protocol=(_, _, _, _) => {
         select_calls.val += 1
         ("203.0.113.8", 62000, "aead_aes256_gcm_rtpsize")
@@ -537,6 +687,7 @@ async test "4006 requests a fresh voice join" {
       session_id="session",
       token="token",
       endpoint="voice.example",
+      max_dave_protocol_version=1,
       select_protocol=(_, _, _, _) => {
         ("203.0.113.8", 62000, "aead_aes256_gcm_rtpsize")
       },
@@ -560,6 +711,7 @@ async test "4014 is fatal" {
       session_id="session",
       token="token",
       endpoint="voice.example",
+      max_dave_protocol_version=1,
       select_protocol=(_, _, _, _) => {
         ("203.0.113.8", 62000, "aead_aes256_gcm_rtpsize")
       },
@@ -612,6 +764,7 @@ async test "voice reconnect backoff runs through the injected sleeper" {
       session_id="session",
       token="token",
       endpoint="voice.example",
+      max_dave_protocol_version=1,
       select_protocol=(_, _, _, _) => {
         ("203.0.113.8", 62000, "aead_aes256_gcm_rtpsize")
       },

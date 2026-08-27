@@ -20,6 +20,8 @@ pub struct Shard {
   priv mut session : Session?
   priv mut latency : Int64?
   priv mut closing : Bool
+  priv mut runner : @async.Task[Unit]?
+  priv shard_id : Int
   priv telemetry_ : (@telemetry.TelemetryEvent) -> Unit
 }
 
@@ -50,19 +52,54 @@ pub async fn Shard::send(self : Shard, command : Json) -> Unit {
   guard self.transport is Some(transport) else {
     raise TransportClosed(code=None, reason="shard is not connected")
   }
-  self.send_gate.acquire()
-  defer self.send_gate.release()
-  transport.send(command.stringify())
+  self.raw_send(transport, command)
 }
 
 ///|
 /// Request a graceful shutdown: closes the connection with code 1000 (which
 /// invalidates the session — Discord will not allow a resume after it).
 pub async fn Shard::close(self : Shard) -> Unit noraise {
+  if self.closing {
+    @async.protect_from_cancel(() => self.wait_runner()) catch {
+      _ => ()
+    }
+    return
+  }
   self.closing = true
-  if self.transport is Some(t) {
-    // the driver's read loop observes the close and exits
-    self.finish_transport(t, code=1000)
+  @async.protect_from_cancel(() => self.stop_runner()) catch {
+    _ => ()
+  }
+}
+
+///|
+async fn Shard::wait_runner(self : Shard) -> Unit noraise {
+  if self.runner is Some(runner) {
+    runner.wait() catch {
+      _ => ()
+    }
+  }
+}
+
+///|
+async fn Shard::stop_runner(self : Shard) -> Unit noraise {
+  if self.runner is Some(runner) {
+    runner.cancel()
+    self.wait_runner()
+  }
+  self.runner = None
+  self.transport = None
+  self.latency = None
+  self.session = None
+  self.state = Disconnected(reconnect_attempts=0)
+  self.emit_telemetry(
+    ShardDisconnected(
+      shard_id=self.shard_id,
+      code=Some(1000),
+      will_resume=false,
+    ),
+  )
+  (self.events.try_put(Disconnected(code=Some(1000), resuming=false)) |> ignore) catch {
+    _ => ()
   }
 }
 
@@ -72,6 +109,10 @@ async fn Shard::finish_transport(
   transport : &GatewayTransport,
   code~ : Int,
 ) -> Unit noraise {
+  self.send_gate.acquire() catch {
+    _ => return
+  }
+  defer self.send_gate.release()
   guard self.transport is Some(current) && physical_equal(current, transport) else {
     return
   }
@@ -109,9 +150,11 @@ pub fn[X] Shard::start(
     session: None,
     latency: None,
     closing: false,
+    runner: None,
+    shard_id,
     telemetry_: telemetry,
   }
-  group.spawn_bg(no_wait=true, () => {
+  let runner = group.spawn(no_wait=true, () => {
     shard.run(
       token~,
       intents~,
@@ -127,6 +170,7 @@ pub fn[X] Shard::start(
       rand~,
     )
   })
+  shard.runner = Some(runner)
   shard
 }
 
@@ -309,8 +353,10 @@ async fn Shard::run_connection(
       for ;; {
         if !heartbeat_state.val {
           // previous beat never acked: the connection is a zombie
-          self.finish_transport(transport, code=4000)
-          break
+          raise ConnectionEnded(
+            code=Some(4000),
+            reason="heartbeat ACK timed out",
+          )
         }
         heartbeat_state.val = false
         heartbeat_sent_at.val = @clock.now_ms()
@@ -498,5 +544,10 @@ async fn Shard::raw_send(
 ) -> Unit {
   self.send_gate.acquire()
   defer self.send_gate.release()
+  guard !self.closing &&
+    self.transport is Some(current) &&
+    physical_equal(current, transport) else {
+    raise TransportClosed(code=None, reason="shard is not connected")
+  }
   transport.send(payload.stringify())
 }

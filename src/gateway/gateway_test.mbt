@@ -5,6 +5,10 @@ struct FakeTransport {
   outgoing : @aqueue.Queue[Json]
   block_next_send : Ref[Bool]
   send_started : @aqueue.Queue[Unit]
+  send_in_flight : Ref[Bool]
+  recv_in_flight : Ref[Bool]
+  close_during_send : Ref[Bool]
+  close_during_recv : Ref[Bool]
   close_calls : Ref[Int]
 }
 
@@ -15,6 +19,10 @@ fn FakeTransport::FakeTransport() -> FakeTransport {
     outgoing: Queue(kind=Unbounded),
     block_next_send: Ref(false),
     send_started: Queue(kind=Unbounded),
+    send_in_flight: Ref(false),
+    recv_in_flight: Ref(false),
+    close_during_send: Ref(false),
+    close_during_recv: Ref(false),
     close_calls: Ref(0),
   }
 }
@@ -28,11 +36,19 @@ fn FakeTransport::server_close(self : FakeTransport, code : Int?) -> Unit {
 
 ///|
 impl @gateway.GatewayTransport for FakeTransport with fn recv(self) {
+  self.recv_in_flight.val = true
+  defer {
+    self.recv_in_flight.val = false
+  }
   Text(self.incoming.get())
 }
 
 ///|
 impl @gateway.GatewayTransport for FakeTransport with fn send(self, text) {
+  self.send_in_flight.val = true
+  defer {
+    self.send_in_flight.val = false
+  }
   if self.block_next_send.val {
     self.block_next_send.val = false
     self.send_started.put(())
@@ -43,6 +59,12 @@ impl @gateway.GatewayTransport for FakeTransport with fn send(self, text) {
 
 ///|
 impl @gateway.GatewayTransport for FakeTransport with fn close(self, code~) {
+  if self.send_in_flight.val {
+    self.close_during_send.val = true
+  }
+  if self.recv_in_flight.val {
+    self.close_during_recv.val = true
+  }
   if self.close_calls.val > 0 {
     return
   }
@@ -350,6 +372,71 @@ async test "cancelled shard send releases the serialized send gate" {
       fail("expected the send after cancellation")
     }
     shard.close()
+  })
+}
+
+///|
+async test "closing a shard drains an in-flight writer before transport close" {
+  let transport = FakeTransport()
+  @async.with_task_group(group => {
+    let shard = @gateway.Shard::start(
+      group,
+      token="tok",
+      intents=@model.Intents::none(),
+      connector=_ => (transport : &@gateway.GatewayTransport),
+    )
+    transport.incoming.put(HELLO)
+    transport.outgoing.get() |> ignore
+    transport.incoming.put(ready_frame())
+    guard! shard.next() is Connected(resumed=false)
+    guard! shard.next() is Dispatch(Ready(_))
+    @async.with_timeout(100, () => {
+      while !transport.recv_in_flight.val {
+        @async.pause()
+      }
+    })
+
+    transport.block_next_send.val = true
+    let blocked = group.spawn(no_wait=true, allow_failure=true, () => {
+      shard.send({ "op": 3, "d": { "since": 0 } })
+    })
+    transport.send_started.get()
+    let queued = group.spawn(no_wait=true, allow_failure=true, () => {
+      shard.send({ "op": 4, "d": { "guild_id": "1" } })
+    })
+    let close_started : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+    let closing = group.spawn(no_wait=true, () => {
+      close_started.try_put(()) |> ignore
+      shard.close()
+    })
+    close_started.get()
+    @async.with_timeout(100, () => {
+      while transport.recv_in_flight.val {
+        @async.pause()
+      }
+    })
+    assert_eq(transport.close_calls.val, 0)
+    let closed_early = @async.with_timeout_opt(10, () => closing.wait())
+    assert_true(closed_early is None)
+
+    blocked.cancel()
+    try blocked.wait() catch {
+      error if @async.is_cancellation_error(error) => ()
+      error => fail("unexpected send error: \{Repr(error)}")
+    } noraise {
+      _ => fail("blocked send unexpectedly completed")
+    }
+    try queued.wait() catch {
+      @gateway.TransportClosed(..) => ()
+      error => fail("unexpected queued send error: \{Repr(error)}")
+    } noraise {
+      _ => fail("queued send crossed the closing boundary")
+    }
+    @async.with_timeout(100, () => closing.wait())
+    assert_eq(transport.close_calls.val, 1)
+    assert_false(transport.close_during_send.val)
+    assert_false(transport.close_during_recv.val)
+    guard! shard.next() is Disconnected(code=Some(1000), resuming=false)
   })
 }
 

@@ -99,7 +99,7 @@ test "client JSON encoders produce the v8 wire shapes" {
         "user_id": String("user"),
         "session_id": String("session"),
         "token": String("token"),
-        "max_dave_protocol_version": Number(1, ..),
+        "max_dave_protocol_version": Number(0, ..),
         ..
       },
       ..
@@ -156,4 +156,26 @@ test "client JSON encoders produce the v8 wire shapes" {
   // Stringification and parsing preserve the complete public encoder value.
   assert_eq(@json.parse(identify.stringify()), identify)
   assert_eq(@json.parse(heartbeat.stringify()), heartbeat)
+}
+
+///|
+test "Identify advertises the caller-selected DAVE protocol limit" {
+  let identify_without_dave = @voice.encode_identify(
+    server_id="guild",
+    user_id="user",
+    session_id="session",
+    token="token",
+    max_dave_protocol_version=0,
+  )
+  guard! identify_without_dave
+    is { "d": { "max_dave_protocol_version": Number(0, ..), .. }, .. }
+  let identify_with_dave = @voice.encode_identify(
+    server_id="guild",
+    user_id="user",
+    session_id="session",
+    token="token",
+    max_dave_protocol_version=1,
+  )
+  guard! identify_with_dave
+    is { "d": { "max_dave_protocol_version": Number(1, ..), .. }, .. }
 }

@@ -66,86 +66,6 @@ struct ThreeFrameSource {
 }
 
 ///|
-struct AudioTestDave {
-  encrypted : Array[Bytes]
-}
-
-///|
-impl @voice.DaveProvider for AudioTestDave with fn max_protocol_version(_self) {
-  1
-}
-
-///|
-impl @voice.DaveProvider for AudioTestDave with fn reinit(
-  _self,
-  protocol_version~,
-) {
-  ignore(protocol_version)
-}
-
-///|
-impl @voice.DaveProvider for AudioTestDave with fn set_external_sender(
-  _self,
-  _payload,
-) {
-
-}
-
-///|
-impl @voice.DaveProvider for AudioTestDave with fn key_package(_self) {
-  b"key-package"
-}
-
-///|
-impl @voice.DaveProvider for AudioTestDave with fn process_proposals(
-  _self,
-  op_type~,
-  _payload,
-  recognized~,
-) {
-  ignore(op_type)
-  ignore(recognized)
-  (None, None)
-}
-
-///|
-impl @voice.DaveProvider for AudioTestDave with fn process_commit(
-  _self,
-  _payload,
-) {
-
-}
-
-///|
-impl @voice.DaveProvider for AudioTestDave with fn process_welcome(
-  _self,
-  _payload,
-) {
-
-}
-
-///|
-impl @voice.DaveProvider for AudioTestDave with fn encrypt_frame(self, frame) {
-  self.encrypted.push(frame)
-  b"dave:" + frame
-}
-
-///|
-impl @voice.DaveProvider for AudioTestDave with fn decrypt_frame(
-  _self,
-  user_id~,
-  frame,
-) {
-  ignore(user_id)
-  frame
-}
-
-///|
-impl @voice.DaveProvider for AudioTestDave with fn status(_self) {
-  2
-}
-
-///|
 impl @voice.AudioSource for ThreeFrameSource with fn next_frame(self) {
   if self.cursor >= self.frames.length() {
     None
@@ -157,7 +77,7 @@ impl @voice.AudioSource for ThreeFrameSource with fn next_frame(self) {
 }
 
 ///|
-async test "send loop encrypts advancing RTP packets after voice handshake" {
+async test "send loop delegates advancing RTP packets to DAVE after handshake" {
   if !@voice.shim_available() {
     return
   }
@@ -173,6 +93,7 @@ async test "send loop encrypts advancing RTP packets after voice handshake" {
       session_id="session",
       token="token",
       endpoint="voice.example",
+      max_dave_protocol_version=1,
       select_protocol=(_, _, _, _) => {
         ("203.0.113.8", 62000, "aead_aes256_gcm_rtpsize")
       },
@@ -204,19 +125,12 @@ async test "send loop encrypts advancing RTP packets after voice handshake" {
     guard! gateway.next() is Connected(resumed=false)
     let cipher = @voice.TransportCipher::new(AeadAes256GcmRtpsize, session_key)
     let source : &@voice.AudioSource = ThreeFrameSource::{ frames, cursor: 0 }
-    let dave_provider = AudioTestDave::{ encrypted: [] }
     let dave = @voice.DaveMachine::new(
-      (dave_provider : &@voice.DaveProvider),
+      protocol_version=1,
       self_user_id="100",
+      channel_id=7UL,
     )
-    dave.handle(
-      SessionDescription(
-        mode="aead_aes256_gcm_rtpsize",
-        secret_key=Bytes::new(32),
-        dave_protocol_version=1,
-      ),
-    )
-    |> ignore
+    assert_eq(dave.active_protocol_version(), 0)
     @voice.run_send_loop(
       source,
       cipher,
@@ -237,22 +151,11 @@ async test "send loop encrypts advancing RTP packets after voice handshake" {
       assert_eq(rtp.sequence, (65534 + index).to_uint16())
       assert_eq(rtp.timestamp, 960U + index.reinterpret_as_uint() * 960U)
       if index < frames.length() {
-        assert_eq(rtp.payload, b"dave:" + frames[index])
+        assert_eq(rtp.payload, frames[index])
       } else {
-        assert_eq(rtp.payload, b"dave:" + @voice.SILENCE_FRAME)
+        assert_eq(rtp.payload, @voice.SILENCE_FRAME)
       }
     }
-    assert_eq(
-      dave_provider.encrypted,
-      frames +
-      [
-        @voice.SILENCE_FRAME,
-        @voice.SILENCE_FRAME,
-        @voice.SILENCE_FRAME,
-        @voice.SILENCE_FRAME,
-        @voice.SILENCE_FRAME,
-      ],
-    )
     guard! transport.outgoing.get()
       is { "op": Number(5, ..), "d": { "speaking": Number(0, ..), .. }, .. }
     gateway.close()

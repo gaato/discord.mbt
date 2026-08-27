@@ -50,7 +50,6 @@ pub struct VoiceConnection {
   priv rejoin_ : async () -> VoiceCredentials
   priv connector_ : async (String) -> &VoiceTransport
   priv udp_opener_ : async (String, Int) -> &VoiceUdp
-  priv dave_factory_ : (Int, String, UInt64) -> &DaveProvider raise
   priv telemetry_ : (VoiceTelemetry) -> Unit
   priv sleeper_ : async (Int) -> Unit
   priv rand_ : @random.Rand
@@ -60,7 +59,7 @@ pub struct VoiceConnection {
   priv mut udp : &VoiceUdp?
   priv mut cipher : TransportCipher?
   priv mut dave : DaveMachine?
-  priv mut dave_enabled : Bool
+  priv mut pending_dave_external_sender : Bytes?
   priv mut ssrc : UInt?
   priv mut state_ : VoiceConnectionState
   priv mut failure : VoiceError?
@@ -111,7 +110,7 @@ async fn VoiceConnection::reset_session(self : VoiceConnection) -> Unit noraise 
   self.close_udp()
   self.cipher = None
   self.dave = None
-  self.dave_enabled = false
+  self.pending_dave_external_sender = None
   self.ssrc = None
   self.receiver.reset_session()
 }
@@ -205,6 +204,7 @@ fn[X] VoiceConnection::new_gateway(
     session_id=credentials.session_id,
     token=credentials.token,
     endpoint=credentials.endpoint,
+    max_dave_protocol_version=@dave.max_supported_protocol_version(),
     select_protocol=(ssrc, ip, port, modes) => {
       self.select_protocol(ssrc, ip, port, modes)
     },
@@ -263,28 +263,50 @@ async fn VoiceConnection::establish_session(
       return
     }
   }
-  let mut dave : DaveMachine? = None
-  if dave_protocol_version >= 1 {
-    let provider = (self.dave_factory_)(
-      dave_protocol_version,
-      self.user_id,
-      self.channel_id,
-    ) catch {
-      error => {
-        self.set_failure(ShimUnavailable(reason="\{Repr(error)}"), code=None)
-        return
-      }
+  let mut dave = self.dave
+  let max_dave_protocol_version = @dave.max_supported_protocol_version().to_int()
+  if dave_protocol_version >= 1 || max_dave_protocol_version >= 1 {
+    let session_protocol_version = if dave_protocol_version >= 1 {
+      dave_protocol_version
+    } else {
+      max_dave_protocol_version
     }
-    let machine = DaveMachine::new(
-      provider,
-      self_user_id=self.user_id,
-      roster=self.roster.to_array(),
-    )
+    let machine = match dave {
+      Some(machine) => machine
+      None =>
+        DaveMachine::new(
+          protocol_version=session_protocol_version,
+          self_user_id=self.user_id,
+          channel_id=self.channel_id,
+          roster=self.roster.to_array(),
+        ) catch {
+          DaveUnavailable(reason~)
+          | DaveInvalid(reason~)
+          | DaveInternal(reason~) => {
+            self.set_failure(
+              ShimUnavailable(reason="DAVE: \{reason}"),
+              code=None,
+            )
+            return
+          }
+        }
+    }
+    if self.pending_dave_external_sender is Some(external_sender) {
+      let _ = machine.handle(DaveMlsExternalSender(payload=external_sender)) catch {
+        DaveUnavailable(reason~)
+        | DaveInvalid(reason~)
+        | DaveInternal(reason~) => {
+          self.set_failure(ShimUnavailable(reason="DAVE: \{reason}"), code=None)
+          return
+        }
+      }
+      self.pending_dave_external_sender = None
+    }
     let actions = machine.handle(
       SessionDescription(mode=mode_name, secret_key~, dave_protocol_version~),
     ) catch {
-      error => {
-        self.set_failure(ShimUnavailable(reason="\{Repr(error)}"), code=None)
+      DaveUnavailable(reason~) | DaveInvalid(reason~) | DaveInternal(reason~) => {
+        self.set_failure(ShimUnavailable(reason="DAVE: \{reason}"), code=None)
         return
       }
     }
@@ -297,7 +319,6 @@ async fn VoiceConnection::establish_session(
   }
   self.cipher = Some(cipher)
   self.dave = dave
-  self.dave_enabled = dave_protocol_version >= 1
   self.failure = None
   self.state_ = Ready
   self.emit(ConnectionReady)
@@ -312,9 +333,14 @@ async fn VoiceConnection::apply_dave_actions(
   for action in actions {
     match action {
       SendJson(payload) => gateway.send_json(payload)
-      SendBinary(op~, payload~) => gateway.send_binary(op~, payload)
+      SendBinary(op~, payload~) => {
+        gateway.send_binary(op~, payload)
+        (self.telemetry_)(
+          DaveBinaryControlSent(opcode=op, payload_bytes=payload.length()),
+        )
+      }
       SwitchMediaContext(protocol_version~) =>
-        self.dave_enabled = protocol_version >= 1
+        (self.telemetry_)(DaveMediaContextActivated(protocol_version~))
     }
   }
 }
@@ -330,6 +356,8 @@ async fn VoiceConnection::handle_message(
         self.roster.add(user_id)
       }
     ClientDisconnect(user_id~) => self.roster.remove(user_id)
+    DaveMlsExternalSender(payload~) if self.dave is None =>
+      self.pending_dave_external_sender = Some(payload)
     _ => ()
   }
   if self.dave is Some(machine) {
@@ -456,7 +484,6 @@ async fn VoiceConnection::run_receiver(self : VoiceConnection) -> Unit noraise {
         datagram,
         cipher,
         self.dave,
-        dave_enabled=self.dave_enabled,
         arrival_ms=@clock.now_ms(),
       ) {
       self.emit(event) catch {
@@ -545,11 +572,6 @@ pub fn[X] VoiceConnection::start(
   rejoin~ : async () -> VoiceCredentials,
   connector? : async (String) -> &VoiceTransport = connect_voice_websocket,
   udp_opener? : async (String, Int) -> &VoiceUdp = open_voice_udp,
-  dave_factory? : (Int, String, UInt64) -> &DaveProvider raise = (
-    protocol_version,
-    user_id,
-    channel_id,
-  ) => new_dave_provider(protocol_version~, user_id~, channel_id~),
   receive? : Bool = true,
   telemetry? : (VoiceTelemetry) -> Unit = _ => (),
   sleeper? : async (Int) -> Unit = @async.sleep,
@@ -566,7 +588,6 @@ pub fn[X] VoiceConnection::start(
     rejoin_: rejoin,
     connector_: connector,
     udp_opener_: udp_opener,
-    dave_factory_: dave_factory,
     telemetry_: telemetry,
     sleeper_: sleeper,
     rand_: rand,
@@ -576,7 +597,7 @@ pub fn[X] VoiceConnection::start(
     udp: None,
     cipher: None,
     dave: None,
-    dave_enabled: false,
+    pending_dave_external_sender: None,
     ssrc: None,
     state_: Connecting,
     failure: None,

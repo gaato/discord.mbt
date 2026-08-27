@@ -258,13 +258,16 @@ pub fn parse_binary_frame(
 }
 
 ///|
-/// Voice gateway Identify (opcode 0) payload, offering DAVE protocol
-/// version 1.
+/// Voice gateway Identify (opcode 0) payload, advertising the selected maximum
+/// DAVE protocol version. It defaults to zero so low-level callers do not
+/// advertise DAVE without an active backend; pass a supported maximum
+/// explicitly to enable negotiation.
 pub fn encode_identify(
   server_id~ : String,
   user_id~ : String,
   session_id~ : String,
   token~ : String,
+  max_dave_protocol_version? : UInt16 = 0,
 ) -> Json {
   {
     "op": 0,
@@ -273,7 +276,7 @@ pub fn encode_identify(
       "user_id": Json::string(user_id),
       "session_id": Json::string(session_id),
       "token": Json::string(token),
-      "max_dave_protocol_version": 1,
+      "max_dave_protocol_version": max_dave_protocol_version.to_int(),
     },
   }
 }
