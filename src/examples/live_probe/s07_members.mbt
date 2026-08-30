@@ -75,6 +75,7 @@ async fn sec_members(p : P) -> Unit {
   })
   p.probe("get_guild_member + MemberRef::fetch", () => {
     let gm = c.get_guild_member(g, p.bot_id)
+    p.s.original_member_nick = gm.nick
     ignore(c.member_ref(g, p.bot_id).fetch())
     "roles=\{gm.roles.length()}"
   })
@@ -94,14 +95,19 @@ async fn sec_members(p : P) -> Unit {
       audit_reason="live probe nick",
     )
     ignore(gm)
-    let cleared = c.modify_current_member(g, clear_nick=true)
-    ignore(cleared)
+    match need(p.s.original_member_nick, "member nick snapshot") {
+      Value(nick) => ignore(c.modify_current_member(g, nick~))
+      Null => ignore(c.modify_current_member(g, clear_nick=true))
+    }
     "ok"
   })
-  p.probe("GuildRef::edit_current_member (bio/banner clear)", () => {
+  p.probe("GuildRef::edit_current_member (nick round-trip)", () => {
     let gm = gr.edit_current_member(nick="live-probe-bot-2")
     ignore(gm)
-    ignore(gr.edit_current_member(clear_nick=true))
+    match need(p.s.original_member_nick, "member nick snapshot") {
+      Value(nick) => ignore(gr.edit_current_member(nick~))
+      Null => ignore(gr.edit_current_member(clear_nick=true))
+    }
     "ok"
   })
   p.probe_err(

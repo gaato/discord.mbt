@@ -159,9 +159,11 @@ async fn sec_commands(p : P) -> Unit {
     "count=\{restored.length()}"
   })
 
-  // Role connection metadata (app-scoped, safe round trip to empty).
+  // Role connection metadata (app-scoped, restored to its original value).
+  let mut original_metadata : Array[@model.ApplicationRoleConnectionMetadata] = []
   p.probe("get_application_role_connection_metadata_records", () => {
     let records = c.get_application_role_connection_metadata_records(a)
+    original_metadata = records
     "count=\{records.length()}"
   })
   p.probe("update_application_role_connection_metadata_records", () => {
@@ -176,9 +178,10 @@ async fn sec_commands(p : P) -> Unit {
     let updated = c.update_application_role_connection_metadata_records(a, [
       record,
     ])
-    // restore empty
-    let cleared = c.update_application_role_connection_metadata_records(a, [])
-    "updated=\{updated.length()} cleared=\{cleared.length()}"
+    let restored = c.update_application_role_connection_metadata_records(
+      a, original_metadata,
+    )
+    "updated=\{updated.length()} restored=\{restored.length()}"
   })
   p.probe_err(
     "get_current_user_application_role_connection (bogus bearer)",

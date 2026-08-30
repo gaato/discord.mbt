@@ -58,8 +58,15 @@ struct S {
   mut sticker : @model.StickerId?
   mut sound : @model.SoundboardSoundId?
   mut message : @model.MessageId?
+  mut dm_channel : @model.ChannelId?
+  mut dm_message : @model.MessageId?
   mut webhook : @model.WebhookId?
   mut original_features : Array[@model.GuildFeature]
+  mut original_guild : @model.Guild?
+  mut original_widget : @model.GuildWidgetSettings?
+  mut original_onboarding : @model.GuildOnboarding?
+  mut original_welcome_screen : @model.WelcomeScreen?
+  mut original_member_nick : @model.Nullable[String]?
 }
 
 ///|
@@ -79,8 +86,15 @@ fn S::S() -> S {
     sticker: None,
     sound: None,
     message: None,
+    dm_channel: None,
+    dm_message: None,
     webhook: None,
     original_features: [],
+    original_guild: None,
+    original_widget: None,
+    original_onboarding: None,
+    original_welcome_screen: None,
+    original_member_nick: None,
   }
 }
 
@@ -319,7 +333,13 @@ async fn main {
       return
     }
   }
-  println("target guild: \{guild_id}")
+  let target_guild = client.get_guild(guild_id) catch {
+    err => {
+      println("failed to verify target guild: \{describe(err)}")
+      return
+    }
+  }
+  println("target guild: \{target_guild.name} (\{guild_id})")
   let p = P::{
     client,
     app_id: Id(0UL),
@@ -345,9 +365,12 @@ async fn main {
     sec_commands(p)
     sec_monetization(p)
     sec_gateway(p)
-    sec_cleanup(p)
   } catch {
     err => println("!! probe aborted: \{describe(err)}")
+  }
+  // Cleanup must still run when an unexpected error escapes a section.
+  sec_cleanup(p) catch {
+    err => p.push("cleanup section", Fail, describe(err))
   }
   print_summary(p)
   let log_path = @env.get_env_var("PAYLOAD_LOG").unwrap_or(

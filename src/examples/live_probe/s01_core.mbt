@@ -57,6 +57,10 @@ async fn sec_core(p : P) -> Unit {
       dm.id,
       content="live probe run — this DM checks create_dm/create_message",
     )
+    p.s.dm_channel = Some(dm.id)
+    p.s.dm_message = Some(msg.id)
+    c.delete_message(dm.id, msg.id)
+    p.s.dm_message = None
     "channel=\{dm.id} message=\{msg.id}"
   })
   p.probe("UserRef::dm", () => {

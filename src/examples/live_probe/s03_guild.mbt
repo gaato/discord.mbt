@@ -5,9 +5,11 @@ async fn sec_guild(p : P) -> Unit {
   let c = p.client
   let g = p.guild_id
   let gr = c.guild_ref(g)
+  let mut prune_count : Int? = None
   p.probe("GuildRef::fetch (with_counts)", () => {
     let guild = gr.fetch(with_counts=true)
     p.s.original_features = guild.features
+    p.s.original_guild = Some(guild)
     "members=\{guild.approximate_member_count.unwrap_or(-1)} features=\{guild.features.length()}"
   })
   p.probe("get_guild_preview", () => {
@@ -53,9 +55,12 @@ async fn sec_guild(p : P) -> Unit {
     "id=\{ch.id}"
   })
   p.probe("GuildRef::edit (premium progress bar)", () => {
-    let guild = gr.edit(premium_progress_bar_enabled=true)
-    ignore(gr.edit(premium_progress_bar_enabled=false))
-    "ok=\{guild.premium_progress_bar_enabled.unwrap_or(false)}"
+    let original = need(p.s.original_guild, "guild snapshot").premium_progress_bar_enabled.unwrap_or(
+      false,
+    )
+    let guild = gr.edit(premium_progress_bar_enabled=!original)
+    ignore(gr.edit(premium_progress_bar_enabled=original))
+    "toggled=\{guild.premium_progress_bar_enabled.unwrap_or(original) != original} restored=\{original}"
   })
   p.probe("get_guild_voice_regions", () => {
     let regions = c.get_guild_voice_regions(g)
@@ -78,6 +83,7 @@ async fn sec_guild(p : P) -> Unit {
   })
   p.probe("get_guild_widget_settings", () => {
     let settings = c.get_guild_widget_settings(g)
+    p.s.original_widget = Some(settings)
     "enabled=\{settings.enabled}"
   })
   p.probe("modify_guild_widget (enable)", () => {
@@ -92,9 +98,19 @@ async fn sec_guild(p : P) -> Unit {
     let url = c.guild_widget_image_url(g, style="banner1")
     "url=\{url}"
   })
-  p.probe("GuildRef::edit_widget (disable)", () => {
-    let settings = gr.edit_widget(enabled=false)
+  p.probe("GuildRef::edit_widget (restore)", () => {
+    let original = need(p.s.original_widget, "widget settings")
+    let settings = match original.channel_id {
+      Value(channel) =>
+        gr.edit_widget(enabled=original.enabled, channel_id=channel)
+      Null => gr.edit_widget(enabled=original.enabled, clear_channel_id=true)
+    }
     "enabled=\{settings.enabled}"
+  })
+  p.probe_env("snapshot guild welcome screen", () => {
+    let ws = c.get_guild_welcome_screen(g)
+    p.s.original_welcome_screen = Some(ws)
+    "channels=\{ws.welcome_channels.length()}"
   })
   p.probe_env("modify_guild_welcome_screen", () => {
     let text = need(p.s.text, "text channel")
@@ -119,38 +135,52 @@ async fn sec_guild(p : P) -> Unit {
   })
   p.probe("get_guild_onboarding", () => {
     let ob = c.get_guild_onboarding(g)
+    p.s.original_onboarding = Some(ob)
     "enabled=\{ob.enabled}"
   })
   p.probe_env("modify_guild_onboarding (disable)", () => {
     let ob = c.modify_guild_onboarding(g, [], [], false, Default)
+    if p.s.original_onboarding is Some(original) {
+      ignore(
+        c.modify_guild_onboarding(
+          g,
+          original.prompts,
+          original.default_channel_ids,
+          original.enabled,
+          original.mode,
+          audit_reason="live probe restore",
+        ),
+      )
+    }
     "enabled=\{ob.enabled}"
   })
   p.probe("modify_guild_incident_actions (set + clear)", () => {
     let until = iso8601(now_ms() + 3600_000L)
-    let set = c.modify_guild_incident_actions(g, invites_disabled_until=until)
-    ignore(set)
-    let cleared = c.modify_guild_incident_actions(
-      g,
-      clear_invites_disabled_until=true,
-      clear_dms_disabled_until=true,
+    ignore(c.modify_guild_incident_actions(g, invites_disabled_until=until))
+    ignore(
+      c.modify_guild_incident_actions(
+        g,
+        clear_invites_disabled_until=true,
+        clear_dms_disabled_until=true,
+      ),
     )
-    ignore(cleared)
     "ok"
   })
   p.probe("get_guild_prune_count", () => {
     let result = c.get_guild_prune_count(g, days=7)
+    if result.pruned is Value(count) {
+      prune_count = Some(count)
+    }
     "pruned=\{nul(result.pruned)}"
   })
   p.probe("begin_guild_prune", () => {
-    // compute_prune_count=false: the synchronous count can exceed the client
-    // request timeout even on small guilds.
     let result = c.begin_guild_prune(
       g,
       days=7,
       compute_prune_count=false,
-      audit_reason="live probe (no-op on a guild with no prunable members)",
+      audit_reason="live probe",
     )
-    "pruned=\{nul(result.pruned)}"
+    "preflight=\{Repr(prune_count)} pruned=\{nul(result.pruned)}"
   })
   p.probe("get_guild_audit_log", () => {
     let log = c.get_guild_audit_log(g, limit=10)

@@ -4,6 +4,22 @@
 async fn sec_cleanup(p : P) -> Unit {
   let c = p.client
   let g = p.guild_id
+  if p.s.dm_channel is Some(channel) && p.s.dm_message is Some(message) {
+    p.probe("cleanup: delete DM probe message", () => {
+      c.delete_message(channel, message)
+      p.s.dm_message = None
+      "ok"
+    })
+  }
+  if p.s.original_member_nick is Some(original) {
+    p.probe("cleanup: restore current member nick", () => {
+      match original {
+        Value(nick) => ignore(c.modify_current_member(g, nick~))
+        Null => ignore(c.modify_current_member(g, clear_nick=true))
+      }
+      "ok"
+    })
+  }
   if p.s.emoji is Some(emoji) {
     p.probe("cleanup: EmojiRef::delete (primary emoji)", () => {
       c.emoji_ref(g, emoji).delete(reason="live probe cleanup")
@@ -54,29 +70,158 @@ async fn sec_cleanup(p : P) -> Unit {
       })
     }
   }
+  // Welcome-screen mutations require COMMUNITY. Restore them before removing
+  // a COMMUNITY feature that this probe temporarily enabled.
+  if p.s.original_welcome_screen is Some(original) {
+    p.probe_env("cleanup: restore guild welcome screen", () => {
+      let mut cleared_stale_snapshot = false
+      let ws = try {
+        match original.description {
+          Value(description) =>
+            c.modify_guild_welcome_screen(
+              g,
+              welcome_channels=original.welcome_channels,
+              description~,
+              audit_reason="live probe cleanup",
+            )
+          Null =>
+            c.modify_guild_welcome_screen(
+              g,
+              welcome_channels=original.welcome_channels,
+              clear_description=true,
+              audit_reason="live probe cleanup",
+            )
+        }
+      } catch {
+        _ => {
+          // A previous interrupted probe may have left a welcome channel that
+          // no longer exists. Leave a valid disabled screen in that case.
+          cleared_stale_snapshot = true
+          c.modify_guild_welcome_screen(
+            g,
+            enabled=false,
+            welcome_channels=[],
+            clear_description=true,
+            audit_reason="live probe cleanup stale snapshot fallback",
+          )
+        }
+      }
+      "channels=\{ws.welcome_channels.length()} stale_snapshot_cleared=\{cleared_stale_snapshot}"
+    })
+  }
   // Restore guild settings we touched. Only downgrade COMMUNITY if we were
   // the ones who enabled it (original_features is the pre-probe snapshot).
-  p.probe("cleanup: modify_guild (restore features/description)", () => {
-    let we_enabled_community = p.s.community_enabled &&
-      !p.s.original_features.contains(Community)
-    let guild = if we_enabled_community {
-      c.modify_guild(
+  if p.s.original_guild is Some(_) {
+    p.probe("cleanup: modify_guild (restore settings)", () => {
+      let original = need(p.s.original_guild, "guild snapshot")
+      let we_enabled_community = p.s.community_enabled &&
+        !p.s.original_features.contains(Community)
+      ignore(
+        c.modify_guild(
+          g,
+          verification_level=original.verification_level,
+          default_message_notifications=original.default_message_notifications,
+          explicit_content_filter=original.explicit_content_filter,
+          premium_progress_bar_enabled=original.premium_progress_bar_enabled.unwrap_or(
+            false,
+          ),
+          audit_reason="live probe cleanup",
+        ),
+      )
+      match original.description {
+        Value(description) =>
+          ignore(
+            c.modify_guild(g, description~, audit_reason="live probe cleanup"),
+          )
+        Null =>
+          ignore(
+            c.modify_guild(
+              g,
+              clear_description=true,
+              audit_reason="live probe cleanup",
+            ),
+          )
+      }
+      if we_enabled_community {
+        ignore(
+          c.modify_guild(
+            g,
+            features=p.s.original_features,
+            clear_rules_channel_id=true,
+            clear_public_updates_channel_id=true,
+            audit_reason="live probe cleanup",
+          ),
+        )
+      } else {
+        match original.rules_channel_id {
+          Value(channel) =>
+            ignore(
+              c.modify_guild(
+                g,
+                rules_channel_id=channel,
+                audit_reason="live probe cleanup",
+              ),
+            )
+          Null =>
+            ignore(
+              c.modify_guild(
+                g,
+                clear_rules_channel_id=true,
+                audit_reason="live probe cleanup",
+              ),
+            )
+        }
+        match original.public_updates_channel_id {
+          Value(channel) =>
+            ignore(
+              c.modify_guild(
+                g,
+                public_updates_channel_id=channel,
+                audit_reason="live probe cleanup",
+              ),
+            )
+          Null =>
+            ignore(
+              c.modify_guild(
+                g,
+                clear_public_updates_channel_id=true,
+                audit_reason="live probe cleanup",
+              ),
+            )
+        }
+      }
+      let guild = c.get_guild(g)
+      "features=\{guild.features.length()}"
+    })
+  }
+  if p.s.original_widget is Some(original) {
+    p.probe("cleanup: restore guild widget", () => {
+      let settings = match original.channel_id {
+        Value(channel) =>
+          c.modify_guild_widget(g, enabled=original.enabled, channel_id=channel)
+        Null =>
+          c.modify_guild_widget(
+            g,
+            enabled=original.enabled,
+            clear_channel_id=true,
+          )
+      }
+      "enabled=\{settings.enabled}"
+    })
+  }
+  if p.s.original_onboarding is Some(original) {
+    p.probe_env("cleanup: restore guild onboarding", () => {
+      let ob = c.modify_guild_onboarding(
         g,
-        features=p.s.original_features,
-        clear_description=true,
-        clear_rules_channel_id=true,
-        clear_public_updates_channel_id=true,
+        original.prompts,
+        original.default_channel_ids,
+        original.enabled,
+        original.mode,
         audit_reason="live probe cleanup",
       )
-    } else {
-      c.modify_guild(
-        g,
-        clear_description=true,
-        audit_reason="live probe cleanup",
-      )
-    }
-    "features=\{guild.features.length()}"
-  })
+      "enabled=\{ob.enabled}"
+    })
+  }
   // With COMMUNITY off, the previously undeletable MentionSpam automod rule
   // becomes deletable.
   let rules = c.list_auto_moderation_rules(g) catch { _ => [] }
