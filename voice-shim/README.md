@@ -5,7 +5,20 @@ This crate builds the native transport AEAD shim used by
 a small C ABI. DAVE MLS and media encryption are provided separately by the
 `gaato/dave` MoonBit module and official libdave.
 
-Build the shim with:
+Native `gaato/discord` consumers can provision the pinned component together
+with official libdave:
+
+```fish
+env DISCORD_VOICE_REQUIRE_SHIM=1 MBT_DAVE_REQUIRE_NATIVE=1 moon build --target native --release
+```
+
+The root prebuild hook downloads the matching `voice-shim-v0.1.0` archive,
+checks its pinned size and SHA-256 digest, verifies the extracted library, and
+caches it outside the Mooncake. It supports Linux x86-64/ARM64, macOS
+x86-64/ARM64, and Windows x86-64. Node.js and either `tar` (Linux/macOS) or
+PowerShell (Windows) are required.
+
+For component development, build the shim with:
 
 ```fish
 cargo build --release
@@ -19,8 +32,14 @@ The output is one of:
 
 Set `DISCORD_VOICE_SHIM_PATH` to the absolute path of that file when running
 discord.mbt tests or applications. When the variable is set, the loader tries
-only that path. Without it, the loader searches the platform library path for
-the native filename: `.so` on Linux, `.dylib` on macOS, or `.dll` on Windows.
+only that path. Without it, the loader searches `DISCORD_VOICE_SHIM_ROOT`, the
+deterministic component cache, and the platform library path for the native
+filename: `.so` on Linux, `.dylib` on macOS, or `.dll` on Windows.
+
+For offline provisioning, set `DISCORD_VOICE_SHIM_ROOT` to an extracted
+release directory and `DISCORD_VOICE_SHIM_OFFLINE=1` to forbid downloads.
+`DISCORD_VOICE_SHIM_CACHE_DIR` overrides the cache base; all path overrides
+must be absolute.
 
 ## C ABI
 

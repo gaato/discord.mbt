@@ -21,3 +21,7 @@ import {
   "hustcer/ed25519@0.6.0",
   "gaato/dave@0.1.0",
 }
+
+options(
+  "--moonbit-unstable-prebuild": "build.js",
+)

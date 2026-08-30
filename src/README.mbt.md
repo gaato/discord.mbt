@@ -208,8 +208,9 @@ applications use the native-only
 [`gaato/dave`](https://github.com/gaato/dave.mbt) binding to Discord's
 official `libdave` for MLS and media encryption. The separate Rust library in
 `voice-shim/` handles RTP transport AEAD only. `gaato/dave` currently pins
-upstream `v1.2.0/cpp`; its official binaries and the Rust shim must both be
-available for the host platform. See the
+upstream `v1.2.0/cpp`; `gaato/discord` pins transport component release
+`voice-shim-v0.1.0`. A native voice build can bootstrap and verify both
+prebuilt runtimes without installing Cargo. See the
 [voice guide](src/guide/10-voice.mbt.md) for installation and runtime limits,
 the `dave_probe`, `voice_player`, and `voice_recorder` examples, and the accepted design in
 [`src/voice/DESIGN.md`](src/voice/DESIGN.md).

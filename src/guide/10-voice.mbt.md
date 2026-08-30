@@ -9,20 +9,22 @@ documented in [`src/voice/DESIGN.md`](../voice/DESIGN.md).
 
 ## Install the native dependencies
 
-`gaato/discord` depends on `gaato/dave`, which currently pins official
-`libdave` `v1.2.0/cpp`. Bootstrap it explicitly from a native build:
+`gaato/discord` pins transport shim release `voice-shim-v0.1.0` and depends on
+`gaato/dave`, which pins official `libdave` `v1.2.0/cpp`. Bootstrap both
+verified native runtimes from a native build:
 
 ```fish
-env MBT_DAVE_REQUIRE_NATIVE=1 moon build --target native --release
+env DISCORD_VOICE_REQUIRE_SHIM=1 MBT_DAVE_REQUIRE_NATIVE=1 moon build --target native --release
 ```
 
-The prebuild hook then downloads the matching upstream archive, verifies the
-pinned archive and library digests, and caches the complete extraction. Moon
-invocations without `MBT_DAVE_REQUIRE_NATIVE=1`, including JavaScript builds,
-do not provision a host library. Node.js is required for the hook; archive
-extraction also requires `unzip` on Linux and macOS or PowerShell on Windows.
-The library is loaded at runtime rather than embedded in the Mooncake or
-installed system-wide.
+The two prebuild hooks download their matching release archives, verify pinned
+archive sizes and SHA-256 digests, verify the extracted libraries again, and
+cache the complete extractions. Moon invocations without the corresponding
+opt-in variable, including JavaScript builds, do not provision host libraries.
+Node.js is required for the hooks; transport archive extraction uses `tar` on
+Linux and macOS or PowerShell on Windows, while `gaato/dave` also requires
+`unzip` on Linux and macOS. The libraries are loaded at runtime rather than
+embedded in the Mooncake or installed system-wide.
 
 The pinned upstream release provides `libdave` for Linux x86-64/ARM64, macOS
 x86-64/ARM64, and Windows x86-64. A native MoonBit toolchain and the transport
@@ -31,10 +33,14 @@ does not provide a macOS x86-64 toolchain, and upstream provides no Windows
 ARM64 asset. Cross-compilation is not supported by the host-selected
 bootstrap. Upstream's Linux binaries require glibc 2.38 and GLIBCXX 3.4.32.
 
-For offline builds, a verified official extraction can be selected with
-`MBT_DAVE_NATIVE_ROOT`; `MBT_DAVE_NATIVE_OFFLINE=1` forbids downloads. Set
-`MBT_DAVE_NATIVE_LIB` to the absolute path of an ABI-compatible self-built
-library when the official binary cannot run on the host. See
+For offline builds, verified extractions can be selected with
+`DISCORD_VOICE_SHIM_ROOT` and `MBT_DAVE_NATIVE_ROOT`;
+`DISCORD_VOICE_SHIM_OFFLINE=1` and `MBT_DAVE_NATIVE_OFFLINE=1` forbid
+downloads. `DISCORD_VOICE_SHIM_CACHE_DIR` and `MBT_DAVE_NATIVE_CACHE_DIR`
+override their cache bases and must be absolute paths. Set
+`DISCORD_VOICE_SHIM_PATH` or `MBT_DAVE_NATIVE_LIB` to the absolute path of an
+ABI-compatible self-built library when a published binary cannot run on the
+host. See
 [`gaato/dave`'s native runtime guide](https://github.com/gaato/dave.mbt/blob/main/docs/native-runtime.md)
 for the cache layout and all overrides.
 
@@ -43,24 +49,26 @@ not exposed. The official prebuilt libdave v1.2.0 C ABI rotates its ephemeral
 signing identity on every `Init` and provides no reusable identity handle; the
 API can be added once upstream exposes one.
 
-Build the transport AEAD shim with Cargo:
+To develop the transport component itself or support another host, build it
+with Cargo:
 
 ```fish
 cd voice-shim
 cargo build --release
 ```
 
-Point the runtime at the built library:
+Point the runtime at that development build:
 
 ```fish
 set -gx DISCORD_VOICE_SHIM_PATH "$PWD/target/release/libdiscord_voice_shim.so"
 ```
 
 macOS uses `libdiscord_voice_shim.dylib`; Windows uses
-`discord_voice_shim.dll`. The loader also checks the platform library path
-when `DISCORD_VOICE_SHIM_PATH` is unset. `DISCORD_VOICE_SHIM_PATH` configures
-only transport AEAD; the `MBT_DAVE_NATIVE_*` variables configure the separate
-official libdave runtime.
+`discord_voice_shim.dll`. When the explicit path is unset, the loader checks
+`DISCORD_VOICE_SHIM_ROOT`, the deterministic `v0.1.0` cache, and finally the
+platform library path. `DISCORD_VOICE_SHIM_*` configures only transport AEAD;
+the `MBT_DAVE_NATIVE_*` variables configure the separate official libdave
+runtime.
 
 ## Join and play
 
@@ -166,7 +174,7 @@ to the other pending members, so a bot alone cannot establish the group. Set
 `DISCORD_TOKEN`, `GUILD_ID`, and `CHANNEL_ID`, then run:
 
 ```fish
-env MBT_DAVE_REQUIRE_NATIVE=1 moon run --target native --release src/examples/dave_probe
+env DISCORD_VOICE_REQUIRE_SHIM=1 MBT_DAVE_REQUIRE_NATIVE=1 moon run --target native --release src/examples/dave_probe
 ```
 
 With no other announced participant, the probe reports an inconclusive result.
@@ -183,7 +191,7 @@ activation before playback and clips the input at three seconds. For example:
 
 ```fish
 ffmpeg -y -hide_banner -loglevel error -f lavfi -i 'sine=frequency=880:duration=1.5' -filter:a 'volume=0.7' -c:a libopus -ar 48000 -ac 2 -frame_duration 20 /tmp/discord-dave-tone.ogg
-env DAVE_PROBE_AUDIBLE=1 DAVE_PROBE_AUDIO_FILE=/tmp/discord-dave-tone.ogg MBT_DAVE_REQUIRE_NATIVE=1 moon run --target native --release src/examples/dave_probe
+env DAVE_PROBE_AUDIBLE=1 DAVE_PROBE_AUDIO_FILE=/tmp/discord-dave-tone.ogg DISCORD_VOICE_REQUIRE_SHIM=1 MBT_DAVE_REQUIRE_NATIVE=1 moon run --target native --release src/examples/dave_probe
 ```
 
 Have the other participant confirm hearing the short tone, and also
@@ -197,7 +205,7 @@ when the receive probe starts. It waits up to 20 seconds for ten decrypted Opus
 frames and stores only the frame count:
 
 ```fish
-env DAVE_PROBE_RECEIVE=1 MBT_DAVE_REQUIRE_NATIVE=1 moon run --target native --release src/examples/dave_probe
+env DAVE_PROBE_RECEIVE=1 DISCORD_VOICE_REQUIRE_SHIM=1 MBT_DAVE_REQUIRE_NATIVE=1 moon run --target native --release src/examples/dave_probe
 ```
 
 UDP can arrive before the voice gateway's initial Speaking event establishes
@@ -214,7 +222,7 @@ so it cannot create a continuous feedback loop. It logs only Opus packet-size
 statistics, not the sender ID or audio content:
 
 ```fish
-env DAVE_PROBE_ECHO=1 MBT_DAVE_REQUIRE_NATIVE=1 moon run --target native --release src/examples/dave_probe
+env DAVE_PROBE_ECHO=1 DISCORD_VOICE_REQUIRE_SHIM=1 MBT_DAVE_REQUIRE_NATIVE=1 moon run --target native --release src/examples/dave_probe
 ```
 
 When explicit recording is acceptable, set `DAVE_PROBE_RECORD_PATH` to an Ogg
@@ -222,5 +230,5 @@ output path. This also uses the Speaking-gated two-second capture, but does not
 enable echo unless `DAVE_PROBE_ECHO=1` is set separately:
 
 ```fish
-env DAVE_PROBE_RECORD_PATH=/tmp/discord-dave-receive-check.ogg MBT_DAVE_REQUIRE_NATIVE=1 moon run --target native --release src/examples/dave_probe
+env DAVE_PROBE_RECORD_PATH=/tmp/discord-dave-receive-check.ogg DISCORD_VOICE_REQUIRE_SHIM=1 MBT_DAVE_REQUIRE_NATIVE=1 moon run --target native --release src/examples/dave_probe
 ```

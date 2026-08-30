@@ -92,18 +92,25 @@ Discord voice client while leaving the compact transport shim local to
 discord.mbt. Interaction signature verification is implemented separately in
 pure MoonBit.
 
-`gaato/dave` currently pins upstream `libdave` `v1.2.0/cpp`. A native Moon
-build with `MBT_DAVE_REQUIRE_NATIVE=1` makes its prebuild hook download and
-verify the matching official host archive; builds without that opt-in do not
-bootstrap a host library. The loader then opens the shared library from the
-managed cache. Official assets cover Linux x86-64/ARM64, macOS x86-64/ARM64,
-and Windows x86-64. The current MoonBit installer has no macOS x86-64
-toolchain, and upstream has no Windows ARM64 asset. The official Linux binaries
-require glibc 2.38 and GLIBCXX 3.4.32. Older Linux systems need an ABI-compatible
-self-built library selected with `MBT_DAVE_NATIVE_LIB` or a newer runtime
-environment.
+`gaato/dave` pins upstream `libdave` `v1.2.0/cpp`, and `gaato/discord` pins
+transport component release `voice-shim-v0.1.0`. A native Moon build with
+`MBT_DAVE_REQUIRE_NATIVE=1` and `DISCORD_VOICE_REQUIRE_SHIM=1` makes their
+prebuild hooks download and verify the matching host archives and extracted
+libraries; builds without the opt-ins do not bootstrap host runtimes. The
+loaders then open the shared libraries from versioned caches. Both releases
+cover Linux x86-64/ARM64, macOS x86-64/ARM64, and Windows x86-64. The current
+MoonBit installer has no macOS x86-64 toolchain, and neither release provides
+Windows ARM64. The official Linux libdave binaries require glibc 2.38 and
+GLIBCXX 3.4.32. Older Linux systems need an ABI-compatible self-built libdave
+selected with `MBT_DAVE_NATIVE_LIB` or a newer runtime environment.
 
-Build the transport shim from the repository root:
+The normal consumer bootstrap is:
+
+```fish
+env DISCORD_VOICE_REQUIRE_SHIM=1 MBT_DAVE_REQUIRE_NATIVE=1 moon build --target native --release
+```
+
+For transport component development, build the shim from the repository root:
 
 ```fish
 cd voice-shim
@@ -111,11 +118,12 @@ cargo build --release
 ```
 
 Set `DISCORD_VOICE_SHIM_PATH` to the resulting `.so`, `.dylib`, or `.dll`.
-Without the variable, the loader searches the platform library path for the
-standard shim filenames. `MBT_DAVE_NATIVE_ROOT`,
-`MBT_DAVE_NATIVE_CACHE_DIR`, and `MBT_DAVE_NATIVE_LIB` configure the separate
-libdave loader. Missing transport and DAVE runtimes are diagnosed
-independently.
+Without the variable, the loader searches `DISCORD_VOICE_SHIM_ROOT`, the
+versioned cache, and the platform library path. The remaining
+`DISCORD_VOICE_SHIM_*` variables control offline and cache behavior;
+`MBT_DAVE_NATIVE_ROOT`, `MBT_DAVE_NATIVE_CACHE_DIR`, and
+`MBT_DAVE_NATIVE_LIB` configure the separate libdave loader. Missing transport
+and DAVE runtimes are diagnosed independently.
 
 ## Delivered milestones
 

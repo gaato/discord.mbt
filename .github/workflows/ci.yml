@@ -112,6 +112,9 @@ jobs:
       - name: Type check
         run: moon check --target js --deny-warn
 
+      - name: Test native prebuild
+        run: node --test test/prebuild.test.js
+
       - name: Test
         run: moon test --target js
 
