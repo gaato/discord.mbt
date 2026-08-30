@@ -9,3 +9,4 @@ moon.work
 .dev.vars
 .wrangler/
 node_modules/
+__pycache__/

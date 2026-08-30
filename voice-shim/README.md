@@ -24,7 +24,10 @@ the native filename: `.so` on Linux, `.dylib` on macOS, or `.dll` on Windows.
 
 ## C ABI
 
-Crate version 0.2 uses transport-only ABI version 3. The loader requires only:
+Component release 0.1 uses transport-only ABI version 3. Release versions and
+ABI generations are independent: this is the first binary component release,
+while ABI versions 1 and 2 existed during source-only development. The loader
+requires only:
 
 - `vs_abi_version`
 - `vs_free`
@@ -33,9 +36,16 @@ Crate version 0.2 uses transport-only ABI version 3. The loader requires only:
 - `vs_aead_open`
 
 ABI version 2 also exposed an in-shim DAVE session API and is intentionally
-incompatible. Every exported Rust entry point catches unwinding panics. Output
-buffers remain Rust-owned until the caller passes the exact pointer/length pair
-to `vs_free`; the MoonBit C adapter copies them before releasing them.
+incompatible. The AEAD entry points catch unwinding panics before returning
+across the C boundary. Output buffers remain Rust-owned until the caller passes
+the exact pointer/length pair to `vs_free`; the MoonBit C adapter copies them
+before releasing them.
+
+The release workflow for the `voice-shim-v0.1.0` tag produces official
+component archives. Each archive contains the platform library, the project license,
+`THIRD_PARTY.md`, and the dependency license texts under
+`THIRD_PARTY_LICENSES/`. `SHA256SUMS`, `RUNTIME_SHA256SUMS`, and `ASSET_SIZES`
+are attached to the same release.
 
 AEAD mode `0` is AES-256-GCM with a 32-byte key and 12-byte nonce. Mode `1` is
 XChaCha20-Poly1305 with a 32-byte key and 24-byte nonce. Input buffers are

@@ -1,6 +1,6 @@
 [package]
 name = "discord-voice-shim"
-version = "0.2.0"
+version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
 description = "Native transport AEAD shim for discord.mbt"
