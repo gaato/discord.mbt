@@ -62,7 +62,7 @@ jobs:
       - name: Check nested modules
         run: |
           moon -C tools/package_graph check --target native --deny-warn
-          moon -C tools/package_graph run -- --check
+          moon -C tools/package_graph run . -- --check
           workdir="$(mktemp -d)"
           cd "$workdir"
           moon work init "$GITHUB_WORKSPACE" "$GITHUB_WORKSPACE/template"

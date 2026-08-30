@@ -101,9 +101,23 @@ jobs:
         run: cargo build --release --locked --target "${{ matrix.target }}"
 
       - name: Smoke-test the dynamic ABI
+        if: runner.os != 'Windows'
         env:
           RUNTIME_PATH: ${{ github.workspace }}/${{ matrix.runtime_path }}
         run: python voice-shim/dynamic_smoke.py "$RUNTIME_PATH"
+
+      - name: Smoke-test the dynamic ABI (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          BUILT_RUNTIME_PATH: ${{ github.workspace }}/${{ matrix.runtime_path }}
+        run: |
+          $runtimePath = Join-Path $env:RUNNER_TEMP "discord_voice_shim.dll"
+          Copy-Item -LiteralPath $env:BUILT_RUNTIME_PATH -Destination $runtimePath -Force
+          Unblock-File -LiteralPath $runtimePath -ErrorAction SilentlyContinue
+          Get-Item -LiteralPath $runtimePath | Format-List FullName,Length
+          Get-FileHash -Algorithm SHA256 -LiteralPath $runtimePath
+          python voice-shim/dynamic_smoke.py $runtimePath
 
       - name: Install MoonBit (Linux and macOS)
         if: matrix.moonbit_smoke && runner.os != 'Windows'
