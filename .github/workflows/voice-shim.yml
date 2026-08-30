@@ -164,7 +164,6 @@ jobs:
         if: matrix.moonbit_smoke
         env:
           DISCORD_VOICE_REQUIRE_SHIM: "1"
-          DISCORD_VOICE_SHIM_PATH: ""
           DISCORD_VOICE_SHIM_CACHE_DIR: ${{ runner.temp }}/discord-voice-shim-cache
         run: |
           moon update

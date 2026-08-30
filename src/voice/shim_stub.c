@@ -60,6 +60,14 @@ static int discord_voice_windows_environment_utf8(const wchar_t *name,
     DWORD error = GetLastError();
     return error == ERROR_SUCCESS || error == ERROR_ENVVAR_NOT_FOUND ? 0 : -1;
   }
+  if (required_wide == 1) {
+    // GetEnvironmentVariableW reports one wchar for an explicitly empty
+    // value. Treat it exactly like an unset optional override.
+    if (output_len != 0) {
+      output[0] = '\0';
+    }
+    return 0;
+  }
   wchar_t *wide = malloc((size_t)required_wide * sizeof(wchar_t));
   if (wide == NULL) {
     return -1;
