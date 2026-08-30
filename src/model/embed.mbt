@@ -204,7 +204,7 @@ pub fn EmbedFooter::EmbedFooter(
   text : String,
   icon_url? : String,
 ) -> EmbedFooter {
-  { text, icon_url, proxy_icon_url: None }
+  { text, icon_url, proxy_icon_url: None, }
 }
 
 ///|
@@ -219,7 +219,7 @@ pub(all) struct EmbedImage {
 ///|
 /// Construct image media for an outgoing embed.
 pub fn EmbedImage::EmbedImage(url : String) -> EmbedImage {
-  { url, proxy_url: None, height: None, width: None }
+  { url, proxy_url: None, height: None, width: None, }
 }
 
 ///|
@@ -234,7 +234,7 @@ pub(all) struct EmbedThumbnail {
 ///|
 /// Construct thumbnail media for an outgoing embed.
 pub fn EmbedThumbnail::EmbedThumbnail(url : String) -> EmbedThumbnail {
-  { url, proxy_url: None, height: None, width: None }
+  { url, proxy_url: None, height: None, width: None, }
 }
 
 ///|
@@ -269,7 +269,7 @@ pub fn EmbedAuthor::EmbedAuthor(
   url? : String,
   icon_url? : String,
 ) -> EmbedAuthor {
-  { name, url, icon_url, proxy_icon_url: None }
+  { name, url, icon_url, proxy_icon_url: None, }
 }
 
 ///|
@@ -287,5 +287,5 @@ pub fn EmbedField::EmbedField(
   value : String,
   inline? : Bool,
 ) -> EmbedField {
-  { name, value, inline }
+  { name, value, inline, }
 }

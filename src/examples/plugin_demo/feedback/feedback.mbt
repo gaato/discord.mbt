@@ -10,7 +10,7 @@ pub fn FeedbackConfig::FeedbackConfig(
   destination_channel~ : @model.ChannelId,
   cooldown_seconds? : Int = 30,
 ) -> FeedbackConfig {
-  { destination_channel, cooldown_seconds }
+  { destination_channel, cooldown_seconds, }
 }
 
 ///|
@@ -31,7 +31,7 @@ pub struct FeedbackFeature {
 pub fn FeedbackFeature::FeedbackFeature(
   config : FeedbackConfig,
 ) -> FeedbackFeature {
-  { config_: config, stored_: 0 }
+  { config_: config, stored_: 0, }
 }
 
 ///|
@@ -53,7 +53,7 @@ fn feedback_modal() -> @discord.Modal[FeedbackForm] {
         style=Paragraph,
         max_length=1000,
       ).optional(),
-      (topic, details) => { topic, details },
+      (topic, details) => { topic, details, },
     ),
   )
 }

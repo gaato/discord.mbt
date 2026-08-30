@@ -7,7 +7,7 @@ async test "template ref fetch resolves by code without the bound guild id" {
   client.perform_override_.val = Some((route, path, _headers, _body, _files) => {
     captured_method.val = @debug.to_string(route.method_())
     captured_path.val = path
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let guild_id : @model.GuildId = Id(300UL)
   try client.guild_ref(guild_id).template_ref("code-a").fetch() catch {
@@ -29,7 +29,7 @@ async test "template ref sync uses the bound guild id" {
   client.perform_override_.val = Some((route, path, _headers, _body, _files) => {
     captured_method.val = @debug.to_string(route.method_())
     captured_path.val = path
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let guild_id : @model.GuildId = Id(310UL)
   try client.guild_template_ref(guild_id, "code-b").sync() catch {
@@ -53,7 +53,7 @@ async test "emoji ref delete delegates bound ids and audit reason" {
     captured_method.val = @debug.to_string(route.method_())
     captured_path.val = path
     captured_headers.val = Some(headers)
-    { status: 204, headers: Map([]), body: Json::null() }
+    { status: 204, headers: Map([]), body: Json::null(), }
   })
   let guild_id : @model.GuildId = Id(320UL)
   let emoji_id : @model.EmojiId = Id(330UL)
@@ -82,7 +82,7 @@ async test "soundboard sound ref edit delegates nullable emoji id" {
     captured_method.val = @debug.to_string(route.method_())
     captured_path.val = path
     captured_body.val = body.unwrap_or(Json::null())
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let guild_id : @model.GuildId = Id(340UL)
   let sound_id : @model.SoundboardSoundId = Id(350UL)

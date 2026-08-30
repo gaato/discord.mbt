@@ -625,7 +625,7 @@ struct ExampleCommand {
 
 ///|
 impl @interaction.CommandModel for ExampleCommand with fn from_options(options) {
-  { query: options.string("query"), limit: options.int_opt("limit") }
+  { query: options.string("query"), limit: options.int_opt("limit"), }
 }
 
 ///|

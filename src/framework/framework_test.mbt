@@ -55,7 +55,7 @@ fn echo_interaction(text : String) -> @model.Interaction raise {
   let interaction : @model.Interaction = @json.from_json(
     @json.parse(json.replace(old="PLACEHOLDER", new=text)),
   )
-  { ..interaction, user: Some(interaction_test_user()) }
+  { ..interaction, user: Some(interaction_test_user()), }
 }
 
 ///|
@@ -108,7 +108,7 @@ fn named_command_interaction(
       .replace(old="COMMAND_TYPE", new=typ.to_string()),
     ),
   )
-  { ..interaction, user: Some(interaction_test_user()) }
+  { ..interaction, user: Some(interaction_test_user()), }
 }
 
 ///|
@@ -186,7 +186,7 @@ fn modal_interaction() -> @model.Interaction raise {
       ),
     ),
   )
-  { ..interaction, user: Some(interaction_test_user()) }
+  { ..interaction, user: Some(interaction_test_user()), }
 }
 
 ///|
@@ -315,7 +315,7 @@ async test "component and modal contexts expose optional guild scopes" {
 async test "interaction contexts reject invalid invoker combinations" {
   let fw = test_framework()
   fw.command(@interaction.CommandSpec::slash("echo", "Echo"), _ => ()) |> ignore
-  let missing = { ..echo_interaction("missing"), user: None }
+  let missing = { ..echo_interaction("missing"), user: None, }
   try fw.process(missing) |> ignore catch {
     @framework.InteractionContextError::MissingInvoker => ()
     error => fail("unexpected error: \{Repr(error)}")
@@ -329,7 +329,7 @@ async test "interaction contexts reject invalid invoker combinations" {
     guild_member: Some(interaction_test_member()),
   }
   assert_true(fw.process(ambiguous))
-  let member_without_user = { ..interaction_test_member(), user: None }
+  let member_without_user = { ..interaction_test_member(), user: None, }
   let invalid_guild = {
     ..echo_interaction("missing-member-user"),
     guild_id: Some(@model.Id::parse("800000000000000001")),
@@ -610,7 +610,7 @@ async test "component contexts require and expose their attached message" {
       #|["700000000000000001:200000000000000001"]
     ),
   )
-  let malformed = { ..component_interaction("inspect:missing"), message: None }
+  let malformed = { ..component_interaction("inspect:missing"), message: None, }
   try fw.process(malformed) |> ignore catch {
     @framework.InteractionContextError::MissingComponentMessage => ()
     error => fail("unexpected error: \{Repr(error)}")
@@ -672,7 +672,7 @@ async test "command context edit followup delegates token id and clear body" {
   client.middleware((request, _next) => {
     captured_path.val = request.route.path()
     captured_body.val = request.body.unwrap_or(Json::null())
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let application_id : @model.ApplicationId = @model.Id::parse(
     "400000000000000001",

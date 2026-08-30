@@ -198,7 +198,7 @@ fn interaction_scope(
     (Some(guild_member), _) => {
       guard guild_member.user is Some(_) else { raise MissingGuildMemberUser }
       guard interaction.guild_id is Some(guild_id) else { raise MissingGuildId }
-      Guild({ guild_id, member: guild_member })
+      Guild({ guild_id, member: guild_member, })
     }
     (None, Some(user)) => Dm(user)
     (None, None) => raise MissingInvoker
@@ -292,7 +292,7 @@ pub fn CommandCtx::target_user(self : CommandCtx) -> TargetUser? {
     Some(members) => members.get(target_id.to_string())
     None => None
   }
-  Some({ user, member: target_member })
+  Some({ user, member: target_member, })
 }
 
 ///|
@@ -602,7 +602,7 @@ pub async fn ComponentCtx::defer_response(
 ///|
 /// Acknowledge without any visible change (edit later if needed).
 pub async fn ComponentCtx::defer_update(self : ComponentCtx) -> Unit {
-  self.gate.send({ typ: DeferredUpdateMessage, data: None })
+  self.gate.send({ typ: DeferredUpdateMessage, data: None, })
 }
 
 ///|

@@ -159,7 +159,7 @@ fn[K : Hash + Eq, V] TimedMap::new(
   limit : CacheLimit,
   now : () -> Int64,
 ) -> TimedMap[K, V] {
-  { entries_: Map([]), limit_: limit, now_: now }
+  { entries_: Map([]), limit_: limit, now_: now, }
 }
 
 ///|
@@ -206,7 +206,7 @@ fn[K : Hash + Eq, V] TimedMap::replace_existing(
     self.entries_.remove(key) |> ignore
     return
   }
-  self.entries_[key] = { value, deadline: timed.deadline }
+  self.entries_[key] = { value, deadline: timed.deadline, }
 }
 
 ///|

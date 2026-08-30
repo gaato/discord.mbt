@@ -334,7 +334,7 @@ pub impl @json.FromJson for PresenceUser with fn from_json(json, path) {
   guard json is Object(fields) else {
     raise JsonDecodeError((path, "expected presence user (object)"))
   }
-  { id: lenient_presence_field(fields, "id", path) }
+  { id: lenient_presence_field(fields, "id", path), }
 }
 
 ///|

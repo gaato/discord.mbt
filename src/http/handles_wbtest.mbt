@@ -7,7 +7,7 @@ async test "message ref reply delegates a message reference" {
   client.perform_override_.val = Some((_route, path, _headers, body, _files) => {
     captured_path.val = path
     captured_body.val = body.unwrap_or(Json::null())
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let channel_id : @model.ChannelId = Id(10UL)
   let message_id : @model.MessageId = Id(20UL)
@@ -36,7 +36,7 @@ async test "member ref ban delegates the audit reason header" {
     captured_path.val = path
     captured_headers.val = Some(headers)
     captured_body.val = body.unwrap_or(Json::null())
-    { status: 204, headers: Map([]), body: Json::null() }
+    { status: 204, headers: Map([]), body: Json::null(), }
   })
   let guild_id : @model.GuildId = Id(30UL)
   let user_id : @model.UserId = Id(40UL)
@@ -65,7 +65,7 @@ async test "message ref pin delegates the audit reason header" {
   client.perform_override_.val = Some((_route, path, headers, _body, _files) => {
     captured_path.val = path
     captured_headers.val = Some(headers)
-    { status: 204, headers: Map([]), body: Json::null() }
+    { status: 204, headers: Map([]), body: Json::null(), }
   })
   let channel_id : @model.ChannelId = Id(50UL)
   let message_id : @model.MessageId = Id(60UL)
@@ -91,7 +91,7 @@ async test "channel ref send preserves create message parameters" {
   client.perform_override_.val = Some((_route, path, _headers, body, _files) => {
     captured_path.val = path
     captured_body.val = body.unwrap_or(Json::null())
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let channel_id : @model.ChannelId = Id(70UL)
   try
@@ -126,7 +126,7 @@ async test "channel ref fetch delegates a GET request" {
   client.perform_override_.val = Some((route, path, _headers, _body, _files) => {
     captured_method.val = @debug.to_string(route.method_())
     captured_path.val = path
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let channel_id : @model.ChannelId = Id(80UL)
   try client.channel_ref(channel_id).fetch() catch {

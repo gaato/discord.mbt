@@ -163,7 +163,7 @@ pub struct FeedbackFeature {
 pub fn FeedbackFeature::FeedbackFeature(
   config : FeedbackConfig,
 ) -> FeedbackFeature {
-  { config_: config, stored_: 0 }
+  { config_: config, stored_: 0, }
 }
 
 ///|
@@ -265,7 +265,7 @@ fn MultiGuildFeedbackConfig::destination(
 ///|
 test "multi-guild configuration resolves destinations" {
   let config = MultiGuildFeedbackConfig::{
-    destinations: [{ guild_id: Id(10UL), channel_id: Id(20UL) }],
+    destinations: [{ guild_id: Id(10UL), channel_id: Id(20UL), }],
     cooldown_seconds: 30,
   }
   assert_true(config.destination(Id(10UL)) is Some(_))

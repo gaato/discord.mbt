@@ -109,7 +109,7 @@ pub fn ChannelRef::message_ref(
   self : ChannelRef,
   message_id : @model.MessageId,
 ) -> MessageRef {
-  { client: self.client, channel_id: self.channel_id, message_id }
+  { client: self.client, channel_id: self.channel_id, message_id, }
 }
 
 ///|

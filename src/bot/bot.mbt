@@ -204,7 +204,7 @@ pub fn Bot::service(
   name~ : String,
   handler : async (GatewayCtx) -> Unit,
 ) -> Unit {
-  self.services_.push({ name, dispatch: handler })
+  self.services_.push({ name, dispatch: handler, })
 }
 
 ///|
@@ -490,7 +490,7 @@ pub async fn Bot::run(self : Bot) -> Unit {
         identify_queue~,
         event_filter=filter,
       )
-      managed_shards.push({ id: shard_id, shard, context: None })
+      managed_shards.push({ id: shard_id, shard, context: None, })
       shard_handles.push(shard)
     }
     group.add_defer(() => close_shards(shard_handles))
@@ -498,7 +498,7 @@ pub async fn Bot::run(self : Bot) -> Unit {
     for owner in managed_shards {
       group.spawn_bg(no_wait=true, () => {
         for ;; {
-          shard_events.put({ owner, event: owner.shard.next() })
+          shard_events.put({ owner, event: owner.shard.next(), })
         }
       })
     }

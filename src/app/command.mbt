@@ -56,7 +56,7 @@ fn[A] suggest_routes(
 ) -> Array[SuggestRoute] {
   args
   .suggestions()
-  .map(handler => { path: path.copy(), option_name: handler.name(), handler })
+  .map(handler => { path: path.copy(), option_name: handler.name(), handler, })
 }
 
 ///|
@@ -326,7 +326,7 @@ pub fn subcommand_group(
   let suggest_routes = []
   for child in children {
     for route in child.routes_ {
-      routes.push({ ..route, path: prefixed_path(name, route.path) })
+      routes.push({ ..route, path: prefixed_path(name, route.path), })
     }
     for path in child.node_paths_ {
       node_paths.push(prefixed_path(name, path))
@@ -338,7 +338,7 @@ pub fn subcommand_group(
       nested_group_paths.push(prefixed_path(name, path))
     }
     for route in child.suggest_routes_ {
-      suggest_routes.push({ ..route, path: prefixed_path(name, route.path) })
+      suggest_routes.push({ ..route, path: prefixed_path(name, route.path), })
     }
   }
   {
@@ -419,7 +419,7 @@ pub fn[A] Command::cooldown(
   seconds~ : Int,
   bucket? : CooldownBucket = User,
 ) -> Command[A] {
-  self.cooldown = Some({ seconds, bucket })
+  self.cooldown = Some({ seconds, bucket, })
   self
 }
 
@@ -456,7 +456,7 @@ async fn[A] dispatch_command_handler(
   }
   match handler {
     Immediate(run) => {
-      let response = run({ raw_: raw, bot_: bot }, value) catch {
+      let response = run({ raw_: raw, bot_: bot, }, value) catch {
         source => raise_failure(command, BeforeInitial, source)
       }
       response.send(raw) catch {
@@ -467,7 +467,7 @@ async fn[A] dispatch_command_handler(
       raw.defer_response(ephemeral~) catch {
         source => raise_failure(command, BeforeInitial, source)
       }
-      run({ raw_: raw, bot_: bot, waiter_: waiter, warn_: warn }, value) catch {
+      run({ raw_: raw, bot_: bot, waiter_: waiter, warn_: warn, }, value) catch {
         source => raise_failure(command, AfterDeferred, source)
       }
     }

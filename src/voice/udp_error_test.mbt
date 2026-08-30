@@ -76,7 +76,7 @@ async test "IP discovery validates its retry configuration" {
 async test "IP discovery re-raises non-timeout receive errors" {
   try
     @voice.discover_external_address(
-      (FailingVoiceUdp::{  } : &@voice.VoiceUdp),
+      (FailingVoiceUdp::{ } : &@voice.VoiceUdp),
       42U,
       retries=2,
       timeout_ms=1000,
@@ -113,7 +113,7 @@ impl @voice.VoiceUdp for SilentVoiceUdp with fn close(_self) {
 
 ///|
 async test "IP discovery retries receive timeouts and then raises" {
-  let udp = SilentVoiceUdp::{ sends: [] }
+  let udp = SilentVoiceUdp::{ sends: [], }
   try
     @voice.discover_external_address(udp, 42U, retries=2, timeout_ms=5)
   catch {
@@ -131,7 +131,7 @@ async test "IP discovery retries receive timeouts and then raises" {
 
 ///|
 async test "IP discovery rejects non-positive retries and timeouts" {
-  let udp = SilentVoiceUdp::{ sends: [] }
+  let udp = SilentVoiceUdp::{ sends: [], }
   try @voice.discover_external_address(udp, 42U, retries=0) catch {
     @voice.VoiceUdpError::IpDiscoveryFailed(attempts~, ..) =>
       assert_eq(attempts, 0)

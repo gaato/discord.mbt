@@ -7,7 +7,7 @@ async test "channel optional bodies pin set and omitted forms" {
   client.perform_override_.val = Some((_route, path, _headers, body, _files) => {
     paths.push(path)
     bodies.push(body.unwrap_or(Json::null()))
-    { status: 204, headers: Map([]), body: Json::null() }
+    { status: 204, headers: Map([]), body: Json::null(), }
   })
   let channel_id : @model.ChannelId = Id(10UL)
   let user_id : @model.UserId = Id(20UL)
@@ -34,7 +34,7 @@ async test "current user body pins every set option and all omitted" {
   let bodies : Array[Json] = []
   client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
     bodies.push(body.unwrap_or(Json::null()))
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   try
     client.modify_current_user(
@@ -70,7 +70,7 @@ async test "scheduled event modify body pins every set option and all omitted" {
   let bodies : Array[Json] = []
   client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
     bodies.push(body.unwrap_or(Json::null()))
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let guild_id : @model.GuildId = Id(30UL)
   let event_id : @model.ScheduledEventId = Id(40UL)
@@ -92,7 +92,7 @@ async test "scheduled event modify body pins every set option and all omitted" {
       guild_id,
       event_id,
       channel_id~,
-      entity_metadata={ location: Some("Town hall") },
+      entity_metadata={ location: Some("Town hall"), },
       name="Weekly meetup",
       privacy_level=GuildOnly,
       scheduled_start_time=Timestamp("2026-08-01T10:00:00Z"),
@@ -146,7 +146,7 @@ async test "sticker modify body pins every set option and all omitted" {
   let bodies : Array[Json] = []
   client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
     bodies.push(body.unwrap_or(Json::null()))
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let guild_id : @model.GuildId = Id(60UL)
   let sticker_id : @model.StickerId = Id(70UL)

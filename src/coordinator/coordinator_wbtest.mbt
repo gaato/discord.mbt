@@ -185,8 +185,8 @@ async test "a stale HTTP release lease cannot release the current owner" {
     next_connection_id: Ref(2),
     next_lease_id: Ref(0),
   }
-  let first = ConnectionState::{ id: 0, held_buckets: Ref(Map([])) }
-  let second = ConnectionState::{ id: 1, held_buckets: Ref(Map([])) }
+  let first = ConnectionState::{ id: 0, held_buckets: Ref(Map([])), }
+  let second = ConnectionState::{ id: 1, held_buckets: Ref(Map([])), }
   let bucket = "POST:/channels/lease-test/messages"
   let acquired_first = dispatch_request(
     { "op": "http_acquire", "bucket": bucket, "global_exempt": false },

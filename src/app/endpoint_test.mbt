@@ -4,7 +4,7 @@ fn app_interaction(fixture : String) -> @model.Interaction raise {
   if interaction.typ == Ping {
     interaction
   } else {
-    { ..interaction, user: Some(app_test_user()) }
+    { ..interaction, user: Some(app_test_user()), }
   }
 }
 
@@ -65,7 +65,7 @@ fn app_command(name : String, id : String) -> @model.Interaction raise {
     .replace(old="INTERACTION_ID", new=id)
     .replace(old="COMMAND_NAME", new=name),
   )
-  { ..interaction, user: Some(app_test_user()) }
+  { ..interaction, user: Some(app_test_user()), }
 }
 
 ///|
@@ -98,7 +98,7 @@ fn app_modal_submit(
     .replace(old="CUSTOM_ID", new=custom_id)
     .replace(old="NOTE", new=note),
   )
-  { ..interaction, user: Some(app_test_user()) }
+  { ..interaction, user: Some(app_test_user()), }
 }
 
 ///|

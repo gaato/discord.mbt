@@ -35,7 +35,7 @@ async fn sec_messages(p : P) -> Unit {
       video: None,
       provider: None,
       author: None,
-      fields: Some([{ name: "field", value: "value", inline: Some(true) }]),
+      fields: Some([{ name: "field", value: "value", inline: Some(true), }]),
       flags: None,
     }
     let button = @model.Button::{
@@ -210,10 +210,10 @@ async fn sec_messages(p : P) -> Unit {
   })
   p.probe("create_message (poll) + get_poll_answer_voters + expire_poll", () => {
     let msg = c.create_message(text, poll={
-      question: { text: Some("live probe poll?"), emoji: None },
+      question: { text: Some("live probe poll?"), emoji: None, },
       answers: [
-        { text: Some("yes"), emoji: None },
-        { text: Some("no"), emoji: None },
+        { text: Some("yes"), emoji: None, },
+        { text: Some("no"), emoji: None, },
       ],
       duration: Some(1),
       allow_multiselect: Some(false),
@@ -232,8 +232,8 @@ async fn sec_messages(p : P) -> Unit {
     let msg = c
       .channel_ref(text)
       .send(poll={
-        question: { text: Some("second poll?"), emoji: None },
-        answers: [{ text: Some("sure"), emoji: None }],
+        question: { text: Some("second poll?"), emoji: None, },
+        answers: [{ text: Some("sure"), emoji: None, }],
         duration: Some(1),
         allow_multiselect: None,
         layout_type: None,

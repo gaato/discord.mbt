@@ -19,9 +19,9 @@ test "Opus frame size statistics do not inspect content" {
 test "unmapped drops correlate to the later speaking SSRC without logging it" {
   let correlation = correlate_unmapped_drops(
     [
-      UnmappedDropSample::{ ssrc: 7U, at_ms: 100L },
-      UnmappedDropSample::{ ssrc: 9U, at_ms: 104L },
-      UnmappedDropSample::{ ssrc: 7U, at_ms: 108L },
+      UnmappedDropSample::{ ssrc: 7U, at_ms: 100L, },
+      UnmappedDropSample::{ ssrc: 9U, at_ms: 104L, },
+      UnmappedDropSample::{ ssrc: 7U, at_ms: 108L, },
     ],
     peer_ssrc=7U,
     speaking_at_ms=112L,

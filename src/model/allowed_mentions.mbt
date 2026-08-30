@@ -88,14 +88,14 @@ pub fn AllowedMentions::AllowedMentions(
 ///|
 /// Suppress every mention parsed from message content.
 pub fn AllowedMentions::none() -> AllowedMentions {
-  { parse: Some([]), roles: None, users: None, replied_user: None }
+  { parse: Some([]), roles: None, users: None, replied_user: None, }
 }
 
 ///|
 /// Allow user and role mentions while suppressing `@everyone` and `@here`.
 /// This is the HTTP client's default for ordinary channel messages.
 pub fn AllowedMentions::safe_default() -> AllowedMentions {
-  { parse: Some([Users, Roles]), roles: None, users: None, replied_user: None }
+  { parse: Some([Users, Roles]), roles: None, users: None, replied_user: None, }
 }
 
 ///|

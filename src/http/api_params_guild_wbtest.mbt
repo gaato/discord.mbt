@@ -7,7 +7,7 @@ async test "modify guild member forwards flags" {
   let captured_body = Ref(Json::null())
   client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let guild_id : @model.GuildId = Id(1UL)
   let user_id : @model.UserId = Id(2UL)
@@ -33,7 +33,7 @@ async test "role wrappers forward colors, icon, and unicode emoji" {
   let captured_body = Ref(Json::null())
   client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let guild_id : @model.GuildId = Id(1UL)
   let role_id : @model.RoleId = Id(2UL)
@@ -91,7 +91,7 @@ async test "auto moderation create omits trigger metadata when absent" {
   let captured_body = Ref(Json::null())
   client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let guild_id : @model.GuildId = Id(1UL)
   try
@@ -100,7 +100,7 @@ async test "auto moderation create omits trigger metadata when absent" {
       "spam rule",
       MessageSend,
       Spam,
-      [{ typ: BlockMessage, metadata: None }],
+      [{ typ: BlockMessage, metadata: None, }],
     )
   catch {
     Deserialize(_) => ()

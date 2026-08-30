@@ -5,7 +5,7 @@ async test "channel pins v2 encodes pagination and decodes an empty page" {
   let paths : Array[String] = []
   client.perform_override_.val = Some((_route, path, _headers, _body, _files) => {
     paths.push(path)
-    { status: 200, headers: Map([]), body: { "items": [], "has_more": false } }
+    { status: 200, headers: Map([]), body: { "items": [], "has_more": false }, }
   })
   let channel_id : @model.ChannelId = Id(10UL)
   let before : @model.Timestamp = @json.from_json(

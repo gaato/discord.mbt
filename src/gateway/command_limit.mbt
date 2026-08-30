@@ -14,7 +14,7 @@ pub fn CommandLimiter::CommandLimiter(
   limit? : Int = 115,
   sleeper? : async (Int) -> Unit = @async.sleep,
 ) -> CommandLimiter {
-  { timestamps: [], limit, sleeper_: sleeper }
+  { timestamps: [], limit, sleeper_: sleeper, }
 }
 
 ///|

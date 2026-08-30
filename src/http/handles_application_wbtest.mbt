@@ -11,14 +11,14 @@ async test "guild command ref edit permissions delegates bearer authorization" {
     captured_path.val = path
     captured_headers.val = Some(headers)
     captured_body.val = body.unwrap_or(Json::null())
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let application_id : @model.ApplicationId = Id(500UL)
   let guild_id : @model.GuildId = Id(510UL)
   let command_id : @model.CommandId = Id(520UL)
   let target_id : @model.GenericId = Id(530UL)
   let permissions : Array[@model.ApplicationCommandPermission] = [
-    { id: target_id, typ: User, permission: true },
+    { id: target_id, typ: User, permission: true, },
   ]
   try
     client
@@ -58,7 +58,7 @@ async test "application ref create test entitlement delegates owner body" {
     captured_method.val = @debug.to_string(route.method_())
     captured_path.val = path
     captured_body.val = body.unwrap_or(Json::null())
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let application_id : @model.ApplicationId = Id(540UL)
   let sku_id : @model.SkuId = Id(550UL)
@@ -91,7 +91,7 @@ async test "sku ref subscriptions delegates the bound sku path" {
   client.perform_override_.val = Some((route, path, _headers, _body, _files) => {
     captured_method.val = @debug.to_string(route.method_())
     captured_path.val = path
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let sku_id : @model.SkuId = Id(570UL)
   try client.sku_ref(sku_id).subscriptions() catch {

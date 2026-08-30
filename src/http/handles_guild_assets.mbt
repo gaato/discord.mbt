@@ -53,7 +53,7 @@ pub fn Client::emoji_ref(
   guild_id : @model.GuildId,
   emoji_id : @model.EmojiId,
 ) -> EmojiRef {
-  { client: self, guild_id, emoji_id }
+  { client: self, guild_id, emoji_id, }
 }
 
 ///|
@@ -63,7 +63,7 @@ pub fn Client::sticker_ref(
   guild_id : @model.GuildId,
   sticker_id : @model.StickerId,
 ) -> StickerRef {
-  { client: self, guild_id, sticker_id }
+  { client: self, guild_id, sticker_id, }
 }
 
 ///|
@@ -73,7 +73,7 @@ pub fn Client::soundboard_sound_ref(
   guild_id : @model.GuildId,
   sound_id : @model.SoundboardSoundId,
 ) -> SoundboardSoundRef {
-  { client: self, guild_id, sound_id }
+  { client: self, guild_id, sound_id, }
 }
 
 ///|
@@ -83,7 +83,7 @@ pub fn Client::scheduled_event_ref(
   guild_id : @model.GuildId,
   event_id : @model.ScheduledEventId,
 ) -> ScheduledEventRef {
-  { client: self, guild_id, event_id }
+  { client: self, guild_id, event_id, }
 }
 
 ///|
@@ -93,7 +93,7 @@ pub fn Client::auto_moderation_rule_ref(
   guild_id : @model.GuildId,
   rule_id : @model.AutoModerationRuleId,
 ) -> AutoModerationRuleRef {
-  { client: self, guild_id, rule_id }
+  { client: self, guild_id, rule_id, }
 }
 
 ///|
@@ -103,7 +103,7 @@ pub fn Client::guild_template_ref(
   guild_id : @model.GuildId,
   code : String,
 ) -> TemplateRef {
-  { client: self, guild_id, code }
+  { client: self, guild_id, code, }
 }
 
 ///|
@@ -112,7 +112,7 @@ pub fn GuildRef::emoji_ref(
   self : GuildRef,
   emoji_id : @model.EmojiId,
 ) -> EmojiRef {
-  { client: self.client, guild_id: self.guild_id, emoji_id }
+  { client: self.client, guild_id: self.guild_id, emoji_id, }
 }
 
 ///|
@@ -121,7 +121,7 @@ pub fn GuildRef::sticker_ref(
   self : GuildRef,
   sticker_id : @model.StickerId,
 ) -> StickerRef {
-  { client: self.client, guild_id: self.guild_id, sticker_id }
+  { client: self.client, guild_id: self.guild_id, sticker_id, }
 }
 
 ///|
@@ -130,7 +130,7 @@ pub fn GuildRef::soundboard_sound_ref(
   self : GuildRef,
   sound_id : @model.SoundboardSoundId,
 ) -> SoundboardSoundRef {
-  { client: self.client, guild_id: self.guild_id, sound_id }
+  { client: self.client, guild_id: self.guild_id, sound_id, }
 }
 
 ///|
@@ -139,7 +139,7 @@ pub fn GuildRef::scheduled_event_ref(
   self : GuildRef,
   event_id : @model.ScheduledEventId,
 ) -> ScheduledEventRef {
-  { client: self.client, guild_id: self.guild_id, event_id }
+  { client: self.client, guild_id: self.guild_id, event_id, }
 }
 
 ///|
@@ -148,13 +148,13 @@ pub fn GuildRef::auto_moderation_rule_ref(
   self : GuildRef,
   rule_id : @model.AutoModerationRuleId,
 ) -> AutoModerationRuleRef {
-  { client: self.client, guild_id: self.guild_id, rule_id }
+  { client: self.client, guild_id: self.guild_id, rule_id, }
 }
 
 ///|
 /// Bind a template code in this guild to the client.
 pub fn GuildRef::template_ref(self : GuildRef, code : String) -> TemplateRef {
-  { client: self.client, guild_id: self.guild_id, code }
+  { client: self.client, guild_id: self.guild_id, code, }
 }
 
 ///|

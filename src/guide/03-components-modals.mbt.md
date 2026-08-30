@@ -141,7 +141,7 @@ let feedback : @discord.Modal[Feedback] = @discord.modal(
       value="General feedback",
     ),
     @discord.text_field(custom_id="details", label="Details", style=Paragraph).optional(),
-    (topic, details) => { topic, details },
+    (topic, details) => { topic, details, },
   ),
 )
 

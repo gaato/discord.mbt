@@ -9,7 +9,7 @@ async test "webhook token ref send delegates bound credentials and body" {
     captured_method.val = @debug.to_string(route.method_())
     captured_path.val = path
     captured_body.val = body.unwrap_or(Json::null())
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let webhook_id : @model.WebhookId = Id(400UL)
   try
@@ -38,7 +38,7 @@ async test "webhook ref edit delegates bot-authenticated audit reason" {
     captured_path.val = path
     captured_headers.val = Some(headers)
     captured_body.val = body.unwrap_or(Json::null())
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let webhook_id : @model.WebhookId = Id(410UL)
   try
@@ -76,7 +76,7 @@ async test "webhook message ref edit delegates nullable content" {
     captured_method.val = @debug.to_string(route.method_())
     captured_path.val = path
     captured_body.val = body.unwrap_or(Json::null())
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let webhook_id : @model.WebhookId = Id(420UL)
   let message_id : @model.MessageId = Id(430UL)
@@ -110,7 +110,7 @@ async test "invite ref target users delegates the uploaded file" {
     captured_method.val = @debug.to_string(route.method_())
     captured_path.val = path
     captured_files.val = files
-    { status: 204, headers: Map([]), body: Json::null() }
+    { status: 204, headers: Map([]), body: Json::null(), }
   })
   let file = FileUpload(
     "target-users.csv",

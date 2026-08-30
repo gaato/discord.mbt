@@ -449,7 +449,7 @@ async fn dispatch_component_handler(
   let route = raw.data.custom_id
   match handler {
     Immediate(run) => {
-      let response = run({ raw_: raw, bot_: bot, prefix_: prefix }) catch {
+      let response = run({ raw_: raw, bot_: bot, prefix_: prefix, }) catch {
         source => raise_failure(route, BeforeInitial, source)
       }
       response.send(raw) catch {

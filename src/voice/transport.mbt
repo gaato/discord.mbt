@@ -106,5 +106,5 @@ fn voice_close_code_to_int(code : @websocket.CloseCode) -> Int {
 /// v8 URL, normally `wss://<endpoint>?v=8`.
 pub async fn connect_voice_websocket(url : String) -> &VoiceTransport {
   let conn = @websocket.connect(url)
-  VoiceWsTransport::{ conn, closed: Ref(false) }
+  VoiceWsTransport::{ conn, closed: Ref(false), }
 }

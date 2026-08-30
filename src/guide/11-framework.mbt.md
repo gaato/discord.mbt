@@ -332,7 +332,7 @@ fn ping_command_interaction() -> @model.Interaction raise {
       ),
     ),
   )
-  { ..interaction, user: Some(user) }
+  { ..interaction, user: Some(user), }
 }
 
 ///|

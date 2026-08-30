@@ -7,7 +7,7 @@ async test "create global command forwards localizations and installation scopes
   let captured_body = Ref(Json::null())
   client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let application_id : @model.ApplicationId = Id(1UL)
   try
@@ -60,7 +60,7 @@ async test "create command requires a description only for chat input" {
   let captured_body = Ref(Json::null())
   client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   try client.create_global_command(application_id, "probe", typ=User) catch {
     Deserialize(_) => ()
@@ -78,7 +78,7 @@ async test "edit global command clears localizations with explicit nulls" {
   let captured_body = Ref(Json::null())
   client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let application_id : @model.ApplicationId = Id(1UL)
   let command_id : @model.CommandId = Id(2UL)
@@ -110,7 +110,7 @@ async test "command list endpoints append the with_localizations query" {
   let captured_path = Ref("")
   client.perform_override_.val = Some((_route, path, _headers, _body, _files) => {
     captured_path.val = path
-    { status: 200, headers: Map([]), body: Json::array([]) }
+    { status: 200, headers: Map([]), body: Json::array([]), }
   })
   let application_id : @model.ApplicationId = Id(1UL)
   let guild_id : @model.GuildId = Id(2UL)

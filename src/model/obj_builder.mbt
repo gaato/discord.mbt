@@ -27,7 +27,7 @@ pub struct ObjBuilder {
 ///|
 /// Create an empty builder.
 pub fn ObjBuilder::ObjBuilder() -> ObjBuilder {
-  { fields: Map([]) }
+  { fields: Map([]), }
 }
 
 ///|

@@ -6,7 +6,7 @@ struct AudioTestTransport {
 
 ///|
 fn AudioTestTransport::new() -> AudioTestTransport {
-  { incoming: Queue(kind=Unbounded), outgoing: Queue(kind=Unbounded) }
+  { incoming: Queue(kind=Unbounded), outgoing: Queue(kind=Unbounded), }
 }
 
 ///|
@@ -41,7 +41,7 @@ struct AudioTestUdp {
 
 ///|
 fn AudioTestUdp::new() -> AudioTestUdp {
-  { outgoing: Queue(kind=Unbounded) }
+  { outgoing: Queue(kind=Unbounded), }
 }
 
 ///|
@@ -124,7 +124,7 @@ async test "send loop delegates advancing RTP packets to DAVE after handshake" {
     assert_eq(session_key, secret_key)
     guard! gateway.next() is Connected(resumed=false)
     let cipher = @voice.TransportCipher::new(AeadAes256GcmRtpsize, session_key)
-    let source : &@voice.AudioSource = ThreeFrameSource::{ frames, cursor: 0 }
+    let source : &@voice.AudioSource = ThreeFrameSource::{ frames, cursor: 0, }
     let dave = @voice.DaveMachine::new(
       protocol_version=1,
       self_user_id="100",

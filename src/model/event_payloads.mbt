@@ -140,7 +140,7 @@ pub impl @json.FromJson for IntegrationEvent with fn from_json(json, path) {
   guard json is Object(fields) else {
     raise JsonDecodeError((path, "expected integration event (object)"))
   }
-  { guild_id: event_field(fields, "guild_id", path), integration: json }
+  { guild_id: event_field(fields, "guild_id", path), integration: json, }
 }
 
 ///|

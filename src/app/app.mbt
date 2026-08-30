@@ -112,7 +112,7 @@ pub fn App::on_component(
   prefix~ : String,
   handler : ComponentHandler,
 ) -> Unit {
-  self.components_.push({ prefix, handler })
+  self.components_.push({ prefix, handler, })
 }
 
 ///|
@@ -155,7 +155,7 @@ pub fn App::autocomplete(
   name : String,
   handler : async (@framework.AutocompleteCtx) -> Unit,
 ) -> Unit {
-  self.autocompletes_.push({ name, dispatch: handler })
+  self.autocompletes_.push({ name, dispatch: handler, })
 }
 
 ///|
@@ -296,7 +296,7 @@ fn failure_context(
   raw : FailureRaw?,
   warn : (String) -> Unit,
 ) -> FailureCtx {
-  { origin_: origin, phase_: phase, raw_: raw, warn_: warn }
+  { origin_: origin, phase_: phase, raw_: raw, warn_: warn, }
 }
 
 ///|

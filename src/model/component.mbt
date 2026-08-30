@@ -30,7 +30,7 @@ pub(all) enum Component {
 ///
 /// ```mbt check
 /// test "detect top-level Components V2 layouts" {
-///   let row : @model.Component = ActionRow({ id: None, components: [] })
+///   let row : @model.Component = ActionRow({ id: None, components: [], })
 ///   let container : @model.Component = Container({
 ///     id: None,
 ///     components: [],

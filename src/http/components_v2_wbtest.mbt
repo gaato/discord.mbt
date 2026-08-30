@@ -1,7 +1,7 @@
 ///|
 test "Components V2 validation permits empty incompatible arrays" {
   let components : Array[@model.Component] = [
-    TextDisplay({ id: None, content: "layout content" }),
+    TextDisplay({ id: None, content: "layout content", }),
   ]
   let flags = message_flags_with_components_v2(
     None,
@@ -20,11 +20,11 @@ async test "create followup combines ephemeral and Components V2 flags" {
   let captured_body = Ref(Json::null())
   client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let application_id : @model.ApplicationId = Id(10UL)
   let components : Array[@model.Component] = [
-    TextDisplay({ id: None, content: "private layout" }),
+    TextDisplay({ id: None, content: "private layout", }),
   ]
   try
     client.create_followup(
@@ -53,11 +53,11 @@ async test "create message adds Components V2 and rejects stickers" {
   let captured_body = Ref(Json::null())
   client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let channel_id : @model.ChannelId = Id(20UL)
   let components : Array[@model.Component] = [
-    Separator({ id: None, divider: Some(true), spacing: None }),
+    Separator({ id: None, divider: Some(true), spacing: None, }),
   ]
   try client.create_message(channel_id, components~) |> ignore catch {
     Deserialize(_) => ()
@@ -94,11 +94,11 @@ async test "execute webhook adds Components V2 and rejects content" {
   let captured_body = Ref(Json::null())
   client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let webhook_id : @model.WebhookId = Id(40UL)
   let components : Array[@model.Component] = [
-    Container({ id: None, components: [], accent_color: None, spoiler: None }),
+    Container({ id: None, components: [], accent_color: None, spoiler: None, }),
   ]
   try
     client.execute_webhook(webhook_id, "webhook-token", components~) |> ignore

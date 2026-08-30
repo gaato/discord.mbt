@@ -31,7 +31,7 @@ test "patch fields omit missing values and preserve empty arrays" {
 ///|
 test "message patch adds and combines the Components V2 flag" {
   let components : Array[@model.Component] = [
-    Container({ id: None, components: [], accent_color: None, spoiler: None }),
+    Container({ id: None, components: [], accent_color: None, spoiler: None, }),
   ]
   json_inspect(
     message_patch_builder(None, false, None, Some(components), None).build(),

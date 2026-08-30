@@ -65,7 +65,7 @@ async fn sec_base_channels(p : P) -> Unit {
           emoji_name: Some("🔧"),
         },
       ],
-      default_reaction_emoji={ emoji_id: Null, emoji_name: Value("👍") },
+      default_reaction_emoji={ emoji_id: Null, emoji_name: Value("👍"), },
       default_thread_rate_limit_per_user=0,
       default_sort_order=LatestActivity,
       default_forum_layout=ListView,

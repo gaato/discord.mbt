@@ -105,7 +105,7 @@ async test "gateway context exposes raw handles, refs, and waiters" {
       }
       other => fail("unexpected REST route \{other.bucket()}")
     }
-    { status: 200, headers: Map([]), body }
+    { status: 200, headers: Map([]), body, }
   })
   let bot = Bot(
     app,

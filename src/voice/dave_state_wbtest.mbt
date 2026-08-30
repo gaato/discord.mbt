@@ -142,7 +142,7 @@ impl DaveBackend for FakeDaveBackend with fn prepare_remote_ratchet(
   user_id~,
   protocol_version~,
 ) {
-  self.prepared_remotes.push({ user_id, protocol_version })
+  self.prepared_remotes.push({ user_id, protocol_version, })
   self.remote_users.add(user_id)
 }
 
@@ -173,13 +173,13 @@ impl DaveBackend for FakeDaveBackend with fn active_protocol_version(self) {
 
 ///|
 impl DaveBackend for FakeDaveBackend with fn encrypt_opus(self, ssrc~, frame) {
-  self.encrypted_opus.push({ ssrc, frame })
+  self.encrypted_opus.push({ ssrc, frame, })
   b"encrypted-opus"
 }
 
 ///|
 impl DaveBackend for FakeDaveBackend with fn decrypt_opus(self, user_id~, frame) {
-  self.decrypted_opus.push({ user_id, frame })
+  self.decrypted_opus.push({ user_id, frame, })
   b"decrypted-opus"
 }
 
@@ -299,7 +299,7 @@ test "DAVE forwards complete proposals and only the connected roster" {
     SendBinary(op=28, payload=b"commit-and-welcome"),
   ])
   assert_eq(fake.proposal_calls, [
-    { payload: b"\x01revoke", recognized_user_ids: [300UL] },
+    { payload: b"\x01revoke", recognized_user_ids: [300UL], },
   ])
 }
 
@@ -375,8 +375,8 @@ test "DAVE commit applies a roster delta and activates self only on Execute" {
   )
   assert_eq(fake.removed_remotes, [300UL])
   assert_eq(fake.prepared_remotes, [
-    { user_id: 200UL, protocol_version: 1 },
-    { user_id: 400UL, protocol_version: 1 },
+    { user_id: 200UL, protocol_version: 1, },
+    { user_id: 400UL, protocol_version: 1, },
   ])
   assert_eq(fake.activated_self, [])
   assert_eq(machine.handle(DaveExecuteTransition(transition_id=7)), [
@@ -409,7 +409,7 @@ test "DAVE Welcome applies a roster delta" {
     recognized_user_ids: [200UL, 300UL],
   })
   assert_eq(fake.removed_remotes, [300UL])
-  assert_eq(fake.prepared_remotes, [{ user_id: 200UL, protocol_version: 1 }])
+  assert_eq(fake.prepared_remotes, [{ user_id: 200UL, protocol_version: 1, }])
 }
 
 ///|
@@ -429,7 +429,7 @@ test "DAVE empty Welcome delta preserves the current MLS roster" {
     [SendJson(encode_transition_ready(transition_id=8))],
   )
   assert_eq(fake.removed_remotes, [])
-  assert_eq(fake.prepared_remotes, [{ user_id: 200UL, protocol_version: 1 }])
+  assert_eq(fake.prepared_remotes, [{ user_id: 200UL, protocol_version: 1, }])
 }
 
 ///|
@@ -481,7 +481,7 @@ test "DAVE failed Welcome reinitializes while retaining the MLS roster" {
   machine.handle(ClientDisconnect(user_id="200")) |> ignore
   fake.prepared_remotes.clear()
   machine.handle(ClientsConnect(user_ids=["200"])) |> ignore
-  assert_eq(fake.prepared_remotes, [{ user_id: 200UL, protocol_version: 1 }])
+  assert_eq(fake.prepared_remotes, [{ user_id: 200UL, protocol_version: 1, }])
   fake.welcome_outcome = WelcomeApplied(changes=[
     RemoveDaveMember(user_id=200UL),
   ])
@@ -505,7 +505,7 @@ test "DAVE transition zero prepares remotes and switches self immediately" {
     machine.handle(DavePrepareTransition(transition_id=0, protocol_version=0)),
     [SwitchMediaContext(protocol_version=0)],
   )
-  assert_eq(fake.prepared_remotes, [{ user_id: 200UL, protocol_version: 0 }])
+  assert_eq(fake.prepared_remotes, [{ user_id: 200UL, protocol_version: 0, }])
   assert_eq(fake.activated_self, [0])
   assert_eq(fake.reset_calls, 1)
   assert_eq(machine.active_protocol_version(), 0)
@@ -554,7 +554,7 @@ test "DAVE connected MLS member receives the latest prepared ratchet" {
   |> ignore
   fake.prepared_remotes.clear()
   machine.handle(ClientsConnect(user_ids=["200"])) |> ignore
-  assert_eq(fake.prepared_remotes, [{ user_id: 200UL, protocol_version: 1 }])
+  assert_eq(fake.prepared_remotes, [{ user_id: 200UL, protocol_version: 1, }])
   assert_true(machine.has_remote_decryptor(user_id="200"))
 }
 
@@ -573,7 +573,7 @@ test "DAVE disconnect destroys the remote decryptor but keeps MLS membership" {
   assert_false(machine.has_remote_decryptor(user_id="200"))
   fake.prepared_remotes.clear()
   machine.handle(ClientsConnect(user_ids=["200"])) |> ignore
-  assert_eq(fake.prepared_remotes, [{ user_id: 200UL, protocol_version: 1 }])
+  assert_eq(fake.prepared_remotes, [{ user_id: 200UL, protocol_version: 1, }])
 }
 
 ///|
@@ -584,12 +584,12 @@ test "DAVE media always delegates with the actual SSRC and parsed user ID" {
     machine.encrypt_opus_frame(ssrc=0x12345678U, b"opus"),
     b"encrypted-opus",
   )
-  assert_eq(fake.encrypted_opus, [{ ssrc: 0x12345678U, frame: b"opus" }])
+  assert_eq(fake.encrypted_opus, [{ ssrc: 0x12345678U, frame: b"opus", }])
   assert_eq(
     machine.decrypt_opus_frame(user_id="200", b"ciphertext"),
     b"decrypted-opus",
   )
-  assert_eq(fake.decrypted_opus, [{ user_id: 200UL, frame: b"ciphertext" }])
+  assert_eq(fake.decrypted_opus, [{ user_id: 200UL, frame: b"ciphertext", }])
 }
 
 ///|

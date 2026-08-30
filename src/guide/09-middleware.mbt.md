@@ -78,7 +78,7 @@ fn mock_gateway(body : Json) -> @dhttp.HttpMiddleware {
   (request, next) => {
     match request.route {
       GetGateway =>
-        { status: 200, headers: { "x-middleware-cache": "hit" }, body }
+        { status: 200, headers: { "x-middleware-cache": "hit" }, body, }
       _ => next(request)
     }
   }

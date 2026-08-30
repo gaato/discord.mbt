@@ -134,7 +134,7 @@ pub fn TransportCipher::new(
       reason=shim_unavailable_reason().unwrap_or("voice shim unavailable"),
     )
   }
-  { mode, secret_key, counter: 0 }
+  { mode, secret_key, counter: 0, }
 }
 
 ///|

@@ -253,7 +253,7 @@ test "cache attachment keeps the gateway filter open and shares state" {
   assert_true(filter(KInviteDelete))
   guard bot.cache_ is Some(attached) else { fail("expected attached cache") }
   attached.update(
-    GuildDelete({ id: @model.Id::parse("100"), unavailable: true }),
+    GuildDelete({ id: @model.Id::parse("100"), unavailable: true, }),
   )
   let guild_id : @model.GuildId = @model.Id::parse("100")
   assert_true(cache.is_guild_unavailable(guild_id))
@@ -284,7 +284,7 @@ struct BotFakeTransport {
 
 ///|
 fn BotFakeTransport::BotFakeTransport() -> BotFakeTransport {
-  { incoming: Queue(kind=Unbounded), outgoing: Queue(kind=Unbounded) }
+  { incoming: Queue(kind=Unbounded), outgoing: Queue(kind=Unbounded), }
 }
 
 ///|
@@ -669,7 +669,7 @@ async test "event middleware transforms events for typed handlers" {
   bot.middleware((_, event, next) => {
     match event {
       MessageCreate(payload) => {
-        let message = { ..payload.message, content: "transformed" }
+        let message = { ..payload.message, content: "transformed", }
         next(MessageCreate({ ..payload, message, }))
       }
       _ => next(event)

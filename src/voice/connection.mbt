@@ -662,7 +662,7 @@ pub async fn VoiceConnection::play(
   if self.playback_stop is Some(stop) {
     stop.val = true
   }
-  self.playback.put({ generation: self.playback_generation, source })
+  self.playback.put({ generation: self.playback_generation, source, })
 }
 
 ///|

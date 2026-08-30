@@ -23,7 +23,7 @@ async test "message paginator after uses maximum cursor from canned pages" {
     } else {
       Json::array([])
     }
-    { status: 200, headers: Map([]), body }
+    { status: 200, headers: Map([]), body, }
   })
   let channel_id : @model.ChannelId = Id(10UL)
   let after : @model.MessageId = Id(100UL)
@@ -52,7 +52,7 @@ async test "message paginator before uses minimum cursor from canned pages" {
     } else {
       Json::array([])
     }
-    { status: 200, headers: Map([]), body }
+    { status: 200, headers: Map([]), body, }
   })
   let channel_id : @model.ChannelId = Id(10UL)
   let before : @model.MessageId = Id(100UL)
@@ -74,7 +74,7 @@ async test "message paginator around performs one fixed-cursor page" {
   let paths : Array[String] = []
   client.perform_override_.val = Some((_route, path, _headers, _body, _files) => {
     paths.push(path)
-    { status: 200, headers: Map([]), body: paginator_message_page([100]) }
+    { status: 200, headers: Map([]), body: paginator_message_page([100]), }
   })
   let channel_id : @model.ChannelId = Id(10UL)
   let around : @model.MessageId = Id(100UL)
@@ -116,7 +116,7 @@ async test "guild member paginator skips absent users and advances by maximum id
     } else {
       Json::array([])
     }
-    { status: 200, headers: Map([]), body }
+    { status: 200, headers: Map([]), body, }
   })
   let guild_id : @model.GuildId = Id(10UL)
   let paginator = client.paginate_guild_members(guild_id, page_size=3)
@@ -148,7 +148,7 @@ async test "guild ban paginator covers after and before cursor directions" {
       } else {
         Json::array([])
       }
-      { status: 200, headers: Map([]), body }
+      { status: 200, headers: Map([]), body, }
     })
     let guild_id : @model.GuildId = Id(11UL)
     let cursor : @model.UserId = Id(30UL)
@@ -198,7 +198,7 @@ async test "audit log paginator extracts entries and advances by minimum id" {
       "threads": [],
       "guild_scheduled_events": [],
     }
-    { status: 200, headers: Map([]), body }
+    { status: 200, headers: Map([]), body, }
   })
   let guild_id : @model.GuildId = Id(12UL)
   let paginator = client.paginate_guild_audit_log(guild_id, page_size=2)
@@ -271,7 +271,7 @@ async test "scheduled users poll voters and current guild paginators advance" {
           Json::array([])
         }
     }
-    { status: 200, headers: Map([]), body }
+    { status: 200, headers: Map([]), body, }
   })
   let guild_id : @model.GuildId = Id(13UL)
   let event_id : @model.ScheduledEventId = Id(14UL)

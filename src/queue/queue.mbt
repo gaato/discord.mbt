@@ -31,9 +31,9 @@ pub fn InMemoryQueue::InMemoryQueue(
 ) -> InMemoryQueue {
   let buckets = []
   for _ in 0..<max_concurrency {
-    buckets.push({ gate: Semaphore(1), last_identify_ms: 0 })
+    buckets.push({ gate: Semaphore(1), last_identify_ms: 0, })
   }
-  { buckets, spacing_ms }
+  { buckets, spacing_ms, }
 }
 
 ///|

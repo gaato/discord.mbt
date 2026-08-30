@@ -280,7 +280,7 @@ fn opus_frame_size_stats(frames : Array[Bytes]) -> (Int, Int, Int) {
 ///|
 async fn play_silence_probe(connection : @discord.VoiceConnection) -> Int {
   let done : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
-  let source = SilenceProbeSource::{ remaining: 50, done, finished: false }
+  let source = SilenceProbeSource::{ remaining: 50, done, finished: false, }
   connection.play((source : &@discord.AudioSource))
   guard @async.with_timeout_opt(5_000, () => done.get()) is Some(_) else {
     raise DaveMediaFailure("timed out while sending silent Opus")
@@ -323,7 +323,12 @@ async fn play_echo_probe(
   frames : Array[Bytes],
 ) -> Int {
   let done : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
-  let source = BufferedProbeSource::{ frames, done, cursor: 0, finished: false }
+  let source = BufferedProbeSource::{
+    frames,
+    done,
+    cursor: 0,
+    finished: false,
+  }
   println("[dave] echoing decrypted peer Opus once (memory only)")
   connection.play((source : &@discord.AudioSource))
   guard @async.with_timeout_opt(5_000, () => done.get()) is Some(_) else {
@@ -414,7 +419,7 @@ async fn run_probe(
       DaveEncryptDropped(reason~) => dave_failures.push(reason)
       DaveDecryptDropped(ssrc~, reason~, ..) =>
         if is_transient_unmapped_sender(reason) {
-          unmapped_sender_drops.push({ ssrc, at_ms: @clock.now_ms() })
+          unmapped_sender_drops.push({ ssrc, at_ms: @clock.now_ms(), })
         } else {
           dave_failures.push(reason)
         }

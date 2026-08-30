@@ -12,7 +12,7 @@ async fn CoordinatorClient::connect(addr : String) -> CoordinatorClient {
     error => raise CoordinatorError::Transport(message="\{error}")
   }
   let conn = CoordinatorClient::dial(addr)
-  { addr, conn: Ref(Some(conn)), gate: Semaphore(1), closed: Ref(false) }
+  { addr, conn: Ref(Some(conn)), gate: Semaphore(1), closed: Ref(false), }
 }
 
 ///|
@@ -144,7 +144,7 @@ pub struct RemoteIdentifyQueue {
 ///
 /// Later transport failures reconnect automatically with bounded backoff.
 pub async fn RemoteIdentifyQueue::connect(addr : String) -> RemoteIdentifyQueue {
-  { client: CoordinatorClient::connect(addr) }
+  { client: CoordinatorClient::connect(addr), }
 }
 
 ///|
@@ -193,7 +193,7 @@ async fn RemoteRateLimiter::connect_with(
   let acquire_client = connector(addr)
   errdefer acquire_client.close()
   let release_client = connector(addr)
-  { acquire_client, release_client, leases: Map([]) }
+  { acquire_client, release_client, leases: Map([]), }
 }
 
 ///|

@@ -16,7 +16,7 @@ async fn sec_events(p : P) -> Unit {
       GuildOnly,
       start,
       External,
-      entity_metadata={ location: Some("https://example.com/live-probe") },
+      entity_metadata={ location: Some("https://example.com/live-probe"), },
       scheduled_end_time=later,
       description="created by live probe",
       audit_reason="live probe",
@@ -104,7 +104,7 @@ async fn sec_events(p : P) -> Unit {
       "probe keyword rule",
       MessageSend,
       Keyword,
-      [{ typ: BlockMessage, metadata: None }],
+      [{ typ: BlockMessage, metadata: None, }],
       trigger_metadata={
         keyword_filter: Some(["live-probe-blocked-phrase"]),
         presets: None,
@@ -130,7 +130,7 @@ async fn sec_events(p : P) -> Unit {
         "probe spam rule",
         MessageSend,
         Spam,
-        [{ typ: BlockMessage, metadata: None }],
+        [{ typ: BlockMessage, metadata: None, }],
         enabled=false,
         audit_reason="live probe",
       )
@@ -151,7 +151,7 @@ async fn sec_events(p : P) -> Unit {
         "probe mention rule",
         MessageSend,
         MentionSpam,
-        [{ typ: BlockMessage, metadata: None }],
+        [{ typ: BlockMessage, metadata: None, }],
         trigger_metadata={
           keyword_filter: None,
           presets: None,
@@ -195,7 +195,7 @@ async fn sec_events(p : P) -> Unit {
       "probe tmp rule",
       MessageSend,
       Keyword,
-      [{ typ: BlockMessage, metadata: None }],
+      [{ typ: BlockMessage, metadata: None, }],
       trigger_metadata={
         keyword_filter: Some(["tmp-phrase"]),
         presets: None,

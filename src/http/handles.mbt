@@ -35,7 +35,7 @@ pub fn Client::channel_ref(
   self : Client,
   channel_id : @model.ChannelId,
 ) -> ChannelRef {
-  { client: self, channel_id }
+  { client: self, channel_id, }
 }
 
 ///|
@@ -45,7 +45,7 @@ pub fn Client::message_ref(
   channel_id : @model.ChannelId,
   message_id : @model.MessageId,
 ) -> MessageRef {
-  { client: self, channel_id, message_id }
+  { client: self, channel_id, message_id, }
 }
 
 ///|
@@ -55,13 +55,13 @@ pub fn Client::member_ref(
   guild_id : @model.GuildId,
   user_id : @model.UserId,
 ) -> MemberRef {
-  { client: self, guild_id, user_id }
+  { client: self, guild_id, user_id, }
 }
 
 ///|
 /// Bind a user id to this client.
 pub fn Client::user_ref(self : Client, user_id : @model.UserId) -> UserRef {
-  { client: self, user_id }
+  { client: self, user_id, }
 }
 
 ///|

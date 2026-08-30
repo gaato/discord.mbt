@@ -65,7 +65,7 @@ pub async fn App::serve(
   }
   let framework = @framework.Framework(client, application_id)
   self.attach(framework, client~, application_id~) |> ignore
-  { framework, spawner: self.spawner(group), warn: self.warn_ }
+  { framework, spawner: self.spawner(group), warn: self.warn_, }
 }
 
 ///|
@@ -78,7 +78,7 @@ pub async fn InteractionEndpoint::handle_interaction(
   deadline_ms? : Int = 2500,
 ) -> InteractionOutcome {
   if interaction.typ == Ping {
-    return Reply(response={ typ: Pong, data: None }, files=None)
+    return Reply(response={ typ: Pong, data: None, }, files=None)
   }
   let (gate, capture) = @framework.ResponseGate::capture(interaction)
   let race : @aqueue.Queue[InteractionRace] = Queue(kind=Unbounded)

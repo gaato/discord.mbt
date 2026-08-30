@@ -50,12 +50,12 @@ async test "create followup forwards the poll body" {
   let captured_body = Ref(Json::null())
   client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let application_id : @model.ApplicationId = Id(1UL)
   let poll = @model.PollCreateRequest::{
-    question: { text: Some("q?"), emoji: None },
-    answers: [{ text: Some("a"), emoji: None }],
+    question: { text: Some("q?"), emoji: None, },
+    answers: [{ text: Some("a"), emoji: None, }],
     duration: None,
     allow_multiselect: None,
     layout_type: None,
@@ -81,12 +81,12 @@ async test "edit original response forwards flags, poll, and kept attachments" {
   let captured_body = Ref(Json::null())
   client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let application_id : @model.ApplicationId = Id(1UL)
   let poll = @model.PollCreateRequest::{
-    question: { text: Some("q?"), emoji: None },
-    answers: [{ text: Some("a"), emoji: None }],
+    question: { text: Some("q?"), emoji: None, },
+    answers: [{ text: Some("a"), emoji: None, }],
     duration: None,
     allow_multiselect: None,
     layout_type: None,
@@ -132,7 +132,7 @@ async test "edit followup forwards flags" {
   let captured_body = Ref(Json::null())
   client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let application_id : @model.ApplicationId = Id(1UL)
   let message_id : @model.MessageId = Id(2UL)

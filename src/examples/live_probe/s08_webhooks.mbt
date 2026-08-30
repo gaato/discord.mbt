@@ -125,8 +125,8 @@ async fn sec_webhooks(p : P) -> Unit {
   })
   p.probe("execute_webhook (poll body)", () => {
     let msg = c.execute_webhook(wid, wtoken, poll={
-      question: { text: Some("webhook poll?"), emoji: None },
-      answers: [{ text: Some("yes"), emoji: None }],
+      question: { text: Some("webhook poll?"), emoji: None, },
+      answers: [{ text: Some("yes"), emoji: None, }],
       duration: Some(1),
       allow_multiselect: None,
       layout_type: None,

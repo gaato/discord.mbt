@@ -30,7 +30,7 @@ priv struct EventRegistration[T] {
 
 ///|
 fn EventCollector::EventCollector() -> EventCollector {
-  { waiters: [] }
+  { waiters: [], }
 }
 
 ///|
@@ -84,7 +84,7 @@ fn[T] EventCollector::register(
     queue: Queue(kind=Unbounded),
   }
   self.waiters.push(waiter)
-  { collector: self, waiter, event_type }
+  { collector: self, waiter, event_type, }
 }
 
 ///|

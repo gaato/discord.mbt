@@ -98,7 +98,7 @@ struct P {
 
 ///|
 fn P::push(self : P, name : String, outcome : Outcome, note : String) -> Unit {
-  self.report.push({ name, outcome, note })
+  self.report.push({ name, outcome, note, })
   println("\{outcome.label()} \{name} — \{note}")
 }
 

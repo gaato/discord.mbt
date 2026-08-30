@@ -101,5 +101,5 @@ fn close_code_to_int(code : @websocket.CloseCode) -> Int {
 /// Connect to the gateway over WebSocket (the default connector).
 pub async fn connect_websocket(url : String) -> &GatewayTransport {
   let conn = @websocket.connect(url)
-  WsTransport::{ conn, closed: Ref(false) }
+  WsTransport::{ conn, closed: Ref(false), }
 }

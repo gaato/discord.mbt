@@ -340,7 +340,7 @@ pub fn number_choice(
 ///|
 /// Build a message component row.
 pub fn action_row(components : Array[@model.Component]) -> @model.Component {
-  ActionRow({ id: None, components })
+  ActionRow({ id: None, components, })
 }
 
 ///|
@@ -393,7 +393,7 @@ pub fn select_option(
   emoji? : @model.Emoji,
   default? : Bool,
 ) -> @model.SelectOption {
-  { label, value, description, emoji, default }
+  { label, value, description, emoji, default, }
 }
 
 ///|
@@ -510,7 +510,7 @@ pub fn channel_select(
 /// in the message body. Reply and send layers set the required
 /// `IS_COMPONENTS_V2` message flag automatically.
 pub fn text_display(content : String) -> @model.Component {
-  TextDisplay({ id: None, content })
+  TextDisplay({ id: None, content, })
 }
 
 ///|
@@ -521,7 +521,7 @@ pub fn section(
   components~ : Array[@model.Component],
   accessory~ : @model.Component,
 ) -> @model.Component {
-  Section({ id: None, components, accessory })
+  Section({ id: None, components, accessory, })
 }
 
 ///|
@@ -574,7 +574,7 @@ pub fn container(
 /// 2 = large). Reply and send layers set the required `IS_COMPONENTS_V2`
 /// message flag automatically.
 pub fn separator(divider? : Bool, spacing? : Int) -> @model.Component {
-  Separator({ id: None, divider, spacing })
+  Separator({ id: None, divider, spacing, })
 }
 
 ///|
@@ -610,7 +610,7 @@ pub fn media_item(
 pub fn media_gallery(
   items : Array[@model.MediaGalleryItem],
 ) -> @model.Component {
-  MediaGallery({ id: None, items })
+  MediaGallery({ id: None, items, })
 }
 
 ///|
@@ -622,7 +622,7 @@ pub fn label(
   component~ : @model.Component,
   description? : String,
 ) -> @model.Component {
-  Label({ id: None, label: Some(label), description, component })
+  Label({ id: None, label: Some(label), description, component, })
 }
 
 ///|

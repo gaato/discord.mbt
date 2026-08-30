@@ -11,7 +11,15 @@ import {
 type DaveProbeError derive(@debug.Debug)
 
 // Types and methods
+type AudibleProbeSource
+
+type BufferedProbeSource
+
+type DropCorrelation
+
 type SilenceProbeSource
+
+type UnmappedDropSample
 
 // Type aliases
 

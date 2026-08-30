@@ -63,7 +63,7 @@ struct ConnectionTestUdp {
 
 ///|
 fn ConnectionTestUdp::new() -> ConnectionTestUdp {
-  { incoming: Queue(kind=Unbounded), outgoing: Queue(kind=Unbounded) }
+  { incoming: Queue(kind=Unbounded), outgoing: Queue(kind=Unbounded), }
 }
 
 ///|
@@ -141,7 +141,7 @@ fn connection_credentials(
   session_id? : String = "session",
   endpoint? : String = "voice.example",
 ) -> @voice.VoiceCredentials {
-  { server_id: "guild", session_id, token: "token", endpoint }
+  { server_id: "guild", session_id, token: "token", endpoint, }
 }
 
 ///|
@@ -438,7 +438,7 @@ async test "voice connection becomes ready, plays, receives, and disconnects ide
     assert_eq(connection.state(), Ready)
     assert_eq(connection.next_event(), ConnectionReady)
 
-    let source : &@voice.AudioSource = OneConnectionFrame::{ sent: false }
+    let source : &@voice.AudioSource = OneConnectionFrame::{ sent: false, }
     connection.play(source)
     guard! transport.outgoing_text.get()
       is { "op": Number(5, ..), "d": { "speaking": Number(1, ..), .. }, .. }

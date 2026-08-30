@@ -436,7 +436,7 @@ async fn Shard::run_connection(
               } else {
                 0L
               }
-              self.session = Some({ id: session_id, resume_url, sequence })
+              self.session = Some({ id: session_id, resume_url, sequence, })
               self.state = Active
               self.emit_telemetry(ShardIdentified(shard_id~))
               self.emit_telemetry(ShardConnected(shard_id~))

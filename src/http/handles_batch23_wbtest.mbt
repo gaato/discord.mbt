@@ -5,7 +5,7 @@ async test "handle unit delegations pin every bound id at the wire boundary" {
   let calls : Array[String] = []
   client.perform_override_.val = Some((route, path, _headers, _body, _files) => {
     calls.push("\{@debug.to_string(route.method_())} \{path}")
-    { status: 204, headers: Map([]), body: Json::null() }
+    { status: 204, headers: Map([]), body: Json::null(), }
   })
   let application_id : @model.ApplicationId = Id(10UL)
   let emoji_id : @model.EmojiId = Id(11UL)

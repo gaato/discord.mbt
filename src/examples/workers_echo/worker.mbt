@@ -214,7 +214,7 @@ fn cached_interaction_verifier(
       let verifier = @discord.InteractionVerifier::new(public_key) catch {
         _ => return None
       }
-      interaction_verifier_cache.val = Some({ public_key, verifier })
+      interaction_verifier_cache.val = Some({ public_key, verifier, })
       Some(verifier)
     }
   }

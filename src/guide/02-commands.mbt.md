@@ -26,7 +26,7 @@ let paint_args : @discord.Args[PaintArgs] = @discord.Args::map2(
   @discord.arg_int(name="coats", description="Number of coats", min=1, max=5).with_default(
     1L,
   ),
-  (color, coats) => { color, coats: coats.to_int() },
+  (color, coats) => { color, coats: coats.to_int(), },
 )
 ```
 

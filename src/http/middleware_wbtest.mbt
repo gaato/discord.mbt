@@ -35,10 +35,10 @@ async test "middleware request headers reach transport" {
   let captured_header = Ref("")
   client.perform_override_.val = Some((_route, _path, headers, _body, _files) => {
     captured_header.val = headers.get_or_default("x-middleware", "")
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   client.middleware((request, next) => {
-    next({ ..request, headers: { "x-middleware": "present" } })
+    next({ ..request, headers: { "x-middleware": "present" }, })
   })
   ignore(client.request(GetGateway))
   inspect(captured_header.val, content="present")
@@ -51,7 +51,7 @@ async test "request headers default to bot auth and allow bearer override" {
   let captured_authorizations : Array[String] = []
   client.perform_override_.val = Some((_route, _path, headers, _body, _files) => {
     captured_authorizations.push(headers.get_or_default("authorization", ""))
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   ignore(client.request(GetGateway))
   ignore(
@@ -74,7 +74,7 @@ async test "github-compatible webhook sends its event without bot auth" {
   client.perform_override_.val = Some((_route, _path, headers, _body, _files) => {
     captured_github_event.val = headers.get_or_default("x-github-event", "")
     captured_authorization.val = headers.contains("authorization")
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let webhook_id : @model.WebhookId = Id(10UL)
   client.execute_github_compatible_webhook(
@@ -94,7 +94,7 @@ async test "middleware may short-circuit without transport" {
   let calls = Ref(0)
   client.perform_override_.val = Some((_route, _path, _headers, _body, _files) => {
     calls.val += 1
-    { status: 200, headers: Map([]), body: { "transport": true } }
+    { status: 200, headers: Map([]), body: { "transport": true }, }
   })
   client.middleware((_request, _next) => {
     status: 200,
@@ -122,7 +122,7 @@ async test "middleware sees final response after 429 retries" {
         body: { "retry_after": 0.0 },
       }
     } else {
-      { status: 200, headers: Map([]), body: { "ok": true } }
+      { status: 200, headers: Map([]), body: { "ok": true }, }
     }
   })
   let next_returns = Ref(0)

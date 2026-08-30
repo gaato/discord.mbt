@@ -11,7 +11,7 @@ async test "channel ref edit delegates nullable fields and audit reason" {
     captured_path.val = path
     captured_headers.val = Some(headers)
     captured_body.val = body.unwrap_or(Json::null())
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let channel_id : @model.ChannelId = Id(100UL)
   try
@@ -45,7 +45,7 @@ async test "channel ref follow keeps announcement and target direction" {
   client.perform_override_.val = Some((_route, path, _headers, body, _files) => {
     captured_path.val = path
     captured_body.val = body.unwrap_or(Json::null())
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let announcement_channel_id : @model.ChannelId = Id(110UL)
   let target_channel_id : @model.ChannelId = Id(120UL)
@@ -70,7 +70,7 @@ async test "channel ref create stage instance binds the channel id" {
   client.perform_override_.val = Some((_route, path, _headers, body, _files) => {
     captured_path.val = path
     captured_body.val = body.unwrap_or(Json::null())
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let channel_id : @model.ChannelId = Id(130UL)
   try client.channel_ref(channel_id).create_stage_instance("town hall") catch {
@@ -102,7 +102,7 @@ async test "channel ref with typing sends before body and returns its value" {
     calls.val += 1
     captured_method.val = @debug.to_string(route.method_())
     captured_path.val = path
-    { status: 204, headers: Map([]), body: Json::null() }
+    { status: 204, headers: Map([]), body: Json::null(), }
   })
   let channel_id : @model.ChannelId = Id(135UL)
   let result = client
@@ -124,7 +124,7 @@ async test "channel ref with typing propagates body errors without hanging" {
   let calls = Ref(0)
   client.perform_override_.val = Some((_route, _path, _headers, _body, _files) => {
     calls.val += 1
-    { status: 204, headers: Map([]), body: Json::null() }
+    { status: 204, headers: Map([]), body: Json::null(), }
   })
   let channel_id : @model.ChannelId = Id(136UL)
   try {
@@ -172,7 +172,7 @@ async test "message ref reaction deletions bind message and user ids" {
   let captured_paths : Array[String] = []
   client.perform_override_.val = Some((_route, path, _headers, _body, _files) => {
     captured_paths.push(path)
-    { status: 204, headers: Map([]), body: Json::null() }
+    { status: 204, headers: Map([]), body: Json::null(), }
   })
   let channel_id : @model.ChannelId = Id(140UL)
   let message_id : @model.MessageId = Id(150UL)

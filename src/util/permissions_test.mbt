@@ -5,7 +5,7 @@ fn overwrite(
   allow : @model.Permissions,
   deny : @model.Permissions,
 ) -> @model.Overwrite {
-  { id: Id(id), typ, allow, deny }
+  { id: Id(id), typ, allow, deny, }
 }
 
 ///|

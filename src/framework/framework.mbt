@@ -63,7 +63,7 @@ pub fn Framework::command(
   spec : @interaction.CommandSpec,
   handler : async (CommandCtx) -> Unit,
 ) -> Framework {
-  self.commands[command_key(spec.typ, spec.name)] = { spec, handler }
+  self.commands[command_key(spec.typ, spec.name)] = { spec, handler, }
   self
 }
 
@@ -201,7 +201,7 @@ pub async fn Framework::process_with(
 ) -> Bool {
   match interaction.typ {
     Ping => {
-      gate.send({ typ: Pong, data: None })
+      gate.send({ typ: Pong, data: None, })
       true
     }
     ApplicationCommand => {
@@ -305,7 +305,7 @@ pub async fn Framework::wait_for_component(
   custom_id~ : String,
   timeout_ms? : Int,
 ) -> ComponentCtx? {
-  let waiter = ComponentWaiter::{ custom_id, queue: Queue(kind=Unbounded) }
+  let waiter = ComponentWaiter::{ custom_id, queue: Queue(kind=Unbounded), }
   self.waiters.push(waiter)
   defer (for i, pending in self.waiters {
     if physical_equal(pending, waiter) {

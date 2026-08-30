@@ -7,7 +7,7 @@ test "edit current application body includes provided values" {
   let integration_types_config : Map[
     String,
     @model.ApplicationIntegrationTypeConfiguration,
-  ] = { "0": { oauth2_install_params: Some(install_params) } }
+  ] = { "0": { oauth2_install_params: Some(install_params), } }
   json_inspect(
     edit_current_application_body(
       custom_install_url="https://example.com/install",
@@ -484,7 +484,7 @@ test "scheduled event request bodies model null and recurrence explicitly" {
     scheduled_event_create_body(
       None,
       true,
-      Some({ location: Some("Community Hall") }),
+      Some({ location: Some("Community Hall"), }),
       false,
       "Meetup",
       GuildOnly,

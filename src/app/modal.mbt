@@ -79,9 +79,9 @@ fn modal_component_present(
 fn set_modal_field_optional(component : @model.Component) -> @model.Component {
   match component {
     Label(label) =>
-      Label({ ..label, component: set_modal_field_optional(label.component) })
-    TextInput(input) => TextInput({ ..input, required: Some(false) })
-    StringSelect(select) => StringSelect({ ..select, min_values: Some(0) })
+      Label({ ..label, component: set_modal_field_optional(label.component), })
+    TextInput(input) => TextInput({ ..input, required: Some(false), })
+    StringSelect(select) => StringSelect({ ..select, min_values: Some(0), })
     other => other
   }
 }
@@ -120,7 +120,7 @@ fn prefill_modal_component(
       })
     TextInput(input) =>
       match values.get(input.custom_id) {
-        Some(value) => TextInput({ ..input, value: Some(value) })
+        Some(value) => TextInput({ ..input, value: Some(value), })
         None => component
       }
     _ => component
@@ -279,7 +279,7 @@ pub fn[A, B] ModalField::map(
 /// Lift a single field into a `ModalFields`; combine further with `zip`
 /// and `map`, or use the `mapN` helpers directly.
 pub fn[A] ModalFields::of(field : ModalField[A]) -> ModalFields[A] {
-  { definitions_: [field.definition_], decode_: field.decode_ }
+  { definitions_: [field.definition_], decode_: field.decode_, }
 }
 
 ///|
@@ -400,7 +400,7 @@ pub fn[A] modal(
   title~ : String,
   fields~ : ModalFields[A],
 ) -> Modal[A] {
-  { custom_id_: custom_id, title_: title, fields_: fields }
+  { custom_id_: custom_id, title_: title, fields_: fields, }
 }
 
 ///|
@@ -707,7 +707,7 @@ async fn[A] dispatch_modal_handler(
       let value = modal.decode(raw.data.components) catch {
         source => raise_failure(route, BeforeInitial, source)
       }
-      let response = run({ raw_: raw, bot_: bot, state_: state }, value) catch {
+      let response = run({ raw_: raw, bot_: bot, state_: state, }, value) catch {
         source => raise_failure(route, BeforeInitial, source)
       }
       response.send_modal(raw) catch {
@@ -721,7 +721,7 @@ async fn[A] dispatch_modal_handler(
       raw.defer_response(ephemeral~) catch {
         source => raise_failure(route, BeforeInitial, source)
       }
-      run({ raw_: raw, bot_: bot, state_: state }, value) catch {
+      run({ raw_: raw, bot_: bot, state_: state, }, value) catch {
         source => raise_failure(route, AfterDeferred, source)
       }
     }

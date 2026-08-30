@@ -24,7 +24,7 @@ fn echo_args() -> @discord.Args[EchoArgs] {
       min=1,
       max=5,
     ).with_default(1L),
-    (text, times) => { text, times: times.to_int() },
+    (text, times) => { text, times: times.to_int(), },
   )
 }
 

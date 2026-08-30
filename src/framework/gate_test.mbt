@@ -38,8 +38,8 @@ async test "response gate captures one valid callback" {
 ///|
 async test "response gate rejects a second callback" {
   let (gate, _) = @framework.ResponseGate::capture(gate_interaction(2))
-  gate.send({ typ: ChannelMessageWithSource, data: None })
-  try gate.send({ typ: DeferredChannelMessageWithSource, data: None }) catch {
+  gate.send({ typ: ChannelMessageWithSource, data: None, })
+  try gate.send({ typ: DeferredChannelMessageWithSource, data: None, }) catch {
     @framework.ResponseGateError::AlreadyResponded => ()
     error => fail("unexpected error: \{Repr(error)}")
   } noraise {
@@ -50,7 +50,7 @@ async test "response gate rejects a second callback" {
 ///|
 async test "response gate rejects modal callbacks for modal submits" {
   let (gate, _) = @framework.ResponseGate::capture(gate_interaction(5))
-  try gate.send({ typ: Modal, data: None }) catch {
+  try gate.send({ typ: Modal, data: None, }) catch {
     @framework.ResponseGateError::InvalidCallback(kind~, typ~) => {
       assert_true(kind == ModalSubmit)
       assert_true(typ == Modal)
@@ -72,13 +72,13 @@ async test "response gate remains terminal after sink failure" {
   let gate = @framework.ResponseGate(ApplicationCommand, (_, _) => {
     raise GateSinkError
   })
-  try gate.send({ typ: ChannelMessageWithSource, data: None }) catch {
+  try gate.send({ typ: ChannelMessageWithSource, data: None, }) catch {
     GateSinkError => assert_true(gate.responded())
     error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected sink failure")
   }
-  try gate.send({ typ: ChannelMessageWithSource, data: None }) catch {
+  try gate.send({ typ: ChannelMessageWithSource, data: None, }) catch {
     @framework.ResponseGateError::AlreadyResponded => ()
     error => fail("unexpected error: \{Repr(error)}")
   } noraise {
@@ -95,7 +95,7 @@ async test "response gate remains terminal after sink cancellation" {
   })
   @async.with_task_group(group => {
     let send_task = group.spawn(no_wait=true, allow_failure=true, () => {
-      gate.send({ typ: ChannelMessageWithSource, data: None })
+      gate.send({ typ: ChannelMessageWithSource, data: None, })
     })
     sink_started.get()
     send_task.cancel()
@@ -106,7 +106,7 @@ async test "response gate remains terminal after sink cancellation" {
       _ => fail("cancelled send unexpectedly completed")
     }
     assert_true(gate.responded())
-    try gate.send({ typ: ChannelMessageWithSource, data: None }) catch {
+    try gate.send({ typ: ChannelMessageWithSource, data: None, }) catch {
       @framework.ResponseGateError::AlreadyResponded => ()
       error => fail("unexpected error: \{Repr(error)}")
     } noraise {

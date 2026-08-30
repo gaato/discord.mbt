@@ -6,7 +6,7 @@ struct FakeVoiceUdp {
 
 ///|
 fn FakeVoiceUdp::FakeVoiceUdp() -> FakeVoiceUdp {
-  { incoming: Queue(kind=Unbounded), outgoing: Queue(kind=Unbounded) }
+  { incoming: Queue(kind=Unbounded), outgoing: Queue(kind=Unbounded), }
 }
 
 ///|

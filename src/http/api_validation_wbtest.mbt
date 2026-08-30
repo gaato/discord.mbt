@@ -374,8 +374,8 @@ test "execute webhook requires message content" {
     None,
     None,
     Some({
-      question: { text: Some("poll?"), emoji: None },
-      answers: [{ text: Some("yes"), emoji: None }],
+      question: { text: Some("poll?"), emoji: None, },
+      answers: [{ text: Some("yes"), emoji: None, }],
       duration: None,
       allow_multiselect: None,
       layout_type: None,

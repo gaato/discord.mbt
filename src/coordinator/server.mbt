@@ -75,7 +75,7 @@ pub async fn[X] Coordinator::serve(
     })
   })
   started.acquire()
-  { address: server.addr.to_string(), runner }
+  { address: server.addr.to_string(), runner, }
 }
 
 ///|
@@ -173,7 +173,7 @@ async fn dispatch_request(
       state.limiter.acquire(bucket, global_exempt~)
       let lease = state.next_lease_id.val
       state.next_lease_id.val += 1
-      state.owners[bucket] = BucketOwner::{ connection, lease }
+      state.owners[bucket] = BucketOwner::{ connection, lease, }
       connection.held_buckets.val[bucket] = lease
       { "ok": true, "lease": lease }
     }

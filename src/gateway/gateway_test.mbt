@@ -133,7 +133,7 @@ struct BinaryFakeTransport {
 
 ///|
 fn BinaryFakeTransport::BinaryFakeTransport() -> BinaryFakeTransport {
-  { incoming: Queue(kind=Unbounded), outgoing: Queue(kind=Unbounded) }
+  { incoming: Queue(kind=Unbounded), outgoing: Queue(kind=Unbounded), }
 }
 
 ///|
@@ -526,7 +526,7 @@ struct SleepGate {
 
 ///|
 fn SleepGate::SleepGate() -> SleepGate {
-  { requests: Queue(kind=Unbounded), releases: Queue(kind=Unbounded) }
+  { requests: Queue(kind=Unbounded), releases: Queue(kind=Unbounded), }
 }
 
 ///|

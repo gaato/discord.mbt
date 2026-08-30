@@ -43,7 +43,7 @@ fn feedback_modal() -> @discord.Modal[Feedback] {
         style=Paragraph,
         placeholder="Optional context",
       ).optional(),
-      (topic, details) => { topic, details },
+      (topic, details) => { topic, details, },
     ),
   )
 }
@@ -92,7 +92,7 @@ fn demo_command() -> @discord.Command[Unit] {
       args=@discord.Args::map2(
         @discord.arg_int(name="a", description="First integer"),
         @discord.arg_int(name="b", description="Second integer"),
-        (a, b) => { a, b },
+        (a, b) => { a, b, },
       ),
       handler=Immediate((_, args) => {
         @discord.CommandReply::message(

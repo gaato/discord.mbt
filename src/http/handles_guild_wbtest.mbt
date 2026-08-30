@@ -11,7 +11,7 @@ async test "guild ref edit delegates nullable fields and audit reason" {
     captured_path.val = path
     captured_headers.val = Some(headers)
     captured_body.val = body.unwrap_or(Json::null())
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let guild_id : @model.GuildId = Id(200UL)
   try
@@ -61,7 +61,7 @@ async test "member ref unban delegates the audit reason header" {
     captured_method.val = @debug.to_string(route.method_())
     captured_path.val = path
     captured_headers.val = Some(headers)
-    { status: 204, headers: Map([]), body: Json::null() }
+    { status: 204, headers: Map([]), body: Json::null(), }
   })
   let guild_id : @model.GuildId = Id(220UL)
   let user_id : @model.UserId = Id(230UL)
@@ -92,7 +92,7 @@ async test "role ref edit delegates bound ids and audit reason" {
     captured_path.val = path
     captured_headers.val = Some(headers)
     captured_body.val = body.unwrap_or(Json::null())
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let guild_id : @model.GuildId = Id(240UL)
   let role_id : @model.RoleId = Id(250UL)
@@ -125,7 +125,7 @@ async test "guild ref search messages preserves query parameters" {
   let captured_path = Ref("")
   client.perform_override_.val = Some((_route, path, _headers, _body, _files) => {
     captured_path.val = path
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let guild_id : @model.GuildId = Id(260UL)
   let author_id : @model.UserId = Id(270UL)

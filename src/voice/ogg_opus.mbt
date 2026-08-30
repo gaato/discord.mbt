@@ -244,7 +244,7 @@ pub fn OggOpusSource::from_bytes(
   let head = reader.next_packet()
   let tags = reader.next_packet()
   let (channels, pre_skip) = validate_opus_headers(head, tags)
-  { reader, input: None, channels_: channels, pre_skip_: pre_skip }
+  { reader, input: None, channels_: channels, pre_skip_: pre_skip, }
 }
 
 ///|
@@ -286,7 +286,7 @@ pub async fn OggOpusSource::from_reader(input : &@io.Reader) -> OggOpusSource {
     }
   }
   let (channels, pre_skip) = validate_opus_headers(head, tags)
-  { reader, input: Some(input), channels_: channels, pre_skip_: pre_skip }
+  { reader, input: Some(input), channels_: channels, pre_skip_: pre_skip, }
 }
 
 ///|

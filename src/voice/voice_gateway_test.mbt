@@ -735,7 +735,7 @@ struct SleepGate {
 
 ///|
 fn SleepGate::SleepGate() -> SleepGate {
-  { requests: Queue(kind=Unbounded), releases: Queue(kind=Unbounded) }
+  { requests: Queue(kind=Unbounded), releases: Queue(kind=Unbounded), }
 }
 
 ///|

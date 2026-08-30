@@ -41,7 +41,7 @@ pub fn CommandOptions::from_data(data : @model.CommandData) -> CommandOptions {
       leaves[opt.name] = opt
     }
   }
-  { path, leaves, resolved: data.resolved }
+  { path, leaves, resolved: data.resolved, }
 }
 
 ///|

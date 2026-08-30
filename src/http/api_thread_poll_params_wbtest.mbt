@@ -3,10 +3,10 @@
 /// 2026-07-16 live sweep (the probe had to fall back to raw routes for these).
 test "poll create request serializes request-side media without nulls" {
   let poll = @model.PollCreateRequest::{
-    question: { text: Some("live probe poll?"), emoji: None },
+    question: { text: Some("live probe poll?"), emoji: None, },
     answers: [
-      { text: Some("yes"), emoji: None },
-      { text: Some("no"), emoji: None },
+      { text: Some("yes"), emoji: None, },
+      { text: Some("no"), emoji: None, },
     ],
     duration: Some(1),
     allow_multiselect: Some(true),
@@ -31,12 +31,12 @@ async test "create message forwards the poll body" {
   let captured_body = Ref(Json::null())
   client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let channel_id : @model.ChannelId = Id(10UL)
   let poll = @model.PollCreateRequest::{
-    question: { text: Some("q?"), emoji: None },
-    answers: [{ text: Some("a"), emoji: None }],
+    question: { text: Some("q?"), emoji: None, },
+    answers: [{ text: Some("a"), emoji: None, }],
     duration: None,
     allow_multiselect: None,
     layout_type: None,
@@ -63,7 +63,7 @@ async test "modify channel forwards the thread-only fields" {
   let captured_body = Ref(Json::null())
   client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let channel_id : @model.ChannelId = Id(20UL)
   try
@@ -101,7 +101,7 @@ async test "execute webhook builds thread query and body params" {
   client.perform_override_.val = Some((_route, path, _headers, body, _files) => {
     captured_path.val = path
     captured_body.val = body.unwrap_or(Json::null())
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let webhook_id : @model.WebhookId = Id(1UL)
   try
@@ -176,7 +176,7 @@ async test "webhook message endpoints append the thread_id query" {
   let captured_path = Ref("")
   client.perform_override_.val = Some((_route, path, _headers, _body, _files) => {
     captured_path.val = path
-    { status: 204, headers: Map([]), body: Json::null() }
+    { status: 204, headers: Map([]), body: Json::null(), }
   })
   let webhook_id : @model.WebhookId = Id(1UL)
   let message_id : @model.MessageId = Id(2UL)

@@ -42,7 +42,7 @@ pub fn ResponseGate::ResponseGate(
   kind : @model.InteractionType,
   sink : async (@model.InteractionResponse, Array[@dhttp.FileUpload]?) -> Unit,
 ) -> ResponseGate {
-  { kind, state: Pending, sink }
+  { kind, state: Pending, sink, }
 }
 
 ///|
@@ -69,7 +69,7 @@ pub fn ResponseGate::capture(
   let queue : @aqueue.Queue[CapturedResponse] = Queue(kind=Blocking(1))
   let capture = ResponseCapture::{ queue, }
   let gate = ResponseGate(interaction.typ, (response, files) => {
-    queue.put({ response, files })
+    queue.put({ response, files, })
   })
   (gate, capture)
 }

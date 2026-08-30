@@ -7,7 +7,7 @@ async test "modify channel forwards voice and forum fields" {
   let captured_body = Ref(Json::null())
   client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let channel_id : @model.ChannelId = Id(1UL)
   try
@@ -36,7 +36,7 @@ async test "modify channel forwards voice and forum fields" {
           emoji_name: Some("🐛"),
         },
       ],
-      default_reaction_emoji={ emoji_id: Null, emoji_name: Value("👍") },
+      default_reaction_emoji={ emoji_id: Null, emoji_name: Value("👍"), },
       default_thread_rate_limit_per_user=30,
       default_sort_order=CreationDate,
       default_forum_layout=GalleryView,
@@ -97,7 +97,7 @@ async test "create guild channel forwards forum defaults" {
   let captured_body = Ref(Json::null())
   client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let guild_id : @model.GuildId = Id(1UL)
   try
@@ -117,7 +117,7 @@ async test "create guild channel forwards forum defaults" {
           emoji_name: None,
         },
       ],
-      default_reaction_emoji={ emoji_id: Null, emoji_name: Value("👍") },
+      default_reaction_emoji={ emoji_id: Null, emoji_name: Value("👍"), },
       default_thread_rate_limit_per_user=10,
       default_sort_order=LatestActivity,
       default_forum_layout=ListView,
@@ -149,7 +149,7 @@ async test "create channel invite forwards targets and roles" {
   let captured_body = Ref(Json::null())
   client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let channel_id : @model.ChannelId = Id(1UL)
   try
@@ -203,7 +203,7 @@ async test "create channel invite uploads the target-users file as multipart" {
   client.perform_override_.val = Some((_route, _path, _headers, body, files) => {
     captured_body.val = body.unwrap_or(Json::null())
     captured_files.val = files.map_or(0, fs => fs.length())
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let channel_id : @model.ChannelId = Id(1UL)
   try
@@ -229,7 +229,7 @@ async test "edit channel permissions omits unset allow and deny" {
   let captured_body = Ref(Json::null())
   client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
-    { status: 204, headers: Map([]), body: Json::null() }
+    { status: 204, headers: Map([]), body: Json::null(), }
   })
   let channel_id : @model.ChannelId = Id(1UL)
   let overwrite_id : @model.GenericId = Id(2UL)

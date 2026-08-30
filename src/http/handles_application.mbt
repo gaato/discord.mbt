@@ -51,7 +51,7 @@ pub fn Client::application_ref(
   self : Client,
   application_id : @model.ApplicationId,
 ) -> ApplicationRef {
-  { client: self, application_id }
+  { client: self, application_id, }
 }
 
 ///|
@@ -61,7 +61,7 @@ pub fn Client::application_emoji_ref(
   application_id : @model.ApplicationId,
   emoji_id : @model.EmojiId,
 ) -> ApplicationEmojiRef {
-  { client: self, application_id, emoji_id }
+  { client: self, application_id, emoji_id, }
 }
 
 ///|
@@ -71,7 +71,7 @@ pub fn Client::global_command_ref(
   application_id : @model.ApplicationId,
   command_id : @model.CommandId,
 ) -> GlobalCommandRef {
-  { client: self, application_id, command_id }
+  { client: self, application_id, command_id, }
 }
 
 ///|
@@ -82,7 +82,7 @@ pub fn Client::guild_command_ref(
   guild_id : @model.GuildId,
   command_id : @model.CommandId,
 ) -> GuildCommandRef {
-  { client: self, application_id, guild_id, command_id }
+  { client: self, application_id, guild_id, command_id, }
 }
 
 ///|
@@ -92,13 +92,13 @@ pub fn Client::entitlement_ref(
   application_id : @model.ApplicationId,
   entitlement_id : @model.EntitlementId,
 ) -> EntitlementRef {
-  { client: self, application_id, entitlement_id }
+  { client: self, application_id, entitlement_id, }
 }
 
 ///|
 /// Bind a SKU id to this client.
 pub fn Client::sku_ref(self : Client, sku_id : @model.SkuId) -> SkuRef {
-  { client: self, sku_id }
+  { client: self, sku_id, }
 }
 
 ///|
@@ -107,7 +107,7 @@ pub fn ApplicationRef::emoji_ref(
   self : ApplicationRef,
   emoji_id : @model.EmojiId,
 ) -> ApplicationEmojiRef {
-  { client: self.client, application_id: self.application_id, emoji_id }
+  { client: self.client, application_id: self.application_id, emoji_id, }
 }
 
 ///|
@@ -116,7 +116,7 @@ pub fn ApplicationRef::global_command_ref(
   self : ApplicationRef,
   command_id : @model.CommandId,
 ) -> GlobalCommandRef {
-  { client: self.client, application_id: self.application_id, command_id }
+  { client: self.client, application_id: self.application_id, command_id, }
 }
 
 ///|
@@ -140,7 +140,7 @@ pub fn ApplicationRef::entitlement_ref(
   self : ApplicationRef,
   entitlement_id : @model.EntitlementId,
 ) -> EntitlementRef {
-  { client: self.client, application_id: self.application_id, entitlement_id }
+  { client: self.client, application_id: self.application_id, entitlement_id, }
 }
 
 ///|
@@ -150,7 +150,7 @@ pub fn ApplicationRef::sku_ref(
   self : ApplicationRef,
   sku_id : @model.SkuId,
 ) -> SkuRef {
-  { client: self.client, sku_id }
+  { client: self.client, sku_id, }
 }
 
 ///|

@@ -18,7 +18,7 @@ async test "guild soundboard listing unwraps the items envelope" {
         },
       ],
     }
-    { status: 200, headers: Map([]), body }
+    { status: 200, headers: Map([]), body, }
   })
   let guild_id : @model.GuildId = Id(300UL)
   let sounds = client.list_guild_soundboard_sounds(guild_id)
@@ -41,7 +41,7 @@ async test "default soundboard listing decodes a bare array" {
         "available": true,
       },
     ]
-    { status: 200, headers: Map([]), body }
+    { status: 200, headers: Map([]), body, }
   })
   let sounds = client.list_default_soundboard_sounds()
   inspect(sounds.length(), content="1")

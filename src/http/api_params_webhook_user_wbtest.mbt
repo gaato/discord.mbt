@@ -7,7 +7,7 @@ async test "execute webhook forwards caller-supplied flags" {
   let captured_body = Ref(Json::null())
   client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let webhook_id : @model.WebhookId = Id(1UL)
   try
@@ -35,7 +35,7 @@ async test "edit webhook message forwards flags, query, and kept attachments" {
   client.perform_override_.val = Some((_route, path, _headers, body, _files) => {
     captured_path.val = path
     captured_body.val = body.unwrap_or(Json::null())
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let webhook_id : @model.WebhookId = Id(1UL)
   let message_id : @model.MessageId = Id(2UL)
@@ -82,7 +82,7 @@ async test "modify current user forwards and clears the banner" {
   let captured_body = Ref(Json::null())
   client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   try client.modify_current_user(banner="data:image/png;base64,AAAA") catch {
     Deserialize(_) => ()

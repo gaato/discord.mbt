@@ -8,7 +8,7 @@ async test "create message forwards a full message reference" {
   let captured_body = Ref(Json::null())
   client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let channel_id : @model.ChannelId = Id(10UL)
   try
@@ -68,7 +68,7 @@ async test "create message forwards a shared client theme" {
   let captured_body = Ref(Json::null())
   client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let channel_id : @model.ChannelId = Id(10UL)
   let theme = @model.SharedClientTheme::{
@@ -101,7 +101,7 @@ async test "edit message merges kept attachments with new uploads" {
   let captured_body = Ref(Json::null())
   client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let channel_id : @model.ChannelId = Id(10UL)
   let message_id : @model.MessageId = Id(20UL)
@@ -151,7 +151,7 @@ async test "get reactions appends the burst type query" {
   let captured_path = Ref("")
   client.perform_override_.val = Some((_route, path, _headers, _body, _files) => {
     captured_path.val = path
-    { status: 200, headers: Map([]), body: Json::array([]) }
+    { status: 200, headers: Map([]), body: Json::array([]), }
   })
   let channel_id : @model.ChannelId = Id(1UL)
   let message_id : @model.MessageId = Id(2UL)
@@ -187,7 +187,7 @@ async test "message ref forwards a message as a snapshot reference" {
   client.perform_override_.val = Some((_route, path, _headers, body, _files) => {
     captured_path.val = path
     captured_body.val = body.unwrap_or(Json::null())
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   try client.channel_ref(Id(2UL)).message_ref(Id(1UL)).forward(Id(30UL)) catch {
     Deserialize(_) => ()

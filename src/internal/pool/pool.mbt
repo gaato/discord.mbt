@@ -16,7 +16,7 @@ pub struct Pool {
 
 ///|
 pub fn Pool::Pool(uri : String, max_connections? : Int = 4) -> Pool {
-  { uri, idle: [], slots: Semaphore(max_connections), closed: false }
+  { uri, idle: [], slots: Semaphore(max_connections), closed: false, }
 }
 
 ///|

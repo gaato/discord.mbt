@@ -82,7 +82,7 @@ async fn main {
       let (source, close_source) = load_audio_source(process_group, audio_path)
       defer close_source()
       let done : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
-      let tracked = TrackedOggSource::{ source, done, finished: false }
+      let tracked = TrackedOggSource::{ source, done, finished: false, }
       let app = @discord.App(sync=Disabled)
       let intents = @model.Intents::guilds() |
         @model.Intents::guild_voice_states()

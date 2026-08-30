@@ -162,7 +162,7 @@ async fn Client::perform(
         _ => Json::string(body_data.text())
       }
     }
-    { status: response.code, headers: lower_headers, body: body_json }
+    { status: response.code, headers: lower_headers, body: body_json, }
   })
 }
 

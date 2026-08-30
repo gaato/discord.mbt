@@ -5,7 +5,7 @@ async test "guild audit, ban, and member queries pin set and omitted parameters"
   let paths : Array[String] = []
   client.perform_override_.val = Some((_route, path, _headers, _body, _files) => {
     paths.push(path)
-    { status: 200, headers: Map([]), body: Json::array([]) }
+    { status: 200, headers: Map([]), body: Json::array([]), }
   })
   let guild_id : @model.GuildId = Id(10UL)
   let user_id : @model.UserId = Id(20UL)
@@ -50,7 +50,7 @@ async test "current user guild query pins set and omitted parameters" {
   let paths : Array[String] = []
   client.perform_override_.val = Some((_route, path, _headers, _body, _files) => {
     paths.push(path)
-    { status: 200, headers: Map([]), body: Json::array([]) }
+    { status: 200, headers: Map([]), body: Json::array([]), }
   })
   let cursor : @model.GuildId = Id(40UL)
   client.get_current_user_guilds(limit=200, after=cursor, with_counts=true)
@@ -68,7 +68,7 @@ async test "message pagination query pins around before after and omitted arms" 
   let paths : Array[String] = []
   client.perform_override_.val = Some((_route, path, _headers, _body, _files) => {
     paths.push(path)
-    { status: 200, headers: Map([]), body: Json::array([]) }
+    { status: 200, headers: Map([]), body: Json::array([]), }
   })
   let channel_id : @model.ChannelId = Id(50UL)
   let cursor : @model.MessageId = Id(60UL)
@@ -89,7 +89,7 @@ async test "scheduled event queries pin set and omitted parameters" {
   let paths : Array[String] = []
   client.perform_override_.val = Some((_route, path, _headers, _body, _files) => {
     paths.push(path)
-    { status: 200, headers: Map([]), body: Json::array([]) }
+    { status: 200, headers: Map([]), body: Json::array([]), }
   })
   let guild_id : @model.GuildId = Id(70UL)
   let event_id : @model.ScheduledEventId = Id(80UL)
@@ -134,7 +134,7 @@ async test "invite poll thread and archived-thread queries pin optional arms" {
   let paths : Array[String] = []
   client.perform_override_.val = Some((_route, path, _headers, _body, _files) => {
     paths.push(path)
-    { status: 200, headers: Map([]), body: Json::array([]) }
+    { status: 200, headers: Map([]), body: Json::array([]), }
   })
   let channel_id : @model.ChannelId = Id(100UL)
   let message_id : @model.MessageId = Id(110UL)

@@ -16,9 +16,9 @@ test "MessageUpdateEvent::is_edit uses before or the timestamp heuristic" {
   assert_true(unedited.before is None)
   assert_false(unedited.is_edit())
   assert_true(edited.is_edit())
-  assert_false({ ..unedited, before: Some(unedited.message) }.is_edit())
-  assert_true({ ..unedited, before: Some(edited.message) }.is_edit())
-  assert_false({ ..edited, before: Some(edited.message) }.is_edit())
+  assert_false({ ..unedited, before: Some(unedited.message), }.is_edit())
+  assert_true({ ..unedited, before: Some(edited.message), }.is_edit())
+  assert_false({ ..edited, before: Some(edited.message), }.is_edit())
 }
 
 ///|
@@ -31,9 +31,11 @@ test "MessageUpdateEvent::is_edit tolerates sub-second precision changes" {
   let milliseconds = message_update_with_timestamp(
     "\"2026-07-17T01:02:51.130000+00:00\"",
   )
-  assert_false({ ..milliseconds, before: Some(microseconds.message) }.is_edit())
+  assert_false(
+    { ..milliseconds, before: Some(microseconds.message), }.is_edit(),
+  )
   let changed = message_update_with_timestamp(
     "\"2026-07-17T01:02:52.000000+00:00\"",
   )
-  assert_true({ ..changed, before: Some(microseconds.message) }.is_edit())
+  assert_true({ ..changed, before: Some(microseconds.message), }.is_edit())
 }

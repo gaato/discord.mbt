@@ -265,7 +265,7 @@ pub async fn[X] serve_interactions(
     }
   })
   match startup.get() {
-    Ready => { address, runner }
+    Ready => { address, runner, }
     Failed(error) => raise error
   }
 }

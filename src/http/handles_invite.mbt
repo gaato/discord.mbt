@@ -8,7 +8,7 @@ pub struct InviteRef {
 ///|
 /// Bind an invite code to this client.
 pub fn Client::invite_ref(self : Client, code : String) -> InviteRef {
-  { client: self, code }
+  { client: self, code, }
 }
 
 ///|

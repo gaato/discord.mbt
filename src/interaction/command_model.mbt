@@ -11,7 +11,7 @@
 /// }
 ///
 /// impl @interaction.CommandModel for Echo with fn from_options(options) {
-///   { text: options.string("text"), times: options.int_opt("times") }
+///   { text: options.string("text"), times: options.int_opt("times"), }
 /// }
 /// ```
 ///

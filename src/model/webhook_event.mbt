@@ -276,7 +276,7 @@ pub impl @json.FromJson for LobbyMessageDeleteEvent with fn from_json(
   path,
 ) {
   let fields : LobbyMessageDeleteFields = @json.from_json(json, path~)
-  { id: fields.id, lobby_id: fields.lobby_id, raw: json }
+  { id: fields.id, lobby_id: fields.lobby_id, raw: json, }
 }
 
 ///|

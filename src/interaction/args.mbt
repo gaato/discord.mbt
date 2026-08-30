@@ -26,7 +26,7 @@ fn[A] required_arg(
   read : (CommandOptions) -> A raise,
   suggest? : SuggestHandler,
 ) -> Arg[A] {
-  { definition, read, suggest }
+  { definition, read, suggest, }
 }
 
 ///|
@@ -37,7 +37,7 @@ fn[A] typed_suggest(
 ) -> SuggestHandler? {
   match suggest {
     Some(run) =>
-      Some({ name_: name, run_: (ctx, input) => run(ctx, decode(input)) })
+      Some({ name_: name, run_: (ctx, input) => run(ctx, decode(input)), })
     None => None
   }
 }
@@ -300,7 +300,7 @@ pub fn arg_attachment(
 /// }
 /// ```
 pub fn[A] Arg::optional(self : Arg[A]) -> Arg[A?] {
-  let definition = { ..self.definition, required: Some(false) }
+  let definition = { ..self.definition, required: Some(false), }
   let name = definition.name
   {
     definition,
@@ -319,7 +319,7 @@ pub fn[A] Arg::optional(self : Arg[A]) -> Arg[A?] {
 /// Make an argument optional in the registration payload and use a default
 /// value when it is absent from a submitted command.
 pub fn[A] Arg::with_default(self : Arg[A], value : A) -> Arg[A] {
-  let definition = { ..self.definition, required: Some(false) }
+  let definition = { ..self.definition, required: Some(false), }
   let name = definition.name
   {
     definition,
@@ -446,7 +446,7 @@ pub fn[A, B] Args::zip(self : Args[A], other : Args[B]) -> Args[(A, B)] {
 ///|
 /// Define a command with no options.
 pub fn Args::unit() -> Args[Unit] {
-  { definitions_: [], decode_: _ => (), suggests_: [] }
+  { definitions_: [], decode_: _ => (), suggests_: [], }
 }
 
 ///|
@@ -455,7 +455,7 @@ pub fn[A] Args::custom(
   definitions~ : Array[@model.CommandOption],
   decode~ : (CommandOptions) -> A raise,
 ) -> Args[A] {
-  { definitions_: definitions.copy(), decode_: decode, suggests_: [] }
+  { definitions_: definitions.copy(), decode_: decode, suggests_: [], }
 }
 
 ///|

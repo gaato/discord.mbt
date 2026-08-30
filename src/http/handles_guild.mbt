@@ -16,7 +16,7 @@ pub struct RoleRef {
 ///|
 /// Bind a guild id to this client.
 pub fn Client::guild_ref(self : Client, guild_id : @model.GuildId) -> GuildRef {
-  { client: self, guild_id }
+  { client: self, guild_id, }
 }
 
 ///|
@@ -26,7 +26,7 @@ pub fn Client::role_ref(
   guild_id : @model.GuildId,
   role_id : @model.RoleId,
 ) -> RoleRef {
-  { client: self, guild_id, role_id }
+  { client: self, guild_id, role_id, }
 }
 
 ///|
@@ -666,13 +666,13 @@ pub fn GuildRef::member_ref(
   self : GuildRef,
   user_id : @model.UserId,
 ) -> MemberRef {
-  { client: self.client, guild_id: self.guild_id, user_id }
+  { client: self.client, guild_id: self.guild_id, user_id, }
 }
 
 ///|
 /// Bind a role id in this guild to the client.
 pub fn GuildRef::role_ref(self : GuildRef, role_id : @model.RoleId) -> RoleRef {
-  { client: self.client, guild_id: self.guild_id, role_id }
+  { client: self.client, guild_id: self.guild_id, role_id, }
 }
 
 ///|

@@ -40,7 +40,7 @@ fn ZlibStreamInflater::ZlibStreamInflater() -> ZlibStreamInflater raise InflateE
   if status != 0 {
     raise InflateError(status~)
   }
-  { handle, pending: [] }
+  { handle, pending: [], }
 }
 
 ///|

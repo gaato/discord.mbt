@@ -22,7 +22,7 @@ async fn run_echo_bot(token : String) -> Unit {
       min=1,
       max=5,
     ).with_default(1L),
-    (text, times) => { text, times: times.to_int() },
+    (text, times) => { text, times: times.to_int(), },
   )
   let echo = @discord.slash(
     name="echo",

@@ -30,7 +30,7 @@ pub fn Client::webhook_ref(
   self : Client,
   webhook_id : @model.WebhookId,
 ) -> WebhookRef {
-  { client: self, webhook_id }
+  { client: self, webhook_id, }
 }
 
 ///|
@@ -40,7 +40,7 @@ pub fn Client::webhook_token_ref(
   webhook_id : @model.WebhookId,
   token : String,
 ) -> WebhookTokenRef {
-  { client: self, webhook_id, token }
+  { client: self, webhook_id, token, }
 }
 
 ///|
@@ -49,7 +49,7 @@ pub fn WebhookRef::with_token(
   self : WebhookRef,
   token : String,
 ) -> WebhookTokenRef {
-  { client: self.client, webhook_id: self.webhook_id, token }
+  { client: self.client, webhook_id: self.webhook_id, token, }
 }
 
 ///|

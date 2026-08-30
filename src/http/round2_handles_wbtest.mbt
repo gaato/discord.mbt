@@ -15,7 +15,7 @@ async test "application handles delegate remaining fetch and mutation methods" {
   let calls : Array[String] = []
   client.perform_override_.val = Some((route, path, _headers, _body, _files) => {
     calls.push("\{@debug.to_string(route.method_())} \{path}")
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let application_id : @model.ApplicationId = Id(100UL)
   let guild_id : @model.GuildId = Id(101UL)
@@ -93,7 +93,7 @@ async test "guild asset handles delegate remaining collections and item methods"
   let calls : Array[String] = []
   client.perform_override_.val = Some((route, path, _headers, _body, _files) => {
     calls.push("\{@debug.to_string(route.method_())} \{path}")
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let guild_id : @model.GuildId = Id(200UL)
   let emoji_id : @model.EmojiId = Id(201UL)
@@ -130,7 +130,7 @@ async test "guild asset handles delegate remaining collections and item methods"
       GuildOnly,
       Timestamp("2026-08-01T10:00:00Z"),
       External,
-      entity_metadata={ location: Some("Hall") },
+      entity_metadata={ location: Some("Hall"), },
       scheduled_end_time=Timestamp("2026-08-01T12:00:00Z"),
     )
     |> ignore
@@ -138,7 +138,7 @@ async test "guild asset handles delegate remaining collections and item methods"
   expect_round2_deserialize(() => guild.auto_moderation_rules() |> ignore)
   expect_round2_deserialize(() => {
     guild.create_auto_moderation_rule("block", MessageSend, Keyword, [
-      { typ: BlockMessage, metadata: None },
+      { typ: BlockMessage, metadata: None, },
     ])
     |> ignore
   })
@@ -193,7 +193,7 @@ async test "channel handles exercise remaining channel API routes and builders" 
   client.perform_override_.val = Some((route, path, _headers, body, _files) => {
     calls.push("\{@debug.to_string(route.method_())} \{path}")
     bodies.push(body.unwrap_or(Json::null()))
-    { status: 200, headers: Map([]), body: Json::null() }
+    { status: 200, headers: Map([]), body: Json::null(), }
   })
   let channel_id : @model.ChannelId = Id(300UL)
   let user_id : @model.UserId = Id(301UL)
@@ -308,7 +308,7 @@ async test "guild handles exercise remaining guild API routes" {
     } else {
       Json::null()
     }
-    { status: 200, headers: Map([]), body }
+    { status: 200, headers: Map([]), body, }
   })
   let guild_id : @model.GuildId = Id(400UL)
   let user_id : @model.UserId = Id(401UL)
@@ -417,7 +417,7 @@ async test "user command webhook invite and gateway long-tail routes are pinned"
     } else {
       Json::null()
     }
-    { status: 200, headers: Map([]), body: response }
+    { status: 200, headers: Map([]), body: response, }
   })
   let user_id : @model.UserId = Id(500UL)
   let guild_id : @model.GuildId = Id(501UL)

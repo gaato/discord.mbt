@@ -15,7 +15,7 @@ async test "http telemetry reports 429 and retry attempts" {
         body: { "retry_after": 0.0 },
       }
     } else {
-      { status: 200, headers: Map([]), body: { "ok": true } }
+      { status: 200, headers: Map([]), body: { "ok": true }, }
     }
   })
   let events : Array[@telemetry.TelemetryEvent] = []
@@ -41,7 +41,7 @@ async test "whole request timeout cancels a delayed transport" {
   defer client.close()
   client.perform_override_.val = Some((_route, _path, _headers, _body, _files) => {
     @async.sleep(100)
-    { status: 200, headers: Map([]), body: { "late": true } }
+    { status: 200, headers: Map([]), body: { "late": true }, }
   })
   try client.request(GetGateway) catch {
     Timeout(timeout_ms~) => inspect(timeout_ms, content="10")

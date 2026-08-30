@@ -120,7 +120,7 @@ async fn Bot::resolve_shards(
         Some(url) => url
         None => client.get_gateway()
       }
-      { ids, count, gateway_url, max_concurrency: 1 }
+      { ids, count, gateway_url, max_concurrency: 1, }
     }
     Auto | Fixed(_) | Range(..) => {
       let info = self.gateway_bot_info(client)

@@ -1,7 +1,7 @@
 ///|
 test "message response data adds the Components V2 flag" {
   let components : Array[@model.Component] = [
-    Container({ id: None, components: [], accent_color: None, spoiler: None }),
+    Container({ id: None, components: [], accent_color: None, spoiler: None, }),
   ]
   json_inspect(
     message_response_data(None, None, Some(components), None, None, false),
@@ -12,7 +12,7 @@ test "message response data adds the Components V2 flag" {
 ///|
 test "message response data combines ephemeral and Components V2 flags" {
   let components : Array[@model.Component] = [
-    TextDisplay({ id: None, content: "private layout" }),
+    TextDisplay({ id: None, content: "private layout", }),
   ]
   json_inspect(
     message_response_data(None, None, Some(components), None, None, true),
@@ -26,7 +26,7 @@ test "message response data combines ephemeral and Components V2 flags" {
 ///|
 test "message response data leaves legacy component flags absent" {
   let components : Array[@model.Component] = [
-    ActionRow({ id: None, components: [] }),
+    ActionRow({ id: None, components: [], }),
   ]
   json_inspect(
     message_response_data(None, None, Some(components), None, None, false),
@@ -37,7 +37,7 @@ test "message response data leaves legacy component flags absent" {
 ///|
 test "message response data rejects content with Components V2" {
   let components : Array[@model.Component] = [
-    Separator({ id: None, divider: Some(true), spacing: None }),
+    Separator({ id: None, divider: Some(true), spacing: None, }),
   ]
   try
     message_response_data(

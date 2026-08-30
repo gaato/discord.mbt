@@ -10,7 +10,7 @@ fn sync_stub_client(requests : Array[String], fetched : Json) -> @dhttp.Client {
     } else {
       Json::array([])
     }
-    { status: 200, headers: Map([]), body }
+    { status: 200, headers: Map([]), body, }
   })
   client
 }
