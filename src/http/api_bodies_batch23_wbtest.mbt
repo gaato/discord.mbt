@@ -80,7 +80,7 @@ async test "scheduled event modify body pins every set option and all omitted" {
     end: Some(Value(Timestamp("2026-09-01T10:00:00Z"))),
     frequency: Weekly,
     interval: 1,
-    by_weekday: Some([Monday]),
+    by_weekday: Some(Value([Monday])),
     by_n_weekday: None,
     by_month: None,
     by_month_day: None,

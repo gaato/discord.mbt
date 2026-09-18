@@ -57,6 +57,7 @@ pub struct Bot {
   priv app_ : @app.App
   priv token_ : String
   priv intents_ : @model.Intents?
+  priv capabilities_ : @model.GatewayCapabilities
   priv client_ : @dhttp.Client?
   priv gateway_url_ : String?
   priv shards_ : ShardConfig
@@ -86,11 +87,13 @@ pub struct Bot {
 /// must still be enabled in the developer portal). `client` supplies a
 /// preconfigured REST client; by default one is built from `token`.
 /// `shards`, `compress`, and `identify_queue` configure sharding, transport
-/// compression, and cross-process identify coordination.
+/// compression, and cross-process identify coordination. `capabilities` is
+/// sent in Identify (see `@model.GatewayCapabilities`).
 pub fn Bot::Bot(
   app : @app.App,
   token~ : String,
   intents? : @model.Intents,
+  capabilities? : @model.GatewayCapabilities = @model.GatewayCapabilities::none(),
   client? : @dhttp.Client,
   gateway_url? : String,
   shards? : ShardConfig = Single(id=0, count=1),
@@ -101,6 +104,7 @@ pub fn Bot::Bot(
     app_: app,
     token_: token,
     intents_: intents,
+    capabilities_: capabilities,
     client_: client,
     gateway_url_: gateway_url,
     shards_: shards,

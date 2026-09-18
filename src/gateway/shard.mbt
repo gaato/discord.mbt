@@ -126,6 +126,7 @@ pub fn[X] Shard::start(
   group : @async.TaskGroup[X],
   token~ : String,
   intents~ : @model.Intents,
+  capabilities? : @model.GatewayCapabilities = @model.GatewayCapabilities::none(),
   gateway_url? : String = "wss://gateway.discord.gg",
   shard_id? : Int = 0,
   shard_count? : Int = 1,
@@ -156,6 +157,7 @@ pub fn[X] Shard::start(
     shard.run(
       token~,
       intents~,
+      capabilities~,
       gateway_url~,
       shard_id~,
       shard_count~,
@@ -192,6 +194,7 @@ async fn Shard::run(
   self : Shard,
   token~ : String,
   intents~ : @model.Intents,
+  capabilities~ : @model.GatewayCapabilities,
   gateway_url~ : String,
   shard_id~ : Int,
   shard_count~ : Int,
@@ -245,6 +248,7 @@ async fn Shard::run(
         inflater~,
         token~,
         intents~,
+        capabilities~,
         shard_id~,
         shard_count~,
         identify_queue?,
@@ -320,6 +324,7 @@ async fn Shard::run_connection(
   inflater~ : &Inflater?,
   token~ : String,
   intents~ : @model.Intents,
+  capabilities~ : @model.GatewayCapabilities,
   shard_id~ : Int,
   shard_count~ : Int,
   identify_queue? : &@queue.IdentifyQueue,
@@ -380,27 +385,27 @@ async fn Shard::run_connection(
         if identify_queue is Some(q) {
           q.wait_for_identify(shard_id)
         }
-        let identify : Json = {
-          "op": 2,
-          "d": {
-            "token": Json::string(token),
-            "intents": intents.to_json(),
-            "shard": [
-              Json::number(shard_id.to_double()),
-              Json::number(shard_count.to_double()),
-            ],
-            "properties": {
-              "os": match @async.platform {
-                Linux => "linux"
-                MacOS => "darwin"
-                Windows => "windows"
-              },
-              "browser": "discord.mbt",
-              "device": "discord.mbt",
+        let data : Map[String, Json] = {
+          "token": Json::string(token),
+          "intents": intents.to_json(),
+          "shard": [
+            Json::number(shard_id.to_double()),
+            Json::number(shard_count.to_double()),
+          ],
+          "properties": {
+            "os": match @async.platform {
+              Linux => "linux"
+              MacOS => "darwin"
+              Windows => "windows"
             },
+            "browser": "discord.mbt",
+            "device": "discord.mbt",
           },
         }
-        self.raw_send(transport, identify)
+        if capabilities != @model.GatewayCapabilities::none() {
+          data["capabilities"] = capabilities.to_json()
+        }
+        self.raw_send(transport, { "op": 2, "d": Json::object(data) })
       }
     }
 

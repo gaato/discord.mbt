@@ -161,6 +161,26 @@ Decode observers run synchronously in the dispatch loop. Keep them short and
 avoid logging payloads where message content or credentials could be exposed.
 Registering one does not add intents.
 
+## Obfuscated channels
+
+From 2026-11-16 Discord obfuscates guild channels the bot cannot view: they
+still arrive in `GUILD_CREATE` and channel events, but only `id`, `typ`,
+`position`, and `parent_id` are reliable (the name becomes `"___hidden___"`).
+Check `Channel::is_obfuscated()` before using any other field; a
+`CHANNEL_UPDATE` with the full data follows once the bot gains access. Until
+the cut-over, opt in to test with the Identify capability:
+
+```mbt check
+///|
+fn obfuscation_test_bot(app : @discord.App, token : String) -> @discord.Bot {
+  @discord.Bot(
+    app,
+    token~,
+    capabilities=@discord.GatewayCapabilities::channel_obfuscation(),
+  )
+}
+```
+
 ## Gateway event middleware
 
 `Bot::middleware` can filter an event by omitting `next`, or transform the
@@ -209,6 +229,7 @@ test "event and shard declarations compile" {
   ignore(register_handlers)
   ignore(bot_with_explicit_intents)
   ignore(observe_decode_errors)
+  ignore(obfuscation_test_bot)
   ignore(filter_and_tag)
   ignore(sharded_bots)
 }

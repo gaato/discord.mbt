@@ -16,7 +16,7 @@ pub(all) struct Channel {
   recipients : Array[User]?
   icon : Nullable[ImageHash]?
   owner_id : UserId?
-  application_id : ApplicationId?
+  application_id : Nullable[ApplicationId]?
   managed : Bool?
   parent_id : Nullable[ChannelId]?
   last_pin_timestamp : Nullable[Timestamp]?
@@ -28,6 +28,7 @@ pub(all) struct Channel {
   thread_member : ThreadMember?
   default_auto_archive_duration : ThreadAutoArchiveDuration?
   permissions : Permissions?
+  app_permissions : Permissions?
   flags : ChannelFlags?
   total_message_sent : Int?
   available_tags : Array[ForumTag]?
@@ -277,7 +278,7 @@ pub(all) struct ThreadMetadata {
   archive_timestamp : Timestamp
   locked : Bool
   invitable : Bool?
-  create_timestamp : Timestamp?
+  create_timestamp : Nullable[Timestamp]?
 } derive(ToJson, FromJson, Debug)
 
 ///|
@@ -464,4 +465,29 @@ pub fn ChannelFlags::is_scheduled_for_deletion() -> ChannelFlags {
 ///|
 pub fn ChannelFlags::hide_media_download_options() -> ChannelFlags {
   ChannelFlags(1UL << 15)
+}
+
+///|
+/// Set on channels received over the gateway whose metadata Discord has
+/// obfuscated because the bot cannot view them. Only `id`, `type`, `position`
+/// and `parent_id` are reliable on such a channel; the HTTP API omits these
+/// channels instead of setting this flag.
+pub fn ChannelFlags::channel_obfuscated() -> ChannelFlags {
+  ChannelFlags(1UL << 17)
+}
+
+///|
+/// A Spoiler Channel: users must opt in to view its contents.
+pub fn ChannelFlags::is_spoiler_channel() -> ChannelFlags {
+  ChannelFlags(1UL << 21)
+}
+
+///|
+/// Whether Discord obfuscated this channel's metadata because the bot cannot
+/// view it (`CHANNEL_OBFUSCATED` flag). Only `id`, `typ`, `position` and
+/// `parent_id` are reliable on an obfuscated channel; a `CHANNEL_UPDATE` with
+/// the full data follows once the bot gains access.
+pub fn Channel::is_obfuscated(self : Channel) -> Bool {
+  self.flags is Some(flags) &&
+  flags.contains(ChannelFlags::channel_obfuscated())
 }

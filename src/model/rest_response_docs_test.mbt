@@ -19,7 +19,7 @@ test "discord docs: scheduled event recurrence rule" {
     @json.parse(fixture),
   )
   assert_true(value.frequency is Weekly)
-  assert_true(value.by_weekday is Some([Monday, Wednesday]))
+  assert_true(value.by_weekday is Some(Value([Monday, Wednesday])))
   assert_eq(value.to_json().stringify(), fixture)
 }
 

@@ -35,6 +35,7 @@ pub using @dhttp {
 ///|
 pub using @model {
   type Intents,
+  type GatewayCapabilities,
   type Event,
   type AllowedMentions,
   type AllowedMentionType,

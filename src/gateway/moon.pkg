@@ -32,6 +32,7 @@ options(
     "command_limit_wbtest.mbt": [ "native" ],
     "compression.mbt": [ "native" ],
     "compression_wbtest.mbt": [ "native" ],
+    "capabilities_test.mbt": [ "native" ],
     "gateway_test.mbt": [ "native" ],
     "pkg.generated.mbti": [ "native" ],
     "shard.mbt": [ "native" ],

@@ -686,7 +686,7 @@ pub(all) struct Channel {
   recipients : Array[User]?
   icon : Nullable[ImageHash]?
   owner_id : Id[UserMarker]?
-  application_id : Id[ApplicationMarker]?
+  application_id : Nullable[Id[ApplicationMarker]]?
   managed : Bool?
   parent_id : Nullable[Id[ChannelMarker]]?
   last_pin_timestamp : Nullable[Timestamp]?
@@ -698,6 +698,7 @@ pub(all) struct Channel {
   thread_member : ThreadMember?
   default_auto_archive_duration : ThreadAutoArchiveDuration?
   permissions : Permissions?
+  app_permissions : Permissions?
   flags : ChannelFlags?
   total_message_sent : Int?
   available_tags : Array[ForumTag]?
@@ -707,10 +708,12 @@ pub(all) struct Channel {
   default_sort_order : Nullable[SortOrderType]?
   default_forum_layout : ForumLayoutType?
 } derive(ToJson, @debug.Debug, @json.FromJson)
+pub fn Channel::is_obfuscated(Self) -> Bool
 
 pub(all) struct ChannelFlags(UInt64) derive(Eq)
 pub fn ChannelFlags::active_channels_removed() -> Self
 pub fn ChannelFlags::bits(Self) -> UInt64
+pub fn ChannelFlags::channel_obfuscated() -> Self
 pub fn ChannelFlags::clyde_ai() -> Self
 pub fn ChannelFlags::contains(Self, Self) -> Bool
 pub fn ChannelFlags::from_bits(UInt64) -> Self
@@ -719,6 +722,7 @@ pub fn ChannelFlags::hide_media_download_options() -> Self
 pub fn ChannelFlags::is_guild_resource_channel() -> Self
 pub fn ChannelFlags::is_scheduled_for_deletion() -> Self
 pub fn ChannelFlags::is_spam() -> Self
+pub fn ChannelFlags::is_spoiler_channel() -> Self
 pub fn ChannelFlags::none() -> Self
 pub fn ChannelFlags::pinned() -> Self
 pub fn ChannelFlags::require_tag() -> Self
@@ -1407,6 +1411,17 @@ pub(all) struct GatewayBotInfo {
   session_start_limit : SessionStartLimit
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
+pub(all) struct GatewayCapabilities(UInt) derive(Eq)
+pub fn GatewayCapabilities::bits(Self) -> UInt
+pub fn GatewayCapabilities::channel_obfuscation() -> Self
+pub fn GatewayCapabilities::contains(Self, Self) -> Bool
+pub fn GatewayCapabilities::from_bits(UInt) -> Self
+pub fn GatewayCapabilities::none() -> Self
+pub impl BitAnd for GatewayCapabilities
+pub impl BitOr for GatewayCapabilities
+pub impl ToJson for GatewayCapabilities
+pub impl @debug.Debug for GatewayCapabilities
+
 pub(all) enum GatewayOpcode {
   Dispatch
   Heartbeat
@@ -1738,10 +1753,10 @@ pub(all) struct GuildScheduledEventRecurrenceRule {
   end : Nullable[Timestamp]?
   frequency : GuildScheduledEventRecurrenceRuleFrequency
   interval : Int
-  by_weekday : Array[GuildScheduledEventRecurrenceRuleWeekday]?
-  by_n_weekday : Array[GuildScheduledEventRecurrenceRuleNWeekday]?
-  by_month : Array[GuildScheduledEventRecurrenceRuleMonth]?
-  by_month_day : Array[Int]?
+  by_weekday : Nullable[Array[GuildScheduledEventRecurrenceRuleWeekday]]?
+  by_n_weekday : Nullable[Array[GuildScheduledEventRecurrenceRuleNWeekday]]?
+  by_month : Nullable[Array[GuildScheduledEventRecurrenceRuleMonth]]?
+  by_month_day : Nullable[Array[Int]]?
   by_year_day : Array[Int]?
   count : Int?
 } derive(ToJson, @debug.Debug, @json.FromJson)
@@ -2281,7 +2296,7 @@ pub(all) struct MediaGallery {
 
 pub(all) struct MediaGalleryItem {
   media : UnfurledMediaItem
-  description : String?
+  description : Nullable[String]?
   spoiler : Bool?
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
@@ -3373,13 +3388,13 @@ pub(all) struct ThreadMetadata {
   archive_timestamp : Timestamp
   locked : Bool
   invitable : Bool?
-  create_timestamp : Timestamp?
+  create_timestamp : Nullable[Timestamp]?
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct Thumbnail {
   id : Int?
   media : UnfurledMediaItem
-  description : String?
+  description : Nullable[String]?
   spoiler : Bool?
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
@@ -3427,8 +3442,8 @@ pub impl[T : @json.FromJson] @json.FromJson for Undefinable[T]
 pub(all) struct UnfurledMediaItem {
   url : String
   proxy_url : String?
-  height : Int?
-  width : Int?
+  height : Nullable[Int]?
+  width : Nullable[Int]?
   placeholder : String?
   placeholder_version : Int?
   content_type : String?

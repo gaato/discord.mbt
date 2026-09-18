@@ -25,6 +25,9 @@ async fn sec_gateway(p : P) -> Unit {
             @model.Intents::guild_voice_states(),
             @model.Intents::guild_messages(),
           ]),
+          // Opt into channel obfuscation (mandatory for all bots from
+          // 2026-11-16) so GUILD_CREATE exercises that decode path early.
+          capabilities=@model.GatewayCapabilities::channel_obfuscation(),
           gateway_url~,
         )
         // Wait for READY.
@@ -46,6 +49,23 @@ async fn sec_gateway(p : P) -> Unit {
             _ => ()
           }
         }
+        p.probe("gateway GUILD_CREATE (channel obfuscation capability)", () => {
+          for ;; {
+            match shard.next() {
+              Dispatch(GuildCreate(Available(created))) if created.guild.id == g => {
+                let obfuscated = created.channels
+                  .iter()
+                  .filter(channel => channel.is_obfuscated())
+                  .count()
+                return "channels=\{created.channels.length()} obfuscated=\{obfuscated}"
+              }
+              Dispatch(Unknown(t~, ..)) if t.has_prefix("DECODE_ERROR") =>
+                fail("GUILD_CREATE failed to decode: \{t}")
+              FatallyClosed(code~) => fail("fatally closed code=\{code}")
+              _ => ()
+            }
+          }
+        })
         p.probe("gateway latency (heartbeat ack)", () => {
           // Latency appears after the first heartbeat ack; wait briefly.
           for _ in 0..<20 {

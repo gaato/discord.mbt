@@ -57,6 +57,7 @@ test "channel decodes a guild text fixture" {
       #|  thread_member: None,
       #|  default_auto_archive_duration: Some(OneDay),
       #|  permissions: Some(1024),
+      #|  app_permissions: None,
       #|  flags: Some(0),
       #|  total_message_sent: None,
       #|  available_tags: None,
@@ -146,7 +147,7 @@ test "channel decodes a thread fixture with metadata and membership" {
       #|      archive_timestamp: "2024-01-02T03:04:05.000000+00:00",
       #|      locked: false,
       #|      invitable: Some(true),
-      #|      create_timestamp: Some("2024-01-01T03:04:05.000000+00:00"),
+      #|      create_timestamp: Some(Value("2024-01-01T03:04:05.000000+00:00")),
       #|    },
       #|  ),
       #|  thread_member: Some(
@@ -178,6 +179,7 @@ test "channel decodes a thread fixture with metadata and membership" {
       #|  ),
       #|  default_auto_archive_duration: None,
       #|  permissions: None,
+      #|  app_permissions: None,
       #|  flags: Some(2),
       #|  total_message_sent: Some(15),
       #|  available_tags: None,
@@ -307,6 +309,7 @@ test "channel decodes a minimal DM" {
       #|  thread_member: None,
       #|  default_auto_archive_duration: None,
       #|  permissions: None,
+      #|  app_permissions: None,
       #|  flags: None,
       #|  total_message_sent: None,
       #|  available_tags: None,
@@ -350,6 +353,7 @@ test "channel encode omits every absent variant field" {
     thread_member: None,
     default_auto_archive_duration: None,
     permissions: None,
+    app_permissions: None,
     flags: None,
     total_message_sent: None,
     available_tags: None,
@@ -424,6 +428,7 @@ test "channel decodes forum tags and defaults" {
       #|  thread_member: None,
       #|  default_auto_archive_duration: None,
       #|  permissions: None,
+      #|  app_permissions: None,
       #|  flags: None,
       #|  total_message_sent: None,
       #|  available_tags: Some(
@@ -521,4 +526,53 @@ test "followed channel JSON round trip" {
     @json.parse(encoded),
   )
   assert_eq(round_trip.to_json().stringify(), encoded)
+}
+
+///|
+test "channel decodes documented nulls and the obfuscated gateway shape" {
+  // Channel `application_id` is nullable since the 2026-08-05 docs change.
+  let guild_channel : @model.Channel = @json.from_json({
+    "id": "41771983423143937",
+    "type": 0,
+    "guild_id": "41771983423143937",
+    "application_id": Json::null(),
+    "app_permissions": "1024",
+  })
+  assert_true(guild_channel.application_id is Some(Null))
+  assert_true(guild_channel.app_permissions is Some(_))
+  assert_false(guild_channel.is_obfuscated())
+  // Shape documented in "Obfuscated Channels": only id/type/position/parent_id
+  // are reliable; everything else may be nulled or reduced.
+  let hidden : @model.Channel = @json.from_json({
+    "id": "41771983423143938",
+    "type": 0,
+    "guild_id": "41771983423143937",
+    "position": 3,
+    "parent_id": "41771983423143939",
+    "name": "___hidden___",
+    "topic": Json::null(),
+    "last_message_id": Json::null(),
+    "application_id": Json::null(),
+    "flags": 131072,
+    "permission_overwrites": [
+      { "id": "41771983423143937", "type": 0, "allow": "0", "deny": "1024" },
+    ],
+  })
+  assert_true(hidden.is_obfuscated())
+  assert_true(
+    hidden.flags.unwrap().contains(@model.ChannelFlags::channel_obfuscated()),
+  )
+  inspect(@model.ChannelFlags::is_spoiler_channel().bits(), content="2097152")
+}
+
+///|
+test "thread metadata accepts a null create_timestamp" {
+  let metadata : @model.ThreadMetadata = @json.from_json({
+    "archived": false,
+    "auto_archive_duration": 1440,
+    "archive_timestamp": "2021-04-12T23:40:39.855793+00:00",
+    "locked": false,
+    "create_timestamp": Json::null(),
+  })
+  assert_true(metadata.create_timestamp is Some(Null))
 }

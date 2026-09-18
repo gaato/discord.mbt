@@ -39,10 +39,10 @@ pub(all) struct GuildScheduledEventRecurrenceRule {
   end : Nullable[Timestamp]?
   frequency : GuildScheduledEventRecurrenceRuleFrequency
   interval : Int
-  by_weekday : Array[GuildScheduledEventRecurrenceRuleWeekday]?
-  by_n_weekday : Array[GuildScheduledEventRecurrenceRuleNWeekday]?
-  by_month : Array[GuildScheduledEventRecurrenceRuleMonth]?
-  by_month_day : Array[Int]?
+  by_weekday : Nullable[Array[GuildScheduledEventRecurrenceRuleWeekday]]?
+  by_n_weekday : Nullable[Array[GuildScheduledEventRecurrenceRuleNWeekday]]?
+  by_month : Nullable[Array[GuildScheduledEventRecurrenceRuleMonth]]?
+  by_month_day : Nullable[Array[Int]]?
   by_year_day : Array[Int]?
   count : Int?
 } derive(ToJson, FromJson, Debug)

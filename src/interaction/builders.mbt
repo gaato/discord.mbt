@@ -545,7 +545,7 @@ pub fn thumbnail(
       flags: None,
       attachment_id: None,
     },
-    description,
+    description: description.map(value => Value(value)),
     spoiler,
   })
 }
@@ -598,7 +598,7 @@ pub fn media_item(
       flags: None,
       attachment_id: None,
     },
-    description,
+    description: description.map(value => Value(value)),
     spoiler,
   }
 }

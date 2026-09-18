@@ -254,7 +254,7 @@ pub(all) struct TextDisplay {
 pub(all) struct Thumbnail {
   id : Int?
   media : UnfurledMediaItem
-  description : String?
+  description : Nullable[String]?
   spoiler : Bool?
 } derive(ToJson, FromJson, Debug)
 
@@ -269,7 +269,7 @@ pub(all) struct MediaGallery {
 /// One item in a media gallery.
 pub(all) struct MediaGalleryItem {
   media : UnfurledMediaItem
-  description : String?
+  description : Nullable[String]?
   spoiler : Bool?
 } derive(ToJson, FromJson, Debug)
 
@@ -366,8 +366,8 @@ pub(all) struct Checkbox {
 pub(all) struct UnfurledMediaItem {
   url : String
   proxy_url : String?
-  height : Int?
-  width : Int?
+  height : Nullable[Int]?
+  width : Nullable[Int]?
   placeholder : String?
   placeholder_version : Int?
   content_type : String?

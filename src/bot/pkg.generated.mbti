@@ -28,7 +28,7 @@ pub impl Show for BotError
 pub struct Bot {
   // private fields
 }
-pub fn Bot::Bot(@app.App, token~ : String, intents? : @model.Intents, client? : @http.Client, gateway_url? : String, shards? : ShardConfig, compress? : Bool, identify_queue? : &@queue.IdentifyQueue) -> Self
+pub fn Bot::Bot(@app.App, token~ : String, intents? : @model.Intents, capabilities? : @model.GatewayCapabilities, client? : @http.Client, gateway_url? : String, shards? : ShardConfig, compress? : Bool, identify_queue? : &@queue.IdentifyQueue) -> Self
 pub fn Bot::attach_cache(Self, @cache.InMemoryCache) -> Unit
 pub fn Bot::middleware(Self, async (GatewayCtx, @model.Event, async (@model.Event) -> Unit) -> Unit) -> Unit
 pub fn[T] Bot::on(Self, EventType[T], async (GatewayCtx, T) -> Unit) -> Unit

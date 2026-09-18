@@ -157,6 +157,7 @@ test "slash command autocomplete dispatches command data with resolved users" {
       #|      thread_member: None,
       #|      default_auto_archive_duration: None,
       #|      permissions: None,
+      #|      app_permissions: None,
       #|      flags: None,
       #|      total_message_sent: None,
       #|      available_tags: None,

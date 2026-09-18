@@ -602,3 +602,24 @@ test "file component round-trips" {
     },
   )
 }
+
+///|
+test "components v2 media accept documented null description and size" {
+  let component : @model.Component = @json.from_json({
+    "type": 11,
+    "media": {
+      "url": "https://example.com/a.png",
+      "width": Json::null(),
+      "height": Json::null(),
+    },
+    "description": Json::null(),
+  })
+  guard component is Thumbnail(thumbnail) else { fail("expected thumbnail") }
+  assert_true(thumbnail.description is Some(Null))
+  assert_true(thumbnail.media.width is Some(Null))
+  let item : @model.MediaGalleryItem = @json.from_json({
+    "media": { "url": "https://example.com/b.png" },
+    "description": Json::null(),
+  })
+  assert_true(item.description is Some(Null))
+}

@@ -229,6 +229,8 @@ pub using @http {type FileUpload}
 
 pub using @framework {type Framework}
 
+pub using @model {type GatewayCapabilities}
+
 pub using @bot {type GatewayCtx}
 
 pub using @http {type GlobalCommandRef}

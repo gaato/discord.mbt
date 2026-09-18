@@ -351,6 +351,7 @@ test "message decodes a full fixture with a string nonce and nested reference" {
       #|      thread_member: None,
       #|      default_auto_archive_duration: None,
       #|      permissions: None,
+      #|      app_permissions: None,
       #|      flags: None,
       #|      total_message_sent: None,
       #|      available_tags: None,
