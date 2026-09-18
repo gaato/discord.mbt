@@ -257,6 +257,68 @@ async fn sec_commands(p : P) -> Unit {
   p.probe_err("get_application_activity_instance (bogus)", expect=[400, 404], () => {
     c.get_application_activity_instance(a, "i-bogus") |> ignore
   })
+
+  // Application Identity Profiles require a user who authorized the write
+  // scope. A bogus user exercises the routes against our own application
+  // without creating identity state for a real user.
+  let bogus_identity_user : @model.UserId = Id(1234567890123456789UL)
+  p.probe_err(
+    "update_application_identity_profile (bogus user)",
+    expect=[400, 401, 403, 404],
+    () => {
+      c.update_application_identity_profile(
+        application_id=a,
+        user_id=bogus_identity_user,
+        provider_issued_user_id="live-probe-bogus",
+        username="live-probe",
+      )
+    },
+  )
+  p.probe_err(
+    "get_application_identity_profile (bogus user)",
+    expect=[400, 401, 403, 404],
+    () => {
+      c.get_application_identity_profile(
+        application_id=a,
+        user_id=bogus_identity_user,
+        provider_issued_user_id="live-probe-bogus",
+      )
+      |> ignore
+    },
+  )
+  p.probe_err(
+    "get_application_identities_by_user_id (bogus user)",
+    expect=[400, 401, 403, 404],
+    () => {
+      c.get_application_identities_by_user_id(
+        user_id=bogus_identity_user,
+        application_id=a,
+      )
+      |> ignore
+    },
+  )
+  // Documented: an unmatched external id yields an empty `identities` list.
+  p.probe("get_application_identities_by_external_id (unmatched)", () => {
+    let identities = c.get_application_identities_by_external_id(
+      application_id=a,
+      provider_type="NONE",
+      provider_issued_user_id="live-probe-bogus",
+      provider_id="live probe/unmatched",
+    )
+    "count=\{identities.length()}"
+  })
+  p.probe_err(
+    "delete_application_identity (bogus user)",
+    expect=[400, 401, 403, 404],
+    () => {
+      c.delete_application_identity(
+        user_id=bogus_identity_user,
+        application_id=a,
+        provider_type="NONE",
+        provider_issued_user_id="live-probe-bogus",
+      )
+    },
+  )
 }
 
 ///|

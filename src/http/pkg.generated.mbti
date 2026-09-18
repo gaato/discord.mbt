@@ -45,6 +45,13 @@ pub async fn ApplicationEmojiRef::delete(Self) -> Unit raise DiscordHttpError
 pub async fn ApplicationEmojiRef::edit(Self, String) -> @model.Emoji raise DiscordHttpError
 pub async fn ApplicationEmojiRef::fetch(Self) -> @model.Emoji raise DiscordHttpError
 
+pub struct ApplicationIdentityRef {
+  // private fields
+}
+pub async fn ApplicationIdentityRef::delete(Self, provider_id? : String) -> Unit raise DiscordHttpError
+pub async fn ApplicationIdentityRef::profile(Self) -> @model.ApplicationIdentityProfile raise DiscordHttpError
+pub async fn ApplicationIdentityRef::update_profile(Self, username? : String, data? : @model.ApplicationIdentityProfileData) -> Unit raise DiscordHttpError
+
 pub struct ApplicationRef {
   // private fields
 }
@@ -64,6 +71,9 @@ pub async fn ApplicationRef::global_commands(Self, with_localizations? : Bool) -
 pub async fn ApplicationRef::guild_command_permissions(Self, @model.Id[@model.GuildMarker]) -> Array[@model.GuildApplicationCommandPermissions] raise DiscordHttpError
 pub fn ApplicationRef::guild_command_ref(Self, @model.Id[@model.GuildMarker], @model.Id[@model.CommandMarker]) -> GuildCommandRef
 pub async fn ApplicationRef::guild_commands(Self, @model.Id[@model.GuildMarker], with_localizations? : Bool) -> Array[@model.ApplicationCommand] raise DiscordHttpError
+pub async fn ApplicationRef::identities_by_external_id(Self, provider_type~ : String, provider_issued_user_id~ : String, provider_id? : String) -> Array[@model.ApplicationIdentity] raise DiscordHttpError
+pub async fn ApplicationRef::identities_by_user_id(Self, user_id~ : @model.Id[@model.UserMarker]) -> Array[@model.ApplicationIdentity] raise DiscordHttpError
+pub fn ApplicationRef::identity_ref(Self, user_id~ : @model.Id[@model.UserMarker], provider_type~ : String, provider_issued_user_id~ : String) -> ApplicationIdentityRef
 pub async fn ApplicationRef::role_connection_metadata(Self) -> Array[@model.ApplicationRoleConnectionMetadata] raise DiscordHttpError
 pub fn ApplicationRef::sku_ref(Self, @model.Id[@model.SkuMarker]) -> SkuRef
 pub async fn ApplicationRef::skus(Self) -> Array[@model.Sku] raise DiscordHttpError
@@ -125,6 +135,7 @@ pub async fn Client::add_guild_member(Self, @model.Id[@model.GuildMarker], @mode
 pub async fn Client::add_member_role(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker], @model.Id[@model.RoleMarker], audit_reason? : String) -> Unit raise DiscordHttpError
 pub async fn Client::add_thread_member(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.UserMarker]) -> Unit raise DiscordHttpError
 pub fn Client::application_emoji_ref(Self, @model.Id[@model.ApplicationMarker], @model.Id[@model.EmojiMarker]) -> ApplicationEmojiRef
+pub fn Client::application_identity_ref(Self, application_id~ : @model.Id[@model.ApplicationMarker], user_id~ : @model.Id[@model.UserMarker], provider_type~ : String, provider_issued_user_id~ : String) -> ApplicationIdentityRef
 pub fn Client::application_ref(Self, @model.Id[@model.ApplicationMarker]) -> ApplicationRef
 pub fn Client::auto_moderation_rule_ref(Self, @model.Id[@model.GuildMarker], @model.Id[@model.AutoModerationRuleMarker]) -> AutoModerationRuleRef
 pub async fn Client::begin_guild_prune(Self, @model.Id[@model.GuildMarker], days? : Int, compute_prune_count? : Bool, include_roles? : Array[@model.Id[@model.RoleMarker]], audit_reason? : String) -> @model.GuildPruneResult raise DiscordHttpError
@@ -162,6 +173,7 @@ pub async fn Client::crosspost_message(Self, @model.Id[@model.ChannelMarker], @m
 pub async fn Client::delete_all_reactions(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker]) -> Unit raise DiscordHttpError
 pub async fn Client::delete_all_reactions_for_emoji(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], String) -> Unit raise DiscordHttpError
 pub async fn Client::delete_application_emoji(Self, @model.Id[@model.ApplicationMarker], @model.Id[@model.EmojiMarker]) -> Unit raise DiscordHttpError
+pub async fn Client::delete_application_identity(Self, user_id~ : @model.Id[@model.UserMarker], application_id~ : @model.Id[@model.ApplicationMarker], provider_type~ : String, provider_issued_user_id~ : String, provider_id? : String) -> Unit raise DiscordHttpError
 pub async fn Client::delete_auto_moderation_rule(Self, @model.Id[@model.GuildMarker], @model.Id[@model.AutoModerationRuleMarker], audit_reason? : String) -> Unit raise DiscordHttpError
 pub async fn Client::delete_channel(Self, @model.Id[@model.ChannelMarker], audit_reason? : String) -> @model.Channel raise DiscordHttpError
 pub async fn Client::delete_channel_permission(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.GenericMarker], audit_reason? : String) -> Unit raise DiscordHttpError
@@ -205,6 +217,9 @@ pub async fn Client::follow_announcement_channel(Self, @model.Id[@model.ChannelM
 pub async fn Client::get_application_activity_instance(Self, @model.Id[@model.ApplicationMarker], String) -> @model.ActivityInstance raise DiscordHttpError
 pub async fn Client::get_application_command_permissions(Self, @model.Id[@model.ApplicationMarker], @model.Id[@model.GuildMarker], @model.Id[@model.CommandMarker]) -> @model.GuildApplicationCommandPermissions raise DiscordHttpError
 pub async fn Client::get_application_emoji(Self, @model.Id[@model.ApplicationMarker], @model.Id[@model.EmojiMarker]) -> @model.Emoji raise DiscordHttpError
+pub async fn Client::get_application_identities_by_external_id(Self, application_id~ : @model.Id[@model.ApplicationMarker], provider_type~ : String, provider_issued_user_id~ : String, provider_id? : String) -> Array[@model.ApplicationIdentity] raise DiscordHttpError
+pub async fn Client::get_application_identities_by_user_id(Self, user_id~ : @model.Id[@model.UserMarker], application_id~ : @model.Id[@model.ApplicationMarker]) -> Array[@model.ApplicationIdentity] raise DiscordHttpError
+pub async fn Client::get_application_identity_profile(Self, application_id~ : @model.Id[@model.ApplicationMarker], user_id~ : @model.Id[@model.UserMarker], provider_issued_user_id~ : String) -> @model.ApplicationIdentityProfile raise DiscordHttpError
 pub async fn Client::get_application_role_connection_metadata_records(Self, @model.Id[@model.ApplicationMarker]) -> Array[@model.ApplicationRoleConnectionMetadata] raise DiscordHttpError
 pub async fn Client::get_auto_moderation_rule(Self, @model.Id[@model.GuildMarker], @model.Id[@model.AutoModerationRuleMarker]) -> @model.AutoModerationRule raise DiscordHttpError
 pub async fn Client::get_channel(Self, @model.Id[@model.ChannelMarker]) -> @model.Channel raise DiscordHttpError
@@ -360,6 +375,7 @@ pub fn Client::sticker_ref(Self, @model.Id[@model.GuildMarker], @model.Id[@model
 pub async fn Client::sync_guild_template(Self, @model.Id[@model.GuildMarker], String) -> @model.GuildTemplate raise DiscordHttpError
 pub async fn Client::trigger_typing(Self, @model.Id[@model.ChannelMarker]) -> Unit raise DiscordHttpError
 pub async fn Client::unpin_message(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], audit_reason? : String) -> Unit raise DiscordHttpError
+pub async fn Client::update_application_identity_profile(Self, application_id~ : @model.Id[@model.ApplicationMarker], user_id~ : @model.Id[@model.UserMarker], provider_issued_user_id~ : String, username? : String, data? : @model.ApplicationIdentityProfileData) -> Unit raise DiscordHttpError
 pub async fn Client::update_application_role_connection_metadata_records(Self, @model.Id[@model.ApplicationMarker], Array[@model.ApplicationRoleConnectionMetadata]) -> Array[@model.ApplicationRoleConnectionMetadata] raise DiscordHttpError
 pub async fn Client::update_current_user_application_role_connection(Self, @model.Id[@model.ApplicationMarker], platform_name? : String, platform_username? : String, metadata? : Json, bearer_token~ : String) -> @model.ApplicationRoleConnection raise DiscordHttpError
 pub async fn Client::update_invite_target_users(Self, String, FileUpload) -> Unit raise DiscordHttpError
@@ -555,6 +571,11 @@ pub(all) enum Route {
   GetCurrentApplication
   EditCurrentApplication
   GetApplicationActivityInstance(application_id~ : @model.Id[@model.ApplicationMarker], instance_id~ : String)
+  UpdateApplicationIdentityProfile(application_id~ : @model.Id[@model.ApplicationMarker], user_id~ : @model.Id[@model.UserMarker], provider_issued_user_id~ : String)
+  GetApplicationIdentityProfile(application_id~ : @model.Id[@model.ApplicationMarker], user_id~ : @model.Id[@model.UserMarker], provider_issued_user_id~ : String)
+  GetApplicationIdentitiesByUserId(user_id~ : @model.Id[@model.UserMarker], application_id~ : @model.Id[@model.ApplicationMarker])
+  GetApplicationIdentitiesByExternalId(application_id~ : @model.Id[@model.ApplicationMarker], provider_type~ : String, provider_issued_user_id~ : String, query~ : String)
+  DeleteApplicationIdentity(user_id~ : @model.Id[@model.UserMarker], application_id~ : @model.Id[@model.ApplicationMarker], provider_type~ : String, provider_issued_user_id~ : String)
   GetApplicationRoleConnectionMetadataRecords(application_id~ : @model.Id[@model.ApplicationMarker])
   UpdateApplicationRoleConnectionMetadataRecords(application_id~ : @model.Id[@model.ApplicationMarker])
   ListApplicationEmojis(application_id~ : @model.Id[@model.ApplicationMarker])
@@ -808,6 +829,8 @@ pub async fn TemplateRef::sync(Self) -> @model.GuildTemplate raise DiscordHttpEr
 pub struct UserRef {
   // private fields
 }
+pub async fn UserRef::application_identities(Self, application_id~ : @model.Id[@model.ApplicationMarker]) -> Array[@model.ApplicationIdentity] raise DiscordHttpError
+pub fn UserRef::application_identity_ref(Self, application_id~ : @model.Id[@model.ApplicationMarker], provider_type~ : String, provider_issued_user_id~ : String) -> ApplicationIdentityRef
 pub async fn UserRef::dm(Self) -> ChannelRef raise DiscordHttpError
 pub async fn UserRef::fetch(Self) -> @model.User raise DiscordHttpError
 

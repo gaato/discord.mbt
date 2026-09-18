@@ -303,6 +303,73 @@ pub impl ToJson for ApplicationFlags
 pub impl @debug.Debug for ApplicationFlags
 pub impl @json.FromJson for ApplicationFlags
 
+pub(all) struct ApplicationIdentity {
+  user_id : Id[UserMarker]?
+  provider_type : String
+  provider_id : String?
+  provider_issued_user_id : String
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum ApplicationIdentityDynamicField {
+  StringField(ApplicationIdentityDynamicStringField)
+  NumberField(ApplicationIdentityDynamicNumberField)
+  MediaField(ApplicationIdentityDynamicMediaField)
+  Unknown(Json)
+} derive(@debug.Debug)
+pub impl ToJson for ApplicationIdentityDynamicField
+pub impl @json.FromJson for ApplicationIdentityDynamicField
+
+pub(all) struct ApplicationIdentityDynamicMediaField {
+  name : String
+  value : ApplicationIdentityProfileMedia
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ApplicationIdentityDynamicNumberField {
+  name : String
+  value : Double
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ApplicationIdentityDynamicStringField {
+  name : String
+  value : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ApplicationIdentityPrimaryProfileData {
+  season : String?
+  rank_name : String?
+  rank_image : ApplicationIdentityProfileMedia?
+  highest_rank : String?
+  highest_rank_image : ApplicationIdentityProfileMedia?
+  featured_played_character : String?
+  featured_played_character_image : ApplicationIdentityProfileMedia?
+  playtime_hours : Double?
+  total_wins : Int?
+  current_period_wins : Int?
+  total_games : Int?
+  current_period_games : Int?
+  total_kills : Int?
+  current_period_kills : Int?
+  total_assists : Int?
+  current_period_assists : Int?
+  total_deaths : Int?
+  current_period_deaths : Int?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ApplicationIdentityProfile {
+  username : Nullable[String]
+  metadata : Nullable[Json]
+  data : Nullable[ApplicationIdentityProfileData]
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ApplicationIdentityProfileData {
+  primary : ApplicationIdentityPrimaryProfileData?
+  dynamic : Array[ApplicationIdentityDynamicField]?
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ApplicationIdentityProfileMedia {
+  url : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) enum ApplicationIntegrationType {
   GuildInstall
   UserInstall

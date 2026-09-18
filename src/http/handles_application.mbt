@@ -6,6 +6,16 @@ pub struct ApplicationRef {
 }
 
 ///|
+/// One external application identity bound to the REST client.
+pub struct ApplicationIdentityRef {
+  priv client : Client
+  priv application_id : @model.ApplicationId
+  priv user_id : @model.UserId
+  priv provider_type : String
+  priv provider_issued_user_id : String
+}
+
+///|
 /// An application emoji id and its application id bound to the REST client.
 pub struct ApplicationEmojiRef {
   priv client : Client
@@ -52,6 +62,24 @@ pub fn Client::application_ref(
   application_id : @model.ApplicationId,
 ) -> ApplicationRef {
   { client: self, application_id, }
+}
+
+///|
+/// Bind the complete key of an application identity to this client.
+pub fn Client::application_identity_ref(
+  self : Client,
+  application_id~ : @model.ApplicationId,
+  user_id~ : @model.UserId,
+  provider_type~ : String,
+  provider_issued_user_id~ : String,
+) -> ApplicationIdentityRef {
+  {
+    client: self,
+    application_id,
+    user_id,
+    provider_type,
+    provider_issued_user_id,
+  }
 }
 
 ///|
@@ -111,6 +139,23 @@ pub fn ApplicationRef::emoji_ref(
 }
 
 ///|
+/// Bind one external identity in this application to the client.
+pub fn ApplicationRef::identity_ref(
+  self : ApplicationRef,
+  user_id~ : @model.UserId,
+  provider_type~ : String,
+  provider_issued_user_id~ : String,
+) -> ApplicationIdentityRef {
+  {
+    client: self.client,
+    application_id: self.application_id,
+    user_id,
+    provider_type,
+    provider_issued_user_id,
+  }
+}
+
+///|
 /// Bind a global command id in this application to the client.
 pub fn ApplicationRef::global_command_ref(
   self : ApplicationRef,
@@ -162,6 +207,77 @@ pub async fn ApplicationRef::activity_instance(
   self.client.get_application_activity_instance(
     self.application_id,
     instance_id,
+  )
+}
+
+///|
+/// List application identities associated with a Discord user.
+pub async fn ApplicationRef::identities_by_user_id(
+  self : ApplicationRef,
+  user_id~ : @model.UserId,
+) -> Array[@model.ApplicationIdentity] raise DiscordHttpError {
+  self.client.get_application_identities_by_user_id(
+    user_id~,
+    application_id=self.application_id,
+  )
+}
+
+///|
+/// Resolve identities in this application from an external provider key.
+pub async fn ApplicationRef::identities_by_external_id(
+  self : ApplicationRef,
+  provider_type~ : String,
+  provider_issued_user_id~ : String,
+  provider_id? : String,
+) -> Array[@model.ApplicationIdentity] raise DiscordHttpError {
+  self.client.get_application_identities_by_external_id(
+    application_id=self.application_id,
+    provider_type~,
+    provider_issued_user_id~,
+    provider_id?,
+  )
+}
+
+///|
+/// Fetch this identity's profile.
+pub async fn ApplicationIdentityRef::profile(
+  self : ApplicationIdentityRef,
+) -> @model.ApplicationIdentityProfile raise DiscordHttpError {
+  self.client.get_application_identity_profile(
+    application_id=self.application_id,
+    user_id=self.user_id,
+    provider_issued_user_id=self.provider_issued_user_id,
+  )
+}
+
+///|
+/// Update this identity's profile. Supplying `data` replaces it in full.
+pub async fn ApplicationIdentityRef::update_profile(
+  self : ApplicationIdentityRef,
+  username? : String,
+  data? : @model.ApplicationIdentityProfileData,
+) -> Unit raise DiscordHttpError {
+  self.client.update_application_identity_profile(
+    application_id=self.application_id,
+    user_id=self.user_id,
+    provider_issued_user_id=self.provider_issued_user_id,
+    username?,
+    data?,
+  )
+}
+
+///|
+/// Delete this identity and its associated profile.
+pub async fn ApplicationIdentityRef::delete(
+  self : ApplicationIdentityRef,
+  provider_id? : String,
+) -> Unit raise DiscordHttpError {
+  self.client.delete_application_identity(
+    user_id=self.user_id,
+    application_id=self.application_id,
+    provider_type=self.provider_type,
+    provider_issued_user_id=self.provider_issued_user_id,
+    provider_id?,
   )
 }
 

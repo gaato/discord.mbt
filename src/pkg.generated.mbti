@@ -155,6 +155,8 @@ pub using @app {type AppCtx}
 
 pub using @http {type ApplicationEmojiRef}
 
+pub using @http {type ApplicationIdentityRef}
+
 pub using @http {type ApplicationRef}
 
 pub using @interaction {type Arg}

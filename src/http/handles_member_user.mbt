@@ -159,6 +159,34 @@ pub async fn UserRef::fetch(
 }
 
 ///|
+/// List this user's external identities for an application.
+pub async fn UserRef::application_identities(
+  self : UserRef,
+  application_id~ : @model.ApplicationId,
+) -> Array[@model.ApplicationIdentity] raise DiscordHttpError {
+  self.client.get_application_identities_by_user_id(
+    user_id=self.user_id,
+    application_id~,
+  )
+}
+
+///|
+/// Bind one application identity belonging to this user.
+pub fn UserRef::application_identity_ref(
+  self : UserRef,
+  application_id~ : @model.ApplicationId,
+  provider_type~ : String,
+  provider_issued_user_id~ : String,
+) -> ApplicationIdentityRef {
+  self.client.application_identity_ref(
+    application_id~,
+    user_id=self.user_id,
+    provider_type~,
+    provider_issued_user_id~,
+  )
+}
+
+///|
 /// Open or reuse a DM channel with this user and bind it to the client.
 pub async fn UserRef::dm(self : UserRef) -> ChannelRef raise DiscordHttpError {
   let channel = self.client.create_dm(self.user_id)

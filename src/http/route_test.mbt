@@ -401,7 +401,7 @@ test "channels and messages batch REST route metadata" {
   let user_id : @model.UserId = Id(30UL)
   let guild_id : @model.GuildId = Id(40UL)
   let routes : Array[@http.Route] = [
-    DeleteAllReactionsForEmoji(channel_id~, message_id~, emoji="party%3A50"),
+    DeleteAllReactionsForEmoji(channel_id~, message_id~, emoji="party:50"),
     CrosspostMessage(channel_id~, message_id~),
     FollowAnnouncementChannel(channel_id~),
     SetVoiceChannelStatus(channel_id~),
@@ -1320,18 +1320,18 @@ test "reaction buckets squash message emoji and user ids" {
   let own = @http.Route::DeleteOwnReaction(
     channel_id~,
     message_id=first_message,
-    emoji="wave%3A40",
+    emoji="wave:40",
   )
   let first_user_reaction = @http.Route::DeleteUserReaction(
     channel_id~,
     message_id=first_message,
-    emoji="wave%3A40",
+    emoji="wave:40",
     user_id=first_user,
   )
   let second_user_reaction = @http.Route::DeleteUserReaction(
     channel_id~,
     message_id=second_message,
-    emoji="future%3A41",
+    emoji="future:41",
     user_id=second_user,
   )
   inspect(own.bucket(), content="DELETE:/channels/10/messages/{}/reactions/{}")
@@ -1340,7 +1340,7 @@ test "reaction buckets squash message emoji and user ids" {
   let get = @http.Route::GetReactions(
     channel_id~,
     message_id=first_message,
-    emoji="wave%3A40",
+    emoji="wave:40",
     query="?limit=25&after=30",
   )
   inspect(

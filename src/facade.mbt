@@ -25,6 +25,7 @@ pub using @dhttp {
   type WebhookMessageRef,
   type InviteRef,
   type ApplicationRef,
+  type ApplicationIdentityRef,
   type ApplicationEmojiRef,
   type GlobalCommandRef,
   type GuildCommandRef,

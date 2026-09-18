@@ -30,7 +30,7 @@ test "route regression table covers every previously uncovered metadata arm" {
       "DELETE:/channels/30",
     ),
     (
-      CreateReaction(channel_id~, message_id~, emoji="wave%3A80"),
+      CreateReaction(channel_id~, message_id~, emoji="wave:80"),
       "Put",
       "/channels/30/messages/40/reactions/wave%3A80/@me",
       "PUT:/channels/30/messages/{}/reactions/{}",

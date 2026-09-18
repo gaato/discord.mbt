@@ -330,7 +330,7 @@ pub async fn Client::search_guild_members(
     raise Validation(message="member query must not be empty")
   }
   validate_range("member limit", limit, min=1, max=1000)
-  let query = percent_encode_query_text(query)
+  let query = percent_encode(query)
   let suffix = match limit {
     None => "?query=\{query}"
     Some(value) => "?query=\{query}&limit=\{value}"

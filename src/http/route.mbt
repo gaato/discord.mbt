@@ -13,6 +13,8 @@ pub(all) suberror CustomRouteError {
 /// One variant per Discord REST endpoint. A route knows its HTTP method, its
 /// concrete path (including query string), and its rate-limit bucket key
 /// (path template with major parameters kept and minor ones squashed).
+/// Free-form string segments (emoji, invite/template codes, external
+/// identity ids) are held raw and percent-encoded by `Route::path`.
 pub(all) enum Route {
   Custom(
     request_method~ : @ahttp.RequestMethod,
@@ -28,6 +30,32 @@ pub(all) enum Route {
   GetApplicationActivityInstance(
     application_id~ : @model.ApplicationId,
     instance_id~ : String
+  )
+  UpdateApplicationIdentityProfile(
+    application_id~ : @model.ApplicationId,
+    user_id~ : @model.UserId,
+    provider_issued_user_id~ : String
+  )
+  GetApplicationIdentityProfile(
+    application_id~ : @model.ApplicationId,
+    user_id~ : @model.UserId,
+    provider_issued_user_id~ : String
+  )
+  GetApplicationIdentitiesByUserId(
+    user_id~ : @model.UserId,
+    application_id~ : @model.ApplicationId
+  )
+  GetApplicationIdentitiesByExternalId(
+    application_id~ : @model.ApplicationId,
+    provider_type~ : String,
+    provider_issued_user_id~ : String,
+    query~ : String
+  )
+  DeleteApplicationIdentity(
+    user_id~ : @model.UserId,
+    application_id~ : @model.ApplicationId,
+    provider_type~ : String,
+    provider_issued_user_id~ : String
   )
   GetApplicationRoleConnectionMetadataRecords(
     application_id~ : @model.ApplicationId
@@ -517,6 +545,9 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | GetGatewayBot
     | GetCurrentApplication
     | GetApplicationActivityInstance(..)
+    | GetApplicationIdentityProfile(..)
+    | GetApplicationIdentitiesByUserId(..)
+    | GetApplicationIdentitiesByExternalId(..)
     | GetApplicationRoleConnectionMetadataRecords(..)
     | ListApplicationEmojis(..)
     | GetApplicationEmoji(..)
@@ -638,9 +669,11 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | CreateInteractionResponse(..)
     | CreateFollowupMessage(..)
     | CreateGlobalCommand(..)
-    | CreateGuildCommand(..) => Post
+    | CreateGuildCommand(..)
+    | DeleteApplicationIdentity(..) => Post
     ModifyCurrentUser
     | EditCurrentApplication
+    | UpdateApplicationIdentityProfile(..)
     | ModifyChannel(..)
     | EditMessage(..)
     | ModifyGuild(..)
@@ -734,7 +767,34 @@ pub fn Route::path(self : Route) -> String {
     GetGatewayBot => "/gateway/bot"
     GetCurrentApplication | EditCurrentApplication => "/applications/@me"
     GetApplicationActivityInstance(application_id~, instance_id~) =>
-      "/applications/\{application_id}/activity-instances/\{instance_id}"
+      "/applications/\{application_id}/activity-instances/\{percent_encode(instance_id)}"
+    UpdateApplicationIdentityProfile(
+      application_id~,
+      user_id~,
+      provider_issued_user_id~
+    )
+    | GetApplicationIdentityProfile(
+      application_id~,
+      user_id~,
+      provider_issued_user_id~
+    ) =>
+      "/applications/\{application_id}/users/\{user_id}/identities/\{percent_encode(provider_issued_user_id)}/profile"
+    GetApplicationIdentitiesByUserId(user_id~, application_id~) =>
+      "/users/\{user_id}/application-identities/\{application_id}"
+    GetApplicationIdentitiesByExternalId(
+      application_id~,
+      provider_type~,
+      provider_issued_user_id~,
+      query~
+    ) =>
+      "/applications/\{application_id}/application-identities/\{percent_encode(provider_type)}/\{percent_encode(provider_issued_user_id)}\{query}"
+    DeleteApplicationIdentity(
+      user_id~,
+      application_id~,
+      provider_type~,
+      provider_issued_user_id~
+    ) =>
+      "/users/\{user_id}/application-identities/\{application_id}/\{percent_encode(provider_type)}/\{percent_encode(provider_issued_user_id)}/delete"
     GetApplicationRoleConnectionMetadataRecords(application_id~)
     | UpdateApplicationRoleConnectionMetadataRecords(application_id~) =>
       "/applications/\{application_id}/role-connections/metadata"
@@ -787,17 +847,17 @@ pub fn Route::path(self : Route) -> String {
       "/channels/\{channel_id}/messages/bulk-delete"
     CreateReaction(channel_id~, message_id~, emoji~)
     | DeleteOwnReaction(channel_id~, message_id~, emoji~) =>
-      "/channels/\{channel_id}/messages/\{message_id}/reactions/\{emoji}/@me"
+      "/channels/\{channel_id}/messages/\{message_id}/reactions/\{percent_encode(emoji)}/@me"
     DeleteUserReaction(channel_id~, message_id~, emoji~, user_id~) =>
-      "/channels/\{channel_id}/messages/\{message_id}/reactions/\{emoji}/\{user_id}"
+      "/channels/\{channel_id}/messages/\{message_id}/reactions/\{percent_encode(emoji)}/\{user_id}"
     DeleteAllReactions(channel_id~, message_id~) =>
       "/channels/\{channel_id}/messages/\{message_id}/reactions"
     DeleteAllReactionsForEmoji(channel_id~, message_id~, emoji~) =>
-      "/channels/\{channel_id}/messages/\{message_id}/reactions/\{emoji}"
+      "/channels/\{channel_id}/messages/\{message_id}/reactions/\{percent_encode(emoji)}"
     CrosspostMessage(channel_id~, message_id~) =>
       "/channels/\{channel_id}/messages/\{message_id}/crosspost"
     GetReactions(channel_id~, message_id~, emoji~, query~) =>
-      "/channels/\{channel_id}/messages/\{message_id}/reactions/\{emoji}\{query}"
+      "/channels/\{channel_id}/messages/\{message_id}/reactions/\{percent_encode(emoji)}\{query}"
     GetPollAnswerVoters(channel_id~, message_id~, answer_id~, query~) =>
       "/channels/\{channel_id}/polls/\{message_id}/answers/\{answer_id}\{query}"
     ExpirePoll(channel_id~, message_id~) =>
@@ -946,22 +1006,23 @@ pub fn Route::path(self : Route) -> String {
       "/guilds/\{guild_id}/voice-states/\{user_id}"
     GetGuildTemplate(template_code~)
     | CreateGuildFromTemplate(template_code~) =>
-      "/guilds/templates/\{template_code}"
+      "/guilds/templates/\{percent_encode(template_code)}"
     GetGuildTemplates(guild_id~) | CreateGuildTemplate(guild_id~) =>
       "/guilds/\{guild_id}/templates"
     SyncGuildTemplate(guild_id~, template_code~)
     | ModifyGuildTemplate(guild_id~, template_code~)
     | DeleteGuildTemplate(guild_id~, template_code~) =>
-      "/guilds/\{guild_id}/templates/\{template_code}"
+      "/guilds/\{guild_id}/templates/\{percent_encode(template_code)}"
     CreateStageInstance => "/stage-instances"
     GetStageInstance(channel_id~)
     | ModifyStageInstance(channel_id~)
     | DeleteStageInstance(channel_id~) => "/stage-instances/\{channel_id}"
-    GetInvite(code~, query~) => "/invites/\{code}\{query}"
-    DeleteInvite(code~) => "/invites/\{code}"
-    UpdateInviteTargetUsers(code~) => "/invites/\{code}/target-users"
+    GetInvite(code~, query~) => "/invites/\{percent_encode(code)}\{query}"
+    DeleteInvite(code~) => "/invites/\{percent_encode(code)}"
+    UpdateInviteTargetUsers(code~) =>
+      "/invites/\{percent_encode(code)}/target-users"
     GetInviteTargetUsersJobStatus(code~) =>
-      "/invites/\{code}/target-users/job-status"
+      "/invites/\{percent_encode(code)}/target-users/job-status"
     GetWebhook(webhook_id~)
     | ModifyWebhook(webhook_id~)
     | DeleteWebhook(webhook_id~) => "/webhooks/\{webhook_id}"
@@ -1030,6 +1091,16 @@ pub fn Route::bucket(self : Route) -> String {
     EditCurrentApplication => "PATCH:/applications/@me"
     GetApplicationActivityInstance(application_id~, ..) =>
       "GET:/applications/\{application_id}/activity-instances/{}"
+    UpdateApplicationIdentityProfile(application_id~, ..) =>
+      "PATCH:/applications/\{application_id}/users/{}/identities/{}/profile"
+    GetApplicationIdentityProfile(application_id~, ..) =>
+      "GET:/applications/\{application_id}/users/{}/identities/{}/profile"
+    GetApplicationIdentitiesByUserId(application_id~, ..) =>
+      "GET:/users/{}/application-identities/\{application_id}"
+    GetApplicationIdentitiesByExternalId(application_id~, ..) =>
+      "GET:/applications/\{application_id}/application-identities/{}/{}"
+    DeleteApplicationIdentity(application_id~, ..) =>
+      "POST:/users/{}/application-identities/\{application_id}/{}/{}/delete"
     GetApplicationRoleConnectionMetadataRecords(application_id~) =>
       "GET:/applications/\{application_id}/role-connections/metadata"
     UpdateApplicationRoleConnectionMetadataRecords(application_id~) =>

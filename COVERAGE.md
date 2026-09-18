@@ -75,6 +75,16 @@ The mechanical diff needs manual review afterwards:
 - [x] PATCH /applications/@me — Edit Current Application (`Client::edit_current_application`)
 - [x] GET /applications/{id}/activity-instances/{instance_id} — Get Application Activity Instance (`Client::get_application_activity_instance`)
 
+## Application Identity Profiles
+
+Source: Discord changelog 2026-08-26, “Game Stats Widgets”.
+
+- [x] PATCH /applications/{application_id}/users/{user_id}/identities/{provider_issued_user_id}/profile — Update Application Identity Profile (`Client::update_application_identity_profile`)
+- [x] GET /applications/{application_id}/users/{user_id}/identities/{provider_issued_user_id}/profile — Get Application Identity Profile (`Client::get_application_identity_profile`)
+- [x] GET /users/{user_id}/application-identities/{application_id} — Get Application Identities by User ID (`Client::get_application_identities_by_user_id`)
+- [x] GET /applications/{application_id}/application-identities/{provider_type}/{provider_issued_user_id} — Get Application Identities by External ID (`Client::get_application_identities_by_external_id`)
+- [x] POST /users/{user_id}/application-identities/{application_id}/{provider_type}/{provider_issued_user_id}/delete — Delete Application Identity (`Client::delete_application_identity`)
+
 ## Application emojis
 
 - [x] GET /applications/{id}/emojis — List Application Emojis (`Client::list_application_emojis`)
@@ -233,6 +243,10 @@ them.
 - GET /applications/{id} — Get Application (only the `@me` variant is documented)
 - PATCH /applications/{id} — Edit Application (only the `@me` variant is documented)
 - POST /applications/{id}/attachment — Upload ephemeral application attachment
+- PUT /invites/{code}/target-users/{user_id} — Add invite target user
+- DELETE /invites/{code}/target-users/{user_id} — Remove invite target user
+- POST /invites/{code}/target-users/bulk-add — Bulk add invite target users
+- POST /invites/{code}/target-users/bulk-delete — Bulk delete invite target users
 - GET /guilds/{id}/requests — List guild join requests
 - PATCH /guilds/{id}/requests/{user} — Act on a guild join request
 - GET /guilds/{id}/roles/member-counts — Get role member counts

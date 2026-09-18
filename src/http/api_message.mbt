@@ -245,28 +245,6 @@ pub async fn Client::get_channel_messages(
 }
 
 ///|
-fn percent_encode_query_text(value : String) -> String {
-  let builder = StringBuilder(size_hint=value.length())
-  for byte in @utf8.encode(value).iter() {
-    let value = byte.to_int()
-    let unreserved = (value >= 65 && value <= 90) ||
-      (value >= 97 && value <= 122) ||
-      (value >= 48 && value <= 57) ||
-      value == 45 ||
-      value == 46 ||
-      value == 95 ||
-      value == 126
-    if unreserved {
-      builder.write_char(byte.to_char())
-    } else {
-      builder.write_char('%')
-      builder.write_string(byte.to_hex().to_upper())
-    }
-  }
-  builder.to_string()
-}
-
-///|
 fn validate_search_array_count(
   name : String,
   values_length : Int,
@@ -349,7 +327,7 @@ fn search_guild_messages_query(
     params.push("slop=\{value}")
   }
   if content is Some(value) {
-    params.push("content=" + percent_encode_query_text(value))
+    params.push("content=" + percent_encode(value))
   }
   if mention_everyone is Some(value) {
     params.push("mention_everyone=\{value}")
@@ -419,22 +397,22 @@ fn search_guild_messages_query(
   }
   if embed_provider is Some(values) {
     for value in values {
-      params.push("embed_provider=" + percent_encode_query_text(value))
+      params.push("embed_provider=" + percent_encode(value))
     }
   }
   if link_hostname is Some(values) {
     for value in values {
-      params.push("link_hostname=" + percent_encode_query_text(value))
+      params.push("link_hostname=" + percent_encode(value))
     }
   }
   if attachment_filename is Some(values) {
     for value in values {
-      params.push("attachment_filename=" + percent_encode_query_text(value))
+      params.push("attachment_filename=" + percent_encode(value))
     }
   }
   if attachment_extension is Some(values) {
     for value in values {
-      params.push("attachment_extension=" + percent_encode_query_text(value))
+      params.push("attachment_extension=" + percent_encode(value))
     }
   }
   if params.length() == 0 {
