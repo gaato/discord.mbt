@@ -388,8 +388,7 @@ fn Bot::spawn_services(
   for service in self.services_ {
     group.spawn_bg(no_wait=true, allow_failure=true, () => {
       (service.dispatch)(gateway) catch {
-        error if @async.is_being_cancelled() ||
-          @async.is_cancellation_error(error) => raise error
+        error if @async.is_being_cancelled() => raise error
         error => self.app_.report_failure(Service(name=service.name), error)
       }
     })
@@ -415,8 +414,7 @@ async fn Bot::spawn_event_handlers(
     if subscription.kind == kind {
       spawner(() => {
         (subscription.dispatch)(gateway, event) catch {
-          error if @async.is_being_cancelled() ||
-            @async.is_cancellation_error(error) => raise error
+          error if @async.is_being_cancelled() => raise error
           error => self.app_.report_failure(Event(kind~), error)
         }
       })
@@ -425,8 +423,7 @@ async fn Bot::spawn_event_handlers(
   for handler in self.raw_events_ {
     spawner(() => {
       handler(gateway, event) catch {
-        error if @async.is_being_cancelled() ||
-          @async.is_cancellation_error(error) => raise error
+        error if @async.is_being_cancelled() => raise error
         error => self.app_.report_failure(Event(kind~), error)
       }
     })
@@ -443,8 +440,7 @@ async fn Bot::spawn_interaction(
   spawner(() => {
     ignore(
       framework.process(interaction) catch {
-        error if @async.is_being_cancelled() ||
-          @async.is_cancellation_error(error) => raise error
+        error if @async.is_being_cancelled() => raise error
         error => {
           self.app_.warn("interaction processing failed: \{Repr(error)}")
           false
@@ -493,7 +489,9 @@ pub async fn Bot::run(self : Bot) -> Unit {
       managed_shards.push({ id: shard_id, shard, context: None, })
       shard_handles.push(shard)
     }
-    group.add_defer(() => close_shards(shard_handles))
+    group.add_defer(() => {
+      @async.protect_from_cancel(() => close_shards(shard_handles))
+    })
     let shard_events : @aqueue.Queue[ManagedShardEvent] = Queue(kind=Unbounded)
     for owner in managed_shards {
       group.spawn_bg(no_wait=true, () => {

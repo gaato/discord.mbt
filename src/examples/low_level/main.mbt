@@ -50,7 +50,7 @@ async fn handle_echo(ctx : @framework.CommandCtx) -> Unit {
 ///|
 async fn main {
   @signal.set_global_cancellation_signals([SIGINT, SIGTERM])
-  try {
+  @async.handle_cancellation(() => {
     let token = @env.get_env_var("DISCORD_TOKEN").unwrap_or("")
     let run_seconds = match @env.get_env_var("RUN_SECONDS") {
       Some(s) => @string.parse_int(s) catch { _ => DEFAULT_RUN_SECONDS }
@@ -112,10 +112,7 @@ async fn main {
       })
     })
     |> ignore
-  } catch {
-    error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
-      ()
-    error => raise error
-  }
+  })
+  |> ignore
   println("[bot] shutting down")
 }

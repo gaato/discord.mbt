@@ -172,8 +172,7 @@ async fn Framework::guard_errors(
   match self.error_hook {
     Some(hook) =>
       body() catch {
-        error if @async.is_being_cancelled() ||
-          @async.is_cancellation_error(error) => raise error
+        error if @async.is_being_cancelled() => raise error
         error => hook(label, error)
       }
     None => body()

@@ -39,6 +39,8 @@ async test "http telemetry reports 429 and retry attempts" {
 async test "whole request timeout cancels a delayed transport" {
   let client = Client("test-token", request_timeout_ms=10, max_retries=0)
   defer client.close()
+  let events : Array[@telemetry.TelemetryEvent] = []
+  client.on_telemetry(event => events.push(event))
   client.perform_override_.val = Some((_route, _path, _headers, _body, _files) => {
     @async.sleep(100)
     { status: 200, headers: Map([]), body: { "late": true }, }
@@ -48,6 +50,9 @@ async test "whole request timeout cancels a delayed transport" {
     error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected timeout")
+  }
+  guard events is [HttpRequest(status=0, retries=0, ..)] else {
+    fail("expected cancelled request telemetry: \{Repr(events)}")
   }
 }
 

@@ -109,9 +109,7 @@ async fn Shard::finish_transport(
   transport : &GatewayTransport,
   code~ : Int,
 ) -> Unit noraise {
-  self.send_gate.acquire() catch {
-    _ => return
-  }
+  self.send_gate.acquire()
   defer self.send_gate.release()
   guard self.transport is Some(current) && physical_equal(current, transport) else {
     return
@@ -138,7 +136,7 @@ pub fn[X] Shard::start(
   inflater_factory? : () -> &Inflater raise = new_zlib_stream_inflater,
   queue_capacity? : Int = 256,
   telemetry? : (@telemetry.TelemetryEvent) -> Unit = _ => (),
-  sleeper? : async (Int) -> Unit = @async.sleep,
+  sleeper? : async (Int) -> Unit = ms => @async.sleep(ms),
   rand? : @random.Rand = @random.Rand::chacha8(),
 ) -> Shard {
   let shard = Shard::{
@@ -223,8 +221,7 @@ async fn Shard::run(
     }
     let compression_query = if compress { "&compress=zlib-stream" } else { "" }
     let transport = connector("\{base}/?v=10&encoding=json\{compression_query}") catch {
-      error if @async.is_being_cancelled() ||
-        @async.is_cancellation_error(error) => return
+      _ if @async.is_being_cancelled() => return
       _ => {
         attempts += 1
         self.state = Disconnected(reconnect_attempts=attempts)
@@ -257,8 +254,7 @@ async fn Shard::run(
       )
       ConnectionEnded(code=Some(1000), reason="loop exited")
     } catch {
-      error if @async.is_being_cancelled() ||
-        @async.is_cancellation_error(error) => return
+      _ if @async.is_being_cancelled() => return
       ConnectionEnded(code~, reason~) => ConnectionEnded(code~, reason~)
       TransportClosed(code~, reason~) => ConnectionEnded(code~, reason~)
       e => ConnectionEnded(code=None, reason="\{e}")
@@ -394,7 +390,11 @@ async fn Shard::run_connection(
               Json::number(shard_count.to_double()),
             ],
             "properties": {
-              "os": "linux",
+              "os": match @async.platform {
+                Linux => "linux"
+                MacOS => "darwin"
+                Windows => "windows"
+              },
               "browser": "discord.mbt",
               "device": "discord.mbt",
             },
@@ -407,8 +407,7 @@ async fn Shard::run_connection(
     // --- read loop ---
     for ;; {
       let frame = @json.parse(recv_payload(transport, inflater~)) catch {
-        error if @async.is_being_cancelled() ||
-          @async.is_cancellation_error(error) => raise error
+        error if @async.is_being_cancelled() => raise error
         TransportClosed(code~, reason~) => raise ConnectionEnded(code~, reason~)
         e => raise ConnectionEnded(code=None, reason="bad frame: \{e}")
       }

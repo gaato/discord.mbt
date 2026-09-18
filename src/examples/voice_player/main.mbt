@@ -71,43 +71,48 @@ impl @discord.AudioSource for TrackedOggSource with fn next_frame(self) {
 ///|
 async fn main {
   @signal.set_global_cancellation_signals([SIGINT, SIGTERM])
-  try {
-    let token = required_env("DISCORD_TOKEN")
-    let guild_id : @model.GuildId = @model.Id::parse(required_env("GUILD_ID"))
-    let channel_id : @model.ChannelId = @model.Id::parse(
-      required_env("CHANNEL_ID"),
-    )
-    let audio_path = required_env("AUDIO_FILE")
-    @async.with_task_group(process_group => {
-      let (source, close_source) = load_audio_source(process_group, audio_path)
-      defer close_source()
-      let done : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
-      let tracked = TrackedOggSource::{ source, done, finished: false, }
-      let app = @discord.App(sync=Disabled)
-      let intents = @model.Intents::guilds() |
-        @model.Intents::guild_voice_states()
-      let bot = @discord.Bot(app, token~, intents~)
-      bot.service(name="voice-player", ctx => {
-        let connection = ctx.join_voice(guild_id, channel_id)
-        errdefer @async.protect_from_cancel(() => {
-          connection.disconnect() catch {
-            _ => ()
-          }
+  ignore(
+    @async.handle_cancellation(() => {
+      let token = required_env("DISCORD_TOKEN")
+      let guild_id : @model.GuildId = @model.Id::parse(required_env("GUILD_ID"))
+      let channel_id : @model.ChannelId = @model.Id::parse(
+        required_env("CHANNEL_ID"),
+      )
+      let audio_path = required_env("AUDIO_FILE")
+      @async.with_task_group(process_group => {
+        let (source, close_source) = load_audio_source(
+          process_group, audio_path,
+        )
+        defer close_source()
+        let done : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+        let tracked = TrackedOggSource::{ source, done, finished: false, }
+        let app = @discord.App(sync=Disabled)
+        let intents = @model.Intents::guilds() |
+          @model.Intents::guild_voice_states()
+        let bot = @discord.Bot(app, token~, intents~)
+        bot.service(name="voice-player", ctx => {
+          let connection = ctx.join_voice(guild_id, channel_id)
+          errdefer @async.protect_from_cancel(() => {
+            connection.disconnect() catch {
+              _ => ()
+            }
+          })
+          println("[voice] connected; playing \{audio_path}")
+          connection.play((tracked : &@discord.AudioSource))
+          done.get()
+          connection.stop()
+          println("[voice] playback complete")
+          connection.disconnect()
+          ctx.shutdown()
         })
-        println("[voice] connected; playing \{audio_path}")
-        connection.play((tracked : &@discord.AudioSource))
-        done.get()
-        connection.stop()
-        println("[voice] playback complete")
-        connection.disconnect()
-        ctx.shutdown()
+        bot.run()
       })
-      bot.run()
-    })
-  } catch {
-    error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
-      ()
-    error => println("[voice] failed: \{Repr(error)}")
-  }
+    }) catch {
+      error => {
+        println("[voice] failed: \{Repr(error)}")
+        None
+      }
+    },
+  )
   println("[voice] disconnected")
 }

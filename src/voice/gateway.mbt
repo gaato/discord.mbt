@@ -126,9 +126,7 @@ async fn VoiceGateway::finish_transport(
   transport : &VoiceTransport,
   code~ : Int,
 ) -> Unit noraise {
-  self.send_gate.acquire() catch {
-    _ => return
-  }
+  self.send_gate.acquire()
   defer self.send_gate.release()
   guard self.transport is Some(current) && physical_equal(current, transport) else {
     return
@@ -160,7 +158,7 @@ pub fn[X] VoiceGateway::start(
   connector? : async (String) -> &VoiceTransport = connect_voice_websocket,
   queue_capacity? : Int = 256,
   telemetry? : (VoiceGatewayEvent) -> Unit = _ => (),
-  sleeper? : async (Int) -> Unit = @async.sleep,
+  sleeper? : async (Int) -> Unit = ms => @async.sleep(ms),
   rand? : @random.Rand = @random.Rand::chacha8(),
 ) -> VoiceGateway {
   let gateway = VoiceGateway::{
@@ -260,8 +258,7 @@ async fn VoiceGateway::run(
     }
     self.state_ = Connecting
     let transport = connector(voice_gateway_url(endpoint)) catch {
-      error if @async.is_being_cancelled() ||
-        @async.is_cancellation_error(error) => return
+      _ if @async.is_being_cancelled() => return
       error => {
         (self.telemetry_)(ConnectFailed(reason="\{Repr(error)}"))
         attempts += 1
@@ -288,8 +285,7 @@ async fn VoiceGateway::run(
       )
       VoiceConnectionEnded(code=Some(1000), reason="connection loop exited")
     } catch {
-      error if @async.is_being_cancelled() ||
-        @async.is_cancellation_error(error) => return
+      _ if @async.is_being_cancelled() => return
       VoiceConnectionEnded(code~, reason~) =>
         VoiceConnectionEnded(code~, reason~)
       VoiceTransportClosed(code~, reason~) =>
@@ -408,8 +404,7 @@ async fn VoiceGateway::run_connection(
 
     for ;; {
       let (message, seq) = recv_voice_message(transport) catch {
-        error if @async.is_being_cancelled() ||
-          @async.is_cancellation_error(error) => raise error
+        error if @async.is_being_cancelled() => raise error
         VoiceTransportClosed(code~, reason~) =>
           raise VoiceConnectionEnded(code~, reason~)
         error =>

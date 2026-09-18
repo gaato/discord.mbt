@@ -385,9 +385,7 @@ async fn[X] VoiceConnection::run_event_pump(
   defer self.terminal_teardown(notify_leave=true)
   while !self.closing {
     guard self.gateway is Some(gateway) else {
-      @async.sleep(5) catch {
-        _ => return
-      }
+      @async.sleep(5)
       continue
     }
     let event = gateway.next() catch {
@@ -458,9 +456,7 @@ async fn VoiceConnection::run_receiver(self : VoiceConnection) -> Unit noraise {
   let buffer : FixedArray[Byte] = FixedArray::make(65535, 0)
   while !self.closing {
     guard self.udp is Some(udp) && self.cipher is Some(cipher) else {
-      @async.sleep(5) catch {
-        _ => return
-      }
+      @async.sleep(5)
       continue
     }
     let generation = self.session_generation
@@ -469,9 +465,7 @@ async fn VoiceConnection::run_receiver(self : VoiceConnection) -> Unit noraise {
         if self.closing {
           return
         }
-        @async.sleep(5) catch {
-          _ => return
-        }
+        @async.sleep(5)
         continue
       }
     }
@@ -529,9 +523,7 @@ async fn VoiceConnection::run_playback(self : VoiceConnection) -> Unit noraise {
             self.gateway is None ||
             self.ssrc is None
           ) {
-      @async.sleep(5) catch {
-        _ => return
-      }
+      @async.sleep(5)
     }
     if self.closing || request.generation != self.playback_generation {
       continue
@@ -574,7 +566,7 @@ pub fn[X] VoiceConnection::start(
   udp_opener? : async (String, Int) -> &VoiceUdp = open_voice_udp,
   receive? : Bool = true,
   telemetry? : (VoiceTelemetry) -> Unit = _ => (),
-  sleeper? : async (Int) -> Unit = @async.sleep,
+  sleeper? : async (Int) -> Unit = ms => @async.sleep(ms),
   rand? : @random.Rand = @random.Rand::chacha8(),
 ) -> VoiceConnection {
   let receiver = ReceivePipeline::new(telemetry)
@@ -675,9 +667,7 @@ pub async fn VoiceConnection::stop(self : VoiceConnection) -> Unit {
     stop.val = true
   }
   while self.playback_stop is Some(_) && !self.closing {
-    @async.sleep(5) catch {
-      _ => return
-    }
+    @async.sleep(5)
   }
 }
 

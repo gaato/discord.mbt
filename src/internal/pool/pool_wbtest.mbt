@@ -141,7 +141,7 @@ async test "a cancelled checkout drops its connection and releases the slot" {
     entered.acquire()
     running.cancel()
     try running.wait() catch {
-      error if @async.is_cancellation_error(error) => ()
+      @async.TaskCancelled => ()
       error => fail("unexpected cancellation error: \{Repr(error)}")
     } noraise {
       _ => fail("cancelled checkout unexpectedly completed")

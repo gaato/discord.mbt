@@ -359,7 +359,7 @@ async test "cancelled shard send releases the serialized send gate" {
     transport.send_started.get()
     blocked.cancel()
     try blocked.wait() catch {
-      error if @async.is_cancellation_error(error) => ()
+      @async.TaskCancelled => ()
       error => fail("unexpected send error: \{Repr(error)}")
     } noraise {
       _ => fail("cancelled send unexpectedly completed")
@@ -421,7 +421,7 @@ async test "closing a shard drains an in-flight writer before transport close" {
 
     blocked.cancel()
     try blocked.wait() catch {
-      error if @async.is_cancellation_error(error) => ()
+      @async.TaskCancelled => ()
       error => fail("unexpected send error: \{Repr(error)}")
     } noraise {
       _ => fail("blocked send unexpectedly completed")

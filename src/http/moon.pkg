@@ -12,14 +12,13 @@ import {
 }
 
 import {
-  "moonbitlang/core/json",
   "moonbitlang/core/debug",
   "gaato/discord/model",
 } for "test"
 
 import {
   "moonbitlang/async/socket",
-  "moonbitlang/async/io",
+  "moonbitlang/core/json",
 } for "wbtest"
 
 // REST transport depends on async HTTP, available on native and JavaScript.

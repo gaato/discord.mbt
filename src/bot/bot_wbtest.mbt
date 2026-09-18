@@ -485,7 +485,7 @@ async test "voice ready cancellation disconnects the pending connection" {
     @async.sleep(10)
     waiting.cancel()
     try waiting.wait() catch {
-      error if @async.is_cancellation_error(error) => ()
+      @async.TaskCancelled => ()
       error => fail("unexpected ready-wait cancellation error: \{Repr(error)}")
     } noraise {
       _ => fail("cancelled voice ready wait unexpectedly completed")

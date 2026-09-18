@@ -160,7 +160,7 @@ fn run_seconds() -> Int {
 ///|
 async fn main {
   @signal.set_global_cancellation_signals([SIGINT, SIGTERM])
-  try {
+  @async.handle_cancellation(() => {
     let feedback = feedback_modal()
     let token = @env.get_env_var("DISCORD_TOKEN").unwrap_or("")
     let app = @discord.App(sync=command_sync())
@@ -216,10 +216,7 @@ async fn main {
     } noraise {
       _ => ()
     }
-  } catch {
-    error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
-      ()
-    error => raise error
-  }
+  })
+  |> ignore
   println("[bot] shutting down")
 }

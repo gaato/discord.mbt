@@ -247,7 +247,7 @@ async test "cancelled voice discovery closes only its candidate UDP" {
 
     owner.cancel()
     try owner.wait() catch {
-      error if @async.is_cancellation_error(error) => ()
+      @async.TaskCancelled => ()
       error => fail("unexpected discovery cancellation error: \{Repr(error)}")
     } noraise {
       _ => fail("cancelled discovery unexpectedly completed")

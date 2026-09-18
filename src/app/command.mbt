@@ -435,7 +435,7 @@ fn[A] raise_failure(
   phase : ResponsePhase,
   source : Error,
 ) -> A raise {
-  if @async.is_being_cancelled() || @async.is_cancellation_error(source) {
+  if @async.is_being_cancelled() {
     raise source
   }
   raise Failure(command~, phase~, source~)

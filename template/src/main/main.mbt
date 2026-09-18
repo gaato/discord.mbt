@@ -30,7 +30,7 @@ fn command_sync() -> @discord.CommandSync {
 ///|
 async fn main {
   @signal.set_global_cancellation_signals([SIGINT, SIGTERM])
-  try {
+  @async.handle_cancellation(() => {
     let token = @env.get_env_var("DISCORD_TOKEN").unwrap_or("")
     let app = @discord.App(sync=command_sync())
     app.command(ping_command())
@@ -40,10 +40,7 @@ async fn main {
       println("[bot] ready as \{ready.user.username}")
     })
     bot.run()
-  } catch {
-    error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
-      ()
-    error => raise error
-  }
+  })
+  |> ignore
   println("[bot] shutting down")
 }

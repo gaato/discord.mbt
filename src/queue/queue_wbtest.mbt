@@ -23,7 +23,7 @@ async test "a cancelled identify wait releases its bucket gate" {
     wait_until_identify_gate_is_held(queue)
     waiting.cancel()
     try waiting.wait() catch {
-      error if @async.is_cancellation_error(error) => ()
+      @async.TaskCancelled => ()
       error => fail("unexpected cancellation error: \{Repr(error)}")
     } noraise {
       _ => fail("cancelled identify wait unexpectedly completed")

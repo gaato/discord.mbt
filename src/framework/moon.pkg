@@ -4,7 +4,6 @@ import {
   "gaato/discord/interaction",
   "moonbitlang/async",
   "moonbitlang/async/aqueue",
-  "moonbitlang/core/json",
 }
 
 import {

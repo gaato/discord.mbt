@@ -84,8 +84,7 @@ pub async fn InteractionEndpoint::handle_interaction(
   let race : @aqueue.Queue[InteractionRace] = Queue(kind=Unbounded)
   (self.spawner)(() => {
     let routed = self.framework.process_with(interaction, gate~) catch {
-      error if @async.is_being_cancelled() ||
-        @async.is_cancellation_error(error) => raise error
+      error if @async.is_being_cancelled() => raise error
       error => {
         (self.warn)("interaction processing failed: \{Repr(error)}")
         true

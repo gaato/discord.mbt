@@ -40,7 +40,7 @@ fn port() -> Int {
 ///|
 async fn main {
   @signal.set_global_cancellation_signals([SIGINT, SIGTERM])
-  try {
+  @async.handle_cancellation(() => {
     let token = @env.get_env_var("DISCORD_TOKEN").unwrap_or("")
     let public_key = @env.get_env_var("PUBLIC_KEY").unwrap_or("")
     let app = @discord.App(sync=command_sync())
@@ -56,10 +56,7 @@ async fn main {
       )
       println("[http] listening on \{server.addr()}")
     })
-  } catch {
-    error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
-      ()
-    error => raise error
-  }
+  })
+  |> ignore
   println("[bot] shutting down")
 }

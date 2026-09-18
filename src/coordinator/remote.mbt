@@ -24,8 +24,7 @@ fn CoordinatorClient::close(self : CoordinatorClient) -> Unit {
 ///|
 async fn CoordinatorClient::dial(addr : @socket.Addr) -> @socket.Tcp {
   @socket.Tcp::connect(addr) catch {
-    error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
-      raise error
+    error if @async.is_being_cancelled() => raise error
     error => raise CoordinatorError::Transport(message="\{error}")
   }
 }
@@ -60,9 +59,7 @@ fn coordinator_retryable(error : Error) -> Bool {
 
 ///|
 fn coordinator_fatal(error : Error) -> Bool {
-  @async.is_being_cancelled() ||
-  @async.is_cancellation_error(error) ||
-  !coordinator_retryable(error)
+  @async.is_being_cancelled() || !coordinator_retryable(error)
 }
 
 ///|
@@ -78,8 +75,7 @@ async fn CoordinatorClient::request_once(
       None => raise CoordinatorError::Disconnected
     }
   } catch {
-    error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
-      raise error
+    error if @async.is_being_cancelled() => raise error
     CoordinatorError::Disconnected => raise CoordinatorError::Disconnected
     error => raise CoordinatorError::Transport(message="\{error}")
   } noraise {
@@ -118,8 +114,7 @@ async fn CoordinatorClient::request(
     fatal_error=coordinator_fatal,
     () => {
       self.request_once(request) catch {
-        error if @async.is_being_cancelled() ||
-          @async.is_cancellation_error(error) => {
+        error if @async.is_being_cancelled() => {
           self.drop_connection()
           raise error
         }

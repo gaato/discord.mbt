@@ -262,7 +262,7 @@ complete signed-interactions HTTP server. See the
 `interactions_http` and `workers_echo` examples.
 
 The JavaScript REST client supports null-body 204 responses through
-`moonbitlang/async@0.21.2`; the `workers_echo` workerd suite covers a deferred
+`moonbitlang/async@0.22.1`; the `workers_echo` workerd suite covers a deferred
 interaction-response deletion end to end. Gateway and Voice transports remain
 native-only.
 

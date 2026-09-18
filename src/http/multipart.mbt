@@ -157,7 +157,7 @@ fn edit_attachments_field(
 
 ///|
 fn ascii_bytes(text : String) -> Bytes {
-  let out : Array[Byte] = Array::new(capacity=text.length())
+  let out : Array[Byte] = Array(capacity=text.length())
   for ch in text {
     out.push(ch.to_int().to_byte())
   }

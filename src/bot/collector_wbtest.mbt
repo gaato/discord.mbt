@@ -96,7 +96,7 @@ async test "event collector timeout and cancellation remove registrations" {
     wait_until_registered(collector, KMessageDelete, 1)
     pending.cancel()
     try pending.wait() catch {
-      error if @async.is_cancellation_error(error) => ()
+      @async.TaskCancelled => ()
       error => fail("unexpected cancellation error: \{Repr(error)}")
     } noraise {
       _ => fail("cancelled collector unexpectedly completed")

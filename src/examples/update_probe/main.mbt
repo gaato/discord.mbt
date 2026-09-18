@@ -158,11 +158,14 @@ async fn main {
     println("[probe] done")
     ctx.shutdown()
   })
-  try @async.with_timeout_opt(180_000, () => bot.run()) catch {
-    error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
-      ()
-    error => println("[probe] run failed: \{Repr(error)}")
-  } noraise {
-    _ => ()
-  }
+  ignore(
+    @async.handle_cancellation(() => {
+      @async.with_timeout_opt(180_000, () => bot.run())
+    }) catch {
+      error => {
+        println("[probe] run failed: \{Repr(error)}")
+        None
+      }
+    },
+  )
 }

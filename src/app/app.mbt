@@ -316,8 +316,7 @@ async fn App::run_registered_command(
     command.run_checks_and_cooldown(raw, (self.now_)())
     (command.dispatch)(bot, waiter, self.warn_, raw)
   }) catch {
-    error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
-      raise error
+    error if @async.is_being_cancelled() => raise error
     AppDispatchError::Failure(command=name, phase~, source~) =>
       invoke_error_policy(
         self.current_policy(),
@@ -366,8 +365,7 @@ async fn App::run_registered_component(
       raw,
     )
   }) catch {
-    error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
-      raise error
+    error if @async.is_being_cancelled() => raise error
     AppDispatchError::Failure(command=_, phase~, source~) =>
       invoke_error_policy(
         self.current_policy(),
@@ -406,8 +404,7 @@ async fn App::run_registered_modal(
     raw_: failure_raw,
   }
   self.run_middleware(ctx, 0, () => (entry.dispatch)(bot, raw)) catch {
-    error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
-      raise error
+    error if @async.is_being_cancelled() => raise error
     AppDispatchError::Failure(command=_, phase~, source~) =>
       invoke_error_policy(
         self.current_policy(),
@@ -440,8 +437,7 @@ async fn App::run_registered_autocomplete(
   raw : @framework.AutocompleteCtx,
 ) -> Unit {
   dispatch_suggest(command.suggest_routes_, self.warn_, raw) catch {
-    error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
-      raise error
+    error if @async.is_being_cancelled() => raise error
     error => {
       invoke_error_policy(
         self.current_policy(),
@@ -507,7 +503,7 @@ pub fn App::attach(
     framework.autocomplete(entry.name, entry.dispatch) |> ignore
   }
   framework.on_error((label, error) => {
-    if @async.is_being_cancelled() || @async.is_cancellation_error(error) {
+    if @async.is_being_cancelled() {
       raise error
     }
     (self.warn_)("framework handler failed (\{label}): \{Repr(error)}")

@@ -169,8 +169,7 @@ async fn handle_request(
       request, body_reader, conn, endpoint, verifier, path, deadline_ms,
     )
   catch {
-    error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
-      raise error
+    error if @async.is_being_cancelled() => raise error
     error => {
       warn("interaction HTTP request failed: \{Repr(error)}")
       text_response(
@@ -184,8 +183,7 @@ async fn handle_request(
     response => response
   }
   send_response(conn, response) catch {
-    error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
-      raise error
+    error if @async.is_being_cancelled() => raise error
     error => {
       warn("interaction HTTP response failed: \{Repr(error)}")
       conn.close()
@@ -208,11 +206,11 @@ pub fn InteractionsServer::addr(self : InteractionsServer) -> String {
 
 ///|
 /// Stop accepting requests and cancel active connection handlers.
-pub fn InteractionsServer::close(self : InteractionsServer) -> Unit {
+pub async fn InteractionsServer::close(
+  self : InteractionsServer,
+) -> Unit noraise {
   if self.runner.val is Some(inner) {
-    inner.return_immediately(()) catch {
-      _ => ()
-    }
+    inner.return_immediately(())
   }
 }
 
@@ -254,8 +252,7 @@ pub async fn[X] serve_interactions(
       startup.put(Ready)
       ready = true
     }) catch {
-      error if @async.is_being_cancelled() ||
-        @async.is_cancellation_error(error) => raise error
+      error if @async.is_being_cancelled() => raise error
       error =>
         if ready {
           warn("interaction HTTP server stopped: \{Repr(error)}")

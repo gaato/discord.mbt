@@ -31,8 +31,7 @@ priv struct WsTransport {
 ///|
 impl GatewayTransport for WsTransport with fn recv(self) {
   let message = self.conn.recv() catch {
-    error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
-      raise error
+    error if @async.is_being_cancelled() => raise error
     @websocket.WebSocketError::ConnectionClosed(code, reason) =>
       raise TransportClosed(
         code=Some(close_code_to_int(code)),
@@ -41,16 +40,14 @@ impl GatewayTransport for WsTransport with fn recv(self) {
     e => raise TransportClosed(code=None, reason="\{e}")
   }
   let data = message.read_all() catch {
-    error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
-      raise error
+    error if @async.is_being_cancelled() => raise error
     e => raise TransportClosed(code=None, reason="\{e}")
   }
   match message.kind {
     Text =>
       Text(
         data.text() catch {
-          error if @async.is_being_cancelled() ||
-            @async.is_cancellation_error(error) => raise error
+          error if @async.is_being_cancelled() => raise error
           e => raise TransportClosed(code=None, reason="\{e}")
         },
       )

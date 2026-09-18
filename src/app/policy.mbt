@@ -230,8 +230,7 @@ async fn invoke_error_policy(
   error : Error,
 ) -> Unit {
   policy(ctx, error) catch {
-    policy_error if @async.is_being_cancelled() ||
-      @async.is_cancellation_error(policy_error) => raise policy_error
+    policy_error if @async.is_being_cancelled() => raise policy_error
     policy_error => (ctx.warn_)("error policy failed: \{Repr(policy_error)}")
   }
 }

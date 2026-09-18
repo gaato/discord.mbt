@@ -12,7 +12,7 @@ pub struct CommandLimiter {
 /// Create a limiter allowing `limit` sends per 60-second sliding window.
 pub fn CommandLimiter::CommandLimiter(
   limit? : Int = 115,
-  sleeper? : async (Int) -> Unit = @async.sleep,
+  sleeper? : async (Int) -> Unit = ms => @async.sleep(ms),
 ) -> CommandLimiter {
   { timestamps: [], limit, sleeper_: sleeper, }
 }

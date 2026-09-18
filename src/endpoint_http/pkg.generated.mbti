@@ -18,7 +18,7 @@ pub struct InteractionsServer {
   // private fields
 }
 pub fn InteractionsServer::addr(Self) -> String
-pub fn InteractionsServer::close(Self) -> Unit
+pub async fn InteractionsServer::close(Self) -> Unit noraise
 
 // Type aliases
 

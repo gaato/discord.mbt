@@ -544,7 +544,7 @@ async test "framework cancellation bypasses the error hook" {
     handler_started.get()
     processing.cancel()
     try processing.wait() catch {
-      error if @async.is_cancellation_error(error) => ()
+      @async.TaskCancelled => ()
       error => fail("unexpected cancellation error: \{Repr(error)}")
     } noraise {
       _ => fail("cancelled framework handler unexpectedly completed")

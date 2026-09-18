@@ -70,7 +70,7 @@ fn echo_command() -> @discord.Command[String] {
 ///|
 async fn getting_started_main() -> Unit {
   @signal.set_global_cancellation_signals([SIGINT, SIGTERM])
-  try {
+  @async.handle_cancellation(() => {
     let token = @env.get_env_var("DISCORD_TOKEN").unwrap_or("")
     let app = @discord.App(sync=Global)
     app.command(echo_command())
@@ -79,11 +79,8 @@ async fn getting_started_main() -> Unit {
       println("ready as \{ready.user.username}")
     })
     bot.run()
-  } catch {
-    error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
-      ()
-    error => raise error
-  }
+  })
+  |> ignore
   println("[bot] shutting down")
 }
 
@@ -115,8 +112,10 @@ The token passed to `Bot(...)` and `Client(...)` is the raw bot token without a
 Pressing Ctrl-C or sending SIGTERM cancels the async runtime because the entry
 point calls `set_global_cancellation_signals`. Structured concurrency then
 unwinds the bot's task groups and completes their teardown before the process
-exits. Signal handling is an entry-point concern; `Bot` does not install
-process-global signal handlers implicitly.
+exits. Cancellation is a signal rather than an error, so the entry point uses
+`handle_cancellation` instead of `catch` when it needs to continue to the final
+shutdown message. Signal handling is an entry-point concern; `Bot` does not
+install process-global signal handlers implicitly.
 
 Continue with [Commands](02-commands.mbt.md), or use
 [HTTP interactions](06-http-interactions.mbt.md) when the application should

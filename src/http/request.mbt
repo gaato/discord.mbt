@@ -190,8 +190,7 @@ pub async fn Client::request(
   }
   let timed = @async.with_timeout_opt(self.request_timeout_ms_, () => {
     RequestSucceeded(self.run_middleware(0, request)) catch {
-      error if @async.is_being_cancelled() ||
-        @async.is_cancellation_error(error) => raise error
+      error if @async.is_being_cancelled() => raise error
       DiscordHttpError::Api(status~, error~) =>
         RequestFailed(Api(status~, error~))
       DiscordHttpError::RateLimited(retry_after_ms~, global~) =>
@@ -275,26 +274,15 @@ async fn Client::request_inner(
   let max_attempts = self.max_retries_ + 1
   for attempt in 0..<max_attempts {
     self.limiter.acquire(bucket, global_exempt~) catch {
-      e if @async.is_being_cancelled() || @async.is_cancellation_error(e) =>
-        raise e
+      e if @async.is_being_cancelled() => raise e
       e => raise DiscordHttpError::Transport(message="cancelled: \{e}")
     }
     let started_at = @clock.now_ms()
-    let response = try
-      self.perform(
-        request.route,
-        request.headers,
-        body?=request.body,
-        audit_reason?=request.audit_reason,
-        files?=request.files,
-      )
-    catch {
-      e => {
-        @async.protect_from_cancel(() => {
-          self.limiter.release(bucket, status=0, headers=Map([])) catch {
-            _ => ()
-          }
-        })
+    let response = try {
+      errdefer @async.protect_from_cancel(() => {
+        self.limiter.release(bucket, status=0, headers=Map([])) catch {
+          _ => ()
+        }
         self.emit_telemetry(
           HttpRequest(
             route_bucket=bucket,
@@ -304,7 +292,17 @@ async fn Client::request_inner(
             retries=attempt,
           ),
         )
-        if @async.is_being_cancelled() || @async.is_cancellation_error(e) {
+      })
+      self.perform(
+        request.route,
+        request.headers,
+        body?=request.body,
+        audit_reason?=request.audit_reason,
+        files?=request.files,
+      )
+    } catch {
+      e => {
+        if @async.is_being_cancelled() {
           raise e
         }
         raise DiscordHttpError::Transport(message="\{e}")
@@ -339,11 +337,7 @@ async fn Client::request_inner(
       if attempt == max_attempts - 1 {
         raise DiscordHttpError::RateLimited(retry_after_ms~, global~)
       }
-      @async.sleep(retry_after_ms.to_int() + 1) catch {
-        e if @async.is_being_cancelled() || @async.is_cancellation_error(e) =>
-          raise e
-        e => raise DiscordHttpError::Transport(message="cancelled: \{e}")
-      }
+      @async.sleep(retry_after_ms.to_int() + 1)
       continue
     }
     return response

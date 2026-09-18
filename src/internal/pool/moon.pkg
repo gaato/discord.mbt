@@ -5,7 +5,6 @@ import {
 
 import {
   "moonbitlang/async/socket",
-  "moonbitlang/async/io",
 } for "wbtest"
 
 // The async HTTP client is implemented by the native and JavaScript runtimes.

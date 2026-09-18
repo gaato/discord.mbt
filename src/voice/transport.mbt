@@ -30,8 +30,7 @@ priv struct VoiceWsTransport {
 ///|
 impl VoiceTransport for VoiceWsTransport with fn recv(self) {
   let message = self.conn.recv() catch {
-    error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
-      raise error
+    error if @async.is_being_cancelled() => raise error
     @websocket.WebSocketError::ConnectionClosed(code, reason) =>
       raise VoiceTransportClosed(
         code=Some(voice_close_code_to_int(code)),
@@ -40,16 +39,14 @@ impl VoiceTransport for VoiceWsTransport with fn recv(self) {
     error => raise VoiceTransportClosed(code=None, reason="\{error}")
   }
   let data = message.read_all() catch {
-    error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
-      raise error
+    error if @async.is_being_cancelled() => raise error
     error => raise VoiceTransportClosed(code=None, reason="\{error}")
   }
   match message.kind {
     Text =>
       Text(
         data.text() catch {
-          error if @async.is_being_cancelled() ||
-            @async.is_cancellation_error(error) => raise error
+          error if @async.is_being_cancelled() => raise error
           error => raise VoiceTransportClosed(code=None, reason="\{error}")
         },
       )

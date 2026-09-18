@@ -90,12 +90,9 @@ pub fn Coordinator::addr(self : Coordinator) -> String {
 /// Shutdown cancels the internal task group; cancellation wakes every
 /// connection handler, and `run_forever` then closes each client socket and
 /// the listener itself (its documented contract forbids closing them here).
-pub fn Coordinator::close(self : Coordinator) -> Unit {
+pub async fn Coordinator::close(self : Coordinator) -> Unit noraise {
   if self.runner.val is Some(inner) {
-    inner.return_immediately(()) catch {
-      // The runner group already returned; shutdown is idempotent.
-      _ => ()
-    }
+    inner.return_immediately(())
   }
 }
 
@@ -115,8 +112,7 @@ async fn serve_connection(conn : @socket.Tcp, state : CoordinatorState) -> Unit 
     let response = try
       dispatch_request(@json.parse(line), state, connection)
     catch {
-      error if @async.is_being_cancelled() ||
-        @async.is_cancellation_error(error) => raise error
+      error if @async.is_being_cancelled() => raise error
       error => error_response("invalid request: \{error}")
     } noraise {
       response => response

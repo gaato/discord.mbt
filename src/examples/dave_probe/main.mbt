@@ -528,10 +528,12 @@ async fn main {
     }
     @async.protect_from_cancel(() => ctx.shutdown())
   })
-  let run_result = @async.with_timeout_opt(90_000, () => bot.run()) catch {
-    error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
-      Some(())
-    error => raise error
+  let run_result = match
+    @async.handle_cancellation(() => {
+      @async.with_timeout_opt(90_000, () => bot.run())
+    }) {
+    None => Some(())
+    Some(result) => result
   }
   guard run_result is Some(_) else { raise DaveProbeError::ProbeDidNotComplete }
   if failure.val is Some(reason) {

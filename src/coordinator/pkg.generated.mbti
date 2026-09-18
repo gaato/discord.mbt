@@ -24,7 +24,7 @@ pub struct Coordinator {
   // private fields
 }
 pub fn Coordinator::addr(Self) -> String
-pub fn Coordinator::close(Self) -> Unit
+pub async fn Coordinator::close(Self) -> Unit noraise
 pub async fn[X] Coordinator::serve(@async.TaskGroup[X], addr~ : String, max_concurrency? : Int, identify_spacing_ms? : Int, global_limit? : Int) -> Self
 
 pub struct RemoteIdentifyQueue {

@@ -1,6 +1,5 @@
 import {
   "gaato/discord/model",
-  "moonbitlang/core/json",
   "moonbitlang/core/string",
 }
 

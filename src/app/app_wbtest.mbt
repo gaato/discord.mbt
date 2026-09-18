@@ -749,14 +749,12 @@ async test "dispatch failure wrapping preserves cancellation" {
     let started : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
     let task = group.spawn(no_wait=true, allow_failure=true, () => {
       started.put(())
-      @async.sleep(60_000) catch {
-        source => raise_failure("cancel", BeforeInitial, source)
-      }
+      @async.sleep(60_000)
     })
     started.get()
     task.cancel()
     try task.wait() catch {
-      error if @async.is_cancellation_error(error) => ()
+      @async.TaskCancelled => ()
       AppDispatchError::Failure(..) =>
         fail("cancellation was wrapped as an app dispatch failure")
       error => fail("unexpected cancellation error: \{Repr(error)}")
