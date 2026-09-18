@@ -421,6 +421,7 @@ pub fn Client::paginate_current_user_guilds(
   self : Client,
   before? : @model.GuildId,
   after? : @model.GuildId,
+  shard? : Int,
   with_counts? : Bool,
   page_size? : Int = 200,
 ) -> Paginator[@model.CurrentUserGuild] raise DiscordHttpError {
@@ -432,7 +433,12 @@ pub fn Client::paginate_current_user_guilds(
         page_size,
         Some(id),
         (cursor, limit) => {
-          self.get_current_user_guilds(limit~, after?=cursor, with_counts?)
+          self.get_current_user_guilds(
+            limit~,
+            after?=cursor,
+            shard?,
+            with_counts?,
+          )
         },
         page => maximum_cursor(page, guild => guild.id),
       )
@@ -441,7 +447,12 @@ pub fn Client::paginate_current_user_guilds(
         page_size,
         before,
         (cursor, limit) => {
-          self.get_current_user_guilds(limit~, before?=cursor, with_counts?)
+          self.get_current_user_guilds(
+            limit~,
+            before?=cursor,
+            shard?,
+            with_counts?,
+          )
         },
         page => minimum_cursor(page, guild => guild.id),
       )

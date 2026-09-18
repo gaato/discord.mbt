@@ -181,6 +181,34 @@ silently ignored.
 `ModalImmediateCtx::origin()` distinguishes a modal opened from a component
 from one opened from a command. `state()` is the value passed to `show`.
 
+### File uploads
+
+`file_field` adds a file upload input and decodes to the uploaded files'
+`Attachment` objects, which Discord resolves alongside the submission.
+`file_types` narrows the client's file picker to preset groups (`Image`,
+`Video`, `Audio`) or dot-prefixed extensions; the same filter is available on
+slash commands through `arg_attachment(file_types=...)`:
+
+```mbt check
+///|
+let upload_report : @discord.Modal[Array[@model.Attachment]] = @discord.modal(
+  custom_id="upload-report",
+  title="Report",
+  fields=@discord.ModalFields::of(
+    @discord.file_field(
+      custom_id="proof",
+      label="Screenshots or a PDF",
+      max_values=3,
+      file_types=[Image, Extension(".pdf")],
+    ),
+  ),
+)
+```
+
+Filters match file extensions only, so validate the attachment contents
+before trusting them. `App::validate` rejects a filter with more than 10
+entries or an extension without its leading dot.
+
 ## Waiting for one component
 
 A deferred handler can wait for an exact custom ID. Waiters take precedence
@@ -212,6 +240,7 @@ test "component and modal declarations compile" {
   ignore(controls)
   ignore(register_ticket_handlers)
   ignore(register_feedback)
+  ignore(upload_report)
   ignore(confirm_command)
 }
 ```

@@ -7,16 +7,22 @@ pub async fn Client::get_current_user(
 }
 
 ///|
-/// List guilds available to the current user.
+/// List guilds available to the current user. `shard` restricts the result to
+/// the guilds stored in that shard (`0` to `max_concurrency - 1` from
+/// `get_gateway_bot`); Discord requires it for apps using large bot sharding.
 pub async fn Client::get_current_user_guilds(
   self : Client,
   limit? : Int,
   before? : @model.GuildId,
   after? : @model.GuildId,
+  shard? : Int,
   with_counts? : Bool,
 ) -> Array[@model.CurrentUserGuild] raise DiscordHttpError {
   validate_page_limit("current user guild", limit, 200)
   validate_cursor_pair("current user guild", before, after)
+  if shard is Some(value) && value < 0 {
+    raise Validation(message="shard must be non-negative")
+  }
   let params : Array[String] = []
   if limit is Some(value) {
     params.push("limit=\{value}")
@@ -26,6 +32,9 @@ pub async fn Client::get_current_user_guilds(
   }
   if after is Some(value) {
     params.push("after=\{value}")
+  }
+  if shard is Some(value) {
+    params.push("shard=\{value}")
   }
   if with_counts is Some(value) {
     params.push("with_counts=\{value}")

@@ -119,6 +119,7 @@ pub using @app {
   slash_group,
   text_field,
   select_field,
+  file_field,
   modal,
   guild_only,
   dm_only,
@@ -178,4 +179,5 @@ pub using @interaction {
   media_item,
   label,
   text_input,
+  file_upload,
 }

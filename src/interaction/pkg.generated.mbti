@@ -9,7 +9,7 @@ import {
 // Values
 pub fn action_row(Array[@model.Component]) -> @model.Component
 
-pub fn arg_attachment(name~ : String, description~ : String, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> Arg[@model.Attachment]
+pub fn arg_attachment(name~ : String, description~ : String, file_types? : Array[@model.FileTypeFilter], name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> Arg[@model.Attachment]
 
 pub fn arg_bool(name~ : String, description~ : String, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> Arg[Bool]
 
@@ -27,7 +27,7 @@ pub fn arg_string(name~ : String, description~ : String, choices? : Array[@model
 
 pub fn arg_user(name~ : String, description~ : String, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> Arg[@model.Id[@model.UserMarker]]
 
-pub fn attachment_option(String, String, required? : Bool, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @model.CommandOption
+pub fn attachment_option(String, String, required? : Bool, file_types? : Array[@model.FileTypeFilter], name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @model.CommandOption
 
 pub fn boolean_option(String, String, required? : Bool, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @model.CommandOption
 
@@ -38,6 +38,8 @@ pub fn channel_option(String, String, required? : Bool, channel_types? : Array[@
 pub fn channel_select(custom_id~ : String, placeholder? : String, min_values? : Int, max_values? : Int, disabled? : Bool, channel_types? : Array[@model.ChannelType]) -> @model.Component
 
 pub fn container(components~ : Array[@model.Component], accent_color? : Int, spoiler? : Bool) -> @model.Component
+
+pub fn file_upload(custom_id~ : String, min_values? : Int, max_values? : Int, required? : Bool, file_types? : Array[@model.FileTypeFilter]) -> @model.Component
 
 pub fn int_choice(String, Int64, name_localizations? : Map[String, String]) -> @model.CommandOptionChoice
 

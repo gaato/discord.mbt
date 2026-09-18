@@ -2,15 +2,23 @@
 /// One typed input in a modal form.
 pub struct ModalField[A] {
   priv definition_ : @model.Component
-  priv decode_ : (Array[@model.Component]) -> A raise HandlerError
-  priv present_ : (Array[@model.Component]) -> Bool
+  priv decode_ : (ModalSubmission) -> A raise HandlerError
+  priv present_ : (ModalSubmission) -> Bool
 }
 
 ///|
 /// A composable collection of typed modal inputs.
 pub struct ModalFields[A] {
   priv definitions_ : Array[@model.Component]
-  priv decode_ : (Array[@model.Component]) -> A raise HandlerError
+  priv decode_ : (ModalSubmission) -> A raise HandlerError
+}
+
+///|
+/// What a submitted modal carries: its component tree plus the entities
+/// Discord resolved for it (file uploads resolve to attachments).
+priv struct ModalSubmission {
+  components : Array[@model.Component]
+  resolved : @model.ResolvedData?
 }
 
 ///|
@@ -56,6 +64,8 @@ fn find_modal_component(
       TextInput(input) if input.custom_id == custom_id => return Some(component)
       StringSelect(select) if select.custom_id == custom_id =>
         return Some(component)
+      FileUpload(upload) if upload.custom_id == custom_id =>
+        return Some(component)
       _ => ()
     }
   }
@@ -71,6 +81,8 @@ fn modal_component_present(
     Some(TextInput(input)) => input.value is Some(value) && !value.is_empty()
     Some(StringSelect(select)) =>
       select.values is Some(values) && !values.is_empty()
+    Some(FileUpload(upload)) =>
+      upload.values is Some(values) && !values.is_empty()
     _ => false
   }
 }
@@ -82,6 +94,8 @@ fn set_modal_field_optional(component : @model.Component) -> @model.Component {
       Label({ ..label, component: set_modal_field_optional(label.component), })
     TextInput(input) => TextInput({ ..input, required: Some(false), })
     StringSelect(select) => StringSelect({ ..select, min_values: Some(0), })
+    FileUpload(upload) =>
+      FileUpload({ ..upload, required: Some(false), min_values: Some(0), })
     other => other
   }
 }
@@ -94,6 +108,23 @@ fn modal_text_input_ids(components : Array[@model.Component]) -> Array[String] {
       ActionRow(row) => result.append(modal_text_input_ids(row.components))
       Label(label) => result.append(modal_text_input_ids([label.component]))
       TextInput(input) => result.push(input.custom_id)
+      _ => ()
+    }
+  }
+  result
+}
+
+///|
+fn modal_file_type_filters(
+  components : Array[@model.Component],
+) -> Array[(String, Array[@model.FileTypeFilter])] {
+  let result = []
+  for component in components {
+    match component {
+      ActionRow(row) => result.append(modal_file_type_filters(row.components))
+      Label(label) => result.append(modal_file_type_filters([label.component]))
+      FileUpload({ custom_id, file_types: Some(filters), .. }) =>
+        result.push((custom_id, filters))
       _ => ()
     }
   }
@@ -166,9 +197,11 @@ pub fn text_field(
   )
   {
     definition_: @interaction.label(label~, component=input, description?),
-    present_: components => modal_component_present(components, custom_id),
-    decode_: components => {
-      match find_modal_component(components, custom_id) {
+    present_: submission => {
+      modal_component_present(submission.components, custom_id)
+    },
+    decode_: submission => {
+      match find_modal_component(submission.components, custom_id) {
         Some(TextInput({ value: Some(value), .. })) if !value.is_empty() =>
           value
         _ => raise InvalidArgument("missing modal field: \{custom_id}")
@@ -197,13 +230,61 @@ pub fn select_field(
   )
   {
     definition_: @interaction.label(label~, component=select, description?),
-    present_: components => modal_component_present(components, custom_id),
-    decode_: components => {
-      match find_modal_component(components, custom_id) {
+    present_: submission => {
+      modal_component_present(submission.components, custom_id)
+    },
+    decode_: submission => {
+      match find_modal_component(submission.components, custom_id) {
         Some(StringSelect({ values: Some(values), .. })) if !values.is_empty() =>
           values
         _ => raise InvalidArgument("missing modal field: \{custom_id}")
       }
+    },
+  }
+}
+
+///|
+/// Define a modern label-wrapped file upload. Decodes to the uploaded files'
+/// attachment objects (resolved by Discord alongside the submission).
+/// `file_types` filters selectable files by extension only — validate the
+/// contents yourself. `min_values`/`max_values` bound the file count.
+pub fn file_field(
+  custom_id~ : String,
+  label~ : String,
+  description? : String,
+  min_values? : Int,
+  max_values? : Int,
+  file_types? : Array[@model.FileTypeFilter],
+) -> ModalField[Array[@model.Attachment]] {
+  let upload = @interaction.file_upload(
+    custom_id~,
+    min_values?,
+    max_values?,
+    required=true,
+    file_types?,
+  )
+  {
+    definition_: @interaction.label(label~, component=upload, description?),
+    present_: submission => {
+      modal_component_present(submission.components, custom_id)
+    },
+    decode_: submission => {
+      guard find_modal_component(submission.components, custom_id)
+        is Some(FileUpload({ values: Some(ids), .. })) &&
+        !ids.is_empty() else {
+        raise InvalidArgument("missing modal field: \{custom_id}")
+      }
+      let attachments = submission.resolved
+        .bind(resolved => resolved.attachments)
+        .unwrap_or({})
+      ids.map(id => {
+        guard attachments.get(id) is Some(attachment) else {
+          raise InvalidArgument(
+            "unresolved attachment \{id} in modal field: \{custom_id}",
+          )
+        }
+        attachment
+      })
     },
   }
 }
@@ -214,9 +295,9 @@ pub fn[A] ModalField::optional(self : ModalField[A]) -> ModalField[A?] {
   {
     definition_: set_modal_field_optional(self.definition_),
     present_: self.present_,
-    decode_: components => {
-      if (self.present_)(components) {
-        Some((self.decode_)(components))
+    decode_: submission => {
+      if (self.present_)(submission) {
+        Some((self.decode_)(submission))
       } else {
         None
       }
@@ -233,9 +314,9 @@ pub fn[A] ModalField::with_default(
   {
     definition_: set_modal_field_optional(self.definition_),
     present_: self.present_,
-    decode_: components => {
-      if (self.present_)(components) {
-        (self.decode_)(components)
+    decode_: submission => {
+      if (self.present_)(submission) {
+        (self.decode_)(submission)
       } else {
         value
       }
@@ -252,8 +333,8 @@ pub fn[A] ModalField::validate(
   {
     definition_: self.definition_,
     present_: self.present_,
-    decode_: components => {
-      let value = (self.decode_)(components)
+    decode_: submission => {
+      let value = (self.decode_)(submission)
       match check(value) {
         Some(message) => raise InvalidArgument(message)
         None => value
@@ -271,7 +352,7 @@ pub fn[A, B] ModalField::map(
   {
     definition_: self.definition_,
     present_: self.present_,
-    decode_: components => f((self.decode_)(components)),
+    decode_: submission => f((self.decode_)(submission)),
   }
 }
 
@@ -291,7 +372,7 @@ pub fn[A, B] ModalFields::map(
 ) -> ModalFields[B] {
   {
     definitions_: self.definitions_,
-    decode_: components => f((self.decode_)(components)),
+    decode_: submission => f((self.decode_)(submission)),
   }
 }
 
@@ -305,8 +386,8 @@ pub fn[A, B] ModalFields::zip(
   definitions.append(other.definitions_)
   {
     definitions_: definitions,
-    decode_: components => {
-      ((self.decode_)(components), (other.decode_)(components))
+    decode_: submission => {
+      ((self.decode_)(submission), (other.decode_)(submission))
     },
   }
 }
@@ -432,8 +513,9 @@ pub fn[A] Modal::show(
 fn[A] Modal::decode(
   self : Modal[A],
   components : Array[@model.Component],
+  resolved? : @model.ResolvedData,
 ) -> A raise HandlerError {
-  (self.fields_.decode_)(components)
+  (self.fields_.decode_)({ components, resolved, })
 }
 
 ///|
@@ -704,7 +786,7 @@ async fn[A] dispatch_modal_handler(
         source => raise_failure(route, BeforeInitial, source)
       }
     Immediate(run) => {
-      let value = modal.decode(raw.data.components) catch {
+      let value = modal.decode(raw.data.components, resolved?=raw.data.resolved) catch {
         source => raise_failure(route, BeforeInitial, source)
       }
       let response = run({ raw_: raw, bot_: bot, state_: state, }, value) catch {
@@ -715,7 +797,7 @@ async fn[A] dispatch_modal_handler(
       }
     }
     Deferred(ephemeral~, run) => {
-      let value = modal.decode(raw.data.components) catch {
+      let value = modal.decode(raw.data.components, resolved?=raw.data.resolved) catch {
         source => raise_failure(route, BeforeInitial, source)
       }
       raw.defer_response(ephemeral~) catch {

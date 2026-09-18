@@ -4,7 +4,7 @@ test "select fields raise on missing submissions and map transforms values" {
     @interaction.select_option(label="Blue", value="blue"),
   ])
   let empty : Array[@model.Component] = []
-  try (colors.decode_)(empty) |> ignore catch {
+  try (colors.decode_)(submission(empty)) |> ignore catch {
     InvalidArgument(message) =>
       inspect(message, content="missing modal field: color")
     _ => fail("unexpected modal error")
@@ -17,7 +17,7 @@ test "select fields raise on missing submissions and map transforms values" {
       #|{"custom_id":"pick","components":[{"type":18,"label":"Color","component":{"type":3,"custom_id":"color","values":["blue"]}}]}
     ),
   )
-  inspect((first.decode_)(submitted), content="blue")
+  inspect((first.decode_)(submission(submitted)), content="blue")
 }
 
 ///|
@@ -32,13 +32,15 @@ test "modal field tuples decode at every arity" {
     ),
   )
   inspect(
-    (ModalFields::map1(note("f1"), value => value + "!").decode_)(submitted),
+    (ModalFields::map1(note("f1"), value => value + "!").decode_)(
+      submission(submitted),
+    ),
     content="a!",
   )
   inspect(
     (ModalFields::map3(note("f1"), note("f2"), note("f3"), (a, b, c) => {
       a + b + c
-    }).decode_)(submitted),
+    }).decode_)(submission(submitted)),
     content="abc",
   )
   inspect(
@@ -47,7 +49,7 @@ test "modal field tuples decode at every arity" {
       b,
       c,
       d,
-    ) => a + b + c + d).decode_)(submitted),
+    ) => a + b + c + d).decode_)(submission(submitted)),
     content="abcd",
   )
   inspect(
@@ -58,7 +60,7 @@ test "modal field tuples decode at every arity" {
       note("f4"),
       note("f5"),
       (a, b, c, d, e) => a + b + c + d + e,
-    ).decode_)(submitted),
+    ).decode_)(submission(submitted)),
     content="abcde",
   )
 }

@@ -263,9 +263,12 @@ pub fn arg_mentionable(
 
 ///|
 /// Define a required attachment option resolved to its attachment object.
+/// `file_types` restricts which files the client lets the user pick (by
+/// extension only; still validate the contents).
 pub fn arg_attachment(
   name~ : String,
   description~ : String,
+  file_types? : Array[@model.FileTypeFilter],
   name_localizations? : Map[String, String],
   description_localizations? : Map[String, String],
 ) -> Arg[@model.Attachment] {
@@ -274,6 +277,7 @@ pub fn arg_attachment(
       name,
       description,
       required=true,
+      file_types?,
       name_localizations?,
       description_localizations?,
     ),

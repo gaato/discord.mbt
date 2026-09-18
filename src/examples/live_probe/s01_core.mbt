@@ -34,6 +34,10 @@ async fn sec_core(p : P) -> Unit {
     let guilds = c.get_current_user_guilds(with_counts=true)
     "count=\{guilds.length()}"
   })
+  p.probe("get_current_user_guilds (shard=0)", () => {
+    let guilds = c.get_current_user_guilds(shard=0)
+    "count=\{guilds.length()}"
+  })
   p.probe("paginate_current_user_guilds", () => {
     let guilds = c.paginate_current_user_guilds(page_size=1).collect(max=5)
     "count=\{guilds.length()}"

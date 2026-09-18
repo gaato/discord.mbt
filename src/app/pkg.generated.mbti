@@ -15,6 +15,8 @@ pub fn commands_in_sync(Array[@interaction.CommandSpec], Array[@model.Applicatio
 
 pub fn dm_only() -> (CheckCtx) -> Bool raise HandlerError
 
+pub fn file_field(custom_id~ : String, label~ : String, description? : String, min_values? : Int, max_values? : Int, file_types? : Array[@model.FileTypeFilter]) -> ModalField[Array[@model.Attachment]]
+
 pub fn guild_only() -> (CheckCtx) -> Bool raise HandlerError
 
 pub fn message_command(name~ : String, handler~ : InteractionHandler[@model.Message], default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType], name_localizations? : Map[String, String]) -> Command[@model.Message]
@@ -47,6 +49,7 @@ pub(all) suberror AppConfigError {
   RequiredOptionAfterOptional(command~ : String, path~ : String)
   InvalidModalFieldCount(custom_id~ : String, count~ : Int)
   DuplicateModalTextInput(custom_id~ : String, field~ : String)
+  InvalidFileTypes(owner~ : String, reason~ : String)
   InvalidCooldown(command~ : String, seconds~ : Int)
   InvalidMaxInFlight(value~ : Int)
 } derive(@debug.Debug)

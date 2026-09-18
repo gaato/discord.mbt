@@ -219,7 +219,7 @@ pub async fn Client::get_current_user(Self) -> @model.User raise DiscordHttpErro
 pub async fn Client::get_current_user_application_role_connection(Self, @model.Id[@model.ApplicationMarker], bearer_token~ : String) -> @model.ApplicationRoleConnection raise DiscordHttpError
 pub async fn Client::get_current_user_connections(Self, bearer_token~ : String) -> Array[@model.Connection] raise DiscordHttpError
 pub async fn Client::get_current_user_guild_member(Self, @model.Id[@model.GuildMarker], bearer_token~ : String) -> @model.GuildMember raise DiscordHttpError
-pub async fn Client::get_current_user_guilds(Self, limit? : Int, before? : @model.Id[@model.GuildMarker], after? : @model.Id[@model.GuildMarker], with_counts? : Bool) -> Array[@model.CurrentUserGuild] raise DiscordHttpError
+pub async fn Client::get_current_user_guilds(Self, limit? : Int, before? : @model.Id[@model.GuildMarker], after? : @model.Id[@model.GuildMarker], shard? : Int, with_counts? : Bool) -> Array[@model.CurrentUserGuild] raise DiscordHttpError
 pub async fn Client::get_current_user_voice_state(Self, @model.Id[@model.GuildMarker]) -> @model.VoiceState raise DiscordHttpError
 pub async fn Client::get_entitlement(Self, @model.Id[@model.ApplicationMarker], @model.Id[@model.EntitlementMarker]) -> @model.Entitlement raise DiscordHttpError
 pub async fn Client::get_followup(Self, @model.Id[@model.ApplicationMarker], String, @model.Id[@model.MessageMarker]) -> @model.Message raise DiscordHttpError
@@ -331,7 +331,7 @@ pub async fn Client::modify_webhook(Self, @model.Id[@model.WebhookMarker], name?
 pub async fn Client::modify_webhook_with_token(Self, @model.Id[@model.WebhookMarker], String, name? : String, avatar? : String, clear_avatar? : Bool) -> @model.Webhook raise DiscordHttpError
 pub fn Client::on_telemetry(Self, (@telemetry.TelemetryEvent) -> Unit raise) -> Unit
 pub fn Client::on_warn(Self, (String) -> Unit) -> Unit
-pub fn Client::paginate_current_user_guilds(Self, before? : @model.Id[@model.GuildMarker], after? : @model.Id[@model.GuildMarker], with_counts? : Bool, page_size? : Int) -> Paginator[@model.CurrentUserGuild] raise DiscordHttpError
+pub fn Client::paginate_current_user_guilds(Self, before? : @model.Id[@model.GuildMarker], after? : @model.Id[@model.GuildMarker], shard? : Int, with_counts? : Bool, page_size? : Int) -> Paginator[@model.CurrentUserGuild] raise DiscordHttpError
 pub fn Client::paginate_guild_audit_log(Self, @model.Id[@model.GuildMarker], user_id? : @model.Id[@model.UserMarker], action_type? : @model.AuditLogEvent, before? : @model.Id[@model.AuditLogEntryMarker], page_size? : Int) -> Paginator[@model.AuditLogEntry] raise DiscordHttpError
 pub fn Client::paginate_guild_bans(Self, @model.Id[@model.GuildMarker], before? : @model.Id[@model.UserMarker], after? : @model.Id[@model.UserMarker], page_size? : Int) -> Paginator[@model.GuildBan] raise DiscordHttpError
 pub fn Client::paginate_guild_members(Self, @model.Id[@model.GuildMarker], after? : @model.Id[@model.UserMarker], page_size? : Int) -> Paginator[@model.GuildMember] raise DiscordHttpError

@@ -319,6 +319,7 @@ pub(all) struct FileUpload {
   max_values : Int?
   required : Bool?
   values : Array[String]?
+  file_types : Array[FileTypeFilter]?
 } derive(ToJson, FromJson, Debug)
 
 ///|

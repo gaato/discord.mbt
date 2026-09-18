@@ -623,3 +623,34 @@ test "components v2 media accept documented null description and size" {
   })
   assert_true(item.description is Some(Null))
 }
+
+///|
+test "file type filters round-trip on attachment options and file uploads" {
+  let upload : @model.Component = @json.from_json({
+    "type": 19,
+    "custom_id": "proof",
+    "file_types": ["image", "video", "audio", ".PDF", "sticker"],
+  })
+  guard upload is FileUpload({ file_types: Some(filters), .. }) else {
+    fail("expected file upload with filters")
+  }
+  debug_inspect(
+    filters,
+    content=(
+      #|[Image, Video, Audio, Extension(".PDF"), Unknown("sticker")]
+    ),
+  )
+  inspect(
+    filters.to_json().stringify(),
+    content=(
+      #|["image","video","audio",".PDF","sticker"]
+    ),
+  )
+  let option : @model.CommandOption = @json.from_json({
+    "type": 11,
+    "name": "file",
+    "description": "File",
+    "file_types": [".pdf"],
+  })
+  assert_true(option.file_types is Some([Extension(".pdf")]))
+}

@@ -268,6 +268,15 @@ Fixed in a follow-up (2026-07-18): `create_guild_sticker` rejected an empty
 `modify_guild_sticker` keeps the 2-100 rule; the documented way to drop a
 description there is null, exposed as `clear_description`.
 
+Upstream sync (2026-09-19, docs changelog 2026-07-16 → 2026-09-17):
+`get_current_user_guilds` / `paginate_current_user_guilds` gained `shard`
+(required by Discord for large bot sharding since 2026-09-15); ATTACHMENT
+options and File Upload components gained `file_types` (2026-08-05). Receive
+shapes are now also checked mechanically: `scripts/docs_shape_audit.py`
+matches every `src/model` struct to its docs field table and fails on a field
+the docs mark optional (`name?`) or nullable (`?type`) that the model does not
+(it caught the 2026-08-05 channel `application_id` nullability change).
+
 Intentionally not exposed (still reachable via `Route::custom`):
 
 - Command params `dm_permission` / `default_permission` — deprecated in the

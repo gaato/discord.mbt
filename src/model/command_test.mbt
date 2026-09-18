@@ -105,6 +105,7 @@ test "application command decodes nested slash options" {
       #|                    min_length: Some(1),
       #|                    max_length: Some(32),
       #|                    autocomplete: None,
+      #|                    file_types: None,
       #|                  },
       #|                  {
       #|                    typ: Number,
@@ -121,6 +122,7 @@ test "application command decodes nested slash options" {
       #|                    min_length: None,
       #|                    max_length: None,
       #|                    autocomplete: Some(false),
+      #|                    file_types: None,
       #|                  },
       #|                ],
       #|              ),
@@ -130,6 +132,7 @@ test "application command decodes nested slash options" {
       #|              min_length: None,
       #|              max_length: None,
       #|              autocomplete: None,
+      #|              file_types: None,
       #|            },
       #|          ],
       #|        ),
@@ -139,6 +142,7 @@ test "application command decodes nested slash options" {
       #|        min_length: None,
       #|        max_length: None,
       #|        autocomplete: None,
+      #|        file_types: None,
       #|      },
       #|    ],
       #|  ),
@@ -185,6 +189,7 @@ test "command option preserves an unknown wire type" {
       #|  min_length: None,
       #|  max_length: None,
       #|  autocomplete: None,
+      #|  file_types: None,
       #|}
     ),
   )

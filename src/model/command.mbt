@@ -143,6 +143,8 @@ pub(all) struct CommandOption {
   min_length : Int?
   max_length : Int?
   autocomplete : Bool?
+  /// Upload filter for ATTACHMENT options (at most 10 entries).
+  file_types : Array[FileTypeFilter]?
 } derive (
   ToJson(fields(typ(rename="type"))),
   FromJson(fields(typ(rename="type"))),

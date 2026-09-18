@@ -1,4 +1,9 @@
 ///|
+fn submission(components : Array[@model.Component]) -> ModalSubmission {
+  { components, resolved: None, }
+}
+
+///|
 fn submitted_components(fixture : String) -> Array[@model.Component] raise {
   let data : @model.ModalData = @json.from_json(@json.parse(fixture))
   data.components
@@ -52,13 +57,13 @@ test "modal field optional default and validation semantics" {
   let optional = ModalFields::of(
     text_field(custom_id="optional", label="Optional").optional(),
   )
-  debug_inspect((optional.decode_)(empty), content="None")
+  debug_inspect((optional.decode_)(submission(empty)), content="None")
   let defaulted = ModalFields::of(
     text_field(custom_id="defaulted", label="Defaulted").with_default(
       "fallback",
     ),
   )
-  inspect((defaulted.decode_)(empty), content="fallback")
+  inspect((defaulted.decode_)(submission(empty)), content="fallback")
   let validated = modal(
     custom_id="validated",
     title="Validated",

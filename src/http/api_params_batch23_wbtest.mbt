@@ -56,9 +56,19 @@ async test "current user guild query pins set and omitted parameters" {
   client.get_current_user_guilds(limit=200, after=cursor, with_counts=true)
   |> ignore
   client.get_current_user_guilds() |> ignore
+  client.get_current_user_guilds(shard=3) |> ignore
+  client.paginate_current_user_guilds(shard=1).collect(max=1) |> ignore
   assert_eq(paths, [
     "/api/v10/users/@me/guilds?limit=200&after=40&with_counts=true", "/api/v10/users/@me/guilds",
+    "/api/v10/users/@me/guilds?shard=3", "/api/v10/users/@me/guilds?limit=200&shard=1",
   ])
+  try client.get_current_user_guilds(shard=-1) |> ignore catch {
+    Validation(message~) =>
+      inspect(message, content="shard must be non-negative")
+    error => fail("unexpected error: \{Repr(error)}")
+  } noraise {
+    _ => fail("expected a shard validation error")
+  }
 }
 
 ///|

@@ -24,7 +24,7 @@ pub const SILENCE_FRAME : Bytes = b"\xF8\xFF\xFE"
 
 pub fn action_row(Array[@model.Component]) -> @model.Component
 
-pub fn arg_attachment(name~ : String, description~ : String, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @interaction.Arg[@model.Attachment]
+pub fn arg_attachment(name~ : String, description~ : String, file_types? : Array[@model.FileTypeFilter], name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @interaction.Arg[@model.Attachment]
 
 pub fn arg_bool(name~ : String, description~ : String, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @interaction.Arg[Bool]
 
@@ -42,7 +42,7 @@ pub fn arg_string(name~ : String, description~ : String, choices? : Array[@model
 
 pub fn arg_user(name~ : String, description~ : String, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @interaction.Arg[@model.Id[@model.UserMarker]]
 
-pub fn attachment_option(String, String, required? : Bool, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @model.CommandOption
+pub fn attachment_option(String, String, required? : Bool, file_types? : Array[@model.FileTypeFilter], name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @model.CommandOption
 
 pub fn boolean_option(String, String, required? : Bool, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @model.CommandOption
 
@@ -55,6 +55,10 @@ pub fn channel_select(custom_id~ : String, placeholder? : String, min_values? : 
 pub fn container(components~ : Array[@model.Component], accent_color? : Int, spoiler? : Bool) -> @model.Component
 
 pub fn dm_only() -> (@app.CheckCtx) -> Bool raise @app.HandlerError
+
+pub fn file_field(custom_id~ : String, label~ : String, description? : String, min_values? : Int, max_values? : Int, file_types? : Array[@model.FileTypeFilter]) -> @app.ModalField[Array[@model.Attachment]]
+
+pub fn file_upload(custom_id~ : String, min_values? : Int, max_values? : Int, required? : Bool, file_types? : Array[@model.FileTypeFilter]) -> @model.Component
 
 pub fn guild_only() -> (@app.CheckCtx) -> Bool raise @app.HandlerError
 

@@ -29,19 +29,32 @@ async fn sec_commands(p : P) -> Unit {
       min_length: None,
       max_length: None,
       autocomplete: None,
+      file_types: None,
     }
+    let upload = @interaction.attachment_option("upload", "a filtered upload", file_types=[
+      Image,
+      Extension(".pdf"),
+    ])
     let cmd = c.create_global_command(
       a,
       "live-probe-global",
       description="created by live probe",
-      options=[option],
+      options=[option, upload],
       name_localizations={ "ja": "らいぶぷろーぶ" },
       description_localizations={ "ja": "ライブプローブ製" },
       integration_types=[GuildInstall],
       contexts=[Guild, BotDm],
     )
     global_cmd = Some(cmd.id)
-    "id=\{cmd.id} contexts=\{cmd.contexts is Some(Value(_))}"
+    let echoed_file_types = match cmd.options {
+      Some([_, { file_types: Some(types), .. }]) =>
+        types.map(t => t.to_string()).join(",")
+      _ => "missing"
+    }
+    guard echoed_file_types == "image,.pdf" else {
+      fail("file_types not echoed: \{echoed_file_types}")
+    }
+    "id=\{cmd.id} contexts=\{cmd.contexts is Some(Value(_))} file_types=\{echoed_file_types}"
   })
   p.probe("create_global_command (USER type, no description)", () => {
     let cmd = c.create_global_command(a, "live-probe-user-cmd", typ=User)

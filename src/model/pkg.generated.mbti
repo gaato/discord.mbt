@@ -849,6 +849,7 @@ pub(all) struct CommandOption {
   min_length : Int?
   max_length : Int?
   autocomplete : Bool?
+  file_types : Array[FileTypeFilter]?
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct CommandOptionChoice {
@@ -1342,6 +1343,18 @@ pub(all) struct FileComponent {
   size : Int?
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
+pub(all) enum FileTypeFilter {
+  Image
+  Video
+  Audio
+  Extension(String)
+  Unknown(String)
+} derive(Eq, @debug.Debug)
+pub fn FileTypeFilter::from_string(String) -> Self
+pub fn FileTypeFilter::to_string(Self) -> String
+pub impl ToJson for FileTypeFilter
+pub impl @json.FromJson for FileTypeFilter
+
 pub(all) struct FileUpload {
   id : Int?
   custom_id : String
@@ -1349,6 +1362,7 @@ pub(all) struct FileUpload {
   max_values : Int?
   required : Bool?
   values : Array[String]?
+  file_types : Array[FileTypeFilter]?
 } derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct FollowedChannel {

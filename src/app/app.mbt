@@ -18,6 +18,9 @@ pub(all) suberror AppConfigError {
   RequiredOptionAfterOptional(command~ : String, path~ : String)
   InvalidModalFieldCount(custom_id~ : String, count~ : Int)
   DuplicateModalTextInput(custom_id~ : String, field~ : String)
+  /// A `file_types` filter with more than 10 entries or an extension that is
+  /// not dot-prefixed. `owner` is a command option path or modal field id.
+  InvalidFileTypes(owner~ : String, reason~ : String)
   InvalidCooldown(command~ : String, seconds~ : Int)
   InvalidMaxInFlight(value~ : Int)
 } derive(Debug)
@@ -33,6 +36,7 @@ priv struct RegisteredModal {
   prefix : String
   field_count : Int?
   text_input_ids : Array[String]?
+  file_type_filters : Array[(String, Array[@model.FileTypeFilter])]
   dispatch : async (AppCtx, @framework.ModalCtx) -> Unit
 }
 
@@ -128,6 +132,7 @@ pub fn[A] App::on_modal(
     prefix: modal.custom_id_,
     field_count: Some(modal.fields_.definitions_.length()),
     text_input_ids: Some(modal_text_input_ids(modal.fields_.definitions_)),
+    file_type_filters: modal_file_type_filters(modal.fields_.definitions_),
     dispatch: (bot, raw) => dispatch_modal_handler(modal, handler, bot, raw),
   })
 }
@@ -143,6 +148,7 @@ pub fn App::on_modal_raw(
     prefix,
     field_count: None,
     text_input_ids: None,
+    file_type_filters: [],
     dispatch: (_, raw) => handler(raw),
   })
 }
@@ -186,6 +192,28 @@ fn App::current_policy(self : App) -> ErrorPolicy {
 }
 
 ///|
+fn validate_file_types(
+  owner : String,
+  filters : Array[@model.FileTypeFilter],
+) -> Unit raise AppConfigError {
+  if filters.length() > 10 {
+    raise InvalidFileTypes(
+      owner~,
+      reason="\{filters.length()} entries (at most 10)",
+    )
+  }
+  for filter in filters {
+    if filter is Extension(extension) &&
+      (!extension.has_prefix(".") || extension.length() < 2) {
+      raise InvalidFileTypes(
+        owner~,
+        reason="extension \{extension} is not dot-prefixed",
+      )
+    }
+  }
+}
+
+///|
 fn validate_command_options(
   command : String,
   parent_path : Array[String],
@@ -207,6 +235,9 @@ fn validate_command_options(
         saw_optional = true
       }
     }
+    if option.file_types is Some(filters) {
+      validate_file_types("\{command}/\{path.join("/")}", filters)
+    }
     if option.options is Some(children) {
       validate_command_options(command, path, children)
     }
@@ -215,7 +246,8 @@ fn validate_command_options(
 
 ///|
 /// Check declarations for configuration errors: invalid command trees and
-/// cooldowns, invalid modal field counts, and duplicate modal text-input ids.
+/// cooldowns, invalid modal field counts, duplicate modal text-input ids,
+/// and malformed `file_types` upload filters.
 /// Executors call this at startup; call it directly in a test to fail fast.
 pub fn App::validate(self : App) -> Unit raise AppConfigError {
   if self.max_in_flight_ <= 0 {
@@ -247,6 +279,9 @@ pub fn App::validate(self : App) -> Unit raise AppConfigError {
   for modal in self.modals_ {
     if modal.field_count is Some(count) && (count < 1 || count > 5) {
       raise InvalidModalFieldCount(custom_id=modal.prefix, count~)
+    }
+    for entry in modal.file_type_filters {
+      validate_file_types("\{modal.prefix}/\{entry.0}", entry.1)
     }
     if modal.text_input_ids is Some(ids) {
       let seen : Set[String] = Set([])

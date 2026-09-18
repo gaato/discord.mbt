@@ -25,6 +25,7 @@ fn base_option(
     min_length: None,
     max_length: None,
     autocomplete: None,
+    file_types: None,
   }
 }
 
@@ -232,6 +233,7 @@ pub fn attachment_option(
   name : String,
   description : String,
   required? : Bool,
+  file_types? : Array[@model.FileTypeFilter],
   name_localizations? : Map[String, String],
   description_localizations? : Map[String, String],
 ) -> @model.CommandOption {
@@ -244,6 +246,7 @@ pub fn attachment_option(
       description_localizations?,
     ),
     required,
+    file_types,
   }
 }
 
@@ -417,6 +420,28 @@ pub fn string_select(
     channel_types: None,
     default_values: None,
     values: None,
+  })
+}
+
+///|
+/// Build a file upload input for a modal (wrap it in `label`). `file_types`
+/// restricts selectable files by extension; `min_values`/`max_values` bound
+/// the file count (0-10 / 1-10).
+pub fn file_upload(
+  custom_id~ : String,
+  min_values? : Int,
+  max_values? : Int,
+  required? : Bool,
+  file_types? : Array[@model.FileTypeFilter],
+) -> @model.Component {
+  FileUpload({
+    id: None,
+    custom_id,
+    min_values,
+    max_values,
+    required,
+    values: None,
+    file_types,
   })
 }
 
