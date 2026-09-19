@@ -112,14 +112,12 @@ async fn run_echo_bot(token : String) -> Unit {
 WebAssembly is not currently enabled or validated as an application target in
 this repository.
 
-Packages remain usable on their own. A REST-only tool needs `http` and `model`.
-The dependency graph, generated from the `moon.pkg` declarations by
-`tools/package_graph` and transitively reduced:
+Packages remain usable on their own. Import only what the program needs:
 
-<!-- Absolute URL: mooncakes.io serves only README.md, so relative image paths break there. -->
-![Package dependency graph](https://raw.githubusercontent.com/gaato/discord.mbt/main/docs/packages.svg)
-
-Amber nodes are native-only; every other package also runs on JS.
+- REST-only tool: `http` (brings `model`).
+- Serverless HTTP interactions (Cloudflare Workers, JS): `app` and `verify`.
+- Native HTTP interactions server: `endpoint_http`.
+- Gateway bot: `bot`, or the `gaato/discord` facade for everything.
 
 ## Examples
 
@@ -333,7 +331,6 @@ moon test --target native --release   # debug native builds need a working tcc s
 moon test --target js --release
 moon fmt
 moon -C template fmt --check
-moon -C tools/package_graph fmt --check
 moon info --target native             # regenerate pkg.generated.mbti (API review signal)
 ```
 
