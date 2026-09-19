@@ -529,7 +529,7 @@ test "followed channel JSON round trip" {
 }
 
 ///|
-test "channel decodes documented nulls and the obfuscated gateway shape" {
+test "channel decodes documented nulls and the live obfuscated shape" {
   // Channel `application_id` is nullable since the 2026-08-05 docs change.
   let guild_channel : @model.Channel = @json.from_json({
     "id": "41771983423143937",
@@ -541,24 +541,18 @@ test "channel decodes documented nulls and the obfuscated gateway shape" {
   assert_true(guild_channel.application_id is Some(Null))
   assert_true(guild_channel.app_permissions is Some(_))
   assert_false(guild_channel.is_obfuscated())
-  // Shape documented in "Obfuscated Channels": only id/type/position/parent_id
-  // are reliable; everything else may be nulled or reduced.
-  let hidden : @model.Channel = @json.from_json({
-    "id": "41771983423143938",
-    "type": 0,
-    "guild_id": "41771983423143937",
-    "position": 3,
-    "parent_id": "41771983423143939",
-    "name": "___hidden___",
-    "topic": Json::null(),
-    "last_message_id": Json::null(),
-    "application_id": Json::null(),
-    "flags": 131072,
-    "permission_overwrites": [
-      { "id": "41771983423143937", "type": 0, "allow": "0", "deny": "1024" },
-    ],
-  })
+  // Captured live on 2026-09-20 with the CHANNEL_OBFUSCATION capability for a
+  // private text channel the bot cannot view (unknown fields trimmed).
+  let hidden : @model.Channel = @json.from_json(
+    @json.parse(
+      (
+        #|{"version":1789836791299,"type":0,"topic":null,"theme_color":null,"status":null,"rtc_region":null,"rate_limit_per_user":0,"position":3,"permission_overwrites":[{"type":0,"id":"1527253314998108220","deny":"1024","allow":"0"}],"parent_id":"1550912651779903572","nsfw":false,"name":"___hidden___","last_pin_timestamp":null,"last_message_id":null,"id":"1550912654049026191","icon_emoji":null,"flags":131072,"default_sort_order":null,"default_reaction_emoji":null,"available_tags":[],"application_id":null}
+      ),
+    ),
+  )
   assert_true(hidden.is_obfuscated())
+  assert_true(hidden.application_id is Some(Null))
+  assert_true(hidden.topic is Some(Null))
   assert_true(
     hidden.flags.unwrap().contains(@model.ChannelFlags::channel_obfuscated()),
   )
