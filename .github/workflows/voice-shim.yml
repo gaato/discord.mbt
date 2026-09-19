@@ -36,7 +36,7 @@ jobs:
     permissions:
       contents: read
     env:
-      MOONBIT_INSTALL_VERSION: "0.10.11+8f8e8db1e"
+      MOONBIT_INSTALL_VERSION: "0.10.13+cbb11c36f"
     strategy:
       fail-fast: false
       matrix:
