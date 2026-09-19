@@ -5,8 +5,8 @@
 // by another drawn edge. Native-only packages (no non-test .mbt file compiles
 // on js) are shaded amber. The SVG is rendered in-process with mizchi/moomaid.
 //
-//   moon run . --target native             regenerate both files
-//   moon run . --target native -- --check  fail if docs/packages.mmd is stale
+//   moon run . --target js             regenerate both files
+//   moon run . --target js -- --check  fail if docs/packages.mmd is stale
 
 ///|
 const MODULE_PREFIX = "gaato/discord/"

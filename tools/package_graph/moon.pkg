@@ -5,6 +5,6 @@ import {
   "moonbitlang/x/sys",
 }
 
-supported_targets = "native"
+supported_targets = "js"
 
 pkgtype(kind: "executable")

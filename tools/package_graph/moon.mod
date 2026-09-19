@@ -6,9 +6,9 @@ description = "Repo tool: generate docs/packages.mmd and docs/packages.svg from 
 
 source = "."
 
-preferred_target = "native"
+preferred_target = "js"
 
 import {
-  "mizchi/moomaid@0.1.3",
+  "mizchi/moomaid@0.4.0",
   "moonbitlang/x@0.5.1",
 }
