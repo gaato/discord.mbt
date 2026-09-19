@@ -9,6 +9,6 @@ source = "src"
 preferred_target = "native"
 
 import {
-  "gaato/discord@0.1.0",
+  "gaato/discord@0.2.0",
   "moonbitlang/async@0.22.1",
 }
