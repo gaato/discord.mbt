@@ -46,12 +46,16 @@ async fn sec_commands(p : P) -> Unit {
       contexts=[Guild, BotDm],
     )
     global_cmd = Some(cmd.id)
+    // Discord stores file_types as a set and may echo any order.
     let echoed_file_types = match cmd.options {
-      Some([_, { file_types: Some(types), .. }]) =>
-        types.map(t => t.to_string()).join(",")
+      Some([_, { file_types: Some(types), .. }]) => {
+        let names = types.map(t => t.to_string())
+        names.sort()
+        names.join(",")
+      }
       _ => "missing"
     }
-    guard echoed_file_types == "image,.pdf" else {
+    guard echoed_file_types == ".pdf,image" else {
       fail("file_types not echoed: \{echoed_file_types}")
     }
     "id=\{cmd.id} contexts=\{cmd.contexts is Some(Value(_))} file_types=\{echoed_file_types}"

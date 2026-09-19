@@ -29,6 +29,49 @@ fn object_default(key : String, command_root : Bool) -> Json? {
 }
 
 ///|
+/// Command fields Discord stores as sets: it may echo them in any order
+/// (observed live for `file_types`), so they compare as multisets. Options
+/// and choices stay order-sensitive because their order is user-visible.
+fn unordered_key(key : String) -> Bool {
+  key is ("file_types" | "channel_types" | "contexts" | "integration_types")
+}
+
+///|
+fn same_elements(expected : Array[Json], actual : Array[Json]) -> Bool {
+  if expected.length() != actual.length() {
+    return false
+  }
+  let used = Array::make(actual.length(), false)
+  for value in expected {
+    let mut matched = false
+    for i, other in actual {
+      if !used[i] && declared_json_matches_at(value, other, false) {
+        used[i] = true
+        matched = true
+        break
+      }
+    }
+    if !matched {
+      return false
+    }
+  }
+  true
+}
+
+///|
+fn declared_value_matches(
+  key : String,
+  declared : Json,
+  fetched : Json,
+) -> Bool {
+  match (declared, fetched) {
+    (Array(expected), Array(actual)) if unordered_key(key) =>
+      same_elements(expected, actual)
+    _ => declared_json_matches_at(declared, fetched, false)
+  }
+}
+
+///|
 /// Compare one declared JSON subtree with the corresponding Discord value.
 /// Discord may add fields to response objects; only keys emitted by the
 /// declaration and known declaration defaults participate in equality.
@@ -42,14 +85,14 @@ fn declared_json_matches_at(
       for key, value in expected {
         match actual.get(key) {
           Some(other) =>
-            if !declared_json_matches_at(value, other, false) {
+            if !declared_value_matches(key, value, other) {
               return false
             }
           None => {
             guard object_default(key, command_root) is Some(fallback) else {
               return false
             }
-            if !declared_json_matches_at(value, fallback, false) {
+            if !declared_value_matches(key, value, fallback) {
               return false
             }
           }
@@ -59,7 +102,7 @@ fn declared_json_matches_at(
         let (key, fallback) = entry
         if !expected.contains(key) &&
           actual.get(key) is Some(value) &&
-          !declared_json_matches_at(fallback, value, false) {
+          !declared_value_matches(key, fallback, value) {
           return false
         }
       }
@@ -95,7 +138,9 @@ fn command_key(typ : @model.ApplicationCommandType, name : String) -> String {
 ///
 /// Command `(type, name)` pairs must form the same set. For each command,
 /// comparison follows the declaration shape recursively, ignoring server-owned
-/// fields such as ids and versions while preserving option and choice order.
+/// fields such as ids and versions while preserving option and choice order;
+/// set-valued fields (`file_types`, `channel_types`, `contexts`,
+/// `integration_types`) match in any order.
 pub fn commands_in_sync(
   declared : Array[@interaction.CommandSpec],
   fetched : Array[@model.ApplicationCommand],
