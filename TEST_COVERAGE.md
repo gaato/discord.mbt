@@ -27,7 +27,7 @@ artifact, and requires it to load so transport AEAD tests cannot skip.
 `--from-json` only rechecks a stored report against the ledger; it does not
 repeat either native bootstrap or runtime load check.
 
-Snapshot at the last full measurement (2026-09-20, after the pre-1.0 boundary
+Snapshot at the last full measurement (2026-09-20, after the 0.3.0 boundary
 hardening and the per-attempt HTTP timeout): **92.5 %** across the library
 (8123/8784 coverage points; http 95.8 %, model 95.1 %, interaction 94.9 %,
 bot 94.2 %, voice 85.7 %, gateway 75.7 %).

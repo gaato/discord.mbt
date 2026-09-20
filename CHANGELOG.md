@@ -1,9 +1,9 @@
 # Changelog
 
 All notable changes to this project are documented here. The format follows
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The project is
-pre-1.0: minor releases may contain breaking changes, and every breaking
-change is listed with a migration note.
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Minor releases
+(0.x → 0.y) may contain breaking changes; patch releases do not. Every
+breaking change is listed with a migration note.
 
 ## [Unreleased]
 
@@ -27,8 +27,8 @@ change is listed with a migration note.
 
 ## [0.3.0] - 2026-09-20
 
-Boundary hardening before 1.0: escape hatches, routing, and lifecycle side
-effects now have explicit, checked contracts.
+Boundary hardening: escape hatches, routing, and lifecycle side effects now
+have explicit, checked contracts.
 
 ### Changed
 

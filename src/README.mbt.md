@@ -11,7 +11,8 @@ The design follows [twilight](https://github.com/twilight-rs/twilight):
 loosely coupled packages that model the Discord API, plus an App layer for
 typed interaction declarations.
 
-> **Status**: experimental, pre-1.0. APIs may change between releases.
+> **Status**: experimental. Minor releases may contain breaking changes; see the
+> [changelog](CHANGELOG.md) for migration notes.
 
 Long-form guides live in [`src/guide/`](src/guide/README.md); their code
 blocks compile and run as part of the test suite, so the examples cannot
