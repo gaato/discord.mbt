@@ -1,4 +1,90 @@
 ///|
+test "automatic select builders preserve options and wire discriminators" {
+  let menus = [
+    @interaction.user_select(
+      custom_id="user",
+      placeholder="Choose",
+      min_values=0,
+      max_values=2,
+      disabled=false,
+    ),
+    @interaction.role_select(
+      custom_id="role",
+      placeholder="Choose",
+      min_values=0,
+      max_values=2,
+      disabled=false,
+    ),
+    @interaction.mentionable_select(
+      custom_id="mentionable",
+      placeholder="Choose",
+      min_values=0,
+      max_values=2,
+      disabled=false,
+    ),
+    @interaction.channel_select(
+      custom_id="channel",
+      placeholder="Choose",
+      min_values=0,
+      max_values=2,
+      disabled=false,
+      channel_types=[GuildText, GuildVoice],
+    ),
+  ]
+  for i, menu in menus {
+    let expected : Json = {
+      "type": i + 5,
+      "custom_id": ["user", "role", "mentionable", "channel"][i],
+      "placeholder": "Choose",
+      "min_values": 0,
+      "max_values": 2,
+      "disabled": false,
+    }
+    if i == 3 {
+      guard! expected is Object(fields)
+      fields["channel_types"] = [0, 2]
+    }
+    assert_eq(menu.to_json(), expected)
+    let decoded : @model.Component = @json.from_json(menu.to_json())
+    assert_eq(decoded.to_json(), expected)
+  }
+  assert_eq(@interaction.user_select(custom_id="default").to_json(), {
+    "type": 5,
+    "custom_id": "default",
+  })
+  assert_eq(@interaction.channel_select(custom_id="all").to_json(), {
+    "type": 8,
+    "custom_id": "all",
+  })
+}
+
+///|
+test "media gallery builders preserve descriptions spoilers and omitted fields" {
+  let gallery = @interaction.media_gallery([
+    @interaction.media_item(
+      url="attachment://preview.png",
+      description="Preview",
+      spoiler=true,
+    ),
+    @interaction.media_item(url="https://example.com/video.webm"),
+  ])
+  let expected : Json = {
+    "type": 12,
+    "items": [
+      {
+        "media": { "url": "attachment://preview.png" },
+        "description": "Preview",
+        "spoiler": true,
+      },
+      { "media": { "url": "https://example.com/video.webm" } },
+    ],
+  }
+  assert_eq(gallery.to_json(), expected)
+  let decoded : @model.Component = @json.from_json(gallery.to_json())
+  assert_eq(decoded.to_json(), expected)
+}
+
+///|
 test "component builders emit Discord wire payloads" {
   json_inspect(
     @interaction.action_row([

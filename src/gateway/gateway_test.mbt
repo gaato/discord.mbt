@@ -10,6 +10,7 @@ struct FakeTransport {
   close_during_send : Ref[Bool]
   close_during_recv : Ref[Bool]
   close_calls : Ref[Int]
+  fail_close : Ref[Bool]
 }
 
 ///|
@@ -24,6 +25,7 @@ fn FakeTransport::FakeTransport() -> FakeTransport {
     close_during_send: Ref(false),
     close_during_recv: Ref(false),
     close_calls: Ref(0),
+    fail_close: Ref(false),
   }
 }
 
@@ -72,6 +74,294 @@ impl @gateway.GatewayTransport for FakeTransport with fn close(self, code~) {
   self.incoming.close(
     error=@gateway.TransportClosed(code=Some(code), reason="client closed"),
   )
+  if self.fail_close.val {
+    raise GatewayTestFailure
+  }
+}
+
+///|
+suberror GatewayTestFailure {
+  GatewayTestFailure
+}
+
+///|
+async test "shard rejects sends while connecting and cancels the connector" {
+  let entered : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  let pending : @aqueue.Queue[&@gateway.GatewayTransport] = Queue(
+    kind=Unbounded,
+  )
+  @async.with_task_group(group => {
+    let shard = @gateway.Shard::start(
+      group,
+      token="tok",
+      intents=@model.Intents::none(),
+      connector=_ => {
+        entered.put(())
+        pending.get()
+      },
+    )
+    entered.get()
+    try shard.send({ "op": 3, "d": null }) catch {
+      @gateway.TransportClosed(code~, reason~) => {
+        assert_eq(code, None)
+        assert_eq(reason, "shard is not connected")
+      }
+      error => fail("unexpected send error: \{Repr(error)}")
+    } noraise {
+      _ => fail("expected disconnected send to fail")
+    }
+    shard.close()
+    shard.close()
+    assert_eq(shard.state(), Disconnected(reconnect_attempts=0))
+  })
+}
+
+///|
+async test "shard suppresses connector failure after protected cancellation cleanup" {
+  let entered : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  let finish : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  let telemetry : Array[@telemetry.TelemetryEvent] = []
+  let attempts = Ref(0)
+  @async.with_task_group(group => {
+    let shard = @gateway.Shard::start(
+      group,
+      token="tok",
+      intents=@model.Intents::none(),
+      connector=_ => {
+        attempts.val += 1
+        @async.protect_from_cancel(() => {
+          entered.put(())
+          finish.get()
+          raise GatewayTestFailure
+        })
+      },
+      telemetry=event => telemetry.push(event),
+    )
+    entered.get()
+    let closing = group.spawn(no_wait=true, () => shard.close())
+    @async.pause()
+    finish.put(())
+    closing.wait()
+    assert_eq(attempts.val, 1)
+    assert_eq(telemetry.length(), 2)
+    assert_true(telemetry[0] is ShardConnecting(shard_id=0))
+    assert_true(
+      telemetry[1]
+      is ShardDisconnected(shard_id=0, code=Some(1000), will_resume=false),
+    )
+    assert_eq(shard.state(), Disconnected(reconnect_attempts=0))
+  })
+}
+
+///|
+async test "shard connector failure reports telemetry and cancelled backoff stops retrying" {
+  let gate = SleepGate()
+  let attempts = Ref(0)
+  let telemetry : Array[@telemetry.TelemetryEvent] = []
+  @async.with_task_group(group => {
+    let shard = @gateway.Shard::start(
+      group,
+      token="tok",
+      intents=@model.Intents::none(),
+      connector=_ => {
+        attempts.val += 1
+        raise GatewayTestFailure
+      },
+      sleeper=ms => gate.sleep(ms),
+      telemetry=event => telemetry.push(event),
+    )
+    let delay = gate.requests.get()
+    assert_true(delay >= 250 && delay < 2250)
+    assert_eq(shard.state(), Disconnected(reconnect_attempts=1))
+    assert_true(telemetry[0] is ShardConnecting(shard_id=0))
+    assert_true(
+      telemetry[1]
+      is ShardDisconnected(shard_id=0, code=None, will_resume=false),
+    )
+    shard.close()
+    assert_eq(attempts.val, 1)
+  })
+}
+
+///|
+async test "shard backoff sleeper failure ends the retry loop" {
+  let attempts = Ref(0)
+  let slept : @aqueue.Queue[Int] = Queue(kind=Unbounded)
+  @async.with_task_group(group => {
+    let shard = @gateway.Shard::start(
+      group,
+      token="tok",
+      intents=@model.Intents::none(),
+      connector=_ => {
+        attempts.val += 1
+        raise GatewayTestFailure
+      },
+      sleeper=ms => {
+        slept.put(ms)
+        raise GatewayTestFailure
+      },
+    )
+    assert_true(slept.get() >= 250)
+    @async.pause()
+    assert_eq(attempts.val, 1)
+    assert_eq(shard.state(), Disconnected(reconnect_attempts=1))
+    shard.close()
+  })
+}
+
+///|
+async test "shard rejects malformed Hello and preserves transport close codes" {
+  for failure in 0..<3 {
+    let transport = FakeTransport()
+    let gate = SleepGate()
+    @async.with_task_group(group => {
+      let shard = @gateway.Shard::start(
+        group,
+        token="tok",
+        intents=@model.Intents::none(),
+        connector=_ => (transport : &@gateway.GatewayTransport),
+        sleeper=ms => gate.sleep(ms),
+      )
+      match failure {
+        0 => transport.incoming.put("{\"op\":10,\"d\":{}}")
+        1 => transport.server_close(Some(4004))
+        _ => transport.incoming.close(error=GatewayTestFailure)
+      }
+      if failure == 1 {
+        guard! shard.next() is FatallyClosed(code=4004)
+        assert_eq(shard.state(), FatallyClosed(code=4004))
+      } else {
+        guard! shard.next() is Disconnected(code=None, resuming=false)
+        assert_eq(shard.state(), Disconnected(reconnect_attempts=1))
+      }
+      assert_eq(transport.close_calls.val, 1)
+      shard.close()
+    })
+  }
+}
+
+///|
+async test "shard ignores incomplete dispatches and reconnects from a zero sequence" {
+  let first = FakeTransport()
+  let second = FakeTransport()
+  let transports = [second, first]
+  let gate = SleepGate()
+  let parked : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  @async.with_task_group(group => {
+    let shard = @gateway.Shard::start(
+      group,
+      token="tok",
+      intents=@model.Intents::none(),
+      connector=_ => (transports.pop().unwrap() : &@gateway.GatewayTransport),
+      sleeper=ms => if ms <= 1 { parked.get() } else { gate.sleep(ms) },
+    )
+    first.incoming.put(HELLO_FAST)
+    guard! first.outgoing.get() is { "op": Number(2, ..), .. }
+    for
+      frame in [
+        "{}", "{\"op\":0}", "{\"op\":0,\"t\":\"READY\",\"s\":1,\"d\":{}}", "{\"op\":255}",
+      ] {
+      first.incoming.put(frame)
+    }
+    first.incoming.put("{\"op\":1,\"d\":null}")
+    assert_eq(first.outgoing.get(), { "op": 1, "d": null })
+    let ready = @json.parse(ready_frame())
+    guard! ready is Object(fields)
+    fields["s"] = Json::null()
+    first.incoming.put(ready.stringify())
+    guard! shard.next() is Connected(resumed=false)
+    guard! shard.next() is Dispatch(Ready(_))
+    first.incoming.put("{\"op\":7,\"d\":null}")
+    guard! shard.next() is Disconnected(code=None, resuming=true)
+    gate.requests.get() |> ignore
+    gate.release()
+    second.incoming.put(HELLO_FAST)
+    guard second.outgoing.get()
+      is { "op": Number(6, ..), "d": { "seq": Number(0, ..), .. }, .. } else {
+      fail("expected resume from sequence zero")
+    }
+    shard.close()
+  })
+}
+
+///|
+async test "shard malformed read frames disconnect and tolerate transport close failure" {
+  let transport = FakeTransport()
+  let parked : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  @async.with_task_group(group => {
+    let shard = @gateway.Shard::start(
+      group,
+      token="tok",
+      intents=@model.Intents::none(),
+      connector=_ => (transport : &@gateway.GatewayTransport),
+      sleeper=_ => parked.get(),
+    )
+    transport.incoming.put(HELLO)
+    transport.outgoing.get() |> ignore
+    transport.fail_close.val = true
+    transport.incoming.put("{")
+    guard! shard.next() is Disconnected(code=None, resuming=false)
+    assert_eq(transport.close_calls.val, 1)
+    shard.close()
+  })
+}
+
+///|
+async test "shard rejects compression frame mismatches" {
+  for compress in [false, true] {
+    let transport = BinaryFakeTransport()
+    let inflater = FakeInflater::{ messages: [], chunks: [], pending: [], }
+    let parked : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+    @async.with_task_group(group => {
+      let shard = @gateway.Shard::start(
+        group,
+        token="tok",
+        intents=@model.Intents::none(),
+        compress~,
+        connector=_ => (transport : &@gateway.GatewayTransport),
+        inflater_factory=() => (inflater : &@gateway.Inflater),
+        sleeper=_ => parked.get(),
+      )
+      transport.incoming.put(
+        if compress {
+          Text(HELLO)
+        } else {
+          Binary(b"frame")
+        },
+      )
+      guard! shard.next() is Disconnected(code=None, resuming=false)
+      assert_eq(inflater.chunks.length(), 0)
+      shard.close()
+    })
+  }
+}
+
+///|
+async test "shard send failures release the writer gate" {
+  let transport = FakeTransport()
+  let parked : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  @async.with_task_group(group => {
+    let shard = @gateway.Shard::start(
+      group,
+      token="tok",
+      intents=@model.Intents::none(),
+      connector=_ => (transport : &@gateway.GatewayTransport),
+      sleeper=_ => parked.get(),
+    )
+    transport.incoming.put(HELLO)
+    transport.outgoing.get() |> ignore
+    transport.outgoing.close(error=GatewayTestFailure)
+    for _ in 0..<2 {
+      try shard.send({ "op": 3, "d": null }) catch {
+        GatewayTestFailure => ()
+        error => fail("unexpected send error: \{Repr(error)}")
+      } noraise {
+        _ => fail("expected failed send")
+      }
+    }
+    shard.close()
+    assert_eq(transport.close_calls.val, 1)
+  })
 }
 
 ///|

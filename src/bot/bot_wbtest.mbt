@@ -379,6 +379,7 @@ test "all typed event descriptors report their matching kind" {
 ///|
 priv struct PendingBotVoiceTransport {
   incoming : @aqueue.Queue[@voice.VoiceFrame]
+  outgoing : @aqueue.Queue[Json]
   recv_started : @aqueue.Queue[Unit]
   close_calls : Ref[Int]
 }
@@ -387,6 +388,7 @@ priv struct PendingBotVoiceTransport {
 fn PendingBotVoiceTransport::new() -> PendingBotVoiceTransport {
   {
     incoming: Queue(kind=Unbounded),
+    outgoing: Queue(kind=Unbounded),
     recv_started: Queue(kind=Unbounded),
     close_calls: Ref(0),
   }
@@ -400,10 +402,10 @@ impl @voice.VoiceTransport for PendingBotVoiceTransport with fn recv(self) {
 
 ///|
 impl @voice.VoiceTransport for PendingBotVoiceTransport with fn send_text(
-  _self,
-  _text,
+  self,
+  text,
 ) {
-
+  self.outgoing.put(@json.parse(text))
 }
 
 ///|
@@ -444,7 +446,7 @@ fn[X] pending_bot_voice_connection(
   @voice.VoiceConnection::start(
     group,
     bot_voice_test_credentials(),
-    user_id="user",
+    user_id="100",
     channel_id=7UL,
     leave=() => leave_calls.val += 1,
     rejoin=() => bot_voice_test_credentials(),
@@ -479,10 +481,12 @@ async test "voice ready cancellation disconnects the pending connection" {
   @async.with_task_group(group => {
     let connection = pending_bot_voice_connection(group, transport, leave_calls)
     transport.recv_started.get()
+    let started : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
     let waiting = group.spawn(no_wait=true, allow_failure=true, () => {
+      started.put(())
       wait_ready_or_disconnect(connection, 60_000)
     })
-    @async.sleep(10)
+    started.get()
     waiting.cancel()
     try waiting.wait() catch {
       @async.TaskCancelled => ()
@@ -494,4 +498,198 @@ async test "voice ready cancellation disconnects the pending connection" {
     assert_eq(transport.close_calls.val, 1)
     assert_eq(connection.state(), Closed(code=None))
   })
+}
+
+///|
+async test "join_voice reuses its per-guild connection and handles a failed server-update rejoin" {
+  if !@voice.shim_available() {
+    return
+  }
+  let transport = BotFakeTransport()
+  let client = @dhttp.Client("test-token")
+  defer client.close()
+  let bot = Bot(
+    @app.App(),
+    token="test-token",
+    client~,
+    intents=@model.Intents::guild_voice_states(),
+    gateway_url="wss://gateway.example",
+  )
+  bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  let ready : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
+  bot.on(Events::ready(), (ctx, _) => ready.put(ctx))
+  @async.with_task_group(group => {
+    let running = group.spawn(no_wait=true, () => bot.run())
+    transport.incoming.put(BOT_HELLO)
+    transport.outgoing.get() |> ignore
+    transport.incoming.put(bot_ready_frame())
+    let ctx = ready.get()
+    let voice_transport = PendingBotVoiceTransport::new()
+    let connection = pending_bot_voice_connection(
+      group,
+      voice_transport,
+      Ref(0),
+    )
+    voice_transport.incoming.put(
+      Text("{\"op\":8,\"d\":{\"heartbeat_interval\":60000}}"),
+    )
+    voice_transport.outgoing.get() |> ignore
+    voice_transport.incoming.put(
+      Text(
+        "{\"op\":4,\"d\":{\"mode\":\"aead_aes256_gcm_rtpsize\",\"secret_key\":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],\"dave_protocol_version\":0}}",
+      ),
+    )
+    assert_eq(connection.next_event(), ConnectionReady)
+    let guild_id : @model.GuildId = Id(100UL)
+    ctx.voice_connections_[guild_id] = connection
+    assert_true(physical_equal(ctx.join_voice(guild_id, Id(200UL)), connection))
+    let gate = ctx.voice_join_gates_[guild_id]
+    assert_true(physical_equal(ctx.join_voice(guild_id, Id(200UL)), connection))
+    assert_true(physical_equal(ctx.voice_join_gates_[guild_id], gate))
+    assert_eq(transport.outgoing.try_get(), None)
+    let watching = group.spawn(no_wait=true, () => {
+      ctx.watch_voice_server_updates(
+        guild_id,
+        Id(200UL),
+        false,
+        true,
+        1000,
+        connection,
+        Ref(false),
+      )
+    })
+    @async.pause()
+    assert_eq(ctx.collector_.waiters.length(), 1)
+    transport.outgoing.close(
+      error=@gateway.TransportClosed(
+        code=None,
+        reason="fake rejoin send failure",
+      ),
+    )
+    ctx.collector_.dispatch(
+      @model.Event::VoiceServerUpdate({
+        guild_id,
+        token: "new-token",
+        endpoint: Value("voice-new.example"),
+      }),
+    )
+    watching.wait()
+    assert_eq(connection.state(), Closed(code=None))
+    assert_eq(ctx.voice_connections_.length(), 0)
+    assert_eq(ctx.collector_.waiters.length(), 0)
+    ctx.shutdown()
+    running.wait()
+  })
+}
+
+///|
+async test "join_voice evicts closed connections and releases its gate after send failure" {
+  let transport = BotFakeTransport()
+  let client = @dhttp.Client("test-token")
+  defer client.close()
+  let bot = Bot(
+    @app.App(),
+    token="test-token",
+    client~,
+    intents=@model.Intents::guild_voice_states(),
+    gateway_url="wss://gateway.example",
+  )
+  bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  let ready : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
+  bot.on(Events::ready(), (ctx, _) => ready.put(ctx))
+  @async.with_task_group(group => {
+    let running = group.spawn(no_wait=true, () => bot.run())
+    transport.incoming.put(BOT_HELLO)
+    transport.outgoing.get() |> ignore
+    transport.incoming.put(bot_ready_frame())
+    let ctx = ready.get()
+    let connection = pending_bot_voice_connection(
+      group,
+      PendingBotVoiceTransport::new(),
+      Ref(0),
+    )
+    connection.disconnect()
+    let guild_id : @model.GuildId = Id(100UL)
+    ctx.voice_connections_[guild_id] = connection
+    transport.outgoing.close(
+      error=@gateway.TransportClosed(code=None, reason="fake send failure"),
+    )
+    try ctx.join_voice(guild_id, Id(200UL)) |> ignore catch {
+      @gateway.TransportClosed(reason~, ..) =>
+        assert_eq(reason, "fake send failure")
+      error => fail("unexpected join error: \{Repr(error)}")
+    } noraise {
+      _ => fail("expected the join send to fail")
+    }
+    assert_eq(ctx.voice_connections_.length(), 0)
+    assert_eq(ctx.collector_.waiters.length(), 0)
+    let gate = ctx.voice_join_gates_[guild_id]
+    gate.acquire()
+    gate.release()
+    ctx.shutdown()
+    running.wait()
+  })
+}
+
+///|
+async test "voice server watcher unregisters after collector failure or a nonready update" {
+  for fail_wait in [false, true] {
+    let transport = BotFakeTransport()
+    let client = @dhttp.Client("test-token")
+    defer client.close()
+    let bot = Bot(
+      @app.App(),
+      token="test-token",
+      client~,
+      intents=@model.Intents::guild_voice_states(),
+      gateway_url="wss://gateway.example",
+    )
+    bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+    let ready : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
+    bot.on(Events::ready(), (ctx, _) => ready.put(ctx))
+    @async.with_task_group(group => {
+      let running = group.spawn(no_wait=true, () => bot.run())
+      transport.incoming.put(BOT_HELLO)
+      transport.outgoing.get() |> ignore
+      transport.incoming.put(bot_ready_frame())
+      let ctx = ready.get()
+      let connection = pending_bot_voice_connection(
+        group,
+        PendingBotVoiceTransport::new(),
+        Ref(0),
+      )
+      let watching = group.spawn(no_wait=true, () => {
+        ctx.watch_voice_server_updates(
+          Id(100UL),
+          Id(200UL),
+          false,
+          true,
+          1000,
+          connection,
+          Ref(false),
+        )
+      })
+      @async.pause()
+      assert_eq(ctx.collector_.waiters.length(), 1)
+      if fail_wait {
+        ctx.collector_.waiters[0].queue.close(
+          error=@voice.VoiceError::Disconnected,
+        )
+      } else {
+        ctx.collector_.dispatch(
+          @model.Event::VoiceServerUpdate({
+            guild_id: Id(100UL),
+            token: "voice-token",
+            endpoint: Value("voice.example"),
+          }),
+        )
+      }
+      watching.wait()
+      assert_eq(ctx.collector_.waiters.length(), 0)
+      assert_eq(connection.state(), Connecting)
+      connection.disconnect()
+      ctx.shutdown()
+      running.wait()
+    })
+  }
 }

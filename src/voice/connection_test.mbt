@@ -59,16 +59,31 @@ impl @voice.VoiceTransport for ConnectionTestTransport with fn close(
 struct ConnectionTestUdp {
   incoming : @aqueue.Queue[Bytes]
   outgoing : @aqueue.Queue[Bytes]
+  close_calls : Ref[Int]
+  fail_close : Ref[Bool]
+  recv_started : @aqueue.Queue[Unit]
+  fail_recv : Ref[Bool]
 }
 
 ///|
 fn ConnectionTestUdp::new() -> ConnectionTestUdp {
-  { incoming: Queue(kind=Unbounded), outgoing: Queue(kind=Unbounded), }
+  {
+    incoming: Queue(kind=Unbounded),
+    outgoing: Queue(kind=Unbounded),
+    close_calls: Ref(0),
+    fail_close: Ref(false),
+    recv_started: Queue(kind=Unbounded),
+    fail_recv: Ref(false),
+  }
 }
 
 ///|
 impl @voice.VoiceUdp for ConnectionTestUdp with fn recv(self, buffer) {
+  self.recv_started.put(())
   let packet = self.incoming.get()
+  if self.fail_recv.val {
+    raise VoiceTestFailure
+  }
   let length = packet.length().min(buffer.length())
   for index in 0..<length {
     buffer[index] = packet[index]
@@ -83,9 +98,525 @@ impl @voice.VoiceUdp for ConnectionTestUdp with fn send(self, bytes) {
 
 ///|
 impl @voice.VoiceUdp for ConnectionTestUdp with fn close(self) {
+  self.close_calls.val += 1
   self.incoming.close(
     error=@voice.VoiceUdpError::IpDiscoveryFailed(attempts=0, reason="closed"),
   )
+  if self.fail_close.val {
+    raise VoiceTestFailure
+  }
+}
+
+///|
+async fn expect_connection_terminated(
+  connection : @voice.VoiceConnection,
+) -> Unit {
+  try connection.next_event() |> ignore catch {
+    @voice.VoiceError::Disconnected => ()
+    error => fail("unexpected terminal error: \{Repr(error)}")
+  } noraise {
+    _ => fail("expected the connection event queue to close")
+  }
+  assert_true(connection.state() is Closed(..))
+}
+
+///|
+async test "voice connection rejects unsupported Ready modes before opening UDP" {
+  let transport = ConnectionTestTransport::new()
+  let opens = Ref(0)
+  let parked : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  @async.with_task_group(group => {
+    let connection = @voice.VoiceConnection::start(
+      group,
+      connection_credentials(),
+      user_id="100",
+      channel_id=7UL,
+      leave=() => (),
+      rejoin=() => fail("unexpected rejoin"),
+      connector=_ => (transport : &@voice.VoiceTransport),
+      udp_opener=(_, _) => {
+        opens.val += 1
+        raise VoiceTestFailure
+      },
+      receive=false,
+      sleeper=_ => parked.get(),
+    )
+    transport.incoming.put(connection_hello())
+    transport.outgoing_text.get() |> ignore
+    transport.incoming.put(
+      Text(
+        "{\"op\":2,\"d\":{\"ssrc\":42,\"ip\":\"198.51.100.1\",\"port\":5000,\"modes\":[\"unsupported\"]}}",
+      ),
+    )
+    expect_connection_terminated(connection)
+    try connection.wait_ready() catch {
+      NoCompatibleMode(offered~) => assert_eq(offered, ["unsupported"])
+      error => fail("unexpected negotiation error: \{Repr(error)}")
+    } noraise {
+      _ => fail("expected mode negotiation failure")
+    }
+    assert_eq(opens.val, 0)
+  })
+}
+
+///|
+async test "voice connection translates UDP open and discovery errors" {
+  for failure in 0..<3 {
+    let transport = ConnectionTestTransport::new()
+    let udp = ConnectionTestUdp::new()
+    let parked : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+    @async.with_task_group(group => {
+      let connection = @voice.VoiceConnection::start(
+        group,
+        connection_credentials(),
+        user_id="100",
+        channel_id=7UL,
+        leave=() => (),
+        rejoin=() => fail("unexpected rejoin"),
+        connector=_ => (transport : &@voice.VoiceTransport),
+        udp_opener=(_, _) => {
+          if failure == 0 {
+            raise VoiceTestFailure
+          }
+          (udp : &@voice.VoiceUdp)
+        },
+        receive=false,
+        sleeper=_ => parked.get(),
+      )
+      transport.incoming.put(connection_hello())
+      transport.outgoing_text.get() |> ignore
+      if failure == 1 {
+        udp.incoming.close(
+          error=@voice.VoiceUdpError::IpDiscoveryFailed(
+            attempts=1,
+            reason="fake discovery failure",
+          ),
+        )
+      } else if failure == 2 {
+        udp.incoming.put(b"malformed")
+      }
+      transport.incoming.put(connection_ready(1))
+      expect_connection_terminated(connection)
+      try connection.wait_ready() catch {
+        IpDiscoveryFailed(reason~) =>
+          if failure == 1 {
+            assert_eq(reason, "fake discovery failure")
+          } else if failure == 2 {
+            assert_true(reason.contains("response must contain 74 bytes"))
+          } else {
+            assert_true(reason.contains("VoiceTestFailure"))
+          }
+        error => fail("unexpected discovery error: \{Repr(error)}")
+      } noraise {
+        _ => fail("expected discovery failure")
+      }
+      assert_eq(udp.close_calls.val, if failure == 0 { 0 } else { 1 })
+    })
+  }
+}
+
+///|
+async test "voice connection cancellation interrupts a pending UDP opener" {
+  let transport = ConnectionTestTransport::new()
+  let opened : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  let pending : @aqueue.Queue[&@voice.VoiceUdp] = Queue(kind=Unbounded)
+  let parked : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  let leaves = Ref(0)
+  @async.with_task_group(group => {
+    let connection = @voice.VoiceConnection::start(
+      group,
+      connection_credentials(),
+      user_id="100",
+      channel_id=7UL,
+      leave=() => leaves.val += 1,
+      rejoin=() => fail("unexpected rejoin"),
+      connector=_ => (transport : &@voice.VoiceTransport),
+      udp_opener=(_, _) => {
+        opened.put(())
+        pending.get()
+      },
+      receive=false,
+      sleeper=_ => parked.get(),
+    )
+    transport.incoming.put(connection_hello())
+    transport.outgoing_text.get() |> ignore
+    transport.incoming.put(connection_ready(1))
+    opened.get()
+    connection.disconnect()
+    expect_connection_terminated(connection)
+    assert_eq(leaves.val, 1)
+  })
+}
+
+///|
+async test "voice connection rejects invalid Session Description modes and keys" {
+  for bad_mode in [true, false] {
+    let transport = ConnectionTestTransport::new()
+    let udp = ConnectionTestUdp::new()
+    let parked : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+    @async.with_task_group(group => {
+      let connection = @voice.VoiceConnection::start(
+        group,
+        connection_credentials(),
+        user_id="100",
+        channel_id=7UL,
+        leave=() => (),
+        rejoin=() => fail("unexpected rejoin"),
+        connector=_ => (transport : &@voice.VoiceTransport),
+        udp_opener=(_, _) => (udp : &@voice.VoiceUdp),
+        receive=false,
+        sleeper=_ => parked.get(),
+      )
+      connection_finish_protocol_selection(transport, udp)
+      let frame : Json = {
+        "op": 4,
+        "d": {
+          "mode": if bad_mode {
+            "unsupported"
+          } else {
+            "aead_aes256_gcm_rtpsize"
+          },
+          "secret_key": [],
+          "dave_protocol_version": 0,
+        },
+      }
+      transport.incoming.put(Text(frame.stringify()))
+      expect_connection_terminated(connection)
+      try connection.wait_ready() catch {
+        NoCompatibleMode(offered~) => {
+          assert_true(bad_mode)
+          assert_eq(offered, ["unsupported"])
+        }
+        ShimUnavailable(reason~) => {
+          assert_false(bad_mode)
+          assert_true(reason.contains("InvalidSecretKey"))
+        }
+        error => fail("unexpected session error: \{Repr(error)}")
+      } noraise {
+        _ => fail("expected session establishment failure")
+      }
+      assert_eq(udp.close_calls.val, 1)
+    })
+  }
+}
+
+///|
+async test "voice connection rejects an invalid DAVE version during session establishment" {
+  if !@voice.shim_available() {
+    return
+  }
+  let transport = ConnectionTestTransport::new()
+  let udp = ConnectionTestUdp::new()
+  let parked : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  @async.with_task_group(group => {
+    let connection = @voice.VoiceConnection::start(
+      group,
+      connection_credentials(),
+      user_id="100",
+      channel_id=7UL,
+      leave=() => (),
+      rejoin=() => fail("unexpected rejoin"),
+      connector=_ => (transport : &@voice.VoiceTransport),
+      udp_opener=(_, _) => (udp : &@voice.VoiceUdp),
+      receive=false,
+      sleeper=_ => parked.get(),
+    )
+    connection_finish_protocol_selection(transport, udp)
+    transport.incoming.put(
+      connection_session_description(2, dave_protocol_version=65536),
+    )
+    expect_connection_terminated(connection)
+    try connection.wait_ready() catch {
+      ShimUnavailable(reason~) => assert_true(reason.has_prefix("DAVE:"))
+      error => fail("unexpected DAVE initialization error: \{Repr(error)}")
+    } noraise {
+      _ => fail("expected invalid DAVE version failure")
+    }
+  })
+}
+
+///|
+async test "voice connection selects xchacha and exposes speaking and latency without a session" {
+  let transport = ConnectionTestTransport::new()
+  let udp = ConnectionTestUdp::new()
+  let parked : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  @async.with_task_group(group => {
+    let connection = @voice.VoiceConnection::start(
+      group,
+      connection_credentials(),
+      user_id="100",
+      channel_id=7UL,
+      leave=() => raise VoiceTestFailure,
+      rejoin=() => fail("unexpected rejoin"),
+      connector=_ => (transport : &@voice.VoiceTransport),
+      udp_opener=(_, _) => (udp : &@voice.VoiceUdp),
+      receive=false,
+      sleeper=_ => parked.get(),
+    )
+    assert_eq(connection.latency_ms(), None)
+    try connection.set_speaking(1) catch {
+      @voice.VoiceError::Disconnected => ()
+      error => fail("unexpected speaking error: \{Repr(error)}")
+    } noraise {
+      _ => fail("expected speaking before discovery to fail")
+    }
+    transport.incoming.put(connection_hello())
+    transport.outgoing_text.get() |> ignore
+    transport.incoming.put(
+      Text(
+        "{\"op\":2,\"d\":{\"ssrc\":42,\"ip\":\"198.51.100.1\",\"port\":5000,\"modes\":[\"aead_xchacha20_poly1305_rtpsize\"]}}",
+      ),
+    )
+    assert_eq(udp.outgoing.get(), @voice.build_ip_discovery_request(42U))
+    udp.incoming.put(connection_discovery_response(42U))
+    guard transport.outgoing_text.get()
+      is {
+        "op": Number(1, ..),
+        "d": {
+          "data": { "mode": String("aead_xchacha20_poly1305_rtpsize"), .. },
+          ..
+        },
+        ..
+      } else {
+      fail("expected xchacha protocol selection")
+    }
+    connection.set_speaking(3)
+    assert_eq(transport.outgoing_text.get(), {
+      "op": 5,
+      "d": { "speaking": 3, "delay": 0, "ssrc": 42 },
+    })
+    connection.stop()
+    udp.fail_close.val = true
+    connection.disconnect()
+    assert_eq(udp.close_calls.val, 1)
+    assert_eq(connection.latency_ms(), None)
+  })
+}
+
+///|
+async test "voice connection preserves fatal close errors and failed rejoin credentials" {
+  for fatal in [false, true] {
+    let transport = ConnectionTestTransport::new()
+    let parked : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+    let rejoins = Ref(0)
+    @async.with_task_group(group => {
+      let connection = @voice.VoiceConnection::start(
+        group,
+        connection_credentials(),
+        user_id="100",
+        channel_id=7UL,
+        leave=() => (),
+        rejoin=() => {
+          rejoins.val += 1
+          raise VoiceTestFailure
+        },
+        connector=_ => (transport : &@voice.VoiceTransport),
+        receive=false,
+        sleeper=_ => parked.get(),
+      )
+      transport.incoming.put(connection_hello())
+      transport.outgoing_text.get() |> ignore
+      transport.server_close(if fatal { 4014 } else { 4006 })
+      expect_connection_terminated(connection)
+      try connection.wait_ready() catch {
+        GatewayClosed(code~) => {
+          assert_true(fatal)
+          assert_eq(code, Some(4014))
+        }
+        @voice.VoiceError::Disconnected => assert_false(fatal)
+        error => fail("unexpected close error: \{Repr(error)}")
+      } noraise {
+        _ => fail("expected closed connection failure")
+      }
+      assert_eq(rejoins.val, if fatal { 0 } else { 1 })
+    })
+  }
+}
+
+///|
+async test "voice connection keepalive ignores UDP send failure and keeps its cadence" {
+  let transport = ConnectionTestTransport::new()
+  let udp = ConnectionTestUdp::new()
+  let gate = SleepGate()
+  let parked : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  @async.with_task_group(group => {
+    let connection = @voice.VoiceConnection::start(
+      group,
+      connection_credentials(),
+      user_id="100",
+      channel_id=7UL,
+      leave=() => (),
+      rejoin=() => fail("unexpected rejoin"),
+      connector=_ => (transport : &@voice.VoiceTransport),
+      udp_opener=(_, _) => (udp : &@voice.VoiceUdp),
+      receive=false,
+      sleeper=ms => if ms == 5000 { gate.sleep(ms) } else { parked.get() },
+    )
+    connection_finish_protocol_selection(transport, udp)
+    assert_eq(gate.requests.get(), 5000)
+    udp.outgoing.close(error=VoiceTestFailure)
+    gate.release()
+    assert_eq(gate.requests.get(), 5000)
+    connection.disconnect()
+  })
+}
+
+///|
+async test "voice connection ignores credentials returned after disconnect" {
+  let transport = ConnectionTestTransport::new()
+  let requested : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  let credentials : @aqueue.Queue[@voice.VoiceCredentials] = Queue(
+    kind=Unbounded,
+  )
+  let returned : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  let parked : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  let connects = Ref(0)
+  @async.with_task_group(group => {
+    let connection = @voice.VoiceConnection::start(
+      group,
+      connection_credentials(),
+      user_id="100",
+      channel_id=7UL,
+      leave=() => (),
+      rejoin=() => {
+        requested.put(())
+        let result = credentials.get()
+        returned.put(())
+        result
+      },
+      connector=_ => {
+        connects.val += 1
+        (transport : &@voice.VoiceTransport)
+      },
+      receive=false,
+      sleeper=_ => parked.get(),
+    )
+    transport.incoming.put(connection_hello())
+    transport.outgoing_text.get() |> ignore
+    transport.server_close(4006)
+    requested.get()
+    assert_eq(connection.state(), Rejoining)
+    connection.disconnect()
+    credentials.put(connection_credentials(session_id="late"))
+    returned.get()
+    assert_eq(connects.val, 1)
+    assert_eq(connection.state(), Closed(code=None))
+  })
+}
+
+///|
+async test "voice connection resumes its existing session after a transient close" {
+  if !@voice.shim_available() {
+    return
+  }
+  let first = ConnectionTestTransport::new()
+  let second = ConnectionTestTransport::new()
+  let transports = [second, first]
+  let udp = ConnectionTestUdp::new()
+  let gate = SleepGate()
+  let parked : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  @async.with_task_group(group => {
+    let connection = @voice.VoiceConnection::start(
+      group,
+      connection_credentials(),
+      user_id="100",
+      channel_id=7UL,
+      leave=() => (),
+      rejoin=() => fail("resume must not rejoin"),
+      connector=_ => (transports.pop().unwrap() : &@voice.VoiceTransport),
+      udp_opener=(_, _) => (udp : &@voice.VoiceUdp),
+      receive=false,
+      sleeper=ms => {
+        if ms == 60000 || ms == 5000 {
+          parked.get()
+        } else {
+          gate.sleep(ms)
+        }
+      },
+    )
+    connection_finish_protocol_selection(first, udp)
+    first.incoming.put(connection_session_description(2))
+    assert_eq(connection.next_event(), ConnectionReady)
+    first.server_close(4015)
+    gate.requests.get() |> ignore
+    @async.pause()
+    assert_eq(connection.state(), Reconnecting)
+    gate.release()
+    second.incoming.put(connection_hello())
+    guard! second.outgoing_text.get() is { "op": Number(7, ..), .. }
+    second.incoming.put(Text("{\"op\":9,\"d\":null}"))
+    assert_eq(connection.next_event(), ConnectionResumed)
+    assert_eq(connection.state(), Ready)
+    assert_eq(udp.close_calls.val, 0)
+    connection.disconnect()
+  })
+}
+
+///|
+async test "voice receiver discards empty datagrams and stops after UDP close" {
+  if !@voice.shim_available() {
+    return
+  }
+  let transport = ConnectionTestTransport::new()
+  let udp = ConnectionTestUdp::new()
+  @async.with_task_group(group => {
+    let connection = ready_receive_connection(group, transport, udp)
+    udp.recv_started.get()
+    udp.recv_started.get()
+    udp.fail_recv.val = true
+    udp.incoming.put(b"failed receive")
+    udp.recv_started.get()
+    udp.fail_recv.val = false
+    udp.incoming.put(b"")
+    udp.recv_started.get()
+    let cipher = @voice.TransportCipher::new(
+      AeadAes256GcmRtpsize,
+      Bytes::new(32),
+    )
+    let header = @voice.build_rtp_header(sequence=1, timestamp=960U, ssrc=77U)
+    udp.incoming.put(cipher.seal(header~, b"after-empty"))
+    assert_eq(
+      connection.next_event(),
+      OpusReceived(
+        user_id=None,
+        ssrc=77U,
+        sequence=1,
+        timestamp=960U,
+        opus=b"after-empty",
+      ),
+    )
+    udp.recv_started.get()
+    connection.disconnect()
+    @async.pause()
+    expect_connection_terminated(connection)
+  })
+}
+
+///|
+async test "voice connection keepalive sleeper failure leaves the connection lifecycle intact" {
+  let transport = ConnectionTestTransport::new()
+  let slept : @aqueue.Queue[Int] = Queue(kind=Unbounded)
+  @async.with_task_group(group => {
+    let connection = @voice.VoiceConnection::start(
+      group,
+      connection_credentials(),
+      user_id="100",
+      channel_id=7UL,
+      leave=() => (),
+      rejoin=() => fail("unexpected rejoin"),
+      connector=_ => (transport : &@voice.VoiceTransport),
+      receive=false,
+      sleeper=ms => {
+        slept.put(ms)
+        raise VoiceTestFailure
+      },
+    )
+    assert_eq(slept.get(), 5000)
+    @async.pause()
+    assert_eq(slept.try_get(), None)
+    assert_eq(connection.state(), Connecting)
+    connection.disconnect()
+  })
 }
 
 ///|

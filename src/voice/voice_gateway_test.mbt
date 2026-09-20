@@ -12,6 +12,7 @@ struct FakeVoiceTransport {
   close_during_send : Ref[Bool]
   close_during_recv : Ref[Bool]
   close_calls : Ref[Int]
+  fail_close : Ref[Bool]
 }
 
 ///|
@@ -28,6 +29,7 @@ fn FakeVoiceTransport::FakeVoiceTransport() -> FakeVoiceTransport {
     close_during_send: Ref(false),
     close_during_recv: Ref(false),
     close_calls: Ref(0),
+    fail_close: Ref(false),
   }
 }
 
@@ -96,6 +98,281 @@ impl @voice.VoiceTransport for FakeVoiceTransport with fn close(self, code~) {
   self.incoming.close(
     error=@voice.VoiceTransportClosed(code=Some(code), reason="client closed"),
   )
+  if self.fail_close.val {
+    raise VoiceTestFailure
+  }
+}
+
+///|
+suberror VoiceTestFailure {
+  VoiceTestFailure
+}
+
+///|
+async test "voice gateway rejects disconnected writes and cancels its connector" {
+  let entered : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  let pending : @aqueue.Queue[&@voice.VoiceTransport] = Queue(kind=Unbounded)
+  @async.with_task_group(group => {
+    let gateway = @voice.VoiceGateway::start(
+      group,
+      server_id="guild",
+      user_id="user",
+      session_id="session",
+      token="token",
+      endpoint="voice.example",
+      select_protocol=(_, _, _, _) => fail("unexpected protocol selection"),
+      connector=_ => {
+        entered.put(())
+        pending.get()
+      },
+    )
+    entered.get()
+    for binary in [false, true] {
+      try {
+        if binary {
+          gateway.send_binary(op=26, b"payload")
+        } else {
+          gateway.send_json({ "op": 5, "d": {} })
+        }
+      } catch {
+        @voice.VoiceTransportClosed(code~, reason~) => {
+          assert_eq(code, None)
+          assert_eq(reason, "voice gateway is not connected")
+        }
+        error => fail("unexpected send error: \{Repr(error)}")
+      } noraise {
+        _ => fail("expected disconnected write to fail")
+      }
+    }
+    gateway.close()
+    gateway.close()
+    assert_eq(gateway.state(), Disconnected(reconnect_attempts=0))
+  })
+}
+
+///|
+async test "voice gateway suppresses connector failure after protected cancellation cleanup" {
+  let entered : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  let finish : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  let telemetry : Array[@voice.VoiceGatewayEvent] = []
+  let attempts = Ref(0)
+  @async.with_task_group(group => {
+    let gateway = @voice.VoiceGateway::start(
+      group,
+      server_id="guild",
+      user_id="user",
+      session_id="session",
+      token="token",
+      endpoint="voice.example",
+      select_protocol=(_, _, _, _) => fail("unexpected protocol selection"),
+      connector=_ => {
+        attempts.val += 1
+        @async.protect_from_cancel(() => {
+          entered.put(())
+          finish.get()
+          raise VoiceTestFailure
+        })
+      },
+      telemetry=event => telemetry.push(event),
+    )
+    entered.get()
+    let closing = group.spawn(no_wait=true, () => gateway.close())
+    @async.pause()
+    finish.put(())
+    closing.wait()
+    assert_eq(attempts.val, 1)
+    assert_eq(telemetry, [Disconnected(code=Some(1000), resuming=false)])
+    assert_eq(gateway.state(), Disconnected(reconnect_attempts=0))
+  })
+}
+
+///|
+async test "voice gateway rejects malformed Hello and protocol selection failures" {
+  for failure in 0..<4 {
+    let transport = FakeVoiceTransport()
+    let parked : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+    @async.with_task_group(group => {
+      let gateway = @voice.VoiceGateway::start(
+        group,
+        server_id="guild",
+        user_id="user",
+        session_id="session",
+        token="token",
+        endpoint="voice.example",
+        select_protocol=(_, _, _, _) => raise VoiceTestFailure,
+        connector=_ => (transport : &@voice.VoiceTransport),
+        sleeper=_ => parked.get(),
+      )
+      match failure {
+        0 => transport.incoming.put(hello_frame(0))
+        1 => transport.incoming.put(Text("{\"op\":9,\"d\":null}"))
+        2 => transport.incoming.close(error=VoiceTestFailure)
+        _ => {
+          transport.incoming.put(hello_frame(60000))
+          transport.outgoing_text.get() |> ignore
+          transport.incoming.put(ready_frame(1))
+          assert_eq(gateway.next(), ReadyReceived)
+        }
+      }
+      assert_eq(gateway.next(), NeedsRejoin(code=None))
+      assert_eq(transport.close_calls.val, 1)
+      gateway.close()
+    })
+  }
+}
+
+///|
+async test "voice gateway malformed text and binary frames request rejoin" {
+  for frame in [@voice.VoiceFrame::Text("{"), Binary(b"\x00")] {
+    let transport = FakeVoiceTransport()
+    let parked : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+    @async.with_task_group(group => {
+      let gateway = @voice.VoiceGateway::start(
+        group,
+        server_id="guild",
+        user_id="user",
+        session_id="session",
+        token="token",
+        endpoint="voice.example",
+        select_protocol=(_, _, _, _) => fail("unexpected protocol selection"),
+        connector=_ => (transport : &@voice.VoiceTransport),
+        sleeper=_ => parked.get(),
+      )
+      transport.incoming.put(hello_frame(60000))
+      transport.outgoing_text.get() |> ignore
+      transport.fail_close.val = true
+      transport.incoming.put(frame)
+      assert_eq(gateway.next(), NeedsRejoin(code=None))
+      assert_eq(transport.close_calls.val, 1)
+      gateway.close()
+    })
+  }
+}
+
+///|
+async test "voice gateway acknowledges the sequence supplied by Hello" {
+  let transport = FakeVoiceTransport()
+  let gate = SleepGate()
+  @async.with_task_group(group => {
+    let gateway = @voice.VoiceGateway::start(
+      group,
+      server_id="guild",
+      user_id="user",
+      session_id="session",
+      token="token",
+      endpoint="voice.example",
+      select_protocol=(_, _, _, _) => fail("unexpected protocol selection"),
+      connector=_ => (transport : &@voice.VoiceTransport),
+      sleeper=ms => gate.sleep(ms),
+    )
+    transport.incoming.put(
+      Text("{\"op\":8,\"seq\":17,\"d\":{\"heartbeat_interval\":60000}}"),
+    )
+    guard! transport.outgoing_text.get() is { "op": Number(0, ..), .. }
+    assert_eq(gate.requests.get(), 60000)
+    gate.release()
+    guard transport.outgoing_text.get()
+      is { "op": Number(3, ..), "d": { "seq_ack": Number(17, ..), .. }, .. } else {
+      fail("expected heartbeat to acknowledge Hello sequence")
+    }
+    gateway.close()
+  })
+}
+
+///|
+async test "voice gateway failed writers release the shared send gate" {
+  let transport = FakeVoiceTransport()
+  let parked : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  @async.with_task_group(group => {
+    let gateway = @voice.VoiceGateway::start(
+      group,
+      server_id="guild",
+      user_id="user",
+      session_id="session",
+      token="token",
+      endpoint="voice.example",
+      select_protocol=(_, _, _, _) => fail("unexpected protocol selection"),
+      connector=_ => (transport : &@voice.VoiceTransport),
+      sleeper=_ => parked.get(),
+    )
+    transport.incoming.put(hello_frame(60000))
+    transport.outgoing_text.get() |> ignore
+    transport.outgoing_text.close(error=VoiceTestFailure)
+    transport.outgoing_binary.close(error=VoiceTestFailure)
+    for binary in [false, true, false] {
+      try {
+        if binary {
+          gateway.send_binary(op=26, b"payload")
+        } else {
+          gateway.send_json({ "op": 5, "d": {} })
+        }
+      } catch {
+        VoiceTestFailure => ()
+        error => fail("unexpected write error: \{Repr(error)}")
+      } noraise {
+        _ => fail("expected failed write")
+      }
+    }
+    gateway.close()
+    assert_eq(transport.close_calls.val, 1)
+  })
+}
+
+///|
+async test "voice gateway cancellation interrupts reconnect backoff" {
+  let gate = SleepGate()
+  let attempts = Ref(0)
+  @async.with_task_group(group => {
+    let gateway = @voice.VoiceGateway::start(
+      group,
+      server_id="guild",
+      user_id="user",
+      session_id="session",
+      token="token",
+      endpoint="voice.example",
+      select_protocol=(_, _, _, _) => fail("unexpected protocol selection"),
+      connector=_ => {
+        attempts.val += 1
+        raise VoiceTestFailure
+      },
+      sleeper=ms => gate.sleep(ms),
+    )
+    let delay = gate.requests.get()
+    assert_true(delay >= 250 && delay < 2250)
+    assert_eq(gateway.state(), Disconnected(reconnect_attempts=1))
+    gateway.close()
+    assert_eq(attempts.val, 1)
+  })
+}
+
+///|
+async test "voice gateway backoff sleeper failure ends the retry loop" {
+  let slept : @aqueue.Queue[Int] = Queue(kind=Unbounded)
+  let attempts = Ref(0)
+  @async.with_task_group(group => {
+    let gateway = @voice.VoiceGateway::start(
+      group,
+      server_id="guild",
+      user_id="user",
+      session_id="session",
+      token="token",
+      endpoint="voice.example",
+      select_protocol=(_, _, _, _) => fail("unexpected protocol selection"),
+      connector=_ => {
+        attempts.val += 1
+        raise VoiceTestFailure
+      },
+      sleeper=ms => {
+        slept.put(ms)
+        raise VoiceTestFailure
+      },
+    )
+    assert_true(slept.get() >= 250)
+    @async.pause()
+    assert_eq(attempts.val, 1)
+    assert_eq(gateway.state(), Disconnected(reconnect_attempts=1))
+    gateway.close()
+  })
 }
 
 ///|

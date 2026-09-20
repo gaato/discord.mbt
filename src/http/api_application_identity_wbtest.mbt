@@ -1,4 +1,76 @@
 ///|
+async test "application identity PATCH preserves number media and unknown dynamic fields" {
+  let client = Client("test-token")
+  defer client.close()
+  let captured = Ref(Json::null())
+  let calls = Ref(0)
+  client.middleware((request, _next) => {
+    calls.val += 1
+    assert_eq(@debug.to_string(request.route.method_()), "Patch")
+    assert_eq(
+      request.route.path(),
+      "/applications/10/users/20/identities/external/profile",
+    )
+    captured.val = request.body.unwrap_or(Json::null())
+    { status: 204, headers: Map([]), body: Json::null(), }
+  })
+  let dynamic : Array[@model.ApplicationIdentityDynamicField] = [
+    NumberField({ name: "score", value: 12.5, }),
+    MediaField({
+      name: "badge",
+      value: { url: "https://example.com/badge.png", },
+    }),
+    Unknown({ "type": 99, "value": [true, null] }),
+  ]
+  client.update_application_identity_profile(
+    application_id=Id(10UL),
+    user_id=Id(20UL),
+    provider_issued_user_id="external",
+    data={ primary: None, dynamic: Some(dynamic), },
+  )
+  assert_eq(captured.val, {
+    "data": {
+      "dynamic": [
+        { "type": 2, "name": "score", "value": 12.5 },
+        {
+          "type": 3,
+          "name": "badge",
+          "value": { "url": "https://example.com/badge.png" },
+        },
+        { "type": 99, "value": [true, null] },
+      ],
+    },
+  })
+  for
+    field in [
+      @model.ApplicationIdentityDynamicField::NumberField({
+        name: String::make(101, 'x'),
+        value: 1,
+      }),
+      MediaField({
+        name: String::make(101, 'x'),
+        value: { url: "https://example.com/badge.png", },
+      }),
+    ] {
+    try
+      client.update_application_identity_profile(
+        application_id=Id(10UL),
+        user_id=Id(20UL),
+        provider_issued_user_id="external",
+        data={ primary: None, dynamic: Some([field]), },
+      )
+    catch {
+      Validation(message~) =>
+        assert_eq(message, "profile dynamic field name exceeds 100 characters")
+      error => fail("unexpected error: \{Repr(error)}")
+    } noraise {
+      _ => fail("expected dynamic name validation")
+    }
+  }
+  assert_eq(calls.val, 1)
+}
+
+///|
 async test "application identity clients pin routes query bodies and Unit responses" {
   let client = Client("test-token")
   defer client.close()

@@ -1,4 +1,69 @@
 ///|
+async test "application ref create global command delegates every optional field" {
+  let client = Client("test-token")
+  defer client.close()
+  let bodies : Array[Json] = []
+  client.perform_override_.val = Some((route, path, _headers, body, _files) => {
+    assert_eq(@debug.to_string(route.method_()), "Post")
+    assert_eq(path, "/api/v10/applications/500/commands")
+    bodies.push(body.unwrap_or(Json::null()))
+    {
+      status: 200,
+      headers: Map([]),
+      body: {
+        "id": "520",
+        "application_id": "500",
+        "type": 1,
+        "name": "inspect",
+        "description": "Inspect",
+        "version": "1",
+        "default_member_permissions": null,
+      },
+    }
+  })
+  let app = client.application_ref(Id(500UL))
+  let command = app.create_global_command(
+    "inspect",
+    description="Inspect",
+    options=[],
+    typ=ChatInput,
+    default_member_permissions=@model.Permissions::from_bits(8UL),
+    nsfw=false,
+    name_localizations={ "ja": "確認" },
+    description_localizations={ "ja": "確認する" },
+    integration_types=[GuildInstall, UserInstall],
+    contexts=[Guild, BotDm],
+    handler=AppHandler,
+  )
+  assert_eq(command.id.to_string(), "520")
+  app.create_global_command(
+    "inspect",
+    typ=User,
+    clear_default_member_permissions=true,
+  )
+  |> ignore
+  assert_eq(bodies.length(), 2)
+  assert_eq(bodies[0], {
+    "name": "inspect",
+    "description": "Inspect",
+    "options": [],
+    "type": 1,
+    "default_member_permissions": "8",
+    "nsfw": false,
+    "name_localizations": { "ja": "確認" },
+    "description_localizations": { "ja": "確認する" },
+    "integration_types": [0, 1],
+    "contexts": [0, 1],
+    "handler": 1,
+  })
+  assert_eq(bodies[1], {
+    "name": "inspect",
+    "type": 2,
+    "default_member_permissions": null,
+  })
+}
+
+///|
 async test "guild command ref edit permissions delegates bearer authorization" {
   let client = Client("test-token")
   defer client.close()

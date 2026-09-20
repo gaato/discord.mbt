@@ -48,6 +48,9 @@ struct FakeDaveBackend {
   proposal_result : Bytes
   mut commit_outcome : DaveCommitOutcome
   mut welcome_outcome : DaveWelcomeOutcome
+  mut fail_external_sender : Bool
+  mut fail_reinitialize : Bool
+  mut fail_encrypt : Bool
 }
 
 ///|
@@ -71,6 +74,9 @@ fn FakeDaveBackend::new() -> FakeDaveBackend {
     proposal_result: b"commit-and-welcome",
     commit_outcome: CommitIgnored,
     welcome_outcome: WelcomeApplied(changes=[]),
+    fail_external_sender: false,
+    fail_reinitialize: false,
+    fail_encrypt: false,
   }
 }
 
@@ -84,6 +90,9 @@ impl DaveBackend for FakeDaveBackend with fn reinitialize(
   self,
   protocol_version~,
 ) {
+  if self.fail_reinitialize {
+    raise DaveInternal(reason="fake reinitialize failure")
+  }
   self.session_version = protocol_version
   self.reinitialized.push(protocol_version)
 }
@@ -95,6 +104,9 @@ impl DaveBackend for FakeDaveBackend with fn reset(self) {
 
 ///|
 impl DaveBackend for FakeDaveBackend with fn set_external_sender(self, payload) {
+  if self.fail_external_sender {
+    raise DaveInvalid(reason="fake external sender failure")
+  }
   self.external_senders.push(payload)
 }
 
@@ -173,6 +185,9 @@ impl DaveBackend for FakeDaveBackend with fn active_protocol_version(self) {
 
 ///|
 impl DaveBackend for FakeDaveBackend with fn encrypt_opus(self, ssrc~, frame) {
+  if self.fail_encrypt {
+    raise DaveInvalid(reason="fake encrypt failure")
+  }
   self.encrypted_opus.push({ ssrc, frame, })
   b"encrypted-opus"
 }
@@ -615,4 +630,342 @@ test "DAVE forwards the external sender package unchanged" {
   let machine = fake_machine(fake)
   assert_eq(machine.handle(DaveMlsExternalSender(payload=b"external")), [])
   assert_eq(fake.external_senders, [b"external"])
+}
+
+///|
+struct DaveConnectionTransport {
+  incoming : @aqueue.Queue[VoiceFrame]
+  text : @aqueue.Queue[Json]
+  binary : @aqueue.Queue[Bytes]
+}
+
+///|
+fn DaveConnectionTransport::DaveConnectionTransport() -> DaveConnectionTransport {
+  {
+    incoming: Queue(kind=Unbounded),
+    text: Queue(kind=Unbounded),
+    binary: Queue(kind=Unbounded),
+  }
+}
+
+///|
+impl VoiceTransport for DaveConnectionTransport with fn recv(self) {
+  self.incoming.get()
+}
+
+///|
+impl VoiceTransport for DaveConnectionTransport with fn send_text(self, text) {
+  self.text.put(@json.parse(text))
+}
+
+///|
+impl VoiceTransport for DaveConnectionTransport with fn send_binary(self, bytes) {
+  self.binary.put(bytes)
+}
+
+///|
+impl VoiceTransport for DaveConnectionTransport with fn close(self, code~) {
+  self.incoming.close(
+    error=VoiceTransportClosed(code=Some(code), reason="closed"),
+  )
+}
+
+///|
+fn[X] dave_test_connection(
+  group : @async.TaskGroup[X],
+  transport : DaveConnectionTransport,
+  telemetry : Array[VoiceTelemetry],
+) -> VoiceConnection {
+  let parked : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  VoiceConnection::start(
+    group,
+    {
+      server_id: "1",
+      session_id: "session",
+      token: "token",
+      endpoint: "voice.example",
+    },
+    user_id="100",
+    channel_id=7UL,
+    leave=() => (),
+    rejoin=() => fail("unexpected rejoin"),
+    connector=_ => (transport : &VoiceTransport),
+    receive=false,
+    telemetry=event => telemetry.push(event),
+    sleeper=_ => parked.get(),
+  )
+}
+
+///|
+async fn identify_dave_test_connection(
+  transport : DaveConnectionTransport,
+) -> Unit {
+  transport.incoming.put(
+    Text("{\"op\":8,\"d\":{\"heartbeat_interval\":60000}}"),
+  )
+  guard! transport.text.get() is { "op": Number(0, ..), .. }
+}
+
+///|
+async test "voice connection DAVE controls preserve roster events and report failed control sends" {
+  let transport = DaveConnectionTransport()
+  let telemetry : Array[VoiceTelemetry] = []
+  let fake = FakeDaveBackend::new()
+  @async.with_task_group(group => {
+    let connection = dave_test_connection(group, transport, telemetry)
+    connection.dave = Some(fake_machine(fake))
+    identify_dave_test_connection(transport)
+    connection.handle_message(ClientsConnect(user_ids=["200"]))
+    assert_eq(connection.next_event(), UserConnected(user_id="200"))
+    assert_true(connection.roster.contains("200"))
+    connection.handle_message(ClientDisconnect(user_id="200"))
+    assert_eq(connection.next_event(), UserDisconnected(user_id="200"))
+    assert_false(connection.roster.contains("200"))
+    connection.handle_message(
+      DavePrepareTransition(transition_id=7, protocol_version=0),
+    )
+    assert_eq(transport.text.get(), encode_transition_ready(transition_id=7))
+    connection.handle_message(DaveMlsProposals(payload=b""))
+    assert_true(
+      telemetry.any(event => {
+        event is PacketDropped(reason~) && reason.has_prefix("DAVE control:")
+      }),
+    )
+    transport.text.close(
+      error=VoiceTransportClosed(code=None, reason="fake send failure"),
+    )
+    connection.handle_message(
+      DavePrepareTransition(transition_id=8, protocol_version=0),
+    )
+    assert_true(
+      telemetry.any(event => {
+        event is PacketDropped(reason~) && reason.has_prefix("DAVE send:")
+      }),
+    )
+    connection.disconnect()
+  })
+}
+
+///|
+async test "voice connection DAVE session failures close the connection with the backend reason" {
+  if !shim_available() {
+    return
+  }
+  for external_sender in [false, true] {
+    let transport = DaveConnectionTransport()
+    let telemetry : Array[VoiceTelemetry] = []
+    let fake = FakeDaveBackend::new()
+    @async.with_task_group(group => {
+      let connection = dave_test_connection(group, transport, telemetry)
+      connection.dave = Some(fake_machine(fake))
+      identify_dave_test_connection(transport)
+      if external_sender {
+        fake.fail_external_sender = true
+        connection.pending_dave_external_sender = Some(b"external")
+      } else {
+        fake.fail_reinitialize = true
+      }
+      connection.establish_session("aead_aes256_gcm_rtpsize", Bytes::new(32), 1)
+      assert_eq(connection.state(), Closed(code=None))
+      try connection.wait_ready() catch {
+        VoiceError::ShimUnavailable(reason~) =>
+          assert_eq(
+            reason,
+            if external_sender {
+              "DAVE: fake external sender failure"
+            } else {
+              "DAVE: fake reinitialize failure"
+            },
+          )
+        error => fail("unexpected DAVE session failure: \{Repr(error)}")
+      } noraise {
+        _ => fail("expected failed DAVE session")
+      }
+      connection.disconnect()
+    })
+  }
+}
+
+///|
+async test "voice connection reports initial DAVE key package send failure" {
+  if !shim_available() {
+    return
+  }
+  let transport = DaveConnectionTransport()
+  let telemetry : Array[VoiceTelemetry] = []
+  @async.with_task_group(group => {
+    let connection = dave_test_connection(group, transport, telemetry)
+    connection.dave = Some(fake_machine(FakeDaveBackend::new()))
+    identify_dave_test_connection(transport)
+    transport.binary.close(
+      error=VoiceTransportClosed(code=None, reason="fake binary failure"),
+    )
+    connection.establish_session("aead_aes256_gcm_rtpsize", Bytes::new(32), 1)
+    assert_eq(connection.next_event(), ConnectionReady)
+    assert_true(
+      telemetry.any(event => {
+        event is PacketDropped(reason~) && reason.has_prefix("DAVE send:")
+      }),
+    )
+    connection.disconnect()
+  })
+}
+
+///|
+async test "voice connection removes a subscription whose queue has failed" {
+  let transport = DaveConnectionTransport()
+  @async.with_task_group(group => {
+    let connection = dave_test_connection(group, transport, [])
+    let subscription = connection.subscribe(user_id="200")
+    subscription.queue.close(error=VoiceError::Disconnected)
+    let event = VoiceEvent::OpusReceived(
+      user_id=Some("200"),
+      ssrc=42U,
+      sequence=1,
+      timestamp=960U,
+      opus=b"opus",
+    )
+    connection.emit(event)
+    assert_eq(connection.next_event(), event)
+    assert_eq(connection.subscriptions.length(), 0)
+    connection.disconnect()
+  })
+}
+
+///|
+struct DaveConnectionUdp {
+  sent : @aqueue.Queue[Bytes]
+}
+
+///|
+impl VoiceUdp for DaveConnectionUdp with fn send(self, bytes) {
+  self.sent.put(bytes)
+}
+
+///|
+impl VoiceUdp for DaveConnectionUdp with fn recv(_self, _buffer) {
+  fail("unexpected receive")
+}
+
+///|
+impl VoiceUdp for DaveConnectionUdp with fn close(_self) {
+  ()
+}
+
+///|
+struct DaveConnectionAudio {
+  requests : @aqueue.Queue[Unit]
+  frames : @aqueue.Queue[Bytes?]
+}
+
+///|
+fn DaveConnectionAudio::DaveConnectionAudio() -> DaveConnectionAudio {
+  { requests: Queue(kind=Unbounded), frames: Queue(kind=Unbounded), }
+}
+
+///|
+impl AudioSource for DaveConnectionAudio with fn next_frame(self) {
+  self.requests.put(())
+  self.frames.get()
+}
+
+///|
+async test "voice playback reports DAVE drops and source failures and replaces stopped sources" {
+  if !shim_available() {
+    return
+  }
+  let transport = DaveConnectionTransport()
+  let fake = FakeDaveBackend::new()
+  let dropped : @aqueue.Queue[VoiceTelemetry] = Queue(kind=Unbounded)
+  let udp = DaveConnectionUdp::{ sent: Queue(kind=Unbounded), }
+  let first = DaveConnectionAudio()
+  let replacement = DaveConnectionAudio()
+  let parked : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  @async.with_task_group(group => {
+    let connection = VoiceConnection::start(
+      group,
+      {
+        server_id: "1",
+        session_id: "session",
+        token: "token",
+        endpoint: "voice.example",
+      },
+      user_id="100",
+      channel_id=7UL,
+      leave=() => (),
+      rejoin=() => fail("unexpected rejoin"),
+      connector=_ => (transport : &VoiceTransport),
+      receive=false,
+      sleeper=_ => parked.get(),
+      telemetry=event => try! (dropped.try_put(event) |> ignore),
+    )
+    identify_dave_test_connection(transport)
+    connection.dave = Some(fake_machine(fake))
+    connection.establish_session("aead_aes256_gcm_rtpsize", Bytes::new(32), 0)
+    assert_eq(connection.next_event(), ConnectionReady)
+    connection.udp = Some(udp)
+    connection.ssrc = Some(42U)
+    connection.play(first)
+    guard! transport.text.get() is { "op": Number(5, ..), .. }
+    first.requests.get()
+    fake.fail_encrypt = true
+    first.frames.put(Some(b"opus"))
+    for event = dropped.get(); ; event = dropped.get() {
+      if event is DaveEncryptDropped(reason~) {
+        assert_eq(reason, "fake encrypt failure")
+        break
+      }
+    }
+    first.requests.get()
+    let stop = connection.playback_stop.unwrap()
+    connection.play(replacement)
+    assert_true(stop.val)
+    first.frames.close(error=VoiceError::Disconnected)
+    for event = dropped.get(); ; event = dropped.get() {
+      if event is PacketDropped(reason~) {
+        assert_true(reason.has_prefix("send loop:"))
+        break
+      }
+    }
+    guard! transport.text.get() is { "op": Number(5, ..), .. }
+    replacement.requests.get()
+    let replacement_stop = connection.playback_stop.unwrap()
+    connection.reset_session()
+    assert_true(replacement_stop.val)
+    let stopping = group.spawn(no_wait=true, () => connection.stop())
+    @async.pause()
+    replacement.frames.close(error=VoiceError::Disconnected)
+    stopping.wait()
+    assert_true(connection.playback_stop is None)
+    connection.disconnect()
+  })
+}
+
+///|
+async test "voice playback discards sources superseded in the queue and during setup" {
+  if !shim_available() {
+    return
+  }
+  let transport = DaveConnectionTransport()
+  let discarded = DaveConnectionAudio()
+  let waiting = DaveConnectionAudio()
+  let current = DaveConnectionAudio()
+  let udp = DaveConnectionUdp::{ sent: Queue(kind=Unbounded), }
+  @async.with_task_group(group => {
+    let connection = dave_test_connection(group, transport, [])
+    identify_dave_test_connection(transport)
+    connection.play(discarded)
+    connection.play(waiting)
+    @async.pause()
+    connection.stop()
+    connection.dave = Some(fake_machine(FakeDaveBackend::new()))
+    connection.establish_session("aead_aes256_gcm_rtpsize", Bytes::new(32), 0)
+    connection.udp = Some(udp)
+    connection.ssrc = Some(42U)
+    connection.play(current)
+    current.requests.get()
+    assert_eq(discarded.requests.try_get(), None)
+    assert_eq(waiting.requests.try_get(), None)
+    connection.disconnect()
+  })
 }
