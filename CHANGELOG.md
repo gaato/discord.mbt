@@ -7,6 +7,8 @@ change is listed with a migration note.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-20
+
 Boundary hardening before 1.0: escape hatches, routing, and lifecycle side
 effects now have explicit, checked contracts.
 
