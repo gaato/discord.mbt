@@ -106,7 +106,7 @@ flag to the original-response PATCH:
 
 ```mbt check
 ///|
-async fn edit_to_components_v2(ctx : @discord.CommandCtx) -> Unit {
+async fn edit_to_components_v2(ctx : @framework.CommandCtx) -> Unit {
   ctx.defer_response()
   ctx.edit_response(components=components_v2) |> ignore
 }

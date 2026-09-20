@@ -137,7 +137,7 @@ User commands receive `TargetUser`; message commands receive `Message`:
 
 ```mbt check
 ///|
-let wave : @discord.Command[@discord.TargetUser] = @discord.user_command(
+let wave : @discord.Command[@framework.TargetUser] = @discord.user_command(
   name="Wave",
   handler=Immediate((_, target) => {
     @discord.CommandReply::message(

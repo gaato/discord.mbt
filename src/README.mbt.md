@@ -90,12 +90,12 @@ async fn run_echo_bot(token : String) -> Unit {
 
 | Package | What it is | Native | JS |
 |---|---|---:|---:|
-| `gaato/discord` | Facade: aliases for the types a typical application names directly | Yes | Yes* |
+| `gaato/discord` | Facade: golden-path names a typical application uses directly | Yes | Yes* |
 | `gaato/discord/model` | Pure data: ~24 entity domains, gateway payloads, zero IO | Yes | Yes |
 | `gaato/discord/telemetry` | Structured REST, gateway, and dispatch observability values | Yes | Yes |
 | `gaato/discord/http` | REST `Client`, routes, rate limiting, multipart uploads | Yes | Yes |
 | `gaato/discord/gateway` | `Shard`: connection state machine, heartbeat, resume | Yes | No |
-| `gaato/discord/voice` | Experimental native voice gateway v8, DAVE, RTP, and Opus send/receive | Yes | No |
+| `gaato/discord/voice` | Experimental: API may change in minor releases until declared stable; native voice gateway v8, DAVE, RTP, and Opus send/receive | Yes | No |
 | `gaato/discord/interaction` | Command/component builders, typed args and autocomplete data | Yes | Yes |
 | `gaato/discord/framework` | Interaction routing, response gates, low-level response contexts | Yes | Yes |
 | `gaato/discord/app` | Gateway-free typed commands/components/modals, HTTP endpoint, sync and policy | Yes | Yes |
@@ -106,13 +106,18 @@ async fn run_echo_bot(token : String) -> Unit {
 | `gaato/discord/verify` | Pure MoonBit Ed25519 request verification | Yes | Yes |
 | `gaato/discord/ratelimit` | Rate limiter trait + in-memory implementation | Yes | Yes |
 | `gaato/discord/queue` | Identify queue trait + in-memory implementation | Yes | Yes |
-| `gaato/discord/coordinator` | Native TCP coordinator for multi-process Identify and REST limits | Yes | No |
+| `gaato/discord/coordinator` | Experimental: API may change in minor releases until declared stable; native TCP coordinator for multi-process Identify and REST limits | Yes | No |
 
 \* The facade's gateway and HTTP-server exports exist only on native.
 WebAssembly is not currently enabled or validated as an application target in
 this repository.
 
 Packages remain usable on their own. Import only what the program needs:
+
+The facade follows the typical bot's golden path. Import the focused `http`,
+`framework`, `gateway`, `coordinator`, `telemetry`, or `interaction` package for
+resource refs, pagination, low-level routing and raw contexts, shard transport,
+coordination, observability events, or raw option declarations.
 
 - REST-only tool: `http` (brings `model`).
 - Serverless HTTP interactions (Cloudflare Workers, JS): `app` and `verify`.

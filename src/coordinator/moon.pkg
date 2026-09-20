@@ -1,3 +1,5 @@
+// Experimental: API may change in minor releases until declared stable.
+
 import {
   "gaato/discord/queue",
   "gaato/discord/ratelimit",

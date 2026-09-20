@@ -1,5 +1,6 @@
 import {
   "gaato/discord",
+  "gaato/discord/framework",
   "gaato/discord/model",
   "moonbitlang/async",
   "moonbitlang/async/signal",

@@ -110,7 +110,7 @@ jobs:
         run: moon check --target js --deny-warn
 
       - name: Test native prebuild
-        run: node --test test/prebuild.test.js
+        run: node --test test/
 
       - name: Test
         run: moon test --target js

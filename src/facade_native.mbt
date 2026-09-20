@@ -3,10 +3,6 @@
 pub using @endpoint_http {type InteractionsServer, serve_interactions}
 
 ///|
-/// Native Discord Gateway transport primitives.
-pub using @gateway {type Shard, type ShardEvent}
-
-///|
 /// Experimental native voice connection, playback, and receive APIs.
 pub using @voice {
   type VoiceConnection,
@@ -20,15 +16,6 @@ pub using @voice {
   type OggOpusError,
   type VoiceReceiveStream,
   SILENCE_FRAME,
-}
-
-///|
-/// Native cross-process Identify and REST rate-limit coordination.
-pub using @coordinator {
-  type Coordinator,
-  type CoordinatorError,
-  type RemoteIdentifyQueue,
-  type RemoteRateLimiter,
 }
 
 ///|

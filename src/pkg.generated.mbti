@@ -4,14 +4,11 @@ package "gaato/discord"
 import {
   "gaato/discord/app",
   "gaato/discord/bot",
-  "gaato/discord/coordinator",
   "gaato/discord/endpoint_http",
   "gaato/discord/framework",
-  "gaato/discord/gateway",
   "gaato/discord/http",
   "gaato/discord/interaction",
   "gaato/discord/model",
-  "gaato/discord/telemetry",
   "gaato/discord/verify",
   "gaato/discord/voice",
   "moonbitlang/async",
@@ -42,13 +39,7 @@ pub fn arg_string(name~ : String, description~ : String, choices? : Array[@model
 
 pub fn arg_user(name~ : String, description~ : String, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @interaction.Arg[@model.Id[@model.UserMarker]]
 
-pub fn attachment_option(String, String, required? : Bool, file_types? : Array[@model.FileTypeFilter], name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @model.CommandOption
-
-pub fn boolean_option(String, String, required? : Bool, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @model.CommandOption
-
 pub fn button(custom_id~ : String, label? : String, style? : @model.ButtonStyle, emoji? : @model.Emoji, disabled? : Bool) -> @model.Component
-
-pub fn channel_option(String, String, required? : Bool, channel_types? : Array[@model.ChannelType], name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @model.CommandOption
 
 pub fn channel_select(custom_id~ : String, placeholder? : String, min_values? : Int, max_values? : Int, disabled? : Bool, channel_types? : Array[@model.ChannelType]) -> @model.Component
 
@@ -64,8 +55,6 @@ pub fn guild_only() -> (@app.CheckCtx) -> Bool raise @app.HandlerError
 
 pub fn int_choice(String, Int64, name_localizations? : Map[String, String]) -> @model.CommandOptionChoice
 
-pub fn integer_option(String, String, required? : Bool, choices? : Array[@model.CommandOptionChoice], min_value? : Int64, max_value? : Int64, autocomplete? : Bool, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @model.CommandOption
-
 pub fn label(label~ : String, component~ : @model.Component, description? : String) -> @model.Component
 
 pub fn link_button(url~ : String, label? : String, emoji? : @model.Emoji, disabled? : Bool) -> @model.Component
@@ -73,8 +62,6 @@ pub fn link_button(url~ : String, label? : String, emoji? : @model.Emoji, disabl
 pub fn media_gallery(Array[@model.MediaGalleryItem]) -> @model.Component
 
 pub fn media_item(url~ : String, description? : String, spoiler? : Bool) -> @model.MediaGalleryItem
-
-pub fn mentionable_option(String, String, required? : Bool, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @model.CommandOption
 
 pub fn mentionable_select(custom_id~ : String, placeholder? : String, min_values? : Int, max_values? : Int, disabled? : Bool) -> @model.Component
 
@@ -84,11 +71,7 @@ pub fn[A] modal(custom_id~ : String, title~ : String, fields~ : @app.ModalFields
 
 pub fn number_choice(String, Double, name_localizations? : Map[String, String]) -> @model.CommandOptionChoice
 
-pub fn number_option(String, String, required? : Bool, choices? : Array[@model.CommandOptionChoice], min_value? : Double, max_value? : Double, autocomplete? : Bool, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @model.CommandOption
-
 pub fn required_permissions(@model.Permissions) -> (@app.CheckCtx) -> Bool raise @app.HandlerError
-
-pub fn role_option(String, String, required? : Bool, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @model.CommandOption
 
 pub fn role_select(custom_id~ : String, placeholder? : String, min_values? : Int, max_values? : Int, disabled? : Bool) -> @model.Component
 
@@ -108,13 +91,7 @@ pub fn slash_group(name~ : String, description~ : String, children~ : Array[@app
 
 pub fn string_choice(String, String, name_localizations? : Map[String, String]) -> @model.CommandOptionChoice
 
-pub fn string_option(String, String, required? : Bool, choices? : Array[@model.CommandOptionChoice], min_length? : Int, max_length? : Int, autocomplete? : Bool, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @model.CommandOption
-
 pub fn string_select(custom_id~ : String, options~ : Array[@model.SelectOption], placeholder? : String, min_values? : Int, max_values? : Int, disabled? : Bool) -> @model.Component
-
-pub fn sub_command(String, String, options? : Array[@model.CommandOption], name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @model.CommandOption
-
-pub fn sub_command_group(String, String, Array[@model.CommandOption], name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @model.CommandOption
 
 pub fn[A] subcommand(name~ : String, description~ : String, args~ : @interaction.Args[A], handler~ : @app.InteractionHandler[A], name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @app.SlashChild
 
@@ -129,8 +106,6 @@ pub fn text_input(custom_id~ : String, style? : @model.TextInputStyle, placehold
 pub fn thumbnail(url~ : String, description? : String, spoiler? : Bool) -> @model.Component
 
 pub fn user_command(name~ : String, handler~ : @app.InteractionHandler[@framework.TargetUser], default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType], name_localizations? : Map[String, String]) -> @app.Command[@framework.TargetUser]
-
-pub fn user_option(String, String, required? : Bool, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @model.CommandOption
 
 pub fn user_select(custom_id~ : String, placeholder? : String, min_values? : Int, max_values? : Int, disabled? : Bool) -> @model.Component
 
@@ -153,27 +128,13 @@ pub using @app {type AppConfigError}
 
 pub using @app {type AppCtx}
 
-pub using @http {type ApplicationEmojiRef}
-
-pub using @http {type ApplicationIdentityRef}
-
-pub using @http {type ApplicationRef}
-
 pub using @interaction {type Arg}
 
 pub using @interaction {type Args}
 
-pub using @interaction {type ArgsDecodeError}
-
-pub using @http {type AutoModerationRuleRef}
-
-pub using @framework {type AutocompleteCtx}
-
 pub using @bot {type Bot}
 
 pub using @bot {type BotError}
-
-pub using @http {type ChannelRef}
 
 pub using @app {type CheckCtx}
 
@@ -183,17 +144,9 @@ pub using @app {type Command}
 
 pub type CommandCheck = (@app.CheckCtx) -> Bool raise @app.HandlerError
 
-pub using @framework {type CommandCtx}
-
-pub using @interaction {type CommandOptions}
-
 pub using @app {type CommandReply}
 
 pub using @app {type CommandScope}
-
-pub using @interaction {type CommandSpec}
-
-pub using @framework {type ComponentCtx}
 
 pub using @app {type ComponentDeferredCtx}
 
@@ -203,19 +156,9 @@ pub using @app {type ComponentImmediateCtx}
 
 pub using @app {type ComponentReply}
 
-pub type ComponentWaiter = async (String, Int?) -> @framework.ComponentCtx?
-
 pub using @app {type CooldownBucket}
 
-pub using @coordinator {type Coordinator}
-
-pub using @coordinator {type CoordinatorError}
-
 pub using @app {type DeferredCtx}
-
-pub using @http {type EmojiRef}
-
-pub using @http {type EntitlementRef}
 
 pub type ErrorPolicy = async (@app.FailureCtx, Error) -> Unit
 
@@ -229,23 +172,11 @@ pub using @app {type FailureCtx}
 
 pub using @app {type FailureOrigin}
 
-pub using @app {type FailureRaw}
-
 pub using @http {type FileUpload}
-
-pub using @framework {type Framework}
 
 pub using @model {type GatewayCapabilities}
 
 pub using @bot {type GatewayCtx}
-
-pub using @http {type GlobalCommandRef}
-
-pub using @http {type GuildCommandRef}
-
-pub using @framework {type GuildInvocation}
-
-pub using @http {type GuildRef}
 
 pub using @app {type HandlerError}
 
@@ -254,8 +185,6 @@ pub using @app {type ImmediateCtx}
 pub using @app {type InitialResponse}
 
 pub using @model {type Intents}
-
-pub using @framework {type InteractionContextError}
 
 pub using @app {type InteractionEndpoint}
 
@@ -269,17 +198,7 @@ pub using @verify {type InteractionVerifierError}
 
 pub using @endpoint_http {type InteractionsServer}
 
-pub using @http {type InviteRef}
-
-pub using @framework {type InvocationScope}
-
-pub using @http {type MemberRef}
-
-pub using @http {type MessageRef}
-
 pub using @app {type Modal}
-
-pub using @framework {type ModalCtx}
 
 pub using @app {type ModalDeferredCtx}
 
@@ -291,8 +210,6 @@ pub using @app {type ModalHandle}
 
 pub using @app {type ModalImmediateCtx}
 
-pub using @framework {type ModalOrigin}
-
 pub using @app {type ModalSubmitHandler}
 
 pub using @voice {type OggOpusError}
@@ -301,45 +218,13 @@ pub using @voice {type OggOpusSource}
 
 pub using @voice {type OggOpusWriter}
 
-pub using @http {type Paginator}
-
-pub using @app {type RegisteredCommand}
-
-pub using @coordinator {type RemoteIdentifyQueue}
-
-pub using @coordinator {type RemoteRateLimiter}
-
 pub using @app {type ResponsePhase}
-
-pub using @http {type RoleRef}
-
-pub using @http {type ScheduledEventRef}
-
-pub using @gateway {type Shard}
 
 pub using @bot {type ShardConfig}
 
-pub using @gateway {type ShardEvent}
-
-pub using @http {type SkuRef}
-
 pub using @app {type SlashChild}
 
-pub using @http {type SoundboardSoundRef}
-
-pub type Spawner = async (async () -> Unit) -> Unit
-
-pub using @http {type StickerRef}
-
 pub using @interaction {type SuggestCtx}
-
-pub using @framework {type TargetUser}
-
-pub using @telemetry {type TelemetryEvent}
-
-pub using @http {type TemplateRef}
-
-pub using @http {type UserRef}
 
 pub using @voice {type VoiceConnection}
 
@@ -353,14 +238,6 @@ pub using @voice {type VoiceReceiveStream}
 
 pub using @voice {type VoiceTelemetry}
 
-pub using @http {type WebhookMessageRef}
-
-pub using @http {type WebhookRef}
-
-pub using @http {type WebhookTokenRef}
-
 pub using @voice {trait AudioSource}
-
-pub using @interaction {trait CommandModel}
 
 // Traits

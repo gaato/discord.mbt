@@ -1,37 +1,20 @@
 ///|
-/// Convenience aliases for the types a typical bot names directly, so the
-/// core loop can be written against `@discord` alone. Everything else —
-/// entity models, REST wrappers, gateway internals, option builders —
-/// lives in the focused packages: `@discord/model`, `@discord/http`,
-/// `@discord/gateway`, `@discord/interaction`, `@discord/framework`.
-pub using @dhttp {
-  type Client,
-  type FileUpload,
-  type Paginator,
-  type ChannelRef,
-  type MessageRef,
-  type MemberRef,
-  type UserRef,
-  type GuildRef,
-  type RoleRef,
-  type EmojiRef,
-  type StickerRef,
-  type SoundboardSoundRef,
-  type ScheduledEventRef,
-  type AutoModerationRuleRef,
-  type TemplateRef,
-  type WebhookRef,
-  type WebhookTokenRef,
-  type WebhookMessageRef,
-  type InviteRef,
-  type ApplicationRef,
-  type ApplicationIdentityRef,
-  type ApplicationEmojiRef,
-  type GlobalCommandRef,
-  type GuildCommandRef,
-  type EntitlementRef,
-  type SkuRef,
-}
+/// Golden-path names that a typical bot uses directly: application
+/// declarations and handler contexts, typed arguments and components, common
+/// models, the REST client, executors, verification, and voice.
+///
+/// Not re-exported — import the focused package instead:
+/// - `gaato/discord/http` for resource refs and pagination.
+/// - `gaato/discord/framework` for the low-level router and raw contexts used
+///   by `Raw` handlers.
+/// - `gaato/discord/gateway` for shard transport primitives.
+/// - `gaato/discord/coordinator` for multi-process coordination.
+/// - `gaato/discord/telemetry` for observability events.
+/// - `gaato/discord/interaction` for raw option builders, `CommandSpec`, and
+///   low-level option decoding.
+/// - `gaato/discord/app` for implementation-facing registration, spawning,
+///   waiting, and raw failure details.
+pub using @dhttp {type Client, type FileUpload}
 
 ///|
 pub using @model {
@@ -44,33 +27,7 @@ pub using @model {
 }
 
 ///|
-/// Structured observability events shared by REST and gateway runtimes.
-pub using @telemetry {type TelemetryEvent}
-
-///|
-pub using @interaction {
-  type Arg,
-  type Args,
-  type ArgsDecodeError,
-  type SuggestCtx,
-  type CommandSpec,
-  type CommandOptions,
-  trait CommandModel,
-}
-
-///|
-pub using @framework {
-  type Framework,
-  type CommandCtx,
-  type ComponentCtx,
-  type ModalCtx,
-  type AutocompleteCtx,
-  type InvocationScope,
-  type ModalOrigin,
-  type InteractionContextError,
-  type TargetUser,
-  type GuildInvocation,
-}
+pub using @interaction {type Arg, type Args, type SuggestCtx}
 
 ///|
 /// Gateway-free application declarations, typed interaction handlers, command
@@ -80,13 +37,10 @@ pub using @app {
   type AppCtx,
   type InteractionEndpoint,
   type InteractionOutcome,
-  type Spawner,
-  type ComponentWaiter,
   type Command,
   type CheckCtx,
   type CommandCheck,
   type CooldownBucket,
-  type RegisteredCommand,
   type InteractionHandler,
   type CommandReply,
   type ComponentReply,
@@ -110,7 +64,6 @@ pub using @app {
   type ErrorPolicy,
   type FailureCtx,
   type FailureOrigin,
-  type FailureRaw,
   type ResponsePhase,
   slash,
   user_command,
@@ -148,17 +101,6 @@ pub using @interaction {
   arg_role,
   arg_mentionable,
   arg_attachment,
-  string_option,
-  integer_option,
-  number_option,
-  boolean_option,
-  user_option,
-  channel_option,
-  role_option,
-  mentionable_option,
-  attachment_option,
-  sub_command,
-  sub_command_group,
   string_choice,
   int_choice,
   number_choice,

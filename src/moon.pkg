@@ -1,14 +1,10 @@
 import {
   "gaato/discord/model",
-  "gaato/discord/telemetry",
   "gaato/discord/http" @dhttp,
-  "gaato/discord/gateway",
   "gaato/discord/voice",
   "gaato/discord/interaction",
-  "gaato/discord/framework",
   "gaato/discord/app",
   "gaato/discord/bot",
-  "gaato/discord/coordinator",
   "gaato/discord/endpoint_http",
   "gaato/discord/verify",
 }
@@ -19,6 +15,7 @@ import {
   "gaato/discord/model",
   "gaato/discord/telemetry",
   "gaato/discord/interaction",
+  "gaato/discord/framework",
   "gaato/discord/http" @dhttp,
 } for "test"
 
