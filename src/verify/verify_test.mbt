@@ -1,13 +1,4 @@
 ///|
-fn encode_hex_for_test(bytes : Bytes) -> String {
-  let out = StringBuilder()
-  for byte in bytes {
-    out.write_string(byte.to_hex())
-  }
-  out.to_string()
-}
-
-///|
 test "RFC 8032 test 1 verifies an empty message" {
   assert_true(
     @verify.verify_signature(
@@ -127,7 +118,7 @@ test "raw non-UTF-8 request bytes are verified without normalization" {
   let public_key = "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a"
   let timestamp = "1720951200"
   let body = b"\xFF\x00\x80raw"
-  let signature = encode_hex_for_test(
+  let signature = @hex.encode(
     @ed25519.sign(seed, @utf8.encode(timestamp) + body),
   )
   let verifier = @verify.InteractionVerifier::new(public_key)

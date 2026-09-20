@@ -1,5 +1,6 @@
 import {
   "hustcer/ed25519",
+  "moonbitlang/core/encoding/hex",
   "moonbitlang/core/encoding/utf8",
 }
 

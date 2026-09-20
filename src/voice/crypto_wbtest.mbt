@@ -1,28 +1,4 @@
 ///|
-fn hex_nibble(code : Int) -> Byte? {
-  if code >= '0' && code <= '9' {
-    Some((code - '0').to_byte())
-  } else if code >= 'a' && code <= 'f' {
-    Some((code - 'a' + 10).to_byte())
-  } else {
-    None
-  }
-}
-
-///|
-fn decode_test_hex(text : String) -> Bytes {
-  let bytes : Array[Byte] = []
-  for index in 0..<(text.length() / 2) {
-    guard hex_nibble(text[index * 2].to_int()) is Some(high) &&
-      hex_nibble(text[index * 2 + 1].to_int()) is Some(low) else {
-      abort("invalid test hex")
-    }
-    bytes.push((high << 4) | low)
-  }
-  Bytes::from_array(bytes)
-}
-
-///|
 test "AEAD known-answer vectors" {
   if !shim_available() {
     return
@@ -36,22 +12,20 @@ test "AEAD known-answer vectors" {
   )
   assert_eq(
     aes,
-    decode_test_hex(
+    @hex.decode(
       "cea7403d4d606b6e074ec5d3baf39d18d0d1c8a799996bf0265b98b5d48ab919",
     ),
   )
 
-  let key = decode_test_hex(
+  let key = @hex.decode(
     "808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f",
   )
-  let nonce = decode_test_hex(
-    "404142434445464748494a4b4c4d4e4f5051525354555657",
-  )
-  let aad = decode_test_hex("50515253c0c1c2c3c4c5c6c7")
-  let plaintext = decode_test_hex(
+  let nonce = @hex.decode("404142434445464748494a4b4c4d4e4f5051525354555657")
+  let aad = @hex.decode("50515253c0c1c2c3c4c5c6c7")
+  let plaintext = @hex.decode(
     "4c616469657320616e642047656e746c656d656e206f662074686520636c617373206f66202739393a204966204920636f756c64206f6666657220796f75206f6e6c79206f6e652074697020666f7220746865206675747572652c2073756e73637265656e20776f756c642062652069742e",
   )
-  let expected = decode_test_hex(
+  let expected = @hex.decode(
     "bd6d179d3e83d43b9576579493c0e939572a1700252bfaccbed2902c21396cbb731c7f1b0b4aa6440bf3a82f4eda7e39ae64c6708c54c216cb96b72e1213b4522f8c9ba40db5d945b11b69b982c1bb9e3f3fac2bc369488f76b2383565d3fff921f9664c97637da9768812f615c68b13b52ec0875924c1c7987947deafd8780acf49",
   )
   assert_eq(

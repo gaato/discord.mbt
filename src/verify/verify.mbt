@@ -23,8 +23,8 @@ pub fn InteractionVerifier::new(
   if public_key.length() != 64 {
     raise InvalidPublicKeyLength(got=public_key.length())
   }
-  guard decode_hex(public_key) is Some(public_key_bytes) else {
-    raise InvalidPublicKeyHex
+  let public_key_bytes = @hex.decode(public_key) catch {
+    _ => raise InvalidPublicKeyHex
   }
   let key = @ed25519.VerifyingKey::from_public_key(public_key_bytes) catch {
     _ => raise InvalidPublicKeyEncoding
@@ -47,7 +47,7 @@ pub fn InteractionVerifier::verify(
   body~ : BytesView,
 ) -> Bool {
   guard signature.length() == 128 else { return false }
-  guard decode_hex(signature) is Some(signature_bytes) else { return false }
+  let signature_bytes = @hex.decode(signature) catch { _ => return false }
   let message = @utf8.encode(timestamp) + body.to_owned()
   self.key.verify(message, signature_bytes)
 }

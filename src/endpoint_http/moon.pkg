@@ -16,6 +16,7 @@ import {
   "gaato/discord/interaction",
   "hustcer/ed25519",
   "moonbitlang/async",
+  "moonbitlang/core/encoding/hex",
 } for "wbtest"
 
 // This package is intentionally empty on non-native targets.

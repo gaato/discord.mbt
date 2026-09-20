@@ -23,6 +23,10 @@ import {
   "moonbitlang/core/json",
 } for "test"
 
+import {
+  "moonbitlang/core/encoding/hex",
+} for "wbtest"
+
 // Voice networking is available only on the native async runtime.
 // This package is intentionally empty on non-native targets.
 

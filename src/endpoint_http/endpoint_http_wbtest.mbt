@@ -1,42 +1,10 @@
 ///|
-fn hex_nibble(code : UInt16) -> Byte? {
-  if code >= '0' && code <= '9' {
-    Some((code - '0').to_byte())
-  } else if code >= 'a' && code <= 'f' {
-    Some((code - 'a' + 10).to_byte())
-  } else {
-    None
-  }
-}
-
-///|
-fn decode_hex(input : String) -> Bytes? {
-  guard input.length() % 2 == 0 else { return None }
-  let decoded = Array::make(input.length() / 2, b'\x00')
-  for i in 0..<decoded.length() {
-    guard hex_nibble(input[i * 2]) is Some(high) else { return None }
-    guard hex_nibble(input[i * 2 + 1]) is Some(low) else { return None }
-    decoded[i] = (high << 4) | low
-  }
-  Some(Bytes::from_array(decoded))
-}
-
-///|
-fn encode_hex(bytes : Bytes) -> String {
-  let out = StringBuilder()
-  for byte in bytes {
-    out.write_string(byte.to_hex())
-  }
-  out.to_string()
-}
-
-///|
 fn sign_body(
   private_seed : Bytes,
   timestamp : String,
   body : String,
 ) -> String raise {
-  encode_hex(@ed25519.sign(private_seed, @utf8.encode(timestamp + body)))
+  @hex.encode(@ed25519.sign(private_seed, @utf8.encode(timestamp + body)))
 }
 
 ///|
@@ -58,7 +26,7 @@ fn signed_headers_bytes(
   body : Bytes,
 ) -> Map[String, String] raise {
   {
-    "X-Signature-Ed25519": encode_hex(
+    "X-Signature-Ed25519": @hex.encode(
       @ed25519.sign(private_seed, @utf8.encode(timestamp) + body),
     ),
     "X-Signature-Timestamp": timestamp,
@@ -126,12 +94,9 @@ fn command_body(name : String, text : String, id : String) -> String {
 
 ///|
 async test "native interactions server authenticates and dispatches HTTP requests" {
-  guard decode_hex(
-      "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60",
-    )
-    is Some(private_seed) else {
-    fail("invalid RFC 8032 private key fixture")
-  }
+  let private_seed = @hex.decode(
+    "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60",
+  )
   let public_key = "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a"
   let timestamp = "1720951200"
   let app = @app.App()

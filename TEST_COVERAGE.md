@@ -123,7 +123,6 @@ Defensive arms unreachable by construction:
 | src/model/id.mbt | 1 | Phantom-id debug fallback. |
 | src/model/command.mbt | 1 | Unknown handler-type emit arm. |
 | src/util/cdn.mbt | 1 | Unreachable extension fallback. |
-| src/verify/hex.mbt | 1 | Odd-length guard unreachable from fixed-size signatures. |
 
 Receive-side model residuals (emit arms of receive-only structs and unknown
 variant fallbacks; decode is pinned by fixtures):
