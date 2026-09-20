@@ -13,6 +13,43 @@ priv struct ComponentWaiter {
 }
 
 ///|
+priv enum RoutePattern {
+  Prefix(String)
+  Id(String)
+}
+
+///|
+fn RoutePattern::rank(self : RoutePattern) -> Int {
+  match self {
+    Prefix(prefix) => prefix.length()
+    Id(id) => id.length() + 1
+  }
+}
+
+///|
+fn RoutePattern::matches(self : RoutePattern, custom_id : String) -> Bool {
+  match self {
+    Prefix(prefix) => custom_id.has_prefix(prefix)
+    Id(id) => custom_id == id || custom_id.has_prefix("\{id}:")
+  }
+}
+
+///|
+fn[C] insert_route(
+  routes : Array[(RoutePattern, async (C) -> Unit)],
+  pattern : RoutePattern,
+  handler : async (C) -> Unit,
+) -> Unit {
+  for index, entry in routes {
+    if pattern.rank() > entry.0.rank() {
+      routes.insert(index, (pattern, handler))
+      return
+    }
+  }
+  routes.push((pattern, handler))
+}
+
+///|
 /// Routes incoming interactions to declared command / component / modal
 /// handlers, and can register the declared commands with Discord.
 ///
@@ -23,8 +60,8 @@ pub struct Framework {
   priv application_id : @model.ApplicationId
   priv commands : Map[String, CommandEntry]
   priv autocompletes : Map[String, async (AutocompleteCtx) -> Unit]
-  priv components : Array[(String, async (ComponentCtx) -> Unit)]
-  priv modals : Array[(String, async (ModalCtx) -> Unit)]
+  priv components : Array[(RoutePattern, async (ComponentCtx) -> Unit)]
+  priv modals : Array[(RoutePattern, async (ModalCtx) -> Unit)]
   priv waiters : Array[ComponentWaiter]
   priv mut error_hook : (async (String, Error) -> Unit)?
 }
@@ -77,36 +114,53 @@ pub fn Framework::autocomplete(
 /// Register a component handler for custom ids starting with `prefix`.
 /// Longer prefixes win; equally long prefixes retain registration order.
 /// Exact-id waiters take precedence over all registered handlers.
+/// Empty and duplicate routes are accepted here; validation is App's job.
 pub fn Framework::component(
   self : Framework,
   prefix : String,
   handler : async (ComponentCtx) -> Unit,
 ) -> Framework {
-  for index, entry in self.components {
-    if prefix.length() > entry.0.length() {
-      self.components.insert(index, (prefix, handler))
-      return self
-    }
-  }
-  self.components.push((prefix, handler))
+  insert_route(self.components, Prefix(prefix), handler)
   self
 }
 
 ///|
 /// Register a modal-submit handler for custom ids starting with `prefix`.
 /// Longer prefixes win; equally long prefixes retain registration order.
+/// Empty and duplicate routes are accepted here; validation is App's job.
 pub fn Framework::modal(
   self : Framework,
   prefix : String,
   handler : async (ModalCtx) -> Unit,
 ) -> Framework {
-  for index, entry in self.modals {
-    if prefix.length() > entry.0.length() {
-      self.modals.insert(index, (prefix, handler))
-      return self
-    }
-  }
-  self.modals.push((prefix, handler))
+  insert_route(self.modals, Prefix(prefix), handler)
+  self
+}
+
+///|
+/// Register a component handler matching `id` or `id` followed by `:` and state.
+/// Ranked by the length of `id + ":"`; ties retain registration order.
+/// Exact-id waiters take precedence. Empty, duplicate, and malformed ids are
+/// accepted here; validation is App's job.
+pub fn Framework::component_id(
+  self : Framework,
+  id : String,
+  handler : async (ComponentCtx) -> Unit,
+) -> Framework {
+  insert_route(self.components, Id(id), handler)
+  self
+}
+
+///|
+/// Register a modal handler matching `id` or `id` followed by `:` and state.
+/// Ranked by the length of `id + ":"`; ties retain registration order.
+/// Empty, duplicate, and malformed ids are accepted here; validation is App's job.
+pub fn Framework::modal_id(
+  self : Framework,
+  id : String,
+  handler : async (ModalCtx) -> Unit,
+) -> Framework {
+  insert_route(self.modals, Id(id), handler)
   self
 }
 
@@ -259,8 +313,8 @@ pub async fn Framework::process_with(
         }
       }
       for entry in self.components {
-        let (prefix, handler) = entry
-        if data.custom_id.has_prefix(prefix) {
+        let (pattern, handler) = entry
+        if pattern.matches(data.custom_id) {
           self.guard_errors("component:\{data.custom_id}", () => handler(ctx))
           return true
         }
@@ -272,8 +326,8 @@ pub async fn Framework::process_with(
       let scope = interaction_scope(interaction)
       let origin = modal_origin(interaction)
       for entry in self.modals {
-        let (prefix, handler) = entry
-        if data.custom_id.has_prefix(prefix) {
+        let (pattern, handler) = entry
+        if pattern.matches(data.custom_id) {
           let ctx = ModalCtx::{
             client: self.client,
             application_id: self.application_id,

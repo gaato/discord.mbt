@@ -130,10 +130,13 @@ async test "interaction middleware order covers commands components and modals" 
       handler=Raw(_ => trace.push("command:ordered:handler")),
     ),
   )
-  app.on_component(
-    prefix="button:",
-    Raw(_ => trace.push("component:button:item:handler")),
+  let route = component_route(id="button", state=CustomIdCodec::string())
+  let button = @interaction.button(
+    custom_id=route.custom_id("item"),
+    label="Run",
   )
+  guard button is Button(button) else { fail("expected a button") }
+  app.on_component(route, Raw(_ => trace.push("component:button:item:handler")))
   app.on_modal_raw(prefix="form:", _ => trace.push("modal:form:item:handler"))
   let framework = middleware_test_framework(app, client)
   process_middleware_interaction(
@@ -143,7 +146,10 @@ async test "interaction middleware order covers commands components and modals" 
   |> ignore
   process_middleware_interaction(
     framework,
-    middleware_component_interaction("button:item", "500000000000000602"),
+    middleware_component_interaction(
+      button.custom_id.unwrap(),
+      "500000000000000602",
+    ),
   )
   |> ignore
   process_middleware_interaction(

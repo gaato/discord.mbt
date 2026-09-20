@@ -80,8 +80,9 @@ async test "raw command handler that responds then raises gets a followup" {
 ///|
 async test "raw component handler that responds then raises gets a followup" {
   let app = @app.App()
+  let route = @app.component_route(id="raw", state=@app.CustomIdCodec::string())
   app.on_component(
-    prefix="raw:",
+    route,
     Raw(raw => {
       assert_true(raw.response_state() is Pending)
       raw.respond(content="initial")
@@ -91,7 +92,7 @@ async test "raw component handler that responds then raises gets a followup" {
   )
   assert_state_followup(
     app,
-    app_component("raw:failure", "500000000000000802"),
+    app_component(app_route_button_id(route, "failure"), "500000000000000802"),
     Sent(ChannelMessageWithSource),
   )
 }

@@ -7,10 +7,12 @@ import {
   "moonbitlang/async",
   "moonbitlang/async/aqueue",
   "moonbitlang/core/json",
+  "moonbitlang/core/string",
 }
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/core/quickcheck" @qc,
   "moonbitlang/core/json",
   "gaato/discord/model",
 } for "test"

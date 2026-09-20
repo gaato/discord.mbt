@@ -1,10 +1,4 @@
 ///|
-test "component suffixes pass through when the prefix does not match" {
-  inspect(component_suffix("pick:colors", "pick:"), content="colors")
-  inspect(component_suffix("other:colors", "pick:"), content="other:colors")
-}
-
-///|
 test "error response summaries name every payload combination" {
   inspect(
     error_response_summary(Some("boom"), None, None, None),

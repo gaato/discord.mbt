@@ -1,16 +1,18 @@
 # Components and modals
 
-Component handlers are routed by a `custom_id` prefix. Put handler identity in
-the prefix and compact state in the suffix:
+Define a `component_route` once and use it both to produce a button or select's
+`custom_id` and to register its handler. The route owns an id and a
+`CustomIdCodec[A]`; the handler receives decoded state of type `A`:
 
 ```text
-ticket:close:123456789012345678
-^^^^^^^^^^^^ handler prefix
-             ^^^^^^^^^^^^^^^^^^ state suffix
+ticket-close:42
+^^^^^^^^^^^^ route id
+             ^^ encoded state
 ```
 
-Keep the complete ID within Discord's 100-character limit. Treat suffixes as
-untrusted input and authorize the user again in the handler.
+`route.custom_id(state)` enforces Discord's 100-character limit, measured
+conservatively in UTF-16 units. Treat decoded state as untrusted input and
+authorize the user again in the handler.
 
 ## Buttons and selects
 
@@ -18,46 +20,60 @@ Components are placed inside action rows:
 
 ```mbt check
 ///|
-let controls : Array[@model.Component] = [
-  @discord.action_row([
-    @discord.button(
-      custom_id="ticket:close:123456789012345678",
-      label="Close",
-      style=Danger,
-    ),
-    @discord.string_select(
-      custom_id="ticket:priority:123456789012345678",
-      placeholder="Priority",
-      options=[
-        @discord.select_option(label="Low", value="low"),
-        @discord.select_option(label="High", value="high"),
-      ],
-    ),
-  ]),
-]
+let close_ticket : @discord.ComponentRoute[Int] = @discord.component_route(
+  id="ticket-close",
+  state=@discord.CustomIdCodec::int(),
+)
+
+///|
+let ticket_priority : @discord.ComponentRoute[Int] = @discord.component_route(
+  id="ticket-priority",
+  state=@discord.CustomIdCodec::int(),
+)
+
+///|
+fn ticket_controls(ticket : Int) -> Array[@model.Component] raise {
+  [
+    @discord.action_row([
+      @discord.button(
+        custom_id=close_ticket.custom_id(ticket),
+        label="Close",
+        style=Danger,
+      ),
+      @discord.string_select(
+        custom_id=ticket_priority.custom_id(ticket),
+        placeholder="Priority",
+        options=[
+          @discord.select_option(label="Low", value="low"),
+          @discord.select_option(label="High", value="high"),
+        ],
+      ),
+    ]),
+  ]
+}
 ```
 
-Register one handler per prefix. `suffix()` removes the registered prefix;
-`values()` returns string-select values.
+Register the same route values. `values()` returns string-select values;
+the second handler argument is the ticket carried in the custom id.
 
 ```mbt check
 ///|
 fn register_ticket_handlers(app : @discord.App) -> Unit {
   app.on_component(
-    prefix="ticket:close:",
-    Immediate(ctx => {
+    close_ticket,
+    Immediate((_, ticket) => {
       @discord.ComponentReply::update_message(
-        content="Closed ticket \{ctx.suffix()}",
+        content="Closed ticket \{ticket}",
         components=[],
       )
     }),
   )
   app.on_component(
-    prefix="ticket:priority:",
-    Immediate(ctx => {
+    ticket_priority,
+    Immediate((ctx, ticket) => {
       let priority = ctx.values().get(0).unwrap_or("none")
       @discord.ComponentReply::message(
-        content="Priority: \{priority}",
+        content="Ticket \{ticket} priority: \{priority}",
         ephemeral=true,
       )
     }),
@@ -67,6 +83,22 @@ fn register_ticket_handlers(app : @discord.App) -> Unit {
 
 Component interaction contexts expose a non-optional `message()`, plus
 `scope()` and `user()` for the invoker.
+
+`CustomIdCodec::unit()` produces the bare route id; `string()`, `int()`, and
+`id()` carry strings, integers, and typed snowflakes. `zip` joins two codecs
+with `:` and splits at the first separator; only the final segment may contain
+`:`. `imap` and `custom` support application types. Encoding ambiguous segments
+raises `CustomIdError::SeparatorInSegment`; oversized ids raise `TooLong`.
+Decode failures reach the error policy as `HandlerError::InvalidArgument`.
+
+Typed routes match the exact id or that id followed by `:` and state, so
+`ticket-closeish` does not match `ticket-close`. Route ids must be nonempty,
+contain no `:`, and fit within 100 UTF-16 units. `App::validate` also rejects
+duplicate effective prefixes: typed `ticket-close` collides with raw
+`ticket-close:`. `on_component_raw(prefix~, handler)` and `on_modal_raw`
+retain literal-prefix routing for advanced handlers. Strict prefix overlaps
+are legal; the longest effective prefix wins, with registration order breaking
+ties in the low-level Framework.
 
 ## Components V2
 
@@ -146,24 +178,37 @@ let feedback : @discord.Modal[Feedback] = @discord.modal(
 )
 
 ///|
-fn show_feedback(
-  topic : String,
-  state? : String,
-) -> @discord.ModalHandle raise @app.ModalPrefillError {
-  feedback.show(state?, values={ "topic": topic })
+let feedback_state : @discord.CustomIdCodec[Int] = @discord.CustomIdCodec::int()
+
+///|
+let open_feedback : @discord.ComponentRoute[Int] = @discord.component_route(
+  id="open-feedback",
+  state=feedback_state,
+)
+
+///|
+fn feedback_button(ticket : Int) -> @model.Component raise {
+  @discord.button(custom_id=open_feedback.custom_id(ticket), label="Feedback")
 }
 
 ///|
 fn register_feedback(app : @discord.App) -> Unit {
   app.on_component(
-    prefix="feedback:",
-    Immediate(ctx => ShowModal(show_feedback("Follow-up", state=ctx.suffix()))),
+    open_feedback,
+    Immediate((_, ticket) => {
+      ShowModal(
+        feedback.show(state=feedback_state.encode(ticket), values={
+          "topic": "Follow-up",
+        }),
+      )
+    }),
   )
   app.on_modal(
     feedback,
     Immediate((ctx, form) => {
+      let ticket = feedback_state.decode(ctx.state().unwrap_or(""))
       @discord.InitialResponse::message(
-        content="topic=\{form.topic}; state=\{ctx.state().unwrap_or("none")}",
+        content="ticket=\{ticket}; topic=\{form.topic}",
         ephemeral=true,
       )
     }),
@@ -180,6 +225,10 @@ silently ignored.
 
 `ModalImmediateCtx::origin()` distinguishes a modal opened from a component
 from one opened from a command. `state()` is the value passed to `show`.
+Modal fields stay typed by `Modal[A]`; encode typed modal state with a codec
+when calling `show`, then decode `ctx.state()` in the submission handler as
+above. `show` checks the complete custom id, including state, against the same
+100-unit limit and raises `CustomIdError::TooLong` if it is exceeded.
 
 ### File uploads
 
@@ -212,7 +261,7 @@ entries or an extension without its leading dot.
 ## Waiting for one component
 
 A deferred handler can wait for an exact custom ID. Waiters take precedence
-over prefix handlers.
+over registered component handlers.
 
 ```mbt check
 ///|
@@ -237,9 +286,13 @@ let confirm_command : @discord.Command[Unit] = @discord.slash(
 
 ///|
 test "component and modal declarations compile" {
-  ignore(controls)
-  ignore(register_ticket_handlers)
-  ignore(register_feedback)
+  let app = @discord.App()
+  register_ticket_handlers(app)
+  register_feedback(app)
+  app.validate()
+  assert_eq(ticket_controls(42).length(), 1)
+  guard feedback_button(42) is Button(button) else { fail("expected button") }
+  assert_eq(button.custom_id, Some("open-feedback:42"))
   ignore(upload_report)
   ignore(confirm_command)
 }

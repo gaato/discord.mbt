@@ -43,6 +43,8 @@ pub fn button(custom_id~ : String, label? : String, style? : @model.ButtonStyle,
 
 pub fn channel_select(custom_id~ : String, placeholder? : String, min_values? : Int, max_values? : Int, disabled? : Bool, channel_types? : Array[@model.ChannelType]) -> @model.Component
 
+pub fn[A] component_route(id~ : String, state~ : @app.CustomIdCodec[A]) -> @app.ComponentRoute[A]
+
 pub fn container(components~ : Array[@model.Component], accent_color? : Int, spoiler? : Bool) -> @model.Component
 
 pub fn dm_only() -> async (@app.CheckCtx) -> Bool
@@ -156,7 +158,13 @@ pub using @app {type ComponentImmediateCtx}
 
 pub using @app {type ComponentReply}
 
+pub using @app {type ComponentRoute}
+
 pub using @app {type CooldownBucket}
+
+pub using @app {type CustomIdCodec}
+
+pub using @app {type CustomIdError}
 
 pub using @app {type DeferredCtx}
 

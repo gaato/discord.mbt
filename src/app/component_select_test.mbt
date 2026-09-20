@@ -24,9 +24,26 @@ fn app_select_component(
 ///|
 async test "component selects expose values, resolved objects, and reply kinds" {
   let app = @app.App()
+  let pick = @app.component_route(id="pick", state=@app.CustomIdCodec::string())
+  let bare = @app.component_route(id="bare", state=@app.CustomIdCodec::string())
+  let button = @app.component_route(
+    id="btn",
+    state=@app.CustomIdCodec::string(),
+  )
+  let pick_select = @interaction.string_select(
+    custom_id=pick.custom_id("colors"),
+    options=[],
+  )
+  let bare_select = @interaction.string_select(custom_id=bare.custom_id("x"), options=[])
+  guard pick_select is StringSelect(pick_select) else {
+    fail("expected select")
+  }
+  guard bare_select is StringSelect(bare_select) else {
+    fail("expected select")
+  }
   app.on_component(
-    prefix="pick:",
-    Immediate(ctx => {
+    pick,
+    Immediate((ctx, state) => {
       assert_eq(ctx.values(), [
         "200000000000000009", "300000000000000009", "400000000000000009", "999999999999999999",
       ])
@@ -43,15 +60,15 @@ async test "component selects expose values, resolved objects, and reply kinds" 
       }
       assert_eq(picked_channel.id.to_string(), "400000000000000009")
       assert_eq(ctx.custom_id(), "pick:colors")
-      assert_eq(ctx.suffix(), "colors")
+      assert_eq(state, "colors")
       assert_true(ctx.guild_id() is None)
       assert_eq(ctx.interaction().token, "interaction-token")
       @app.ComponentReply::message(content="picked", ephemeral=true)
     }),
   )
   app.on_component(
-    prefix="bare:",
-    Immediate(ctx => {
+    bare,
+    Immediate((ctx, _) => {
       // values without a resolved payload resolve to nothing...
       assert_eq(ctx.values().length(), 4)
       assert_true(ctx.selected_users() is [])
@@ -61,12 +78,12 @@ async test "component selects expose values, resolved objects, and reply kinds" 
     }),
   )
   app.on_component(
-    prefix="btn:",
-    DeferredMessage(ephemeral=true, ctx => {
+    button,
+    DeferredMessage(ephemeral=true, (ctx, state) => {
       // ...and buttons carry no values at all.
       assert_eq(ctx.values(), [])
       assert_true(ctx.selected_users() is [])
-      assert_eq(ctx.suffix(), "press")
+      assert_eq(state, "press")
       assert_true(ctx.guild_id() is None)
       assert_eq(ctx.interaction().token, "interaction-token")
     }),
@@ -86,7 +103,7 @@ async test "component selects expose values, resolved objects, and reply kinds" 
     match
       served.handle_interaction(
         app_select_component(
-          "pick:colors",
+          pick_select.custom_id,
           "500000000000000301",
           with_resolved=true,
         ),
@@ -105,7 +122,7 @@ async test "component selects expose values, resolved objects, and reply kinds" 
     match
       served.handle_interaction(
         app_select_component(
-          "bare:x",
+          bare_select.custom_id,
           "500000000000000302",
           with_resolved=false,
         ),
@@ -115,7 +132,10 @@ async test "component selects expose values, resolved objects, and reply kinds" 
     }
     match
       served.handle_interaction(
-        app_component("btn:press", "500000000000000303"),
+        app_component(
+          app_route_button_id(button, "press"),
+          "500000000000000303",
+        ),
       ) {
       Reply(response~, ..) =>
         assert_true(response.typ == DeferredChannelMessageWithSource)

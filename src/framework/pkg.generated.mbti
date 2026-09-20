@@ -102,7 +102,9 @@ pub fn Framework::autocomplete(Self, String, async (AutocompleteCtx) -> Unit) ->
 pub fn Framework::command(Self, @interaction.CommandSpec, async (CommandCtx) -> Unit) -> Self
 pub fn Framework::command_specs(Self) -> Json
 pub fn Framework::component(Self, String, async (ComponentCtx) -> Unit) -> Self
+pub fn Framework::component_id(Self, String, async (ComponentCtx) -> Unit) -> Self
 pub fn Framework::modal(Self, String, async (ModalCtx) -> Unit) -> Self
+pub fn Framework::modal_id(Self, String, async (ModalCtx) -> Unit) -> Self
 pub fn Framework::on_error(Self, async (String, Error) -> Unit) -> Self
 pub async fn Framework::process(Self, @model.Interaction) -> Bool
 pub async fn Framework::process_with(Self, @model.Interaction, gate~ : ResponseGate) -> Bool

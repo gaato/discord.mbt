@@ -12,6 +12,8 @@ import {
 }
 
 // Values
+pub fn[A] component_route(id~ : String, state~ : CustomIdCodec[A]) -> ComponentRoute[A]
+
 pub fn dm_only() -> async (CheckCtx) -> Bool
 
 pub fn file_field(custom_id~ : String, label~ : String, description? : String, min_values? : Int, max_values? : Int, file_types? : Array[@model.FileTypeFilter]) -> ModalField[Array[@model.Attachment]]
@@ -46,11 +48,21 @@ pub(all) suberror AppConfigError {
   NestedSubcommandGroup(command~ : String, path~ : String)
   ChoicesWithAutocomplete(command~ : String, path~ : String)
   RequiredOptionAfterOptional(command~ : String, path~ : String)
+  DuplicateComponentRoute(custom_id~ : String)
+  DuplicateModalRoute(custom_id~ : String)
+  EmptyComponentRoute
+  EmptyModalRoute
+  InvalidRouteId(custom_id~ : String, reason~ : String)
   InvalidModalFieldCount(custom_id~ : String, count~ : Int)
   DuplicateModalTextInput(custom_id~ : String, field~ : String)
   InvalidFileTypes(owner~ : String, reason~ : String)
   InvalidCooldown(command~ : String, seconds~ : Int)
   InvalidMaxInFlight(value~ : Int)
+} derive(@debug.Debug)
+
+pub(all) suberror CustomIdError {
+  TooLong(custom_id~ : String, length~ : Int)
+  SeparatorInSegment(segment~ : String)
 } derive(@debug.Debug)
 
 pub(all) suberror HandlerError {
@@ -78,7 +90,8 @@ pub fn App::autocomplete(Self, String, async (@framework.AutocompleteCtx) -> Uni
 pub fn[A] App::command(Self, Command[A]) -> Unit
 pub fn App::error_policy(Self, async (FailureCtx, Error) -> Unit) -> Unit
 pub fn App::middleware(Self, async (InteractionCtx, async () -> Unit) -> Unit) -> Unit
-pub fn App::on_component(Self, prefix~ : String, ComponentHandler) -> Unit
+pub fn[A] App::on_component(Self, ComponentRoute[A], ComponentHandler[A]) -> Unit
+pub fn App::on_component_raw(Self, prefix~ : String, async (@framework.ComponentCtx) -> Unit) -> Unit
 pub fn[A] App::on_modal(Self, Modal[A], ModalSubmitHandler[A]) -> Unit
 pub fn App::on_modal_raw(Self, prefix~ : String, async (@framework.ModalCtx) -> Unit) -> Unit
 pub fn App::on_warn(Self, (String) -> Unit) -> Unit
@@ -144,15 +157,14 @@ pub fn ComponentDeferredCtx::scope(Self) -> @framework.InvocationScope
 pub fn ComponentDeferredCtx::selected_channels(Self) -> Array[@model.Channel]
 pub fn ComponentDeferredCtx::selected_roles(Self) -> Array[@model.Role]
 pub fn ComponentDeferredCtx::selected_users(Self) -> Array[@model.User]
-pub fn ComponentDeferredCtx::suffix(Self) -> String
 pub fn ComponentDeferredCtx::user(Self) -> @model.User
 pub fn ComponentDeferredCtx::values(Self) -> Array[String]
 pub async fn ComponentDeferredCtx::wait_for_component(Self, custom_id~ : String, timeout_ms? : Int) -> @framework.ComponentCtx?
 
-pub(all) enum ComponentHandler {
-  Immediate(async (ComponentImmediateCtx) -> ComponentReply)
-  DeferredUpdate(async (ComponentDeferredCtx) -> Unit)
-  DeferredMessage(ephemeral~ : Bool, async (ComponentDeferredCtx) -> Unit)
+pub(all) enum ComponentHandler[A] {
+  Immediate(async (ComponentImmediateCtx, A) -> ComponentReply)
+  DeferredUpdate(async (ComponentDeferredCtx, A) -> Unit)
+  DeferredMessage(ephemeral~ : Bool, async (ComponentDeferredCtx, A) -> Unit)
   Raw(async (@framework.ComponentCtx) -> Unit)
 }
 
@@ -170,7 +182,6 @@ pub fn ComponentImmediateCtx::scope(Self) -> @framework.InvocationScope
 pub fn ComponentImmediateCtx::selected_channels(Self) -> Array[@model.Channel]
 pub fn ComponentImmediateCtx::selected_roles(Self) -> Array[@model.Role]
 pub fn ComponentImmediateCtx::selected_users(Self) -> Array[@model.User]
-pub fn ComponentImmediateCtx::suffix(Self) -> String
 pub fn ComponentImmediateCtx::user(Self) -> @model.User
 pub fn ComponentImmediateCtx::values(Self) -> Array[String]
 
@@ -182,11 +193,29 @@ pub(all) enum ComponentReply {
 pub fn ComponentReply::message(content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, ephemeral? : Bool) -> Self
 pub fn ComponentReply::update_message(content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], allowed_mentions? : @model.AllowedMentions) -> Self
 
+pub struct ComponentRoute[A] {
+  // private fields
+}
+pub fn[A] ComponentRoute::custom_id(Self[A], A) -> String raise CustomIdError
+
 pub(all) enum CooldownBucket {
   User
   Guild
   Global
 } derive(Eq, @debug.Debug)
+
+pub struct CustomIdCodec[A] {
+  // private fields
+}
+pub fn[A] CustomIdCodec::custom(encode~ : (A) -> String, decode~ : (String) -> A raise HandlerError) -> Self[A]
+pub fn[A] CustomIdCodec::decode(Self[A], String) -> A raise HandlerError
+pub fn[A] CustomIdCodec::encode(Self[A], A) -> String raise CustomIdError
+pub fn[M] CustomIdCodec::id() -> Self[@model.Id[M]]
+pub fn[A, B] CustomIdCodec::imap(Self[A], to~ : (A) -> B raise HandlerError, from~ : (B) -> A) -> Self[B]
+pub fn CustomIdCodec::int() -> Self[Int]
+pub fn CustomIdCodec::string() -> Self[String]
+pub fn CustomIdCodec::unit() -> Self[Unit]
+pub fn[A, B] CustomIdCodec::zip(Self[A], Self[B]) -> Self[(A, B)]
 
 pub struct DeferredCtx {
   // private fields
@@ -282,7 +311,7 @@ pub(all) enum InteractionTarget {
 pub struct Modal[A] {
   // private fields
 }
-pub fn[A] Modal::show(Self[A], state? : String, values? : Map[String, String]) -> ModalHandle raise ModalPrefillError
+pub fn[A] Modal::show(Self[A], state? : String, values? : Map[String, String]) -> ModalHandle raise
 
 pub struct ModalDeferredCtx {
   // private fields

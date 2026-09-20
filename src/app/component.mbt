@@ -13,10 +13,10 @@ pub(all) enum ComponentReply {
 
 ///|
 /// Execution strategy for a component route.
-pub(all) enum ComponentHandler {
-  Immediate(async (ComponentImmediateCtx) -> ComponentReply)
-  DeferredUpdate(async (ComponentDeferredCtx) -> Unit)
-  DeferredMessage(ephemeral~ : Bool, async (ComponentDeferredCtx) -> Unit)
+pub(all) enum ComponentHandler[A] {
+  Immediate(async (ComponentImmediateCtx, A) -> ComponentReply)
+  DeferredUpdate(async (ComponentDeferredCtx, A) -> Unit)
+  DeferredMessage(ephemeral~ : Bool, async (ComponentDeferredCtx, A) -> Unit)
   Raw(async (@framework.ComponentCtx) -> Unit)
 }
 
@@ -25,7 +25,6 @@ pub(all) enum ComponentHandler {
 pub struct ComponentImmediateCtx {
   priv raw_ : @framework.ComponentCtx
   priv bot_ : AppCtx
-  priv prefix_ : String
 }
 
 ///|
@@ -33,7 +32,6 @@ pub struct ComponentImmediateCtx {
 pub struct ComponentDeferredCtx {
   priv raw_ : @framework.ComponentCtx
   priv bot_ : AppCtx
-  priv prefix_ : String
   priv waiter_ : ComponentWaiter?
   priv warn_ : (String) -> Unit
 }
@@ -98,14 +96,6 @@ async fn ComponentReply::send(
     Message(response) => response.send_component(ctx)
     ShowModal(handle) => handle.send_component(ctx)
   }
-}
-
-///|
-fn component_suffix(custom_id : String, prefix : String) -> String {
-  if !custom_id.has_prefix(prefix) {
-    return custom_id
-  }
-  custom_id[prefix.length():].to_owned()
 }
 
 ///|
@@ -210,13 +200,6 @@ pub fn ComponentImmediateCtx::custom_id(self : ComponentImmediateCtx) -> String 
 }
 
 ///|
-/// The custom id with this route's registered prefix stripped (the full
-/// id when it does not start with the prefix).
-pub fn ComponentImmediateCtx::suffix(self : ComponentImmediateCtx) -> String {
-  component_suffix(self.raw_.data.custom_id, self.prefix_)
-}
-
-///|
 /// The raw string values selected in a select menu (empty for buttons).
 pub fn ComponentImmediateCtx::values(
   self : ComponentImmediateCtx,
@@ -317,13 +300,6 @@ pub fn ComponentDeferredCtx::guild_id(
 /// The full custom id of the component that fired.
 pub fn ComponentDeferredCtx::custom_id(self : ComponentDeferredCtx) -> String {
   self.raw_.data.custom_id
-}
-
-///|
-/// The custom id with this route's registered prefix stripped (the full
-/// id when it does not start with the prefix).
-pub fn ComponentDeferredCtx::suffix(self : ComponentDeferredCtx) -> String {
-  component_suffix(self.raw_.data.custom_id, self.prefix_)
 }
 
 ///|
@@ -440,9 +416,9 @@ pub async fn ComponentDeferredCtx::wait_for_component(
 }
 
 ///|
-async fn dispatch_component_handler(
-  prefix : String,
-  handler : ComponentHandler,
+async fn[A] ComponentRoute::dispatch_typed(
+  self : ComponentRoute[A],
+  handler : ComponentHandler[A],
   bot : AppCtx,
   waiter : ComponentWaiter?,
   warn : (String) -> Unit,
@@ -450,29 +426,59 @@ async fn dispatch_component_handler(
 ) -> Unit {
   match handler {
     Immediate(run) => {
-      let response = run({ raw_: raw, bot_: bot, prefix_: prefix, })
+      let value = self.decode_state(raw.data.custom_id)
+      let response = run({ raw_: raw, bot_: bot, }, value)
       response.send(raw)
     }
     DeferredUpdate(run) => {
+      let value = self.decode_state(raw.data.custom_id)
       raw.defer_update()
-      run({
-        raw_: raw,
-        bot_: bot,
-        prefix_: prefix,
-        waiter_: waiter,
-        warn_: warn,
-      })
+      run({ raw_: raw, bot_: bot, waiter_: waiter, warn_: warn, }, value)
     }
     DeferredMessage(ephemeral~, run) => {
+      let value = self.decode_state(raw.data.custom_id)
       raw.defer_response(ephemeral~)
-      run({
-        raw_: raw,
-        bot_: bot,
-        prefix_: prefix,
-        waiter_: waiter,
-        warn_: warn,
-      })
+      run({ raw_: raw, bot_: bot, waiter_: waiter, warn_: warn, }, value)
     }
     Raw(run) => run(raw)
+  }
+}
+
+///|
+fn[A] ComponentRoute::decode_state(
+  self : ComponentRoute[A],
+  custom_id : String,
+) -> A raise HandlerError {
+  let text = if custom_id == self.id_ {
+    ""
+  } else {
+    custom_id[self.id_.length() + 1:].to_owned()
+  }
+  self.state_.decode(text) catch {
+    source => raise InvalidArgument("\{Repr(source)}")
+  }
+}
+
+///|
+priv struct RegisteredComponent {
+  pattern : AppRoutePattern
+  dispatch : async (
+    AppCtx,
+    ComponentWaiter?,
+    (String) -> Unit,
+    @framework.ComponentCtx,
+  ) -> Unit
+}
+
+///|
+fn[A] ComponentRoute::erase(
+  self : ComponentRoute[A],
+  handler : ComponentHandler[A],
+) -> RegisteredComponent {
+  {
+    pattern: Id(self.id_),
+    dispatch: (bot, waiter, warn, raw) => {
+      self.dispatch_typed(handler, bot, waiter, warn, raw)
+    },
   }
 }

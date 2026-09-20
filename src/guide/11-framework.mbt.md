@@ -54,9 +54,43 @@ fn build_router(
 - **Commands** route by command type and top-level name, so a slash command
   and a user command may share a name. Subcommands do not register separately;
   dispatch on `ctx.options.path()` inside the handler.
-- **Components** and **modals** route by `custom_id` prefix. Prefixes are
-  tried in registration order; the first match wins. Component waiters (below)
-  take precedence over registered component handlers.
+- **Components** and **modals** use literal prefixes via `component` / `modal`,
+  or exact ids with optional `:state` via `component_id` / `modal_id`.
+  The longest effective prefix wins (`id + ":"` for id routes), with ties
+  retaining registration order. Component waiters (below) take precedence.
+  Framework accepts duplicate and empty routes; `App::validate` rejects them.
+
+```mbt check
+///|
+async test "longest prefix wins regardless of registration order" {
+  let client = @dhttp.Client("test-token")
+  defer client.close()
+  let interaction : @model.Interaction = @json.from_json(
+    @json.parse(
+      (
+        #|{"id":"500000000000000001","application_id":"400000000000000001","type":5,"token":"test-token","version":1,"user":{"id":"200000000000000001","username":"test","discriminator":"0","avatar":null},"data":{"custom_id":"ticket:close:42","components":[]}}
+      ),
+    ),
+  )
+  for longer_first in [false, true] {
+    let fw = @framework.Framework(
+      client,
+      @model.Id::parse("400000000000000001"),
+    )
+    let routed = Ref("")
+    if longer_first {
+      fw.modal("ticket:close:", _ => routed.val = "long") |> ignore
+      fw.modal("ticket:", _ => routed.val = "short") |> ignore
+    } else {
+      fw.modal("ticket:", _ => routed.val = "short") |> ignore
+      fw.modal("ticket:close:", _ => routed.val = "long") |> ignore
+    }
+    assert_true(fw.process(interaction))
+    assert_eq(routed.val, "long")
+  }
+}
+```
+
 - **Autocomplete** routes by command name via `autocomplete(name, handler)`.
 - **Ping** interactions are answered with `Pong` automatically.
 

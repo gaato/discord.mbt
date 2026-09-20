@@ -316,6 +316,15 @@ async test "interaction endpoint dispatches captured responses and completion ou
 ///|
 async test "interaction endpoint dispatches component and typed modal handlers" {
   let app = @app.App()
+  let update = @app.component_route(
+    id="update",
+    state=@app.CustomIdCodec::string(),
+  )
+  let open = @app.component_route(id="open", state=@app.CustomIdCodec::string())
+  let defer_route = @app.component_route(
+    id="defer",
+    state=@app.CustomIdCodec::string(),
+  )
   let feedback = @app.modal(
     custom_id="feedback",
     title="Feedback",
@@ -330,21 +339,21 @@ async test "interaction endpoint dispatches component and typed modal handlers" 
     ),
   )
   app.on_component(
-    prefix="update:",
-    Immediate(ctx => {
+    update,
+    Immediate((ctx, state) => {
       assert_true(ctx.scope() is Dm(_))
       assert_true(ctx.user().id.to_string() == "200000000000000001")
       assert_true(ctx.message().content == "component host")
-      @app.ComponentReply::update_message(content="updated:\{ctx.suffix()}")
+      @app.ComponentReply::update_message(content="updated:\{state}")
     }),
   )
   app.on_component(
-    prefix="open:",
-    Immediate(ctx => ShowModal(feedback.show(state=ctx.suffix()))),
+    open,
+    Immediate((_, state) => ShowModal(feedback.show(state~))),
   )
   app.on_component(
-    prefix="defer:",
-    DeferredUpdate(ctx => {
+    defer_route,
+    DeferredUpdate((ctx, _) => {
       assert_true(ctx.scope() is Dm(_))
       assert_true(ctx.message().content == "component host")
     }),
@@ -403,7 +412,10 @@ async test "interaction endpoint dispatches component and typed modal handlers" 
     }
     match
       app.handle_interaction(
-        app_component("update:item-1", "500000000000000401"),
+        app_component(
+          app_route_button_id(update, "item-1"),
+          "500000000000000401",
+        ),
       ) {
       Reply(response~, files=_) => {
         assert_true(response.typ == UpdateMessage)
@@ -418,7 +430,10 @@ async test "interaction endpoint dispatches component and typed modal handlers" 
     }
     match
       app.handle_interaction(
-        app_component("open:ticket-7", "500000000000000402"),
+        app_component(
+          app_route_button_id(open, "ticket-7"),
+          "500000000000000402",
+        ),
       ) {
       Reply(response~, files=_) => {
         assert_true(response.typ == Modal)
@@ -449,7 +464,10 @@ async test "interaction endpoint dispatches component and typed modal handlers" 
     }
     match
       app.handle_interaction(
-        app_component("defer:item-2", "500000000000000404"),
+        app_component(
+          app_route_button_id(defer_route, "item-2"),
+          "500000000000000404",
+        ),
       ) {
       Reply(response~, files=_) =>
         assert_true(response.typ == DeferredUpdateMessage)

@@ -15,6 +15,11 @@ pub(all) suberror AppConfigError {
   NestedSubcommandGroup(command~ : String, path~ : String)
   ChoicesWithAutocomplete(command~ : String, path~ : String)
   RequiredOptionAfterOptional(command~ : String, path~ : String)
+  DuplicateComponentRoute(custom_id~ : String)
+  DuplicateModalRoute(custom_id~ : String)
+  EmptyComponentRoute
+  EmptyModalRoute
+  InvalidRouteId(custom_id~ : String, reason~ : String)
   InvalidModalFieldCount(custom_id~ : String, count~ : Int)
   DuplicateModalTextInput(custom_id~ : String, field~ : String)
   /// A `file_types` filter with more than 10 entries or an extension that is
@@ -25,14 +30,8 @@ pub(all) suberror AppConfigError {
 } derive(Debug)
 
 ///|
-priv struct RegisteredComponent {
-  prefix : String
-  handler : ComponentHandler
-}
-
-///|
 priv struct RegisteredModal {
-  prefix : String
+  pattern : AppRoutePattern
   field_count : Int?
   text_input_ids : Array[String]?
   file_type_filters : Array[(String, Array[@model.FileTypeFilter])]
@@ -111,27 +110,41 @@ pub fn App::register(self : App, command : RegisteredCommand) -> Unit {
 }
 
 ///|
-/// Route component interactions whose custom id starts with `prefix` to
-/// `handler`. Longer prefixes win when several match.
-pub fn App::on_component(
+/// Route a component's exact id or `id:state`, decoding state before the handler.
+/// Use the same route's `custom_id` when building buttons and selects.
+pub fn[A] App::on_component(
+  self : App,
+  route : ComponentRoute[A],
+  handler : ComponentHandler[A],
+) -> Unit {
+  self.components_.push(route.erase(handler))
+}
+
+///|
+/// Register a fully raw literal-prefix component route. Longer prefixes win.
+/// `App::validate` rejects empty or duplicate effective prefixes.
+pub fn App::on_component_raw(
   self : App,
   prefix~ : String,
-  handler : ComponentHandler,
+  handler : async (@framework.ComponentCtx) -> Unit,
 ) -> Unit {
-  self.components_.push({ prefix, handler, })
+  self.components_.push({
+    pattern: Prefix(prefix),
+    dispatch: (_, _, _, raw) => handler(raw),
+  })
 }
 
 ///|
 /// Route submissions of the typed `modal` to `handler`; field values
 /// are decoded through the modal's `ModalFields` before the handler
-/// runs.
+/// runs. Matches the exact modal id or that id followed by `:` and state.
 pub fn[A] App::on_modal(
   self : App,
   modal : Modal[A],
   handler : ModalSubmitHandler[A],
 ) -> Unit {
   self.modals_.push({
-    prefix: modal.custom_id_,
+    pattern: Id(modal.custom_id_),
     field_count: Some(modal.fields_.definitions_.length()),
     text_input_ids: Some(modal_text_input_ids(modal.fields_.definitions_)),
     file_type_filters: modal_file_type_filters(modal.fields_.definitions_),
@@ -140,14 +153,15 @@ pub fn[A] App::on_modal(
 }
 
 ///|
-/// Register a fully raw modal route without a typed modal definition.
+/// Register a fully raw literal-prefix modal route. Longer prefixes win.
+/// `App::validate` rejects empty or duplicate effective prefixes.
 pub fn App::on_modal_raw(
   self : App,
   prefix~ : String,
   handler : async (@framework.ModalCtx) -> Unit,
 ) -> Unit {
   self.modals_.push({
-    prefix,
+    pattern: Prefix(prefix),
     field_count: None,
     text_input_ids: None,
     file_type_filters: [],
@@ -242,7 +256,8 @@ fn validate_command_options(
 ///|
 /// Check declarations for configuration errors: invalid command trees and
 /// cooldowns, invalid modal field counts, duplicate modal text-input ids,
-/// and malformed `file_types` upload filters.
+/// malformed `file_types` upload filters, empty or duplicate component/modal
+/// effective prefixes, and invalid typed route ids.
 /// Executors call this at startup; call it directly in a test to fail fast.
 pub fn App::validate(self : App) -> Unit raise AppConfigError {
   if self.max_in_flight_ <= 0 {
@@ -271,18 +286,25 @@ pub fn App::validate(self : App) -> Unit raise AppConfigError {
       raise InvalidCooldown(command=command.name_, seconds=config.seconds)
     }
   }
+  let components : Set[String] = Set([])
+  for component in self.components_ {
+    validate_route(component.pattern, components, modal=false)
+  }
+  let modals : Set[String] = Set([])
   for modal in self.modals_ {
+    validate_route(modal.pattern, modals, modal=true)
+    let custom_id = modal.pattern.base()
     if modal.field_count is Some(count) && (count < 1 || count > 5) {
-      raise InvalidModalFieldCount(custom_id=modal.prefix, count~)
+      raise InvalidModalFieldCount(custom_id~, count~)
     }
     for entry in modal.file_type_filters {
-      validate_file_types("\{modal.prefix}/\{entry.0}", entry.1)
+      validate_file_types("\{custom_id}/\{entry.0}", entry.1)
     }
     if modal.text_input_ids is Some(ids) {
       let seen : Set[String] = Set([])
       for field in ids {
         if seen.contains(field) {
-          raise DuplicateModalTextInput(custom_id=modal.prefix, field~)
+          raise DuplicateModalTextInput(custom_id~, field~)
         }
         seen.add(field)
       }
@@ -373,14 +395,7 @@ async fn App::run_registered_component(
     raw_: failure_raw,
   }
   self.run_middleware(ctx, 0, () => {
-    dispatch_component_handler(
-      entry.prefix,
-      entry.handler,
-      bot,
-      waiter,
-      self.warn_,
-      raw,
-    )
+    (entry.dispatch)(bot, waiter, self.warn_, raw)
   }) catch {
     error if @async.is_being_cancelled() => raise error
     error =>
@@ -475,16 +490,20 @@ pub fn App::attach(
     }
   }
   for entry in self.components_ {
-    framework.component(entry.prefix, raw => {
+    let dispatch = raw => {
       self.run_registered_component(app_ctx, waiter, entry, raw)
-    })
-    |> ignore
+    }
+    match entry.pattern {
+      Prefix(prefix) => framework.component(prefix, dispatch) |> ignore
+      Id(id) => framework.component_id(id, dispatch) |> ignore
+    }
   }
   for entry in self.modals_ {
-    framework.modal(entry.prefix, raw => {
-      self.run_registered_modal(app_ctx, entry, raw)
-    })
-    |> ignore
+    let dispatch = raw => self.run_registered_modal(app_ctx, entry, raw)
+    match entry.pattern {
+      Prefix(prefix) => framework.modal(prefix, dispatch) |> ignore
+      Id(id) => framework.modal_id(id, dispatch) |> ignore
+    }
   }
   // Registered last so explicitly configured raw handlers win by name.
   for entry in self.autocompletes_ {

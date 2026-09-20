@@ -489,24 +489,23 @@ pub fn[A] modal(
 /// overriding text-input defaults by `custom_id` for this response only.
 /// Raises `ModalPrefillError` when an override key is unknown or does not name
 /// a text input.
+/// Raises `CustomIdError::TooLong` when the complete id exceeds 100 UTF-16 units.
 pub fn[A] Modal::show(
   self : Modal[A],
   state? : String,
   values? : Map[String, String],
-) -> ModalHandle raise ModalPrefillError {
+) -> ModalHandle raise {
+  let custom_id = match state {
+    Some(value) => "\{self.custom_id_}:\{value}"
+    None => self.custom_id_
+  }
+  check_custom_id_length(custom_id)
   let components = match values {
     Some(overrides) =>
       prefill_modal_components(self.fields_.definitions_, overrides)
     None => self.fields_.definitions_.copy()
   }
-  {
-    custom_id_: match state {
-      Some(value) => "\{self.custom_id_}:\{value}"
-      None => self.custom_id_
-    },
-    title_: self.title_,
-    components_: components,
-  }
+  { custom_id_: custom_id, title_: self.title_, components_: components, }
 }
 
 ///|
@@ -567,15 +566,11 @@ pub struct ModalDeferredCtx {
 }
 
 ///|
-fn modal_state(base : String, custom_id : String) -> String? raise HandlerError {
+fn modal_state(base : String, custom_id : String) -> String? {
   if custom_id == base {
     return None
   }
-  let prefix = "\{base}:"
-  guard custom_id.has_prefix(prefix) else {
-    raise InvalidArgument("modal custom_id does not match \{base}")
-  }
-  Some(custom_id[prefix.length():].to_owned())
+  Some(custom_id[base.length() + 1:].to_owned())
 }
 
 ///|

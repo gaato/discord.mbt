@@ -64,7 +64,10 @@ fn name_argument() -> @discord.Arg[String] {
 }
 
 ///|
-fn demo_command() -> @discord.Command[Unit] {
+fn demo_command(
+  feedback_route : @discord.ComponentRoute[String],
+  done_route : @discord.ComponentRoute[String],
+) -> @discord.Command[Unit] {
   @discord.slash_group(name="demo", description="Try discord.mbt v3 features", children=[
     @discord.subcommand(
       name="greet",
@@ -74,11 +77,11 @@ fn demo_command() -> @discord.Command[Unit] {
         @discord.CommandReply::message(content="Hello, \{args.name}!", components=[
           @discord.action_row([
             @discord.button(
-              custom_id="demo:feedback:\{args.name}",
+              custom_id=feedback_route.custom_id(args.name),
               label="Open feedback form",
             ),
             @discord.button(
-              custom_id="demo:done:\{args.name}",
+              custom_id=done_route.custom_id(args.name),
               label="Mark as done",
               style=Success,
             ),
@@ -162,23 +165,28 @@ async fn main {
   @signal.set_global_cancellation_signals([SIGINT, SIGTERM])
   @async.handle_cancellation(() => {
     let feedback = feedback_modal()
+    let feedback_route = @discord.component_route(
+      id="demo-feedback",
+      state=@discord.CustomIdCodec::string(),
+    )
+    let done_route = @discord.component_route(
+      id="demo-done",
+      state=@discord.CustomIdCodec::string(),
+    )
     let token = @env.get_env_var("DISCORD_TOKEN").unwrap_or("")
     let app = @discord.App()
     app
-    ..command(demo_command())
+    ..command(demo_command(feedback_route, done_route))
     ..command(wave_command())
     ..command(quote_command())
     ..on_component(
-      prefix="demo:feedback:",
-      Immediate(ctx => ShowModal(feedback.show(state=ctx.suffix()))),
+      feedback_route,
+      Immediate((_, name) => ShowModal(feedback.show(state=name))),
     )
     ..on_component(
-      prefix="demo:done:",
-      DeferredUpdate(ctx => {
-        ctx.edit_original(
-          content="✅ \{ctx.suffix()} marked this greeting as done.",
-          components=[],
-        )
+      done_route,
+      DeferredUpdate((ctx, name) => {
+        ctx.edit_original(content="✅ \{name} marked this greeting as done.", components=[])
         |> ignore
       }),
     )

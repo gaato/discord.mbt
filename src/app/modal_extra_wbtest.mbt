@@ -98,14 +98,8 @@ test "legacy action rows thread through ids, prefill, and optional marking" {
 }
 
 ///|
-test "modal state parsing accepts bare and suffixed ids and rejects others" {
+test "modal state parsing accepts ids already matched by the router" {
   assert_true(modal_state("feedback", "feedback") is None)
   assert_true(modal_state("feedback", "feedback:s-1") is Some("s-1"))
-  try modal_state("feedback", "different") |> ignore catch {
-    InvalidArgument(message) =>
-      inspect(message, content="modal custom_id does not match feedback")
-    _ => fail("unexpected modal state error")
-  } noraise {
-    _ => fail("expected a mismatched custom_id error")
-  }
+  assert_true(modal_state("feedback", "feedback:") is Some(""))
 }

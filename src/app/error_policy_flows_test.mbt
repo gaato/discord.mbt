@@ -1,11 +1,16 @@
 ///|
 async test "component and modal failures flow through the error policy" {
   let app = @app.App()
+  let boom = @app.component_route(id="boom", state=@app.CustomIdCodec::string())
+  let late_boom = @app.component_route(
+    id="late-boom",
+    state=@app.CustomIdCodec::string(),
+  )
   let warnings : Array[String] = []
   app.on_warn(message => warnings.push(message))
   app.on_component(
-    prefix="boom:",
-    Immediate(_ => {
+    boom,
+    Immediate((_, _) => {
       raise @app.HandlerError::UserMessage(
         message="component exploded",
         ephemeral=true,
@@ -13,8 +18,8 @@ async test "component and modal failures flow through the error policy" {
     }),
   )
   app.on_component(
-    prefix="late-boom:",
-    DeferredUpdate(_ => {
+    late_boom,
+    DeferredUpdate((_, _) => {
       raise @app.HandlerError::UserMessage(
         message="deferred component exploded",
         ephemeral=true,
@@ -44,7 +49,9 @@ async test "component and modal failures flow through the error policy" {
     )
     // A failing immediate component handler answers through the policy.
     match
-      served.handle_interaction(app_component("boom:now", "500000000000000401")) {
+      served.handle_interaction(
+        app_component(app_route_button_id(boom, "now"), "500000000000000401"),
+      ) {
       Reply(response~, ..) =>
         inspect(
           response.to_json().stringify(),
@@ -72,7 +79,10 @@ async test "component and modal failures flow through the error policy" {
     // being swallowed.
     match
       served.handle_interaction(
-        app_component("late-boom:now", "500000000000000403"),
+        app_component(
+          app_route_button_id(late_boom, "now"),
+          "500000000000000403",
+        ),
       ) {
       Reply(response~, ..) => assert_true(response.typ == DeferredUpdateMessage)
       outcome => fail("expected a deferred update, got \{Repr(outcome)}")
