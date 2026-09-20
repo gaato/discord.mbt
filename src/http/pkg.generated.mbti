@@ -242,6 +242,7 @@ pub async fn Client::get_gateway(Self) -> String raise DiscordHttpError
 pub async fn Client::get_gateway_bot(Self) -> @model.GatewayBotInfo raise DiscordHttpError
 pub async fn Client::get_global_command(Self, @model.Id[@model.ApplicationMarker], @model.Id[@model.CommandMarker]) -> @model.ApplicationCommand raise DiscordHttpError
 pub async fn Client::get_global_commands(Self, @model.Id[@model.ApplicationMarker], with_localizations? : Bool) -> Array[@model.ApplicationCommand] raise DiscordHttpError
+pub async fn Client::get_global_commands_raw(Self, @model.Id[@model.ApplicationMarker], with_localizations? : Bool) -> Array[Json] raise DiscordHttpError
 pub async fn Client::get_guild(Self, @model.Id[@model.GuildMarker], with_counts? : Bool) -> @model.Guild raise DiscordHttpError
 pub async fn Client::get_guild_application_command_permissions(Self, @model.Id[@model.ApplicationMarker], @model.Id[@model.GuildMarker]) -> Array[@model.GuildApplicationCommandPermissions] raise DiscordHttpError
 pub async fn Client::get_guild_audit_log(Self, @model.Id[@model.GuildMarker], user_id? : @model.Id[@model.UserMarker], action_type? : @model.AuditLogEvent, before? : @model.Id[@model.AuditLogEntryMarker], after? : @model.Id[@model.AuditLogEntryMarker], limit? : Int) -> @model.AuditLog raise DiscordHttpError
@@ -250,6 +251,7 @@ pub async fn Client::get_guild_bans(Self, @model.Id[@model.GuildMarker], limit? 
 pub async fn Client::get_guild_channels(Self, @model.Id[@model.GuildMarker]) -> Array[@model.Channel] raise DiscordHttpError
 pub async fn Client::get_guild_command(Self, @model.Id[@model.ApplicationMarker], @model.Id[@model.GuildMarker], @model.Id[@model.CommandMarker]) -> @model.ApplicationCommand raise DiscordHttpError
 pub async fn Client::get_guild_commands(Self, @model.Id[@model.ApplicationMarker], @model.Id[@model.GuildMarker], with_localizations? : Bool) -> Array[@model.ApplicationCommand] raise DiscordHttpError
+pub async fn Client::get_guild_commands_raw(Self, @model.Id[@model.ApplicationMarker], @model.Id[@model.GuildMarker], with_localizations? : Bool) -> Array[Json] raise DiscordHttpError
 pub async fn Client::get_guild_emoji(Self, @model.Id[@model.GuildMarker], @model.Id[@model.EmojiMarker]) -> @model.Emoji raise DiscordHttpError
 pub async fn Client::get_guild_integrations(Self, @model.Id[@model.GuildMarker]) -> Array[@model.Integration] raise DiscordHttpError
 pub async fn Client::get_guild_invites(Self, @model.Id[@model.GuildMarker]) -> Array[@model.Invite] raise DiscordHttpError

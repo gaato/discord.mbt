@@ -6,11 +6,6 @@ priv struct CommandEntry {
 }
 
 ///|
-fn command_key(typ : @model.ApplicationCommandType, name : String) -> String {
-  "\{typ.to_int()}:\{name}"
-}
-
-///|
 /// One task waiting for a specific component interaction.
 priv struct ComponentWaiter {
   custom_id : String
@@ -138,28 +133,32 @@ pub fn Framework::command_specs(self : Framework) -> Json {
 }
 
 ///|
-/// Replace all global commands with the declared ones.
+/// Synchronize global commands, preserving entry points and reporting changes.
 pub async fn Framework::sync_global(
   self : Framework,
-) -> Array[@model.ApplicationCommand] {
-  self.client.bulk_overwrite_global_commands(
+  unowned? : UnownedCommands = Delete,
+) -> ScopeSyncReport {
+  sync_command_scope(
+    self.client,
     self.application_id,
-    self.command_specs(),
+    self.commands.values().map(entry => entry.spec).collect(),
+    unowned~,
   )
 }
 
 ///|
-/// Replace all commands of one guild with the declared ones. Guild
-/// commands update instantly, which makes this the right call during
-/// development.
+/// Synchronize one guild's commands and report changes.
 pub async fn Framework::sync_guild(
   self : Framework,
   guild_id : @model.GuildId,
-) -> Array[@model.ApplicationCommand] {
-  self.client.bulk_overwrite_guild_commands(
+  unowned? : UnownedCommands = Delete,
+) -> ScopeSyncReport {
+  sync_command_scope(
+    self.client,
     self.application_id,
-    guild_id,
-    self.command_specs(),
+    self.commands.values().map(entry => entry.spec).collect(),
+    unowned~,
+    guild_id~,
   )
 }
 

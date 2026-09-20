@@ -1,224 +1,4 @@
 ///|
-fn fetched_command(fixture : String) -> @model.ApplicationCommand raise {
-  @json.from_json(@json.parse(fixture))
-}
-
-///|
-fn fetched_ping(
-  name? : String = "ping",
-  description? : String = "Check latency",
-) -> @model.ApplicationCommand raise {
-  fetched_command(
-    (
-      #|{
-      #|  "id": "900000000000000001",
-      #|  "application_id": "400000000000000001",
-      #|  "type": 1,
-      #|  "name": "NAME_PLACEHOLDER",
-      #|  "description": "DESCRIPTION_PLACEHOLDER",
-      #|  "default_member_permissions": null,
-      #|  "version": "900000000000000002",
-      #|  "dm_permission": true
-      #|}
-    )
-    .replace(old="NAME_PLACEHOLDER", new=name)
-    .replace(old="DESCRIPTION_PLACEHOLDER", new=description),
-  )
-}
-
-///|
-test "commands_in_sync compares declarations and ignores server fields" {
-  let ping = @interaction.CommandSpec::slash("ping", "Check latency")
-  let echo_arg = @interaction.arg_string(
-    name="text",
-    description="Text to echo",
-  )
-  let echo = @interaction.CommandSpec::slash(
-    "echo",
-    "Echo text",
-    options=@interaction.Args::of(echo_arg).definitions(),
-  )
-  let echo_matching = fetched_command(
-    (
-      #|{
-      #|  "id": "900000000000000003",
-      #|  "application_id": "400000000000000001",
-      #|  "type": 1,
-      #|  "name": "echo",
-      #|  "description": "Echo text",
-      #|  "options": [
-      #|    {
-      #|      "type": 3,
-      #|      "name": "text",
-      #|      "description": "Text to echo",
-      #|      "required": true
-      #|    }
-      #|  ],
-      #|  "default_member_permissions": null,
-      #|  "version": "900000000000000004"
-      #|}
-    ),
-  )
-  let echo_wrong_required = fetched_command(
-    (
-      #|{
-      #|  "id": "900000000000000003",
-      #|  "application_id": "400000000000000001",
-      #|  "type": 1,
-      #|  "name": "echo",
-      #|  "description": "Echo text",
-      #|  "options": [
-      #|    {
-      #|      "type": 3,
-      #|      "name": "text",
-      #|      "description": "Text to echo",
-      #|      "required": false
-      #|    }
-      #|  ],
-      #|  "default_member_permissions": null,
-      #|  "version": "900000000000000004"
-      #|}
-    ),
-  )
-  let ping_with_option = fetched_command(
-    (
-      #|{
-      #|  "id": "900000000000000001",
-      #|  "application_id": "400000000000000001",
-      #|  "type": 1,
-      #|  "name": "ping",
-      #|  "description": "Check latency",
-      #|  "options": [
-      #|    {"type":3,"name":"extra","description":"Extra","required":false}
-      #|  ],
-      #|  "default_member_permissions": null,
-      #|  "version": "900000000000000002"
-      #|}
-    ),
-  )
-  debug_inspect(
-    [
-      @app.commands_in_sync([ping], [fetched_ping()]),
-      @app.commands_in_sync([ping], [fetched_ping(description="Changed")]),
-      @app.commands_in_sync([ping], [ping_with_option]),
-      @app.commands_in_sync([echo], [echo_wrong_required]),
-      @app.commands_in_sync([ping], [fetched_ping(name="other")]),
-      @app.commands_in_sync([echo], [echo_matching]),
-    ],
-    content="[true, false, false, false, false, true]",
-  )
-}
-
-///|
-test "commands_in_sync normalizes command defaults and uses type plus name" {
-  let slash = @interaction.CommandSpec::slash("inspect", "Inspect a target")
-  assert_false(slash.to_json().stringify().contains("\"type\""))
-  let response = fetched_command(
-    (
-      #|{
-      #|  "id": "900000000000000010",
-      #|  "application_id": "400000000000000001",
-      #|  "type": 1,
-      #|  "name": "inspect",
-      #|  "description": "Inspect a target",
-      #|  "default_member_permissions": null,
-      #|  "dm_permission": true,
-      #|  "nsfw": false,
-      #|  "integration_types": [0],
-      #|  "contexts": null,
-      #|  "version": "900000000000000011"
-      #|}
-    ),
-  )
-  let wrong_nsfw = fetched_command(
-    response
-    .to_json()
-    .stringify()
-    .replace(old="\"nsfw\":false", new="\"nsfw\":true"),
-  )
-  let wrong_integration = fetched_command(
-    response
-    .to_json()
-    .stringify()
-    .replace(old="\"integration_types\":[0]", new="\"integration_types\":[1]"),
-  )
-  let wrong_contexts = fetched_command(
-    response
-    .to_json()
-    .stringify()
-    .replace(old="\"contexts\":null", new="\"contexts\":[0]"),
-  )
-  let wrong_dm_permission = fetched_command(
-    response
-    .to_json()
-    .stringify()
-    .replace(old="\"dm_permission\":true", new="\"dm_permission\":false"),
-  )
-  let wrong_permissions = fetched_command(
-    response
-    .to_json()
-    .stringify()
-    .replace(
-      old="\"default_member_permissions\":null",
-      new="\"default_member_permissions\":\"8\"",
-    ),
-  )
-  let wrong_type = fetched_command(
-    response.to_json().stringify().replace(old="\"type\":1", new="\"type\":2"),
-  )
-  debug_inspect(
-    [
-      @app.commands_in_sync([slash], [response]),
-      @app.commands_in_sync([slash], [wrong_nsfw]),
-      @app.commands_in_sync([slash], [wrong_integration]),
-      @app.commands_in_sync([slash], [wrong_contexts]),
-      @app.commands_in_sync([slash], [wrong_dm_permission]),
-      @app.commands_in_sync([slash], [wrong_permissions]),
-      @app.commands_in_sync([slash], [wrong_type]),
-    ],
-    content="[true, false, false, false, false, false, false]",
-  )
-  let explicit_defaults = @interaction.CommandSpec::slash(
-    "inspect",
-    "Inspect a target",
-    nsfw=false,
-    integration_types=[GuildInstall],
-  )
-  let omitted_defaults = fetched_command(
-    (
-      #|{
-      #|  "id": "900000000000000014",
-      #|  "application_id": "400000000000000001",
-      #|  "name": "inspect",
-      #|  "description": "Inspect a target",
-      #|  "default_member_permissions": null,
-      #|  "version": "900000000000000015"
-      #|}
-    ),
-  )
-  assert_true(@app.commands_in_sync([explicit_defaults], [omitted_defaults]))
-  let user = @interaction.CommandSpec::user("inspect")
-  let user_response = fetched_command(
-    (
-      #|{
-      #|  "id": "900000000000000012",
-      #|  "application_id": "400000000000000001",
-      #|  "type": 2,
-      #|  "name": "inspect",
-      #|  "description": "",
-      #|  "default_member_permissions": null,
-      #|  "dm_permission": true,
-      #|  "nsfw": false,
-      #|  "integration_types": [0],
-      #|  "contexts": null,
-      #|  "version": "900000000000000013"
-      #|}
-    ),
-  )
-  assert_true(@app.commands_in_sync([slash, user], [response, user_response]))
-}
-
-///|
 test "intent derivation strips privileged intents and warns" {
   let app = @app.App()
   let bot = Bot(app, token="token")
@@ -482,6 +262,185 @@ async test "bot without sync performs no command requests" {
     ctx.shutdown()
     running.wait()
   })
+}
+
+///|
+async test "bot warns when sync deletes undeclared commands" {
+  let guild_a : @model.GuildId = @model.Id::parse("100")
+  let guild_b : @model.GuildId = @model.Id::parse("101")
+  for
+    entry in [
+      (@app.CommandScope::Global, ["global scope"]),
+      (
+        @app.CommandScope::Guilds([guild_a, guild_b]),
+        ["guild 100", "guild 101"],
+      ),
+    ] {
+    let (scope, targets) = entry
+    let transport = BotFakeTransport()
+    let app = @app.App()
+    let warnings = []
+    app.on_warn(message => warnings.push(message))
+    let client = @dhttp.Client("test-token")
+    defer client.close()
+    client.middleware((request, _next) => {
+      let body : Json = if request.route.method_() is Get {
+        [
+          { "id": "10", "name": "old" },
+          { "id": "11", "type": 2, "name": "inspect" },
+        ]
+      } else {
+        []
+      }
+      { status: 200, headers: Map([]), body, }
+    })
+    let bot = Bot(
+      app,
+      token="test-token",
+      intents=@model.Intents::guilds(),
+      client~,
+      gateway_url="wss://gateway.example",
+      sync=scope,
+    )
+    bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+    let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
+    bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
+    @async.with_task_group(group => {
+      let running = group.spawn(no_wait=true, () => bot.run())
+      transport.incoming.put(BOT_HELLO)
+      guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
+        fail("expected identify")
+      }
+      transport.incoming.put(bot_ready_frame())
+      let ctx = ready_contexts.get()
+      assert_eq(
+        warnings,
+        targets.map(target => {
+          "command sync deleted old, 2:inspect in \{target}; use sync_unowned=Keep to preserve undeclared commands"
+        }),
+      )
+      ctx.shutdown()
+      running.wait()
+    })
+  }
+}
+
+///|
+async test "bot Keep preserves other owners and emits no deletion warning" {
+  let transport = BotFakeTransport()
+  let app = @app.App()
+  app.command(
+    @app.slash(
+      name="ping",
+      description="Ping",
+      args=@interaction.Args::unit(),
+      handler=Raw(_ => ()),
+    ),
+  )
+  let warnings = []
+  app.on_warn(message => warnings.push(message))
+  let bodies : Array[Json] = []
+  let client = @dhttp.Client("test-token")
+  defer client.close()
+  client.middleware((request, _next) => {
+    if request.route.method_() is Put && request.body is Some(body) {
+      bodies.push(body)
+    }
+    let body : Json = if request.route.method_() is Get {
+      [
+        { "id": "10", "name": "other" },
+        { "id": "11", "type": 4, "name": "Launch", "handler": 2 },
+      ]
+    } else {
+      []
+    }
+    { status: 200, headers: Map([]), body, }
+  })
+  let bot = Bot(
+    app,
+    token="test-token",
+    intents=@model.Intents::guilds(),
+    client~,
+    gateway_url="wss://gateway.example",
+    sync=Global,
+    sync_unowned=Keep,
+  )
+  bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
+  bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
+  @async.with_task_group(group => {
+    let running = group.spawn(no_wait=true, () => bot.run())
+    transport.incoming.put(BOT_HELLO)
+    guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
+      fail("expected identify")
+    }
+    transport.incoming.put(bot_ready_frame())
+    let ctx = ready_contexts.get()
+    assert_eq(warnings, [])
+    json_inspect(bodies, content=[
+      [
+        { "name": "ping", "description": "Ping" },
+        { "id": "10", "name": "other" },
+        { "id": "11", "type": 4, "name": "Launch", "handler": 2 },
+      ],
+    ])
+    ctx.shutdown()
+    running.wait()
+  })
+}
+
+///|
+async test "bot sync failures stay fail-fast" {
+  for fail_get in [true, false] {
+    let transport = BotFakeTransport()
+    let app = @app.App()
+    let warnings = []
+    app.on_warn(message => warnings.push(message))
+    let client = @dhttp.Client("test-token")
+    defer client.close()
+    client.middleware((request, _next) => {
+      if (request.route.method_() is Get) == fail_get {
+        raise @dhttp.DiscordHttpError::Transport(message="sync failed")
+      }
+      {
+        status: 200,
+        headers: Map([]),
+        body: Json::array([{ "id": "10", "name": "old" }]),
+      }
+    })
+    let bot = Bot(
+      app,
+      token="test-token",
+      intents=@model.Intents::guilds(),
+      client~,
+      gateway_url="wss://gateway.example",
+      sync=Global,
+    )
+    bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+    let ready_called = Ref(false)
+    bot.on(Events::ready(), (ctx, _) => {
+      ready_called.val = true
+      ctx.shutdown()
+    })
+    try
+      @async.with_task_group(group => {
+        let running = group.spawn(no_wait=true, () => bot.run())
+        transport.incoming.put(BOT_HELLO)
+        guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
+          fail("expected identify")
+        }
+        transport.incoming.put(bot_ready_frame())
+        running.wait()
+      })
+    catch {
+      @dhttp.DiscordHttpError::Transport(message="sync failed") => ()
+      error => fail("unexpected sync error: \{Repr(error)}")
+    } noraise {
+      _ => fail("expected sync failure")
+    }
+    assert_false(ready_called.val)
+    assert_eq(warnings, [])
+  }
 }
 
 ///|

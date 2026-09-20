@@ -38,9 +38,42 @@ async fn serve_with_existing_client(
 
 Command registration is a separate deploy-time step. Run a one-shot program
 that builds the same App and calls `app.sync_commands(client, application_id,
-scope~)` before starting or updating the HTTP deployment. Synchronization uses
-bulk overwrite and can remove commands in that scope that this App does not
-declare. Do not synchronize per request.
+scope~)` before starting or updating the HTTP deployment. The call returns an
+`@app.SyncReport`; print it to see each scope's changes and `overwritten` flag:
+
+```mbt check
+///|
+async fn register_commands(
+  app : @app.App,
+  client : @dhttp.Client,
+  application_id : @model.ApplicationId,
+  scope : @app.CommandScope,
+) -> Unit {
+  let report = app.sync_commands(client, application_id, scope~)
+  println("\{Repr(report)}")
+}
+```
+
+The default `unowned=Delete` removes undeclared commands, while `unowned=Keep`
+retains them. The Entry Point command is always preserved. A matching catalog
+sends no overwrite PUT (the GET still runs). Do not synchronize per request.
+
+```mbt check
+///|
+async test "registration reports an unchanged catalog with an entry point" {
+  let spec = @interaction.CommandSpec::slash("echo", "Echo")
+  let (payload, report) = @framework.plan_command_sync(
+    [spec],
+    [spec.to_json(), { "id": "11", "type": 4, "name": "Launch" }],
+    unowned=Delete,
+  )
+  assert_true(payload is None)
+  assert_false(report.overwritten)
+  assert_eq(report.unchanged, ["echo"])
+  assert_eq(report.preserved, ["4:Launch"])
+  ignore(register_commands)
+}
+```
 
 ## Configure the Discord endpoint
 

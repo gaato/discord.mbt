@@ -97,7 +97,31 @@ request. Use `CommandScope::Guild(guild_id)` while developing if the command
 should appear immediately in one guild.
 
 Synchronization uses Discord's bulk overwrite endpoint and deletes commands
-in that scope that this App does not declare.
+in that scope that this App does not declare, except that the Entry Point
+command is always preserved. Pass `sync_unowned=Keep` to preserve other owners'
+commands too.
+
+```mbt check
+///|
+async test "default sync deletes undeclared commands but preserves the entry point" {
+  let (payload, report) = @framework.plan_command_sync(
+    [],
+    [
+      { "id": "10", "name": "old" },
+      { "id": "11", "type": 4, "name": "Launch", "handler": 2 },
+    ],
+    unowned=Delete,
+  )
+  assert_eq(report.deleted, ["old"])
+  assert_eq(report.preserved, ["4:Launch"])
+  assert_eq(
+    payload,
+    Some(
+      Json::array([{ "id": "11", "type": 4, "name": "Launch", "handler": 2 }]),
+    ),
+  )
+}
+```
 
 ## Run
 

@@ -204,8 +204,25 @@ test "guild command declaration compiles" {
 Register every command with `app.command(command)`. To synchronize the
 declarations, pass a `CommandScope` to `Bot(sync=...)` or call
 `app.sync_commands(client, application_id, scope~)` from a one-shot program.
-Both paths use Discord's bulk overwrite endpoint and can delete commands in
-the selected scope that this App does not declare.
+The call returns a sync report. Both paths default to deleting undeclared
+commands in the selected scope, while always preserving the Entry Point
+command. Use `unowned=Keep` on `sync_commands` or `sync_unowned=Keep` on `Bot`
+for a scope shared with other command owners.
+
+```mbt check
+///|
+async test "command sync keeps the entry point under either ownership policy" {
+  for unowned in [@framework.UnownedCommands::Delete, Keep] {
+    let (_, report) = @framework.plan_command_sync(
+      [],
+      [{ "id": "11", "type": 4, "name": "Launch" }],
+      unowned~,
+    )
+    assert_eq(report.preserved, ["4:Launch"])
+    assert_eq(report.deleted, [])
+  }
+}
+```
 
 ## Checks and app middleware
 

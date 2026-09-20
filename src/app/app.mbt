@@ -251,7 +251,7 @@ pub fn App::validate(self : App) -> Unit raise AppConfigError {
   }
   let commands : Set[String] = Set([])
   for command in self.commands_ {
-    let command_key = command_key(command.definition.typ, command.name_)
+    let command_key = "\{command.definition.typ.to_int()}:\{command.name_}"
     if commands.contains(command_key) {
       raise DuplicateCommand(name=command.name_)
     }
@@ -544,23 +544,52 @@ pub fn App::attach(
 }
 
 ///|
-/// Push the declared command set to a Discord command scope.
+/// Reports for each synchronized scope, in the requested order.
+pub(all) struct SyncReport {
+  scopes : Array[@framework.ScopeSyncReport]
+} derive(Debug)
+
+///|
+/// Synchronize the declared commands and report each scope's changes.
+/// Entry points are always preserved; `Keep` also preserves other owners.
 pub async fn App::sync_commands(
   self : App,
   client : @dhttp.Client,
   application_id : @model.ApplicationId,
   scope~ : CommandScope,
-) -> Unit {
+  unowned? : @framework.UnownedCommands = Delete,
+) -> SyncReport {
   let specs = self.commands_.map(command => command.definition)
+  let scopes = []
   match scope {
-    Global => sync_global_commands(client, application_id, specs)
+    Global =>
+      scopes.push(
+        @framework.sync_command_scope(client, application_id, specs, unowned~),
+      )
     Guild(guild_id) =>
-      sync_guild_commands(client, application_id, guild_id, specs)
+      scopes.push(
+        @framework.sync_command_scope(
+          client,
+          application_id,
+          specs,
+          unowned~,
+          guild_id~,
+        ),
+      )
     Guilds(guild_ids) =>
       for guild_id in guild_ids {
-        sync_guild_commands(client, application_id, guild_id, specs)
+        scopes.push(
+          @framework.sync_command_scope(
+            client,
+            application_id,
+            specs,
+            unowned~,
+            guild_id~,
+          ),
+        )
       }
   }
+  { scopes, }
 }
 
 ///|

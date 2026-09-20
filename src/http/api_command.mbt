@@ -140,6 +140,20 @@ pub async fn Client::get_global_commands(
   with_localizations? : Bool,
 ) -> Array[@model.ApplicationCommand] raise DiscordHttpError {
   decode(
+    Json::array(
+      self.get_global_commands_raw(application_id, with_localizations?),
+    ),
+  )
+}
+
+///|
+/// List global commands as raw objects, retaining fields unknown to the model.
+pub async fn Client::get_global_commands_raw(
+  self : Client,
+  application_id : @model.ApplicationId,
+  with_localizations? : Bool,
+) -> Array[Json] raise DiscordHttpError {
+  decode(
     self.request(
       GetGlobalCommands(
         application_id~,
@@ -249,6 +263,21 @@ pub async fn Client::get_guild_commands(
   guild_id : @model.GuildId,
   with_localizations? : Bool,
 ) -> Array[@model.ApplicationCommand] raise DiscordHttpError {
+  decode(
+    Json::array(
+      self.get_guild_commands_raw(application_id, guild_id, with_localizations?),
+    ),
+  )
+}
+
+///|
+/// List guild commands as raw objects, retaining fields unknown to the model.
+pub async fn Client::get_guild_commands_raw(
+  self : Client,
+  application_id : @model.ApplicationId,
+  guild_id : @model.GuildId,
+  with_localizations? : Bool,
+) -> Array[Json] raise DiscordHttpError {
   decode(
     self.request(
       GetGuildCommands(

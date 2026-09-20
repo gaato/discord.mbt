@@ -11,6 +11,10 @@ import {
   "moonbitlang/core/json",
 } for "test"
 
+import {
+  "moonbitlang/core/json",
+} for "wbtest"
+
 // `member` is part of the public TargetUser API, but MoonBit currently marks
 // it as a possible future keyword before local warning attributes take effect.
 

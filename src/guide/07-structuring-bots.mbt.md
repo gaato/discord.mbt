@@ -47,6 +47,29 @@ fn compose(
 }
 ```
 
+`sync=command_scope` uses the combined declarations from all installers.
+If another process owns commands in that scope, add `sync_unowned=Keep` to
+the Bot constructor to preserve them. The Entry Point command is preserved
+under either policy.
+
+```mbt check
+///|
+async test "feature owners can keep commands from another process" {
+  for unowned in [@framework.UnownedCommands::Delete, Keep] {
+    let (_, report) = @framework.plan_command_sync(
+      [],
+      [
+        { "id": "10", "name": "other" },
+        { "id": "11", "type": 4, "name": "Launch" },
+      ],
+      unowned~,
+    )
+    assert_true(report.preserved.contains("4:Launch"))
+    assert_eq(report.preserved.contains("other"), unowned == Keep)
+  }
+}
+```
+
 The snippets in this chapter reference a few supporting declarations that a
 real feature package would define; representative stubs keep the chapter
 compiling:

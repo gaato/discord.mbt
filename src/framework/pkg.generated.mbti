@@ -9,6 +9,9 @@ import {
 }
 
 // Values
+pub fn plan_command_sync(Array[@interaction.CommandSpec], Array[Json], unowned~ : UnownedCommands, guild_id? : @model.Id[@model.GuildMarker]) -> (Json?, ScopeSyncReport)
+
+pub async fn sync_command_scope(@http.Client, @model.Id[@model.ApplicationMarker], Array[@interaction.CommandSpec], unowned? : UnownedCommands, guild_id? : @model.Id[@model.GuildMarker]) -> ScopeSyncReport
 
 // Errors
 pub(all) suberror InteractionContextError {
@@ -100,8 +103,8 @@ pub fn Framework::modal(Self, String, async (ModalCtx) -> Unit) -> Self
 pub fn Framework::on_error(Self, async (String, Error) -> Unit) -> Self
 pub async fn Framework::process(Self, @model.Interaction) -> Bool
 pub async fn Framework::process_with(Self, @model.Interaction, gate~ : ResponseGate) -> Bool
-pub async fn Framework::sync_global(Self) -> Array[@model.ApplicationCommand]
-pub async fn Framework::sync_guild(Self, @model.Id[@model.GuildMarker]) -> Array[@model.ApplicationCommand]
+pub async fn Framework::sync_global(Self, unowned? : UnownedCommands) -> ScopeSyncReport
+pub async fn Framework::sync_guild(Self, @model.Id[@model.GuildMarker], unowned? : UnownedCommands) -> ScopeSyncReport
 pub async fn Framework::wait_for_component(Self, custom_id~ : String, timeout_ms? : Int) -> ComponentCtx?
 
 pub(all) struct GuildInvocation {
@@ -157,10 +160,25 @@ pub fn ResponseGate::responded(Self) -> Bool
 pub fn ResponseGate::rest(@http.Client, @model.Interaction) -> Self
 pub async fn ResponseGate::send(Self, @model.InteractionResponse, files? : Array[@http.FileUpload]) -> Unit
 
+pub(all) struct ScopeSyncReport {
+  guild_id : @model.Id[@model.GuildMarker]?
+  created : Array[String]
+  updated : Array[String]
+  deleted : Array[String]
+  unchanged : Array[String]
+  preserved : Array[String]
+  overwritten : Bool
+} derive(@debug.Debug)
+
 pub(all) struct TargetUser {
   user : @model.User
   member : @model.GuildMember?
 }
+
+pub(all) enum UnownedCommands {
+  Delete
+  Keep
+} derive(Eq, @debug.Debug)
 
 // Type aliases
 

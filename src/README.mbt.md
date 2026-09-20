@@ -219,11 +219,33 @@ the `dave_probe`, `voice_player`, and `voice_recorder` examples, and the accepte
 `sync=scope` to `Bot` to synchronize once after the first READY; when omitted,
 the bot makes no command request. HTTP executors never synchronize commands.
 For those deployments, call `app.sync_commands(client, application_id,
-scope~)` from a one-shot registration program.
+scope~)` from a one-shot registration program. It returns an `@app.SyncReport`
+whose `scopes` list each scope's created, updated, deleted, unchanged, and
+preserved command names, plus whether an overwrite was sent.
 
-**Synchronization uses Discord's bulk overwrite endpoints. A required PUT
-deletes commands registered outside this App from the selected scope.** Use
-exactly one process for synchronization in a multi-process deployment.
+Synchronization fetches the remote catalog and only sends a bulk-overwrite
+PUT when it differs. By default (`unowned=Delete`), it removes undeclared
+commands from the selected scope. The Entry Point command is always preserved,
+including its id and fields unknown to this library. Use `unowned=Keep` on
+`App::sync_commands` or `Framework::sync_*`, or `sync_unowned=Keep` on `Bot`,
+when another process owns commands in the same scope. Bot emits one warning
+per scope with deletions through `app.on_warn`. Use exactly one process for
+synchronization in a multi-process deployment.
+
+```mbt check
+///|
+async test "sync preserves entry points and skips an unchanged catalog" {
+  let spec = @interaction.CommandSpec::slash("ping", "Ping")
+  let (payload, report) = @framework.plan_command_sync(
+    [spec],
+    [spec.to_json(), { "id": "10", "type": 4, "name": "Launch", "handler": 2 }],
+    unowned=Delete,
+  )
+  assert_true(payload is None)
+  assert_false(report.overwritten)
+  assert_eq(report.preserved, ["4:Launch"])
+}
+```
 
 Install `app.error_policy(...)` to map failures to logs or interaction
 responses; handlers raise `HandlerError` variants such as `UserMessage` or

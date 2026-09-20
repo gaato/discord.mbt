@@ -66,10 +66,27 @@ errors propagate out of `process` unless an `on_error` hook is installed;
 the hook receives a `kind:name` label such as `command:greet` and the error.
 
 The registration payload for every declared command is available as
-`command_specs()`. `sync_global()` and `sync_guild(guild_id)` send it to the
-bulk-overwrite endpoints. As with `App` synchronization, **a bulk overwrite
-deletes commands registered outside this `Framework`** from the selected
-scope; guild sync applies instantly, global sync can take up to an hour.
+`command_specs()`. `sync_global()` and `sync_guild(guild_id)` fetch the catalog,
+compare it with the declarations, and return a `@framework.ScopeSyncReport`.
+Only a changed catalog sends a bulk-overwrite PUT; an unchanged one still
+needs the GET. The default `unowned=Delete` removes undeclared commands;
+`unowned=Keep` retains them. The Entry Point command is always preserved.
+
+```mbt check
+///|
+async test "framework planning preserves the entry point without an overwrite" {
+  let spec = @interaction.CommandSpec::slash("greet", "Greet somebody")
+  let (payload, report) = @framework.plan_command_sync(
+    [spec],
+    [spec.to_json(), { "id": "11", "type": 4, "name": "Launch" }],
+    unowned=Delete,
+  )
+  assert_true(payload is None)
+  assert_false(report.overwritten)
+  assert_eq(report.unchanged, ["greet"])
+  assert_eq(report.preserved, ["4:Launch"])
+}
+```
 
 A `CommandSpec` serializes to exactly the JSON Discord's registration
 endpoints expect:

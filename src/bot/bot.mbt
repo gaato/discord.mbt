@@ -64,6 +64,7 @@ pub struct Bot {
   priv compress_ : Bool
   priv identify_queue_ : &@queue.IdentifyQueue?
   priv sync_ : @app.CommandScope?
+  priv sync_unowned_ : @framework.UnownedCommands
   priv typed_events_ : Array[TypedEventHandler]
   priv raw_events_ : Array[async (GatewayCtx, @model.Event) -> Unit]
   priv event_middleware_ : Array[EventMiddleware]
@@ -94,8 +95,10 @@ pub struct Bot {
 /// When `sync` is omitted, the bot performs no command synchronization. When
 /// set, synchronization runs once per process after the first READY. It uses
 /// Discord's bulk overwrite and deletes commands in that scope that this App
-/// does not declare. In multi-process sharding, enable it in exactly one
-/// process.
+/// does not declare, except for entry points, which are always preserved.
+/// `sync_unowned=Keep` also preserves commands registered by other owners.
+/// Deletions are reported through the app's warning hook. In multi-process
+/// sharding, enable synchronization in exactly one process.
 pub fn Bot::Bot(
   app : @app.App,
   token~ : String,
@@ -107,6 +110,7 @@ pub fn Bot::Bot(
   compress? : Bool = false,
   identify_queue? : &@queue.IdentifyQueue,
   sync? : @app.CommandScope,
+  sync_unowned? : @framework.UnownedCommands = Delete,
 ) -> Bot {
   {
     app_: app,
@@ -119,6 +123,7 @@ pub fn Bot::Bot(
     compress_: compress,
     identify_queue_: identify_queue,
     sync_: sync,
+    sync_unowned_: sync_unowned,
     typed_events_: [],
     raw_events_: [],
     event_middleware_: [],
@@ -585,8 +590,25 @@ pub async fn Bot::run(self : Bot) -> Unit {
           }
           if first_ready {
             match self.sync_ {
-              Some(scope) =>
-                self.app_.sync_commands(client, ready.application.id, scope~)
+              Some(scope) => {
+                let report = self.app_.sync_commands(
+                  client,
+                  ready.application.id,
+                  scope~,
+                  unowned=self.sync_unowned_,
+                )
+                for scope in report.scopes {
+                  if !scope.deleted.is_empty() {
+                    let target = match scope.guild_id {
+                      None => "global scope"
+                      Some(guild_id) => "guild \{guild_id}"
+                    }
+                    self.app_.warn(
+                      "command sync deleted \{scope.deleted.join(", ")} in \{target}; use sync_unowned=Keep to preserve undeclared commands",
+                    )
+                  }
+                }
+              }
               None => ()
             }
             self.spawn_services(group, ctx)

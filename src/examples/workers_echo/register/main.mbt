@@ -33,7 +33,7 @@ async fn main {
     let client = @discord.Client(token)
     group.add_defer(() => client.close())
     let application_id = client.get_current_application().id
-    app.sync_commands(client, application_id, scope~)
-    println("[register] commands synced (\{Repr(scope)})")
+    let report = app.sync_commands(client, application_id, scope~)
+    println("[register] \{Repr(report)}")
   })
 }

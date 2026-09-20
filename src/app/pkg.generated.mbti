@@ -11,8 +11,6 @@ import {
 }
 
 // Values
-pub fn commands_in_sync(Array[@interaction.CommandSpec], Array[@model.ApplicationCommand]) -> Bool
-
 pub fn dm_only() -> (CheckCtx) -> Bool raise HandlerError
 
 pub fn file_field(custom_id~ : String, label~ : String, description? : String, min_values? : Int, max_values? : Int, file_types? : Array[@model.FileTypeFilter]) -> ModalField[Array[@model.Attachment]]
@@ -91,7 +89,7 @@ pub fn App::register(Self, RegisteredCommand) -> Unit
 pub async fn App::report_failure(Self, FailureOrigin, Error) -> Unit
 pub async fn App::serve(Self, @async.TaskGroup[Unit], client? : @http.Client, token? : String, application_id? : @model.Id[@model.ApplicationMarker]) -> InteractionEndpoint
 pub fn App::spawner(Self, @async.TaskGroup[Unit]) -> async (async () -> Unit) -> Unit
-pub async fn App::sync_commands(Self, @http.Client, @model.Id[@model.ApplicationMarker], scope~ : CommandScope) -> Unit
+pub async fn App::sync_commands(Self, @http.Client, @model.Id[@model.ApplicationMarker], scope~ : CommandScope, unowned? : @framework.UnownedCommands) -> SyncReport
 pub fn App::validate(Self) -> Unit raise AppConfigError
 pub fn App::warn(Self, String) -> Unit
 
@@ -360,6 +358,10 @@ pub(all) enum ResponsePhase {
 pub struct SlashChild {
   // private fields
 }
+
+pub(all) struct SyncReport {
+  scopes : Array[@framework.ScopeSyncReport]
+} derive(@debug.Debug)
 
 // Type aliases
 pub type CommandCheck = (CheckCtx) -> Bool raise HandlerError
