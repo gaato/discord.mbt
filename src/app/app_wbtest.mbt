@@ -444,9 +444,10 @@ async test "command guild_scope raises in DMs and returns the guild bundle" {
 async test "command cooldown reports retry time and recovers" {
   let client = @dhttp.Client("test-token")
   defer client.close()
-  let app = App()
   let clock = Ref(1_000L)
-  app.set_clock(() => clock.val)
+  let app = App(
+    cooldown_store=@cooldown.InMemoryCooldownStore(now=() => clock.val),
+  )
   let handled = Ref(0)
   let retries : Array[Int64] = []
   app.error_policy((_, error) => {
@@ -499,8 +500,9 @@ async test "command cooldown reports retry time and recovers" {
 async test "guild and global cooldown buckets share the intended scope" {
   let client = @dhttp.Client("test-token")
   defer client.close()
-  let app = App()
-  app.set_clock(() => 1_000L)
+  let app = App(
+    cooldown_store=@cooldown.InMemoryCooldownStore(now=() => 1_000L),
+  )
   let guild_runs = Ref(0)
   let global_runs = Ref(0)
   let cooldowns = Ref(0)

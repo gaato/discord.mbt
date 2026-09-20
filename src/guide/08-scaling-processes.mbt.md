@@ -2,7 +2,8 @@
 
 The native `gaato/discord/coordinator` package provides a small TCP service for
 deployments that split Gateway shards between processes. It centralizes the
-existing `InMemoryQueue` Identify buckets and `InMemoryRateLimiter` REST state;
+existing `InMemoryQueue` Identify buckets, `InMemoryRateLimiter` REST state,
+and `InMemoryCooldownStore` command windows;
 no Redis or external database is required.
 
 ## Run the coordinator
@@ -69,10 +70,70 @@ count. All workers that use the same bot token should also use the same
 coordinator-backed REST limiter.
 
 Connections are persistent and requests on one connection are ordered. After
-a transport failure, an in-flight request reconnects with bounded exponential
+a transport failure, Identify and REST requests reconnect with bounded exponential
 backoff. Protocol errors from the server remain fatal and are not retried. If
 a process disconnects after acquiring a REST bucket, the server releases that
 bucket during connection cleanup.
+
+## Shared cooldowns
+
+`App()` creates a fresh `InMemoryCooldownStore`. To enforce the same command
+cooldown across processes, inject a shared store into **every process that
+serves interactions**, including HTTP interaction workers:
+
+```mbt check
+///|
+async test "shared cooldown store wiring" {
+  @async.with_task_group(group => {
+    let coordinator = @coordinator.Coordinator::serve(group, addr="127.0.0.1:0")
+    defer coordinator.close()
+    let cooldown = @coordinator.RemoteCooldownStore::connect(
+      coordinator.addr(),
+      timeout_ms=1000,
+      on_error=error => println("cooldown coordinator: \{error}"),
+    )
+    defer cooldown.close()
+    let app = @app.App(cooldown_store=(cooldown : &@cooldown.CooldownStore))
+    app.command(
+      @app.slash(
+        name="limited",
+        description="Shared cooldown",
+        args=@interaction.Args::unit(),
+        handler=Raw(_ => ()),
+      ).cooldown(seconds=10, bucket=User),
+    )
+    app.validate()
+    cooldown.ping()
+  })
+}
+```
+
+Use the coordinator's configured address in each worker and keep the remote
+store alive for the lifetime of its App. Keys include command type, command
+name, and bucket identity, so commands sharing a store have independent
+windows. The coordinator owns the clock and keeps windows in memory; restarting
+it clears those windows.
+
+The `gaato/discord/cooldown` trait is portable to JS and native, while
+`RemoteCooldownStore` is native-only. Other deployments can implement
+`CooldownStore` over shared storage and pass it through the same App parameter.
+
+The remote store defaults to `when_unreachable=FailOpen`. A timeout or disconnect
+calls `on_error` and admits the command: cooldowns damp abuse, and an outage
+should not take every command offline. Use `when_unreachable=FailClosed` to deny the
+attempt with `retry_after_ms` equal to the requested window instead. The
+default error hook does nothing, so install it to observe outages. Initial
+connection outages also call the hook and return a store that can reconnect.
+Cancellation always propagates, as do protocol errors. `ping()` reports errors
+directly instead of applying the admission policy.
+
+Each cooldown store has its own connection, independent of blocking
+`http_acquire` requests. Acquisition makes one attempt with no retries;
+`timeout_ms` (default 1000) bounds the entire operation, including connection
+queueing and reconnect time. This work runs before the handler can defer and
+spends Discord's three-second initial-response budget. Identify and REST retain
+their existing retry policy; `RemoteRateLimiter` remains fail-closed because
+avoiding Discord's 429 bans is a correctness concern.
 
 ## Wire protocol
 
@@ -85,7 +146,13 @@ line. A client sends only one in-flight request per connection.
 | `{"op":"identify_acquire","shard_id":N}` | Returns success after the shard's Identify bucket and spacing permit it. |
 | `{"op":"http_acquire","bucket":"...","global_exempt":false}` | Returns success when the REST request may start. |
 | `{"op":"http_release","bucket":"...","status":N,"headers":{...}}` | Applies lowercase Discord rate-limit headers, releases the bucket, then returns success. |
+| `{"op":"cooldown_acquire","key":"...","window_ms":"10000"}` | Immediately returns `{"ok":true,"retry_after_ms":"0"}` when acquired, or the remaining window in milliseconds. |
+
+Cooldown `window_ms` and `retry_after_ms` are decimal strings, preserving Int64
+precision through JSON. `"0"` means acquired. Other operations retain their
+existing numeric fields.
 
 Unknown or malformed operations return `{"ok":false,"error":"..."}`. The
 server keeps the connection open after these protocol-level errors. Transport
-failures close the connection and trigger the bounded reconnect policy.
+failures close the connection. Identify and REST use bounded retries; cooldown
+acquisition applies its unreachable policy and tries to reconnect on the next call.

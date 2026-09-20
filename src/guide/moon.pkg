@@ -13,6 +13,7 @@ import {
   "gaato/discord/app",
   "gaato/discord/bot",
   "gaato/discord/coordinator",
+  "gaato/discord/cooldown",
   "gaato/discord/ratelimit",
   "gaato/discord/queue",
   "gaato/discord/cache",

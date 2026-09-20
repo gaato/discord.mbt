@@ -51,3 +51,33 @@ fn json_bool(value : Json) -> Bool? {
     _ => None
   }
 }
+
+///|
+// Cooldown durations use decimal strings to preserve all Int64 bits in JSON.
+fn json_nonnegative_int64(value : Json) -> Int64? {
+  guard value is String(text) else { return None }
+  let integer = @string.parse_int64(text) catch { _ => return None }
+  if integer >= 0L {
+    Some(integer)
+  } else {
+    None
+  }
+}
+
+///|
+fn cooldown_acquire_request(key : String, window_ms : Int64) -> Json {
+  {
+    "op": "cooldown_acquire",
+    "key": Json::string(key),
+    "window_ms": Json::string(window_ms.to_string()),
+  }
+}
+
+///|
+fn cooldown_response(decision : @cooldown.CooldownDecision) -> Json {
+  let retry_after_ms = match decision {
+    Acquired => 0L
+    Active(retry_after_ms~) => retry_after_ms
+  }
+  { "ok": true, "retry_after_ms": Json::string(retry_after_ms.to_string()) }
+}

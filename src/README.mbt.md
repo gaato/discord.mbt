@@ -105,8 +105,9 @@ async fn run_echo_bot(token : String) -> Unit {
 | `gaato/discord/util` | Pure helpers: permissions, mentions, timestamps, CDN URLs | Yes | Yes |
 | `gaato/discord/verify` | Pure MoonBit Ed25519 request verification | Yes | Yes |
 | `gaato/discord/ratelimit` | Rate limiter trait + in-memory implementation | Yes | Yes |
+| `gaato/discord/cooldown` | Command cooldown store trait + in-memory fixed windows | Yes | Yes |
 | `gaato/discord/queue` | Identify queue trait + in-memory implementation | Yes | Yes |
-| `gaato/discord/coordinator` | Experimental: API may change in minor releases until declared stable; native TCP coordinator for multi-process Identify and REST limits | Yes | No |
+| `gaato/discord/coordinator` | Experimental: API may change in minor releases until declared stable; native TCP coordinator for multi-process Identify, REST limits, and cooldowns | Yes | No |
 
 \* The facade's gateway and HTTP-server exports exist only on native.
 WebAssembly is not currently enabled or validated as an application target in

@@ -9,6 +9,7 @@ pub struct Coordinator {
 priv struct CoordinatorState {
   identify : @queue.InMemoryQueue
   limiter : @ratelimit.InMemoryRateLimiter
+  cooldown : @cooldown.InMemoryCooldownStore
   owners : Map[String, BucketOwner]
   next_connection_id : Ref[Int]
   next_lease_id : Ref[Int]
@@ -57,6 +58,7 @@ pub async fn[X] Coordinator::serve(
   let state = CoordinatorState::{
     identify: InMemoryQueue(max_concurrency~, spacing_ms=identify_spacing_ms),
     limiter: InMemoryRateLimiter(global_limit~),
+    cooldown: @cooldown.InMemoryCooldownStore(),
     owners: Map([]),
     next_connection_id: Ref(0),
     next_lease_id: Ref(0),
@@ -148,6 +150,15 @@ async fn dispatch_request(
   }
   match op {
     "ping" => ok_response()
+    "cooldown_acquire" => {
+      guard request is { "key": String(key), "window_ms": window_json, .. } &&
+        json_nonnegative_int64(window_json) is Some(window_ms) else {
+        return error_response(
+          "cooldown_acquire requires key and non-negative decimal string window_ms",
+        )
+      }
+      cooldown_response(state.cooldown.try_acquire(key, window_ms~))
+    }
     "identify_acquire" => {
       guard request is { "shard_id": shard_json, .. } &&
         json_nonnegative_int(shard_json) is Some(shard_id) else {

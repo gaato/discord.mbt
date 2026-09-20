@@ -2,6 +2,7 @@
 package "gaato/discord/app"
 
 import {
+  "gaato/discord/cooldown",
   "gaato/discord/framework",
   "gaato/discord/http",
   "gaato/discord/interaction",
@@ -75,7 +76,7 @@ pub(all) suberror ModalPrefillError {
 pub struct App {
   // private fields
 }
-pub fn App::App(max_in_flight? : Int) -> Self
+pub fn App::App(max_in_flight? : Int, cooldown_store? : &@cooldown.CooldownStore) -> Self
 pub fn App::attach(Self, @framework.Framework, client~ : @http.Client, application_id~ : @model.Id[@model.ApplicationMarker], waiter? : async (String, Int?) -> @framework.ComponentCtx?, latency_ms? : () -> Int64?) -> AppCtx
 pub fn App::autocomplete(Self, String, async (@framework.AutocompleteCtx) -> Unit) -> Unit
 pub fn[A] App::command(Self, Command[A]) -> Unit

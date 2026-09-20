@@ -572,8 +572,6 @@ pub struct RegisteredCommand {
   priv suggest_routes_ : Array[SuggestRoute]
   priv checks_ : Array[CommandCheck]
   priv cooldown_ : CooldownConfig?
-  priv cooldowns_ : Map[String, Int64]
-  priv mut cooldown_cleanup_after_ : Int64
   priv dispatch : async (
     AppCtx,
     ComponentWaiter?,
@@ -599,10 +597,14 @@ pub fn[A] Command::erase(self : Command[A]) -> RegisteredCommand {
     suggest_routes_: self.suggest_routes,
     checks_: self.checks,
     cooldown_: self.cooldown,
-    cooldowns_: Map([]),
-    cooldown_cleanup_after_: 0L,
     dispatch: (bot, waiter, warn, raw) => {
       self.dispatch_typed(bot, waiter, warn, raw)
     },
   }
+}
+
+///|
+/// The `(type, name)` identity Discord uses for a command, as one string.
+fn RegisteredCommand::key(self : RegisteredCommand) -> String {
+  "\{self.definition.typ.to_int()}:\{self.name_}"
 }

@@ -61,13 +61,17 @@ pub struct App {
   priv middleware_ : Array[InteractionMiddleware]
   priv mut policy_ : ErrorPolicy?
   priv mut warn_ : (String) -> Unit
-  priv mut now_ : () -> Int64
+  priv cooldown_store_ : &@cooldown.CooldownStore
 }
 
 ///|
 /// Create an application core. `max_in_flight` caps concurrently running
-/// interaction handlers.
-pub fn App::App(max_in_flight? : Int = 64) -> App {
+/// interaction handlers. Cooldowns use a fresh in-memory store unless a
+/// shared `cooldown_store` is supplied.
+pub fn App::App(
+  max_in_flight? : Int = 64,
+  cooldown_store? : &@cooldown.CooldownStore,
+) -> App {
   {
     max_in_flight_: max_in_flight,
     commands_: [],
@@ -77,7 +81,9 @@ pub fn App::App(max_in_flight? : Int = 64) -> App {
     middleware_: [],
     policy_: None,
     warn_: message => println(message),
-    now_: @clock.now_ms,
+    cooldown_store_: cooldown_store.unwrap_or_else(() => {
+      @cooldown.InMemoryCooldownStore()
+    }),
   }
 }
 
@@ -176,13 +182,6 @@ pub fn App::on_warn(self : App, hook : (String) -> Unit) -> Unit {
 }
 
 ///|
-/// Internal clock seam used by deterministic command-dispatch tests.
-#warnings("-unused_value")
-fn App::set_clock(self : App, clock : () -> Int64) -> Unit {
-  self.now_ = clock
-}
-
-///|
 fn App::current_policy(self : App) -> ErrorPolicy {
   self.policy_.unwrap_or_else(() => default_error_policy(self.warn_))
 }
@@ -251,7 +250,7 @@ pub fn App::validate(self : App) -> Unit raise AppConfigError {
   }
   let commands : Set[String] = Set([])
   for command in self.commands_ {
-    let command_key = "\{command.definition.typ.to_int()}:\{command.name_}"
+    let command_key = command.key()
     if commands.contains(command_key) {
       raise DuplicateCommand(name=command.name_)
     }
@@ -344,7 +343,7 @@ async fn App::run_registered_command(
     raw_: failure_raw,
   }
   self.run_middleware(ctx, 0, () => {
-    command.run_checks_and_cooldown(bot, raw, (self.now_)())
+    command.run_checks_and_cooldown(bot, raw, self.cooldown_store_)
     (command.dispatch)(bot, waiter, self.warn_, raw)
   }) catch {
     error if @async.is_being_cancelled() => raise error

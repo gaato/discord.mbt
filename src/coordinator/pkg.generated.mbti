@@ -2,6 +2,7 @@
 package "gaato/discord/coordinator"
 
 import {
+  "gaato/discord/cooldown",
   "gaato/discord/queue",
   "gaato/discord/ratelimit",
   "moonbitlang/async",
@@ -27,6 +28,14 @@ pub fn Coordinator::addr(Self) -> String
 pub async fn Coordinator::close(Self) -> Unit noraise
 pub async fn[X] Coordinator::serve(@async.TaskGroup[X], addr~ : String, max_concurrency? : Int, identify_spacing_ms? : Int, global_limit? : Int) -> Self
 
+pub struct RemoteCooldownStore {
+  // private fields
+}
+pub fn RemoteCooldownStore::close(Self) -> Unit
+pub async fn RemoteCooldownStore::connect(String, timeout_ms? : Int, when_unreachable? : UnreachablePolicy, on_error? : (Error) -> Unit) -> Self
+pub async fn RemoteCooldownStore::ping(Self) -> Unit
+pub impl @cooldown.CooldownStore for RemoteCooldownStore
+
 pub struct RemoteIdentifyQueue {
   // private fields
 }
@@ -42,6 +51,11 @@ pub fn RemoteRateLimiter::close(Self) -> Unit
 pub async fn RemoteRateLimiter::connect(String) -> Self
 pub async fn RemoteRateLimiter::ping(Self) -> Unit
 pub impl @ratelimit.RateLimiter for RemoteRateLimiter
+
+pub(all) enum UnreachablePolicy {
+  FailOpen
+  FailClosed
+} derive(Eq, @debug.Debug)
 
 // Type aliases
 

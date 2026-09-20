@@ -1,6 +1,6 @@
 import {
   "gaato/discord/model",
-  "gaato/discord/internal/clock",
+  "gaato/discord/cooldown",
   "gaato/discord/http" @dhttp,
   "gaato/discord/interaction",
   "gaato/discord/framework",

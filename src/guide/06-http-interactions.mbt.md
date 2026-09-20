@@ -202,6 +202,14 @@ for public HTTPS termination.
 
 ## Cloudflare Workers
 
+On per-request runtimes such as Workers, constructing `App()` for every request
+also rebuilds its in-memory cooldown store. Those cooldowns are therefore inert
+across requests. Implement `gaato/discord/cooldown.CooldownStore` over KV or a
+Durable Object and inject it with `App(cooldown_store=...)` to enforce real
+cooldowns. The implementation must own its clock and atomically acquire each
+key's window; account for the storage service's consistency and atomicity
+guarantees. The TCP `RemoteCooldownStore` is native-only.
+
 The `src/examples/workers_echo` adapter exports two promises:
 
 1. A response promise resolves when the initial Discord callback is known.

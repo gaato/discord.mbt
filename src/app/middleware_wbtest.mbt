@@ -161,14 +161,10 @@ async test "interaction middleware order covers commands components and modals" 
 async test "interaction middleware short-circuits checks and handler" {
   let client = @dhttp.Client("test-token")
   defer client.close()
-  let app = App()
-  let clock_ran = Ref(false)
+  let store = CountingCooldownStore::{ calls: [], }
+  let app = App(cooldown_store=store)
   let check_ran = Ref(false)
   let handler_ran = Ref(false)
-  app.set_clock(() => {
-    clock_ran.val = true
-    1_000L
-  })
   app.middleware((_ctx, _next) => ())
   app.command(
     slash(
@@ -176,10 +172,12 @@ async test "interaction middleware short-circuits checks and handler" {
       description="Short circuit",
       args=@interaction.Args::unit(),
       handler=Raw(_ => handler_ran.val = true),
-    ).check(_ => {
+    )
+    .check(_ => {
       check_ran.val = true
       true
-    }),
+    })
+    .cooldown(seconds=10, bucket=Global),
   )
   let framework = middleware_test_framework(app, client)
   process_middleware_interaction(
@@ -187,7 +185,7 @@ async test "interaction middleware short-circuits checks and handler" {
     middleware_command_interaction("short-circuit", "500000000000000610"),
   )
   |> ignore
-  assert_false(clock_ran.val)
+  assert_eq(store.calls.length(), 0)
   assert_false(check_ran.val)
   assert_false(handler_ran.val)
 }

@@ -339,6 +339,13 @@ async I/O, but checks run before the handler can defer and therefore spend
 Discord's three-second initial-response budget; keep them fast or cache their
 results. Cooldown failures use the same error policy as handler failures.
 
+Cooldown storage belongs to the App, with a fresh `InMemoryCooldownStore` by
+default. Command type, name, and bucket are included in each storage key, so
+features sharing a store do not collide. Supply `App(cooldown_store=...)` when
+windows must be shared across Apps or processes; the portable `CooldownStore`
+trait and native `RemoteCooldownStore` are described under
+[Shared cooldowns](08-scaling-processes.mbt.md#shared-cooldowns).
+
 ## No plugin trait or reload lifecycle
 
 discord.mbt does not define a `Plugin` trait. An installer function composes

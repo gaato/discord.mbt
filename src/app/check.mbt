@@ -127,7 +127,7 @@ async fn RegisteredCommand::run_checks_and_cooldown(
   self : RegisteredCommand,
   bot : AppCtx,
   raw : @framework.CommandCtx,
-  now_ms : Int64,
+  store : &@cooldown.CooldownStore,
 ) -> Unit {
   let ctx = CheckCtx::{ raw_: raw, bot_: bot, }
   for check in self.checks_ {
@@ -136,23 +136,10 @@ async fn RegisteredCommand::run_checks_and_cooldown(
     }
   }
   guard self.cooldown_ is Some(config) else { return }
-  let key = cooldown_key(config, ctx)
+  let key = self.key() + "|" + cooldown_key(config, ctx)
   let duration_ms = config.seconds.to_int64() * 1000L
-  if now_ms >= self.cooldown_cleanup_after_ {
-    let expired : Array[String] = []
-    for pending_key, expires_at in self.cooldowns_ {
-      if expires_at <= now_ms {
-        expired.push(pending_key)
-      }
-    }
-    for pending_key in expired {
-      self.cooldowns_.remove(pending_key) |> ignore
-    }
-    self.cooldown_cleanup_after_ = now_ms + duration_ms
-  }
-  match self.cooldowns_.get(key) {
-    Some(expires_at) if expires_at > now_ms =>
-      raise OnCooldown(retry_after_ms=expires_at - now_ms)
-    _ => self.cooldowns_[key] = now_ms + duration_ms
+  match store.try_acquire(key, window_ms=duration_ms) {
+    Acquired => ()
+    Active(retry_after_ms~) => raise OnCooldown(retry_after_ms~)
   }
 }

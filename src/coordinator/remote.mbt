@@ -7,12 +7,20 @@ priv struct CoordinatorClient {
 }
 
 ///|
-async fn CoordinatorClient::connect(addr : String) -> CoordinatorClient {
+fn CoordinatorClient::CoordinatorClient(
+  addr : String,
+) -> CoordinatorClient raise {
   let addr = @socket.Addr::parse(addr) catch {
     error => raise CoordinatorError::Transport(message="\{error}")
   }
-  let conn = CoordinatorClient::dial(addr)
-  { addr, conn: Ref(Some(conn)), gate: Semaphore(1), closed: Ref(false), }
+  { addr, conn: Ref(None), gate: Semaphore(1), closed: Ref(false), }
+}
+
+///|
+async fn CoordinatorClient::connect(addr : String) -> CoordinatorClient {
+  let client = CoordinatorClient(addr)
+  client.connection() |> ignore
+  client
 }
 
 ///|
@@ -98,19 +106,39 @@ async fn CoordinatorClient::request_once(
 async fn CoordinatorClient::request(
   self : CoordinatorClient,
   request : Json,
+  max_retry? : Int = 5,
+  timeout_ms? : Int,
+) -> Json {
+  match timeout_ms {
+    Some(timeout_ms) =>
+      @async.with_timeout(timeout_ms, () => {
+        self.request_with_retry(request, max_retry)
+      })
+    None => self.request_with_retry(request, max_retry)
+  }
+}
+
+///|
+async fn CoordinatorClient::request_with_retry(
+  self : CoordinatorClient,
+  request : Json,
+  max_retry : Int,
 ) -> Json {
   self.gate.acquire()
   defer self.gate.release()
+  // Cancellation can bypass catch handlers. Discard a partial exchange
+  // before releasing the gate so the next request cannot read its response.
+  defer (if @async.is_being_cancelled() { self.drop_connection() })
   if self.closed.val {
     raise CoordinatorError::Disconnected
   }
-  // Replaying is safe: identify requests hold no connection-owned state,
+  // Identify and HTTP remotes can replay: identify holds no connection-owned state,
   // disconnect cleanup releases acquired HTTP buckets, and releasing an
   // already-cleaned bucket is a server-side no-op. A lost identify response
-  // can repeat the spacing wait, but cannot leak a slot.
+  // can repeat the spacing wait, but cannot leak a slot. Cooldowns disable retries.
   @async.retry(
     ExponentialDelay(initial=200, factor=2.0, maximum=5000),
-    max_retry=5,
+    max_retry~,
     fatal_error=coordinator_fatal,
     () => {
       self.request_once(request) catch {
@@ -261,5 +289,110 @@ fn coordinator_nonnegative_int(value : Json) -> Int? {
     Some(integer)
   } else {
     None
+  }
+}
+
+///|
+/// Admission policy when the cooldown coordinator is unreachable.
+pub(all) enum UnreachablePolicy {
+  FailOpen
+  FailClosed
+} derive(Debug, Eq)
+
+///|
+/// Cross-process cooldown windows using the coordinator's clock.
+///
+/// FailOpen is the default: cooldowns damp abuse, so an outage should not take
+/// every command offline. RemoteRateLimiter remains fail-closed because avoiding
+/// Discord's 429 bans is a correctness concern. Cancellation always propagates.
+pub struct RemoteCooldownStore {
+  priv client : CoordinatorClient
+  priv timeout_ms : Int
+  priv policy : UnreachablePolicy
+  priv on_error : (Error) -> Unit
+}
+
+///|
+/// Open a dedicated connection, independent of blocking HTTP acquisitions.
+/// Each acquisition has no retries and a `timeout_ms` deadline, including queue
+/// and reconnect time. Transport failures and timeouts call `on_error`, then
+/// use `when_unreachable`: Acquired for FailOpen, or Active for the requested window
+/// for FailClosed. Other errors propagate. The default error hook does nothing.
+/// An initial connection outage is reported but still returns a store; later
+/// acquisitions attempt to reconnect within the same deadline.
+pub async fn RemoteCooldownStore::connect(
+  addr : String,
+  timeout_ms? : Int = 1000,
+  when_unreachable? : UnreachablePolicy = FailOpen,
+  on_error? : (Error) -> Unit,
+) -> RemoteCooldownStore {
+  if timeout_ms <= 0 {
+    raise CoordinatorError::InvalidConfig(message="timeout_ms must be positive")
+  }
+  let client = CoordinatorClient(addr)
+  let on_error = on_error.unwrap_or_else(() => _ => ())
+  @async.with_timeout(timeout_ms, () => client.connection() |> ignore) catch {
+    error if @async.is_being_cancelled() => {
+      client.close()
+      raise error
+    }
+    error if coordinator_unreachable(error) => {
+      client.drop_connection()
+      on_error(error)
+    }
+    error => raise error
+  }
+  { client, timeout_ms, policy: when_unreachable, on_error, }
+}
+
+///|
+/// Close the connection permanently. Later acquisitions use `when_unreachable`.
+pub fn RemoteCooldownStore::close(self : RemoteCooldownStore) -> Unit {
+  self.client.close()
+}
+
+///|
+/// Check connectivity within the deadline, without retries or a fallback.
+pub async fn RemoteCooldownStore::ping(self : RemoteCooldownStore) -> Unit {
+  self.client.request({ "op": "ping" }, max_retry=0, timeout_ms=self.timeout_ms)
+  |> ignore
+}
+
+///|
+fn coordinator_unreachable(error : Error) -> Bool {
+  coordinator_retryable(error) || error is @async.TimeoutError
+}
+
+///|
+pub impl @cooldown.CooldownStore for RemoteCooldownStore with fn try_acquire(
+  self,
+  key,
+  window_ms~,
+) {
+  let response = self.client.request(
+    cooldown_acquire_request(key, window_ms),
+    max_retry=0,
+    timeout_ms=self.timeout_ms,
+  ) catch {
+    error if @async.is_being_cancelled() => raise error
+    error if coordinator_unreachable(error) => {
+      (self.on_error)(error)
+      return match self.policy {
+        FailOpen => Acquired
+        FailClosed => Active(retry_after_ms=window_ms)
+      }
+    }
+    error => raise error
+  }
+  guard response is { "retry_after_ms": retry_json, .. } &&
+    json_nonnegative_int64(retry_json) is Some(retry_after_ms) else {
+    raise CoordinatorError::InvalidResponse(
+      message="missing non-negative decimal string retry_after_ms",
+    )
+  }
+  if retry_after_ms == 0L {
+    Acquired
+  } else {
+    Active(retry_after_ms~)
   }
 }
