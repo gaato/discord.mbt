@@ -125,6 +125,9 @@ effects now have explicit, checked contracts.
   `Expired`), `ResponseGate::state()` / `expire()`, a `rejected` classifier on
   `ResponseGate`, and `response_state()` on the command, component, and modal
   contexts and on `FailureCtx`.
+- `ComponentRoute::decode(custom_id)` reads the state back from an id the route
+  produced (for ids that arrive undecoded, such as a waiter's `ComponentCtx`,
+  and for tests).
 - `ComponentRoute`, `component_route`, `CustomIdCodec` (`unit`, `string`,
   `int`, `id`, `custom`, `zip`, `imap`, `encode`, `decode`), `CustomIdError`,
   `App::on_component_raw`, `Framework::component_id` / `modal_id`.

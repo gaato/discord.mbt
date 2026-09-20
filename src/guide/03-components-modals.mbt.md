@@ -14,6 +14,26 @@ ticket-close:42
 conservatively in UTF-16 units. Treat decoded state as untrusted input and
 authorize the user again in the handler.
 
+`route.decode(custom_id)` is the inverse: it reads the state back from an id
+the route produced, and raises `HandlerError::InvalidArgument` for an id that
+belongs to another route or whose state does not decode. Typed handlers
+receive the state already decoded, so reach for it where an id arrives
+undecoded — the `ComponentCtx` returned by `wait_for_component`, or a test
+that pins your id format:
+
+```mbt check
+///|
+test "a route reads back the ids it produces" {
+  let close_ticket = @discord.component_route(
+    id="ticket-close",
+    state=@discord.CustomIdCodec::int(),
+  )
+  let id = close_ticket.custom_id(42)
+  assert_eq(id, "ticket-close:42")
+  assert_eq(close_ticket.decode(id), 42)
+}
+```
+
 ## Buttons and selects
 
 Components are placed inside action rows:

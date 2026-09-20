@@ -429,36 +429,21 @@ async fn[A] ComponentRoute::dispatch_typed(
 ) -> Unit {
   match handler {
     Immediate(run) => {
-      let value = self.decode_state(raw.data.custom_id)
+      let value = self.decode(raw.data.custom_id)
       let response = run({ raw_: raw, bot_: bot, }, value)
       response.send(raw)
     }
     DeferredUpdate(run) => {
-      let value = self.decode_state(raw.data.custom_id)
+      let value = self.decode(raw.data.custom_id)
       raw.defer_update()
       run({ raw_: raw, bot_: bot, waiter_: waiter, warn_: warn, }, value)
     }
     DeferredMessage(ephemeral~, run) => {
-      let value = self.decode_state(raw.data.custom_id)
+      let value = self.decode(raw.data.custom_id)
       raw.defer_response(ephemeral~)
       run({ raw_: raw, bot_: bot, waiter_: waiter, warn_: warn, }, value)
     }
     Raw(run) => run(raw)
-  }
-}
-
-///|
-fn[A] ComponentRoute::decode_state(
-  self : ComponentRoute[A],
-  custom_id : String,
-) -> A raise HandlerError {
-  let text = if custom_id == self.id_ {
-    ""
-  } else {
-    custom_id[self.id_.length() + 1:].to_owned()
-  }
-  self.state_.decode(text) catch {
-    source => raise InvalidArgument("\{Repr(source)}")
   }
 }
 

@@ -197,6 +197,7 @@ pub struct ComponentRoute[A] {
   // private fields
 }
 pub fn[A] ComponentRoute::custom_id(Self[A], A) -> String raise CustomIdError
+pub fn[A] ComponentRoute::decode(Self[A], String) -> A raise HandlerError
 
 pub(all) enum CooldownBucket {
   User

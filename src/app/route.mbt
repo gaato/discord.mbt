@@ -181,6 +181,41 @@ pub fn[A] ComponentRoute::custom_id(
 }
 
 ///|
+/// Decode the state from a custom id this route produced — the inverse of
+/// `custom_id`. Typed handlers receive the state already decoded; use this for
+/// ids that reach you undecoded, such as the `ComponentCtx` returned by
+/// `wait_for_component`, and in tests. An id that belongs to another route, or
+/// whose state does not decode, raises `HandlerError::InvalidArgument`. The
+/// decoded state is untrusted input.
+///
+/// ```mbt check
+/// test {
+///   let route = @app.component_route(
+///     id="ticket-close",
+///     state=@app.CustomIdCodec::int(),
+///   )
+///   assert_eq(route.decode(route.custom_id(42)), 42)
+/// }
+/// ```
+pub fn[A] ComponentRoute::decode(
+  self : ComponentRoute[A],
+  custom_id : String,
+) -> A raise HandlerError {
+  let text = if custom_id == self.id_ {
+    ""
+  } else if custom_id.has_prefix("\{self.id_}:") {
+    custom_id[self.id_.length() + 1:].to_owned()
+  } else {
+    raise InvalidArgument(
+      "custom id \{custom_id} does not belong to route \{self.id_}",
+    )
+  }
+  self.state_.decode(text) catch {
+    source => raise InvalidArgument("\{Repr(source)}")
+  }
+}
+
+///|
 priv enum AppRoutePattern {
   Prefix(String)
   Id(String)

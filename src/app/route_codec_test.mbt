@@ -211,3 +211,24 @@ test "built-in codecs reject state they cannot decode" {
     _ => fail("id accepted a non-snowflake")
   }
 }
+
+///|
+test "a route decodes the ids it produces and rejects foreign ones" {
+  let route = @app.component_route(
+    id="docs",
+    state=@app.CustomIdCodec::int().zip(@app.CustomIdCodec::string()),
+  )
+  let id = route.custom_id((3, "02-two.mbt.md#a::b"))
+  assert_eq(id, "docs:3:02-two.mbt.md#a::b")
+  assert_eq(route.decode(id), (3, "02-two.mbt.md#a::b"))
+  let bare = @app.component_route(id="done", state=@app.CustomIdCodec::unit())
+  assert_eq(bare.decode(bare.custom_id(())), ())
+  for foreign in ["docsy:3:x", "other:3:x", "docs:indicator", "docs"] {
+    try route.decode(foreign) |> ignore catch {
+      @app.HandlerError::InvalidArgument(_) => ()
+      error => fail("unexpected error: \{Repr(error)}")
+    } noraise {
+      _ => fail("decoded a foreign or malformed id: \{foreign}")
+    }
+  }
+}
