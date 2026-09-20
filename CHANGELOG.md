@@ -7,6 +7,15 @@ change is listed with a migration note.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Gateway jitter was identical in every shard and process.** `Shard::start`,
+  `VoiceGateway`, and `VoiceConnection` defaulted `rand` to
+  `@random.Rand::chacha8()`, whose default seed is a fixed constant, so the
+  first-heartbeat jitter, reconnect backoff, and invalid-session wait replayed
+  the same sequence everywhere. The default is now `@random.Rand::new()`,
+  seeded from platform entropy. Pass `rand=` to keep a deterministic sequence.
+
 ## [0.3.0] - 2026-09-20
 
 Boundary hardening before 1.0: escape hatches, routing, and lifecycle side

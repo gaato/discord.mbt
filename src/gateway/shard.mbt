@@ -138,7 +138,7 @@ pub fn[X] Shard::start(
   queue_capacity? : Int = 256,
   telemetry? : (@telemetry.TelemetryEvent) -> Unit = _ => (),
   sleeper? : async (Int) -> Unit = ms => @async.sleep(ms),
-  rand? : @random.Rand = @random.Rand::chacha8(),
+  rand? : @random.Rand = @random.Rand::new(),
 ) -> Shard {
   let shard = Shard::{
     events: Queue(kind=Blocking(queue_capacity)),

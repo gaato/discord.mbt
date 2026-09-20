@@ -567,7 +567,7 @@ pub fn[X] VoiceConnection::start(
   receive? : Bool = true,
   telemetry? : (VoiceTelemetry) -> Unit = _ => (),
   sleeper? : async (Int) -> Unit = ms => @async.sleep(ms),
-  rand? : @random.Rand = @random.Rand::chacha8(),
+  rand? : @random.Rand = @random.Rand::new(),
 ) -> VoiceConnection {
   let receiver = ReceivePipeline::new(telemetry)
   let connection = VoiceConnection::{

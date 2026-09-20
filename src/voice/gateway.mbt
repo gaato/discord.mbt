@@ -159,7 +159,7 @@ pub fn[X] VoiceGateway::start(
   queue_capacity? : Int = 256,
   telemetry? : (VoiceGatewayEvent) -> Unit = _ => (),
   sleeper? : async (Int) -> Unit = ms => @async.sleep(ms),
-  rand? : @random.Rand = @random.Rand::chacha8(),
+  rand? : @random.Rand = @random.Rand::new(),
 ) -> VoiceGateway {
   let gateway = VoiceGateway::{
     events: Queue(kind=Blocking(queue_capacity)),
