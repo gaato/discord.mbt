@@ -11,7 +11,7 @@ cd my-discord-bot
 
 ## Dependencies
 
-After `gaato/discord` is published, replace `gaato/discord@0.3.0` in
+After `gaato/discord` is published, replace `gaato/discord@0.3.1` in
 `moon.mod` with the released version and update it with Moon when needed:
 
 ```fish

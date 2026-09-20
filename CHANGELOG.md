@@ -7,6 +7,8 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-09-21
+
 ### Added
 
 - **`arg_int32`: an integer option that decodes to `Int`.** `arg_int` yields

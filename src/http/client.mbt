@@ -21,7 +21,7 @@ pub struct Client {
 
 ///|
 /// Library version, sent in the User-Agent header.
-pub const VERSION : String = "0.3.0"
+pub const VERSION : String = "0.3.1"
 
 ///|
 /// Create a client. `token` is the raw bot token (without the `Bot ` prefix).
