@@ -27,9 +27,10 @@ artifact, and requires it to load so transport AEAD tests cannot skip.
 `--from-json` only rechecks a stored report against the ledger; it does not
 repeat either native bootstrap or runtime load check.
 
-Snapshot at the last full measurement (2026-08-27, after the official-libdave
-extraction): **90.5 %** across the library (7636/8440 coverage points; http
-95.4 %, model 94.8 %, bot 92.3 %, interaction 91.0 %, voice 79.6 %).
+Snapshot at the last full measurement (2026-09-20, after the pre-1.0 boundary
+hardening and the per-attempt HTTP timeout): **92.5 %** across the library
+(8123/8784 coverage points; http 95.8 %, model 95.1 %, interaction 94.9 %,
+bot 94.2 %, voice 85.7 %, gateway 75.7 %).
 
 ## Policy
 
@@ -72,9 +73,9 @@ Live socket, websocket, and FFI adapters (live-verified; no unit seam):
 | src/voice/udp.mbt | 4 | SocketVoiceUdp impls and `open_voice_udp` over a real UDP socket; parse and retry logic is covered via fakes. |
 | src/voice/shim_ffi.mbt | 3 | Extern-C glue whose arms depend on host library state. |
 | src/voice/crypto.mbt | 5 | Shim error-status translation paths; round-trips and geometry checks are covered with the shim loaded. |
-| src/http/client.mbt | 4 | Connection teardown paths on live pools. |
-| src/http/request.mbt | 27 | Cancellation/timeout plumbing on live connections; the JSON, body-less, 204, non-JSON-error, and all three multipart named-file arms are covered by the loopback server tests. |
-| src/endpoint_http/endpoint_http.mbt | 16 | HTTP server error/cancellation arms (send failures, teardown); the request paths are covered by the signed-request e2e tests. |
+| src/http/client.mbt | 3 | Connection teardown paths on live pools. |
+| src/http/request.mbt | 21 | Cancellation/timeout plumbing on live connections; the JSON, body-less, 204, non-JSON-error, and all three multipart named-file arms are covered by the loopback server tests. |
+| src/endpoint_http/endpoint_http.mbt | 15 | HTTP server error/cancellation arms (send failures, teardown); the request paths are covered by the signed-request e2e tests. |
 | src/coordinator/protocol.mbt | 3 | Cross-process wire error arms. |
 | src/coordinator/remote.mbt | 20 | Reconnecting remote clients against a real coordinator socket; for the cooldown store, the cancellation-during-connect arms and malformed-response arm (its outage, deadline, and gate-wait paths are covered). |
 | src/coordinator/server.mbt | 12 | Per-connection cleanup on real disconnects (the existing socket test is retry-flaky; see project notes). |
@@ -87,10 +88,10 @@ ledgered):
 
 | File | Budget | Reason |
 | --- | --- | --- |
-| src/voice/connection.mbt | 78 | Error/cancellation plumbing of the pump, receiver, and playback tasks plus rejoin credential arms beyond the fake-session and seamed-keepalive tests. |
-| src/voice/gateway.mbt | 13 | Send-gate error arms, teardown catches, and malformed-frame guards; backoff and heartbeat cadence are tested via the injected sleeper. |
+| src/voice/connection.mbt | 17 | Impossible alternate negotiation errors, shim-loader failure while the shim is required, opener/discovery cancellation catches, event-pump and receiver queue teardown, an unemitted `ConnectFailed` case, and unreachable session-state/typed-error fallbacks. Negotiation, discovery, session, DAVE-control, source-replacement, receiver, and lifecycle-recovery failures are tested through the UDP/voice/DAVE seams. |
+| src/voice/gateway.mbt | 13 | Protected-shutdown and event-queue teardown catches, stale-transport and non-returning-loop fallbacks, and read-loop cancellation propagation. Disconnected sends, malformed Hello/frames, the Hello sequence, send failures, and protected connector cleanup are tested; backoff and heartbeat cadence use the injected sleeper. |
 | src/voice/dave.mbt | 52 | DAVE/MLS transitions that need a second member and real libdave group state. |
-| src/voice/audio.mbt | 9 | Real-time pacing loop (deadline sleeps) and DAVE encrypt-drop telemetry arms. |
+| src/voice/audio.mbt | 6 | Real-time pacing loop (deadline sleeps) and DAVE encrypt-drop telemetry arms. |
 | src/voice/subscribe.mbt | 4 | Silence-timeout stream end arms. |
 | src/voice/receive.mbt | 7 | Decrypt arms needing real DAVE frames from a second member. |
 | src/voice/reorder.mbt | 3 | Arrival-time flush arms. |
@@ -102,14 +103,14 @@ run; the gateway/voice loops are additionally tested via injected sleepers):
 
 | File | Budget | Reason |
 | --- | --- | --- |
-| src/gateway/shard.mbt | 24 | Defensive arms around the seamed loops: send-gate release on transport errors, event-queue teardown catches, malformed Hello/frame guards, and cancellation returns. |
+| src/gateway/shard.mbt | 16 | Protected-shutdown and event-queue teardown catches, stale-transport and normal-return fallbacks, read-loop cancellation re-raise plumbing (async 0.22 cancellation does not pass through ordinary catches), and two OS-specific Identify properties unavailable on Linux. Malformed Hello/frame, compression-mismatch, connector/backoff, and disconnected-send arms are tested through the fake transport. |
 | src/gateway/compression.mbt | 3 | zlib failure statuses require a corrupted native stream state. |
 | src/ratelimit/ratelimit.mbt | 2 | Global-window sleep and gate release-on-error paths. |
 | src/http/handles_channel.mbt | 3 | `with_typing` refresh-failure arm sits behind the real 8-second cadence. |
 | src/bot/middleware.mbt | 1 | Middleware chain cancellation arm. |
 | src/bot/shard_manager.mbt | 6 | Multi-shard session-start-limit and staggered-identify paths over live gateways. |
 | src/bot/bot.mbt | 19 | Gateway run-loop teardown/cancellation arms; startup, intents, telemetry, and event routing are covered. |
-| src/bot/voice.mbt | 33 | join_voice credential/timeout error arms beyond the fake-transport happy path. |
+| src/bot/voice.mbt | 19 | Credential timeouts have no injectable timer; the endpoint fallback contradicts the collector predicate; disconnect/cancellation catches; and the new-join/rejoin closures cross `join_voice`'s unseamed live `VoiceConnection::start`. Cache, gate, collector, and failed-watcher-rejoin behaviour is tested. |
 
 Defensive arms unreachable by construction:
 
@@ -117,7 +118,7 @@ Defensive arms unreachable by construction:
 | --- | --- | --- |
 | src/http/multipart.mbt | 3 | `attachments_json` always returns an array and boundary search never gets an empty needle. |
 | src/model/interaction.mbt | 4 | Fallbacks behind emitters that always produce objects. |
-| src/model/component.mbt | 14 | Non-object fallback plus emit arms for component kinds Discord never sends in the covered contexts. |
+| src/model/component.mbt | 8 | Non-object fallback plus emit arms for component kinds Discord never sends in the covered contexts. |
 | src/model/message.mbt | 3 | Timestamp-parse fallback for values the Timestamp decoder already rejects. |
 | src/model/id.mbt | 1 | Phantom-id debug fallback. |
 | src/model/command.mbt | 1 | Unknown handler-type emit arm. |
@@ -164,7 +165,6 @@ show-flows beyond the covered happy and failing paths):
 | src/framework/framework.mbt | 9 | Dispatch fallbacks for unroutable interactions. |
 | src/framework/gate.mbt | 1 | Double-response guard arms. |
 | src/interaction/args.mbt | 8 | Suggest-handler closures that only run inside a live autocomplete dispatch. |
-| src/interaction/builders.mbt | 12 | Builder arms for option kinds not used by any covered command shape. |
 | src/interaction/options.mbt | 8 | Focused-option accessors for kinds not used by any covered command shape. |
 | src/cache/cache.mbt | 17 | Permission-overwrite computation arms needing full guild channel fixtures. |
 | src/http/api_application.mbt | 3 | Emit arms of optional request fields not exercised by the pinned shapes. |
@@ -177,7 +177,6 @@ show-flows beyond the covered happy and failing paths):
 | src/http/api_sticker.mbt | 3 | Global catalog delegations (get_sticker, sticker packs) without a guild anchor; ENV-LIMITED live. |
 | src/http/api_voice.mbt | 4 | Remaining optional-parameter emit arms. |
 | src/http/api_webhook.mbt | 2 | Remaining optional-parameter emit arms. |
-| src/http/handles_application.mbt | 1 | One delegation arm. |
 | src/http/handles_guild.mbt | 1 | One delegation arm. |
 | src/http/handles_member_user.mbt | 6 | Bearer-token delegations (401-checked live only). |
 | src/http/handles_message.mbt | 4 | Delegations whose params only differ on live-only flags. |
