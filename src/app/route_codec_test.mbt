@@ -194,3 +194,20 @@ test "quickcheck custom id zip int string encode then decode is identity" {
     seed=0xD15C2303UL,
   )
 }
+
+///|
+test "built-in codecs reject state they cannot decode" {
+  try @app.CustomIdCodec::unit().decode("extra") catch {
+    @app.HandlerError::InvalidArgument(_) => ()
+    error => fail("unexpected error: \{Repr(error)}")
+  } noraise {
+    _ => fail("unit accepted state")
+  }
+  let id : @app.CustomIdCodec[@model.UserId] = @app.CustomIdCodec::id()
+  try id.decode("not-a-snowflake") |> ignore catch {
+    @app.HandlerError::InvalidArgument(_) => ()
+    error => fail("unexpected error: \{Repr(error)}")
+  } noraise {
+    _ => fail("id accepted a non-snowflake")
+  }
+}

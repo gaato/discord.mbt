@@ -262,3 +262,15 @@ test "empty scope needs no overwrite" {
   assert_eq(report.unchanged, [])
   assert_eq(report.preserved, [])
 }
+
+///|
+test "a remote command without a name is treated as undeclared" {
+  let nameless : Json = { "id": "900000000000000001", "type": 1 }
+  let (payload, report) = @framework.plan_command_sync(
+    [],
+    [nameless],
+    unowned=Delete,
+  )
+  assert_true(payload is Some(Array([])))
+  assert_eq(report.deleted, [""])
+}

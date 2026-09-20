@@ -76,7 +76,7 @@ Live socket, websocket, and FFI adapters (live-verified; no unit seam):
 | src/http/request.mbt | 27 | Cancellation/timeout plumbing on live connections; the JSON, body-less, 204, non-JSON-error, and all three multipart named-file arms are covered by the loopback server tests. |
 | src/endpoint_http/endpoint_http.mbt | 16 | HTTP server error/cancellation arms (send failures, teardown); the request paths are covered by the signed-request e2e tests. |
 | src/coordinator/protocol.mbt | 3 | Cross-process wire error arms. |
-| src/coordinator/remote.mbt | 14 | Reconnecting remote client against a real coordinator socket. |
+| src/coordinator/remote.mbt | 20 | Reconnecting remote clients against a real coordinator socket; for the cooldown store, the cancellation-during-connect arms and malformed-response arm (its outage, deadline, and gate-wait paths are covered). |
 | src/coordinator/server.mbt | 12 | Per-connection cleanup on real disconnects (the existing socket test is retry-flaky; see project notes). |
 
 Voice session state machine (transport and session flow verified live
@@ -150,19 +150,19 @@ show-flows beyond the covered happy and failing paths):
 
 | File | Budget | Reason |
 | --- | --- | --- |
-| src/app/app.mbt | 20 | Cancellation re-raise arms and per-kind failure plumbing beyond the covered component/modal policy flows. |
+| src/app/app.mbt | 13 | Cancellation re-raise arms and per-kind failure plumbing beyond the covered component/modal policy flows. |
 | src/app/check.mbt | 2 | Permission-check arms needing resolved member permissions in a guild payload. |
-| src/app/command.mbt | 11 | Group/subcommand registration arms beyond the covered paths. |
-| src/app/component.mbt | 21 | Deferred-ctx accessor duplicates and waiter arms behind a live gateway. |
-| src/app/ctx.mbt | 5 | Waiter plumbing behind a live gateway. |
-| src/app/endpoint.mbt | 8 | `serve` startup with an owned token/client (creates a real Client and fetches the application id). |
+| src/app/command.mbt | 9 | Group/subcommand registration arms beyond the covered paths. |
+| src/app/component.mbt | 13 | Deferred-ctx accessor duplicates and waiter arms behind a live gateway. |
+| src/app/ctx.mbt | 4 | Waiter plumbing behind a live gateway. |
+| src/app/endpoint.mbt | 7 | `serve` startup with an owned token/client (creates a real Client and fetches the application id). |
 | src/app/middleware.mbt | 4 | Component-scope middleware arms not reachable in the covered flows. |
-| src/app/modal.mbt | 27 | Show/prefill dispatch arms beyond the covered decode, validation, and error flows. |
-| src/app/policy.mbt | 13 | Followup-with-files arms and member-user extraction beyond the covered flows. |
-| src/app/sync.mbt | 3 | Option-comparison early exits not hit by the covered spec shapes. |
-| src/framework/ctx.mbt | 17 | Autocomplete/modal response variants beyond the covered response-management flows. |
-| src/framework/framework.mbt | 12 | Dispatch fallbacks for unroutable interactions. |
-| src/framework/gate.mbt | 2 | Double-response guard arms. |
+| src/app/modal.mbt | 20 | Show/prefill dispatch arms beyond the covered decode, validation, and error flows. |
+| src/app/policy.mbt | 11 | Followup-with-files arms and member-user extraction beyond the covered flows. |
+| src/framework/ctx.mbt | 14 | Autocomplete/modal response variants beyond the covered response-management flows. |
+| src/framework/sync.mbt | 2 | Option-comparison early exits not hit by the covered spec shapes (moved from `src/app/sync.mbt`). |
+| src/framework/framework.mbt | 9 | Dispatch fallbacks for unroutable interactions. |
+| src/framework/gate.mbt | 1 | Double-response guard arms. |
 | src/interaction/args.mbt | 8 | Suggest-handler closures that only run inside a live autocomplete dispatch. |
 | src/interaction/builders.mbt | 12 | Builder arms for option kinds not used by any covered command shape. |
 | src/interaction/options.mbt | 8 | Focused-option accessors for kinds not used by any covered command shape. |

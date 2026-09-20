@@ -504,3 +504,16 @@ test "cooldown wire values preserve Int64 precision" {
     assert_eq(json_nonnegative_int64(invalid), None)
   }
 }
+
+///|
+async test "remote cooldown store rejects a non-positive timeout" {
+  try
+    RemoteCooldownStore::connect("127.0.0.1:1", timeout_ms=0) |> ignore
+  catch {
+    CoordinatorError::InvalidConfig(message~) =>
+      assert_eq(message, "timeout_ms must be positive")
+    error => fail("unexpected error: \{Repr(error)}")
+  } noraise {
+    _ => fail("expected an invalid configuration error")
+  }
+}
