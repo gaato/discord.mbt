@@ -91,6 +91,15 @@ effects now have explicit, checked contracts.
 - The `voice` and `coordinator` packages are marked experimental: their APIs
   may change in minor releases until declared stable.
 
+### Fixed
+
+- Command synchronization no longer re-sends every global command on each run
+  for apps that support user installs. An omitted `integration_types` is filled
+  in by Discord from the app's installation contexts (`[0, 1]` rather than
+  `[0]`), which the diff used to read as a change. An undeclared
+  `integration_types` now matches whatever Discord echoes; a declared one is
+  still compared.
+
 ### Removed
 
 - `CommandSync` (renamed `CommandScope`), `CommandSync::Disabled`, the `sync`

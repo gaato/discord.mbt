@@ -224,7 +224,8 @@ test "sync_unchanged normalizes command defaults and uses type plus name" {
   let wrong_nsfw = fetched_command(
     response.stringify().replace(old="\"nsfw\":false", new="\"nsfw\":true"),
   )
-  let wrong_integration = fetched_command(
+  // Undeclared `integration_types` is server-derived, so any echo matches.
+  let derived_integration = fetched_command(
     response
     .stringify()
     .replace(old="\"integration_types\":[0]", new="\"integration_types\":[1]"),
@@ -254,13 +255,13 @@ test "sync_unchanged normalizes command defaults and uses type plus name" {
     [
       sync_unchanged([slash], [response]),
       sync_unchanged([slash], [wrong_nsfw]),
-      sync_unchanged([slash], [wrong_integration]),
+      sync_unchanged([slash], [derived_integration]),
       sync_unchanged([slash], [wrong_contexts]),
       sync_unchanged([slash], [wrong_dm_permission]),
       sync_unchanged([slash], [wrong_permissions]),
       sync_unchanged([slash], [wrong_type]),
     ],
-    content="[true, false, false, false, false, false, false]",
+    content="[true, false, true, false, false, false, false]",
   )
   let explicit_defaults = @interaction.CommandSpec::slash(
     "inspect",
@@ -300,4 +301,31 @@ test "sync_unchanged normalizes command defaults and uses type plus name" {
     ),
   )
   assert_true(sync_unchanged([slash, user], [response, user_response]))
+}
+
+///|
+test "undeclared integration_types accepts the app's installation contexts" {
+  // Live echo of a global command on an app with guild and user installs
+  // enabled (2026-09-20): Discord filled in `[0, 1]` for the omitted field.
+  let spec = @interaction.CommandSpec::slash(
+    "echo", "Echo text from a Cloudflare Worker",
+  )
+  let echoed = fetched_command(
+    (
+      #|{"id": "1551096903213645856", "application_id": "1527253733371809823", "version": "1551096903213645861", "default_member_permissions": null, "type": 1, "name": "echo", "name_localizations": null, "description": "Echo text from a Cloudflare Worker", "description_localizations": null, "dm_permission": true, "contexts": null, "integration_types": [0, 1], "nsfw": false}
+    ),
+  )
+  assert_true(sync_unchanged([spec], [echoed]))
+  let declared = @interaction.CommandSpec::slash(
+    "echo",
+    "Echo text from a Cloudflare Worker",
+    integration_types=[GuildInstall],
+  )
+  assert_false(sync_unchanged([declared], [echoed]))
+  let both = @interaction.CommandSpec::slash(
+    "echo",
+    "Echo text from a Cloudflare Worker",
+    integration_types=[UserInstall, GuildInstall],
+  )
+  assert_true(sync_unchanged([both], [echoed]))
 }

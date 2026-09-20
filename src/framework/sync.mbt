@@ -18,6 +18,16 @@ fn object_defaults(command_root : Bool) -> Array[(String, Json)] {
 }
 
 ///|
+/// Keys whose omitted value Discord derives from state the client cannot see.
+/// An omitted `integration_types` becomes the app's supported installation
+/// contexts at creation time (`[0]`, or `[0, 1]` once user installs are
+/// enabled — observed live), so an undeclared one matches whatever Discord
+/// echoes. A declared one is still compared, with an absent echo read as `[0]`.
+fn server_derived_default(key : String) -> Bool {
+  key == "integration_types"
+}
+
+///|
 fn object_default(key : String, command_root : Bool) -> Json? {
   for entry in object_defaults(command_root) {
     let (candidate, value) = entry
@@ -101,6 +111,7 @@ fn declared_json_matches_at(
       for entry in object_defaults(command_root) {
         let (key, fallback) = entry
         if !expected.contains(key) &&
+          !server_derived_default(key) &&
           actual.get(key) is Some(value) &&
           !declared_value_matches(key, fallback, value) {
           return false
