@@ -126,6 +126,74 @@ pub fn arg_int(
 }
 
 ///|
+/// Narrow a received integer to `Int`, rejecting values outside `[min, max]`.
+fn int32_in_range(
+  value : Int64,
+  name : String,
+  min : Int,
+  max : Int,
+) -> Int raise ArgsDecodeError {
+  if value < min.to_int64() || value > max.to_int64() {
+    raise ArgsDecodeError::Validation(
+      name~,
+      message="must be between \{min} and \{max}",
+    )
+  }
+  value.to_int()
+}
+
+///|
+/// Define a required integer option that decodes to `Int`.
+///
+/// Discord integers span the 53-bit safe range, so `arg_int` yields `Int64`.
+/// This variant keeps the narrowing safe instead of leaving a wrapping
+/// `to_int()` to the caller: a missing `min` or `max` is registered as the
+/// `Int` bound, so Discord rejects wider input before it is sent, and a
+/// received value outside the range fails decoding with
+/// `ArgsDecodeError::Validation`. With `choices`, only explicit bounds are
+/// registered, because the choices already close the value set.
+pub fn arg_int32(
+  name~ : String,
+  description~ : String,
+  min? : Int,
+  max? : Int,
+  choices? : Array[@model.CommandOptionChoice],
+  suggest? : async (SuggestCtx, Int) -> Array[@model.CommandOptionChoice],
+  name_localizations? : Map[String, String],
+  description_localizations? : Map[String, String],
+) -> Arg[Int] {
+  let low = min.unwrap_or(-2147483648)
+  let high = max.unwrap_or(2147483647)
+  let (min_value, max_value) = if choices is Some(_) {
+    (min.map(Int::to_int64), max.map(Int::to_int64))
+  } else {
+    (Some(low.to_int64()), Some(high.to_int64()))
+  }
+  let suggest_handler = typed_suggest(
+    name,
+    input => {
+      int32_in_range(json_int64(input.value_, name, "integer"), name, low, high)
+    },
+    suggest,
+  )
+  required_arg(
+    integer_option(
+      name,
+      description,
+      required=true,
+      choices?,
+      min_value?,
+      max_value?,
+      autocomplete?=suggest_handler.map(_ => true),
+      name_localizations?,
+      description_localizations?,
+    ),
+    options => int32_in_range(options.int(name), name, low, high),
+    suggest?=suggest_handler,
+  )
+}
+
+///|
 /// Define a required floating-point number option.
 pub fn arg_number(
   name~ : String,

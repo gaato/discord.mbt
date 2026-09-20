@@ -58,13 +58,13 @@ struct QuickstartEchoArgs {
 async fn run_echo_bot(token : String) -> Unit {
   let args : @discord.Args[QuickstartEchoArgs] = @discord.Args::map2(
     @discord.arg_string(name="text", description="What to echo"),
-    @discord.arg_int(
+    @discord.arg_int32(
       name="times",
       description="How many times (1-5)",
       min=1,
       max=5,
-    ).with_default(1L),
-    (text, times) => { text, times: times.to_int(), },
+    ).with_default(1),
+    (text, times) => { text, times, },
   )
   let echo = @discord.slash(
     name="echo",

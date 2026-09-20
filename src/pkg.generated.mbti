@@ -29,6 +29,8 @@ pub fn arg_channel(name~ : String, description~ : String, channel_types? : Array
 
 pub fn arg_int(name~ : String, description~ : String, min? : Int64, max? : Int64, choices? : Array[@model.CommandOptionChoice], suggest? : async (@interaction.SuggestCtx, Int64) -> Array[@model.CommandOptionChoice], name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @interaction.Arg[Int64]
 
+pub fn arg_int32(name~ : String, description~ : String, min? : Int, max? : Int, choices? : Array[@model.CommandOptionChoice], suggest? : async (@interaction.SuggestCtx, Int) -> Array[@model.CommandOptionChoice], name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @interaction.Arg[Int]
+
 pub fn arg_mentionable(name~ : String, description~ : String, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @interaction.Arg[@model.Id[@model.GenericMarker]]
 
 pub fn arg_number(name~ : String, description~ : String, min? : Double, max? : Double, choices? : Array[@model.CommandOptionChoice], suggest? : async (@interaction.SuggestCtx, Double) -> Array[@model.CommandOptionChoice], name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @interaction.Arg[Double]

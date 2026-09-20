@@ -98,6 +98,7 @@ pub using @verify {
 pub using @interaction {
   arg_string,
   arg_int,
+  arg_int32,
   arg_number,
   arg_bool,
   arg_user,

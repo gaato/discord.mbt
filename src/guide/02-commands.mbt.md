@@ -23,17 +23,21 @@ let paint_args : @discord.Args[PaintArgs] = @discord.Args::map2(
     @discord.string_choice("Red", "red"),
     @discord.string_choice("Blue", "blue"),
   ]),
-  @discord.arg_int(name="coats", description="Number of coats", min=1, max=5).with_default(
-    1L,
+  @discord.arg_int32(name="coats", description="Number of coats", min=1, max=5).with_default(
+    1,
   ),
-  (color, coats) => { color, coats: coats.to_int(), },
+  (color, coats) => { color, coats, },
 )
 ```
 
 Use `.optional()` for `T?`, `.with_default(value)` for a defaulted value,
 `.validate(check)` for application validation, and `.map(f)` for local type
-conversion. For more than eight arguments, compose `Args` values with `zip`
-and `map`.
+conversion. `arg_int` yields `Int64` because Discord integers exceed 32 bits;
+`arg_int32` yields `Int`, registers the `Int` range when `min` or `max` is
+omitted, and rejects a received value outside it instead of wrapping. The
+combining function may return any type; a tuple works when a
+struct is not worth declaring. For more than eight arguments, compose `Args`
+values with `zip` and `map`.
 
 ## Localization
 

@@ -308,3 +308,101 @@ test "zip and map compose nine arguments" {
   inspect(all_nine.definitions().length(), content="9")
   inspect(all_nine.decode(typed_options(fixture)), content="45")
 }
+
+///|
+fn int32_fixture(value : String) -> @interaction.CommandOptions raise {
+  typed_options(
+    "{\"id\":\"107000000000000104\",\"name\":\"repeat\",\"type\":1,\"options\":[{\"name\":\"times\",\"type\":4,\"value\":\{value}}]}",
+  )
+}
+
+///|
+test "arg_int32 registers the Int range it can decode" {
+  json_inspect(
+    @interaction.Args::of(
+      @interaction.arg_int32(name="times", description="Times"),
+    ).definitions(),
+    content=[
+      {
+        "type": 4,
+        "name": "times",
+        "description": "Times",
+        "required": true,
+        "min_value": -2147483648,
+        "max_value": 2147483647,
+      },
+    ],
+  )
+  json_inspect(
+    @interaction.Args::of(
+      @interaction.arg_int32(name="times", description="Times", min=1, max=5).with_default(
+        1,
+      ),
+    ).definitions(),
+    content=[
+      {
+        "type": 4,
+        "name": "times",
+        "description": "Times",
+        "required": false,
+        "min_value": 1,
+        "max_value": 5,
+      },
+    ],
+  )
+  // Choices already close the value set, so no implicit bounds are added.
+  json_inspect(
+    @interaction.Args::of(
+      @interaction.arg_int32(name="times", description="Times", choices=[
+        @interaction.int_choice("Once", 1L),
+      ]),
+    ).definitions(),
+    content=[
+      {
+        "type": 4,
+        "name": "times",
+        "description": "Times",
+        "required": true,
+        "choices": [{ "name": "Once", "value": 1 }],
+      },
+    ],
+  )
+}
+
+///|
+test "arg_int32 decodes in-range values and rejects the rest" {
+  let bounded = @interaction.Args::of(
+    @interaction.arg_int32(name="times", description="Times", min=1, max=5),
+  )
+  inspect(bounded.decode(int32_fixture("5")), content="5")
+  try bounded.decode(int32_fixture("6")) catch {
+    err =>
+      debug_inspect(
+        err,
+        content=(
+          #|Validation(name="times", message="must be between 1 and 5")
+        ),
+      )
+  } noraise {
+    _ => fail("expected the explicit bound to reject 6")
+  }
+  let open = @interaction.Args::of(
+    @interaction.arg_int32(name="times", description="Times"),
+  )
+  inspect(open.decode(int32_fixture("-2147483648")), content="-2147483648")
+  // 2^31 would wrap to a negative Int under a bare `to_int()`.
+  try open.decode(int32_fixture("2147483648")) catch {
+    err =>
+      debug_inspect(
+        err,
+        content=(
+          #|Validation(
+          #|  name="times",
+          #|  message="must be between -2147483648 and 2147483647",
+          #|)
+        ),
+      )
+  } noraise {
+    _ => fail("expected the Int bound to reject 2^31")
+  }
+}

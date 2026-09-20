@@ -7,6 +7,15 @@ change is listed with a migration note.
 
 ## [Unreleased]
 
+### Added
+
+- **`arg_int32`: an integer option that decodes to `Int`.** `arg_int` yields
+  `Int64`, and narrowing it with `to_int()` wraps silently when a command
+  registers no bounds. `arg_int32` registers the `Int` range for a missing
+  `min` or `max` and fails decoding with `ArgsDecodeError::Validation` for a
+  received value outside the range, so counts and page numbers need no
+  caller-side conversion.
+
 ### Fixed
 
 - **Gateway jitter was identical in every shard and process.** `Shard::start`,

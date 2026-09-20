@@ -1049,3 +1049,69 @@ async test "slash groups emit nested specs and dispatch direct and grouped paths
     }
   })
 }
+
+///|
+async test "arg_int32 suggestions receive an Int and reject out-of-range input" {
+  let app = @app.App()
+  let failures : Array[Bool] = []
+  app.error_policy((_ctx, error) => {
+    failures.push(
+      error is @interaction.ArgsDecodeError::Validation(name="number", ..),
+    )
+  })
+  app.command(
+    @app.slash(
+      name="page",
+      description="Jump to a page",
+      args=@interaction.Args::of(
+        @interaction.arg_int32(
+          name="number",
+          description="Page number",
+          min=1,
+          max=99,
+          suggest=(_, value) => {
+            [
+              @interaction.int_choice(
+                "page \{value + 1}",
+                (value + 1).to_int64(),
+              ),
+            ]
+          },
+        ),
+      ),
+      handler=Raw(_ => ()),
+    ),
+  )
+  let focused = (value : String) => {
+    app_interaction(
+      "{\"id\":\"500000000000000311\",\"application_id\":\"400000000000000001\",\"type\":4,\"token\":\"interaction-token\",\"version\":1,\"data\":{\"id\":\"600000000000000311\",\"name\":\"page\",\"type\":1,\"options\":[{\"name\":\"number\",\"type\":4,\"value\":\{value},\"focused\":true}]}}",
+    )
+  }
+  let client = @dhttp.Client(
+    "test-token",
+    base_url="http://127.0.0.1:1",
+    max_connections=1,
+  )
+  defer client.close()
+  @async.with_task_group(group => {
+    let app = app.serve(
+      group,
+      client~,
+      application_id=@model.Id::parse("400000000000000001"),
+    )
+    match app.handle_interaction(focused("12")) {
+      Reply(response~, files=_) => {
+        let choices = autocomplete_choices(response)
+        inspect(choices[0].name, content="page 13")
+      }
+      outcome => fail("expected autocomplete choices, got \{Repr(outcome)}")
+    }
+    inspect(failures.length(), content="0")
+    match app.handle_interaction(focused("100")) {
+      Reply(response~, files=_) =>
+        inspect(autocomplete_choices(response).length(), content="0")
+      outcome => fail("expected empty autocomplete, got \{Repr(outcome)}")
+    }
+    debug_inspect(failures, content="[true]")
+  })
+}
