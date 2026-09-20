@@ -2,6 +2,8 @@
 /// One-shot command registration for the worker: builds the same `App` as
 /// entry.js and diff-syncs its commands, so run it after `wrangler deploy`
 /// (or from CI). Without `GUILD_ID` the commands are registered globally.
+/// Set `SYNC_UNOWNED=keep` when another process also registers commands in
+/// that scope; by default undeclared commands are deleted.
 fn command_scope() -> @discord.CommandScope {
   match @env.get_env_var("GUILD_ID") {
     Some(raw) => {
@@ -21,6 +23,14 @@ fn command_scope() -> @discord.CommandScope {
 }
 
 ///|
+fn unowned_commands() -> @framework.UnownedCommands {
+  match @env.get_env_var("SYNC_UNOWNED") {
+    Some("keep") => Keep
+    _ => Delete
+  }
+}
+
+///|
 async fn main {
   let token = @env.get_env_var("DISCORD_TOKEN").unwrap_or("")
   if token.is_empty() {
@@ -33,7 +43,12 @@ async fn main {
     let client = @discord.Client(token)
     group.add_defer(() => client.close())
     let application_id = client.get_current_application().id
-    let report = app.sync_commands(client, application_id, scope~)
+    let report = app.sync_commands(
+      client,
+      application_id,
+      scope~,
+      unowned=unowned_commands(),
+    )
     println("[register] \{Repr(report)}")
   })
 }

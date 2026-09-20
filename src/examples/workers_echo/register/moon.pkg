@@ -1,6 +1,7 @@
 import {
   "gaato/discord",
   "gaato/discord/model",
+  "gaato/discord/framework",
   "gaato/discord/examples/workers_echo",
   "moonbitlang/async",
   "moonbitlang/core/env",

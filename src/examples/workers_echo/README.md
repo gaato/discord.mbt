@@ -57,6 +57,7 @@ registered commands already match. Run it after `wrangler deploy` (or from CI):
 ```fish
 env DISCORD_TOKEN=... moon run --target native src/examples/workers_echo/register
 env GUILD_ID=... DISCORD_TOKEN=... moon run --target native src/examples/workers_echo/register # one guild only
+env SYNC_UNOWNED=keep DISCORD_TOKEN=... moon run --target native src/examples/workers_echo/register # keep commands other processes registered
 ```
 
 Deployment and configuring the Discord developer portal are manual steps. The
