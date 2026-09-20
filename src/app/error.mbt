@@ -32,9 +32,3 @@ pub(all) suberror HandlerError {
   OnCooldown(retry_after_ms~ : Int64)
   InvalidArgument(String)
 } derive(Debug)
-
-///|
-/// A command dispatch failure with its response phase and original cause.
-pub(all) suberror AppDispatchError {
-  Failure(command~ : String, phase~ : ResponsePhase, source~ : Error)
-} derive(Debug)

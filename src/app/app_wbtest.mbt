@@ -746,24 +746,42 @@ test "app validates command type names and slash child structure" {
 }
 
 ///|
-async test "dispatch failure wrapping preserves cancellation" {
+async test "registered command cancellation bypasses the error policy" {
+  let client = @dhttp.Client("test-token")
+  defer client.close()
+  let app = App()
+  let policy_calls = Ref(0)
+  app.error_policy((_, _) => policy_calls.val += 1)
+  let started : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  app.command(
+    slash(
+      name="cancelled",
+      description="Wait for cancellation",
+      args=@interaction.Args::unit(),
+      handler=Raw(_ => {
+        started.put(())
+        @async.sleep(60_000)
+      }),
+    ),
+  )
+  let framework = policy_test_framework(app, client)
+  let interaction = policy_test_interaction("cancelled", "500000000000000703")
+  let (gate, _) = @framework.ResponseGate::capture(interaction)
   @async.with_task_group(group => {
-    let started : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
     let task = group.spawn(no_wait=true, allow_failure=true, () => {
-      started.put(())
-      @async.sleep(60_000)
+      framework.process_with(interaction, gate~) |> ignore
     })
     started.get()
     task.cancel()
     try task.wait() catch {
       @async.TaskCancelled => ()
-      AppDispatchError::Failure(..) =>
-        fail("cancellation was wrapped as an app dispatch failure")
       error => fail("unexpected cancellation error: \{Repr(error)}")
     } noraise {
       _ => fail("cancelled dispatch unexpectedly completed")
     }
   })
+  assert_eq(policy_calls.val, 0)
+  assert_true(gate.state() is Pending)
 }
 
 ///|

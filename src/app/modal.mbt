@@ -641,6 +641,7 @@ pub fn ModalImmediateCtx::state(self : ModalImmediateCtx) -> String? {
 ///|
 /// Escape hatch for advanced inspection. Calling response methods on the
 /// raw value opts out of this wrapper's response discipline.
+/// Failure handling still follows the gate's real response state.
 pub fn ModalImmediateCtx::raw(self : ModalImmediateCtx) -> @framework.ModalCtx {
   self.raw_
 }
@@ -708,6 +709,7 @@ pub fn ModalDeferredCtx::state(self : ModalDeferredCtx) -> String? {
 ///|
 /// Escape hatch for advanced inspection. Calling response methods on the
 /// raw value opts out of this wrapper's response discipline.
+/// Failure handling still follows the gate's real response state.
 pub fn ModalDeferredCtx::raw(self : ModalDeferredCtx) -> @framework.ModalCtx {
   self.raw_
 }
@@ -777,35 +779,18 @@ async fn[A] dispatch_modal_handler(
   raw : @framework.ModalCtx,
 ) -> Unit {
   let route = raw.data.custom_id
-  let state = modal_state(modal.custom_id_, route) catch {
-    source => raise_failure(route, BeforeInitial, source)
-  }
+  let state = modal_state(modal.custom_id_, route)
   match handler {
-    Raw(run) =>
-      run(raw) catch {
-        source => raise_failure(route, BeforeInitial, source)
-      }
+    Raw(run) => run(raw)
     Immediate(run) => {
-      let value = modal.decode(raw.data.components, resolved?=raw.data.resolved) catch {
-        source => raise_failure(route, BeforeInitial, source)
-      }
-      let response = run({ raw_: raw, bot_: bot, state_: state, }, value) catch {
-        source => raise_failure(route, BeforeInitial, source)
-      }
-      response.send_modal(raw) catch {
-        source => raise_failure(route, BeforeInitial, source)
-      }
+      let value = modal.decode(raw.data.components, resolved?=raw.data.resolved)
+      let response = run({ raw_: raw, bot_: bot, state_: state, }, value)
+      response.send_modal(raw)
     }
     Deferred(ephemeral~, run) => {
-      let value = modal.decode(raw.data.components, resolved?=raw.data.resolved) catch {
-        source => raise_failure(route, BeforeInitial, source)
-      }
-      raw.defer_response(ephemeral~) catch {
-        source => raise_failure(route, BeforeInitial, source)
-      }
-      run({ raw_: raw, bot_: bot, state_: state, }, value) catch {
-        source => raise_failure(route, AfterDeferred, source)
-      }
+      let value = modal.decode(raw.data.components, resolved?=raw.data.resolved)
+      raw.defer_response(ephemeral~)
+      run({ raw_: raw, bot_: bot, state_: state, }, value)
     }
   }
 }

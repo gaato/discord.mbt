@@ -23,6 +23,7 @@ pub(all) suberror InteractionContextError {
 
 pub(all) suberror ResponseGateError {
   AlreadyResponded
+  Expired
   InvalidCallback(kind~ : @model.InteractionType, typ~ : @model.InteractionResponseType)
 } derive(@debug.Debug)
 
@@ -61,6 +62,7 @@ pub fn CommandCtx::guild_scope(Self) -> GuildInvocation?
 pub fn[T : @interaction.CommandModel] CommandCtx::model(Self) -> T raise
 pub async fn CommandCtx::original_response(Self) -> @model.Message
 pub async fn CommandCtx::respond(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, ephemeral? : Bool) -> Unit
+pub fn CommandCtx::response_state(Self) -> ResponseState
 pub fn CommandCtx::scope(Self) -> InvocationScope
 pub async fn CommandCtx::show_modal(Self, custom_id~ : String, title~ : String, components~ : Array[@model.Component]) -> Unit
 pub fn CommandCtx::target_message(Self) -> @model.Message?
@@ -86,6 +88,7 @@ pub fn ComponentCtx::guild_scope(Self) -> GuildInvocation?
 pub fn ComponentCtx::message(Self) -> @model.Message
 pub async fn ComponentCtx::original_response(Self) -> @model.Message
 pub async fn ComponentCtx::respond(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, ephemeral? : Bool) -> Unit
+pub fn ComponentCtx::response_state(Self) -> ResponseState
 pub fn ComponentCtx::scope(Self) -> InvocationScope
 pub async fn ComponentCtx::show_modal(Self, custom_id~ : String, title~ : String, components~ : Array[@model.Component]) -> Unit
 pub async fn ComponentCtx::update_message(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], allowed_mentions? : @model.AllowedMentions) -> Unit
@@ -136,6 +139,7 @@ pub fn ModalCtx::guild_scope(Self) -> GuildInvocation?
 pub fn ModalCtx::origin(Self) -> ModalOrigin
 pub async fn ModalCtx::original_response(Self) -> @model.Message
 pub async fn ModalCtx::respond(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, ephemeral? : Bool) -> Unit
+pub fn ModalCtx::response_state(Self) -> ResponseState
 pub fn ModalCtx::scope(Self) -> InvocationScope
 pub fn ModalCtx::text_value(Self, String) -> String?
 pub fn ModalCtx::user(Self) -> @model.User
@@ -154,11 +158,20 @@ pub fn ResponseCapture::try_get(Self) -> CapturedResponse? raise
 pub struct ResponseGate {
   // private fields
 }
-pub fn ResponseGate::ResponseGate(@model.InteractionType, async (@model.InteractionResponse, Array[@http.FileUpload]?) -> Unit) -> Self
+pub fn ResponseGate::ResponseGate(@model.InteractionType, async (@model.InteractionResponse, Array[@http.FileUpload]?) -> Unit, rejected? : (Error) -> Bool) -> Self
 pub fn ResponseGate::capture(@model.Interaction) -> (Self, ResponseCapture)
+pub fn ResponseGate::expire(Self) -> Unit
 pub fn ResponseGate::responded(Self) -> Bool
 pub fn ResponseGate::rest(@http.Client, @model.Interaction) -> Self
 pub async fn ResponseGate::send(Self, @model.InteractionResponse, files? : Array[@http.FileUpload]) -> Unit
+pub fn ResponseGate::state(Self) -> ResponseState
+
+pub(all) enum ResponseState {
+  Pending
+  Sent(@model.InteractionResponseType)
+  Unconfirmed(@model.InteractionResponseType)
+  Expired
+} derive(Eq, @debug.Debug)
 
 pub(all) struct ScopeSyncReport {
   guild_id : @model.Id[@model.GuildMarker]?

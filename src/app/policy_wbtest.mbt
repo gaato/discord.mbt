@@ -71,7 +71,7 @@ async test "error policy exposes the user and sends a rich initial response" {
   app.error_policy((ctx, _) => {
     guard ctx.user() is Some(user) else { fail("expected invoking user") }
     assert_eq(user.id.to_string(), "200000000000000001")
-    assert_true(ctx.phase() is Some(BeforeInitial))
+    assert_true(ctx.response_state() is Some(Pending))
     assert_true(ctx.raw() is Some(RawCommand(_)))
     guard ctx.interaction() is Some(interaction) else {
       fail("expected interaction payload")
@@ -156,7 +156,9 @@ async test "error policy uses a followup after a deferred failure" {
     ),
   )
   app.error_policy((ctx, _) => {
-    assert_true(ctx.phase() is Some(AfterDeferred))
+    assert_true(
+      ctx.response_state() is Some(Sent(DeferredChannelMessageWithSource)),
+    )
     ctx.respond_error(content="followup failure")
   })
   let framework = policy_test_framework(app, client)
@@ -181,10 +183,11 @@ async test "error policy uses a followup after a deferred failure" {
 ///|
 async test "non-interaction error responses warn with a payload summary" {
   let warnings : Array[String] = []
-  let ctx = failure_context(Service(name="worker"), None, None, message => {
+  let ctx = failure_context(Service(name="worker"), None, message => {
     warnings.push(message)
   })
   assert_true(ctx.raw() is None)
+  assert_true(ctx.response_state() is None)
   assert_true(ctx.interaction() is None)
   assert_true(ctx.user() is None)
   ctx.respond_error(content="plain failure")

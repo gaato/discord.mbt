@@ -197,6 +197,8 @@ test "guild command declaration compiles" {
   `ctx.edit_original`, `ctx.followup`, or `ctx.wait_for_component` afterward.
 - `Raw(ctx => Unit)` exposes the lower-level `framework.CommandCtx`; see
   [The framework layer](11-framework.mbt.md) for its full response surface.
+  Error policies follow the gate's real state, so a Raw handler that responds
+  and then raises receives an error followup through `respond_error`.
 
 `edit_original` and `followup` return the resulting message; append
 `|> ignore` when the handler does not need it.

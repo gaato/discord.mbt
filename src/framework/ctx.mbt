@@ -250,6 +250,12 @@ pub fn CommandCtx::scope(self : CommandCtx) -> InvocationScope {
 }
 
 ///|
+/// The current state of this interaction's initial callback.
+pub fn CommandCtx::response_state(self : CommandCtx) -> ResponseState {
+  self.gate.state()
+}
+
+///|
 /// The validated guild invocation, or `None` when invoked in a DM.
 pub fn CommandCtx::guild_scope(self : CommandCtx) -> GuildInvocation? {
   match self.scope_ {
@@ -506,6 +512,12 @@ pub fn ComponentCtx::scope(self : ComponentCtx) -> InvocationScope {
 }
 
 ///|
+/// The current state of this interaction's initial callback.
+pub fn ComponentCtx::response_state(self : ComponentCtx) -> ResponseState {
+  self.gate.state()
+}
+
+///|
 /// The validated guild invocation, or `None` when invoked in a DM.
 pub fn ComponentCtx::guild_scope(self : ComponentCtx) -> GuildInvocation? {
   match self.scope_ {
@@ -755,6 +767,12 @@ pub(all) struct ModalCtx {
 /// Whether the modal was submitted in a guild or a DM.
 pub fn ModalCtx::scope(self : ModalCtx) -> InvocationScope {
   self.scope_
+}
+
+///|
+/// The current state of this interaction's initial callback.
+pub fn ModalCtx::response_state(self : ModalCtx) -> ResponseState {
+  self.gate.state()
 }
 
 ///|

@@ -291,7 +291,6 @@ pub fn[A] subcommand(
         path: [name],
         dispatch: (bot, waiter, warn, raw) => {
           dispatch_command_handler(
-            raw.data.name,
             raw => decode(raw),
             handler,
             bot,
@@ -433,20 +432,7 @@ pub fn[A] Command::spec(self : Command[A]) -> @interaction.CommandSpec {
 }
 
 ///|
-fn[A] raise_failure(
-  command : String,
-  phase : ResponsePhase,
-  source : Error,
-) -> A raise {
-  if @async.is_being_cancelled() {
-    raise source
-  }
-  raise Failure(command~, phase~, source~)
-}
-
-///|
 async fn[A] dispatch_command_handler(
-  command : String,
   decode : (@framework.CommandCtx) -> A raise,
   handler : InteractionHandler[A],
   bot : AppCtx,
@@ -454,30 +440,17 @@ async fn[A] dispatch_command_handler(
   warn : (String) -> Unit,
   raw : @framework.CommandCtx,
 ) -> Unit {
-  let value = decode(raw) catch {
-    source => raise_failure(command, BeforeInitial, source)
-  }
+  let value = decode(raw)
   match handler {
     Immediate(run) => {
-      let response = run({ raw_: raw, bot_: bot, }, value) catch {
-        source => raise_failure(command, BeforeInitial, source)
-      }
-      response.send(raw) catch {
-        source => raise_failure(command, BeforeInitial, source)
-      }
+      let response = run({ raw_: raw, bot_: bot, }, value)
+      response.send(raw)
     }
     Deferred(ephemeral~, run) => {
-      raw.defer_response(ephemeral~) catch {
-        source => raise_failure(command, BeforeInitial, source)
-      }
-      run({ raw_: raw, bot_: bot, waiter_: waiter, warn_: warn, }, value) catch {
-        source => raise_failure(command, AfterDeferred, source)
-      }
+      raw.defer_response(ephemeral~)
+      run({ raw_: raw, bot_: bot, waiter_: waiter, warn_: warn, }, value)
     }
-    Raw(run) =>
-      run(raw) catch {
-        source => raise_failure(command, BeforeInitial, source)
-      }
+    Raw(run) => run(raw)
   }
 }
 
@@ -492,7 +465,6 @@ async fn[A] Command::dispatch_typed(
   match self.routes {
     None =>
       dispatch_command_handler(
-        self.definition.name,
         self.decode,
         self.handler,
         bot,
@@ -509,12 +481,8 @@ async fn[A] Command::dispatch_typed(
           return
         }
       }
-      raise_failure(
-        self.definition.name,
-        BeforeInitial,
-        HandlerError::InvalidArgument(
-          "unknown subcommand path: \{if path.is_empty() { "<empty>" } else { path.join("/") }}",
-        ),
+      raise HandlerError::InvalidArgument(
+        "unknown subcommand path: \{if path.is_empty() { "<empty>" } else { path.join("/") }}",
       )
     }
   }

@@ -2,6 +2,7 @@
 /// An error raised when an interaction callback cannot be accepted.
 pub(all) suberror ResponseGateError {
   AlreadyResponded
+  Expired
   InvalidCallback(
     kind~ : @model.InteractionType,
     typ~ : @model.InteractionResponseType
@@ -9,18 +10,23 @@ pub(all) suberror ResponseGateError {
 } derive(Debug)
 
 ///|
-priv enum ResponseGateState {
+/// What has happened to an interaction's single initial callback.
+pub(all) enum ResponseState {
   Pending
-  Sent
-  Failed
-} derive(Eq)
+  Sent(@model.InteractionResponseType)
+  /// The sink raised; Discord may or may not have accepted the callback.
+  Unconfirmed(@model.InteractionResponseType)
+  /// The executor gave up the callback window.
+  Expired
+} derive(Debug, Eq)
 
 ///|
 /// A single-use interaction callback gate.
 pub struct ResponseGate {
   priv kind : @model.InteractionType
-  priv mut state : ResponseGateState
+  priv mut state : ResponseState
   priv sink : async (@model.InteractionResponse, Array[@dhttp.FileUpload]?) -> Unit
+  priv rejected : (Error) -> Bool
 }
 
 ///|
@@ -38,11 +44,14 @@ pub struct ResponseCapture {
 
 ///|
 /// Construct a gate around an injected callback sink.
+/// `rejected` identifies definitive refusals that leave the callback unused.
+/// Cancellation always leaves delivery unconfirmed, regardless of the classifier.
 pub fn ResponseGate::ResponseGate(
   kind : @model.InteractionType,
   sink : async (@model.InteractionResponse, Array[@dhttp.FileUpload]?) -> Unit,
+  rejected? : (Error) -> Bool = _ => false,
 ) -> ResponseGate {
-  { kind, state: Pending, sink, }
+  { kind, state: Pending, sink, rejected, }
 }
 
 ///|
@@ -51,14 +60,25 @@ pub fn ResponseGate::rest(
   client : @dhttp.Client,
   interaction : @model.Interaction,
 ) -> ResponseGate {
-  ResponseGate(interaction.typ, (response, files) => {
-    client.create_interaction_response(
-      interaction.id,
-      interaction.token,
-      response,
-      files?,
-    )
-  })
+  ResponseGate(
+    interaction.typ,
+    (response, files) => {
+      client.create_interaction_response(
+        interaction.id,
+        interaction.token,
+        response,
+        files?,
+      )
+    },
+    rejected=error => {
+      match error {
+        @dhttp.DiscordHttpError::Validation(..) => true
+        @dhttp.DiscordHttpError::Api(status~, error~) =>
+          status >= 400 && status < 500 && status != 429 && error.code != 40060
+        _ => false
+      }
+    },
+  )
 }
 
 ///|
@@ -110,21 +130,51 @@ pub async fn ResponseGate::send(
   response : @model.InteractionResponse,
   files? : Array[@dhttp.FileUpload],
 ) -> Unit {
-  if self.state != Pending {
-    raise ResponseGateError::AlreadyResponded
+  match self.state {
+    Pending => ()
+    Expired => raise ResponseGateError::Expired
+    Sent(_) | Unconfirmed(_) => raise ResponseGateError::AlreadyResponded
   }
   if !callback_allowed(self.kind, response.typ) {
     raise ResponseGateError::InvalidCallback(kind=self.kind, typ=response.typ)
   }
-  self.state = Sent
-  errdefer {
-    self.state = Failed
+  self.state = Sent(response.typ)
+  errdefer (if self.state is Sent(_) { self.state = Unconfirmed(response.typ) })
+  (self.sink)(response, files) catch {
+    error if !@async.is_being_cancelled() && (self.rejected)(error) => {
+      self.state = Pending
+      raise error
+    }
+    error => raise error
   }
-  (self.sink)(response, files)
 }
 
 ///|
-/// Whether this gate has attempted its single callback delivery.
+/// The current state of this interaction's initial callback.
+pub fn ResponseGate::state(self : ResponseGate) -> ResponseState {
+  self.state
+}
+
+///|
+/// Close an unused callback window. Other states remain unchanged.
+///
+/// ```mbt check
+/// test "expire an unused callback window" {
+///   let gate = @framework.ResponseGate(ApplicationCommand, (_, _) => ())
+///   assert_eq(gate.state(), Pending)
+///   gate.expire()
+///   assert_eq(gate.state(), Expired)
+///   assert_true(gate.responded())
+/// }
+/// ```
+pub fn ResponseGate::expire(self : ResponseGate) -> Unit {
+  if self.state == Pending {
+    self.state = Expired
+  }
+}
+
+///|
+/// Whether the initial callback is no longer pending, including expiry.
 pub fn ResponseGate::responded(self : ResponseGate) -> Bool {
   self.state != Pending
 }

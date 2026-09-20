@@ -53,10 +53,6 @@ pub(all) suberror AppConfigError {
   InvalidMaxInFlight(value~ : Int)
 } derive(@debug.Debug)
 
-pub(all) suberror AppDispatchError {
-  Failure(command~ : String, phase~ : ResponsePhase, source~ : Error)
-} derive(@debug.Debug)
-
 pub(all) suberror HandlerError {
   UserMessage(message~ : String, ephemeral~ : Bool)
   GuildOnly
@@ -211,9 +207,9 @@ pub struct FailureCtx {
 }
 pub fn FailureCtx::interaction(Self) -> @model.Interaction?
 pub fn FailureCtx::origin(Self) -> FailureOrigin
-pub fn FailureCtx::phase(Self) -> ResponsePhase?
 pub fn FailureCtx::raw(Self) -> FailureRaw?
 pub async fn FailureCtx::respond_error(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, ephemeral? : Bool) -> Unit
+pub fn FailureCtx::response_state(Self) -> @framework.ResponseState?
 pub fn FailureCtx::user(Self) -> @model.User?
 
 pub(all) enum FailureOrigin {
@@ -350,12 +346,6 @@ pub struct RegisteredCommand {
   // private fields
 }
 pub fn RegisteredCommand::name(Self) -> String
-
-pub(all) enum ResponsePhase {
-  BeforeInitial
-  AfterDeferred
-  AfterInitial
-} derive(Eq, @debug.Debug)
 
 pub struct SlashChild {
   // private fields

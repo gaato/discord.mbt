@@ -64,7 +64,6 @@ pub using @app {
   type ErrorPolicy,
   type FailureCtx,
   type FailureOrigin,
-  type ResponsePhase,
   slash,
   user_command,
   message_command,

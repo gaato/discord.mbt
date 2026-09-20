@@ -12,8 +12,8 @@ pub(all) enum FailureOrigin {
 ///|
 /// The underlying interaction context for a failure.
 ///
-/// Event and service failures have no raw context. Responding through one of
-/// these contexts without first checking the response phase may fail; prefer
+/// Event, service, and autocomplete failures have no raw context. Responding
+/// through these contexts without checking the response state may fail; prefer
 /// `FailureCtx::respond_error()` for ordinary error responses.
 pub(all) enum FailureRaw {
   RawCommand(@framework.CommandCtx)
@@ -25,29 +25,34 @@ pub(all) enum FailureRaw {
 /// Context handed to the error policy when a handler fails.
 pub struct FailureCtx {
   priv origin_ : FailureOrigin
-  priv phase_ : ResponsePhase?
   priv raw_ : FailureRaw?
   priv warn_ : (String) -> Unit
 }
 
 ///|
-/// What opened the modal: a component (with its host message) or a
-/// command.
+/// The operation whose handler failed.
 pub fn FailureCtx::origin(self : FailureCtx) -> FailureOrigin {
   self.origin_
 }
 
 ///|
-/// How far the response lifecycle progressed before the failure, when an
-/// interaction was involved.
-pub fn FailureCtx::phase(self : FailureCtx) -> ResponsePhase? {
-  self.phase_
+/// Read the gate's current state. Event, service, and autocomplete failures
+/// have no raw context and return `None`.
+pub fn FailureCtx::response_state(
+  self : FailureCtx,
+) -> @framework.ResponseState? {
+  match self.raw_ {
+    Some(RawCommand(ctx)) => Some(ctx.response_state())
+    Some(RawComponent(ctx)) => Some(ctx.response_state())
+    Some(RawModal(ctx)) => Some(ctx.response_state())
+    None => None
+  }
 }
 
 ///|
-/// Access the underlying interaction context. Event and service failures
+/// Access the underlying interaction context. Event, service, and autocomplete failures
 /// return `None`. Direct responses through this escape hatch may fail unless
-/// the response phase is checked first; normally use `respond_error()`.
+/// the response state is checked first; normally use `respond_error()`.
 pub fn FailureCtx::raw(self : FailureCtx) -> FailureRaw? {
   self.raw_
 }
@@ -106,8 +111,9 @@ fn error_response_summary(
 
 ///|
 /// Send an error without violating Discord's one-initial-response rule.
-/// Event and service failures have no response target; those calls are sent to
-/// the warning hook instead of guessing a channel.
+/// Pending callbacks use an initial response; sent or unconfirmed callbacks
+/// use a best-effort followup. Expired callbacks and failures without a raw
+/// context send a payload summary to the warning hook.
 pub async fn FailureCtx::respond_error(
   self : FailureCtx,
   content? : String,
@@ -123,8 +129,8 @@ pub async fn FailureCtx::respond_error(
     )
     return
   }
-  match self.phase_ {
-    Some(BeforeInitial) | None =>
+  match self.response_state() {
+    Some(Pending) =>
       match raw {
         RawCommand(ctx) =>
           ctx.respond(
@@ -154,7 +160,8 @@ pub async fn FailureCtx::respond_error(
             ephemeral~,
           )
       }
-    Some(AfterDeferred) | Some(AfterInitial) =>
+    // NOTE: Live verification decides whether Discord accepts followups after Sent(Modal).
+    Some(Sent(_)) | Some(Unconfirmed(_)) =>
       match raw {
         RawCommand(ctx) =>
           ctx.followup(
@@ -187,6 +194,11 @@ pub async fn FailureCtx::respond_error(
           )
           |> ignore
       }
+    Some(Expired) =>
+      (self.warn_)(
+        "cannot respond to an expired interaction: \{error_response_summary(content, embeds, components, files)}",
+      )
+    None => ()
   }
 }
 

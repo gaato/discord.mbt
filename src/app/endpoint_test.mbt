@@ -102,6 +102,58 @@ fn app_modal_submit(
 }
 
 ///|
+async test "timed-out interaction expires its gate" {
+  let app = @app.App()
+  let release : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  let failures : @aqueue.Queue[(@framework.ResponseState?, Bool)] = Queue(
+    kind=Unbounded,
+  )
+  let warnings : Array[String] = []
+  app.on_warn(message => warnings.push(message))
+  app.command(
+    @app.slash(
+      name="late-response",
+      description="Wait beyond the callback deadline",
+      args=@interaction.Args::unit(),
+      handler=Raw(raw => {
+        release.get()
+        raw.respond(content="too late")
+      }),
+    ),
+  )
+  app.error_policy((ctx, error) => {
+    ctx.respond_error(content="expired reply")
+    failures.put(
+      (ctx.response_state(), error is @framework.ResponseGateError::Expired),
+    )
+  })
+  let client = @dhttp.Client("test-token")
+  defer client.close()
+  @async.with_task_group(group => {
+    let endpoint = app.serve(
+      group,
+      client~,
+      application_id=@model.Id::parse("400000000000000001"),
+    )
+    assert_true(
+      endpoint.handle_interaction(
+        app_command("late-response", "500000000000000810"),
+        deadline_ms=1,
+      )
+      is TimedOut,
+    )
+    release.put(())
+    assert_eq(
+      @async.with_timeout_opt(1000, () => failures.get()),
+      Some((Some(Expired), true)),
+    )
+    assert_eq(warnings, [
+      "cannot respond to an expired interaction: expired reply",
+    ])
+  })
+}
+
+///|
 fn autocomplete_choices(
   response : @model.InteractionResponse,
 ) -> Array[@model.CommandOptionChoice] raise {
@@ -162,7 +214,12 @@ async test "interaction endpoint dispatches captured responses and completion ou
       args=@interaction.Args::unit(),
       handler=Raw(raw => {
         @async.sleep(100)
-        raw.respond(content="late")
+        try raw.respond(content="late") catch {
+          @framework.ResponseGateError::Expired => ()
+          error => raise error
+        } noraise {
+          _ => fail("late callback unexpectedly succeeded")
+        }
         slow_finished.put(())
       }),
     ),

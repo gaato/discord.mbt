@@ -259,6 +259,7 @@ pub fn ComponentImmediateCtx::message(
 ///|
 /// Escape hatch for advanced inspection. Calling response methods on the
 /// raw value opts out of this wrapper's response discipline.
+/// Failure handling still follows the gate's real response state.
 pub fn ComponentImmediateCtx::raw(
   self : ComponentImmediateCtx,
 ) -> @framework.ComponentCtx {
@@ -368,6 +369,7 @@ pub fn ComponentDeferredCtx::message(
 ///|
 /// Escape hatch for advanced inspection. Calling response methods on the
 /// raw value opts out of this wrapper's response discipline.
+/// Failure handling still follows the gate's real response state.
 pub fn ComponentDeferredCtx::raw(
   self : ComponentDeferredCtx,
 ) -> @framework.ComponentCtx {
@@ -446,47 +448,31 @@ async fn dispatch_component_handler(
   warn : (String) -> Unit,
   raw : @framework.ComponentCtx,
 ) -> Unit {
-  let route = raw.data.custom_id
   match handler {
     Immediate(run) => {
-      let response = run({ raw_: raw, bot_: bot, prefix_: prefix, }) catch {
-        source => raise_failure(route, BeforeInitial, source)
-      }
-      response.send(raw) catch {
-        source => raise_failure(route, BeforeInitial, source)
-      }
+      let response = run({ raw_: raw, bot_: bot, prefix_: prefix, })
+      response.send(raw)
     }
     DeferredUpdate(run) => {
-      raw.defer_update() catch {
-        source => raise_failure(route, BeforeInitial, source)
-      }
+      raw.defer_update()
       run({
         raw_: raw,
         bot_: bot,
         prefix_: prefix,
         waiter_: waiter,
         warn_: warn,
-      }) catch {
-        source => raise_failure(route, AfterDeferred, source)
-      }
+      })
     }
     DeferredMessage(ephemeral~, run) => {
-      raw.defer_response(ephemeral~) catch {
-        source => raise_failure(route, BeforeInitial, source)
-      }
+      raw.defer_response(ephemeral~)
       run({
         raw_: raw,
         bot_: bot,
         prefix_: prefix,
         waiter_: waiter,
         warn_: warn,
-      }) catch {
-        source => raise_failure(route, AfterDeferred, source)
-      }
+      })
     }
-    Raw(run) =>
-      run(raw) catch {
-        source => raise_failure(route, BeforeInitial, source)
-      }
+    Raw(run) => run(raw)
   }
 }

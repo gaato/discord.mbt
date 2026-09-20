@@ -218,8 +218,6 @@ pub using @voice {type OggOpusSource}
 
 pub using @voice {type OggOpusWriter}
 
-pub using @app {type ResponsePhase}
-
 pub using @bot {type ShardConfig}
 
 pub using @app {type SlashChild}

@@ -166,7 +166,18 @@ middleware when it owns the result, or call `next()` promptly into a
 
 The error policy receives the invoking user and, for interaction failures, an
 optional raw context. Prefer `respond_error` for replies because it selects an
-initial response or followup according to the current response phase:
+initial response or followup from the gate's real state. `response_state()`
+reads that state on demand, including responses sent through `raw()`:
+
+- `Some(Pending)` sends an initial callback. A definitively rejected callback
+  returns the gate to this state so the policy can send a different payload.
+- `Some(Sent(type))` or `Some(Unconfirmed(type))` attempts a followup. The latter
+  means the sink raised and delivery may have succeeded; followup failures go
+  to the existing warning hook.
+- `Some(Expired)` warns with a payload summary because the executor closed the
+  callback window.
+- `None` also warns: event, service, and autocomplete failures have no raw
+  response context.
 
 ```mbt check
 ///|
@@ -180,13 +191,13 @@ fn install_rich_error_policy(app : @discord.App) -> Unit {
       Some(RawCommand(_)) => "command"
       Some(RawComponent(_)) => "component"
       Some(RawModal(_)) => "modal"
-      None => "event or service"
+      None => "event, service, or autocomplete"
     }
     failure.respond_error(
       embeds=[
         Embed(
           title="Request failed",
-          description="source: \{source}\nuser: \{username}\n\{Repr(error)}",
+          description="source: \{source}\nuser: \{username}\nstate: \{Repr(failure.response_state())}\n\{Repr(error)}",
           color=0xED4245,
         ),
       ],
@@ -210,11 +221,11 @@ test "rich error policy declaration compiles" {
 }
 ```
 
-`FailureCtx::user()` and `raw()` return `None` for Gateway event and service
+`FailureCtx::user()` and `raw()` return `None` for Gateway event, service, and autocomplete
 failures. In that case `respond_error` sends a summary to the warning hook
 because there is no interaction response target. The raw command, component,
 and modal contexts are escape hatches; responding through them directly can
-violate the response phase, so ordinary policies should continue to use
+attempt a second initial callback, so ordinary policies should continue to use
 `respond_error`. Its optional `content`, `embeds`, `components`, `files`, and
 `allowed_mentions` parameters are passed through for both initial responses
 and followups.
@@ -279,12 +290,67 @@ the warning sink and continues the dispatch loop.
 
 ## Before and after `next`
 
-Use the onion boundary deliberately: raise or short-circuit before `next`, and
-observe or clean up after it returns. This matters most for interaction
-middleware. An error raised after `next()` returns is reported to the error
-policy with phase `BeforeInitial`. If the inner handler already sent an
-initial response, the policy cannot replace it and the failure may degrade to
-a warning.
+Interaction middleware can raise before or after `next()`. The error policy
+reads the same gate used by the handler, so an error after the handler sends
+its initial response produces a followup through `respond_error`.
+
+```mbt check
+///|
+async test "middleware failure after next uses the handler's sent state" {
+  let client = @dhttp.Client("test-token")
+  defer client.close()
+  let routes : Array[String] = []
+  client.middleware((request, _) => {
+    assert_true(request.route.method_() is Post)
+    routes.push(request.route.path())
+    {
+      status: 200,
+      headers: Map([]),
+      body: @json.parse(
+        (
+          #|{"id":"700000000000000001","channel_id":"800000000000000001","author":{"id":"200000000000000002","username":"bot","discriminator":"0","global_name":null,"avatar":null},"content":"policy reply","timestamp":"2025-06-01T10:00:00Z","edited_timestamp":null,"tts":false,"mention_everyone":false,"mentions":[],"mention_roles":[],"attachments":[],"embeds":[],"pinned":false,"type":0}
+        ),
+      ),
+    }
+  })
+  let app = @discord.App()
+  let warnings : Array[String] = []
+  let states : Array[@framework.ResponseState?] = []
+  app.on_warn(message => warnings.push(message))
+  app.middleware((_, next) => {
+    next()
+    raise @app.HandlerError::UserMessage(message="after next", ephemeral=true)
+  })
+  app.command(
+    @discord.slash(
+      name="ping",
+      description="Reply before middleware raises",
+      args=@discord.Args::unit(),
+      handler=Immediate((_, _) => @discord.CommandReply::message(content="pong")),
+    ),
+  )
+  app.error_policy((failure, _) => {
+    states.push(failure.response_state())
+    failure.respond_error(content="policy reply")
+  })
+  let application_id = @model.Id::parse("400000000000000001")
+  let framework = @framework.Framework(client, application_id)
+  app.attach(framework, client~, application_id~) |> ignore
+  let interaction : @model.Interaction = @json.from_json(
+    @json.parse(
+      (
+        #|{"id":"500000000000000001","application_id":"400000000000000001","type":2,"token":"interaction-token","version":1,"user":{"id":"200000000000000001","username":"nelly","discriminator":"0","global_name":null,"avatar":null},"data":{"id":"600000000000000001","name":"ping","type":1}}
+      ),
+    ),
+  )
+  let (gate, capture) = @framework.ResponseGate::capture(interaction)
+  assert_true(framework.process_with(interaction, gate~))
+  assert_eq(capture.get().response.typ, ChannelMessageWithSource)
+  assert_eq(states, [Some(Sent(ChannelMessageWithSource))])
+  assert_eq(routes, ["/webhooks/400000000000000001/interaction-token"])
+  assert_eq(warnings, [])
+}
+```
 
 HTTP middleware can inspect the final wire status, headers, and body after
 `next(request)`. Event middleware can inspect only the completion of handler

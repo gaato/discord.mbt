@@ -322,11 +322,10 @@ pub fn App::spawner(self : App, group : @async.TaskGroup[Unit]) -> Spawner {
 ///|
 fn failure_context(
   origin : FailureOrigin,
-  phase : ResponsePhase?,
   raw : FailureRaw?,
   warn : (String) -> Unit,
 ) -> FailureCtx {
-  { origin_: origin, phase_: phase, raw_: raw, warn_: warn, }
+  { origin_: origin, raw_: raw, warn_: warn, }
 }
 
 ///|
@@ -347,23 +346,11 @@ async fn App::run_registered_command(
     (command.dispatch)(bot, waiter, self.warn_, raw)
   }) catch {
     error if @async.is_being_cancelled() => raise error
-    AppDispatchError::Failure(command=name, phase~, source~) =>
-      invoke_error_policy(
-        self.current_policy(),
-        failure_context(
-          Command(name~),
-          Some(phase),
-          Some(failure_raw),
-          self.warn_,
-        ),
-        source,
-      )
     error =>
       invoke_error_policy(
         self.current_policy(),
         failure_context(
           Command(name=command.name_),
-          Some(BeforeInitial),
           Some(failure_raw),
           self.warn_,
         ),
@@ -396,23 +383,11 @@ async fn App::run_registered_component(
     )
   }) catch {
     error if @async.is_being_cancelled() => raise error
-    AppDispatchError::Failure(command=_, phase~, source~) =>
-      invoke_error_policy(
-        self.current_policy(),
-        failure_context(
-          Component(custom_id=raw.data.custom_id),
-          Some(phase),
-          Some(failure_raw),
-          self.warn_,
-        ),
-        source,
-      )
     error =>
       invoke_error_policy(
         self.current_policy(),
         failure_context(
           Component(custom_id=raw.data.custom_id),
-          Some(BeforeInitial),
           Some(failure_raw),
           self.warn_,
         ),
@@ -435,23 +410,11 @@ async fn App::run_registered_modal(
   }
   self.run_middleware(ctx, 0, () => (entry.dispatch)(bot, raw)) catch {
     error if @async.is_being_cancelled() => raise error
-    AppDispatchError::Failure(command=_, phase~, source~) =>
-      invoke_error_policy(
-        self.current_policy(),
-        failure_context(
-          Modal(custom_id=raw.data.custom_id),
-          Some(phase),
-          Some(failure_raw),
-          self.warn_,
-        ),
-        source,
-      )
     error =>
       invoke_error_policy(
         self.current_policy(),
         failure_context(
           Modal(custom_id=raw.data.custom_id),
-          Some(BeforeInitial),
           Some(failure_raw),
           self.warn_,
         ),
@@ -471,12 +434,7 @@ async fn App::run_registered_autocomplete(
     error => {
       invoke_error_policy(
         self.current_policy(),
-        failure_context(
-          Autocomplete(name=command.name_),
-          None,
-          None,
-          self.warn_,
-        ),
+        failure_context(Autocomplete(name=command.name_), None, self.warn_),
         error,
       )
       // ErrorPolicy is transport-neutral and cannot construct an autocomplete
@@ -602,7 +560,7 @@ pub async fn App::report_failure(
 ) -> Unit {
   invoke_error_policy(
     self.current_policy(),
-    failure_context(origin, None, None, self.warn_),
+    failure_context(origin, None, self.warn_),
     error,
   )
 }

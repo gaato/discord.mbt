@@ -92,14 +92,26 @@ pub async fn InteractionEndpoint::handle_interaction(
   })
   @async.with_task_group(group => {
     let capture_task = group.spawn(no_wait=true, allow_failure=true, () => {
-      race.put(Captured(capture.get()))
+      let captured = capture.get()
+      race.put(Captured(captured))
+      captured
     })
     let result = match @async.with_timeout_opt(deadline_ms, () => race.get()) {
       Some(Captured(captured)) =>
         Reply(response=captured.response, files=captured.files)
       Some(Completed(true)) => NoResponse
       Some(Completed(false)) => NoRoute
-      None => TimedOut
+      None => {
+        gate.expire()
+        // The timeout may win after race.get() consumed a captured reply.
+        // Retain it in the task so a callback that left Pending is not lost.
+        if gate.state() is Sent(_) {
+          let captured = capture_task.wait()
+          Reply(response=captured.response, files=captured.files)
+        } else {
+          TimedOut
+        }
+      }
     }
     capture_task.cancel()
     result

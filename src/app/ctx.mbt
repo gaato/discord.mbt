@@ -47,14 +47,6 @@ pub fn AppCtx::application_ref(self : AppCtx) -> @dhttp.ApplicationRef {
 pub type ComponentWaiter = async (String, Int?) -> @framework.ComponentCtx?
 
 ///|
-/// The response state when an interaction handler failed.
-pub(all) enum ResponsePhase {
-  BeforeInitial
-  AfterDeferred
-  AfterInitial
-} derive(Debug, Eq)
-
-///|
 fn require_guild(
   scope : @framework.GuildInvocation?,
 ) -> @framework.GuildInvocation raise HandlerError {
@@ -115,6 +107,7 @@ pub fn ImmediateCtx::guild_id(self : ImmediateCtx) -> @model.GuildId? {
 ///|
 /// Escape hatch for advanced read-only inspection. Calling response methods on
 /// this raw value opts out of the immediate-handler response discipline.
+/// Failure handling still follows the gate's real response state.
 pub fn ImmediateCtx::raw(self : ImmediateCtx) -> @framework.CommandCtx {
   self.raw_
 }
@@ -172,6 +165,7 @@ pub fn DeferredCtx::guild_id(self : DeferredCtx) -> @model.GuildId? {
 ///|
 /// Escape hatch for advanced inspection. Calling response methods on the
 /// raw value opts out of this wrapper's response discipline.
+/// Failure handling still follows the gate's real response state.
 pub fn DeferredCtx::raw(self : DeferredCtx) -> @framework.CommandCtx {
   self.raw_
 }
