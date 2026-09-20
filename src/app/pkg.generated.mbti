@@ -85,7 +85,7 @@ pub struct App {
   // private fields
 }
 pub fn App::App(max_in_flight? : Int, cooldown_store? : &@cooldown.CooldownStore) -> Self
-pub fn App::attach(Self, @framework.Framework, client~ : @http.Client, application_id~ : @model.Id[@model.ApplicationMarker], waiter? : async (String, Int?) -> @framework.ComponentCtx?, latency_ms? : () -> Int64?) -> AppCtx
+pub fn App::attach(Self, @framework.Framework, client~ : @http.Client, application_id~ : @model.Id[@model.ApplicationMarker], waiter? : async (String, @model.Id[@model.UserMarker]?, Int?) -> @framework.ComponentCtx?, latency_ms? : () -> Int64?) -> AppCtx
 pub fn App::autocomplete(Self, String, async (@framework.AutocompleteCtx) -> Unit) -> Unit
 pub fn[A] App::command(Self, Command[A]) -> Unit
 pub fn App::error_policy(Self, async (FailureCtx, Error) -> Unit) -> Unit
@@ -159,7 +159,7 @@ pub fn ComponentDeferredCtx::selected_roles(Self) -> Array[@model.Role]
 pub fn ComponentDeferredCtx::selected_users(Self) -> Array[@model.User]
 pub fn ComponentDeferredCtx::user(Self) -> @model.User
 pub fn ComponentDeferredCtx::values(Self) -> Array[String]
-pub async fn ComponentDeferredCtx::wait_for_component(Self, custom_id~ : String, timeout_ms? : Int) -> @framework.ComponentCtx?
+pub async fn ComponentDeferredCtx::wait_for_component(Self, custom_id~ : String, from? : WaitFrom, timeout_ms? : Int) -> @framework.ComponentCtx?
 
 pub(all) enum ComponentHandler[A] {
   Immediate(async (ComponentImmediateCtx, A) -> ComponentReply)
@@ -229,7 +229,7 @@ pub fn DeferredCtx::interaction(Self) -> @model.Interaction
 pub fn DeferredCtx::raw(Self) -> @framework.CommandCtx
 pub fn DeferredCtx::scope(Self) -> @framework.InvocationScope
 pub fn DeferredCtx::user(Self) -> @model.User
-pub async fn DeferredCtx::wait_for_component(Self, custom_id~ : String, timeout_ms? : Int) -> @framework.ComponentCtx?
+pub async fn DeferredCtx::wait_for_component(Self, custom_id~ : String, from? : WaitFrom, timeout_ms? : Int) -> @framework.ComponentCtx?
 
 pub struct FailureCtx {
   // private fields
@@ -384,10 +384,16 @@ pub(all) struct SyncReport {
   scopes : Array[@framework.ScopeSyncReport]
 } derive(@debug.Debug)
 
+pub(all) enum WaitFrom {
+  Invoker
+  User(@model.Id[@model.UserMarker])
+  Anyone
+} derive(Eq, @debug.Debug)
+
 // Type aliases
 pub type CommandCheck = async (CheckCtx) -> Bool
 
-pub type ComponentWaiter = async (String, Int?) -> @framework.ComponentCtx?
+pub type ComponentWaiter = async (String, @model.Id[@model.UserMarker]?, Int?) -> @framework.ComponentCtx?
 
 pub type ErrorPolicy = async (FailureCtx, Error) -> Unit
 

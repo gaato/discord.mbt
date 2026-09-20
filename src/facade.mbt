@@ -37,6 +37,7 @@ pub using @app {
   type AppCtx,
   type InteractionEndpoint,
   type InteractionOutcome,
+  type WaitFrom,
   type Command,
   type CheckCtx,
   type CommandCheck,

@@ -437,10 +437,11 @@ the pattern.
 
 ## Component waiters
 
-`wait_for_component(custom_id~, timeout_ms?)` suspends the current handler
-until the next component interaction whose `custom_id` matches exactly, and
-returns `None` on timeout. Waiters win over registered component handlers,
-which keeps a multi-step flow inside one handler:
+`wait_for_component(custom_id~, user?, timeout_ms?)` suspends the current
+handler until the next component interaction whose `custom_id` matches exactly
+and, when supplied, comes from `user`. Omitting `user` accepts anyone at this
+low-level layer. It returns `None` on timeout. Waiters win over registered
+component handlers, which keeps a multi-step flow inside one handler:
 
 ```mbt nocheck
 ///|
@@ -449,17 +450,22 @@ async fn handle_confirm(
   fw : @framework.Framework,
 ) -> Unit {
   ctx.respond(content="Really?", components=[confirm_button()])
-  match fw.wait_for_component(custom_id="confirm:yes", timeout_ms=30_000) {
+  match
+    fw.wait_for_component(
+      custom_id="confirm:yes",
+      user=ctx.user().id,
+      timeout_ms=30_000,
+    ) {
     Some(click) => click.update_message(content="Done!", components=[])
     None => ctx.followup(content="Timed out.", ephemeral=true) |> ignore
   }
 }
 ```
 
-The waiter is removed when it fires or times out, so the registered
-`confirm:` prefix handler resumes receiving clicks afterwards. The App layer
-exposes the same mechanism on its deferred contexts; see
-[Components and modals](03-components-modals.mbt.md).
+The waiter is removed when it fires or times out. A click from a different user
+does not remove a filtered waiter and falls through to registered routes. The
+App layer exposes the same mechanism on its deferred contexts with a safe
+`Invoker` default; see [Components and modals](03-components-modals.mbt.md).
 
 ```mbt check
 ///|

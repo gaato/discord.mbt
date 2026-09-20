@@ -244,6 +244,8 @@ pub using @voice {type VoiceReceiveStream}
 
 pub using @voice {type VoiceTelemetry}
 
+pub using @app {type WaitFrom}
+
 pub using @voice {trait AudioSource}
 
 // Traits

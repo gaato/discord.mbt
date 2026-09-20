@@ -41,10 +41,30 @@ pub fn AppCtx::application_ref(self : AppCtx) -> @dhttp.ApplicationRef {
 }
 
 ///|
-/// Executor-provided lookup behind `wait_for_component`: resolves the
-/// next component interaction matching a custom id, with an optional
-/// timeout in milliseconds.
-pub type ComponentWaiter = async (String, Int?) -> @framework.ComponentCtx?
+/// Who may satisfy a component wait.
+pub(all) enum WaitFrom {
+  Invoker
+  User(@model.UserId)
+  Anyone
+} derive(Debug, Eq)
+
+///|
+fn WaitFrom::user_filter(
+  self : WaitFrom,
+  invoker : @model.UserId,
+) -> @model.UserId? {
+  match self {
+    Invoker => Some(invoker)
+    User(user) => Some(user)
+    Anyone => None
+  }
+}
+
+///|
+/// Executor-provided lookup behind `wait_for_component`: resolves the next
+/// component interaction matching a custom id and optional user filter, with
+/// an optional timeout in milliseconds.
+pub type ComponentWaiter = async (String, @model.UserId?, Int?) -> @framework.ComponentCtx?
 
 ///|
 fn require_guild(
@@ -213,14 +233,17 @@ pub async fn DeferredCtx::followup(
 }
 
 ///|
-/// Wait for the next component interaction with an exact custom id.
+/// Wait for the next component interaction with an exact custom id. By
+/// default, only the invoking user may satisfy the wait.
 pub async fn DeferredCtx::wait_for_component(
   self : DeferredCtx,
   custom_id~ : String,
+  from? : WaitFrom = Invoker,
   timeout_ms? : Int,
 ) -> @framework.ComponentCtx? {
   match self.waiter_ {
-    Some(waiter) => waiter(custom_id, timeout_ms)
+    Some(waiter) =>
+      waiter(custom_id, from.user_filter(self.user().id), timeout_ms)
     None => {
       (self.warn_)(
         "component waiting is unavailable without a gateway connection",

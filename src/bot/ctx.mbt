@@ -143,13 +143,15 @@ pub fn GatewayCtx::ref_of_message(
 }
 
 ///|
-/// Wait for the next component interaction with an exact custom id.
+/// Wait for the next component interaction with an exact custom id, optionally
+/// restricted to one invoking user.
 pub async fn GatewayCtx::wait_for_component(
   self : GatewayCtx,
   custom_id~ : String,
+  user? : @model.UserId,
   timeout_ms? : Int,
 ) -> @framework.ComponentCtx? {
-  self.framework_.wait_for_component(custom_id~, timeout_ms?)
+  self.framework_.wait_for_component(custom_id~, user?, timeout_ms?)
 }
 
 ///|

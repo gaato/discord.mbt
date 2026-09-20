@@ -4,14 +4,19 @@ fn test_framework() -> @framework.Framework raise {
 }
 
 ///|
-fn interaction_test_user() -> @model.User raise {
+fn interaction_test_user_from(user_id : String) -> @model.User raise {
   @json.from_json(
     @json.parse(
       (
-        #|{"id":"200000000000000001","username":"nelly","discriminator":"0","global_name":"Nelly","avatar":null}
-      ),
+        #|{"id":"USER_ID","username":"nelly","discriminator":"0","global_name":"Nelly","avatar":null}
+      ).replace(old="USER_ID", new=user_id),
     ),
   )
+}
+
+///|
+fn interaction_test_user() -> @model.User raise {
+  interaction_test_user_from("200000000000000001")
 }
 
 ///|
@@ -136,7 +141,10 @@ fn resolved_command_interaction(
 }
 
 ///|
-fn component_interaction(custom_id : String) -> @model.Interaction raise {
+fn component_interaction_from(
+  custom_id : String,
+  user_id : String,
+) -> @model.Interaction raise {
   let json =
     #|{
     #|  "id": "500000000000000002",
@@ -151,9 +159,14 @@ fn component_interaction(custom_id : String) -> @model.Interaction raise {
   )
   {
     ..interaction,
-    user: Some(interaction_test_user()),
+    user: Some(interaction_test_user_from(user_id)),
     message: Some(interaction_test_message()),
   }
+}
+
+///|
+fn component_interaction(custom_id : String) -> @model.Interaction raise {
+  component_interaction_from(custom_id, "200000000000000001")
 }
 
 ///|
@@ -582,6 +595,82 @@ async test "component waiters beat prefix handlers and time out cleanly" {
     )
     // timeout path returns None
     guard! fw.wait_for_component(custom_id="never", timeout_ms=20) is None
+  })
+}
+
+///|
+async test "waiter ignores another user's click and the route handles it" {
+  @async.with_task_group((group : @async.TaskGroup[Unit]) => {
+    let fw = test_framework()
+    let routed : Array[String] = []
+    let allowed_user : @model.UserId = @model.Id::parse("200000000000000001")
+    fw.component("confirm", ctx => routed.push(ctx.user().id.to_string()))
+    |> ignore
+    let pending = group.spawn(no_wait=true, () => {
+      fw.wait_for_component(
+        custom_id="confirm:restricted",
+        user=allowed_user,
+        timeout_ms=1000,
+      )
+    })
+    @async.sleep(20)
+    assert_true(
+      fw.process(
+        component_interaction_from("confirm:restricted", "200000000000000002"),
+      ),
+    )
+    assert_eq(routed, ["200000000000000002"])
+    assert_true(fw.process(component_interaction("confirm:restricted")))
+    guard pending.wait() is Some(ctx) else {
+      fail("expected the allowed user's click to satisfy the waiter")
+    }
+    assert_true(ctx.user().id == allowed_user)
+  })
+}
+
+///|
+async test "waiter ignores another user's click and stays pending" {
+  @async.with_task_group((group : @async.TaskGroup[Unit]) => {
+    let fw = test_framework()
+    let allowed_user : @model.UserId = @model.Id::parse("200000000000000001")
+    let pending = group.spawn(no_wait=true, () => {
+      fw.wait_for_component(
+        custom_id="confirm:pending",
+        user=allowed_user,
+        timeout_ms=1000,
+      )
+    })
+    @async.sleep(20)
+    assert_false(
+      fw.process(
+        component_interaction_from("confirm:pending", "200000000000000002"),
+      ),
+    )
+    assert_true(fw.process(component_interaction("confirm:pending")))
+    guard pending.wait() is Some(ctx) else {
+      fail("expected the waiter to remain pending")
+    }
+    assert_true(ctx.user().id == allowed_user)
+  })
+}
+
+///|
+async test "waiter without a user accepts anyone" {
+  @async.with_task_group((group : @async.TaskGroup[Unit]) => {
+    let fw = test_framework()
+    let pending = group.spawn(no_wait=true, () => {
+      fw.wait_for_component(custom_id="confirm:anyone", timeout_ms=1000)
+    })
+    @async.sleep(20)
+    assert_true(
+      fw.process(
+        component_interaction_from("confirm:anyone", "200000000000000002"),
+      ),
+    )
+    guard pending.wait() is Some(ctx) else {
+      fail("expected an unfiltered waiter to accept the click")
+    }
+    assert_eq(ctx.user().id.to_string(), "200000000000000002")
   })
 }
 

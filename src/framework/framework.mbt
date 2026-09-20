@@ -9,6 +9,7 @@ priv struct CommandEntry {
 /// One task waiting for a specific component interaction.
 priv struct ComponentWaiter {
   custom_id : String
+  user : @model.UserId?
   queue : @aqueue.Queue[ComponentCtx]
 }
 
@@ -306,7 +307,11 @@ pub async fn Framework::process_with(
         gate,
       }
       for i, waiter in self.waiters {
-        if waiter.custom_id == data.custom_id {
+        let user_matches = match waiter.user {
+          Some(user) => user == ctx.user().id
+          None => true
+        }
+        if waiter.custom_id == data.custom_id && user_matches {
           self.waiters.remove(i) |> ignore
           waiter.queue.put(ctx)
           return true
@@ -348,16 +353,22 @@ pub async fn Framework::process_with(
 }
 
 ///|
-/// Wait for the next component interaction whose custom id matches
-/// exactly. Returns `None` on timeout. Waiters win over registered
-/// component handlers, which makes multi-step flows (confirm buttons,
-/// pagination) straightforward inside one handler.
+/// Wait for the next component interaction whose custom id matches exactly
+/// and whose invoking user matches `user`, when provided. Returns `None` on
+/// timeout. Waiters win over registered component handlers, which makes
+/// multi-step flows (confirm buttons, pagination) straightforward inside one
+/// handler.
 pub async fn Framework::wait_for_component(
   self : Framework,
   custom_id~ : String,
+  user? : @model.UserId,
   timeout_ms? : Int,
 ) -> ComponentCtx? {
-  let waiter = ComponentWaiter::{ custom_id, queue: Queue(kind=Unbounded), }
+  let waiter = ComponentWaiter::{
+    custom_id,
+    user,
+    queue: Queue(kind=Unbounded),
+  }
   self.waiters.push(waiter)
   defer (for i, pending in self.waiters {
     if physical_equal(pending, waiter) {

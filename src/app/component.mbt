@@ -397,15 +397,18 @@ pub async fn ComponentDeferredCtx::followup(
 
 ///|
 /// Wait for the next component interaction with an exact custom id.
+/// By default, only the user who invoked this component may satisfy the wait.
 /// Returns `None` on timeout, or immediately when running without a
 /// gateway connection.
 pub async fn ComponentDeferredCtx::wait_for_component(
   self : ComponentDeferredCtx,
   custom_id~ : String,
+  from? : WaitFrom = Invoker,
   timeout_ms? : Int,
 ) -> @framework.ComponentCtx? {
   match self.waiter_ {
-    Some(waiter) => waiter(custom_id, timeout_ms)
+    Some(waiter) =>
+      waiter(custom_id, from.user_filter(self.user().id), timeout_ms)
     None => {
       (self.warn_)(
         "component waiting is unavailable without a gateway connection",

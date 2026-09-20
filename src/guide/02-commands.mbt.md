@@ -195,6 +195,8 @@ test "guild command declaration compiles" {
 - `Immediate((ctx, value) => CommandReply)` returns the initial response.
 - `Deferred(ephemeral=..., (ctx, value) => Unit)` acknowledges first; use
   `ctx.edit_original`, `ctx.followup`, or `ctx.wait_for_component` afterward.
+  Component waits default to the invoking user; pass `from=Anyone` only for a
+  flow such as a public poll, or `from=User(user_id)` for a different user.
 - `Raw(ctx => Unit)` exposes the lower-level `framework.CommandCtx`; see
   [The framework layer](11-framework.mbt.md) for its full response surface.
   Error policies follow the gate's real state, so a Raw handler that responds

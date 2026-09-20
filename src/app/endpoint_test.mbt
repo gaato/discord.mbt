@@ -165,6 +165,146 @@ fn autocomplete_choices(
 }
 
 ///|
+async test "app-level waits default to the invoking user" {
+  let app = @app.App()
+  let seen : Array[String] = []
+  let waiter : @app.ComponentWaiter = (custom_id, user, _timeout_ms) => {
+    let filter = match user {
+      Some(id) => id.to_string()
+      None => "anyone"
+    }
+    seen.push("\{custom_id}:\{filter}")
+    None
+  }
+  app.command(
+    @app.slash(
+      name="wait-default",
+      description="Wait with the safe default",
+      args=@interaction.Args::unit(),
+      handler=Deferred(ephemeral=false, (ctx, _) => {
+        ctx.wait_for_component(custom_id="command-default") |> ignore
+      }),
+    ),
+  )
+  let route = @app.component_route(
+    id="wait-default",
+    state=@app.CustomIdCodec::unit(),
+  )
+  app.on_component(
+    route,
+    DeferredUpdate((ctx, _) => {
+      ctx.wait_for_component(custom_id="component-default") |> ignore
+    }),
+  )
+  let client = @dhttp.Client("test-token")
+  defer client.close()
+  let framework = @framework.Framework(
+    client,
+    @model.Id::parse("400000000000000001"),
+  )
+  app.attach(
+    framework,
+    client~,
+    application_id=@model.Id::parse("400000000000000001"),
+    waiter~,
+  )
+  |> ignore
+  let command = app_command("wait-default", "500000000000000120")
+  let (command_gate, _command_capture) = @framework.ResponseGate::capture(
+    command,
+  )
+  assert_true(framework.process_with(command, gate=command_gate))
+  let component = app_component("wait-default", "500000000000000121")
+  let (component_gate, _component_capture) = @framework.ResponseGate::capture(
+    component,
+  )
+  assert_true(framework.process_with(component, gate=component_gate))
+  assert_eq(seen, [
+    "command-default:200000000000000001", "component-default:200000000000000001",
+  ])
+}
+
+///|
+async test "WaitFrom::Anyone passes no user filter" {
+  let app = @app.App()
+  let seen : Array[@model.UserId?] = []
+  let waiter : @app.ComponentWaiter = (_custom_id, user, _timeout_ms) => {
+    seen.push(user)
+    None
+  }
+  app.command(
+    @app.slash(
+      name="wait-anyone",
+      description="Wait for anyone",
+      args=@interaction.Args::unit(),
+      handler=Deferred(ephemeral=false, (ctx, _) => {
+        ctx.wait_for_component(custom_id="anyone", from=@app.WaitFrom::Anyone)
+        |> ignore
+      }),
+    ),
+  )
+  let client = @dhttp.Client("test-token")
+  defer client.close()
+  let framework = @framework.Framework(
+    client,
+    @model.Id::parse("400000000000000001"),
+  )
+  app.attach(
+    framework,
+    client~,
+    application_id=@model.Id::parse("400000000000000001"),
+    waiter~,
+  )
+  |> ignore
+  let interaction = app_command("wait-anyone", "500000000000000122")
+  let (gate, _capture) = @framework.ResponseGate::capture(interaction)
+  assert_true(framework.process_with(interaction, gate~))
+  assert_eq(seen, [None])
+}
+
+///|
+async test "WaitFrom::User passes that user" {
+  let app = @app.App()
+  let seen : Array[@model.UserId?] = []
+  let waiter : @app.ComponentWaiter = (_custom_id, user, _timeout_ms) => {
+    seen.push(user)
+    None
+  }
+  let allowed_user : @model.UserId = @model.Id::parse("200000000000000009")
+  app.command(
+    @app.slash(
+      name="wait-user",
+      description="Wait for one user",
+      args=@interaction.Args::unit(),
+      handler=Deferred(ephemeral=false, (ctx, _) => {
+        ctx.wait_for_component(
+          custom_id="specific-user",
+          from=@app.WaitFrom::User(allowed_user),
+        )
+        |> ignore
+      }),
+    ),
+  )
+  let client = @dhttp.Client("test-token")
+  defer client.close()
+  let framework = @framework.Framework(
+    client,
+    @model.Id::parse("400000000000000001"),
+  )
+  app.attach(
+    framework,
+    client~,
+    application_id=@model.Id::parse("400000000000000001"),
+    waiter~,
+  )
+  |> ignore
+  let interaction = app_command("wait-user", "500000000000000123")
+  let (gate, _capture) = @framework.ResponseGate::capture(interaction)
+  assert_true(framework.process_with(interaction, gate~))
+  assert_eq(seen, [Some(allowed_user)])
+}
+
+///|
 async test "interaction endpoint dispatches captured responses and completion outcomes" {
   let app = @app.App()
   let warnings : Array[String] = []
@@ -202,7 +342,12 @@ async test "interaction endpoint dispatches captured responses and completion ou
         assert_true(ctx.scope() is Dm(_))
         assert_true(ctx.user().id.to_string() == "200000000000000001")
         waiter_results.put(
-          ctx.wait_for_component(custom_id="never", timeout_ms=1) is None,
+          ctx.wait_for_component(
+            custom_id="never",
+            from=@app.WaitFrom::Anyone,
+            timeout_ms=1,
+          )
+          is None,
         )
       }),
     ),

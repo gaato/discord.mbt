@@ -533,8 +533,8 @@ pub async fn Bot::run(self : Bot) -> Unit {
           let first_ready = framework is None
           if first_ready {
             let router = @framework.Framework(client, ready.application.id)
-            let waiter : @app.ComponentWaiter = (custom_id, timeout_ms) => {
-              router.wait_for_component(custom_id~, timeout_ms?)
+            let waiter : @app.ComponentWaiter = (custom_id, user, timeout_ms) => {
+              router.wait_for_component(custom_id~, user?, timeout_ms?)
             }
             let latency_ms = () => {
               let mut total = 0L

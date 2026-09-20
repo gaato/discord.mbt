@@ -260,8 +260,9 @@ entries or an extension without its leading dot.
 
 ## Waiting for one component
 
-A deferred handler can wait for an exact custom ID. Waiters take precedence
-over registered component handlers.
+A deferred handler can wait for an exact custom ID. By default, only the user
+who invoked the command or component may satisfy the wait. Waiters take
+precedence over registered component handlers.
 
 ```mbt check
 ///|
@@ -298,5 +299,47 @@ test "component and modal declarations compile" {
 }
 ```
 
-Use a user- or interaction-specific value in the exact ID so another user
-cannot satisfy the waiter accidentally.
+For a public poll, opt out of the user filter explicitly with
+`ctx.wait_for_component(custom_id~, from=Anyone, timeout_ms=30_000)`. Keep an
+interaction-specific value in the exact ID when concurrent waits are possible;
+the unique value prevents two waits from colliding, while the default
+`Invoker` filter provides user safety.
+
+```mbt check
+///|
+fn component_wait_guide_interaction(
+  user_id : String,
+) -> @model.Interaction raise {
+  let payload =
+    #|{"id":"500000000000000050","application_id":"400000000000000001","type":3,"token":"interaction-token","version":1,"user":{"id":"USER_ID","username":"nelly","discriminator":"0","global_name":"Nelly","avatar":null},"message":{"id":"700000000000000001","channel_id":"800000000000000001","author":{"id":"200000000000000099","username":"bot","discriminator":"0","global_name":null,"avatar":null},"content":"confirm","timestamp":"2025-06-01T10:00:00.000000+00:00","edited_timestamp":null,"tts":false,"mention_everyone":false,"mentions":[],"mention_roles":[],"attachments":[],"embeds":[],"pinned":false,"type":0},"data":{"custom_id":"confirm:guide","component_type":2}}
+  @json.from_json(@json.parse(payload.replace(old="USER_ID", new=user_id)))
+}
+
+///|
+async test "another user's click does not satisfy a component wait" {
+  let client = @dhttp.Client("test-token")
+  defer client.close()
+  let fw = @framework.Framework(client, @model.Id::parse("400000000000000001"))
+  let invoker : @model.UserId = @model.Id::parse("200000000000000001")
+  @async.with_task_group((group : @async.TaskGroup[Unit]) => {
+    let pending = group.spawn(no_wait=true, () => {
+      fw.wait_for_component(
+        custom_id="confirm:guide",
+        user=invoker,
+        timeout_ms=1000,
+      )
+    })
+    @async.sleep(20)
+    assert_false(
+      fw.process(component_wait_guide_interaction("200000000000000002")),
+    )
+    assert_true(
+      fw.process(component_wait_guide_interaction("200000000000000001")),
+    )
+    guard pending.wait() is Some(click) else {
+      fail("expected the invoking user's click")
+    }
+    assert_true(click.user().id == invoker)
+  })
+}
+```

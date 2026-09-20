@@ -110,7 +110,7 @@ pub async fn Framework::process(Self, @model.Interaction) -> Bool
 pub async fn Framework::process_with(Self, @model.Interaction, gate~ : ResponseGate) -> Bool
 pub async fn Framework::sync_global(Self, unowned? : UnownedCommands) -> ScopeSyncReport
 pub async fn Framework::sync_guild(Self, @model.Id[@model.GuildMarker], unowned? : UnownedCommands) -> ScopeSyncReport
-pub async fn Framework::wait_for_component(Self, custom_id~ : String, timeout_ms? : Int) -> ComponentCtx?
+pub async fn Framework::wait_for_component(Self, custom_id~ : String, user? : @model.Id[@model.UserMarker], timeout_ms? : Int) -> ComponentCtx?
 
 pub(all) struct GuildInvocation {
   guild_id : @model.Id[@model.GuildMarker]
