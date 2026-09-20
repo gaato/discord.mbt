@@ -137,6 +137,8 @@ Runnable programs live under `src/examples/`:
 - `workers_echo`: Cloudflare Workers adapter.
 - `interactions_http`: native signed-interactions HTTP server.
 - `plugin_demo`: a stateful feedback feature installed as a separate package.
+- `gate_probe`: live probe for error-policy recovery and user-restricted
+  component waits (needs a Discord client; guild commands only).
 - `voice_player`: join a voice channel and play an Ogg/Opus file.
 - `voice_recorder`: record a user's voice to an Ogg/Opus file.
 

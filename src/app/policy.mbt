@@ -160,7 +160,8 @@ pub async fn FailureCtx::respond_error(
             ephemeral~,
           )
       }
-    // NOTE: Live verification decides whether Discord accepts followups after Sent(Modal).
+    // Discord accepts a followup after every sent callback, including
+    // `Sent(Modal)` (verified live with `src/examples/gate_probe`).
     Some(Sent(_)) | Some(Unconfirmed(_)) =>
       match raw {
         RawCommand(ctx) =>
