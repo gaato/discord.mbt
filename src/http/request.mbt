@@ -1,10 +1,4 @@
 ///|
-priv enum TimedRequestResult {
-  RequestSucceeded(HttpResponse)
-  RequestFailed(DiscordHttpError)
-}
-
-///|
 fn Client::request_headers(
   self : Client,
   route : Route,
@@ -173,6 +167,12 @@ async fn Client::perform(
 /// plus JSON body and decode the returned JSON, while unwrapped endpoints use
 /// `Route::custom`. Optional `headers` are merged after the client's base
 /// headers, so caller-supplied values such as `authorization` take precedence.
+///
+/// `request_timeout_ms` bounds each network attempt, including reading its
+/// response body. Rate-limit waits, 429 back-off, and user middleware are
+/// outside it. A timed-out attempt raises `Timeout` and is not retried because
+/// it may already have reached Discord. For a whole-operation deadline,
+/// compose `@async.with_timeout` around the call.
 pub async fn Client::request(
   self : Client,
   route : Route,
@@ -188,51 +188,43 @@ pub async fn Client::request(
     files,
     headers: headers.unwrap_or(Map([])),
   }
-  let timed = @async.with_timeout_opt(self.request_timeout_ms_, () => {
-    RequestSucceeded(self.run_middleware(0, request)) catch {
-      error if @async.is_being_cancelled() => raise error
-      DiscordHttpError::Api(status~, error~) =>
-        RequestFailed(Api(status~, error~))
-      DiscordHttpError::RateLimited(retry_after_ms~, global~) =>
-        RequestFailed(RateLimited(retry_after_ms~, global~))
-      DiscordHttpError::Deserialize(message~) =>
-        RequestFailed(Deserialize(message~))
-      DiscordHttpError::Transport(message~) =>
-        RequestFailed(Transport(message~))
-      DiscordHttpError::Timeout(timeout_ms~) =>
-        RequestFailed(Timeout(timeout_ms~))
-      DiscordHttpError::Validation(message~) =>
-        RequestFailed(Validation(message~))
-      error => RequestFailed(Transport(message="\{error}"))
-    }
-  }) catch {
-    error => raise Transport(message="cancelled: \{error}")
-  }
-  match timed {
-    Some(RequestSucceeded(response)) => {
-      if response.status >= 400 {
-        let error : ApiError = @json.from_json(response.body) catch {
-          _ => {
-            // Non-JSON bodies (proxy HTML, empty strings) surface verbatim so
-            // the user-visible error keeps whatever the server actually said.
-            let detail = match response.body {
-              String(text) => text
-              body => body.stringify()
-            }
-            {
-              code: 0,
-              message: "HTTP \{response.status}: \{detail}",
-              errors: None,
-            }
-          }
-        }
-        raise Api(status=response.status, error~)
+  let response = self.run_middleware(0, request) catch {
+    error => {
+      if @async.is_being_cancelled() {
+        // Resume cancellation at this typed-error boundary before mapping errors.
+        @async.pause()
       }
-      response.body
+      match error {
+        DiscordHttpError::Api(status~, error~) => raise Api(status~, error~)
+        DiscordHttpError::RateLimited(retry_after_ms~, global~) =>
+          raise RateLimited(retry_after_ms~, global~)
+        DiscordHttpError::Deserialize(message~) => raise Deserialize(message~)
+        DiscordHttpError::Transport(message~) => raise Transport(message~)
+        DiscordHttpError::Timeout(timeout_ms~) => raise Timeout(timeout_ms~)
+        DiscordHttpError::Validation(message~) => raise Validation(message~)
+        error => raise Transport(message="\{error}")
+      }
     }
-    Some(RequestFailed(error)) => raise error
-    None => raise Timeout(timeout_ms=self.request_timeout_ms_)
   }
+  if response.status >= 400 {
+    let error : ApiError = @json.from_json(response.body) catch {
+      _ => {
+        // Non-JSON bodies (proxy HTML, empty strings) surface verbatim so
+        // the user-visible error keeps whatever the server actually said.
+        let detail = match response.body {
+          String(text) => text
+          body => body.stringify()
+        }
+        {
+          code: 0,
+          message: "HTTP \{response.status}: \{detail}",
+          errors: None,
+        }
+      }
+    }
+    raise Api(status=response.status, error~)
+  }
+  response.body
 }
 
 ///|
@@ -263,8 +255,9 @@ async fn Client::execute(self : Client, request : HttpRequest) -> HttpResponse {
 }
 
 ///|
-/// Rate-limit and retry implementation bounded by `Client::request`'s
-/// whole-request timeout.
+/// Rate-limit acquisition and 429 back-off stay outside the per-attempt
+/// timeout. A timeout exits through the same cleanup as a transport failure
+/// and is never retried.
 async fn Client::request_inner(
   self : Client,
   request : HttpRequest,
@@ -293,20 +286,23 @@ async fn Client::request_inner(
           ),
         )
       })
-      self.perform(
-        request.route,
-        request.headers,
-        body?=request.body,
-        audit_reason?=request.audit_reason,
-        files?=request.files,
+      @async.with_timeout(
+        self.request_timeout_ms_,
+        () => {
+          self.perform(
+            request.route,
+            request.headers,
+            body?=request.body,
+            audit_reason?=request.audit_reason,
+            files?=request.files,
+          )
+        },
+        error=DiscordHttpError::Timeout(timeout_ms=self.request_timeout_ms_),
       )
     } catch {
-      e => {
-        if @async.is_being_cancelled() {
-          raise e
-        }
-        raise DiscordHttpError::Transport(message="\{e}")
-      }
+      e if @async.is_being_cancelled() => raise e
+      DiscordHttpError::Timeout(..) as e => raise e
+      e => raise DiscordHttpError::Transport(message="\{e}")
     } noraise {
       r => r
     }

@@ -44,6 +44,14 @@ An HTTP middleware receives `HttpRequest` before transport encoding. `next`
 returns the final `HttpResponse` after any internal 429 retries and before a
 Discord error status becomes `DiscordHttpError::Api`.
 
+`request_timeout_ms` bounds each network attempt inside `next`, including
+reading its response body. User middleware before and after `next`, rate-limit
+waits, and 429 back-off are outside that timeout. Timed-out attempts raise
+`DiscordHttpError::Timeout` without retrying. For a whole-operation deadline,
+compose `@async.with_timeout` around the call; see the tested example in
+[REST client](05-rest.mbt.md#rate-limit-behavior). Allow for legitimate waits:
+command sync may wait about a minute for the bulk-overwrite-commands bucket.
+
 This middleware logs the logical call and adds an extra wire header:
 
 ```mbt check

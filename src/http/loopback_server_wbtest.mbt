@@ -55,6 +55,50 @@ fn reason_of(status : Int) -> String {
 }
 
 ///|
+async test "a stalled response body times out and releases the bucket once" {
+  let server = @ahttp.Server(@socket.Addr::parse("127.0.0.1:0"))
+  defer server.close()
+  let limiter = TimeoutTestLimiter(() => ())
+  let client = Client(
+    "test-token",
+    base_url="http://\{server.addr}",
+    limiter~,
+    request_timeout_ms=200,
+    max_retries=3,
+  )
+  defer client.close()
+  let attempts = Ref(0)
+  let events : Array[@telemetry.TelemetryEvent] = []
+  client.on_telemetry(event => events.push(event))
+  @async.with_task_group(group => {
+    group.spawn_bg(no_wait=true, () => {
+      server.run_forever(allow_failure=true, (_, _, conn) => {
+        attempts.val += 1
+        conn.send_response(200, "OK", extra_headers={
+          "Content-Type": "application/json",
+        })
+        conn.write_string("{")
+        conn.flush()
+        @async.sleep(60000)
+        conn.end_response()
+      })
+    })
+    try client.request(GetGateway) catch {
+      Timeout(timeout_ms~) => assert_eq(timeout_ms, 200)
+      error => fail("unexpected error: \{Repr(error)}")
+    } noraise {
+      _ => fail("expected timeout while reading the response body")
+    }
+  })
+  assert_eq(attempts.val, 1)
+  assert_eq(limiter.acquires, 1)
+  assert_eq(limiter.releases, [(GetGateway.bucket(), 0, Map([]))])
+  guard events is [HttpRequest(status=0, retries=0, ..)] else {
+    fail("expected one timed-out attempt event: \{Repr(events)}")
+  }
+}
+
+///|
 async test "mixed-case authorization override wins on the wire" {
   with_recording_server(_ => (200, "{}"), (client, exchanges) => {
     ignore(

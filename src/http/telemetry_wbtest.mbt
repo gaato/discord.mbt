@@ -2,8 +2,14 @@
 priv suberror TelemetryHookFailure derive(Debug)
 
 ///|
-async test "http telemetry reports 429 and retry attempts" {
-  let client = Client("test-token", max_retries=1, request_timeout_ms=1000)
+async test "429 retry_after longer than the request timeout retries with telemetry" {
+  let limiter = TimeoutTestLimiter(() => ())
+  let client = Client(
+    "test-token",
+    limiter~,
+    max_retries=1,
+    request_timeout_ms=10,
+  )
   defer client.close()
   let calls = Ref(0)
   client.perform_override_.val = Some((_route, _path, _headers, _body, _files) => {
@@ -11,8 +17,8 @@ async test "http telemetry reports 429 and retry attempts" {
     if calls.val == 1 {
       {
         status: 429,
-        headers: { "x-ratelimit-global": "true", "retry-after": "0" },
-        body: { "retry_after": 0.0 },
+        headers: { "x-ratelimit-global": "true", "retry-after": "0.06" },
+        body: { "retry_after": 0.06 },
       }
     } else {
       { status: 200, headers: Map([]), body: { "ok": true }, }
@@ -25,10 +31,12 @@ async test "http telemetry reports 429 and retry attempts" {
     fail("expected successful retry")
   }
   inspect(calls.val, content="2")
+  assert_eq(limiter.acquires, 2)
+  assert_eq(limiter.releases.map(release => release.1), [429, 200])
   guard events
     is [
       HttpRequest(status=429, retries=0, ..),
-      HttpRateLimited(global=true, retry_after_ms=0L, ..),
+      HttpRateLimited(global=true, retry_after_ms=60L, ..),
       HttpRequest(status=200, retries=1, ..),
     ] else {
     fail("unexpected telemetry: \{Repr(events)}")
@@ -36,21 +44,38 @@ async test "http telemetry reports 429 and retry attempts" {
 }
 
 ///|
-async test "whole request timeout cancels a delayed transport" {
-  let client = Client("test-token", request_timeout_ms=10, max_retries=0)
+async test "a timed-out attempt releases its bucket and emits telemetry without retrying" {
+  let limiter = TimeoutTestLimiter(() => ())
+  let client = Client(
+    "test-token",
+    limiter~,
+    request_timeout_ms=10,
+    max_retries=3,
+  )
   defer client.close()
+  let attempts = Ref(0)
+  let cancelled = Ref(false)
   let events : Array[@telemetry.TelemetryEvent] = []
   client.on_telemetry(event => events.push(event))
   client.perform_override_.val = Some((_route, _path, _headers, _body, _files) => {
-    @async.sleep(100)
+    attempts.val += 1
+    defer {
+      cancelled.val = @async.is_being_cancelled()
+    }
+    @async.sleep(60000)
     { status: 200, headers: Map([]), body: { "late": true }, }
   })
-  try client.request(GetGateway) catch {
+  let route = Route::custom(request_method=Post, path="/channels/1/messages")
+  try client.request(route, body={ "content": "send once" }) catch {
     Timeout(timeout_ms~) => inspect(timeout_ms, content="10")
     error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected timeout")
   }
+  assert_eq(attempts.val, 1)
+  assert_true(cancelled.val)
+  assert_eq(limiter.acquires, 1)
+  assert_eq(limiter.releases, [(route.bucket(), 0, Map([]))])
   guard events is [HttpRequest(status=0, retries=0, ..)] else {
     fail("expected cancelled request telemetry: \{Repr(events)}")
   }

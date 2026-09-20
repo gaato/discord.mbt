@@ -25,6 +25,11 @@ pub const VERSION : String = "0.2.0"
 
 ///|
 /// Create a client. `token` is the raw bot token (without the `Bot ` prefix).
+///
+/// `request_timeout_ms` (default 30000) bounds each network attempt, including
+/// reading its response body. Rate-limit waits, 429 back-off, and user HTTP
+/// middleware are outside it. Timed-out attempts are not retried. For a
+/// whole-operation deadline, compose `@async.with_timeout` around the call.
 pub fn Client::Client(
   token : String,
   base_url? : String = "https://discord.com",

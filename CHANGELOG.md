@@ -80,6 +80,13 @@ effects now have explicit, checked contracts.
 - **The `gaato/discord` facade is cut to golden-path families** (169 → 113
   names). Migration: import the focused package for anything removed — see
   "Removed" below and the header of `src/facade.mbt`.
+- **`request_timeout_ms` bounds one network attempt, not the whole request.**
+  Rate-limit waits, 429 back-off, and HTTP middleware no longer count against
+  it, so a request that only has to wait for its bucket (for example a third
+  command sync within a minute: Discord allows two bulk overwrites per ~60 s)
+  succeeds instead of failing with `Timeout`. A timed-out attempt is not
+  retried, because it may have reached Discord. Migration: compose
+  `@async.with_timeout` around calls that need an overall deadline.
 - `@http.VERSION` now matches the module version.
 - The `voice` and `coordinator` packages are marked experimental: their APIs
   may change in minor releases until declared stable.

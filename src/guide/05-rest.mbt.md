@@ -323,10 +323,48 @@ headers and retries 429 responses after the declared delay. Typed and custom
 routes use the same request path, so no separate limiter integration is
 required. A custom limiter can be passed through `Client(limiter=...)`.
 
+`Client(request_timeout_ms=30000)` bounds each single network attempt,
+including reading its response body. Rate-limit waits, 429 back-off, and user
+HTTP middleware are not bounded by it. Command sync can legitimately wait
+about a minute for the bulk-overwrite-commands bucket. A timed-out attempt
+raises `DiscordHttpError::Timeout` and is not retried: Discord may already
+have received it, so retrying a non-idempotent POST could duplicate it.
+
+For a whole-operation deadline, compose `@async.with_timeout` around the
+call. This also bounds middleware and rate-limit waiting. The example uses a
+synthetic response to demonstrate both deadlines without contacting Discord:
+
+```mbt check
+///|
+async test "an overall REST deadline includes middleware" {
+  let client = @dhttp.Client("test-token", request_timeout_ms=10)
+  defer client.close()
+  let cancelled = Ref(false)
+  client.middleware((_, _) => {
+    defer {
+      cancelled.val = @async.is_being_cancelled()
+    }
+    @async.sleep(60)
+    { status: 200, headers: Map([]), body: { "ok": true }, }
+  })
+  let response = @async.with_timeout(1000, () => client.request(GetGateway))
+  json_inspect(response, content={ "ok": true })
+  assert_false(cancelled.val)
+  try @async.with_timeout(10, () => client.request(GetGateway)) catch {
+    @async.TimeoutError => ()
+    error => fail("unexpected error: \{Repr(error)}")
+  } noraise {
+    _ => fail("expected the overall deadline to cancel slow middleware")
+  }
+  assert_true(cancelled.val)
+}
+```
+
 ## Request middleware
 
-`Client::middleware` wraps each logical REST call. The rate limiter, wire
-exchange, and bounded 429 retries all run inside `next`:
+`Client::middleware` wraps each logical REST call, outside the per-attempt
+timeout. The rate limiter, wire exchange, and bounded 429 retries all run
+inside `next`:
 
 ```mbt check
 ///|
