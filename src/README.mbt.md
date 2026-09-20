@@ -78,7 +78,7 @@ async fn run_echo_bot(token : String) -> Unit {
   )
   let app = @discord.App()
   app.command(echo)
-  let bot = @discord.Bot(app, token~)
+  let bot = @discord.Bot(app, token~, sync=Global)
   bot.on(@discord.Events::ready(), (_ctx, ready) => {
     println("ready as \{ready.user.username}")
   })
@@ -137,8 +137,8 @@ Runnable programs live under `src/examples/`:
 ## App core and executors
 
 `App` owns the interaction declaration: commands, components, modals,
-autocomplete routes, command synchronization, and the error policy. It has no
-gateway dependency. After building an App, choose an executor:
+autocomplete routes, and the error policy. It has no gateway dependency.
+After building an App, choose an executor:
 
 - `Bot(app, token~)` connects to the gateway and routes
   `InteractionCreate` events through the App.
@@ -215,13 +215,15 @@ the `dave_probe`, `voice_player`, and `voice_recorder` examples, and the accepte
 
 ### Synchronization and failures
 
-`CommandSync` belongs to `App` and defaults to `Global`. The gateway executor
-synchronizes after its first READY; `App::serve` synchronizes during startup
-only when you pass `sync=true`. Guild and multi-guild targets are available.
+`CommandScope` selects global, guild, or multi-guild registration. Pass
+`sync=scope` to `Bot` to synchronize once after the first READY; when omitted,
+the bot makes no command request. HTTP executors never synchronize commands.
+For those deployments, call `app.sync_commands(client, application_id,
+scope~)` from a one-shot registration program.
 
 **Synchronization uses Discord's bulk overwrite endpoints. A required PUT
 deletes commands registered outside this App from the selected scope.** Use
-`Disabled` when another process owns registration.
+exactly one process for synchronization in a multi-process deployment.
 
 Install `app.error_policy(...)` to map failures to logs or interaction
 responses; handlers raise `HandlerError` variants such as `UserMessage` or

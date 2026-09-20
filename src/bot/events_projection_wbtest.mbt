@@ -37,7 +37,7 @@ test "event kinds classify the payload-free and unknown events" {
 
 ///|
 test "raw event handlers trigger the explicit-intents warning" {
-  let app = @app.App(sync=Disabled)
+  let app = @app.App()
   let warnings : Array[String] = []
   app.on_warn(message => warnings.push(message))
   let bot = Bot(app, token="test-token")

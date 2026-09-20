@@ -36,12 +36,12 @@ This convention keeps registration visible at the application entry point:
 ///|
 fn compose(
   token : String,
-  command_sync : @discord.CommandSync,
+  command_scope : @discord.CommandScope,
   feedback_config : FeedbackConfig,
   starboard_config : StarboardConfig,
 ) -> Unit {
-  let app = @discord.App(sync=command_sync)
-  let bot = @discord.Bot(app, token~)
+  let app = @discord.App()
+  let bot = @discord.Bot(app, token~, sync=command_scope)
   install_feedback(app, config=feedback_config)
   install_starboard(app, bot, config=starboard_config)
 }

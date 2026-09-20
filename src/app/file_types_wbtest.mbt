@@ -17,7 +17,7 @@ fn expect_invalid_file_types(
 
 ///|
 test "app validation rejects malformed attachment option file types" {
-  let too_many = App(sync=Disabled)
+  let too_many = App()
   too_many.command(
     slash(
       name="upload",
@@ -33,7 +33,7 @@ test "app validation rejects malformed attachment option file types" {
     ),
   )
   expect_invalid_file_types(too_many, "upload/file", "11 entries (at most 10)")
-  let bare_extension = App(sync=Disabled)
+  let bare_extension = App()
   bare_extension.command(
     slash(
       name="upload",
@@ -49,7 +49,7 @@ test "app validation rejects malformed attachment option file types" {
   expect_invalid_file_types(
     bare_extension, "upload/file", "extension pdf is not dot-prefixed",
   )
-  let valid = App(sync=Disabled)
+  let valid = App()
   valid.command(
     slash(
       name="upload",
@@ -68,7 +68,7 @@ test "app validation rejects malformed attachment option file types" {
 
 ///|
 test "app validation rejects malformed modal file field types" {
-  let app = App(sync=Disabled)
+  let app = App()
   app.on_modal(
     modal(
       custom_id="report",

@@ -29,19 +29,18 @@ priv enum InteractionRace {
 ///
 /// When `client` is omitted, the endpoint owns a client created from `token`
 /// and closes it when `group` finishes. When `application_id` is omitted, this
-/// method always resolves it through `GET /applications/@me`, including when
-/// `sync` is false. Supplying both values avoids startup HTTP requests when
-/// synchronization is disabled.
+/// method resolves it through `GET /applications/@me`. Supplying both values
+/// avoids startup HTTP requests.
 ///
-/// If `sync` is true, command synchronization follows the app's `CommandSync`
-/// setting; `CommandSync::Disabled` still performs no synchronization.
+/// Command registration is a deploy-time step. Call `app.sync_commands(...)`
+/// from a one-shot program (see `src/examples/workers_echo/register`), never
+/// per request.
 pub async fn App::serve(
   self : App,
   group : @async.TaskGroup[Unit],
   client? : @dhttp.Client,
   token? : String,
   application_id? : @model.ApplicationId,
-  sync? : Bool = false,
 ) -> InteractionEndpoint {
   self.validate()
   let (client, owns_client) = match client {
@@ -59,9 +58,6 @@ pub async fn App::serve(
   let application_id = match application_id {
     Some(id) => id
     None => client.get_current_application().id
-  }
-  if sync {
-    self.sync_commands(client, application_id)
   }
   let framework = @framework.Framework(client, application_id)
   self.attach(framework, client~, application_id~) |> ignore

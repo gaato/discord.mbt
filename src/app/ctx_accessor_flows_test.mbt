@@ -1,6 +1,6 @@
 ///|
 test "app validation rejects modals with more than five fields" {
-  let app = @app.App(sync=Disabled)
+  let app = @app.App()
   let six = @app.ModalFields::map5(
     @app.text_field(custom_id="f1", label="f1"),
     @app.text_field(custom_id="f2", label="f2"),
@@ -26,7 +26,7 @@ test "app validation rejects modals with more than five fields" {
 
 ///|
 async test "command contexts expose their interaction and REST surfaces" {
-  let app = @app.App(sync=Disabled)
+  let app = @app.App()
   let rest_paths : Array[String] = []
   let client = @dhttp.Client("test-token")
   defer client.close()
@@ -76,7 +76,6 @@ async test "command contexts expose their interaction and REST surfaces" {
       group,
       client~,
       application_id=@model.Id::parse("400000000000000001"),
-      sync=false,
     )
     match
       served.handle_interaction(app_command("inspect", "500000000000000501")) {

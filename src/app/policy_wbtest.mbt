@@ -59,7 +59,7 @@ fn policy_test_framework(
 async test "error policy exposes the user and sends a rich initial response" {
   let client = @dhttp.Client("test-token")
   defer client.close()
-  let app = App(sync=Disabled)
+  let app = App()
   app.command(
     slash(
       name="rich-failure",
@@ -146,7 +146,7 @@ async test "error policy uses a followup after a deferred failure" {
       ),
     }
   })
-  let app = App(sync=Disabled)
+  let app = App()
   app.command(
     slash(
       name="deferred-failure",

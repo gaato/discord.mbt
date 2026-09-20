@@ -54,8 +54,8 @@ fn file_command() -> @discord.Command[Unit] {
 ///|
 /// The worker's command set. The `register` runner builds the same app on
 /// native, so the deployed worker and the registered commands cannot drift.
-pub fn worker_app(sync? : @discord.CommandSync = Disabled) -> @discord.App {
-  let app = @discord.App(sync~)
+pub fn worker_app() -> @discord.App {
+  let app = @discord.App()
   app
   ..command(echo_command())
   ..command(file_command())

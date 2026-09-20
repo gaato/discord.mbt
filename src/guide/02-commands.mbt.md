@@ -201,9 +201,11 @@ test "guild command declaration compiles" {
 `edit_original` and `followup` return the resulting message; append
 `|> ignore` when the handler does not need it.
 
-Register every command with `app.command(command)`. Command synchronization is
-controlled by `App(sync=...)`: `Global`, `Guild(id)`, `Guilds(ids)`, or
-`Disabled`.
+Register every command with `app.command(command)`. To synchronize the
+declarations, pass a `CommandScope` to `Bot(sync=...)` or call
+`app.sync_commands(client, application_id, scope~)` from a one-shot program.
+Both paths use Discord's bulk overwrite endpoint and can delete commands in
+the selected scope that this App does not declare.
 
 ## Checks and app middleware
 

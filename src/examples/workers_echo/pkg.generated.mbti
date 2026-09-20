@@ -6,7 +6,7 @@ import {
 }
 
 // Values
-pub fn worker_app(sync? : @app.CommandSync) -> @app.App
+pub fn worker_app() -> @app.App
 
 // Errors
 

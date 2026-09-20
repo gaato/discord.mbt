@@ -64,7 +64,7 @@ test "voice state command encodes a disconnect as a null channel" {
 ///|
 async test "gateway context exposes raw handles, refs, and waiters" {
   let transport = BotFakeTransport()
-  let app = @app.App(sync=Disabled)
+  let app = @app.App()
   let client = @dhttp.Client("test-token")
   defer client.close()
   client.middleware((request, _next) => {

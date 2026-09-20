@@ -1,10 +1,9 @@
 ///|
-/// Where application commands are synchronized after the first READY.
-pub(all) enum CommandSync {
+/// Which command scope a synchronization targets.
+pub(all) enum CommandScope {
   Global
   Guild(@model.GuildId)
   Guilds(Array[@model.GuildId])
-  Disabled
 } derive(Debug)
 
 ///|
@@ -54,7 +53,6 @@ pub type Spawner = async (async () -> Unit) -> Unit
 ///|
 /// Gateway-free application declarations shared by gateway and HTTP executors.
 pub struct App {
-  priv sync_ : CommandSync
   priv max_in_flight_ : Int
   priv commands_ : Array[RegisteredCommand]
   priv components_ : Array[RegisteredComponent]
@@ -67,12 +65,10 @@ pub struct App {
 }
 
 ///|
-/// Create an application core. `sync` picks the command-sync strategy
-/// applied by `sync_commands` (default: overwrite global commands);
-/// `max_in_flight` caps concurrently running interaction handlers.
-pub fn App::App(sync? : CommandSync = Global, max_in_flight? : Int = 64) -> App {
+/// Create an application core. `max_in_flight` caps concurrently running
+/// interaction handlers.
+pub fn App::App(max_in_flight? : Int = 64) -> App {
   {
-    sync_: sync,
     max_in_flight_: max_in_flight,
     commands_: [],
     components_: [],
@@ -548,16 +544,15 @@ pub fn App::attach(
 }
 
 ///|
-/// Push the declared command set to Discord following the `CommandSync`
-/// strategy chosen at construction: global, one or more guilds, or
-/// disabled.
+/// Push the declared command set to a Discord command scope.
 pub async fn App::sync_commands(
   self : App,
   client : @dhttp.Client,
   application_id : @model.ApplicationId,
+  scope~ : CommandScope,
 ) -> Unit {
   let specs = self.commands_.map(command => command.definition)
-  match self.sync_ {
+  match scope {
     Global => sync_global_commands(client, application_id, specs)
     Guild(guild_id) =>
       sync_guild_commands(client, application_id, guild_id, specs)
@@ -565,7 +560,6 @@ pub async fn App::sync_commands(
       for guild_id in guild_ids {
         sync_guild_commands(client, application_id, guild_id, specs)
       }
-    Disabled => ()
   }
 }
 

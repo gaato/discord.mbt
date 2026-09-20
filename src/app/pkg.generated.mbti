@@ -77,7 +77,7 @@ pub(all) suberror ModalPrefillError {
 pub struct App {
   // private fields
 }
-pub fn App::App(sync? : CommandSync, max_in_flight? : Int) -> Self
+pub fn App::App(max_in_flight? : Int) -> Self
 pub fn App::attach(Self, @framework.Framework, client~ : @http.Client, application_id~ : @model.Id[@model.ApplicationMarker], waiter? : async (String, Int?) -> @framework.ComponentCtx?, latency_ms? : () -> Int64?) -> AppCtx
 pub fn App::autocomplete(Self, String, async (@framework.AutocompleteCtx) -> Unit) -> Unit
 pub fn[A] App::command(Self, Command[A]) -> Unit
@@ -89,9 +89,9 @@ pub fn App::on_modal_raw(Self, prefix~ : String, async (@framework.ModalCtx) -> 
 pub fn App::on_warn(Self, (String) -> Unit) -> Unit
 pub fn App::register(Self, RegisteredCommand) -> Unit
 pub async fn App::report_failure(Self, FailureOrigin, Error) -> Unit
-pub async fn App::serve(Self, @async.TaskGroup[Unit], client? : @http.Client, token? : String, application_id? : @model.Id[@model.ApplicationMarker], sync? : Bool) -> InteractionEndpoint
+pub async fn App::serve(Self, @async.TaskGroup[Unit], client? : @http.Client, token? : String, application_id? : @model.Id[@model.ApplicationMarker]) -> InteractionEndpoint
 pub fn App::spawner(Self, @async.TaskGroup[Unit]) -> async (async () -> Unit) -> Unit
-pub async fn App::sync_commands(Self, @http.Client, @model.Id[@model.ApplicationMarker]) -> Unit
+pub async fn App::sync_commands(Self, @http.Client, @model.Id[@model.ApplicationMarker], scope~ : CommandScope) -> Unit
 pub fn App::validate(Self) -> Unit raise AppConfigError
 pub fn App::warn(Self, String) -> Unit
 
@@ -126,11 +126,10 @@ pub(all) enum CommandReply {
 }
 pub fn CommandReply::message(content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, ephemeral? : Bool) -> Self
 
-pub(all) enum CommandSync {
+pub(all) enum CommandScope {
   Global
   Guild(@model.Id[@model.GuildMarker])
   Guilds(Array[@model.Id[@model.GuildMarker]])
-  Disabled
 } derive(@debug.Debug)
 
 pub struct ComponentDeferredCtx {

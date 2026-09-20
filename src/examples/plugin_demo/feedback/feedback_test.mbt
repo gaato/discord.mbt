@@ -1,6 +1,6 @@
 ///|
 test "feedback feature installs a valid command graph" {
-  let app = @discord.App(sync=Disabled)
+  let app = @discord.App()
   let feature = @feedback.FeedbackFeature(
     FeedbackConfig(
       destination_channel=@model.Id::parse("800000000000000001"),

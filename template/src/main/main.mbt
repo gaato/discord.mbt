@@ -9,21 +9,21 @@ fn ping_command() -> @discord.Command[Unit] {
 }
 
 ///|
-fn command_sync() -> @discord.CommandSync {
+fn command_scope() -> @discord.CommandScope {
   match @env.get_env_var("GUILD_ID") {
     Some(raw) => {
       let guild_id : @model.GuildId? = Some(@model.Id::parse(raw)) catch {
         _ => None
       }
       match guild_id {
-        Some(value) => @discord.CommandSync::Guild(value)
+        Some(value) => @discord.CommandScope::Guild(value)
         None => {
           println("[bot] invalid GUILD_ID, syncing globally")
-          @discord.CommandSync::Global
+          @discord.CommandScope::Global
         }
       }
     }
-    None => @discord.CommandSync::Global
+    None => @discord.CommandScope::Global
   }
 }
 
@@ -32,10 +32,10 @@ async fn main {
   @signal.set_global_cancellation_signals([SIGINT, SIGTERM])
   @async.handle_cancellation(() => {
     let token = @env.get_env_var("DISCORD_TOKEN").unwrap_or("")
-    let app = @discord.App(sync=command_sync())
+    let app = @discord.App()
     app.command(ping_command())
 
-    let bot = @discord.Bot(app, token~)
+    let bot = @discord.Bot(app, token~, sync=command_scope())
     bot.on(@discord.Events::ready(), (_, ready) => {
       println("[bot] ready as \{ready.user.username}")
     })

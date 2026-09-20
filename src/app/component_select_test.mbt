@@ -23,7 +23,7 @@ fn app_select_component(
 
 ///|
 async test "component selects expose values, resolved objects, and reply kinds" {
-  let app = @app.App(sync=Disabled)
+  let app = @app.App()
   app.on_component(
     prefix="pick:",
     Immediate(ctx => {
@@ -82,7 +82,6 @@ async test "component selects expose values, resolved objects, and reply kinds" 
       group,
       client~,
       application_id=@model.Id::parse("400000000000000001"),
-      sync=false,
     )
     match
       served.handle_interaction(
@@ -127,7 +126,7 @@ async test "component selects expose values, resolved objects, and reply kinds" 
 
 ///|
 async test "dm_only checks pass for direct-message invocations" {
-  let app = @app.App(sync=Disabled)
+  let app = @app.App()
   let handled : Array[String] = []
   app.command(
     @app.slash(
@@ -151,7 +150,6 @@ async test "dm_only checks pass for direct-message invocations" {
       group,
       client~,
       application_id=@model.Id::parse("400000000000000001"),
-      sync=false,
     )
     match
       served.handle_interaction(app_command("dm-ok", "500000000000000304")) {

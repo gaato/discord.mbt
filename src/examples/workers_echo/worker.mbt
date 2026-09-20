@@ -150,7 +150,6 @@ async fn run_interaction(
       group,
       client~,
       application_id=interaction.application_id,
-      sync=false,
     )
     responses.put(encode_outcome(endpoint.handle_interaction(interaction)))
     response_sent = true

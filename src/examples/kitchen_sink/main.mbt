@@ -131,7 +131,7 @@ fn quote_command() -> @discord.Command[@model.Message] {
 }
 
 ///|
-fn command_sync() -> @discord.CommandSync {
+fn command_scope() -> @discord.CommandScope {
   match @env.get_env_var("GUILD_ID") {
     Some(raw) => {
       let guild_id : @model.GuildId? = Some(@model.Id::parse(raw)) catch {
@@ -163,7 +163,7 @@ async fn main {
   @async.handle_cancellation(() => {
     let feedback = feedback_modal()
     let token = @env.get_env_var("DISCORD_TOKEN").unwrap_or("")
-    let app = @discord.App(sync=command_sync())
+    let app = @discord.App()
     app
     ..command(demo_command())
     ..command(wave_command())
@@ -194,7 +194,7 @@ async fn main {
       }),
     )
 
-    let bot = @discord.Bot(app, token~)
+    let bot = @discord.Bot(app, token~, sync=command_scope())
     bot.on(@discord.Events::ready(), (_ctx, ready) => {
       println("[bot] ready as \{ready.user.username}")
     })

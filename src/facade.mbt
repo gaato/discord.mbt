@@ -104,7 +104,7 @@ pub using @app {
   type SlashChild,
   type ImmediateCtx,
   type DeferredCtx,
-  type CommandSync,
+  type CommandScope,
   type AppConfigError,
   type HandlerError,
   type ErrorPolicy,

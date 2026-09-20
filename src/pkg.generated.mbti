@@ -100,7 +100,7 @@ pub fn select_option(label~ : String, value~ : String, description? : String, em
 
 pub fn separator(divider? : Bool, spacing? : Int) -> @model.Component
 
-pub async fn[X] serve_interactions(@async.TaskGroup[X], @app.App, addr~ : String, public_key~ : String, client? : @http.Client, token? : String, application_id? : @model.Id[@model.ApplicationMarker], sync? : Bool, path? : String, deadline_ms? : Int) -> @endpoint_http.InteractionsServer
+pub async fn[X] serve_interactions(@async.TaskGroup[X], @app.App, addr~ : String, public_key~ : String, client? : @http.Client, token? : String, application_id? : @model.Id[@model.ApplicationMarker], path? : String, deadline_ms? : Int) -> @endpoint_http.InteractionsServer
 
 pub fn[A] slash(name~ : String, description~ : String, args~ : @interaction.Args[A], handler~ : @app.InteractionHandler[A], default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType], name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @app.Command[A]
 
@@ -189,9 +189,9 @@ pub using @interaction {type CommandOptions}
 
 pub using @app {type CommandReply}
 
-pub using @interaction {type CommandSpec}
+pub using @app {type CommandScope}
 
-pub using @app {type CommandSync}
+pub using @interaction {type CommandSpec}
 
 pub using @framework {type ComponentCtx}
 

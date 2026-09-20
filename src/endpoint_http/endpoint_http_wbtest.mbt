@@ -134,7 +134,7 @@ async test "native interactions server authenticates and dispatches HTTP request
   }
   let public_key = "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a"
   let timestamp = "1720951200"
-  let app = @app.App(sync=Disabled)
+  let app = @app.App()
   app.command(
     @app.slash(
       name="echo",
@@ -173,7 +173,6 @@ async test "native interactions server authenticates and dispatches HTTP request
       public_key~,
       client=discord_client,
       application_id=@model.Id::parse("400000000000000001"),
-      sync=false,
       path="/interactions",
     )
     defer server.close()
@@ -294,7 +293,7 @@ async test "native interactions server authenticates and dispatches HTTP request
 
 ///|
 async test "native interactions server rejects invalid keys before startup" {
-  let app = @app.App(sync=Disabled)
+  let app = @app.App()
   @async.with_task_group(group => {
     try
       serve_interactions(
@@ -303,7 +302,6 @@ async test "native interactions server rejects invalid keys before startup" {
         addr="127.0.0.1:0",
         public_key="00",
         token="",
-        sync=false,
       )
       |> ignore
     catch {

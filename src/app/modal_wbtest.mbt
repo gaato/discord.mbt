@@ -185,7 +185,7 @@ test "modal show rejects unknown and non-text prefill keys" {
 
 ///|
 test "app validation rejects duplicate modal text input ids" {
-  let app = App(sync=Disabled)
+  let app = App()
   let form = modal(
     custom_id="duplicate",
     title="Duplicate fields",

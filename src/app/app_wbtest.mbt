@@ -11,7 +11,7 @@ async test "app context exposes an optional latency provider" {
   let application_id : @model.ApplicationId = @model.Id::parse(
     "400000000000000001",
   )
-  let app = App(sync=Disabled)
+  let app = App()
   let with_provider = app.attach(
     Framework(client, application_id),
     client~,
@@ -274,7 +274,7 @@ async fn dispatch_guard_interaction(
 async test "command checks run in order and stop before the handler" {
   let client = @dhttp.Client("test-token")
   defer client.close()
-  let app = App(sync=Disabled)
+  let app = App()
   let trace : Array[String] = []
   let errors : Array[String] = []
   app.error_policy((_, error) => {
@@ -325,7 +325,7 @@ async test "command checks run in order and stop before the handler" {
 async test "built-in scope and permission checks use invocation data" {
   let client = @dhttp.Client("test-token")
   defer client.close()
-  let app = App(sync=Disabled)
+  let app = App()
   let handled : Array[String] = []
   let errors : Array[String] = []
   app.error_policy((_, error) => {
@@ -395,7 +395,7 @@ async test "built-in scope and permission checks use invocation data" {
 async test "command guild_scope raises in DMs and returns the guild bundle" {
   let client = @dhttp.Client("test-token")
   defer client.close()
-  let app = App(sync=Disabled)
+  let app = App()
   let guild_ids : Array[String] = []
   app.command(
     slash(
@@ -444,7 +444,7 @@ async test "command guild_scope raises in DMs and returns the guild bundle" {
 async test "command cooldown reports retry time and recovers" {
   let client = @dhttp.Client("test-token")
   defer client.close()
-  let app = App(sync=Disabled)
+  let app = App()
   let clock = Ref(1_000L)
   app.set_clock(() => clock.val)
   let handled = Ref(0)
@@ -499,7 +499,7 @@ async test "command cooldown reports retry time and recovers" {
 async test "guild and global cooldown buckets share the intended scope" {
   let client = @dhttp.Client("test-token")
   defer client.close()
-  let app = App(sync=Disabled)
+  let app = App()
   app.set_clock(() => 1_000L)
   let guild_runs = Ref(0)
   let global_runs = Ref(0)
@@ -575,7 +575,7 @@ async test "guild and global cooldown buckets share the intended scope" {
 
 ///|
 test "command validation rejects non-positive cooldowns" {
-  let app = App(sync=Disabled)
+  let app = App()
   app.command(
     slash(
       name="invalid-cooldown",
@@ -625,7 +625,7 @@ test "initial response emits explicit typed allowed mentions" {
 
 ///|
 test "app validates command type names and slash child structure" {
-  let duplicate = App(sync=Disabled)
+  let duplicate = App()
   let command = slash(
     name="same",
     description="Duplicate",
@@ -640,7 +640,7 @@ test "app validates command type names and slash child structure" {
   } noraise {
     _ => fail("expected duplicate command error")
   }
-  let mixed = App(sync=Disabled)
+  let mixed = App()
   mixed.command(
     slash(
       name="shared",
@@ -651,7 +651,7 @@ test "app validates command type names and slash child structure" {
   )
   mixed.command(user_command(name="shared", handler=Raw(_ => ())))
   mixed.validate()
-  let duplicate_path = App(sync=Disabled)
+  let duplicate_path = App()
   duplicate_path.command(
     slash_group(name="admin", description="Administrative tools", children=[
       subcommand(
@@ -677,7 +677,7 @@ test "app validates command type names and slash child structure" {
   } noraise {
     _ => fail("expected duplicate path error")
   }
-  let nested_group = App(sync=Disabled)
+  let nested_group = App()
   nested_group.command(
     slash_group(name="admin", description="Administrative tools", children=[
       subcommand_group(name="outer", description="Outer group", children=[
@@ -694,7 +694,7 @@ test "app validates command type names and slash child structure" {
   } noraise {
     _ => fail("expected nested group error")
   }
-  let choices_and_suggest = App(sync=Disabled)
+  let choices_and_suggest = App()
   choices_and_suggest.command(
     slash(
       name="search",
@@ -719,7 +719,7 @@ test "app validates command type names and slash child structure" {
   } noraise {
     _ => fail("expected choices and autocomplete error")
   }
-  let invalid_order = App(sync=Disabled)
+  let invalid_order = App()
   invalid_order.command(
     slash(
       name="ordered",
@@ -766,7 +766,7 @@ async test "dispatch failure wrapping preserves cancellation" {
 
 ///|
 test "app validation rejects non-positive handler capacity" {
-  try App(sync=Disabled, max_in_flight=0).validate() catch {
+  try App(max_in_flight=0).validate() catch {
     InvalidMaxInFlight(value~) => assert_eq(value, 0)
     error => fail("unexpected validation error: \{Repr(error)}")
   } noraise {

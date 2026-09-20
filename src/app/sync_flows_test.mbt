@@ -17,7 +17,7 @@ fn sync_stub_client(requests : Array[String], fetched : Json) -> @dhttp.Client {
 
 ///|
 async test "global sync skips matching sets and replaces stale ones" {
-  let app = @app.App(sync=Global)
+  let app = @app.App()
   app.command(
     @app.slash(
       name="ping",
@@ -42,7 +42,7 @@ async test "global sync skips matching sets and replaces stale ones" {
     ),
   )
   defer in_sync_client.close()
-  app.sync_commands(in_sync_client, application_id)
+  app.sync_commands(in_sync_client, application_id, scope=Global)
   inspect(
     in_sync_requests.join("\n"),
     content=(
@@ -61,7 +61,7 @@ async test "global sync skips matching sets and replaces stale ones" {
     ),
   )
   defer stale_client.close()
-  app.sync_commands(stale_client, application_id)
+  app.sync_commands(stale_client, application_id, scope=Global)
   inspect(
     stale_requests.join("\n"),
     content=(
@@ -75,7 +75,7 @@ async test "global sync skips matching sets and replaces stale ones" {
 async test "guild sync targets each configured guild" {
   let guild_a : @model.GuildId = @model.Id::parse("100")
   let guild_b : @model.GuildId = @model.Id::parse("101")
-  let app = @app.App(sync=Guilds([guild_a, guild_b]))
+  let app = @app.App()
   app.command(
     @app.slash(
       name="ping",
@@ -87,7 +87,11 @@ async test "guild sync targets each configured guild" {
   let requests : Array[String] = []
   let client = sync_stub_client(requests, Json::array([]))
   defer client.close()
-  app.sync_commands(client, @model.Id::parse("400000000000000001"))
+  app.sync_commands(
+    client,
+    @model.Id::parse("400000000000000001"),
+    scope=Guilds([guild_a, guild_b]),
+  )
   inspect(
     requests.join("\n"),
     content=(

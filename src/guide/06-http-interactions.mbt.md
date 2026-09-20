@@ -16,14 +16,13 @@ async fn dispatch_interaction(
   token : String,
   body : Json,
 ) -> Json? {
-  let endpoint = app.serve(group, token~, sync=false)
+  let endpoint = app.serve(group, token~)
   endpoint.handle(body)
 }
 ```
 
 `App::serve` accepts either `token` or an existing `client`. Supplying both
-`client` and `application_id` avoids startup HTTP requests when synchronization
-is disabled:
+`client` and `application_id` avoids startup HTTP requests:
 
 ```mbt check
 ///|
@@ -33,13 +32,15 @@ async fn serve_with_existing_client(
   client : @dhttp.Client,
   application_id : @model.ApplicationId,
 ) -> @discord.InteractionEndpoint {
-  app.serve(group, client~, application_id~, sync=false)
+  app.serve(group, client~, application_id~)
 }
 ```
 
-Set `sync=true` only when this process should perform the configured
-`CommandSync`. Synchronization uses bulk overwrite and can remove commands not
-declared by this `App`.
+Command registration is a separate deploy-time step. Run a one-shot program
+that builds the same App and calls `app.sync_commands(client, application_id,
+scope~)` before starting or updating the HTTP deployment. Synchronization uses
+bulk overwrite and can remove commands in that scope that this App does not
+declare. Do not synchronize per request.
 
 ## Configure the Discord endpoint
 
@@ -143,7 +144,6 @@ async fn run_server(
       addr="127.0.0.1:8080",
       public_key~,
       token~,
-      sync=true,
     )
     println("listening on \{server.addr()}")
   })

@@ -81,7 +81,7 @@ async fn main {
     @env.get_env_var("GUILD_ID").unwrap_or(""),
   )
   let client = @dhttp.Client(token)
-  let app = @discord.App(sync=Disabled)
+  let app = @discord.App()
   let bot = @discord.Bot(app, token~, client~)
   bot.attach_cache(InMemoryCache(resources=CacheResources(messages=true)))
   let updates : @aqueue.Queue[@model.MessageUpdateEvent] = Queue(kind=Unbounded)

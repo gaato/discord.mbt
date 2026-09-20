@@ -86,7 +86,7 @@ async fn main {
         defer close_source()
         let done : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
         let tracked = TrackedOggSource::{ source, done, finished: false, }
-        let app = @discord.App(sync=Disabled)
+        let app = @discord.App()
         let intents = @model.Intents::guilds() |
           @model.Intents::guild_voice_states()
         let bot = @discord.Bot(app, token~, intents~)

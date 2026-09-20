@@ -1,6 +1,6 @@
 ///|
-/// Interaction-first /echo example. App owns the command and synchronization
-/// policy; Bot adds the gateway event and managed run loop.
+/// Interaction-first /echo example. App owns the command declaration; Bot
+/// adds command synchronization, gateway events, and the managed run loop.
 ///
 /// Run: DISCORD_TOKEN=... GUILD_ID=... moon run --release src/examples/slash_echo
 /// With GUILD_ID the command syncs to that guild (instant); without it the
@@ -43,7 +43,7 @@ fn echo_command() -> @discord.Command[EchoArgs] {
 }
 
 ///|
-fn command_sync() -> @discord.CommandSync {
+fn command_scope() -> @discord.CommandScope {
   match @env.get_env_var("GUILD_ID") {
     Some(raw) => {
       let guild_id : @model.GuildId? = Some(@model.Id::parse(raw)) catch {
@@ -70,10 +70,10 @@ async fn main {
       Some(s) => @string.parse_int(s) catch { _ => DEFAULT_RUN_SECONDS }
       None => DEFAULT_RUN_SECONDS
     }
-    let app = @discord.App(sync=command_sync())
+    let app = @discord.App()
     app.command(echo_command())
 
-    let bot = @discord.Bot(app, token~)
+    let bot = @discord.Bot(app, token~, sync=command_scope())
     bot.on(@discord.Events::ready(), (_ctx, ready) => {
       println("[bot] ready as \{ready.user.username}")
     })

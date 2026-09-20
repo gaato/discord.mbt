@@ -116,7 +116,7 @@ async fn[T] manager_get(queue : @aqueue.Queue[T], stage : String) -> T {
 ///|
 async test "shard config resolves auto fixed and range selections" {
   let client = @dhttp.Client("test-token")
-  let app = @app.App(sync=Disabled)
+  let app = @app.App()
   let auto = Bot(app, token="test-token", shards=Auto)
   assert_false(auto.compress_)
   auto.gateway_bot_info_.val = Some(manager_gateway_info(shards=3))
@@ -166,7 +166,7 @@ async test "fixed shards share identify queue and dispatch path" {
   let first = ManagerFakeTransport()
   let second = ManagerFakeTransport()
   let pending : Array[ManagerFakeTransport] = [second, first]
-  let app = @app.App(sync=Disabled)
+  let app = @app.App()
   let bot = Bot(
     app,
     token="test-token",
@@ -251,7 +251,7 @@ async test "fatal close fails the manager and closes sibling shards" {
   let first = ManagerFakeTransport()
   let second = ManagerFakeTransport()
   let pending : Array[ManagerFakeTransport] = [second, first]
-  let app = @app.App(sync=Disabled)
+  let app = @app.App()
   let bot = Bot(
     app,
     token="test-token",

@@ -1,6 +1,6 @@
 ///|
 async test "component and modal failures flow through the error policy" {
-  let app = @app.App(sync=Disabled)
+  let app = @app.App()
   let warnings : Array[String] = []
   app.on_warn(message => warnings.push(message))
   app.on_component(
@@ -41,7 +41,6 @@ async test "component and modal failures flow through the error policy" {
       group,
       client~,
       application_id=@model.Id::parse("400000000000000001"),
-      sync=false,
     )
     // A failing immediate component handler answers through the policy.
     match

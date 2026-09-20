@@ -504,7 +504,7 @@ async fn main {
   let channel_id : @model.ChannelId = @model.Id::parse(
     required_env("CHANNEL_ID"),
   )
-  let app = @discord.App(sync=Disabled)
+  let app = @discord.App()
   let intents = @model.Intents::guilds() | @model.Intents::guild_voice_states()
   let bot = @discord.Bot(app, token~, intents~)
   let completed = Ref(false)

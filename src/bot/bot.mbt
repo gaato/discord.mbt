@@ -63,6 +63,7 @@ pub struct Bot {
   priv shards_ : ShardConfig
   priv compress_ : Bool
   priv identify_queue_ : &@queue.IdentifyQueue?
+  priv sync_ : @app.CommandScope?
   priv typed_events_ : Array[TypedEventHandler]
   priv raw_events_ : Array[async (GatewayCtx, @model.Event) -> Unit]
   priv event_middleware_ : Array[EventMiddleware]
@@ -89,6 +90,12 @@ pub struct Bot {
 /// `shards`, `compress`, and `identify_queue` configure sharding, transport
 /// compression, and cross-process identify coordination. `capabilities` is
 /// sent in Identify (see `@model.GatewayCapabilities`).
+///
+/// When `sync` is omitted, the bot performs no command synchronization. When
+/// set, synchronization runs once per process after the first READY. It uses
+/// Discord's bulk overwrite and deletes commands in that scope that this App
+/// does not declare. In multi-process sharding, enable it in exactly one
+/// process.
 pub fn Bot::Bot(
   app : @app.App,
   token~ : String,
@@ -99,6 +106,7 @@ pub fn Bot::Bot(
   shards? : ShardConfig = Single(id=0, count=1),
   compress? : Bool = false,
   identify_queue? : &@queue.IdentifyQueue,
+  sync? : @app.CommandScope,
 ) -> Bot {
   {
     app_: app,
@@ -110,6 +118,7 @@ pub fn Bot::Bot(
     shards_: shards,
     compress_: compress,
     identify_queue_: identify_queue,
+    sync_: sync,
     typed_events_: [],
     raw_events_: [],
     event_middleware_: [],
@@ -575,7 +584,11 @@ pub async fn Bot::run(self : Bot) -> Unit {
             }
           }
           if first_ready {
-            self.app_.sync_commands(client, ready.application.id)
+            match self.sync_ {
+              Some(scope) =>
+                self.app_.sync_commands(client, ready.application.id, scope~)
+              None => ()
+            }
             self.spawn_services(group, ctx)
           }
           self.collector_.dispatch(event)

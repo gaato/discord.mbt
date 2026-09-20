@@ -470,7 +470,7 @@ pub fn[A, B, C, D, E, Z] ModalFields::map5(
 ///       @app.text_field(custom_id="details", label="Details").optional(),
 ///     ),
 ///   )
-///   let app = @app.App(sync=Disabled)
+///   let app = @app.App()
 ///   app.on_modal(feedback, Raw(_ => ()))
 ///   app.validate()
 ///   let _ : @app.ModalHandle = feedback.show(state="draft")

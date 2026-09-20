@@ -11,7 +11,7 @@ fn echo_command() -> @discord.Command[String] {
 }
 
 ///|
-fn command_sync() -> @discord.CommandSync {
+fn command_scope() -> @discord.CommandScope {
   match @env.get_env_var("GUILD_ID") {
     Some(raw) => {
       let guild_id : @model.GuildId? = Some(@model.Id::parse(raw)) catch {
@@ -43,16 +43,20 @@ async fn main {
   @async.handle_cancellation(() => {
     let token = @env.get_env_var("DISCORD_TOKEN").unwrap_or("")
     let public_key = @env.get_env_var("PUBLIC_KEY").unwrap_or("")
-    let app = @discord.App(sync=command_sync())
+    let app = @discord.App()
     app.command(echo_command())
     @async.with_task_group(group => {
+      let client = @discord.Client(token)
+      group.add_defer(() => client.close())
+      let application_id = client.get_current_application().id
+      app.sync_commands(client, application_id, scope=command_scope())
       let server = @discord.serve_interactions(
         group,
         app,
         addr="0.0.0.0:\{port()}",
         public_key~,
-        token~,
-        sync=true,
+        client~,
+        application_id~,
       )
       println("[http] listening on \{server.addr()}")
     })

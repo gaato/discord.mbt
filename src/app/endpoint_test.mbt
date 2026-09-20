@@ -114,7 +114,7 @@ fn autocomplete_choices(
 
 ///|
 async test "interaction endpoint dispatches captured responses and completion outcomes" {
-  let app = @app.App(sync=Disabled)
+  let app = @app.App()
   let warnings : Array[String] = []
   app.on_warn(message => warnings.push(message))
   let waiter_results : @aqueue.Queue[Bool] = Queue(kind=Unbounded)
@@ -182,12 +182,11 @@ async test "interaction endpoint dispatches captured responses and completion ou
   )
   defer client.close()
   @async.with_task_group(group => {
-    // Explicit client/id plus sync=false must perform no startup HTTP.
+    // Explicit client/id must perform no startup HTTP.
     let app = app.serve(
       group,
       client~,
       application_id=@model.Id::parse("400000000000000001"),
-      sync=false,
     )
     match app.handle_interaction(app_ping()) {
       Reply(response~, files~) => {
@@ -259,7 +258,7 @@ async test "interaction endpoint dispatches captured responses and completion ou
 
 ///|
 async test "interaction endpoint dispatches component and typed modal handlers" {
-  let app = @app.App(sync=Disabled)
+  let app = @app.App()
   let feedback = @app.modal(
     custom_id="feedback",
     title="Feedback",
@@ -330,7 +329,6 @@ async test "interaction endpoint dispatches component and typed modal handlers" 
       group,
       client~,
       application_id=@model.Id::parse("400000000000000001"),
-      sync=false,
     )
     match
       app.handle_interaction(app_command("open-form", "500000000000000400")) {
@@ -414,7 +412,7 @@ async test "interaction endpoint dispatches component and typed modal handlers" 
 
 ///|
 async test "typed autocomplete dispatches partial and nested focused options" {
-  let app = @app.App(sync=Disabled)
+  let app = @app.App()
   let warnings : Array[String] = []
   app.on_warn(message => warnings.push(message))
   app.command(
@@ -506,7 +504,6 @@ async test "typed autocomplete dispatches partial and nested focused options" {
       group,
       client~,
       application_id=@model.Id::parse("400000000000000001"),
-      sync=false,
     )
     match app.handle_interaction(nested) {
       Reply(response~, files=_) => {
@@ -578,7 +575,7 @@ test "command constructors emit context types and slash attributes" {
 
 ///|
 async test "context menu commands decode resolved targets" {
-  let app = @app.App(sync=Disabled)
+  let app = @app.App()
   app.command(
     @app.user_command(
       name="Inspect",
@@ -694,7 +691,6 @@ async test "context menu commands decode resolved targets" {
       group,
       client~,
       application_id=@model.Id::parse("400000000000000001"),
-      sync=false,
     )
     match app.handle_interaction(user_interaction) {
       Reply(response~, files=_) =>
@@ -789,7 +785,7 @@ async test "slash groups emit nested specs and dispatch direct and grouped paths
       },
     ],
   })
-  let app = @app.App(sync=Disabled)
+  let app = @app.App()
   app.command(command)
   let direct = app_interaction(
     (
@@ -817,7 +813,6 @@ async test "slash groups emit nested specs and dispatch direct and grouped paths
       group,
       client~,
       application_id=@model.Id::parse("400000000000000001"),
-      sync=false,
     )
     for
       pair in [

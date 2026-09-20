@@ -35,7 +35,7 @@ async fn main {
       )
       let target_user_id = required_env("TARGET_USER_ID")
       let output_path = env_or("OUTPUT_PATH", "recording.ogg")
-      let app = @discord.App(sync=Disabled)
+      let app = @discord.App()
       let intents = @model.Intents::guilds() |
         @model.Intents::guild_voice_states()
       let bot = @discord.Bot(app, token~, intents~)

@@ -54,6 +54,10 @@ Set `GUILD_ID` while developing to synchronize `/ping` to one guild, where it
 will appear immediately. If it is omitted, the command is synchronized
 globally and can take time to appear.
 
+The starter opts into synchronization on the bot's first READY. Discord's bulk
+overwrite deletes commands in the selected scope that this App does not
+declare.
+
 ```fish
 set -x GUILD_ID "123456789012345678"
 moon run --target native src/main

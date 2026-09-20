@@ -103,7 +103,7 @@ async fn process_middleware_interaction(
 async test "interaction middleware order covers commands components and modals" {
   let client = @dhttp.Client("test-token")
   defer client.close()
-  let app = App(sync=Disabled)
+  let app = App()
   let trace : Array[String] = []
   let first : InteractionMiddleware = (ctx, next) => {
     let target = middleware_target_label(ctx.target())
@@ -161,7 +161,7 @@ async test "interaction middleware order covers commands components and modals" 
 async test "interaction middleware short-circuits checks and handler" {
   let client = @dhttp.Client("test-token")
   defer client.close()
-  let app = App(sync=Disabled)
+  let app = App()
   let clock_ran = Ref(false)
   let check_ran = Ref(false)
   let handler_ran = Ref(false)
@@ -196,7 +196,7 @@ async test "interaction middleware short-circuits checks and handler" {
 async test "interaction middleware may send the initial response" {
   let client = @dhttp.Client("test-token")
   defer client.close()
-  let app = App(sync=Disabled)
+  let app = App()
   let handler_ran = Ref(false)
   app.middleware((ctx, _next) => ctx.respond("blocked"))
   app.command(
@@ -228,7 +228,7 @@ async test "interaction middleware may send the initial response" {
 async test "middleware CheckFailed matches a failing command check" {
   let client = @dhttp.Client("test-token")
   defer client.close()
-  let app = App(sync=Disabled)
+  let app = App()
   app.middleware((ctx, next) => {
     match ctx.target() {
       Command(name~) if name == "middleware-denied" =>
@@ -283,7 +283,7 @@ async test "middleware CheckFailed matches a failing command check" {
 async test "middleware guild_scope failures flow through the error policy" {
   let client = @dhttp.Client("test-token")
   defer client.close()
-  let app = App(sync=Disabled)
+  let app = App()
   app.middleware((ctx, next) => {
     match ctx.target() {
       Command(name~) if name == "guild-required" => {
@@ -321,7 +321,7 @@ async test "middleware guild_scope failures flow through the error policy" {
 async test "interaction middleware wraps command checks" {
   let client = @dhttp.Client("test-token")
   defer client.close()
-  let app = App(sync=Disabled)
+  let app = App()
   let trace : Array[String] = []
   app.middleware((_ctx, next) => {
     trace.push("middleware-in")
@@ -355,7 +355,7 @@ async test "interaction middleware wraps command checks" {
 async test "autocomplete bypasses interaction middleware" {
   let client = @dhttp.Client("test-token")
   defer client.close()
-  let app = App(sync=Disabled)
+  let app = App()
   let middleware_ran = Ref(false)
   let autocomplete_ran = Ref(false)
   app.middleware((_ctx, next) => {
