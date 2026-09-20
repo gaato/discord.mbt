@@ -45,13 +45,13 @@ pub fn channel_select(custom_id~ : String, placeholder? : String, min_values? : 
 
 pub fn container(components~ : Array[@model.Component], accent_color? : Int, spoiler? : Bool) -> @model.Component
 
-pub fn dm_only() -> (@app.CheckCtx) -> Bool raise @app.HandlerError
+pub fn dm_only() -> async (@app.CheckCtx) -> Bool
 
 pub fn file_field(custom_id~ : String, label~ : String, description? : String, min_values? : Int, max_values? : Int, file_types? : Array[@model.FileTypeFilter]) -> @app.ModalField[Array[@model.Attachment]]
 
 pub fn file_upload(custom_id~ : String, min_values? : Int, max_values? : Int, required? : Bool, file_types? : Array[@model.FileTypeFilter]) -> @model.Component
 
-pub fn guild_only() -> (@app.CheckCtx) -> Bool raise @app.HandlerError
+pub fn guild_only() -> async (@app.CheckCtx) -> Bool
 
 pub fn int_choice(String, Int64, name_localizations? : Map[String, String]) -> @model.CommandOptionChoice
 
@@ -71,7 +71,7 @@ pub fn[A] modal(custom_id~ : String, title~ : String, fields~ : @app.ModalFields
 
 pub fn number_choice(String, Double, name_localizations? : Map[String, String]) -> @model.CommandOptionChoice
 
-pub fn required_permissions(@model.Permissions) -> (@app.CheckCtx) -> Bool raise @app.HandlerError
+pub fn required_permissions(@model.Permissions) -> async (@app.CheckCtx) -> Bool
 
 pub fn role_select(custom_id~ : String, placeholder? : String, min_values? : Int, max_values? : Int, disabled? : Bool) -> @model.Component
 
@@ -142,7 +142,7 @@ pub using @http {type Client}
 
 pub using @app {type Command}
 
-pub type CommandCheck = (@app.CheckCtx) -> Bool raise @app.HandlerError
+pub type CommandCheck = async (@app.CheckCtx) -> Bool
 
 pub using @app {type CommandReply}
 

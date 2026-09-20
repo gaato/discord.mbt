@@ -333,8 +333,11 @@ test "feature installer declarations compile" {
 ```
 
 Call `.check` more than once when a command needs several guards. The App runs
-them in registration order. Cooldown failures use the same error policy as
-handler failures.
+them in registration order. The complete command path is middleware, checks,
+cooldown, argument decoding, then the handler. A check may use `ctx.app()` for
+async I/O, but checks run before the handler can defer and therefore spend
+Discord's three-second initial-response budget; keep them fast or cache their
+results. Cooldown failures use the same error policy as handler failures.
 
 ## No plugin trait or reload lifecycle
 

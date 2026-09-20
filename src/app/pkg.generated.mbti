@@ -11,17 +11,17 @@ import {
 }
 
 // Values
-pub fn dm_only() -> (CheckCtx) -> Bool raise HandlerError
+pub fn dm_only() -> async (CheckCtx) -> Bool
 
 pub fn file_field(custom_id~ : String, label~ : String, description? : String, min_values? : Int, max_values? : Int, file_types? : Array[@model.FileTypeFilter]) -> ModalField[Array[@model.Attachment]]
 
-pub fn guild_only() -> (CheckCtx) -> Bool raise HandlerError
+pub fn guild_only() -> async (CheckCtx) -> Bool
 
 pub fn message_command(name~ : String, handler~ : InteractionHandler[@model.Message], default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType], name_localizations? : Map[String, String]) -> Command[@model.Message]
 
 pub fn[A] modal(custom_id~ : String, title~ : String, fields~ : ModalFields[A]) -> Modal[A]
 
-pub fn required_permissions(@model.Permissions) -> (CheckCtx) -> Bool raise HandlerError
+pub fn required_permissions(@model.Permissions) -> async (CheckCtx) -> Bool
 
 pub fn select_field(custom_id~ : String, label~ : String, options~ : Array[@model.SelectOption], description? : String, placeholder? : String, min_values? : Int, max_values? : Int) -> ModalField[Array[String]]
 
@@ -104,6 +104,7 @@ pub fn AppCtx::latency_ms(Self) -> Int64?
 pub struct CheckCtx {
   // private fields
 }
+pub fn CheckCtx::app(Self) -> AppCtx
 pub fn CheckCtx::guild_id(Self) -> @model.Id[@model.GuildMarker]?
 pub fn CheckCtx::guild_scope(Self) -> @framework.GuildInvocation raise HandlerError
 pub fn CheckCtx::interaction(Self) -> @model.Interaction
@@ -113,7 +114,7 @@ pub fn CheckCtx::user(Self) -> @model.User
 pub struct Command[A] {
   // private fields
 }
-pub fn[A] Command::check(Self[A], (CheckCtx) -> Bool raise HandlerError) -> Self[A]
+pub fn[A] Command::check(Self[A], async (CheckCtx) -> Bool) -> Self[A]
 pub fn[A] Command::cooldown(Self[A], seconds~ : Int, bucket? : CooldownBucket) -> Self[A]
 pub fn[A] Command::erase(Self[A]) -> RegisteredCommand
 pub fn[A] Command::spec(Self[A]) -> @interaction.CommandSpec
@@ -364,7 +365,7 @@ pub(all) struct SyncReport {
 } derive(@debug.Debug)
 
 // Type aliases
-pub type CommandCheck = (CheckCtx) -> Bool raise HandlerError
+pub type CommandCheck = async (CheckCtx) -> Bool
 
 pub type ComponentWaiter = async (String, Int?) -> @framework.ComponentCtx?
 

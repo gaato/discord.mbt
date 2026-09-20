@@ -230,6 +230,11 @@ A command check is a per-command gate, and cooldown state is also per-command.
 App middleware is application-global and wraps checks, cooldowns, and handler
 dispatch for commands, components, and modals. It does not run for
 autocomplete. Use checks for command-specific permissions and preconditions.
+Checks may call async services such as Discord REST through
+`ctx.app().http()`. The command path is middleware, checks in registration
+order, cooldown, argument decoding, then the handler. Checks run before the
+handler can defer, so they spend Discord's three-second initial-response budget;
+keep them fast or cache their results.
 Use middleware for policy that spans interaction kinds, or inspect its routed
 target to keep the policy scoped. See [Middleware](09-middleware.mbt.md) for
 ordering, short-circuiting, and error-policy behavior.

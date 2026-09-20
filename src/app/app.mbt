@@ -344,7 +344,7 @@ async fn App::run_registered_command(
     raw_: failure_raw,
   }
   self.run_middleware(ctx, 0, () => {
-    command.run_checks_and_cooldown(raw, (self.now_)())
+    command.run_checks_and_cooldown(bot, raw, (self.now_)())
     (command.dispatch)(bot, waiter, self.warn_, raw)
   }) catch {
     error if @async.is_being_cancelled() => raise error

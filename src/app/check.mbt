@@ -3,6 +3,13 @@
 /// handler execution.
 pub struct CheckCtx {
   priv raw_ : @framework.CommandCtx
+  priv bot_ : AppCtx
+}
+
+///|
+/// The app-level services: the REST client and application id.
+pub fn CheckCtx::app(self : CheckCtx) -> AppCtx {
+  self.bot_
 }
 
 ///|
@@ -41,9 +48,10 @@ pub fn CheckCtx::guild_id(self : CheckCtx) -> @model.GuildId? {
 }
 
 ///|
-/// A command guard. Returning false produces `HandlerError::CheckFailed`;
-/// expected denials can instead raise a more specific `HandlerError`.
-pub type CommandCheck = (CheckCtx) -> Bool raise HandlerError
+/// A command guard. Returning false produces `HandlerError::CheckFailed`; raise
+/// a more specific `HandlerError` for an expected denial. Any other error
+/// reaches the error policy unchanged.
+pub type CommandCheck = async (CheckCtx) -> Bool
 
 ///|
 /// Require a guild invocation.
@@ -115,12 +123,13 @@ fn cooldown_key(
 }
 
 ///|
-fn RegisteredCommand::run_checks_and_cooldown(
+async fn RegisteredCommand::run_checks_and_cooldown(
   self : RegisteredCommand,
+  bot : AppCtx,
   raw : @framework.CommandCtx,
   now_ms : Int64,
-) -> Unit raise HandlerError {
-  let ctx = CheckCtx::{ raw_: raw, }
+) -> Unit {
+  let ctx = CheckCtx::{ raw_: raw, bot_: bot, }
   for check in self.checks_ {
     if !check(ctx) {
       raise CheckFailed

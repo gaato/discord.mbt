@@ -404,8 +404,11 @@ pub fn slash_group(
 }
 
 ///|
-/// Add a pre-execution check. Checks run in registration order before argument
-/// decoding. Returning false is equivalent to `HandlerError::CheckFailed`.
+/// Add a pre-execution check. Checks run in registration order after middleware
+/// and before cooldown, argument decoding, and handler dispatch. Checks share
+/// Discord's three-second initial-response budget, so keep them fast or cache
+/// their results. Returning false is equivalent to
+/// `HandlerError::CheckFailed`.
 pub fn[A] Command::check(self : Command[A], check : CommandCheck) -> Command[A] {
   self.checks.push(check)
   self
