@@ -1,0 +1,334 @@
+///|
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/fs",
+  "moonbitlang/core/env",
+}
+
+///|
+struct Endpoint {
+  name : String
+  path : String
+  formats : String
+  builder : String?
+}
+
+///|
+fn baseline() -> Array[Endpoint] {
+  let animated = "PNG, JPEG, WebP, GIF"
+  let still = "PNG, JPEG, WebP"
+  [
+    {
+      name: "Custom Emoji",
+      path: "emojis/{}",
+      formats: animated,
+      builder: Some("emoji_url"),
+    },
+    {
+      name: "Guild Icon",
+      path: "icons/{}/{}",
+      formats: animated,
+      builder: Some("guild_icon_url"),
+    },
+    {
+      name: "Guild Splash",
+      path: "splashes/{}/{}",
+      formats: still,
+      builder: Some("guild_splash_url"),
+    },
+    {
+      name: "Guild Discovery Splash",
+      path: "discovery-splashes/{}/{}",
+      formats: still,
+      builder: Some("guild_discovery_splash_url"),
+    },
+    {
+      name: "Guild Banner",
+      path: "banners/{}/{}",
+      formats: animated,
+      builder: Some("guild_banner_url"),
+    },
+    {
+      name: "User Banner",
+      path: "banners/{}/{}",
+      formats: animated,
+      builder: Some("user_banner_url"),
+    },
+    {
+      name: "Default User Avatar",
+      path: "embed/avatars/{}",
+      formats: "PNG",
+      builder: Some("default_user_avatar_url"),
+    },
+    {
+      name: "User Avatar",
+      path: "avatars/{}/{}",
+      formats: animated,
+      builder: Some("user_avatar_url"),
+    },
+    {
+      name: "Guild Member Avatar",
+      path: "guilds/{}/users/{}/avatars/{}",
+      formats: animated,
+      builder: Some("guild_member_avatar_url"),
+    },
+    {
+      name: "Avatar Decoration",
+      path: "avatar-decoration-presets/{}",
+      formats: "PNG",
+      builder: Some("avatar_decoration_url"),
+    },
+    {
+      name: "Application Icon",
+      path: "app-icons/{}/{}",
+      formats: still,
+      builder: Some("application_icon_url"),
+    },
+    {
+      name: "Application Cover",
+      path: "app-icons/{}/{}",
+      formats: still,
+      builder: Some("application_cover_url"),
+    },
+    {
+      name: "Application Asset",
+      path: "app-assets/{}/{}",
+      formats: still,
+      builder: None,
+    },
+    {
+      name: "Achievement Icon",
+      path: "app-assets/{}/achievements/{}/icons/{}",
+      formats: still,
+      builder: None,
+    },
+    {
+      name: "Store Page Asset",
+      path: "app-assets/{}/store/asset_id",
+      formats: still,
+      builder: None,
+    },
+    {
+      name: "Sticker Pack Banner",
+      path: "app-assets/710982414301790216/store/{}",
+      formats: still,
+      builder: Some("sticker_pack_banner_url"),
+    },
+    {
+      name: "Team Icon",
+      path: "team-icons/{}/{}",
+      formats: still,
+      builder: Some("team_icon_url"),
+    },
+    {
+      name: "Sticker",
+      path: "stickers/{}",
+      formats: "PNG, Lottie, GIF",
+      builder: Some("sticker_url"),
+    },
+    {
+      name: "Role Icon",
+      path: "role-icons/{}/{}",
+      formats: still,
+      builder: Some("role_icon_url"),
+    },
+    {
+      name: "Guild Scheduled Event Cover",
+      path: "guild-events/{}/{}",
+      formats: still,
+      builder: Some("scheduled_event_cover_url"),
+    },
+    {
+      name: "Guild Member Banner",
+      path: "guilds/{}/users/{}/banners/{}",
+      formats: animated,
+      builder: Some("guild_member_banner_url"),
+    },
+    {
+      name: "Guild Tag Badge",
+      path: "guild-tag-badges/{}/{}",
+      formats: still,
+      builder: Some("guild_tag_badge_url"),
+    },
+  ]
+}
+
+///|
+// Normalize Markdown links, not endpoint names or formats. Unexpected syntax
+// remains visible and therefore fails comparison instead of disappearing.
+fn normalize_path(path : String) -> String raise {
+  let output = StringBuilder()
+  let mut in_link = false
+  for char in path {
+    if in_link {
+      if char == ')' {
+        in_link = false
+      }
+    } else if char == '[' {
+      output.write_string("{}")
+      in_link = true
+    } else if char == '\\' || char == '*' {
+      continue
+    } else {
+      output.write_char(char)
+    }
+  }
+  if in_link {
+    fail("unterminated CDN Markdown link")
+  }
+  let normalized = output.to_string().trim().to_owned()
+  normalized.strip_suffix(".png").unwrap_or(normalized[:]).to_owned()
+}
+
+///|
+fn rows(text : String) -> Map[String, (String, String)] raise {
+  let found : Map[String, (String, String)] = Map([])
+  let mut active = false
+  let mut header = false
+  for raw in text.split("\n") {
+    let line = raw.trim().to_owned()
+    if line == "**CDN Endpoints**" {
+      active = true
+      continue
+    }
+    if !active {
+      continue
+    }
+    if !line.has_prefix("|") {
+      if !found.is_empty() {
+        break
+      }
+      continue
+    }
+    let cells = line.split("|").map(cell => cell.trim().to_owned()).to_array()
+    if cells.length() != 5 {
+      fail("malformed CDN table row")
+    }
+    if cells[1] == "Type" {
+      if cells[2] != "Path" || cells[3] != "Supports" {
+        fail("unexpected CDN header")
+      }
+      header = true
+      continue
+    }
+    if cells[1].has_prefix("---") {
+      continue
+    }
+    if !header || found.contains(cells[1]) {
+      fail("missing header or duplicate CDN endpoint")
+    }
+    found[cells[1]] = (normalize_path(cells[2]), cells[3])
+  }
+  if !active || !header || found.is_empty() {
+    fail("missing or empty CDN table")
+  }
+  found
+}
+
+///|
+fn audit(text : String, allow_text : String, source : String) -> Unit raise {
+  let actual = rows(text)
+  let allowed : Set[String] = Set([])
+  for raw in allow_text.split("\n") {
+    let line = raw.trim().to_owned()
+    if line.is_empty() || line.has_prefix("#") {
+      continue
+    }
+    let parts = line.split("#").to_array()
+    if parts.length() < 2 || parts[1].trim().is_empty() {
+      fail("allow entry requires a reason")
+    }
+    let name = parts[0].trim().to_owned()
+    if allowed.contains(name) {
+      fail("duplicate allow entry: \{name}")
+    }
+    allowed.add(name)
+  }
+  let expected = baseline()
+  if actual.length() != expected.length() {
+    fail("CDN table row count changed")
+  }
+  for endpoint in expected {
+    guard actual.get(endpoint.name) is Some((path, formats)) else {
+      fail("missing endpoint: \{endpoint.name}")
+    }
+    if path != endpoint.path || formats != endpoint.formats {
+      fail(
+        "CDN path/formats drift: \{endpoint.name}: \{path} [\{formats}], expected \{endpoint.path} [\{endpoint.formats}]",
+      )
+    }
+    match endpoint.builder {
+      Some(builder) => {
+        if allowed.contains(endpoint.name) {
+          fail("stale allow entry: \{endpoint.name}")
+        }
+        if !source.contains("pub fn \{builder}(") {
+          fail("missing builder: \{builder}")
+        }
+      }
+      None => {
+        if !allowed.contains(endpoint.name) {
+          fail("unexplained endpoint: \{endpoint.name}")
+        }
+        allowed.remove(endpoint.name)
+      }
+    }
+  }
+  if !allowed.is_empty() {
+    fail("unknown or stale allow entries")
+  }
+}
+
+///|
+fn must_fail(run : () -> Unit raise) -> Unit raise {
+  try run() catch {
+    _ => ()
+  } noraise {
+    _ => fail("negative audit self-test unexpectedly passed")
+  }
+}
+
+///|
+async fn main {
+  let args = @env.args()
+  if args.length() < 2 || args.length() > 3 {
+    fail(
+      "usage: moon run scripts/docs_cdn_audit.mbtx REFERENCE.mdx [--self-test]",
+    )
+  }
+  let text = @fs.read_file(args[1]).text()
+  let allow = @fs.read_file("scripts/docs_cdn_audit.allow").text()
+  let source = @fs.read_file("src/util/cdn.mbt").text()
+  audit(text, allow, source)
+  if args.length() == 3 {
+    if args[2] != "--self-test" {
+      fail("unknown option")
+    }
+    must_fail(() => audit("", allow, source))
+    must_fail(() => {
+      audit("**CDN Endpoints**\n| Type | Path | Supports |\n", allow, source)
+    })
+    must_fail(() => {
+      audit(text.replace(old="Guild Icon", new="Unknown Icon"), allow, source)
+    })
+    must_fail(() => {
+      audit(text.replace(old="emojis/", new="emoji-assets/"), allow, source)
+    })
+    must_fail(() => {
+      audit(
+        text.replace(old="PNG, JPEG, WebP, GIF", new="PNG, GIF"),
+        allow,
+        source,
+      )
+    })
+    must_fail(() => audit(text, allow + "\nGuild Icon # stale\n", source))
+    must_fail(() => audit(text, allow + "\nRemoved Endpoint # stale\n", source))
+    must_fail(() => audit(text, "", source))
+    must_fail(() => audit(text, allow, ""))
+    must_fail(() => {
+      ignore(rows("**CDN Endpoints**\n| Type | Path | Supports |\n| broken |"))
+    })
+    println("CDN audit self-tests: OK")
+  }
+  println("CDN endpoints: OK (22 rows; URL behavior is checked by util tests)")
+}

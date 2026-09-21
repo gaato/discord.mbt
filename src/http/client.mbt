@@ -12,8 +12,8 @@ pub struct Client {
   priv middleware_ : Array[HttpMiddleware]
   priv telemetry_ : Array[(@telemetry.TelemetryEvent) -> Unit raise]
   priv warn_ : Ref[(String) -> Unit]
-  // Whitebox tests intercept prepared requests here; production always uses
-  // the pooled transport through `perform`.
+  priv mut closed_ : Bool
+  // Adapt the public transport to the existing prepared-request boundary.
   priv perform_override_ : Ref[
     (async (Route, String, Map[String, String], Json?, Array[FileUpload]?) -> HttpResponse)?,
   ]
@@ -21,7 +21,7 @@ pub struct Client {
 
 ///|
 /// Library version, sent in the User-Agent header.
-pub const VERSION : String = "0.3.1"
+pub const VERSION : String = "0.4.0"
 
 ///|
 /// Create a client. `token` is the raw bot token (without the `Bot ` prefix).
@@ -30,6 +30,9 @@ pub const VERSION : String = "0.3.1"
 /// reading its response body. Rate-limit waits, 429 back-off, and user HTTP
 /// middleware are outside it. Timed-out attempts are not retried. For a
 /// whole-operation deadline, compose `@async.with_timeout` around the call.
+/// `transport` replaces only wire exchange, after validation and before JSON or
+/// multipart encoding; failures never fall back to the network. See
+/// `PreparedHttpRequest` for the prepared-header contract.
 pub fn Client::Client(
   token : String,
   base_url? : String = "https://discord.com",
@@ -39,6 +42,7 @@ pub fn Client::Client(
   request_timeout_ms? : Int = 30000,
   max_retries? : Int = 4,
   default_allowed_mentions? : @model.AllowedMentions,
+  transport? : HttpTransport,
 ) -> Client {
   let limiter : &@ratelimit.RateLimiter = match limiter {
     Some(l) => l
@@ -58,7 +62,14 @@ pub fn Client::Client(
     middleware_: [],
     telemetry_: [],
     warn_: Ref(message => println(message)),
-    perform_override_: Ref(None),
+    closed_: false,
+    perform_override_: Ref(
+      transport.map(send => {
+        (route, path, headers, body, files) => {
+          send({ route, path, headers, body, files, })
+        }
+      }),
+    ),
   }
 }
 
@@ -99,8 +110,10 @@ fn Client::emit_telemetry(
 }
 
 ///|
-/// Close all pooled connections.
+/// Close pooled connections and reject future transport calls. An in-flight
+/// custom transport owns its resources and is not cancelled by this method.
 pub fn Client::close(self : Client) -> Unit {
+  self.closed_ = true
   self.pool.close()
 }
 

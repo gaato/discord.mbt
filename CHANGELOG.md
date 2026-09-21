@@ -7,13 +7,27 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-09-21
+
 ### Added
 
+- **App testkit (`gaato/discord/testkit`), on JS and native.** Deterministic
+  model/interaction fixtures and a Harness exercise real App routing, decoding,
+  checks, middleware, policy and response validation without Discord. Initial
+  response and original failures are recorded independently. FIFO scripted REST
+  supports arbitrary Routes, rejects unexpected/mismatched calls even when
+  caught, and checks leftovers with `assert_rest_complete`. Dispatch timeout
+  cancels and joins owned tasks before closing the Client. See the testkit guide.
+- **Executor-scoped failure observation and injectable HTTP transport.**
+  `App::attach(failure_observer=...)` observes failures without replacing the
+  policy. `Client(transport=...)` replaces wire exchange below validation while
+  preserving middleware, timeouts, rate limiting, status mapping and decoding.
+  `FileUpload` exposes read-only filename, content and content-type accessors.
 - **Outgoing embeds, components, and modals are checked against Discord's
   documented limits.** Discord answers a value outside one — a text input
   `max_length` over 4000, a button label over 80, embeds totalling more than
-  6000 — with 400 Invalid Form Body, whatever the user did. Every message send
-  path (REST, webhooks, interaction responses and followups, edits) and
+  6000 — with 400 Invalid Form Body, whatever the user did. Typed message send
+  helpers (REST, webhooks, interaction responses and followups, edits) and
   `show_modal` now raise `DiscordHttpError::Validation` naming the offending
   path before any request is made. `App::validate` applies the modal limits to
   registered typed modals at startup (`AppConfigError::ModalOutsideLimits`),
@@ -30,11 +44,19 @@ breaking change is listed with a migration note.
   `role_icon_url`, `scheduled_event_cover_url`, `application_icon_url`,
   `application_cover_url`, `team_icon_url`, and `sticker_pack_banner_url`,
   plus `display_avatar_url`, which resolves guild member avatar, user avatar,
-  then default avatar the way clients do. `scripts/docs_cdn_audit.py` compares
-  the builders with the documented table so a new route is noticed.
+  then default avatar the way clients do. `scripts/docs_cdn_audit.mbtx` audits
+  names, paths and formats against a pinned table in CI; run it against updated
+  documentation to discover new routes.
 
 ### Changed
 
+- **CDN URL corrections and migration.** Animated WebP includes
+  `animated=true`; GIF stickers use `media.discordapp.net`. Remove the `size`
+  argument from `sticker_url` calls: Discord ignores it. Static-only endpoints
+  default to PNG even for an `a_` hash and reject GIF with the new
+  `CdnUrlError::UnsupportedFormat`; add this case to exhaustive error matches.
+  Raw `Client::request` and raw interaction callback bodies remain escape
+  hatches, not a promise of full outgoing model validation.
 - **Typed route ids may contain `:`.** `component_route` and `modal` ids were
   rejected by `App::validate` when they contained the state separator, which
   forced a bot adopting typed routes to keep ids already attached to posted

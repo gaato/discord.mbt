@@ -87,7 +87,7 @@ pub struct App {
   // private fields
 }
 pub fn App::App(max_in_flight? : Int, cooldown_store? : &@cooldown.CooldownStore) -> Self
-pub fn App::attach(Self, @framework.Framework, client~ : @http.Client, application_id~ : @model.Id[@model.ApplicationMarker], waiter? : async (String, @model.Id[@model.UserMarker]?, Int?) -> @framework.ComponentCtx?, latency_ms? : () -> Int64?) -> AppCtx
+pub fn App::attach(Self, @framework.Framework, client~ : @http.Client, application_id~ : @model.Id[@model.ApplicationMarker], waiter? : async (String, @model.Id[@model.UserMarker]?, Int?) -> @framework.ComponentCtx?, latency_ms? : () -> Int64?, failure_observer? : (FailureObservation) -> Unit) -> AppCtx
 pub fn App::autocomplete(Self, String, async (@framework.AutocompleteCtx) -> Unit) -> Unit
 pub fn[A] App::command(Self, Command[A]) -> Unit
 pub fn App::error_policy(Self, async (FailureCtx, Error) -> Unit) -> Unit
@@ -244,6 +244,12 @@ pub async fn FailureCtx::respond_error(Self, content? : String, embeds? : Array[
 pub fn FailureCtx::response_state(Self) -> @framework.ResponseState?
 pub fn FailureCtx::user(Self) -> @model.User?
 
+pub(all) enum FailureObservation {
+  Handler(FailureOrigin, Error)
+  ErrorPolicy(FailureOrigin, Error)
+  Framework(String, Error)
+} derive(@debug.Debug)
+
 pub(all) enum FailureOrigin {
   Command(name~ : String)
   Autocomplete(name~ : String)
@@ -399,6 +405,8 @@ pub type CommandCheck = async (CheckCtx) -> Bool
 pub type ComponentWaiter = async (String, @model.Id[@model.UserMarker]?, Int?) -> @framework.ComponentCtx?
 
 pub type ErrorPolicy = async (FailureCtx, Error) -> Unit
+
+pub type FailureObserver = (FailureObservation) -> Unit
 
 pub type InteractionMiddleware = async (InteractionCtx, async () -> Unit) -> Unit
 

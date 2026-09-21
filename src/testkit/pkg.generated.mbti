@@ -1,0 +1,84 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "gaato/discord/testkit"
+
+import {
+  "gaato/discord/app",
+  "gaato/discord/framework",
+  "gaato/discord/http",
+  "gaato/discord/model",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn autocomplete(String, options~ : Array[@model.CommandDataOption], base? : @model.Interaction) -> @model.Interaction
+
+pub fn component(String, message? : @model.Message, typ? : Int, values? : Array[String], resolved? : @model.ResolvedData, base? : @model.Interaction) -> @model.Interaction raise FixtureError
+
+pub fn default_application_id() -> @model.Id[@model.ApplicationMarker]
+
+pub fn guild_member(user? : @model.User, roles? : Array[@model.Id[@model.RoleMarker]], permissions? : @model.Permissions) -> @model.GuildMember
+
+pub fn interaction(id? : @model.Id[@model.InteractionMarker], application_id? : @model.Id[@model.ApplicationMarker], actor? : @model.User, guild? : (@model.Id[@model.GuildMarker], @model.GuildMember), channel_id? : @model.Id[@model.ChannelMarker]) -> @model.Interaction raise FixtureError
+
+pub fn message(id? : @model.Id[@model.MessageMarker], channel_id? : @model.Id[@model.ChannelMarker], author? : @model.User, content? : String, components? : Array[@model.Component]) -> @model.Message
+
+pub fn message_command(String, @model.Message, base? : @model.Interaction) -> @model.Interaction
+
+pub fn modal(String, components? : Array[@model.Component], resolved? : @model.ResolvedData, message? : @model.Message, base? : @model.Interaction) -> @model.Interaction raise FixtureError
+
+pub fn role(id? : @model.Id[@model.RoleMarker], name? : String, permissions? : @model.Permissions) -> @model.Role
+
+pub fn slash(String, options? : Array[@model.CommandDataOption], resolved? : @model.ResolvedData, base? : @model.Interaction) -> @model.Interaction
+
+pub fn user(id? : @model.Id[@model.UserMarker], username? : String, bot? : Bool) -> @model.User
+
+pub fn user_command(String, @model.User, base? : @model.Interaction) -> @model.Interaction
+
+// Errors
+pub(all) suberror FixtureError {
+  InconsistentContext(String)
+} derive(Eq, @debug.Debug)
+
+pub(all) suberror TestkitError {
+  Busy
+  FailedHarness
+  InvalidConfiguration(String)
+  DispatchTimeout
+  UnexpectedRest
+  RestMismatch
+  UnconsumedRest(Int)
+} derive(Eq, @debug.Debug)
+
+// Types and methods
+pub(all) enum DispatchFailure {
+  App(@app.FailureObservation)
+  Dispatch(Error)
+} derive(@debug.Debug)
+
+pub struct DispatchResult {
+  routing : Routing
+  // private fields
+}
+pub fn DispatchResult::errors(Self) -> Array[DispatchFailure]
+pub fn DispatchResult::initial_response(Self) -> @framework.CapturedResponse?
+pub fn DispatchResult::no_response(Self) -> Bool
+pub fn DispatchResult::requests(Self) -> Array[@http.PreparedHttpRequest]
+
+pub struct Harness {
+  // private fields
+}
+pub fn Harness::Harness(@app.App, application_id? : @model.Id[@model.ApplicationMarker]) -> Self
+pub fn Harness::assert_rest_complete(Self) -> Unit raise TestkitError
+pub async fn Harness::dispatch(Self, @model.Interaction, timeout_ms? : Int) -> DispatchResult
+pub fn Harness::expect_rest(Self, @http.Route, @http.HttpResponse) -> Unit raise TestkitError
+pub fn Harness::last_requests(Self) -> Array[@http.PreparedHttpRequest]
+
+pub(all) enum Routing {
+  Matched
+  NoRoute
+  Rejected
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits

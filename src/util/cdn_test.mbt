@@ -1,4 +1,113 @@
 ///|
+test "animated WebP keeps animation and combines size query" {
+  assert_eq(
+    @util.user_avatar_url(Id(1UL), ImageHash("a_hash"), format=Webp),
+    "https://cdn.discordapp.com/avatars/1/a_hash.webp?animated=true",
+  )
+  assert_eq(
+    @util.guild_icon_url(Id(1UL), ImageHash("a_hash"), format=Webp, size=128),
+    "https://cdn.discordapp.com/icons/1/a_hash.webp?animated=true&size=128",
+  )
+  assert_eq(
+    @util.sticker_url(Id(1UL), format=Gif),
+    "https://media.discordapp.net/stickers/1.gif",
+  )
+}
+
+///|
+test "static CDN endpoints accept raster formats but never GIF or animated defaults" {
+  let builders : Array[
+    (@util.CdnImageFormat?) -> String raise @util.CdnUrlError,
+  ] = [
+    format => @util.guild_splash_url(Id(1UL), ImageHash("a_hash"), format?),
+    format => {
+      @util.guild_discovery_splash_url(Id(1UL), ImageHash("a_hash"), format?)
+    },
+    format => @util.guild_tag_badge_url(Id(1UL), ImageHash("a_hash"), format?),
+    format => @util.role_icon_url(Id(1UL), ImageHash("a_hash"), format?),
+    format => {
+      @util.scheduled_event_cover_url(Id(1UL), ImageHash("a_hash"), format?)
+    },
+    format => @util.application_icon_url(Id(1UL), ImageHash("a_hash"), format?),
+    format => @util.application_cover_url(Id(1UL), ImageHash("a_hash"), format?),
+    format => @util.team_icon_url(Id(1UL), ImageHash("a_hash"), format?),
+    format => @util.sticker_pack_banner_url(Id(1UL), format?),
+  ]
+  for build in builders {
+    assert_true(build(None).has_suffix(".png"))
+    for
+      (format, extension) in [
+        (@util.CdnImageFormat::Png, "png"),
+        (Jpeg, "jpeg"),
+        (Webp, "webp"),
+      ] {
+      assert_true(build(Some(format)).has_suffix("." + extension))
+    }
+    try build(Some(Gif)) catch {
+      @util.CdnUrlError::UnsupportedFormat(..) => ()
+      error => raise error
+    } noraise {
+      _ => fail("expected unsupported format")
+    }
+  }
+}
+
+///|
+test "animated CDN endpoint format and size matrix" {
+  let builders : Array[
+    (@util.CdnImageFormat, Int) -> String raise @util.CdnUrlError,
+  ] = [
+    (format, size) => {
+      @util.user_avatar_url(Id(1UL), ImageHash("a_hash"), format~, size~)
+    },
+    (format, size) => {
+      @util.user_banner_url(Id(1UL), ImageHash("a_hash"), format~, size~)
+    },
+    (format, size) => {
+      @util.guild_icon_url(Id(1UL), ImageHash("a_hash"), format~, size~)
+    },
+    (format, size) => {
+      @util.guild_banner_url(Id(1UL), ImageHash("a_hash"), format~, size~)
+    },
+    (format, size) => {
+      @util.guild_member_avatar_url(
+        Id(1UL),
+        Id(2UL),
+        ImageHash("a_hash"),
+        format~,
+        size~,
+      )
+    },
+    (format, size) => {
+      @util.guild_member_banner_url(
+        Id(1UL),
+        Id(2UL),
+        ImageHash("a_hash"),
+        format~,
+        size~,
+      )
+    },
+  ]
+  for build in builders {
+    for size in [16, 32, 64, 128, 256, 512, 1024, 2048, 4096] {
+      for format in [@util.CdnImageFormat::Png, Jpeg, Webp, Gif] {
+        let url = build(format, size)
+        assert_true(url.has_suffix("size=\{size}"))
+        assert_eq(url.contains("animated=true"), format == Webp)
+      }
+    }
+    for size in [0, 15, 100, 8192] {
+      try build(Png, size) catch {
+        @util.CdnUrlError::InvalidSize(_) => ()
+        error => raise error
+      } noraise {
+        _ => fail("expected invalid size")
+      }
+    }
+  }
+}
+
+///|
 test "CDN asset URLs and defaults" {
   debug_inspect(
     [
@@ -16,7 +125,7 @@ test "CDN asset URLs and defaults" {
       ),
       @util.emoji_url(Id(3UL), format=Gif, size=64),
       @util.sticker_url(Id(4UL), format=Lottie),
-      @util.sticker_url(Id(5UL), format=Apng, size=256),
+      @util.sticker_url(Id(5UL), format=Apng),
       @util.user_banner_url(Id(1UL), ImageHash("a_banner")),
       @util.guild_member_avatar_url(Id(2UL), Id(1UL), ImageHash("a_local")),
       @util.guild_member_banner_url(Id(2UL), Id(1UL), ImageHash("local")),
@@ -41,7 +150,7 @@ test "CDN asset URLs and defaults" {
       #|  "https://cdn.discordapp.com/splashes/2/splash.jpeg?size=4096",
       #|  "https://cdn.discordapp.com/emojis/3.gif?size=64",
       #|  "https://cdn.discordapp.com/stickers/4.json",
-      #|  "https://cdn.discordapp.com/stickers/5.png?size=256",
+      #|  "https://cdn.discordapp.com/stickers/5.png",
       #|  "https://cdn.discordapp.com/banners/1/a_banner.gif",
       #|  "https://cdn.discordapp.com/guilds/2/users/1/avatars/a_local.gif",
       #|  "https://cdn.discordapp.com/guilds/2/users/1/banners/local.png",

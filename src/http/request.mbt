@@ -27,8 +27,8 @@ fn to_http_headers(headers : Map[String, String]) -> @ahttp.Headers {
 }
 
 ///|
-/// Execute one HTTP exchange on a pooled connection. The response body is
-/// fully consumed before the connection returns to the pool.
+/// Execute one HTTP exchange through the injected transport or a pooled
+/// connection. Network response bodies are consumed before returning to the pool.
 async fn Client::perform(
   self : Client,
   route : Route,
@@ -37,6 +37,9 @@ async fn Client::perform(
   files? : Array[FileUpload],
   extra_headers : Map[String, String],
 ) -> HttpResponse {
+  if self.closed_ {
+    raise DiscordHttpError::Transport(message="client is closed")
+  }
   let headers = self.request_headers(route, audit_reason)
   headers.merge_in_place(extra_headers)
   let path = self.base_path + route.path()
@@ -229,6 +232,9 @@ pub async fn Client::request(
 
 ///|
 async fn Client::execute(self : Client, request : HttpRequest) -> HttpResponse {
+  if self.closed_ {
+    raise DiscordHttpError::Transport(message="client is closed")
+  }
   if request.files is Some(files) {
     validate_files(files)
   }
@@ -243,6 +249,9 @@ async fn Client::execute(self : Client, request : HttpRequest) -> HttpResponse {
     raise DiscordHttpError::Validation(
       message="update invite target users requires exactly one file and no JSON body",
     )
+  }
+  if request.route is CreateGuildSticker(..) && request.body is Some(body) {
+    ignore(sticker_form_fields(body))
   }
   if request.route is CreateChannelInvite(..) &&
     request.files is Some(files) &&

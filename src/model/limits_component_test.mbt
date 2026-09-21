@@ -1,4 +1,23 @@
 ///|
+test "message limit traversal does not skip children nested inside a Label" {
+  // Raw component trees may contain modal-only nodes. The limit walker must
+  // still inspect descendants; structural legality is a separate concern.
+  let component : @model.Component = @json.from_json({
+    "type": 18,
+    "label": "Choice",
+    "component": {
+      "type": 2,
+      "style": 1,
+      "custom_id": "button",
+      "label": "x".repeat(81),
+    },
+  })
+  let violations = @model.message_component_limit_violations([component])
+  assert_eq(violations.length(), 1)
+  assert_true(violations[0].message().contains("components[0].component.label"))
+}
+
+///|
 fn limit_with(base : Json, field : String, value : Json) -> Json {
   guard base is Object(fields) else { abort("expected object fixture") }
   let fields = fields.copy()

@@ -13,6 +13,24 @@ pub struct FileUpload {
 }
 
 ///|
+/// The supplied filename, before multipart encoding.
+pub fn FileUpload::filename(self : FileUpload) -> String {
+  self.filename
+}
+
+///|
+/// Immutable uploaded bytes. Never included in debug output.
+pub fn FileUpload::content(self : FileUpload) -> Bytes {
+  self.content
+}
+
+///|
+/// The supplied media type.
+pub fn FileUpload::content_type(self : FileUpload) -> String {
+  self.content_type
+}
+
+///|
 /// Keep uploaded bytes out of diagnostics while allowing captured interaction
 /// outcomes to derive Debug.
 pub impl Debug for FileUpload with fn to_repr(self) {

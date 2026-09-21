@@ -188,7 +188,7 @@ builder が `@util` になかった。
 
 **Resolved**: 公式 CDN endpoint 表と突き合わせ、モデルが hash を持つ全 route に builder を
 揃えた(12 個追加)。クライアントと同じ優先順位(メンバー → ユーザー → デフォルト)で解決する
-`display_avatar_url` も追加。表との乖離は `scripts/docs_cdn_audit.py` が検出する
+`display_avatar_url` も追加。更新した公式 docs の表との乖離は `scripts/docs_cdn_audit.mbtx` で検出する
 (意図的に除外した 3 行は `docs_cdn_audit.allow` に理由付きで記載)。
 
 ### 5. `@fs.mkdir(recursive=true)` が既存ディレクトリで失敗する(moonbitlang/async)

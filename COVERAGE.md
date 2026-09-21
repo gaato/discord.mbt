@@ -291,9 +291,11 @@ matches every `src/model` struct to its docs field table and fails on a field
 the docs mark optional (`name?`) or nullable (`?type`) that the model does not
 (it caught the 2026-08-05 channel `application_id` nullability change).
 
-CDN routes (2026-09-21): `scripts/docs_cdn_audit.py` matches every row of the
-docs' CDN Endpoints table to a URL builder in `src/util/cdn.mbt` and fails on
-an uncovered route. The three rows left out on purpose (Application Asset,
+CDN routes (2026-09-21): `scripts/docs_cdn_audit.mbtx` checks every row's name,
+path and formats against a declared baseline and verifies implemented builders.
+URL behavior is checked separately by the util test matrix. CI pins the docs;
+the release check uses an updated local checkout (see `scripts/README.md`).
+The three rows left out on purpose (Application Asset,
 Achievement Icon, Store Page Asset) carry their reasons in
 `scripts/docs_cdn_audit.allow`.
 

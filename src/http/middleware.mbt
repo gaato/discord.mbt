@@ -12,8 +12,8 @@ pub(all) struct HttpRequest {
 }
 
 ///|
-/// Final wire response for one logical call (after internal 429 retries),
-/// before status-code-to-error mapping.
+/// A wire response before status-code-to-error mapping. A custom transport
+/// returns one attempt; middleware receives the final response after retries.
 pub(all) struct HttpResponse {
   status : Int
   headers : Map[String, String]

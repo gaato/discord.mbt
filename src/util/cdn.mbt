@@ -25,6 +25,7 @@ fn CdnImageFormat::extension(self : CdnImageFormat) -> String {
 pub(all) suberror CdnUrlError {
   InvalidSize(Int)
   UnsupportedStickerFormat(Int)
+  UnsupportedFormat(endpoint~ : String, format~ : CdnImageFormat)
 } derive(Eq, Debug)
 
 ///|
@@ -38,7 +39,8 @@ fn append_size(url : String, size : Int?) -> String raise CdnUrlError {
     None => url
     Some(size) => {
       guard valid_size(size) else { raise InvalidSize(size) }
-      "\{url}?size=\{size}"
+      let separator = if url.contains("?") { "&" } else { "?" }
+      "\{url}\{separator}size=\{size}"
     }
   }
 }
@@ -60,10 +62,23 @@ fn hashed_asset_url(
   hash : @model.ImageHash,
   format : CdnImageFormat?,
   size : Int?,
+  animated? : Bool = true,
 ) -> String raise CdnUrlError {
-  let format = asset_format(hash, format)
+  let format = if animated {
+    asset_format(hash, format)
+  } else {
+    format.unwrap_or(Png)
+  }
+  if !animated && format == Gif {
+    raise UnsupportedFormat(endpoint=directory, format~)
+  }
+  let query = if animated && hash.is_animated() && format == Webp {
+    "?animated=true"
+  } else {
+    ""
+  }
   append_size(
-    "\{cdn_base}/\{directory}/\{hash.to_string()}.\{format.extension()}",
+    "\{cdn_base}/\{directory}/\{hash.to_string()}.\{format.extension()}\{query}",
     size,
   )
 }
@@ -242,7 +257,7 @@ pub fn guild_splash_url(
   format? : CdnImageFormat,
   size? : Int,
 ) -> String raise CdnUrlError {
-  hashed_asset_url("splashes/\{guild_id}", splash, format, size)
+  hashed_asset_url("splashes/\{guild_id}", splash, format, size, animated=false)
 }
 
 ///|
@@ -258,6 +273,7 @@ pub fn guild_discovery_splash_url(
     discovery_splash,
     format,
     size,
+    animated=false,
   )
 }
 
@@ -269,7 +285,13 @@ pub fn guild_tag_badge_url(
   format? : CdnImageFormat,
   size? : Int,
 ) -> String raise CdnUrlError {
-  hashed_asset_url("guild-tag-badges/\{guild_id}", badge, format, size)
+  hashed_asset_url(
+    "guild-tag-badges/\{guild_id}",
+    badge,
+    format,
+    size,
+    animated=false,
+  )
 }
 
 ///|
@@ -280,7 +302,7 @@ pub fn role_icon_url(
   format? : CdnImageFormat,
   size? : Int,
 ) -> String raise CdnUrlError {
-  hashed_asset_url("role-icons/\{role_id}", icon, format, size)
+  hashed_asset_url("role-icons/\{role_id}", icon, format, size, animated=false)
 }
 
 ///|
@@ -291,7 +313,13 @@ pub fn scheduled_event_cover_url(
   format? : CdnImageFormat,
   size? : Int,
 ) -> String raise CdnUrlError {
-  hashed_asset_url("guild-events/\{scheduled_event_id}", image, format, size)
+  hashed_asset_url(
+    "guild-events/\{scheduled_event_id}",
+    image,
+    format,
+    size,
+    animated=false,
+  )
 }
 
 ///|
@@ -302,7 +330,13 @@ pub fn application_icon_url(
   format? : CdnImageFormat,
   size? : Int,
 ) -> String raise CdnUrlError {
-  hashed_asset_url("app-icons/\{application_id}", icon, format, size)
+  hashed_asset_url(
+    "app-icons/\{application_id}",
+    icon,
+    format,
+    size,
+    animated=false,
+  )
 }
 
 ///|
@@ -314,7 +348,13 @@ pub fn application_cover_url(
   format? : CdnImageFormat,
   size? : Int,
 ) -> String raise CdnUrlError {
-  hashed_asset_url("app-icons/\{application_id}", cover_image, format, size)
+  hashed_asset_url(
+    "app-icons/\{application_id}",
+    cover_image,
+    format,
+    size,
+    animated=false,
+  )
 }
 
 ///|
@@ -325,7 +365,7 @@ pub fn team_icon_url(
   format? : CdnImageFormat,
   size? : Int,
 ) -> String raise CdnUrlError {
-  hashed_asset_url("team-icons/\{team_id}", icon, format, size)
+  hashed_asset_url("team-icons/\{team_id}", icon, format, size, animated=false)
 }
 
 ///|
@@ -342,10 +382,10 @@ pub fn emoji_url(
 ///|
 /// Build a sticker CDN URL. Sticker format is required because the ID alone
 /// does not encode whether the asset is PNG/APNG, Lottie JSON, or GIF.
+/// Stickers have fixed size; GIF stickers use the media host.
 pub fn sticker_url(
   sticker_id : @model.StickerId,
   format~ : @model.StickerFormatType,
-  size? : Int,
 ) -> String raise CdnUrlError {
   let extension = match format {
     Png | Apng => "png"
@@ -353,7 +393,12 @@ pub fn sticker_url(
     Gif => "gif"
     Unknown(value) => raise UnsupportedStickerFormat(value)
   }
-  append_size("\{cdn_base}/stickers/\{sticker_id}.\{extension}", size)
+  let base = if format == Gif {
+    "https://media.discordapp.net"
+  } else {
+    cdn_base
+  }
+  "\{base}/stickers/\{sticker_id}.\{extension}"
 }
 
 ///|
@@ -365,6 +410,9 @@ pub fn sticker_pack_banner_url(
   size? : Int,
 ) -> String raise CdnUrlError {
   let format = format.unwrap_or(Png)
+  if format == Gif {
+    raise UnsupportedFormat(endpoint="sticker-pack-banner", format~)
+  }
   append_size(
     "\{cdn_base}/app-assets/710982414301790216/store/\{banner_asset_id}.\{format.extension()}",
     size,

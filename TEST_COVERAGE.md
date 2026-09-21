@@ -27,10 +27,11 @@ artifact, and requires it to load so transport AEAD tests cannot skip.
 `--from-json` only rechecks a stored report against the ledger; it does not
 repeat either native bootstrap or runtime load check.
 
-Snapshot at the last full measurement (2026-09-20, after the 0.3.0 boundary
-hardening and the per-attempt HTTP timeout): **92.5 %** across the library
-(8123/8784 coverage points; http 95.8 %, model 95.1 %, interaction 94.9 %,
-bot 94.2 %, voice 85.7 %, gateway 75.7 %).
+Snapshot at the last full measurement (2026-09-21, the local 0.4.0 candidate):
+**92.9 %** across the library (8477/9127 coverage points; http 95.9 %, model
+95.4 %, interaction 95.1 %, testkit 99.2 %, util 100 %, bot 94.2 %, voice
+85.7 %, gateway 75.7 %). The single testkit residual is the defensive
+cancellation re-raise listed below, not an untested timeout/cleanup behavior.
 
 ## Policy
 
@@ -105,7 +106,7 @@ run; the gateway/voice loops are additionally tested via injected sleepers):
 | --- | --- | --- |
 | src/gateway/shard.mbt | 16 | Protected-shutdown and event-queue teardown catches, stale-transport and normal-return fallbacks, read-loop cancellation re-raise plumbing (async 0.22 cancellation does not pass through ordinary catches), and two OS-specific Identify properties unavailable on Linux. Malformed Hello/frame, compression-mismatch, connector/backoff, and disconnected-send arms are tested through the fake transport. |
 | src/gateway/compression.mbt | 3 | zlib failure statuses require a corrupted native stream state. |
-| src/ratelimit/ratelimit.mbt | 2 | Global-window sleep and gate release-on-error paths. |
+| src/ratelimit/ratelimit.mbt | 1 | Gate release-on-error path. |
 | src/http/handles_channel.mbt | 3 | `with_typing` refresh-failure arm sits behind the real 8-second cadence. |
 | src/bot/middleware.mbt | 1 | Middleware chain cancellation arm. |
 | src/bot/shard_manager.mbt | 6 | Multi-shard session-start-limit and staggered-identify paths over live gateways. |
@@ -122,7 +123,6 @@ Defensive arms unreachable by construction:
 | src/model/message.mbt | 3 | Timestamp-parse fallback for values the Timestamp decoder already rejects. |
 | src/model/id.mbt | 1 | Phantom-id debug fallback. |
 | src/model/command.mbt | 1 | Unknown handler-type emit arm. |
-| src/util/cdn.mbt | 1 | Unreachable extension fallback. |
 
 Receive-side model residuals (emit arms of receive-only structs and unknown
 variant fallbacks; decode is pinned by fixtures):
@@ -150,7 +150,7 @@ show-flows beyond the covered happy and failing paths):
 
 | File | Budget | Reason |
 | --- | --- | --- |
-| src/app/app.mbt | 13 | Cancellation re-raise arms and per-kind failure plumbing beyond the covered component/modal policy flows. |
+| src/app/app.mbt | 6 | Cancellation re-raise arms and per-kind failure plumbing beyond the covered component/modal policy flows. |
 | src/app/check.mbt | 2 | Permission-check arms needing resolved member permissions in a guild payload. |
 | src/app/command.mbt | 9 | Group/subcommand registration arms beyond the covered paths. |
 | src/app/component.mbt | 13 | Deferred-ctx accessor duplicates and waiter arms behind a live gateway. |
@@ -158,9 +158,10 @@ show-flows beyond the covered happy and failing paths):
 | src/app/endpoint.mbt | 7 | `serve` startup with an owned token/client (creates a real Client and fetches the application id). |
 | src/app/middleware.mbt | 4 | Component-scope middleware arms not reachable in the covered flows. |
 | src/app/modal.mbt | 20 | Show/prefill dispatch arms beyond the covered decode, validation, and error flows. |
-| src/app/policy.mbt | 11 | Followup-with-files arms and member-user extraction beyond the covered flows. |
+| src/app/policy.mbt | 10 | Followup-with-files arms and member-user extraction beyond the covered flows. |
 | src/framework/ctx.mbt | 14 | Autocomplete/modal response variants beyond the covered response-management flows. |
-| src/framework/sync.mbt | 2 | Option-comparison early exits not hit by the covered spec shapes (moved from `src/app/sync.mbt`). |
+| src/framework/sync.mbt | 1 | Option-comparison early exit not hit by the covered spec shapes (moved from `src/app/sync.mbt`). |
+| src/testkit/harness.mbt | 1 | Defensive cancellation re-raise: async 0.22 cancellation bypasses ordinary catches. Timeout and external cancellation cleanup are both tested. |
 | src/framework/framework.mbt | 9 | Dispatch fallbacks for unroutable interactions. |
 | src/framework/gate.mbt | 1 | Double-response guard arms. |
 | src/interaction/args.mbt | 8 | Suggest-handler closures that only run inside a live autocomplete dispatch. |

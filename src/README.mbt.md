@@ -363,6 +363,11 @@ Also in the box, each with its guide chapter:
 
 ## Development
 
+For handler tests without a Discord connection, use the JS/native
+[`gaato/discord/testkit`](testkit/README.mbt.md): deterministic fixtures, real
+App dispatch, typed captured responses and failures, and strict scripted REST.
+Import it only in your package's `for "test"` block.
+
 ```fish
 moon check --target native --deny-warn
 moon check --target js --deny-warn

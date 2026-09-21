@@ -63,7 +63,7 @@ pub fn split_content(String, limit? : Int) -> Array[String]
 
 pub fn sticker_pack_banner_url(@model.Id[@model.GenericMarker], format? : CdnImageFormat, size? : Int) -> String raise CdnUrlError
 
-pub fn sticker_url(@model.Id[@model.StickerMarker], format~ : @model.StickerFormatType, size? : Int) -> String raise CdnUrlError
+pub fn sticker_url(@model.Id[@model.StickerMarker], format~ : @model.StickerFormatType) -> String raise CdnUrlError
 
 pub fn team_icon_url(@model.Id[@model.TeamMarker], @model.ImageHash, format? : CdnImageFormat, size? : Int) -> String raise CdnUrlError
 
@@ -81,6 +81,7 @@ pub fn user_mention(@model.Id[@model.UserMarker]) -> String
 pub(all) suberror CdnUrlError {
   InvalidSize(Int)
   UnsupportedStickerFormat(Int)
+  UnsupportedFormat(endpoint~ : String, format~ : CdnImageFormat)
 } derive(Eq, @debug.Debug)
 
 // Types and methods
