@@ -170,6 +170,17 @@ custom id の 100 文字制限は 0.3.0 で検証済みなのに、同型の制�
 `ModalOutsideLimits` で検出し、動的な prefill は `Modal::show` が
 `ModalPrefillError::ValueTooLong` で拒否する。制限値は公式ドキュメントに書かれたものだけを採る。
 
+### 3. 型付き route の id に `:` を含められない
+
+既に投稿済みメッセージに付いている custom id(`nekosama:rolemenu` など)は変えられないが、
+`App::validate` が `:` を含む route id を `InvalidRouteId` で拒否するため、型付き
+`ComponentRoute` に移せず `on_component_raw` に逃げる必要があった。
+
+**Resolved**: `:` 禁止は「ある型付き route の state が別の型付き route に届かない」という
+不変条件の代理だった。代理をやめて不変条件そのもの — 2 つの型付き id が `:` 境界で入れ子に
+ならないこと(`ticket` と `ticket:close`)— を検査する。従来通っていた構成はすべて通る。
+`App::validate` の他の規則は Discord の規則か往復可能性そのもので、代理ルールはこれだけだった。
+
 ---
 
 ## 環境メモ(ライブラリの問題ではない)

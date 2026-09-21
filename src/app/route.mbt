@@ -144,7 +144,11 @@ pub struct ComponentRoute[A] {
 
 ///|
 /// Define a component route matching `id` or `id:state`.
-/// `App::validate` rejects empty ids, ids containing `:`, and ids over 100 units.
+/// The id may itself contain `:`, so ids that are already in use elsewhere
+/// (`bot:rolemenu`) keep working. `App::validate` rejects empty ids, ids over
+/// 100 units, and an id that extends another typed route's id at a `:`
+/// (`ticket` beside `ticket:close`), because the shorter route's state could
+/// then produce a custom id the longer route receives.
 ///
 /// ```mbt check
 /// test "build a component from its route" {
@@ -232,6 +236,7 @@ fn AppRoutePattern::base(self : AppRoutePattern) -> String {
 fn validate_route(
   pattern : AppRoutePattern,
   seen : Set[String],
+  ids : Array[String],
   modal~ : Bool,
 ) -> Unit raise AppConfigError {
   let custom_id = pattern.base()
@@ -245,9 +250,6 @@ fn validate_route(
   let effective_prefix = match pattern {
     Prefix(prefix) => prefix
     Id(id) => {
-      if id.contains(":") {
-        raise InvalidRouteId(custom_id~, reason="route ids cannot contain ':'")
-      }
       if id.length() > 100 {
         raise InvalidRouteId(
           custom_id~,
@@ -265,4 +267,18 @@ fn validate_route(
     }
   }
   seen.add(effective_prefix)
+  if pattern is Id(id) {
+    // Typed routes never shadow each other: `a` and `a:b` would both match
+    // `a:b:state`, and state encoded for `a` could reach the handler of `a:b`.
+    for other in ids {
+      if effective_prefix.has_prefix("\{other}:") ||
+        "\{other}:".has_prefix(effective_prefix) {
+        raise InvalidRouteId(
+          custom_id~,
+          reason="overlaps the typed route id '\{other}' at a ':' boundary",
+        )
+      }
+    }
+    ids.push(id)
+  }
 }

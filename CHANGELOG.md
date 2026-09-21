@@ -27,6 +27,15 @@ breaking change is listed with a migration note.
 
 ### Changed
 
+- **Typed route ids may contain `:`.** `component_route` and `modal` ids were
+  rejected by `App::validate` when they contained the state separator, which
+  forced a bot adopting typed routes to keep ids already attached to posted
+  messages (`bot:rolemenu`) on `on_component_raw`. The rule guarded against one
+  typed route receiving another's state, so `App::validate` now rejects
+  exactly that — two typed ids nested at a `:` boundary, such as `ticket`
+  beside `ticket:close` — with `InvalidRouteId`. Every configuration that
+  validated before still validates.
+
 - **Dot-callable trait methods are declared explicitly.** moonc 0.10.14
   deprecates the implicit promotion of trait methods to regular methods. The
   ones meant to be called with dot syntax are now `pub extend` declarations:

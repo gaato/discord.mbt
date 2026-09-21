@@ -297,12 +297,14 @@ pub fn App::validate(self : App) -> Unit raise AppConfigError {
     }
   }
   let components : Set[String] = Set([])
+  let component_ids : Array[String] = []
   for component in self.components_ {
-    validate_route(component.pattern, components, modal=false)
+    validate_route(component.pattern, components, component_ids, modal=false)
   }
   let modals : Set[String] = Set([])
+  let modal_ids : Array[String] = []
   for modal in self.modals_ {
-    validate_route(modal.pattern, modals, modal=true)
+    validate_route(modal.pattern, modals, modal_ids, modal=true)
     let custom_id = modal.pattern.base()
     if modal.field_count is Some(count) && (count < 1 || count > 5) {
       raise InvalidModalFieldCount(custom_id~, count~)

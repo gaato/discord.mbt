@@ -112,8 +112,12 @@ raises `CustomIdError::SeparatorInSegment`; oversized ids raise `TooLong`.
 Decode failures reach the error policy as `HandlerError::InvalidArgument`.
 
 Typed routes match the exact id or that id followed by `:` and state, so
-`ticket-closeish` does not match `ticket-close`. Route ids must be nonempty,
-contain no `:`, and fit within 100 UTF-16 units. `App::validate` also rejects
+`ticket-closeish` does not match `ticket-close`. Route ids must be nonempty
+and fit within 100 UTF-16 units. An id may contain `:` — a bot that adopts
+typed routes can keep ids already attached to posted messages, such as
+`bot:rolemenu` — but two typed ids may not nest at a `:` boundary: `ticket`
+beside `ticket:close` is rejected, because state encoded for `ticket` could
+reach the `ticket:close` handler. `App::validate` also rejects
 duplicate effective prefixes: typed `ticket-close` collides with raw
 `ticket-close:`. `on_component_raw(prefix~, handler)` and `on_modal_raw`
 retain literal-prefix routing for advanced handlers. Strict prefix overlaps

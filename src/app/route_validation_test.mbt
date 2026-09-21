@@ -131,7 +131,7 @@ test "id route collides with its literal prefix form" {
 
 ///|
 test "invalid route ids are rejected" {
-  for id in ["ticket:close", "x".repeat(101), "😀".repeat(51)] {
+  for id in ["x".repeat(101), "😀".repeat(51)] {
     for modal in [false, true] {
       let app = @app.App()
       if modal {
@@ -150,6 +150,52 @@ test "invalid route ids are rejected" {
         error => fail("unexpected error: \{Repr(error)}")
       } noraise {
         _ => fail("expected invalid route id")
+      }
+    }
+  }
+}
+
+///|
+test "typed route ids may contain the separator but not nest at it" {
+  let route = @app.component_route(
+    id="bot:rolemenu",
+    state=@app.CustomIdCodec::int(),
+  )
+  assert_eq(route.custom_id(7), "bot:rolemenu:7")
+  assert_eq(route.decode("bot:rolemenu:7"), 7)
+  let legal = @app.App()
+  legal.on_component(route, Raw(_ => ()))
+  legal.on_modal(route_test_modal("bot:rolemenu"), Raw(_ => ()))
+  // Siblings share a prefix without either extending the other at a `:`.
+  for id in ["bot:rolemenus", "bot:role", "bot:rolemenu-x"] {
+    legal.on_component(
+      @app.component_route(id~, state=@app.CustomIdCodec::unit()),
+      Raw(_ => ()),
+    )
+    legal.on_modal(route_test_modal(id), Raw(_ => ()))
+  }
+  legal.validate()
+  for ids in [("bot", "bot:rolemenu"), ("bot:rolemenu", "bot")] {
+    for modal in [false, true] {
+      let app = @app.App()
+      for id in [ids.0, ids.1] {
+        if modal {
+          app.on_modal(route_test_modal(id), Raw(_ => ()))
+        } else {
+          app.on_component(
+            @app.component_route(id~, state=@app.CustomIdCodec::string()),
+            Raw(_ => ()),
+          )
+        }
+      }
+      try app.validate() catch {
+        @app.AppConfigError::InvalidRouteId(custom_id~, reason~) => {
+          assert_eq(custom_id, ids.1)
+          assert_true(reason.contains("'\{ids.0}'"))
+        }
+        error => fail("unexpected error: \{Repr(error)}")
+      } noraise {
+        _ => fail("expected overlapping route ids")
       }
     }
   }
