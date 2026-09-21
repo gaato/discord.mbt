@@ -142,6 +142,20 @@ app 版は DM で `HandlerError::GuildOnly` を raise するため、既存の e
 応答を描画する。`required_permissions` も内部でこの bundle を使う。member があるのに
 guild_id がない壊れた payload は、新設した `InteractionContextError::MissingGuildId` で拒否する。
 
+## 第3ラウンド (2026-09-21、0.3.1 追従)
+
+### 1. prebuild hook の Node.js 前提が voice guide にしか書かれていない
+
+`gaato/discord` と依存の `gaato/dave` は `--moonbit-unstable-prebuild` で `build.js` を宣言して
+おり、voice の opt-in 変数がなければ何もダウンロードせず終了するが、Moon は hook の実行自体に
+`node` を要求する。音声を使わない bot でも、`node` のないクリーンな Docker builder では
+`moon build` が `needs node executable in PATH` で失敗した(`moon check` は hook を走らせないので通る)。
+Moon の prebuild は `.js`(node)か `.py`(python)しか選べず、`gaato/dave` 側にも同じ hook が
+あるため、前提そのものは外せない。
+
+**Resolved**: 第1ラウンド #6(zlib)と同じ 3 箇所 — README・getting-started guide・template — の
+前提条件に Node.js を追記した。
+
 ---
 
 ## 環境メモ(ライブラリの問題ではない)

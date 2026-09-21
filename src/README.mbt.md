@@ -25,6 +25,12 @@ relevant symbols — look anything up with `moon ide doc` (see
 On a clean machine, install `git` and run `moon update` before resolving the
 module dependencies. Moon uses `git` to clone the package registry.
 
+Node.js must be on `PATH` for every build, on any target and whether or not
+the bot uses voice. `gaato/discord` and its `gaato/dave` dependency declare
+prebuild hooks that Moon runs with `node`; without the voice opt-in variables
+they exit without downloading anything, but `moon build` still fails when
+`node` is missing. `moon check` does not run the hooks.
+
 Every native build compiles the Gateway package's `zlib_stream.c`, which
 always includes `<zlib.h>` even when `compress=false`. The zlib development
 headers are therefore required for all native builds: install `zlib1g-dev` on

@@ -19,7 +19,13 @@ moon update
 ```
 
 Install `git` before running `moon update`; Moon uses it to clone the package
-registry. Native builds also require the zlib development headers because the
+registry. Node.js must be on `PATH` for every build, including container
+builder stages: `gaato/discord` and its `gaato/dave` dependency declare
+prebuild hooks that Moon runs with `node`. They do nothing unless voice is
+opted into, but `moon build` fails when `node` is missing. Node.js is not
+needed to run the built executable.
+
+Native builds also require the zlib development headers because the
 Gateway package always compiles a C source that includes `<zlib.h>`, even when
 compression is disabled. Install `zlib1g-dev` on Debian/Ubuntu or `zlib-devel`
 on Fedora/openSUSE. The zlib shared library is required at runtime when using

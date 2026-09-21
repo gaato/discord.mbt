@@ -20,6 +20,15 @@ breaking change is listed with a migration note.
   compiler removes the promotion; use the operators, `@debug`, and
   `@json.from_json` instead.
 
+### Fixed
+
+- **The Node.js build prerequisite is documented.** Moon runs the prebuild
+  hooks of `gaato/discord` and `gaato/dave` with `node` on every `moon build`,
+  so a bot that never uses voice still fails to build in an environment
+  without Node.js. Only the voice guide said so; the README, the
+  getting-started guide, and the template now list it with the other
+  prerequisites.
+
 ## [0.3.1] - 2026-09-21
 
 ### Added
