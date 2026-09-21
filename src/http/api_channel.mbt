@@ -529,6 +529,7 @@ pub async fn Client::start_thread_in_forum_or_media_channel(
       message="one of content/embeds/components/sticker_ids/files is required",
     )
   }
+  validate_message_limits(embeds, components)
   if components is Some(values) && @model.requires_components_v2(values) {
     raise Validation(
       message="forum thread starter messages only allow the SUPPRESS_EMBEDS and SUPPRESS_NOTIFICATIONS flags, so Components V2 is unavailable",

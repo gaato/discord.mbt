@@ -9,9 +9,17 @@ import {
 // Values
 pub fn dispatch_event(String, Json) -> Event raise
 
+pub fn embed_limit_violations(Array[Embed]) -> Array[LimitViolation]
+
 pub fn[T] flatten(Nullable[T]?) -> T?
 
+pub fn message_component_limit_violations(Array[Component]) -> Array[LimitViolation]
+
+pub fn modal_limit_violations(title~ : String, components~ : Array[Component]) -> Array[LimitViolation]
+
 pub fn requires_components_v2(Array[Component]) -> Bool
+
+pub let text_input_max_length : Int
 
 // Errors
 pub(all) suberror AllowedMentionsError {
@@ -2529,6 +2537,13 @@ pub(all) struct Label {
   component : Component
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn Label::to_json(Self) -> Json
+
+pub(all) struct LimitViolation {
+  path : String
+  custom_id : String?
+  reason : String
+} derive(Eq, @debug.Debug)
+pub fn LimitViolation::message(Self) -> String
 
 pub(all) struct LobbyMessage {
   id : Id[MessageMarker]

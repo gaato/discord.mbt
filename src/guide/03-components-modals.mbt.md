@@ -241,7 +241,20 @@ fn register_feedback(app : @discord.App) -> Unit {
 does not mutate the modal definition, so later calls return to the static
 default. Override keys are text-input `custom_id` values. An unknown key or a
 key naming a non-text field raises `ModalPrefillError` instead of being
-silently ignored.
+silently ignored, and so does a value over Discord's 4000-unit text-input
+limit: check the length before calling `show` when the prefill comes from
+longer content such as an embed description (4096).
+
+Discord documents hard limits for everything in this chapter — 45 units for a
+modal title or label, 4000 for a text input, 80 for a button label, 25 select
+options, 40 components in a Components V2 message — and rejects the whole
+request with 400 Invalid Form Body when one is exceeded. The library checks
+them locally: every send path raises `DiscordHttpError::Validation` naming the
+offending path (such as `components[0].components[2].label`), and
+`App::validate` applies the modal limits to registered modals at startup, so a
+bad declaration fails before the first interaction. The same checks are
+available as `@model.message_component_limit_violations`,
+`@model.modal_limit_violations`, and `@model.embed_limit_violations`.
 
 `ModalImmediateCtx::origin()` distinguishes a modal opened from a component
 from one opened from a command. `state()` is the value passed to `show`.

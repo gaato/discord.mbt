@@ -44,6 +44,8 @@ pub struct ModalHandle {
 pub(all) suberror ModalPrefillError {
   UnknownCustomId(custom_id~ : String)
   NonTextInput(custom_id~ : String)
+  /// The value exceeds Discord's 4000 UTF-16 unit limit for a text input.
+  ValueTooLong(custom_id~ : String, length~ : Int)
 } derive(Debug)
 
 ///|
@@ -163,9 +165,12 @@ fn prefill_modal_components(
   components : Array[@model.Component],
   values : Map[String, String],
 ) -> Array[@model.Component] raise ModalPrefillError {
-  for custom_id, _ in values {
+  for custom_id, value in values {
     match find_modal_component(components, custom_id) {
-      Some(TextInput(_)) => ()
+      Some(TextInput(_)) =>
+        if value.length() > @model.text_input_max_length {
+          raise ValueTooLong(custom_id~, length=value.length())
+        }
       Some(_) => raise NonTextInput(custom_id~)
       None => raise UnknownCustomId(custom_id~)
     }
@@ -487,8 +492,8 @@ pub fn[A] modal(
 ///|
 /// Prepare a modal response, optionally appending opaque state after `:` and
 /// overriding text-input defaults by `custom_id` for this response only.
-/// Raises `ModalPrefillError` when an override key is unknown or does not name
-/// a text input.
+/// Raises `ModalPrefillError` when an override key is unknown, does not name
+/// a text input, or carries a value over 4000 UTF-16 units.
 /// Raises `CustomIdError::TooLong` when the complete id exceeds 100 UTF-16 units.
 pub fn[A] Modal::show(
   self : Modal[A],

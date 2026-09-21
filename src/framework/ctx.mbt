@@ -61,6 +61,7 @@ async fn respond_modal(
   title : String,
   components : Array[@model.Component],
 ) -> Unit {
+  @dhttp.validate_modal_limits(title, components)
   gate.send({
     typ: Modal,
     data: Some(

@@ -132,3 +132,87 @@ async test "execute webhook adds Components V2 and rejects content" {
     _ => fail("expected Components V2 content validation")
   }
 }
+
+///|
+test "modal limits are reported as a validation error naming the path" {
+  let input = @model.Component::TextInput({
+    id: None,
+    custom_id: "body",
+    style: Some(Paragraph),
+    label: None,
+    min_length: None,
+    max_length: Some(4096),
+    required: None,
+    value: None,
+    placeholder: None,
+  })
+  let components : Array[@model.Component] = [
+    Label({
+      id: None,
+      label: Some("Body"),
+      description: None,
+      component: input,
+    }),
+  ]
+  try validate_modal_limits("Edit", components) catch {
+    err =>
+      debug_inspect(
+        err,
+        content=(
+          #|Validation(message="components[0].component.max_length: 4096 (1 to 4000)")
+        ),
+      )
+  } noraise {
+    _ => fail("expected a modal limit violation")
+  }
+}
+
+///|
+async test "message sends reject embeds and components outside Discord's limits" {
+  let client = Client("test-token")
+  defer client.close()
+  let requests = Ref(0)
+  client.perform_override_.val = Some((_route, _path, _headers, _body, _files) => {
+    requests.val += 1
+    { status: 200, headers: Map([]), body: Json::null(), }
+  })
+  let channel_id : @model.ChannelId = Id(20UL)
+  try
+    client.create_message(channel_id, embeds=[
+      @model.Embed(description="x".repeat(4097)),
+    ])
+    |> ignore
+  catch {
+    err =>
+      debug_inspect(
+        err,
+        content=(
+          #|Validation(message="embeds[0].description: 4097 units (at most 4096)")
+        ),
+      )
+  } noraise {
+    _ => fail("expected an embed limit violation")
+  }
+  let button : @model.Component = @json.from_json({
+    "type": 2,
+    "style": 1,
+    "custom_id": "go",
+    "label": "x".repeat(81),
+  })
+  let components : Array[@model.Component] = [
+    ActionRow({ id: None, components: [button], }),
+  ]
+  let message_id : @model.MessageId = Id(21UL)
+  try client.edit_message(channel_id, message_id, components~) |> ignore catch {
+    err =>
+      debug_inspect(
+        err,
+        content=(
+          #|Validation(message="components[0].components[0].label: 81 units (at most 80)")
+        ),
+      )
+  } noraise {
+    _ => fail("expected a component limit violation")
+  }
+  inspect(requests.val, content="0")
+}

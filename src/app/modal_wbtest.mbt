@@ -229,3 +229,139 @@ test "modal show appends state and emits modern label components" {
     },
   ])
 }
+
+///|
+/// The first limit violation `App::validate` reports for a one-field modal.
+fn[A] modal_limit_violation(
+  field : ModalField[A],
+  title? : String = "Limits",
+) -> String {
+  let app = App()
+  app.on_modal(
+    modal(custom_id="limits", title~, fields=ModalFields::of(field)),
+    Raw(_ => ()),
+  )
+  try app.validate() catch {
+    ModalOutsideLimits(custom_id="limits", violation~) =>
+      "\{violation.custom_id.unwrap_or("-")} \{violation.message()}"
+    error => "unexpected error: \{Repr(error)}"
+  } noraise {
+    _ => "valid"
+  }
+}
+
+///|
+test "app validation rejects modal fields outside Discord's limits" {
+  // The embed description limit is 4096, but a text input stops at 4000.
+  inspect(
+    modal_limit_violation(
+      text_field(custom_id="body", label="Body", max_length=4096),
+    ),
+    content=(
+      #|body components[0].component.max_length: 4096 (1 to 4000)
+    ),
+  )
+  inspect(
+    modal_limit_violation(
+      text_field(custom_id="body", label="Body", max_length=4000),
+    ),
+    content="valid",
+  )
+  inspect(
+    modal_limit_violation(
+      text_field(custom_id="body", label="Body", min_length=-1),
+    ),
+    content=(
+      #|body components[0].component.min_length: -1 (0 to 4000)
+    ),
+  )
+  inspect(
+    modal_limit_violation(
+      text_field(custom_id="body", label="Body", min_length=9, max_length=3),
+    ),
+    content=(
+      #|body components[0].component.min_length: 9 exceeds the maximum 3
+    ),
+  )
+  inspect(
+    modal_limit_violation(
+      text_field(custom_id="body", label="Body", value="x".repeat(4001)),
+    ),
+    content=(
+      #|body components[0].component.value: 4001 units (at most 4000)
+    ),
+  )
+  inspect(
+    modal_limit_violation(
+      text_field(custom_id="body", label="Body", placeholder="x".repeat(101)),
+    ),
+    content=(
+      #|body components[0].component.placeholder: 101 units (at most 100)
+    ),
+  )
+  inspect(
+    modal_limit_violation(text_field(custom_id="body", label="x".repeat(46))),
+    content=(
+      #|body components[0].label: 46 units (at most 45)
+    ),
+  )
+  inspect(
+    modal_limit_violation(
+      text_field(custom_id="body", label="Body", description="x".repeat(101)),
+    ),
+    content=(
+      #|body components[0].description: 101 units (at most 100)
+    ),
+  )
+  inspect(
+    modal_limit_violation(
+      select_field(custom_id="color", label="Color", options=[], max_values=26),
+    ),
+    content=(
+      #|color components[0].component.max_values: 26 (0 to 25)
+    ),
+  )
+  inspect(
+    modal_limit_violation(
+      file_field(custom_id="files", label="Files", max_values=11),
+    ),
+    content=(
+      #|files components[0].component.max_values: 11 (0 to 10)
+    ),
+  )
+  // Optional fields lower `min_values` to 0, which Discord accepts.
+  inspect(
+    modal_limit_violation(
+      file_field(custom_id="files", label="Files").optional(),
+    ),
+    content="valid",
+  )
+  inspect(
+    modal_limit_violation(
+      text_field(custom_id="body", label="Body"),
+      title="x".repeat(46),
+    ),
+    content=(
+      #|- title: 46 units (at most 45)
+    ),
+  )
+}
+
+///|
+test "modal show rejects a prefill value over 4000 units" {
+  let form = modal(
+    custom_id="edit",
+    title="Edit",
+    fields=ModalFields::of(text_field(custom_id="body", label="Body")),
+  )
+  form.show(values={ "body": "x".repeat(4000) }) |> ignore
+  try form.show(values={ "body": "x".repeat(4001) }) |> ignore catch {
+    ValueTooLong(custom_id~, length~) => {
+      inspect(custom_id, content="body")
+      inspect(length, content="4001")
+    }
+    error => fail("unexpected error: \{Repr(error)}")
+  } noraise {
+    _ => fail("expected value too long error")
+  }
+}

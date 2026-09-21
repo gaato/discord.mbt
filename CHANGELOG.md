@@ -7,6 +7,24 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+### Added
+
+- **Outgoing embeds, components, and modals are checked against Discord's
+  documented limits.** Discord answers a value outside one — a text input
+  `max_length` over 4000, a button label over 80, embeds totalling more than
+  6000 — with 400 Invalid Form Body, whatever the user did. Every message send
+  path (REST, webhooks, interaction responses and followups, edits) and
+  `show_modal` now raise `DiscordHttpError::Validation` naming the offending
+  path before any request is made. `App::validate` applies the modal limits to
+  registered typed modals at startup (`AppConfigError::ModalOutsideLimits`),
+  and `Modal::show` raises the new `ModalPrefillError::ValueTooLong` for a
+  prefill value over 4000 units. The checks are public as
+  `@model.embed_limit_violations`, `message_component_limit_violations`, and
+  `modal_limit_violations`, each returning `LimitViolation`s. Only limits the
+  official documentation states are encoded, so only requests that Discord
+  already rejected are affected; exhaustive matches on
+  `AppConfigError` and `ModalPrefillError` need the new cases.
+
 ### Changed
 
 - **Dot-callable trait methods are declared explicitly.** moonc 0.10.14

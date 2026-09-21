@@ -22,6 +22,9 @@ pub(all) suberror AppConfigError {
   InvalidRouteId(custom_id~ : String, reason~ : String)
   InvalidModalFieldCount(custom_id~ : String, count~ : Int)
   DuplicateModalTextInput(custom_id~ : String, field~ : String)
+  /// A modal title or field outside a limit Discord documents, such as a text
+  /// input `max_length` over 4000 or a label over 45 units.
+  ModalOutsideLimits(custom_id~ : String, violation~ : @model.LimitViolation)
   /// A `file_types` filter with more than 10 entries or an extension that is
   /// not dot-prefixed. `owner` is a command option path or modal field id.
   InvalidFileTypes(owner~ : String, reason~ : String)
@@ -35,6 +38,7 @@ priv struct RegisteredModal {
   field_count : Int?
   text_input_ids : Array[String]?
   file_type_filters : Array[(String, Array[@model.FileTypeFilter])]
+  limit_violations : Array[@model.LimitViolation]
   dispatch : async (AppCtx, @framework.ModalCtx) -> Unit
 }
 
@@ -148,6 +152,10 @@ pub fn[A] App::on_modal(
     field_count: Some(modal.fields_.definitions_.length()),
     text_input_ids: Some(modal_text_input_ids(modal.fields_.definitions_)),
     file_type_filters: modal_file_type_filters(modal.fields_.definitions_),
+    limit_violations: @model.modal_limit_violations(
+      title=modal.title_,
+      components=modal.fields_.definitions_,
+    ),
     dispatch: (bot, raw) => dispatch_modal_handler(modal, handler, bot, raw),
   })
 }
@@ -165,6 +173,7 @@ pub fn App::on_modal_raw(
     field_count: None,
     text_input_ids: None,
     file_type_filters: [],
+    limit_violations: [],
     dispatch: (_, raw) => handler(raw),
   })
 }
@@ -256,6 +265,7 @@ fn validate_command_options(
 ///|
 /// Check declarations for configuration errors: invalid command trees and
 /// cooldowns, invalid modal field counts, duplicate modal text-input ids,
+/// modal titles and fields outside Discord's documented limits,
 /// malformed `file_types` upload filters, empty or duplicate component/modal
 /// effective prefixes, and invalid typed route ids.
 /// Executors call this at startup; call it directly in a test to fail fast.
@@ -296,6 +306,9 @@ pub fn App::validate(self : App) -> Unit raise AppConfigError {
     let custom_id = modal.pattern.base()
     if modal.field_count is Some(count) && (count < 1 || count > 5) {
       raise InvalidModalFieldCount(custom_id~, count~)
+    }
+    if modal.limit_violations is [violation, ..] {
+      raise ModalOutsideLimits(custom_id~, violation~)
     }
     for entry in modal.file_type_filters {
       validate_file_types("\{custom_id}/\{entry.0}", entry.1)

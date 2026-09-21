@@ -55,6 +55,7 @@ pub(all) suberror AppConfigError {
   InvalidRouteId(custom_id~ : String, reason~ : String)
   InvalidModalFieldCount(custom_id~ : String, count~ : Int)
   DuplicateModalTextInput(custom_id~ : String, field~ : String)
+  ModalOutsideLimits(custom_id~ : String, violation~ : @model.LimitViolation)
   InvalidFileTypes(owner~ : String, reason~ : String)
   InvalidCooldown(command~ : String, seconds~ : Int)
   InvalidMaxInFlight(value~ : Int)
@@ -78,6 +79,7 @@ pub(all) suberror HandlerError {
 pub(all) suberror ModalPrefillError {
   UnknownCustomId(custom_id~ : String)
   NonTextInput(custom_id~ : String)
+  ValueTooLong(custom_id~ : String, length~ : Int)
 } derive(@debug.Debug)
 
 // Types and methods

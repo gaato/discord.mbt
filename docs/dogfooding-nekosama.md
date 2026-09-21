@@ -156,6 +156,20 @@ Moon の prebuild は `.js`(node)か `.py`(python)しか選べず、`gaato/dave`
 **Resolved**: 第1ラウンド #6(zlib)と同じ 3 箇所 — README・getting-started guide・template — の
 前提条件に Node.js を追記した。
 
+### 2. modal の text input 制限がローカルで検出されない
+
+Edit モーダルで `text_field(max_length=4096)`(embed description の上限)を指定していたため、
+Discord が毎回 50035 Invalid Form Body を返していた。text input の上限は 4000。
+`Modal::show(values=...)` の prefill 値が 4000 を超える場合も同じく 400 になるまで気づけない。
+custom id の 100 文字制限は 0.3.0 で検証済みなのに、同型の制限が素通りだった。
+
+**Resolved**: 同型の問題(文書化された値制約の未検証)を全件に広げて解いた。`@model` に
+`LimitViolation` と `modal_limit_violations` / `message_component_limit_violations` /
+`embed_limit_violations` を置き、メッセージ系の全送信経路と `show_modal` が送信前に
+`DiscordHttpError::Validation` で拒否する。typed modal は `App::validate` が起動時に
+`ModalOutsideLimits` で検出し、動的な prefill は `Modal::show` が
+`ModalPrefillError::ValueTooLong` で拒否する。制限値は公式ドキュメントに書かれたものだけを採る。
+
 ---
 
 ## 環境メモ(ライブラリの問題ではない)
