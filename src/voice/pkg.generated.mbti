@@ -138,6 +138,7 @@ pub struct OggOpusSource {
 pub fn OggOpusSource::channels(Self) -> Int
 pub fn OggOpusSource::from_bytes(Bytes) -> Self raise OggOpusError
 pub async fn OggOpusSource::from_reader(&@io.Reader) -> Self
+pub async fn OggOpusSource::next_frame(Self) -> Bytes?
 pub fn OggOpusSource::pre_skip(Self) -> Int
 pub impl AudioSource for OggOpusSource
 
@@ -282,6 +283,7 @@ pub struct VoiceReceiveStream {
   // private fields
 }
 pub fn VoiceReceiveStream::close(Self) -> Unit
+pub async fn VoiceReceiveStream::next_frame(Self) -> Bytes?
 pub impl AudioSource for VoiceReceiveStream
 
 pub(all) enum VoiceReconnectPolicy {

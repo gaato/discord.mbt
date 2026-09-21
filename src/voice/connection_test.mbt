@@ -1224,7 +1224,7 @@ async test "fatal voice close performs terminal teardown" {
     assert_eq(connection.state(), Closed(code=Some(4014)))
     assert_eq(leave_calls.val, 1)
     try connection.next_event() |> ignore catch {
-      VoiceError::Disconnected => ()
+      @voice.VoiceError::Disconnected => ()
       error => fail("unexpected terminal queue error: \{Repr(error)}")
     } noraise {
       _ => fail("terminal event queue unexpectedly remained open")

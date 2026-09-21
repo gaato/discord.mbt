@@ -105,6 +105,9 @@ pub fn Client::close(self : Client) -> Unit {
 }
 
 ///|
+pub extend Client with Show::{to_string}
+
+///|
 /// Never leak the token through debug output.
 pub impl Show for Client with fn output(self, logger) {
   ignore(self.token)

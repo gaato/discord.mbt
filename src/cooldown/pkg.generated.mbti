@@ -19,6 +19,7 @@ pub struct InMemoryCooldownStore {
   // private fields
 }
 pub fn InMemoryCooldownStore::InMemoryCooldownStore(now? : () -> Int64) -> Self
+pub async fn InMemoryCooldownStore::try_acquire(Self, String, window_ms~ : Int64) -> CooldownDecision
 pub impl CooldownStore for InMemoryCooldownStore
 
 // Type aliases

@@ -177,6 +177,7 @@ pub(all) struct CommandSpec {
 } derive(@debug.Debug)
 pub fn CommandSpec::message(String, default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType], name_localizations? : Map[String, String]) -> Self
 pub fn CommandSpec::slash(String, String, options? : Array[@model.CommandOption], default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType], name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> Self
+pub fn CommandSpec::to_json(Self) -> Json
 pub fn CommandSpec::user(String, default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType], name_localizations? : Map[String, String]) -> Self
 pub impl ToJson for CommandSpec
 

@@ -37,6 +37,9 @@ pub fn InMemoryQueue::InMemoryQueue(
 }
 
 ///|
+pub extend InMemoryQueue with IdentifyQueue::{wait_for_identify}
+
+///|
 /// Wait until the shard's bucket (`shard_id % max_concurrency`) allows the
 /// next identify.
 pub impl IdentifyQueue for InMemoryQueue with fn wait_for_identify(

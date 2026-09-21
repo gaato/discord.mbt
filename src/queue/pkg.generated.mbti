@@ -10,6 +10,7 @@ pub struct InMemoryQueue {
   // private fields
 }
 pub fn InMemoryQueue::InMemoryQueue(max_concurrency? : Int, spacing_ms? : Int) -> Self
+pub async fn InMemoryQueue::wait_for_identify(Self, Int) -> Unit
 pub impl IdentifyQueue for InMemoryQueue
 
 // Type aliases

@@ -17,6 +17,9 @@ pub(all) suberror BotError {
 } derive(Debug)
 
 ///|
+pub extend BotError with Show::{to_string}
+
+///|
 /// Human-readable failure message, including remediation hints for the
 /// intent-related close codes.
 pub impl Show for BotError with fn output(self, logger) {

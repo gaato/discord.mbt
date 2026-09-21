@@ -7,6 +7,19 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+### Changed
+
+- **Dot-callable trait methods are declared explicitly.** moonc 0.10.14
+  deprecates the implicit promotion of trait methods to regular methods. The
+  ones meant to be called with dot syntax are now `pub extend` declarations:
+  `to_json()` on every `ToJson` type, `to_string()` on `Id`, `BotError`, and
+  `Client`, and the `RateLimiter` / `IdentifyQueue` / `CooldownStore` /
+  `AudioSource` methods on their concrete types. Nothing changes under the
+  current compiler. Other promoted methods (`equal`, `not_equal`, `to_repr`,
+  `T::from_json`, `lor`, `land`, `compare`, `hash`) stop resolving once the
+  compiler removes the promotion; use the operators, `@debug`, and
+  `@json.from_json` instead.
+
 ## [0.3.1] - 2026-09-21
 
 ### Added

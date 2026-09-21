@@ -60,6 +60,9 @@ pub impl[M] Hash for Id[M] with fn hash_combine(self, hasher) {
 }
 
 ///|
+pub extend Id with Show::{to_string}
+
+///|
 pub impl[M] Show for Id[M] with fn output(self, logger) {
   logger.write_string(self.0.to_string())
 }

@@ -34,6 +34,7 @@ pub struct RemoteCooldownStore {
 pub fn RemoteCooldownStore::close(Self) -> Unit
 pub async fn RemoteCooldownStore::connect(String, timeout_ms? : Int, when_unreachable? : UnreachablePolicy, on_error? : (Error) -> Unit) -> Self
 pub async fn RemoteCooldownStore::ping(Self) -> Unit
+pub async fn RemoteCooldownStore::try_acquire(Self, String, window_ms~ : Int64) -> @cooldown.CooldownDecision
 pub impl @cooldown.CooldownStore for RemoteCooldownStore
 
 pub struct RemoteIdentifyQueue {
@@ -42,14 +43,17 @@ pub struct RemoteIdentifyQueue {
 pub fn RemoteIdentifyQueue::close(Self) -> Unit
 pub async fn RemoteIdentifyQueue::connect(String) -> Self
 pub async fn RemoteIdentifyQueue::ping(Self) -> Unit
+pub async fn RemoteIdentifyQueue::wait_for_identify(Self, Int) -> Unit
 pub impl @queue.IdentifyQueue for RemoteIdentifyQueue
 
 pub struct RemoteRateLimiter {
   // private fields
 }
+pub async fn RemoteRateLimiter::acquire(Self, String, global_exempt~ : Bool) -> Unit
 pub fn RemoteRateLimiter::close(Self) -> Unit
 pub async fn RemoteRateLimiter::connect(String) -> Self
 pub async fn RemoteRateLimiter::ping(Self) -> Unit
+pub async fn RemoteRateLimiter::release(Self, String, status~ : Int, headers~ : Map[String, String]) -> Unit
 pub impl @ratelimit.RateLimiter for RemoteRateLimiter
 
 pub(all) enum UnreachablePolicy {

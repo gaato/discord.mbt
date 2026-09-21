@@ -89,6 +89,9 @@ async fn InMemoryRateLimiter::wait_for_global(
 }
 
 ///|
+pub extend InMemoryRateLimiter with RateLimiter::{acquire, release}
+
+///|
 /// Wait for bucket capacity — and the global window unless `global_exempt` —
 /// before the request is sent.
 pub impl RateLimiter for InMemoryRateLimiter with fn acquire(

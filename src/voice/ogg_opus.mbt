@@ -302,6 +302,9 @@ pub fn OggOpusSource::pre_skip(self : OggOpusSource) -> Int {
 }
 
 ///|
+pub extend OggOpusSource with AudioSource::{next_frame}
+
+///|
 /// Yield the next raw Opus packet, pulling more input on demand for
 /// streaming sources; `None` at end of stream.
 pub impl AudioSource for OggOpusSource with fn next_frame(self) {

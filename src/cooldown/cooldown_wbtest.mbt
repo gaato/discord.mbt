@@ -1,7 +1,4 @@
 ///|
-extend InMemoryCooldownStore with CooldownStore::{try_acquire}
-
-///|
 async test "expired keys are swept lazily" {
   let clock = Ref(1_000L)
   let store = InMemoryCooldownStore(now=() => clock.val)

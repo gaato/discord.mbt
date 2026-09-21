@@ -22,6 +22,7 @@ pub(all) suberror BotError {
   InvalidShardConfig(message~ : String)
   SessionStartLimitExceeded(required~ : Int, remaining~ : Int, reset_after_ms~ : Int64)
 } derive(@debug.Debug)
+pub fn BotError::to_string(Self) -> String
 pub impl Show for BotError
 
 // Types and methods

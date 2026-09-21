@@ -14,6 +14,8 @@ pub struct InMemoryRateLimiter {
   // private fields
 }
 pub fn InMemoryRateLimiter::InMemoryRateLimiter(global_limit? : Int) -> Self
+pub async fn InMemoryRateLimiter::acquire(Self, String, global_exempt~ : Bool) -> Unit
+pub async fn InMemoryRateLimiter::release(Self, String, status~ : Int, headers~ : Map[String, String]) -> Unit
 pub impl RateLimiter for InMemoryRateLimiter
 
 // Type aliases

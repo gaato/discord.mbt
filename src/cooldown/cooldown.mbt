@@ -41,6 +41,9 @@ pub fn InMemoryCooldownStore::InMemoryCooldownStore(
 }
 
 ///|
+pub extend InMemoryCooldownStore with CooldownStore::{try_acquire}
+
+///|
 pub impl CooldownStore for InMemoryCooldownStore with fn try_acquire(
   self,
   key,

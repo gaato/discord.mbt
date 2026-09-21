@@ -365,6 +365,7 @@ moon test --target js --release
 moon fmt
 moon -C template fmt --check
 moon info --target native             # regenerate pkg.generated.mbti (API review signal)
+scripts/gen_extends.py                # regenerate extends.mbt after adding or removing a ToJson type
 ```
 
 Look up any package, type, or symbol — including its docstring examples —

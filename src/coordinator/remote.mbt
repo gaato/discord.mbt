@@ -183,6 +183,9 @@ pub async fn RemoteIdentifyQueue::ping(self : RemoteIdentifyQueue) -> Unit {
 }
 
 ///|
+pub extend RemoteIdentifyQueue with @queue.IdentifyQueue::{wait_for_identify}
+
+///|
 /// Acquire the shard's identify slot from the coordinator process.
 pub impl @queue.IdentifyQueue for RemoteIdentifyQueue with fn wait_for_identify(
   self,
@@ -232,6 +235,9 @@ pub fn RemoteRateLimiter::close(self : RemoteRateLimiter) -> Unit {
 pub async fn RemoteRateLimiter::ping(self : RemoteRateLimiter) -> Unit {
   self.acquire_client.request({ "op": "ping" }) |> ignore
 }
+
+///|
+pub extend RemoteRateLimiter with @ratelimit.RateLimiter::{acquire, release}
 
 ///|
 /// Acquire the HTTP bucket slot from the coordinator's shared accounting.
@@ -362,6 +368,9 @@ pub async fn RemoteCooldownStore::ping(self : RemoteCooldownStore) -> Unit {
 fn coordinator_unreachable(error : Error) -> Bool {
   coordinator_retryable(error) || error is @async.TimeoutError
 }
+
+///|
+pub extend RemoteCooldownStore with @cooldown.CooldownStore::{try_acquire}
 
 ///|
 pub impl @cooldown.CooldownStore for RemoteCooldownStore with fn try_acquire(

@@ -37,6 +37,7 @@ pub(all) struct ApiError {
   message : String
   errors : Json?
 } derive(ToJson, @debug.Debug, @json.FromJson)
+pub fn ApiError::to_json(Self) -> Json
 
 pub struct ApplicationEmojiRef {
   // private fields
@@ -375,6 +376,7 @@ pub async fn Client::start_thread_in_forum_or_media_channel(Self, @model.Id[@mod
 pub async fn Client::start_thread_without_message(Self, @model.Id[@model.ChannelMarker], String, typ? : @model.ChannelType, auto_archive_duration? : @model.ThreadAutoArchiveDuration, invitable? : Bool, rate_limit_per_user? : Int, audit_reason? : String) -> @model.Channel raise DiscordHttpError
 pub fn Client::sticker_ref(Self, @model.Id[@model.GuildMarker], @model.Id[@model.StickerMarker]) -> StickerRef
 pub async fn Client::sync_guild_template(Self, @model.Id[@model.GuildMarker], String) -> @model.GuildTemplate raise DiscordHttpError
+pub fn Client::to_string(Self) -> String
 pub async fn Client::trigger_typing(Self, @model.Id[@model.ChannelMarker]) -> Unit raise DiscordHttpError
 pub async fn Client::unpin_message(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], audit_reason? : String) -> Unit raise DiscordHttpError
 pub async fn Client::update_application_identity_profile(Self, application_id~ : @model.Id[@model.ApplicationMarker], user_id~ : @model.Id[@model.UserMarker], provider_issued_user_id~ : String, username? : String, data? : @model.ApplicationIdentityProfileData) -> Unit raise DiscordHttpError

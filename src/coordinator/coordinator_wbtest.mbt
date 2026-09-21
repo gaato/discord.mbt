@@ -1,13 +1,4 @@
 ///|
-extend RemoteIdentifyQueue with @queue.IdentifyQueue::{wait_for_identify}
-
-///|
-extend RemoteRateLimiter with @ratelimit.RateLimiter::{acquire, release}
-
-///|
-extend RemoteCooldownStore with @cooldown.CooldownStore::{try_acquire}
-
-///|
 async test "coordinator serializes identify and HTTP limits across clients" {
   @async.with_task_group(group => {
     let coordinator = Coordinator::serve(

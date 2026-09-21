@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  MOONBIT_INSTALL_VERSION: "0.10.13+cbb11c36f"
+  MOONBIT_INSTALL_VERSION: "0.10.14+7d59c7ec9"
 
 jobs:
   check:
@@ -71,6 +71,9 @@ jobs:
           # Current moon removes a legacy trailing blank line from generated
           # interfaces; ignore blank-only churn while still rejecting API edits.
           git diff --exit-code --ignore-blank-lines -- '*.mbti'
+
+      - name: Generated extend declarations check
+        run: python3 scripts/gen_extends.py --check
 
   js:
     runs-on: ubuntu-24.04
