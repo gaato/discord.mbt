@@ -195,9 +195,42 @@ test "build CDN URLs" {
 }
 ```
 
-`guild_icon_url`, `guild_banner_url`, `emoji_url`, `sticker_url`, and the
-default-avatar helpers cover the other CDN routes. An invalid `size` or a
+Every image route in Discord's CDN endpoint table whose hash the models carry
+has a builder: user avatars and banners, guild icons, banners, splashes,
+discovery splashes and tag badges, guild member avatars and banners, avatar
+decorations, role icons, scheduled event covers, application icons and covers,
+team icons, emoji, stickers, and sticker pack banners. An invalid `size` or a
 format the asset cannot have raises `CdnUrlError` before any IO.
+
+`display_avatar_url` resolves the avatar a client would show: the member's
+guild avatar when there is one, then the user's avatar, then the default
+avatar.
+
+```mbt check
+///|
+test "resolve the avatar shown in a guild" {
+  let user : @model.User = @json.from_json({
+    "id": "80351110224678912",
+    "username": "nelly",
+    "discriminator": "0",
+    "avatar": "global",
+  })
+  let profile : @model.GuildMember = @json.from_json({
+    "avatar": "local",
+    "roles": [],
+    "joined_at": null,
+  })
+  let guild_id : @model.GuildId = @model.Id::parse("197038439483310086")
+  inspect(
+    @util.display_avatar_url(user, guild_member=(guild_id, profile)),
+    content="https://cdn.discordapp.com/guilds/197038439483310086/users/80351110224678912/avatars/local.png",
+  )
+  inspect(
+    @util.display_avatar_url(user),
+    content="https://cdn.discordapp.com/avatars/80351110224678912/global.png",
+  )
+}
+```
 
 ## Permissions
 

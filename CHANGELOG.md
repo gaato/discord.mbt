@@ -24,6 +24,14 @@ breaking change is listed with a migration note.
   official documentation states are encoded, so only requests that Discord
   already rejected are affected; exhaustive matches on
   `AppConfigError` and `ModalPrefillError` need the new cases.
+- **CDN URL builders cover Discord's CDN endpoint table.** `@util` gains
+  `guild_member_avatar_url`, `guild_member_banner_url`, `user_banner_url`,
+  `avatar_decoration_url`, `guild_discovery_splash_url`, `guild_tag_badge_url`,
+  `role_icon_url`, `scheduled_event_cover_url`, `application_icon_url`,
+  `application_cover_url`, `team_icon_url`, and `sticker_pack_banner_url`,
+  plus `display_avatar_url`, which resolves guild member avatar, user avatar,
+  then default avatar the way clients do. `scripts/docs_cdn_audit.py` compares
+  the builders with the documented table so a new route is noticed.
 
 ### Changed
 

@@ -291,6 +291,12 @@ matches every `src/model` struct to its docs field table and fails on a field
 the docs mark optional (`name?`) or nullable (`?type`) that the model does not
 (it caught the 2026-08-05 channel `application_id` nullability change).
 
+CDN routes (2026-09-21): `scripts/docs_cdn_audit.py` matches every row of the
+docs' CDN Endpoints table to a URL builder in `src/util/cdn.mbt` and fails on
+an uncovered route. The three rows left out on purpose (Application Asset,
+Achievement Icon, Store Page Asset) carry their reasons in
+`scripts/docs_cdn_audit.allow`.
+
 Intentionally not exposed (still reachable via `Route::custom`):
 
 - Command params `dm_permission` / `default_permission` — deprecated in the

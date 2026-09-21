@@ -9,7 +9,13 @@ import {
 // Values
 pub fn all_permissions() -> @model.Permissions
 
+pub fn application_cover_url(@model.Id[@model.ApplicationMarker], @model.ImageHash, format? : CdnImageFormat, size? : Int) -> String raise CdnUrlError
+
+pub fn application_icon_url(@model.Id[@model.ApplicationMarker], @model.ImageHash, format? : CdnImageFormat, size? : Int) -> String raise CdnUrlError
+
 pub fn apply_communication_timeout(permissions~ : @model.Permissions, communication_disabled_until~ : @model.Timestamp, now_unix_ms~ : Int64) -> @model.Permissions raise @model.TimestampError
+
+pub fn avatar_decoration_url(@model.ImageHash, size? : Int) -> String raise CdnUrlError
 
 pub fn base_permissions(is_owner~ : Bool, everyone_permissions~ : @model.Permissions, role_permissions~ : Array[@model.Permissions]) -> @model.Permissions
 
@@ -21,6 +27,8 @@ pub fn custom_emoji_mention(name~ : String, emoji_id~ : @model.Id[@model.EmojiMa
 
 pub fn default_user_avatar_url(@model.Id[@model.UserMarker]) -> String
 
+pub fn display_avatar_url(@model.User, guild_member? : (@model.Id[@model.GuildMarker], @model.GuildMember), format? : CdnImageFormat, size? : Int) -> String raise CdnUrlError
+
 pub fn emoji_url(@model.Id[@model.EmojiMarker], format? : CdnImageFormat, size? : Int) -> String raise CdnUrlError
 
 pub fn escape_markdown(String) -> String
@@ -29,25 +37,43 @@ pub fn escape_mentions(String) -> String
 
 pub fn guild_banner_url(@model.Id[@model.GuildMarker], @model.ImageHash, format? : CdnImageFormat, size? : Int) -> String raise CdnUrlError
 
+pub fn guild_discovery_splash_url(@model.Id[@model.GuildMarker], @model.ImageHash, format? : CdnImageFormat, size? : Int) -> String raise CdnUrlError
+
 pub fn guild_icon_url(@model.Id[@model.GuildMarker], @model.ImageHash, format? : CdnImageFormat, size? : Int) -> String raise CdnUrlError
+
+pub fn guild_member_avatar_url(@model.Id[@model.GuildMarker], @model.Id[@model.UserMarker], @model.ImageHash, format? : CdnImageFormat, size? : Int) -> String raise CdnUrlError
+
+pub fn guild_member_banner_url(@model.Id[@model.GuildMarker], @model.Id[@model.UserMarker], @model.ImageHash, format? : CdnImageFormat, size? : Int) -> String raise CdnUrlError
 
 pub fn guild_splash_url(@model.Id[@model.GuildMarker], @model.ImageHash, format? : CdnImageFormat, size? : Int) -> String raise CdnUrlError
 
+pub fn guild_tag_badge_url(@model.Id[@model.GuildMarker], @model.ImageHash, format? : CdnImageFormat, size? : Int) -> String raise CdnUrlError
+
 pub fn legacy_default_user_avatar_url(Int) -> String
 
+pub fn role_icon_url(@model.Id[@model.RoleMarker], @model.ImageHash, format? : CdnImageFormat, size? : Int) -> String raise CdnUrlError
+
 pub fn role_mention(@model.Id[@model.RoleMarker]) -> String
+
+pub fn scheduled_event_cover_url(@model.Id[@model.ScheduledEventMarker], @model.ImageHash, format? : CdnImageFormat, size? : Int) -> String raise CdnUrlError
 
 pub fn slash_command_mention(name~ : String, command_id~ : @model.Id[@model.CommandMarker]) -> String
 
 pub fn split_content(String, limit? : Int) -> Array[String]
 
+pub fn sticker_pack_banner_url(@model.Id[@model.GenericMarker], format? : CdnImageFormat, size? : Int) -> String raise CdnUrlError
+
 pub fn sticker_url(@model.Id[@model.StickerMarker], format~ : @model.StickerFormatType, size? : Int) -> String raise CdnUrlError
+
+pub fn team_icon_url(@model.Id[@model.TeamMarker], @model.ImageHash, format? : CdnImageFormat, size? : Int) -> String raise CdnUrlError
 
 pub fn timestamp(Int64, style? : TimestampStyle) -> String
 
 pub fn timestamp_from_model(@model.Timestamp, style? : TimestampStyle) -> String raise @model.TimestampError
 
 pub fn user_avatar_url(@model.Id[@model.UserMarker], @model.ImageHash, format? : CdnImageFormat, size? : Int) -> String raise CdnUrlError
+
+pub fn user_banner_url(@model.Id[@model.UserMarker], @model.ImageHash, format? : CdnImageFormat, size? : Int) -> String raise CdnUrlError
 
 pub fn user_mention(@model.Id[@model.UserMarker]) -> String
 

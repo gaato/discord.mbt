@@ -181,6 +181,42 @@ custom id の 100 文字制限は 0.3.0 で検証済みなのに、同型の制�
 ならないこと(`ticket` と `ticket:close`)— を検査する。従来通っていた構成はすべて通る。
 `App::validate` の他の規則は Discord の規則か往復可能性そのもので、代理ルールはこれだけだった。
 
+### 4. ギルドメンバーのアバター URL ヘルパーがない
+
+`GuildMember::avatar` はモデルにあるのに、`guilds/{guild}/users/{user}/avatars/{hash}` を組む
+builder が `@util` になかった。
+
+**Resolved**: 公式 CDN endpoint 表と突き合わせ、モデルが hash を持つ全 route に builder を
+揃えた(12 個追加)。クライアントと同じ優先順位(メンバー → ユーザー → デフォルト)で解決する
+`display_avatar_url` も追加。表との乖離は `scripts/docs_cdn_audit.py` が検出する
+(意図的に除外した 3 行は `docs_cdn_audit.allow` に理由付きで記載)。
+
+### 5. `@fs.mkdir(recursive=true)` が既存ディレクトリで失敗する(moonbitlang/async)
+
+discord.mbt の問題ではない。上流に修正 PR (#628) を出した。内容は下の「上流 (moonbitlang/async)」を参照。
+
+## 上流 (moonbitlang/async)
+
+### `@fs.mkdir(recursive=true)` が既存ディレクトリと並行呼び出しで失敗する
+
+確認: async `b1ad24d`(2026-09-21 の origin/HEAD、`src/fs/dir.mbt` の `mkdir` は 0.22 系と同一)。
+既存の issue / PR はなかった(recursive を入れた #231 のみ)。
+**Reported**: [moonbitlang/async#628](https://github.com/moonbitlang/async/pull/628)(修正 PR、2026-09-21)。
+
+`mkdir` は最初の `mkdir(2)` が ENOENT のときだけ親を再帰的に作り、それ以外のエラーはそのまま
+raise する。このため:
+
+1. 既存ディレクトリに対する `mkdir(path, recursive=true)` が `File exists` で失敗する。
+   `mkdir -p`、Rust `create_dir_all`、Go `MkdirAll`、Python `makedirs(exist_ok=True)`、
+   Node `mkdir({recursive: true})` はいずれも成功する。
+2. 一般化すると競合バグになる: 共有の親を持つ複数タスクが同時に呼ぶと、親の作成で負けた側が
+   EEXIST で失敗する。4 タスクで `_build/repro_race/shared/parent/{i}` を作ると 3 つが
+   `"_build/repro_race": File exists` などで失敗した(`with_task_group` + `spawn_bg` で再現)。
+   呼び出し側で事前に存在確認しても TOCTOU で防げない。
+
+PR の内容: `recursive=true` では、`mkdir(2)` の EEXIST を「対象がディレクトリなら成功」として扱う
+(親の再帰作成と最後の作成の両方)。ファイルが存在する場合は従来どおり EEXIST。
+
 ---
 
 ## 環境メモ(ライブラリの問題ではない)

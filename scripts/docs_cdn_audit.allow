@@ -1,0 +1,3 @@
+Application Asset  # Rich Presence asset ids arrive as opaque strings (`mp:` externals included), not as an id the builder can type
+Achievement Icon  # legacy GameSDK; no model carries an achievement
+Store Page Asset  # legacy store pages; no model carries the asset id

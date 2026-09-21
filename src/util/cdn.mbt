@@ -55,6 +55,20 @@ fn asset_format(
 }
 
 ///|
+fn hashed_asset_url(
+  directory : String,
+  hash : @model.ImageHash,
+  format : CdnImageFormat?,
+  size : Int?,
+) -> String raise CdnUrlError {
+  let format = asset_format(hash, format)
+  append_size(
+    "\{cdn_base}/\{directory}/\{hash.to_string()}.\{format.extension()}",
+    size,
+  )
+}
+
+///|
 /// Build a user avatar CDN URL. Animated hashes default to GIF; other hashes
 /// default to PNG.
 ///
@@ -78,11 +92,7 @@ pub fn user_avatar_url(
   format? : CdnImageFormat,
   size? : Int,
 ) -> String raise CdnUrlError {
-  let format = asset_format(avatar, format)
-  append_size(
-    "\{cdn_base}/avatars/\{user_id}/\{avatar.to_string()}.\{format.extension()}",
-    size,
-  )
+  hashed_asset_url("avatars/\{user_id}", avatar, format, size)
 }
 
 ///|
@@ -111,16 +121,93 @@ pub fn legacy_default_user_avatar_url(discriminator : Int) -> String {
 }
 
 ///|
-fn guild_asset_url(
-  kind : String,
-  guild_id : @model.GuildId,
-  hash : @model.ImageHash,
-  format : CdnImageFormat?,
-  size : Int?,
+/// Build a user profile banner CDN URL.
+pub fn user_banner_url(
+  user_id : @model.UserId,
+  banner : @model.ImageHash,
+  format? : CdnImageFormat,
+  size? : Int,
 ) -> String raise CdnUrlError {
-  let format = asset_format(hash, format)
+  hashed_asset_url("banners/\{user_id}", banner, format, size)
+}
+
+///|
+/// Build the CDN URL of the avatar a member set for one guild
+/// (`GuildMember::avatar`). `display_avatar_url` picks between this, the user
+/// avatar, and the default avatar.
+pub fn guild_member_avatar_url(
+  guild_id : @model.GuildId,
+  user_id : @model.UserId,
+  avatar : @model.ImageHash,
+  format? : CdnImageFormat,
+  size? : Int,
+) -> String raise CdnUrlError {
+  hashed_asset_url(
+    "guilds/\{guild_id}/users/\{user_id}/avatars",
+    avatar,
+    format,
+    size,
+  )
+}
+
+///|
+/// Build the CDN URL of the banner a member set for one guild.
+pub fn guild_member_banner_url(
+  guild_id : @model.GuildId,
+  user_id : @model.UserId,
+  banner : @model.ImageHash,
+  format? : CdnImageFormat,
+  size? : Int,
+) -> String raise CdnUrlError {
+  hashed_asset_url(
+    "guilds/\{guild_id}/users/\{user_id}/banners",
+    banner,
+    format,
+    size,
+  )
+}
+
+///|
+/// Build the URL of the avatar Discord clients display for `user`: the guild
+/// member avatar when `guild_member` carries one, otherwise the user avatar,
+/// otherwise the default avatar. `format` and `size` do not apply to the
+/// default avatar, which is always a fixed-size PNG.
+pub fn display_avatar_url(
+  user : @model.User,
+  guild_member? : (@model.GuildId, @model.GuildMember),
+  format? : CdnImageFormat,
+  size? : Int,
+) -> String raise CdnUrlError {
+  if guild_member is Some((guild_id, profile)) &&
+    @model.flatten(profile.avatar) is Some(avatar) {
+    return hashed_asset_url(
+      "guilds/\{guild_id}/users/\{user.id}/avatars",
+      avatar,
+      format,
+      size,
+    )
+  }
+  if user.avatar is Value(avatar) {
+    return hashed_asset_url("avatars/\{user.id}", avatar, format, size)
+  }
+  // Accounts on the unique-username system report discriminator "0".
+  let discriminator = @string.parse_int(user.discriminator) catch { _ => 0 }
+  if discriminator == 0 {
+    default_user_avatar_url(user.id)
+  } else {
+    legacy_default_user_avatar_url(discriminator)
+  }
+}
+
+///|
+/// Build an avatar decoration CDN URL from `AvatarDecorationData::asset`.
+/// Decorations are served as PNG only.
+pub fn avatar_decoration_url(
+  asset : @model.ImageHash,
+  size? : Int,
+) -> String raise CdnUrlError {
   append_size(
-    "\{cdn_base}/\{kind}/\{guild_id}/\{hash.to_string()}.\{format.extension()}",
+    "\{cdn_base}/avatar-decoration-presets/\{asset.to_string()}.png",
     size,
   )
 }
@@ -133,7 +220,7 @@ pub fn guild_icon_url(
   format? : CdnImageFormat,
   size? : Int,
 ) -> String raise CdnUrlError {
-  guild_asset_url("icons", guild_id, icon, format, size)
+  hashed_asset_url("icons/\{guild_id}", icon, format, size)
 }
 
 ///|
@@ -144,7 +231,7 @@ pub fn guild_banner_url(
   format? : CdnImageFormat,
   size? : Int,
 ) -> String raise CdnUrlError {
-  guild_asset_url("banners", guild_id, banner, format, size)
+  hashed_asset_url("banners/\{guild_id}", banner, format, size)
 }
 
 ///|
@@ -155,7 +242,90 @@ pub fn guild_splash_url(
   format? : CdnImageFormat,
   size? : Int,
 ) -> String raise CdnUrlError {
-  guild_asset_url("splashes", guild_id, splash, format, size)
+  hashed_asset_url("splashes/\{guild_id}", splash, format, size)
+}
+
+///|
+/// Build a guild discovery-splash CDN URL.
+pub fn guild_discovery_splash_url(
+  guild_id : @model.GuildId,
+  discovery_splash : @model.ImageHash,
+  format? : CdnImageFormat,
+  size? : Int,
+) -> String raise CdnUrlError {
+  hashed_asset_url(
+    "discovery-splashes/\{guild_id}",
+    discovery_splash,
+    format,
+    size,
+  )
+}
+
+///|
+/// Build a guild tag badge CDN URL from `UserPrimaryGuild::badge`.
+pub fn guild_tag_badge_url(
+  guild_id : @model.GuildId,
+  badge : @model.ImageHash,
+  format? : CdnImageFormat,
+  size? : Int,
+) -> String raise CdnUrlError {
+  hashed_asset_url("guild-tag-badges/\{guild_id}", badge, format, size)
+}
+
+///|
+/// Build a role icon CDN URL.
+pub fn role_icon_url(
+  role_id : @model.RoleId,
+  icon : @model.ImageHash,
+  format? : CdnImageFormat,
+  size? : Int,
+) -> String raise CdnUrlError {
+  hashed_asset_url("role-icons/\{role_id}", icon, format, size)
+}
+
+///|
+/// Build a guild scheduled event cover image CDN URL.
+pub fn scheduled_event_cover_url(
+  scheduled_event_id : @model.ScheduledEventId,
+  image : @model.ImageHash,
+  format? : CdnImageFormat,
+  size? : Int,
+) -> String raise CdnUrlError {
+  hashed_asset_url("guild-events/\{scheduled_event_id}", image, format, size)
+}
+
+///|
+/// Build an application icon CDN URL.
+pub fn application_icon_url(
+  application_id : @model.ApplicationId,
+  icon : @model.ImageHash,
+  format? : CdnImageFormat,
+  size? : Int,
+) -> String raise CdnUrlError {
+  hashed_asset_url("app-icons/\{application_id}", icon, format, size)
+}
+
+///|
+/// Build an application cover image CDN URL. The cover shares the icon's
+/// `app-icons` directory.
+pub fn application_cover_url(
+  application_id : @model.ApplicationId,
+  cover_image : @model.ImageHash,
+  format? : CdnImageFormat,
+  size? : Int,
+) -> String raise CdnUrlError {
+  hashed_asset_url("app-icons/\{application_id}", cover_image, format, size)
+}
+
+///|
+/// Build a team icon CDN URL.
+pub fn team_icon_url(
+  team_id : @model.TeamId,
+  icon : @model.ImageHash,
+  format? : CdnImageFormat,
+  size? : Int,
+) -> String raise CdnUrlError {
+  hashed_asset_url("team-icons/\{team_id}", icon, format, size)
 }
 
 ///|
@@ -184,4 +354,19 @@ pub fn sticker_url(
     Unknown(value) => raise UnsupportedStickerFormat(value)
   }
   append_size("\{cdn_base}/stickers/\{sticker_id}.\{extension}", size)
+}
+
+///|
+/// Build a sticker pack banner CDN URL from `StickerPack::banner_asset_id`.
+/// Every pack banner lives under Discord's own sticker application.
+pub fn sticker_pack_banner_url(
+  banner_asset_id : @model.GenericId,
+  format? : CdnImageFormat,
+  size? : Int,
+) -> String raise CdnUrlError {
+  let format = format.unwrap_or(Png)
+  append_size(
+    "\{cdn_base}/app-assets/710982414301790216/store/\{banner_asset_id}.\{format.extension()}",
+    size,
+  )
 }
