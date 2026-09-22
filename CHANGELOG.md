@@ -7,6 +7,17 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-09-22
+
+### Fixed
+
+- **The module README no longer appears twice on mooncakes.** The module
+  README (`README.mbt.md`) was a link to the root package's `src/README.mbt.md`,
+  so mooncakes rendered the same document as the module page and again as the
+  root package's documentation. The module README is now a short overview that
+  links to the root package guide, the long-form guides, and the testkit. No
+  code changed.
+
 ## [0.4.0] - 2026-09-22
 
 ### Added

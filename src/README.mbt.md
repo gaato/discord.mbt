@@ -1,24 +1,15 @@
-# discord.mbt
+# The `gaato/discord` root package
 
-[![CI](https://github.com/gaato/discord.mbt/actions/workflows/ci.yml/badge.svg)](https://github.com/gaato/discord.mbt/actions/workflows/ci.yml)
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/gaato/discord.mbt)
-
-A Discord application library for [MoonBit](https://www.moonbitlang.com/):
-typed interaction declarations, API models, a rate-limited REST client,
-JS/serverless HTTP interactions, and a native WebSocket gateway shard.
-
-The design follows [twilight](https://github.com/twilight-rs/twilight):
-loosely coupled packages that model the Discord API, plus an App layer for
-typed interaction declarations.
+This is the guide to the root package of `gaato/discord`: what the module
+provides, how the packages fit together, and how to run it. The
+[module overview](../README.mbt.md) is one level up, and long-form guides live
+in [`guide/`](guide/README.md); their code blocks compile and run as part of the
+test suite, so the examples cannot drift from the library. Task-focused
+recipes are docstring examples on the relevant symbols — look anything up with
+`moon ide doc` (see [Development](#development)).
 
 > **Status**: experimental. Minor releases may contain breaking changes; see the
-> [changelog](CHANGELOG.md) for migration notes.
-
-Long-form guides live in [`src/guide/`](src/guide/README.md); their code
-blocks compile and run as part of the test suite, so the examples cannot
-drift from the library. Task-focused recipes are docstring examples on the
-relevant symbols — look anything up with `moon ide doc` (see
-[Development](#development)).
+> [changelog](../CHANGELOG.md) for migration notes.
 
 ## Prerequisites
 
@@ -173,13 +164,13 @@ three-second initial-response deadline: `Immediate` computes and returns a
 flows. Subcommands carry their own typed `Args`, autocomplete attaches
 directly to the focused argument, and context-menu commands, components, and
 typed modals route through the same App — see the
-[commands](src/guide/02-commands.mbt.md) and
-[components and modals](src/guide/03-components-modals.mbt.md) guides.
+[commands](guide/02-commands.mbt.md) and
+[components and modals](guide/03-components-modals.mbt.md) guides.
 
 `Client`, `App`, and `Bot` each accept onion-style middleware — around one
 logical REST call, around routed interaction dispatch, and around gateway
 event fan-out — plus structured telemetry callbacks. See the
-[middleware guide](src/guide/09-middleware.mbt.md).
+[middleware guide](guide/09-middleware.mbt.md).
 
 ### Gateway executor
 
@@ -196,7 +187,7 @@ If `intents` is omitted, `Bot` derives non-privileged intents from typed
 subscriptions; pass privileged intents (members, presences, message content)
 explicitly, and pass the full set when raw event handlers are used.
 `ctx.wait_for(...)` makes one-shot typed event observations inside a handler.
-The [events and intents guide](src/guide/04-events-intents.mbt.md) covers
+The [events and intents guide](guide/04-events-intents.mbt.md) covers
 descriptors, intent derivation, decode-error observers, opt-in `zlib-stream`
 compression, and the gateway-driven in-memory cache.
 
@@ -211,7 +202,7 @@ let bot = @discord.Bot(app, token~, shards=Auto)
 Identify calls honor the `max_concurrency` bucket rules from
 `GET /gateway/bot`, and multi-process deployments can share Identify and REST
 limits through the bundled TCP coordinator. See the
-[scaling guide](src/guide/08-scaling-processes.mbt.md).
+[scaling guide](guide/08-scaling-processes.mbt.md).
 
 ### Voice (experimental)
 
@@ -224,9 +215,9 @@ official `libdave` for MLS and media encryption. The separate Rust library in
 upstream `v1.2.0/cpp`; `gaato/discord` pins transport component release
 `voice-shim-v0.1.0`. A native voice build can bootstrap and verify both
 prebuilt runtimes without installing Cargo. See the
-[voice guide](src/guide/10-voice.mbt.md) for installation and runtime limits,
+[voice guide](guide/10-voice.mbt.md) for installation and runtime limits,
 the `dave_probe`, `voice_player`, and `voice_recorder` examples, and the accepted design in
-[`src/voice/DESIGN.md`](src/voice/DESIGN.md).
+[`src/voice/DESIGN.md`](voice/DESIGN.md).
 
 ### Synchronization and failures
 
@@ -266,7 +257,7 @@ Install `app.error_policy(...)` to map failures to logs or interaction
 responses; handlers raise `HandlerError` variants such as `UserMessage` or
 `MissingPermission` for expected failures, and commands accept ordered
 pre-execution checks and fixed-window cooldowns. See the
-[structuring bots guide](src/guide/07-structuring-bots.mbt.md).
+[structuring bots guide](guide/07-structuring-bots.mbt.md).
 
 ## HTTP interactions (experimental)
 
@@ -295,7 +286,7 @@ tested inside Cloudflare's local `workerd` runtime and supports streamed
 multipart callbacks for in-memory `FileUpload` values. On native,
 `@discord.serve_interactions(group, app, addr~, public_key~, token~)` is a
 complete signed-interactions HTTP server. See the
-[HTTP interactions guide](src/guide/06-http-interactions.mbt.md) and the
+[HTTP interactions guide](guide/06-http-interactions.mbt.md) and the
 `interactions_http` and `workers_echo` examples.
 
 The JavaScript REST client supports null-body 204 responses through
@@ -319,7 +310,7 @@ println(id.timestamp_ms()) // 1462015105796
 Wire models use `T?` for optional fields and `Nullable[T]` for nullable
 fields; PATCH methods expose plain optional arguments with
 `clear_<field>=true` flags for clearing. See the
-[models and utilities guide](src/guide/12-models-utilities.mbt.md).
+[models and utilities guide](guide/12-models-utilities.mbt.md).
 
 ## REST without the gateway
 
@@ -345,21 +336,21 @@ client.guild_ref(guild_id).emoji_ref(emoji_id).edit(name="renamed") |> ignore
 
 Validation failures raise before any I/O, request failures use
 `DiscordHttpError`, and list endpoints expose stateful `Paginator[T]` values.
-The [REST guide](src/guide/05-rest.mbt.md) covers the full ref surface,
+The [REST guide](guide/05-rest.mbt.md) covers the full ref surface,
 allowed mentions, file uploads, pagination, and custom routes.
 
 Also in the box, each with its guide chapter:
 
 - an opt-in, gateway-driven in-memory cache —
-  [events and intents](src/guide/04-events-intents.mbt.md);
+  [events and intents](guide/04-events-intents.mbt.md);
 - pure helpers for permissions, mentions, timestamps, and CDN URLs —
-  [models and utilities](src/guide/12-models-utilities.mbt.md);
+  [models and utilities](guide/12-models-utilities.mbt.md);
 - structured REST, gateway, and dispatch telemetry —
-  [middleware](src/guide/09-middleware.mbt.md);
+  [middleware](guide/09-middleware.mbt.md);
 - a feature-installer convention for structuring larger bots —
-  [structuring bots](src/guide/07-structuring-bots.mbt.md);
+  [structuring bots](guide/07-structuring-bots.mbt.md);
 - the interaction router, response gates, and no-network handler testing
-  under `App` — [the framework layer](src/guide/11-framework.mbt.md).
+  under `App` — [the framework layer](guide/11-framework.mbt.md).
 
 ## Development
 
@@ -395,7 +386,7 @@ review its diff when checking API drift.
 
 Every MoonBit code block in this README has a compiled twin in
 `src/readme_native_test.mbt`, and code blocks marked `mbt check` in the
-[guides](src/guide/README.md) and in docstrings compile and run as part of
+[guides](guide/README.md) and in docstrings compile and run as part of
 the test suite.
 
 ## License
