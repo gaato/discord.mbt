@@ -1,7 +1,11 @@
 # discord.mbt
 
 [![CI](https://github.com/gaato/discord.mbt/actions/workflows/ci.yml/badge.svg)](https://github.com/gaato/discord.mbt/actions/workflows/ci.yml)
+[![Voice shim](https://github.com/gaato/discord.mbt/actions/workflows/voice-shim.yml/badge.svg)](https://github.com/gaato/discord.mbt/actions/workflows/voice-shim.yml)
+[![Release](https://img.shields.io/github/v/release/gaato/discord.mbt)](https://github.com/gaato/discord.mbt/releases)
+[![mooncakes](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fmooncakes.io%2Fapi%2Fv0%2Fmodules%2Fgaato%2Fdiscord&query=%24.version&label=mooncakes&prefix=v)](https://mooncakes.io/docs/gaato/discord)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/gaato/discord.mbt)
+[![License](https://img.shields.io/github/license/gaato/discord.mbt)](LICENSE)
 
 A Discord application library for [MoonBit](https://www.moonbitlang.com/):
 typed interaction declarations, API models, a rate-limited REST client,
