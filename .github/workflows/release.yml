@@ -1,0 +1,64 @@
+name: Release
+
+# Publishes to mooncakes.io after CI is green on main. Idempotent: when the
+# version in moon.mod is already in the registry index nothing happens, so only
+# a version bump releases (scripts/release.sh).
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  MOONBIT_INSTALL_VERSION: "0.10.14+7d59c7ec9"
+
+jobs:
+  publish:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: mooncakes
+    steps:
+      - name: Check out the commit CI validated
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          persist-credentials: false
+
+      - name: Install MoonBit
+        shell: bash
+        run: |
+          curl --proto '=https' --tlsv1.2 --fail --show-error --silent --location \
+            https://cli.moonbitlang.com/install/unix.sh \
+            --output "$RUNNER_TEMP/install-moonbit.sh"
+          actual="$(shasum -a 256 "$RUNNER_TEMP/install-moonbit.sh" | awk '{print $1}')"
+          test "$actual" = "46495f8cdc0050f79b6cb195d66478d101cb3601d68506568fbe377fcdf2a9fe"
+          bash "$RUNNER_TEMP/install-moonbit.sh"
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+
+      - name: Publish
+        env:
+          MOONCAKES_TOKEN: ${{ secrets.MOONCAKES_TOKEN }}
+          MOONCAKES_USERNAME: ${{ secrets.MOONCAKES_USERNAME }}
+        run: |
+          if [ -z "$MOONCAKES_TOKEN" ]; then
+            echo "MOONCAKES_TOKEN is not set; nothing published" >&2
+            exit 0
+          fi
+          # moon needs credentials even for --dry-run.
+          moon_home="${MOON_HOME:-$HOME/.moon}"
+          mkdir -p "$moon_home"
+          umask 077
+          printf '{"token":"%s","username":"%s"}\n' "$MOONCAKES_TOKEN" "$MOONCAKES_USERNAME" > "$moon_home/credentials.json"
+          trap 'rm -f "$moon_home/credentials.json"' EXIT
+          scripts/release.sh --dry-run
+          scripts/release.sh
