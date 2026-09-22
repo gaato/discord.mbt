@@ -17,18 +17,18 @@ import {
   "moonbitlang/async",
 } for "wbtest"
 
-// This package is intentionally empty on non-native targets.
+// TCP coordination runs on native and moonrun Wasm; this package is empty on JS.
 
-supported_targets = "js + native"
+supported_targets = "js + native + wasm"
 
 warnings = "-29"
 
 options(
   targets: {
-    "coordinator_wbtest.mbt": [ "native" ],
-    "pkg.generated.mbti": [ "native" ],
-    "protocol.mbt": [ "native" ],
-    "remote.mbt": [ "native" ],
-    "server.mbt": [ "native" ],
+    "coordinator_wbtest.mbt": [ "native", "wasm" ],
+    "pkg.generated.mbti": [ "native", "wasm" ],
+    "protocol.mbt": [ "native", "wasm" ],
+    "remote.mbt": [ "native", "wasm" ],
+    "server.mbt": [ "native", "wasm" ],
   },
 )

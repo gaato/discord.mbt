@@ -23,13 +23,10 @@ import {
   "moonbitlang/core/json",
 } for "wbtest"
 
-// REST transport depends on async HTTP, available on native and JavaScript.
+// REST transport uses async HTTP on native, JavaScript, and moonrun Wasm.
 
-supported_targets = "js + native"
+supported_targets = "js + native + wasm"
 
 options(
-  targets: {
-    // The loopback @ahttp.Server used by the wire tests is native-only.
-    "loopback_server_wbtest.mbt": [ "native" ],
-  },
+  targets: { "loopback_server_wbtest.mbt": [ "native", "wasm" ] },
 )

@@ -192,7 +192,7 @@ async fn handle_request(
 }
 
 ///|
-/// A native HTTP server dispatching Discord interactions through an `App`.
+/// An HTTP server dispatching Discord interactions on native or moonrun Wasm.
 pub struct InteractionsServer {
   priv address : String
   priv runner : Ref[@async.TaskGroup[Unit]?]
@@ -215,7 +215,7 @@ pub async fn InteractionsServer::close(
 }
 
 ///|
-/// Start a native Discord HTTP-interactions server in `group`.
+/// Start a Discord HTTP-interactions server in `group` on native or moonrun Wasm.
 ///
 /// Use port zero in `addr` to let the OS choose a free port, then read the
 /// resolved address from `InteractionsServer::addr`.

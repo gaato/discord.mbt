@@ -1,6 +1,6 @@
 name = "gaato/discord"
 
-version = "0.4.2"
+version = "0.4.3"
 
 readme = "README.md"
 
@@ -10,7 +10,7 @@ license = "Apache-2.0"
 
 keywords = [ "discord", "bot", "gateway", "api", "voice", "interactions" ]
 
-description = "An experimental Discord library for MoonBit: typed APIs, a native gateway with voice (DAVE E2EE), and JS/serverless HTTP interactions."
+description = "An experimental Discord library for MoonBit: native/JS/Wasm REST and interactions, plus a native gateway with voice (DAVE E2EE)."
 
 source = "src"
 
@@ -23,10 +23,10 @@ warnings = "-implicit_impl_as_method"
 
 import {
   "gaato/http@0.1.0",
-  "gaato/http-async@0.1.0",
+  "gaato/http-async@0.1.1",
   "moonbitlang/async@0.22.1",
   "hustcer/ed25519@0.6.0",
-  "gaato/dave@0.1.0",
+  "gaato/dave@0.1.1",
 }
 
 options(

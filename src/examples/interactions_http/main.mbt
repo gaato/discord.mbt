@@ -1,17 +1,17 @@
 ///|
-fn echo_command() -> @discord.Command[String] {
-  @discord.slash(
+fn echo_command() -> @app.Command[String] {
+  @app.slash(
     name="echo",
     description="Echo text back",
-    args=@discord.Args::of(
-      @discord.arg_string(name="text", description="What to echo"),
+    args=@interaction.Args::of(
+      @interaction.arg_string(name="text", description="What to echo"),
     ),
-    handler=Immediate((_, text) => @discord.CommandReply::message(content=text)),
+    handler=Immediate((_, text) => @app.CommandReply::message(content=text)),
   )
 }
 
 ///|
-fn command_scope() -> @discord.CommandScope {
+fn command_scope() -> @app.CommandScope {
   match @env.get_env_var("GUILD_ID") {
     Some(raw) => {
       let guild_id : @model.GuildId? = Some(@model.Id::parse(raw)) catch {
@@ -43,10 +43,10 @@ async fn main {
   @async.handle_cancellation(() => {
     let token = @env.get_env_var("DISCORD_TOKEN").unwrap_or("")
     let public_key = @env.get_env_var("PUBLIC_KEY").unwrap_or("")
-    let app = @discord.App()
+    let app = @app.App()
     app.command(echo_command())
     @async.with_task_group(group => {
-      let client = @discord.Client(token)
+      let client = @dhttp.Client(token)
       group.add_defer(() => client.close())
       let application_id = client.get_current_application().id
       let report = app.sync_commands(
@@ -55,7 +55,7 @@ async fn main {
         scope=command_scope(),
       )
       println("[http] command sync: \{Repr(report)}")
-      let server = @discord.serve_interactions(
+      let server = @endpoint_http.serve_interactions(
         group,
         app,
         addr="0.0.0.0:\{port()}",

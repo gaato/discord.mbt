@@ -9,7 +9,7 @@
 
 A Discord application library for [MoonBit](https://www.moonbitlang.com/):
 typed interaction declarations, API models, a rate-limited REST client,
-JS/serverless HTTP interactions, and a native WebSocket gateway shard.
+native/JS/moonrun Wasm HTTP interactions, and a native WebSocket gateway shard.
 
 The design follows [twilight](https://github.com/twilight-rs/twilight):
 loosely coupled packages that model the Discord API, plus an App layer for
@@ -48,8 +48,8 @@ moon update
 moon add gaato/discord
 ```
 
-The interaction App, REST client, and data packages support **native** and
-**JavaScript**. The gateway Bot executor is native-only. Both are built on
+The interaction App, REST client, and data packages support **native**,
+**JavaScript**, and **linear-memory Wasm on moonrun**. The gateway Bot executor is native-only. Both are built on
 [moonbitlang/async](https://github.com/moonbitlang/async).
 
 ## Quickstart
@@ -99,30 +99,73 @@ async fn run_echo_bot(token : String) -> Unit {
 
 ## Packages
 
-| Package | What it is | Native | JS |
-|---|---|---:|---:|
-| `gaato/discord` | Facade: golden-path names a typical application uses directly | Yes | Yes* |
-| `gaato/discord/model` | Pure data: ~24 entity domains, gateway payloads, zero IO | Yes | Yes |
-| `gaato/discord/telemetry` | Structured REST, gateway, and dispatch observability values | Yes | Yes |
-| `gaato/discord/http` | REST `Client`, routes, rate limiting, multipart uploads | Yes | Yes |
-| `gaato/discord/gateway` | `Shard`: connection state machine, heartbeat, resume | Yes | No |
-| `gaato/discord/voice` | Experimental: API may change in minor releases until declared stable; native voice gateway v8, DAVE, RTP, and Opus send/receive | Yes | No |
-| `gaato/discord/interaction` | Command/component builders, typed args and autocomplete data | Yes | Yes |
-| `gaato/discord/framework` | Interaction routing, response gates, low-level response contexts | Yes | Yes |
-| `gaato/discord/app` | Gateway-free typed commands/components/modals, HTTP endpoint, sync and policy | Yes | Yes |
-| `gaato/discord/bot` | Native gateway executor and typed gateway event descriptors | Yes | No |
-| `gaato/discord/endpoint_http` | Native signed-interactions HTTP server (`serve_interactions`) | Yes | No |
-| `gaato/discord/cache` | Opt-in, gateway-driven in-memory cache | Yes | Yes |
-| `gaato/discord/util` | Pure helpers: permissions, mentions, timestamps, CDN URLs | Yes | Yes |
-| `gaato/discord/verify` | Pure MoonBit Ed25519 request verification | Yes | Yes |
-| `gaato/discord/ratelimit` | Rate limiter trait + in-memory implementation | Yes | Yes |
-| `gaato/discord/cooldown` | Command cooldown store trait + in-memory fixed windows | Yes | Yes |
-| `gaato/discord/queue` | Identify queue trait + in-memory implementation | Yes | Yes |
-| `gaato/discord/coordinator` | Experimental: API may change in minor releases until declared stable; native TCP coordinator for multi-process Identify, REST limits, and cooldowns | Yes | No |
+| Package | What it is | Native | JS | Wasm (moonrun) |
+|---|---|---:|---:|---:|
+| `gaato/discord` | Facade: golden-path names a typical application uses directly | Yes | Yes* | Yes* |
+| `gaato/discord/model` | Pure data: ~24 entity domains, gateway payloads, zero IO | Yes | Yes | Yes |
+| `gaato/discord/telemetry` | Structured REST, gateway, and dispatch observability values | Yes | Yes | Yes |
+| `gaato/discord/http` | REST `Client`, routes, rate limiting, multipart uploads | Yes | Yes | Yes |
+| `gaato/discord/gateway` | `Shard`: connection state machine, heartbeat, resume | Yes | No | No |
+| `gaato/discord/voice` | Experimental native voice gateway v8, DAVE, RTP, and Opus send/receive | Yes | No | No |
+| `gaato/discord/interaction` | Command/component builders, typed args and autocomplete data | Yes | Yes | Yes |
+| `gaato/discord/framework` | Interaction routing, response gates, low-level response contexts | Yes | Yes | Yes |
+| `gaato/discord/app` | Gateway-free typed commands/components/modals, HTTP endpoint, sync and policy | Yes | Yes | Yes |
+| `gaato/discord/bot` | Native gateway executor and typed gateway event descriptors | Yes | No | No |
+| `gaato/discord/endpoint_http` | Signed-interactions HTTP server (`serve_interactions`) | Yes | No | Yes |
+| `gaato/discord/cache` | Opt-in, gateway-driven in-memory cache | Yes | Yes | Yes |
+| `gaato/discord/util` | Pure helpers: permissions, mentions, timestamps, CDN URLs | Yes | Yes | Yes |
+| `gaato/discord/verify` | Pure MoonBit Ed25519 request verification | Yes | Yes | Yes |
+| `gaato/discord/ratelimit` | Rate limiter trait + in-memory implementation | Yes | Yes | Yes |
+| `gaato/discord/cooldown` | Command cooldown store trait + in-memory fixed windows | Yes | Yes | Yes |
+| `gaato/discord/queue` | Identify queue trait + in-memory implementation | Yes | Yes | Yes |
+| `gaato/discord/coordinator` | Experimental TCP coordinator for multi-process Identify, REST limits, and cooldowns | Yes | No | Yes |
+| `gaato/discord/testkit` | Deterministic interaction and model fixtures | Yes | Yes | Yes |
 
-\* The facade's gateway and HTTP-server exports exist only on native.
-WebAssembly is not currently enabled or validated as an application target in
-this repository.
+\* Gateway/Bot and Voice exports exist only on native. The HTTP-server exports
+exist on native and Wasm. As on JS, the root retains DAVE in its dependency
+graph, but `gaato/dave.available()` is false on Wasm and its safe constructors
+raise `LibraryUnavailable`. This does not enable DAVE or Voice. Packages that
+are empty on a backend do not provide that feature, even if Moon accepts them
+as dependencies.
+
+### Wasm runtime and permissions
+
+Use `--target wasm` with the pinned MoonBit toolchain and its matching `moonrun`.
+This backend uses MoonBit host APIs for sockets, TLS, timers, and environment
+variables; it is not a browser, generic WASI, or wasm-gc application target.
+Wasm builds do not link Gateway zlib or the voice/DAVE native libraries. Node
+is still required for the build-time prebuild hooks described above.
+
+The `interactions_http` example also builds for Wasm:
+
+```fish
+moon build --target wasm --release src/examples/interactions_http
+moonrun --policy discord-policy.json _build/wasm/release/build/examples/interactions_http/interactions_http.wasm
+```
+
+An example `discord-policy.json` for that server:
+
+```json
+{
+  "env": {
+    "required_from_host": ["DISCORD_TOKEN", "PUBLIC_KEY"],
+    "from_host": ["GUILD_ID"],
+    "set": {"PORT": "8080"}
+  },
+  "net": {
+    "connect": ["discord.com:443"],
+    "bind": ["0.0.0.0:8080"]
+  }
+}
+```
+
+Supply credentials through the environment, never in the policy file. This
+example synchronizes commands at startup; run it only when you intend to update
+your application's commands. A REST-only program needs the token and outbound
+connection permission but no bind permission. The coordinator needs bind
+permission on its server address and connect permission on each client. Add
+other destinations only for features that actually need them. In policy mode,
+omitted environment, filesystem, network, and process permissions are denied.
 
 Packages remain usable on their own. Import only what the program needs:
 
@@ -368,7 +411,7 @@ Also in the box, each with its guide chapter:
 ## Development
 
 For handler tests without a Discord connection, `Client::offline` answers REST
-calls from a function you write, and the JS/native
+calls from a function you write, and the native/JS/Wasm
 [`gaato/discord/testkit`](testkit/README.mbt.md) provides deterministic
 interaction and model fixtures. Import the testkit only in your package's
 `for "test"` block.
@@ -376,8 +419,10 @@ interaction and model fixtures. Import the testkit only in your package's
 ```fish
 moon check --target native --deny-warn
 moon check --target js --deny-warn
+moon check --target wasm --deny-warn
 moon test --target native --release   # debug native builds need a working tcc setup
 moon test --target js --release
+moon test --target wasm --release
 moon fmt
 moon -C template fmt --check
 moon info --target native             # regenerate pkg.generated.mbti (API review signal)

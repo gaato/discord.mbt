@@ -141,6 +141,45 @@ jobs:
           WRANGLER_SEND_METRICS: "false"
         run: npm run bundle:check -- --outdir "$RUNNER_TEMP/workers-echo"
 
+  wasm:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install MoonBit
+        shell: bash
+        run: |
+          curl --proto '=https' --tlsv1.2 --fail --show-error --silent --location \
+            https://cli.moonbitlang.com/install/unix.sh \
+            --output "$RUNNER_TEMP/install-moonbit.sh"
+          actual="$(shasum -a 256 "$RUNNER_TEMP/install-moonbit.sh" | awk '{print $1}')"
+          test "$actual" = "46495f8cdc0050f79b6cb195d66478d101cb3601d68506568fbe377fcdf2a9fe"
+          bash "$RUNNER_TEMP/install-moonbit.sh"
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+
+      - name: Version
+        run: moon version --all
+
+      - name: Update registry index
+        run: moon update
+
+      - name: Type check Wasm
+        run: |
+          moon check --target wasm --deny-warn
+          # Explicit roots must not silently disappear through target filtering.
+          moon check src src/coordinator src/endpoint_http src/testkit --target wasm --deny-warn
+
+      - name: Test Wasm including HTTP and TCP loopback
+        run: moon test --target wasm --release --verbose
+
+      - name: Build HTTP interactions example
+        run: moon build src/examples/interactions_http --target wasm --release --deny-warn
+
   voice-shim:
     runs-on: ubuntu-24.04
     timeout-minutes: 30

@@ -93,7 +93,7 @@ fn command_body(name : String, text : String, id : String) -> String {
 }
 
 ///|
-async test "native interactions server authenticates and dispatches HTTP requests" {
+async test "interactions server authenticates and dispatches HTTP requests" {
   let private_seed = @hex.decode(
     "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60",
   )

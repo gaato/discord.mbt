@@ -19,16 +19,16 @@ import {
   "moonbitlang/core/encoding/hex",
 } for "wbtest"
 
-// This package is intentionally empty on non-native targets.
+// The listening server uses moonrun host sockets on Wasm; it is empty on JS.
 
 warnings = "-29"
 
-supported_targets = "js + native"
+supported_targets = "js + native + wasm"
 
 options(
   targets: {
-    "endpoint_http.mbt": [ "native" ],
-    "endpoint_http_wbtest.mbt": [ "native" ],
-    "pkg.generated.mbti": [ "native" ],
+    "endpoint_http.mbt": [ "native", "wasm" ],
+    "endpoint_http_wbtest.mbt": [ "native", "wasm" ],
+    "pkg.generated.mbti": [ "native", "wasm" ],
   },
 )

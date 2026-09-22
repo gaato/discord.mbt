@@ -1,8 +1,4 @@
 ///|
-/// Native Discord HTTP-interactions server.
-pub using @endpoint_http {type InteractionsServer, serve_interactions}
-
-///|
 /// Experimental native voice connection, playback, and receive APIs.
 pub using @voice {
   type VoiceConnection,

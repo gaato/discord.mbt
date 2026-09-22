@@ -17,18 +17,21 @@ import {
   "gaato/discord/interaction",
   "gaato/discord/framework",
   "gaato/discord/http" @dhttp,
+  "moonbitlang/async/http" @ahttp,
 } for "test"
 
 // Native-only facade imports are unused when facade_native.mbt is excluded.
 
 warnings = "-29"
 
-supported_targets = "js + native"
+supported_targets = "js + native + wasm"
 
 options(
   targets: {
     "overview.mbt.md": [ "native" ],
     "facade_native.mbt": [ "native" ],
+    "facade_server.mbt": [ "native", "wasm" ],
+    "facade_server_test.mbt": [ "native", "wasm" ],
     "readme_native_test.mbt": [ "native" ],
   },
 )

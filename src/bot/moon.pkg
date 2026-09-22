@@ -30,7 +30,7 @@ import {
 
 warnings = "-29"
 
-supported_targets = "js + native"
+supported_targets = "js + native + wasm"
 
 options(
   targets: {

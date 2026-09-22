@@ -7,6 +7,17 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+## [0.4.3] - 2026-09-23
+
+### Added
+
+- Experimental linear-memory Wasm support on `moonrun` for REST, typed
+  interactions, signature verification, the HTTP interactions server, TCP
+  coordinator, and common data/test packages. The root facade exposes its
+  common APIs and HTTP server on Wasm; Gateway/Bot and Voice remain native-only.
+- Wasm loopback coverage for HTTP, connection pooling, signed interactions,
+  and coordinator behavior, plus a Wasm build of the HTTP interactions example.
+
 ## [0.4.2] - 2026-09-22
 
 ### Fixed

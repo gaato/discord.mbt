@@ -4,4 +4,4 @@ import {
   "moonbitlang/core/encoding/utf8",
 }
 
-supported_targets = "js + native"
+supported_targets = "js + native + wasm"
