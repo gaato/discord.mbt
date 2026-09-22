@@ -41,7 +41,7 @@ Must be covered by tests:
 - every `raise` arm reachable through the public API;
 - wire boundaries via `perform_override_` wbtests (exact method/path/body),
   or a loopback `@ahttp.Server` where the real connection path itself is the
-  subject (multipart request arms, the connection pool).
+  subject (multipart request arms).
 
 Accepted as uncovered (needs a ledger row):
 

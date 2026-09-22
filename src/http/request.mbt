@@ -18,17 +18,36 @@ fn Client::request_headers(
 }
 
 ///|
-fn to_http_headers(headers : Map[String, String]) -> @ahttp.Headers {
-  let converted : @ahttp.Headers = Map([])
-  for name, value in headers {
-    converted[name] = value
+fn wire_method(meth : @ahttp.RequestMethod) -> String {
+  match meth {
+    Get => "GET"
+    Head => "HEAD"
+    Post => "POST"
+    Put => "PUT"
+    Delete => "DELETE"
+    Connect => "CONNECT"
+    Options => "OPTIONS"
+    Trace => "TRACE"
+    Patch => "PATCH"
   }
-  converted
 }
 
 ///|
-/// Execute one HTTP exchange on a pooled connection. The response body is
-/// fully consumed before the connection returns to the pool.
+/// Concatenates multipart parts into one request body.
+fn multipart_body(parts : Array[MultipartChunk]) -> Bytes {
+  let buffer = Buffer()
+  for part in parts {
+    match part {
+      Text(text) => buffer.write_bytes(@utf8.encode(text))
+      Blob(bytes) => buffer.write_bytes(bytes)
+    }
+  }
+  buffer.contents()
+}
+
+///|
+/// Execute one HTTP exchange on the transport. The response body is read in
+/// full, so the transport may keep the connection alive.
 async fn Client::perform(
   self : Client,
   route : Route,
@@ -43,121 +62,71 @@ async fn Client::perform(
   if self.perform_override_.val is Some(perform) {
     return perform(route, path, headers, body, files)
   }
-  self.pool.with_conn(conn => {
-    let response = match (route, files, body) {
-      (CreateGuildSticker(..), Some([file]), Some(json)) => {
-        let payload = json.stringify()
-        let seed = "\{@clock.now_ms()}-\{next_multipart_seq()}"
-        let boundary = fresh_boundary(seed, payload, [file])
-        headers["content-type"] = "multipart/form-data; boundary=\{boundary}"
-        conn.request(
-          route.method_(),
-          path,
-          extra_headers=to_http_headers(headers),
-        )
-        for
-          part in multipart_form_parts(
-            boundary,
-            sticker_form_fields(json),
-            "file",
-            file,
-          ) {
-          match part {
-            Text(text) => conn.write(text)
-            Blob(bytes) => conn.write(bytes)
-          }
-        }
-        conn.end_request()
-      }
-      (CreateChannelInvite(..), Some([file]), Some(json)) => {
-        let payload = json.stringify()
-        let seed = "\{@clock.now_ms()}-\{next_multipart_seq()}"
-        let boundary = fresh_boundary(seed, payload, [file])
-        headers["content-type"] = "multipart/form-data; boundary=\{boundary}"
-        conn.request(
-          route.method_(),
-          path,
-          extra_headers=to_http_headers(headers),
-        )
-        for
-          part in multipart_payload_with_named_file(
-            boundary, payload, "target_users_file", file,
-          ) {
-          match part {
-            Text(text) => conn.write(text)
-            Blob(bytes) => conn.write(bytes)
-          }
-        }
-        conn.end_request()
-      }
-      (UpdateInviteTargetUsers(..), Some([file]), None) => {
-        let seed = "\{@clock.now_ms()}-\{next_multipart_seq()}"
-        let boundary = fresh_boundary(seed, "", [file])
-        headers["content-type"] = "multipart/form-data; boundary=\{boundary}"
-        conn.request(
-          route.method_(),
-          path,
-          extra_headers=to_http_headers(headers),
-        )
-        for
-          part in multipart_form_parts(boundary, [], "target_users_file", file) {
-          match part {
-            Text(text) => conn.write(text)
-            Blob(bytes) => conn.write(bytes)
-          }
-        }
-        conn.end_request()
-      }
-      (_, Some(fs), _) if fs.length() > 0 => {
-        let payload = body.unwrap_or(Json::empty_object()).stringify()
-        let seed = "\{@clock.now_ms()}-\{next_multipart_seq()}"
-        let boundary = fresh_boundary(seed, payload, fs)
-        headers["content-type"] = "multipart/form-data; boundary=\{boundary}"
-        conn.request(
-          route.method_(),
-          path,
-          extra_headers=to_http_headers(headers),
-        )
-        for part in multipart_parts(boundary, payload, fs) {
-          match part {
-            Text(text) => conn.write(text)
-            Blob(bytes) => conn.write(bytes)
-          }
-        }
-        conn.end_request()
-      }
-      (_, _, Some(json)) => {
-        headers["content-type"] = "application/json"
-        conn
-        ..request(route.method_(), path, extra_headers=to_http_headers(headers))
-        ..write(json)
-        .end_request()
-      }
-      (_, _, None) => {
-        conn.request(
-          route.method_(),
-          path,
-          extra_headers=to_http_headers(headers),
-        )
-        conn.end_request()
-      }
+  let wire_body : Bytes = match (route, files, body) {
+    (CreateGuildSticker(..), Some([file]), Some(json)) => {
+      let payload = json.stringify()
+      let seed = "\{@clock.now_ms()}-\{next_multipart_seq()}"
+      let boundary = fresh_boundary(seed, payload, [file])
+      headers["content-type"] = "multipart/form-data; boundary=\{boundary}"
+      multipart_body(
+        multipart_form_parts(boundary, sticker_form_fields(json), "file", file),
+      )
     }
-    let lower_headers : Map[String, String] = Map([])
-    for name, value in response.headers {
-      lower_headers[name.to_string().to_lower()] = value
+    (CreateChannelInvite(..), Some([file]), Some(json)) => {
+      let payload = json.stringify()
+      let seed = "\{@clock.now_ms()}-\{next_multipart_seq()}"
+      let boundary = fresh_boundary(seed, payload, [file])
+      headers["content-type"] = "multipart/form-data; boundary=\{boundary}"
+      multipart_body(
+        multipart_payload_with_named_file(
+          boundary, payload, "target_users_file", file,
+        ),
+      )
     }
-    let body_data = conn.read_all()
-    let body_json = if response.code == 204 {
-      Json::null()
-    } else {
-      // A body that is not valid JSON (proxy error pages, empty replies) is
-      // preserved as a JSON string so error paths can report its content.
-      @json.parse(body_data.text()) catch {
-        _ => Json::string(body_data.text())
-      }
+    (UpdateInviteTargetUsers(..), Some([file]), None) => {
+      let seed = "\{@clock.now_ms()}-\{next_multipart_seq()}"
+      let boundary = fresh_boundary(seed, "", [file])
+      headers["content-type"] = "multipart/form-data; boundary=\{boundary}"
+      multipart_body(
+        multipart_form_parts(boundary, [], "target_users_file", file),
+      )
     }
-    { status: response.code, headers: lower_headers, body: body_json, }
-  })
+    (_, Some(fs), _) if fs.length() > 0 => {
+      let payload = body.unwrap_or(Json::empty_object()).stringify()
+      let seed = "\{@clock.now_ms()}-\{next_multipart_seq()}"
+      let boundary = fresh_boundary(seed, payload, fs)
+      headers["content-type"] = "multipart/form-data; boundary=\{boundary}"
+      multipart_body(multipart_parts(boundary, payload, fs))
+    }
+    (_, _, Some(json)) => {
+      headers["content-type"] = "application/json"
+      @utf8.encode(json.stringify())
+    }
+    (_, _, None) => b""
+  }
+  let request = @ghttp.Request::new(
+    wire_method(route.method_()),
+    self.base_url + path,
+  )
+  for name, value in headers {
+    request.headers.set(name, value)
+  }
+  let response = self.transport.send(request.body_bytes(wire_body))
+  let lower_headers : Map[String, String] = Map([])
+  for pair in response.headers.iter() {
+    lower_headers[pair.0] = pair.1
+  }
+  let body_json = if response.status == 204 {
+    Json::null()
+  } else {
+    // A body that is not valid JSON (proxy error pages, empty replies) is
+    // preserved as a JSON string so error paths can report its content.
+    let text = response.text() catch { _ => @utf8.decode_lossy(response.body) }
+    @json.parse(text) catch {
+      _ => Json::string(text)
+    }
+  }
+  { status: response.status, headers: lower_headers, body: body_json, }
 }
 
 ///|
@@ -365,6 +334,10 @@ async fn Client::request_inner(
     } catch {
       e if @async.is_being_cancelled() => raise e
       DiscordHttpError::Timeout(..) as e => raise e
+      // The transport's own deadline (the default transport shares
+      // `request_timeout_ms`) is a timeout of this attempt as well.
+      @ghttp.HttpError::Timeout(_) =>
+        raise DiscordHttpError::Timeout(timeout_ms=self.request_timeout_ms_)
       e => raise DiscordHttpError::Transport(message="\{e}")
     } noraise {
       r => r

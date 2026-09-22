@@ -1,8 +1,10 @@
 ///|
-/// Discord REST client: token + connection pool + rate limiter.
+/// Discord REST client: token + HTTP transport + rate limiter.
 pub struct Client {
   priv token : String
-  priv pool : @pool.Pool
+  priv transport : &@ghttp.Transport
+  // The transport this client created and therefore closes.
+  priv owned_transport : @transport.AsyncTransport?
   priv limiter : &@ratelimit.RateLimiter
   priv base_url : String
   priv base_path : String
@@ -34,11 +36,20 @@ pub const VERSION : String = "0.3.1"
 /// reading its response body. Rate-limit waits, 429 back-off, and user HTTP
 /// middleware are outside it. Timed-out attempts are not retried. For a
 /// whole-operation deadline, compose `@async.with_timeout` around the call.
+///
+/// `transport` is the `gaato/http` `Transport` that performs the wire
+/// exchange, below request validation, middleware, rate limiting, 429
+/// retries, status mapping, and decoding. By default the client creates a
+/// `gaato/http-async` `AsyncTransport` with `request_timeout_ms` and a
+/// keep-alive pool of up to `max_connections` parked connections, and closes
+/// it in `close`. A supplied transport is shared: the client never closes it,
+/// and `max_connections` does not apply to it.
 pub fn Client::Client(
   token : String,
   base_url? : String = "https://discord.com",
   api_version? : Int = 10,
   limiter? : &@ratelimit.RateLimiter,
+  transport? : &@ghttp.Transport,
   max_connections? : Int = 4,
   request_timeout_ms? : Int = 30000,
   max_retries? : Int = 4,
@@ -48,9 +59,23 @@ pub fn Client::Client(
     Some(l) => l
     None => @ratelimit.InMemoryRateLimiter()
   }
+  let (transport, owned_transport) : (
+    &@ghttp.Transport,
+    @transport.AsyncTransport?,
+  ) = match transport {
+    Some(shared) => (shared, None)
+    None => {
+      let owned = @transport.AsyncTransport::new(
+        timeout_ms=request_timeout_ms,
+        max_idle_per_origin=max_connections,
+      )
+      (owned, Some(owned))
+    }
+  }
   {
     token,
-    pool: Pool(base_url, max_connections~),
+    transport,
+    owned_transport,
     limiter,
     base_url,
     base_path: "/api/v\{api_version}",
@@ -103,7 +128,8 @@ pub fn Client::offline(
 ) -> Client {
   {
     token: "",
-    pool: Pool(""),
+    transport: NoTransport::{ },
+    owned_transport: None,
     limiter: @ratelimit.InMemoryRateLimiter(),
     base_url: "",
     base_path: "/api/v10",
@@ -158,12 +184,29 @@ fn Client::emit_telemetry(
 }
 
 ///|
-/// Close pooled connections and reject future requests, including those of
-/// an offline client. A request already inside an offline handler is not
+/// Close the client's own transport (parked keep-alive connections) and
+/// reject future requests, including those of an offline client. A supplied
+/// transport is left open. A request already inside an offline handler is not
 /// cancelled by this method.
 pub fn Client::close(self : Client) -> Unit {
   self.closed_ = true
-  self.pool.close()
+  if self.owned_transport is Some(transport) {
+    transport.close()
+  }
+}
+
+///|
+/// The transport of an offline client, which never performs a wire exchange.
+priv struct NoTransport {}
+
+///|
+impl @ghttp.Transport for NoTransport with fn send(_self, _request) {
+  raise @ghttp.HttpError::Connect("offline client has no transport")
+}
+
+///|
+impl @ghttp.Transport for NoTransport with fn send_stream(_self, _request) {
+  raise @ghttp.HttpError::Connect("offline client has no transport")
 }
 
 ///|

@@ -9,6 +9,15 @@ breaking change is listed with a migration note.
 
 ### Added
 
+- **`Client(transport=...)` accepts a `gaato/http` `Transport`.** The wire
+  exchange below request validation, middleware, rate limiting, 429 retries,
+  status mapping, and typed decoding is now a `gaato/http` `Transport`. By
+  default the client creates a `gaato/http-async` `AsyncTransport` with
+  `request_timeout_ms` and a keep-alive pool of up to `max_connections`
+  parked connections, and closes it in `close`; a supplied transport is
+  shared and left open. Any `Transport`, including the `gaato/http/mock`
+  `FakeTransport`, can stand in for the network below the same middleware
+  chain that `Client::offline` answers above it.
 - **`Client::offline` runs handlers without a network.** It takes a function
   of the same shape as the `next` continuation of `HttpMiddleware` and answers
   every logical REST call from it: no token, base URL, rate limiter, timeout, or
@@ -48,6 +57,13 @@ breaking change is listed with a migration note.
 
 ### Changed
 
+- **Connection pooling moved to `gaato/http-async`.** The private per-client
+  pool is gone; `max_connections` now bounds the connections the default
+  transport keeps parked per origin instead of the connections in flight, so
+  concurrent requests beyond it dial instead of waiting. A parked connection
+  the server had dropped is retried once on a fresh connection for idempotent
+  requests and surfaces as `Transport` for the rest. `gaato/http` and
+  `gaato/http-async` are new dependencies.
 - **CDN URL corrections and migration.** Animated WebP includes
   `animated=true`; GIF stickers use `media.discordapp.net`. Remove the `size`
   argument from `sticker_url` calls: Discord ignores it. Static-only endpoints

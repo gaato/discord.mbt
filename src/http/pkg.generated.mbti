@@ -131,7 +131,7 @@ pub async fn[T] ChannelRef::with_typing(Self, async () -> T) -> T
 pub struct Client {
   // private fields
 }
-pub fn Client::Client(String, base_url? : String, api_version? : Int, limiter? : &@ratelimit.RateLimiter, max_connections? : Int, request_timeout_ms? : Int, max_retries? : Int, default_allowed_mentions? : @model.AllowedMentions) -> Self
+pub fn Client::Client(String, base_url? : String, api_version? : Int, limiter? : &@ratelimit.RateLimiter, transport? : &@gaato/http.Transport, max_connections? : Int, request_timeout_ms? : Int, max_retries? : Int, default_allowed_mentions? : @model.AllowedMentions) -> Self
 pub async fn Client::add_guild_member(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker], String, nick? : String, roles? : Array[@model.Id[@model.RoleMarker]], mute? : Bool, deaf? : Bool) -> @model.GuildMember? raise DiscordHttpError
 pub async fn Client::add_member_role(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker], @model.Id[@model.RoleMarker], audit_reason? : String) -> Unit raise DiscordHttpError
 pub async fn Client::add_thread_member(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.UserMarker]) -> Unit raise DiscordHttpError
