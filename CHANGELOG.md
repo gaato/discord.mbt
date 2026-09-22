@@ -7,6 +7,18 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-09-22
+
+### Fixed
+
+- **The documentation appears once on mooncakes.** 0.4.1 removed the `readme`
+  field, but the published package still contains `README.md` (the GitHub
+  README), which mooncakes uses as the module README when the field is absent,
+  and it rendered the root package's `src/README.mbt.md` again below it. The
+  root package guide is now `src/overview.mbt.md`, still compiled with the
+  test suite, and it is the module README (`readme = "README.md"`, a link to
+  it). No code changed.
+
 ## [0.4.1] - 2026-09-22
 
 ### Fixed

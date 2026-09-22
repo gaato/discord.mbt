@@ -1,4 +1,4 @@
-// Compiled twins of the README's code blocks. README.mbt.md keeps its
+// Compiled twins of the README's code blocks. overview.mbt.md keeps its
 // examples as `mbt nocheck` so readers see no test scaffolding; every MoonBit
 // block there must have a mirror here (same declarations, same API surface)
 // so `moon test --target native` still fails when an example drifts from the

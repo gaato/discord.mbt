@@ -27,7 +27,7 @@ supported_targets = "js + native"
 
 options(
   targets: {
-    "README.mbt.md": [ "native" ],
+    "overview.mbt.md": [ "native" ],
     "facade_native.mbt": [ "native" ],
     "readme_native_test.mbt": [ "native" ],
   },
