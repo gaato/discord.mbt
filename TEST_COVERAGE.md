@@ -27,8 +27,8 @@ artifact, and requires it to load so transport AEAD tests cannot skip.
 `--from-json` only rechecks a stored report against the ledger; it does not
 repeat either native bootstrap or runtime load check.
 
-Snapshot at the last full measurement (2026-09-22, unreleased work after
-0.3.1 including `Client::offline`): **92.9 %** across the library (8437/9077 coverage
+Snapshot at the last full measurement (2026-09-22, the 0.4.0 candidate
+including `Client::offline`): **92.9 %** across the library (8437/9077 coverage
 points; http 96.0 %, model 95.4 %, interaction 95.1 %, testkit 100 %, util
 100 %, bot 94.2 %, app 90.7 %, voice 85.7 %, gateway 75.7 %).
 

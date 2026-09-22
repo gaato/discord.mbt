@@ -7,6 +7,8 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-09-22
+
 ### Added
 
 - **`Client(transport=...)` accepts a `gaato/http` `Transport`.** The wire
