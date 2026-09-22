@@ -1,15 +1,15 @@
 import {
-  "gaato/discord/app",
-  "gaato/discord/framework",
-  "gaato/discord/http",
   "gaato/discord/model",
-  "gaato/discord/ratelimit",
-  "moonbitlang/async",
   "moonbitlang/core/json",
 }
 
 import {
+  "gaato/discord/app",
+  "gaato/discord/framework",
+  "gaato/discord/http",
   "gaato/discord/interaction",
+  "moonbitlang/async",
+  "moonbitlang/core/json",
 } for "test"
 
 supported_targets = "js + native"

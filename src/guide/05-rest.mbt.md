@@ -388,3 +388,48 @@ test "request middleware compiles" {
 Middleware sees the final wire response before status-code-to-error mapping.
 See [Middleware](09-middleware.mbt.md) for header injection, short-circuiting,
 and retry visibility.
+
+## Offline client
+
+`Client::offline` replaces the innermost step of that chain with a function
+and removes the network entirely: no token, base URL, rate limiter, timeout,
+or retry. Validation, installed middleware, status-code-to-error mapping, and
+typed decoding still run, so code under test sees the same `DiscordHttpError`
+values it would see online. The handler receives the logical `HttpRequest`
+and answers by matching on the typed route:
+
+```mbt check
+///|
+async test "offline client" {
+  let requests : Array[@dhttp.HttpRequest] = []
+  let client = @dhttp.Client::offline(request => {
+    requests.push(request)
+    match request.route {
+      GetChannel(channel_id~) =>
+        {
+          status: 200,
+          headers: {},
+          body: { "id": channel_id.to_string(), "type": 0 },
+        }
+      _ =>
+        {
+          status: 404,
+          headers: {},
+          body: { "code": 10003, "message": "Unknown Channel" },
+        }
+    }
+  })
+  let channel = client.get_channel(Id(7UL))
+  assert_eq(channel.id, Id(7UL))
+  try client.get_gateway() catch {
+    @dhttp.DiscordHttpError::Api(status=404, ..) => ()
+    error => raise error
+  } noraise {
+    _ => fail("expected Api")
+  }
+  assert_eq(requests.length(), 2)
+}
+```
+
+The [testkit](../testkit/README.mbt.md) shows the same client driving a full
+App dispatch with interaction fixtures.

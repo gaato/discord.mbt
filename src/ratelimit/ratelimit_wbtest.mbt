@@ -66,3 +66,18 @@ async test "a shorter global 429 never shortens an existing block" {
   })
   assert_true(limiter.global_blocked_until >= first_deadline)
 }
+
+///|
+async test "a 429 without retry-after blocks its bucket for one second" {
+  let limiter = InMemoryRateLimiter()
+  let key = "POST:/channels/6/messages"
+  RateLimiter::acquire(limiter, key, global_exempt=true)
+  let before = @clock.now_ms()
+  RateLimiter::release(limiter, key, status=429, headers=Map([]))
+  guard limiter.buckets.get(key) is Some(bucket) else {
+    fail("rate-limit bucket was not created")
+  }
+  assert_eq(bucket.remaining, 0)
+  let reset_in = bucket.reset_at_ms - before
+  assert_true(reset_in >= 1000L && reset_in <= 1100L)
+}

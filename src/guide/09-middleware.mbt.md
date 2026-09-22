@@ -94,7 +94,10 @@ fn mock_gateway(body : Json) -> @dhttp.HttpMiddleware {
 ```
 
 The synthetic response still passes through outer middleware and normal
-status-code mapping. It does not enter the rate limiter or transport.
+status-code mapping. It does not enter the rate limiter or transport. When
+every call should be answered this way, `Client::offline` takes the innermost
+step as a function and has no network to fall back to; see
+[REST client](05-rest.mbt.md#offline-client).
 
 HTTP middleware runs once per logical call, not once per attempt. A 429
 followed by a successful retry produces one return from `next`, containing the

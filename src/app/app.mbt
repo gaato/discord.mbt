@@ -361,9 +361,8 @@ fn failure_context(
   origin : FailureOrigin,
   raw : FailureRaw?,
   warn : (String) -> Unit,
-  observer? : FailureObserver,
 ) -> FailureCtx {
-  { origin_: origin, raw_: raw, warn_: warn, observer_: observer, }
+  { origin_: origin, raw_: raw, warn_: warn, }
 }
 
 ///|
@@ -373,7 +372,6 @@ async fn App::run_registered_command(
   waiter : ComponentWaiter?,
   command : RegisteredCommand,
   raw : @framework.CommandCtx,
-  observer : FailureObserver?,
 ) -> Unit {
   let failure_raw = RawCommand(raw)
   let ctx = InteractionCtx::{
@@ -392,7 +390,6 @@ async fn App::run_registered_command(
           Command(name=command.name_),
           Some(failure_raw),
           self.warn_,
-          observer?,
         ),
         error,
       )
@@ -406,7 +403,6 @@ async fn App::run_registered_component(
   waiter : ComponentWaiter?,
   entry : RegisteredComponent,
   raw : @framework.ComponentCtx,
-  observer : FailureObserver?,
 ) -> Unit {
   let failure_raw = RawComponent(raw)
   let ctx = InteractionCtx::{
@@ -424,7 +420,6 @@ async fn App::run_registered_component(
           Component(custom_id=raw.data.custom_id),
           Some(failure_raw),
           self.warn_,
-          observer?,
         ),
         error,
       )
@@ -437,7 +432,6 @@ async fn App::run_registered_modal(
   bot : AppCtx,
   entry : RegisteredModal,
   raw : @framework.ModalCtx,
-  observer : FailureObserver?,
 ) -> Unit {
   let failure_raw = RawModal(raw)
   let ctx = InteractionCtx::{
@@ -453,7 +447,6 @@ async fn App::run_registered_modal(
           Modal(custom_id=raw.data.custom_id),
           Some(failure_raw),
           self.warn_,
-          observer?,
         ),
         error,
       )
@@ -465,19 +458,13 @@ async fn App::run_registered_autocomplete(
   self : App,
   command : RegisteredCommand,
   raw : @framework.AutocompleteCtx,
-  observer : FailureObserver?,
 ) -> Unit {
   dispatch_suggest(command.suggest_routes_, self.warn_, raw) catch {
     error if @async.is_being_cancelled() => raise error
     error => {
       invoke_error_policy(
         self.current_policy(),
-        failure_context(
-          Autocomplete(name=command.name_),
-          None,
-          self.warn_,
-          observer?,
-        ),
+        failure_context(Autocomplete(name=command.name_), None, self.warn_),
         error,
       )
       // ErrorPolicy is transport-neutral and cannot construct an autocomplete
@@ -492,9 +479,6 @@ async fn App::run_registered_autocomplete(
 /// route into `framework` and return the `AppCtx` shared by handlers.
 /// Called by the built-in executors (`Bot`, the HTTP endpoint); only
 /// custom executors need it directly.
-/// `failure_observer` is scoped to these attached handlers, runs synchronously
-/// before the existing policy/warning handling, and cannot raise. It does not
-/// observe event/service failures reported through other executors.
 pub fn App::attach(
   self : App,
   framework : @framework.Framework,
@@ -502,7 +486,6 @@ pub fn App::attach(
   application_id~ : @model.ApplicationId,
   waiter? : ComponentWaiter,
   latency_ms? : () -> Int64?,
-  failure_observer? : FailureObserver,
 ) -> AppCtx {
   let app_ctx = AppCtx::{
     client_: client,
@@ -511,23 +494,19 @@ pub fn App::attach(
   }
   for command in self.commands_ {
     framework.command(command.definition, raw => {
-      self.run_registered_command(
-        app_ctx, waiter, command, raw, failure_observer,
-      )
+      self.run_registered_command(app_ctx, waiter, command, raw)
     })
     |> ignore
     if !command.suggest_routes_.is_empty() {
       framework.autocomplete(command.name_, raw => {
-        self.run_registered_autocomplete(command, raw, failure_observer)
+        self.run_registered_autocomplete(command, raw)
       })
       |> ignore
     }
   }
   for entry in self.components_ {
     let dispatch = raw => {
-      self.run_registered_component(
-        app_ctx, waiter, entry, raw, failure_observer,
-      )
+      self.run_registered_component(app_ctx, waiter, entry, raw)
     }
     match entry.pattern {
       Prefix(prefix) => framework.component(prefix, dispatch) |> ignore
@@ -535,9 +514,7 @@ pub fn App::attach(
     }
   }
   for entry in self.modals_ {
-    let dispatch = raw => {
-      self.run_registered_modal(app_ctx, entry, raw, failure_observer)
-    }
+    let dispatch = raw => self.run_registered_modal(app_ctx, entry, raw)
     match entry.pattern {
       Prefix(prefix) => framework.modal(prefix, dispatch) |> ignore
       Id(id) => framework.modal_id(id, dispatch) |> ignore
@@ -550,9 +527,6 @@ pub fn App::attach(
   framework.on_error((label, error) => {
     if @async.is_being_cancelled() {
       raise error
-    }
-    if failure_observer is Some(observe) {
-      observe(Framework(label, error))
     }
     (self.warn_)("framework handler failed (\{label}): \{Repr(error)}")
   })

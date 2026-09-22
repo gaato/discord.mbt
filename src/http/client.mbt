@@ -13,7 +13,11 @@ pub struct Client {
   priv telemetry_ : Array[(@telemetry.TelemetryEvent) -> Unit raise]
   priv warn_ : Ref[(String) -> Unit]
   priv mut closed_ : Bool
-  // Adapt the public transport to the existing prepared-request boundary.
+  // An offline client answers every validated request here instead of the
+  // rate limiter, network attempts, and retries.
+  priv offline_ : (async (HttpRequest) -> HttpResponse)?
+  // Whitebox tests intercept prepared requests here; production always uses
+  // the pooled transport through `perform`.
   priv perform_override_ : Ref[
     (async (Route, String, Map[String, String], Json?, Array[FileUpload]?) -> HttpResponse)?,
   ]
@@ -21,7 +25,7 @@ pub struct Client {
 
 ///|
 /// Library version, sent in the User-Agent header.
-pub const VERSION : String = "0.4.0"
+pub const VERSION : String = "0.3.1"
 
 ///|
 /// Create a client. `token` is the raw bot token (without the `Bot ` prefix).
@@ -30,9 +34,6 @@ pub const VERSION : String = "0.4.0"
 /// reading its response body. Rate-limit waits, 429 back-off, and user HTTP
 /// middleware are outside it. Timed-out attempts are not retried. For a
 /// whole-operation deadline, compose `@async.with_timeout` around the call.
-/// `transport` replaces only wire exchange, after validation and before JSON or
-/// multipart encoding; failures never fall back to the network. See
-/// `PreparedHttpRequest` for the prepared-header contract.
 pub fn Client::Client(
   token : String,
   base_url? : String = "https://discord.com",
@@ -42,7 +43,6 @@ pub fn Client::Client(
   request_timeout_ms? : Int = 30000,
   max_retries? : Int = 4,
   default_allowed_mentions? : @model.AllowedMentions,
-  transport? : HttpTransport,
 ) -> Client {
   let limiter : &@ratelimit.RateLimiter = match limiter {
     Some(l) => l
@@ -63,13 +63,61 @@ pub fn Client::Client(
     telemetry_: [],
     warn_: Ref(message => println(message)),
     closed_: false,
-    perform_override_: Ref(
-      transport.map(send => {
-        (route, path, headers, body, files) => {
-          send({ route, path, headers, body, files, })
-        }
-      }),
+    offline_: None,
+    perform_override_: Ref(None),
+  }
+}
+
+///|
+/// Create a client with no network. `handler` answers every logical REST
+/// call in place of the rate limiter, the wire exchange, and 429 retries; it
+/// has the same shape as the `next` continuation of `HttpMiddleware`, so an
+/// offline client is the innermost step of the same chain. Request validation,
+/// installed middleware, status-code-to-error mapping, and typed decoding run
+/// exactly as they do online, and nothing falls back to Discord.
+///
+/// There is no token, base URL, timeout, or retry: a 429 from `handler`
+/// surfaces as `DiscordHttpError::RateLimited` at once. An error raised by
+/// `handler` propagates as itself when it is a `DiscordHttpError` and as
+/// `DiscordHttpError::Transport` otherwise. Each call emits the same
+/// `HttpRequest` and `HttpRateLimited` telemetry as a single network attempt.
+///
+/// # Example
+/// ```mbt check
+/// async test {
+///   let calls : Array[@http.Route] = []
+///   let client = @http.Client::offline(request => {
+///     calls.push(request.route)
+///     match request.route {
+///       GetGateway => { status: 200, headers: {}, body: { "url": "wss://x" }, }
+///       _ => { status: 404, headers: {}, body: { "code": 0, "message": "no" }, }
+///     }
+///   })
+///   inspect(client.get_gateway(), content="wss://x")
+///   assert_true(calls is [GetGateway])
+/// }
+/// ```
+pub fn Client::offline(
+  handler : async (HttpRequest) -> HttpResponse,
+  default_allowed_mentions? : @model.AllowedMentions,
+) -> Client {
+  {
+    token: "",
+    pool: Pool(""),
+    limiter: @ratelimit.InMemoryRateLimiter(),
+    base_url: "",
+    base_path: "/api/v10",
+    default_allowed_mentions: default_allowed_mentions.unwrap_or_else(
+      @model.AllowedMentions::safe_default,
     ),
+    request_timeout_ms_: 0,
+    max_retries_: 0,
+    middleware_: [],
+    telemetry_: [],
+    warn_: Ref(message => println(message)),
+    closed_: false,
+    offline_: Some(handler),
+    perform_override_: Ref(None),
   }
 }
 
@@ -110,8 +158,9 @@ fn Client::emit_telemetry(
 }
 
 ///|
-/// Close pooled connections and reject future transport calls. An in-flight
-/// custom transport owns its resources and is not cancelled by this method.
+/// Close pooled connections and reject future requests, including those of
+/// an offline client. A request already inside an offline handler is not
+/// cancelled by this method.
 pub fn Client::close(self : Client) -> Unit {
   self.closed_ = true
   self.pool.close()

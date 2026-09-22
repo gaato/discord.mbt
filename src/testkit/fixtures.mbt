@@ -4,7 +4,7 @@ pub(all) suberror FixtureError {
 } derive(Debug, Eq)
 
 ///|
-/// Shared by default interaction fixtures and Harness.
+/// Shared by the default interaction fixtures.
 pub fn default_application_id() -> @model.ApplicationId {
   @model.Id(400000000000000001UL)
 }

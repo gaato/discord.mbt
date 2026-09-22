@@ -10,7 +10,7 @@ import {
 }
 
 // Values
-pub const VERSION : String = "0.4.0"
+pub const VERSION : String = "0.3.1"
 
 pub fn attachments_json(Array[FileUpload]) -> Json
 
@@ -131,7 +131,7 @@ pub async fn[T] ChannelRef::with_typing(Self, async () -> T) -> T
 pub struct Client {
   // private fields
 }
-pub fn Client::Client(String, base_url? : String, api_version? : Int, limiter? : &@ratelimit.RateLimiter, max_connections? : Int, request_timeout_ms? : Int, max_retries? : Int, default_allowed_mentions? : @model.AllowedMentions, transport? : async (PreparedHttpRequest) -> HttpResponse) -> Self
+pub fn Client::Client(String, base_url? : String, api_version? : Int, limiter? : &@ratelimit.RateLimiter, max_connections? : Int, request_timeout_ms? : Int, max_retries? : Int, default_allowed_mentions? : @model.AllowedMentions) -> Self
 pub async fn Client::add_guild_member(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker], String, nick? : String, roles? : Array[@model.Id[@model.RoleMarker]], mute? : Bool, deaf? : Bool) -> @model.GuildMember? raise DiscordHttpError
 pub async fn Client::add_member_role(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker], @model.Id[@model.RoleMarker], audit_reason? : String) -> Unit raise DiscordHttpError
 pub async fn Client::add_thread_member(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.UserMarker]) -> Unit raise DiscordHttpError
@@ -347,6 +347,7 @@ pub async fn Client::modify_stage_instance(Self, @model.Id[@model.ChannelMarker]
 pub async fn Client::modify_user_voice_state(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker], @model.Id[@model.ChannelMarker], suppress? : Bool) -> Unit raise DiscordHttpError
 pub async fn Client::modify_webhook(Self, @model.Id[@model.WebhookMarker], name? : String, avatar? : String, clear_avatar? : Bool, channel_id? : @model.Id[@model.ChannelMarker], audit_reason? : String) -> @model.Webhook raise DiscordHttpError
 pub async fn Client::modify_webhook_with_token(Self, @model.Id[@model.WebhookMarker], String, name? : String, avatar? : String, clear_avatar? : Bool) -> @model.Webhook raise DiscordHttpError
+pub fn Client::offline(async (HttpRequest) -> HttpResponse, default_allowed_mentions? : @model.AllowedMentions) -> Self
 pub fn Client::on_telemetry(Self, (@telemetry.TelemetryEvent) -> Unit raise) -> Unit
 pub fn Client::on_warn(Self, (String) -> Unit) -> Unit
 pub fn Client::paginate_current_user_guilds(Self, before? : @model.Id[@model.GuildMarker], after? : @model.Id[@model.GuildMarker], shard? : Int, with_counts? : Bool, page_size? : Int) -> Paginator[@model.CurrentUserGuild] raise DiscordHttpError
@@ -563,14 +564,6 @@ pub struct Paginator[T] {
 pub async fn[T] Paginator::collect(Self[T], max~ : Int) -> Array[T]
 pub async fn[T] Paginator::each(Self[T], (T) -> Unit raise) -> Unit
 pub async fn[T] Paginator::next_page(Self[T]) -> Array[T]?
-
-pub(all) struct PreparedHttpRequest {
-  route : Route
-  path : String
-  headers : Map[String, String]
-  body : Json?
-  files : Array[FileUpload]?
-}
 
 pub struct RoleRef {
   // private fields
@@ -877,8 +870,6 @@ pub async fn WebhookTokenRef::send_slack(Self, Json, thread_id? : @model.Id[@mod
 
 // Type aliases
 pub type HttpMiddleware = async (HttpRequest, async (HttpRequest) -> HttpResponse) -> HttpResponse
-
-pub type HttpTransport = async (PreparedHttpRequest) -> HttpResponse
 
 pub using @moonbitlang/async/http {type RequestMethod}
 

@@ -7,22 +7,20 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
-## [0.4.0] - 2026-09-21
-
 ### Added
 
-- **App testkit (`gaato/discord/testkit`), on JS and native.** Deterministic
-  model/interaction fixtures and a Harness exercise real App routing, decoding,
-  checks, middleware, policy and response validation without Discord. Initial
-  response and original failures are recorded independently. FIFO scripted REST
-  supports arbitrary Routes, rejects unexpected/mismatched calls even when
-  caught, and checks leftovers with `assert_rest_complete`. Dispatch timeout
-  cancels and joins owned tasks before closing the Client. See the testkit guide.
-- **Executor-scoped failure observation and injectable HTTP transport.**
-  `App::attach(failure_observer=...)` observes failures without replacing the
-  policy. `Client(transport=...)` replaces wire exchange below validation while
-  preserving middleware, timeouts, rate limiting, status mapping and decoding.
-  `FileUpload` exposes read-only filename, content and content-type accessors.
+- **`Client::offline` runs handlers without a network.** It takes a function
+  of the same shape as the `next` continuation of `HttpMiddleware` and answers
+  every logical REST call from it: no token, base URL, rate limiter, timeout, or
+  retry, while request validation, installed middleware, status-code-to-error
+  mapping, and typed decoding run exactly as online. A 429 surfaces as
+  `RateLimited` at once. `FileUpload` exposes read-only filename, content, and
+  content-type accessors for assertions on uploads.
+- **Fixtures for handler tests (`gaato/discord/testkit`), on JS and native.**
+  Deterministic model and interaction fixtures that depend only on `@model`.
+  Together with `Client::offline`, `ResponseGate::capture`, and
+  `Framework::process_with`, a test exercises real App validation, routing,
+  decoding, checks, middleware, and error policy; see the testkit guide.
 - **Outgoing embeds, components, and modals are checked against Discord's
   documented limits.** Discord answers a value outside one — a text input
   `max_length` over 4000, a button label over 80, embeds totalling more than

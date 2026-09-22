@@ -2,9 +2,6 @@
 package "gaato/discord/testkit"
 
 import {
-  "gaato/discord/app",
-  "gaato/discord/framework",
-  "gaato/discord/http",
   "gaato/discord/model",
   "moonbitlang/core/debug",
 }
@@ -39,45 +36,7 @@ pub(all) suberror FixtureError {
   InconsistentContext(String)
 } derive(Eq, @debug.Debug)
 
-pub(all) suberror TestkitError {
-  Busy
-  FailedHarness
-  InvalidConfiguration(String)
-  DispatchTimeout
-  UnexpectedRest
-  RestMismatch
-  UnconsumedRest(Int)
-} derive(Eq, @debug.Debug)
-
 // Types and methods
-pub(all) enum DispatchFailure {
-  App(@app.FailureObservation)
-  Dispatch(Error)
-} derive(@debug.Debug)
-
-pub struct DispatchResult {
-  routing : Routing
-  // private fields
-}
-pub fn DispatchResult::errors(Self) -> Array[DispatchFailure]
-pub fn DispatchResult::initial_response(Self) -> @framework.CapturedResponse?
-pub fn DispatchResult::no_response(Self) -> Bool
-pub fn DispatchResult::requests(Self) -> Array[@http.PreparedHttpRequest]
-
-pub struct Harness {
-  // private fields
-}
-pub fn Harness::Harness(@app.App, application_id? : @model.Id[@model.ApplicationMarker]) -> Self
-pub fn Harness::assert_rest_complete(Self) -> Unit raise TestkitError
-pub async fn Harness::dispatch(Self, @model.Interaction, timeout_ms? : Int) -> DispatchResult
-pub fn Harness::expect_rest(Self, @http.Route, @http.HttpResponse) -> Unit raise TestkitError
-pub fn Harness::last_requests(Self) -> Array[@http.PreparedHttpRequest]
-
-pub(all) enum Routing {
-  Matched
-  NoRoute
-  Rejected
-} derive(Eq, @debug.Debug)
 
 // Type aliases
 

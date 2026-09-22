@@ -104,7 +104,12 @@ async test "context command fixtures resolve targets and component/modal fixture
     ctx.respond(content=ctx.message().content)
   })
   app.on_modal_raw(prefix="form", ctx => ctx.respond(content="modal"))
-  let harness = @testkit.Harness(app)
+  let client = @http.Client::offline(_ => fail("no REST call expected"))
+  let application_id = @testkit.default_application_id()
+  let framework = @framework.Framework(client, application_id)
+  let failures : Array[Error] = []
+  app.error_policy((_, error) => failures.push(error))
+  app.attach(framework, client~, application_id~) |> ignore
   for
     input in [
       @testkit.user_command("User", @testkit.user()),
@@ -112,9 +117,9 @@ async test "context command fixtures resolve targets and component/modal fixture
       @testkit.component("button"),
       @testkit.modal("form"),
     ] {
-    let result = harness.dispatch(input)
-    assert_eq(result.routing, Matched)
-    assert_true(result.errors().is_empty())
-    assert_true(result.initial_response() is Some(_))
+    let (gate, capture) = @framework.ResponseGate::capture(input)
+    assert_true(framework.process_with(input, gate~))
+    assert_true(capture.try_get() is Some(_))
   }
+  assert_true(failures.is_empty())
 }

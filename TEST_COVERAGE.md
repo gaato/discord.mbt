@@ -27,11 +27,10 @@ artifact, and requires it to load so transport AEAD tests cannot skip.
 `--from-json` only rechecks a stored report against the ledger; it does not
 repeat either native bootstrap or runtime load check.
 
-Snapshot at the last full measurement (2026-09-21, the local 0.4.0 candidate):
-**92.9 %** across the library (8477/9127 coverage points; http 95.9 %, model
-95.4 %, interaction 95.1 %, testkit 99.2 %, util 100 %, bot 94.2 %, voice
-85.7 %, gateway 75.7 %). The single testkit residual is the defensive
-cancellation re-raise listed below, not an untested timeout/cleanup behavior.
+Snapshot at the last full measurement (2026-09-22, unreleased work after
+0.3.1 including `Client::offline`): **92.9 %** across the library (8437/9077 coverage
+points; http 96.0 %, model 95.4 %, interaction 95.1 %, testkit 100 %, util
+100 %, bot 94.2 %, app 90.7 %, voice 85.7 %, gateway 75.7 %).
 
 ## Policy
 
@@ -74,7 +73,7 @@ Live socket, websocket, and FFI adapters (live-verified; no unit seam):
 | src/voice/udp.mbt | 4 | SocketVoiceUdp impls and `open_voice_udp` over a real UDP socket; parse and retry logic is covered via fakes. |
 | src/voice/shim_ffi.mbt | 3 | Extern-C glue whose arms depend on host library state. |
 | src/voice/crypto.mbt | 5 | Shim error-status translation paths; round-trips and geometry checks are covered with the shim loaded. |
-| src/http/client.mbt | 3 | Connection teardown paths on live pools. |
+| src/http/client.mbt | 2 | Default warning sinks (`println`) of the online and offline constructors. |
 | src/http/request.mbt | 21 | Cancellation/timeout plumbing on live connections; the JSON, body-less, 204, non-JSON-error, and all three multipart named-file arms are covered by the loopback server tests. |
 | src/endpoint_http/endpoint_http.mbt | 15 | HTTP server error/cancellation arms (send failures, teardown); the request paths are covered by the signed-request e2e tests. |
 | src/coordinator/protocol.mbt | 3 | Cross-process wire error arms. |
@@ -106,7 +105,7 @@ run; the gateway/voice loops are additionally tested via injected sleepers):
 | --- | --- | --- |
 | src/gateway/shard.mbt | 16 | Protected-shutdown and event-queue teardown catches, stale-transport and normal-return fallbacks, read-loop cancellation re-raise plumbing (async 0.22 cancellation does not pass through ordinary catches), and two OS-specific Identify properties unavailable on Linux. Malformed Hello/frame, compression-mismatch, connector/backoff, and disconnected-send arms are tested through the fake transport. |
 | src/gateway/compression.mbt | 3 | zlib failure statuses require a corrupted native stream state. |
-| src/ratelimit/ratelimit.mbt | 1 | Gate release-on-error path. |
+| src/ratelimit/ratelimit.mbt | 1 | Global-window sleep. |
 | src/http/handles_channel.mbt | 3 | `with_typing` refresh-failure arm sits behind the real 8-second cadence. |
 | src/bot/middleware.mbt | 1 | Middleware chain cancellation arm. |
 | src/bot/shard_manager.mbt | 6 | Multi-shard session-start-limit and staggered-identify paths over live gateways. |
@@ -150,7 +149,7 @@ show-flows beyond the covered happy and failing paths):
 
 | File | Budget | Reason |
 | --- | --- | --- |
-| src/app/app.mbt | 6 | Cancellation re-raise arms and per-kind failure plumbing beyond the covered component/modal policy flows. |
+| src/app/app.mbt | 6 | Default warning sink (`println`) and cancellation re-raise arms of the per-kind failure handlers. |
 | src/app/check.mbt | 2 | Permission-check arms needing resolved member permissions in a guild payload. |
 | src/app/command.mbt | 9 | Group/subcommand registration arms beyond the covered paths. |
 | src/app/component.mbt | 13 | Deferred-ctx accessor duplicates and waiter arms behind a live gateway. |
@@ -158,10 +157,9 @@ show-flows beyond the covered happy and failing paths):
 | src/app/endpoint.mbt | 7 | `serve` startup with an owned token/client (creates a real Client and fetches the application id). |
 | src/app/middleware.mbt | 4 | Component-scope middleware arms not reachable in the covered flows. |
 | src/app/modal.mbt | 20 | Show/prefill dispatch arms beyond the covered decode, validation, and error flows. |
-| src/app/policy.mbt | 10 | Followup-with-files arms and member-user extraction beyond the covered flows. |
+| src/app/policy.mbt | 4 | Member-without-user extraction, `respond_error` on a failure with no raw context, the default policy's unknown-error warning, and the policy cancellation re-raise. |
 | src/framework/ctx.mbt | 14 | Autocomplete/modal response variants beyond the covered response-management flows. |
 | src/framework/sync.mbt | 1 | Option-comparison early exit not hit by the covered spec shapes (moved from `src/app/sync.mbt`). |
-| src/testkit/harness.mbt | 1 | Defensive cancellation re-raise: async 0.22 cancellation bypasses ordinary catches. Timeout and external cancellation cleanup are both tested. |
 | src/framework/framework.mbt | 9 | Dispatch fallbacks for unroutable interactions. |
 | src/framework/gate.mbt | 1 | Double-response guard arms. |
 | src/interaction/args.mbt | 8 | Suggest-handler closures that only run inside a live autocomplete dispatch. |
@@ -171,7 +169,7 @@ show-flows beyond the covered happy and failing paths):
 | src/http/api_channel.mbt | 15 | Remaining optional-parameter emit arms. |
 | src/http/api_guild.mbt | 4 | Remaining optional-parameter emit arms. |
 | src/http/api_interaction.mbt | 3 | Callback-with-files arms needing a live token. |
-| src/http/api_message.mbt | 5 | Remaining optional-parameter emit arms. |
+| src/http/api_message.mbt | 3 | Remaining optional-parameter emit arms. |
 | src/http/api_oauth2.mbt | 4 | Bearer-token flows (401-checked live only). |
 | src/http/api_poll.mbt | 1 | One optional-parameter emit arm. |
 | src/http/api_sticker.mbt | 3 | Global catalog delegations (get_sticker, sticker packs) without a guild anchor; ENV-LIMITED live. |

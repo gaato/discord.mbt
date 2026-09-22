@@ -27,8 +27,8 @@ fn to_http_headers(headers : Map[String, String]) -> @ahttp.Headers {
 }
 
 ///|
-/// Execute one HTTP exchange through the injected transport or a pooled
-/// connection. Network response bodies are consumed before returning to the pool.
+/// Execute one HTTP exchange on a pooled connection. The response body is
+/// fully consumed before the connection returns to the pool.
 async fn Client::perform(
   self : Client,
   route : Route,
@@ -37,9 +37,6 @@ async fn Client::perform(
   files? : Array[FileUpload],
   extra_headers : Map[String, String],
 ) -> HttpResponse {
-  if self.closed_ {
-    raise DiscordHttpError::Transport(message="client is closed")
-  }
   let headers = self.request_headers(route, audit_reason)
   headers.merge_in_place(extra_headers)
   let path = self.base_path + route.path()
@@ -260,7 +257,64 @@ async fn Client::execute(self : Client, request : HttpRequest) -> HttpResponse {
       message="create channel invite accepts exactly one target-users file next to its JSON params",
     )
   }
-  self.request_inner(request)
+  match self.offline_ {
+    Some(handler) => self.answer_offline(handler, request)
+    None => self.request_inner(request)
+  }
+}
+
+///|
+/// One attempt through the offline handler, reported through telemetry the
+/// way a single network attempt is: status 0 when the handler raises, and a
+/// 429 as `HttpRateLimited` followed by `RateLimited` without waiting.
+async fn Client::answer_offline(
+  self : Client,
+  handler : async (HttpRequest) -> HttpResponse,
+  request : HttpRequest,
+) -> HttpResponse {
+  let bucket = request.route.bucket()
+  let method_name = @debug.to_string(request.route.method_())
+  let started_at = @clock.now_ms()
+  let response = {
+    errdefer self.emit_telemetry(
+      HttpRequest(
+        route_bucket=bucket,
+        method_name~,
+        status=0,
+        duration_ms=@clock.now_ms() - started_at,
+        retries=0,
+      ),
+    )
+    handler(request)
+  }
+  self.emit_telemetry(
+    HttpRequest(
+      route_bucket=bucket,
+      method_name~,
+      status=response.status,
+      duration_ms=@clock.now_ms() - started_at,
+      retries=0,
+    ),
+  )
+  if response.status == 429 {
+    let (retry_after_ms, global) = rate_limit_details(response)
+    self.emit_telemetry(
+      HttpRateLimited(route_bucket=bucket, global~, retry_after_ms~),
+    )
+    raise DiscordHttpError::RateLimited(retry_after_ms~, global~)
+  }
+  response
+}
+
+///|
+/// Retry delay and scope of a 429 response.
+fn rate_limit_details(response : HttpResponse) -> (Int64, Bool) {
+  let global = response.headers.get("x-ratelimit-global") is Some(_)
+  let retry_after_ms : Int64 = match response.body {
+    { "retry_after": Number(seconds, ..), .. } => (seconds * 1000.0).to_int64()
+    _ => 1000L
+  }
+  (retry_after_ms, global)
 }
 
 ///|
@@ -330,12 +384,7 @@ async fn Client::request_inner(
       ),
     )
     if response.status == 429 {
-      let global = response.headers.get("x-ratelimit-global") is Some(_)
-      let retry_after_ms : Int64 = match response.body {
-        { "retry_after": Number(seconds, ..), .. } =>
-          (seconds * 1000.0).to_int64()
-        _ => 1000L
-      }
+      let (retry_after_ms, global) = rate_limit_details(response)
       self.emit_telemetry(
         HttpRateLimited(route_bucket=bucket, global~, retry_after_ms~),
       )

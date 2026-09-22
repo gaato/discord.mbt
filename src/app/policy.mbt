@@ -10,18 +10,6 @@ pub(all) enum FailureOrigin {
 } derive(Debug)
 
 ///|
-/// A failure observed without replacing the App's error policy or warning sink.
-pub(all) enum FailureObservation {
-  Handler(FailureOrigin, Error)
-  ErrorPolicy(FailureOrigin, Error)
-  Framework(String, Error)
-} derive(Debug)
-
-///|
-/// Synchronous, non-raising diagnostic hook scoped to one executor attachment.
-pub type FailureObserver = (FailureObservation) -> Unit
-
-///|
 /// The underlying interaction context for a failure.
 ///
 /// Event, service, and autocomplete failures have no raw context. Responding
@@ -39,7 +27,6 @@ pub struct FailureCtx {
   priv origin_ : FailureOrigin
   priv raw_ : FailureRaw?
   priv warn_ : (String) -> Unit
-  priv observer_ : FailureObserver?
 }
 
 ///|
@@ -255,16 +242,8 @@ async fn invoke_error_policy(
   ctx : FailureCtx,
   error : Error,
 ) -> Unit {
-  if ctx.observer_ is Some(observe) {
-    observe(Handler(ctx.origin_, error))
-  }
   policy(ctx, error) catch {
     policy_error if @async.is_being_cancelled() => raise policy_error
-    policy_error => {
-      if ctx.observer_ is Some(observe) {
-        observe(ErrorPolicy(ctx.origin_, policy_error))
-      }
-      (ctx.warn_)("error policy failed: \{Repr(policy_error)}")
-    }
+    policy_error => (ctx.warn_)("error policy failed: \{Repr(policy_error)}")
   }
 }
