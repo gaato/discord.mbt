@@ -2,8 +2,6 @@ name = "gaato/discord"
 
 version = "0.4.1"
 
-readme = "README.mbt.md"
-
 repository = "https://github.com/gaato/discord.mbt"
 
 license = "Apache-2.0"
