@@ -1,0 +1,26 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "gaato/discord/internal/websocket"
+
+import {
+  "moonbitlang/async/http",
+}
+
+// Values
+pub async fn connect(String, headers? : Map[@http.CaseInsensitiveString, String], proxy? : @http.Client) -> @moonbitlang/async/websocket.Conn
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+pub using @moonbitlang/async/websocket {type CloseCode}
+
+pub using @moonbitlang/async/websocket {type Conn}
+
+pub using @moonbitlang/async/websocket {type Message}
+
+pub using @moonbitlang/async/websocket {type MessageKind}
+
+pub using @moonbitlang/async/websocket {type WebSocketError}
+
+// Traits

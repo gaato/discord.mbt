@@ -1,0 +1,33 @@
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/js_async",
+  "moonbitlang/async/io",
+  "moonbitlang/async/http",
+  "moonbitlang/async/websocket" @upstream,
+  "moonbitlang/core/buffer",
+  "moonbitlang/core/encoding/utf8",
+}
+
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/js_async",
+  "moonbitlang/async/io",
+  "moonbitlang/async/http",
+} for "test"
+
+// Native and Wasm re-export moonbitlang/async/websocket; JS implements the client subset over the platform WebSocket API.
+
+warnings = "-29"
+
+supported_targets = "js + native + wasm"
+
+options(
+  targets: {
+    "native.mbt": [ "native", "wasm" ],
+    "types.mbt": [ "js" ],
+    "ffi.mbt": [ "js" ],
+    "conn.mbt": [ "js" ],
+    "conn_test.mbt": [ "js" ],
+    "pkg.generated.mbti": [ "native" ],
+  },
+)
