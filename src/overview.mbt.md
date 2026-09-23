@@ -99,9 +99,9 @@ async fn run_echo_bot(token : String) -> Unit {
 
 ## Packages
 
-| Package | What it is | Native | JS | Wasm (moonrun) |
+| Package | What it is | Native | JS | Wasm¹ |
 |---|---|---:|---:|---:|
-| `gaato/discord` | Facade: golden-path names a typical application uses directly | Yes | Yes* | Yes* |
+| `gaato/discord` | Facade: golden-path names a typical application uses directly | Yes | Yes² | Yes² |
 | `gaato/discord/model` | Pure data: ~24 entity domains, gateway payloads, zero IO | Yes | Yes | Yes |
 | `gaato/discord/telemetry` | Structured REST, gateway, and dispatch observability values | Yes | Yes | Yes |
 | `gaato/discord/http` | REST `Client`, routes, rate limiting, multipart uploads | Yes | Yes | Yes |
@@ -121,7 +121,11 @@ async fn run_echo_bot(token : String) -> Unit {
 | `gaato/discord/coordinator` | Experimental TCP coordinator for multi-process Identify, REST limits, and cooldowns | Yes | No | Yes |
 | `gaato/discord/testkit` | Deterministic interaction and model fixtures | Yes | Yes | Yes |
 
-\* Gateway/Bot and Voice exports exist only on native. The HTTP-server exports
+¹ Linear-memory Wasm run by `moonrun`. The host imports come from
+moonbitlang/async, so generic WASI runtimes, browsers, and wasm-gc are not
+targets. See [Wasm runtime and permissions](#wasm-runtime-and-permissions).
+
+² Gateway/Bot and Voice exports exist only on native. The HTTP-server exports
 exist on native and Wasm. As on JS, the root retains DAVE in its dependency
 graph, but `gaato/dave.available()` is false on Wasm and its safe constructors
 raise `LibraryUnavailable`. This does not enable DAVE or Voice. Packages that
