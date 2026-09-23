@@ -23,7 +23,8 @@ breaking change is listed with a migration note.
   `Shard::session()` expose wire RESUME state; `Bot(resume~)` and
   `Bot::sessions()` use `BotSession` snapshots that also retain original READY
   metadata for replayed events before RESUMED. Shards with a saved session are
-  not counted against `session_start_limit.remaining`.
+  not counted against `session_start_limit.remaining`, and `Bot::sessions()`
+  reports the supplied snapshots until the shards start.
 - `zlib_stream_supported()` reports Gateway compression availability.
 - The `workers_gateway` example runs a gateway bot in a Cloudflare Durable
   Object with periodic session snapshots and alarm/cron recovery. A deployed

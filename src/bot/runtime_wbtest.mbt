@@ -203,6 +203,69 @@ async test "bot restores context before replay and snapshots live sessions" {
 }
 
 ///|
+async test "bot reports supplied sessions while resolving shards" {
+  let transport = BotFakeTransport()
+  let app = @app.App()
+  let client = @dhttp.Client("test-token")
+  defer client.close()
+  let gateway_requested : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  let gateway_release : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  client.middleware((_request, _next) => {
+    gateway_requested.put(())
+    gateway_release.get()
+    { status: 200, headers: Map([]), body: { "url": "wss://gateway.example" }, }
+  })
+  guard @json.parse(bot_ready_frame()) is { "d": ready_json, .. } else {
+    fail("expected READY payload")
+  }
+  let ready : @model.Ready = @json.from_json(ready_json)
+  let saved : BotSession = {
+    gateway: {
+      id: ready.session_id,
+      resume_url: ready.resume_gateway_url,
+      sequence: 41L,
+    },
+    ready,
+  }
+  let bot = Bot(
+    app,
+    token="test-token",
+    intents=@model.Intents::guild_messages(),
+    client~,
+    resume={ 0: saved },
+  )
+  bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  let events : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
+  bot.on(Events::message_delete(), (ctx, _) => events.put(ctx))
+  assert_true(bot.sessions().is_empty())
+  @async.with_task_group(group => {
+    let running = group.spawn(no_wait=true, () => bot.run())
+    gateway_requested.get()
+    // The gateway lookup is still pending: the supplied snapshot is reported.
+    guard bot.sessions().get(0) is Some(pending) else {
+      fail("expected supplied BotSession while resolving shards")
+    }
+    assert_eq(pending.gateway.sequence, 41L)
+    assert_eq(pending.ready.session_id, "sess-bot")
+    pending.gateway.sequence = 999L
+    gateway_release.put(())
+    transport.incoming.put(BOT_HELLO)
+    guard transport.outgoing.get() is { "op": Number(6, ..), .. } else {
+      fail("expected saved RESUME")
+    }
+    guard bot.sessions().get(0) is Some(connecting) else {
+      fail("expected BotSession while connecting")
+    }
+    assert_eq(connecting.gateway.sequence, 41L)
+    transport.incoming.put(message_delete_frame(42, "700"))
+    let ctx = events.get()
+    ctx.shutdown()
+    running.wait()
+    assert_true(bot.sessions().is_empty())
+  })
+}
+
+///|
 fn bot_ready_frame() -> String {
   (
     #|{"op":0,"s":1,"t":"READY","d":{"v":10,"user":{"id":"1","username":"bot","discriminator":"0","global_name":null,"avatar":null},"guilds":[],"session_id":"sess-bot","resume_gateway_url":"wss://resume.example","application":{"id":"42"},"shard":[0,1]}}

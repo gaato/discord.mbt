@@ -68,6 +68,7 @@ pub struct Bot {
   priv shards_ : ShardConfig
   priv compress_ : Bool
   priv resume_ : Map[Int, BotSession]
+  priv starting_ : Ref[Bool]
   priv running_shards_ : Ref[Array[ManagedShard]]
   priv identify_queue_ : &@queue.IdentifyQueue?
   priv sync_ : @app.CommandScope?
@@ -140,6 +141,7 @@ pub fn Bot::Bot(
       }
       snapshots
     },
+    starting_: Ref(false),
     running_shards_: Ref([]),
     identify_queue_: identify_queue,
     sync_: sync,
@@ -160,11 +162,18 @@ pub fn Bot::Bot(
 
 ///|
 /// Current resumable gateway state paired with READY metadata, keyed by shard
-/// id. A supplied snapshot is available while connecting; an unsaved shard
-/// appears after READY. Empty while the bot is not running. Returned values
-/// do not alias mutable runtime state.
+/// id. A supplied snapshot is available from the start of `run` until its
+/// shard replaces or invalidates it, including while `run` still resolves the
+/// shard layout over REST; an unsaved shard appears after READY. Empty while
+/// the bot is not running. Returned values do not alias mutable runtime state.
 pub fn Bot::sessions(self : Bot) -> Map[Int, BotSession] {
   let sessions : Map[Int, BotSession] = Map([])
+  if self.starting_.val {
+    for shard_id, saved in self.resume_ {
+      sessions[shard_id] = clone_bot_session(saved)
+    }
+    return sessions
+  }
   for owner in self.running_shards_.val {
     if owner.shard.session() is Some(gateway) &&
       owner.context is Some(ctx) &&
@@ -529,6 +538,12 @@ pub async fn Bot::run(self : Bot) -> Unit {
   let client = self.client_.unwrap_or_else(() => Client(self.token_))
   defer (if owns_client { client.close() })
   client.on_telemetry(event => self.emit_telemetry(event))
+  // Supplied snapshots stay visible through `sessions()` until the shards
+  // exist, so a periodic persister never observes an empty map mid-startup.
+  self.starting_.val = true
+  defer {
+    self.starting_.val = false
+  }
   let resolved = self.resolve_shards(client)
   @async.with_task_group((group : @async.TaskGroup[Unit]) => {
     let filter = self.event_filter()
@@ -557,6 +572,7 @@ pub async fn Bot::run(self : Bot) -> Unit {
       shard_handles.push(shard)
     }
     self.running_shards_.val = managed_shards
+    self.starting_.val = false
     group.add_defer(() => self.running_shards_.val = [])
     group.add_defer(() => {
       @async.protect_from_cancel(() => close_shards(shard_handles))
