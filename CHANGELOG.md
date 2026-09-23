@@ -28,6 +28,16 @@ breaking change is listed with a migration note.
   Object with periodic session snapshots and alarm/cron recovery. A deployed
   run on 2026-09-23 answered `/ping` over the Gateway for 20 minutes without a
   reconnect; see the example README.
+- `InteractionHttpRequest`, `InteractionHttpBody`, `InteractionHttpResponse`,
+  and `InteractionEndpoint::handle_signed_http`: one host-independent entry
+  point that verifies the raw request bytes, decodes one interaction, and
+  returns a status, content type, and bytes or multipart chunks. The native
+  `endpoint_http` server is built on it.
+- `App::start_signed_http` (JavaScript only) returning
+  `InteractionHttpDispatch`, a `{ response, background }` object for host
+  adapters: the initial callback and the completion of deferred work as two
+  promises created synchronously, with a per-public-key verifier cache and a
+  dispatch-owned REST client.
 
 ### Changed
 
@@ -39,6 +49,8 @@ breaking change is listed with a migration note.
   Wasm, where zlib-stream is unavailable.
 - **Breaking:** `InflateError` gains `Unsupported`; exhaustive matches need a
   new arm.
+- The native `endpoint_http` server answers `NoResponse` with 202 (was 500)
+  and `TimedOut` with 504 (was 202), matching `handle_signed_http`.
 
 ## [0.4.3] - 2026-09-23
 

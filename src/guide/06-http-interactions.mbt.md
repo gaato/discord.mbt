@@ -212,6 +212,7 @@ async fn run_server(
 test "http interaction declarations compile" {
   ignore(dispatch_interaction)
   ignore(serve_with_existing_client)
+  ignore(dispatch_signed_http)
   ignore(configure_interactions_endpoint)
   ignore(restore_gateway_interactions)
   ignore(route_outcome)
@@ -222,9 +223,50 @@ test "http interaction declarations compile" {
 
 The server validates and expands the public key before binding its socket, then
 reuses that verifier for every request. It verifies signatures against the raw
-body, handles Discord PINGs, dispatches through `App::serve`, returns 404 for
-`NoRoute`, and returns 202 for `NoResponse` or `TimedOut`. Use a reverse proxy
-for public HTTPS termination.
+body, handles Discord PINGs, dispatches through `App::serve`, and maps the
+outcome like `handle_signed_http`: 404 for `NoRoute`, 202 for `NoResponse`,
+504 for `TimedOut`. Use a reverse proxy for public HTTPS termination.
+
+## JavaScript hosts
+
+`App::start_signed_http` exists on the JavaScript backend only and returns a
+JavaScript object `{ response, background }`: `InteractionHttpDispatch`. Both
+promises exist synchronously when the function returns, so hosts such as
+Fastly that must register `waitUntil` before awaiting anything can do so
+immediately. Pass `background` to the host's `waitUntil`-style lifetime API
+and await `response` for the initial callback. `abort_signal` cancels only the
+`response` waiter; `background` keeps running so deferred handlers still
+finish after a client disconnect.
+
+The library caches the expanded verifier for the most recent `public_key`
+(one entry, process-wide) and answers 401 for an unusable key without caching
+it. Each dispatch owns one REST `Client` built from `token` and the optional
+`api_base_url`, and closes it when its work ends, so connections are not
+reused across interactions. `application_id` is required so no startup
+request is made. A handler that produces no initial response yields status
+202 with a `null` body and `null` content type; multipart replies arrive as a
+`ReadableStream` of chunks. See `src/examples/interactions_js/handler.js` for
+a reference host adapter.
+
+```mbt nocheck
+///|
+fn dispatch_on_js_host(
+  app : @discord.App,
+  request : @discord.InteractionHttpRequest,
+  token : String,
+  application_id : @model.ApplicationId,
+  public_key : String,
+  abort_signal : @js_async.AbortSignal,
+) -> @discord.InteractionHttpDispatch {
+  app.start_signed_http(
+    request,
+    token~,
+    application_id~,
+    public_key~,
+    abort_signal~,
+  )
+}
+```
 
 ## Cloudflare Workers
 

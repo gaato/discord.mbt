@@ -353,9 +353,12 @@ async fn handle_http_interaction(
 
 The Cloudflare Worker, Deno, Bun, and Vercel Function HTTP adapters verify
 the raw request bytes with the reusable pure MoonBit
-`@discord.InteractionVerifier` before parsing. The shared MoonBit example is
-`src/examples/interactions_js`; its host adapters use one generated
-ESM artifact and one HTTP response mapper. The shared handler is tested on
+`@discord.InteractionVerifier` before parsing. The dispatch bridge is
+`App::start_signed_http` in the library. The `src/examples/interactions_js`
+example is an exported wrapper plus a small `handler.js` that maps a Web
+`Request` to `InteractionHttpRequest` and back; the per-host adapters
+(Workers, Deno, Bun, Vercel, Fastly, Lambda) only wire their entry point and
+lifetime API. The shared handler is tested on
 Node.js and Bun, while the Vercel lifecycle adapter is tested with an injected
 `waitUntil` collector. These local tests do not establish hosted Vercel
 deployment behavior. `workers_echo` is
