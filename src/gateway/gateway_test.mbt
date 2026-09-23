@@ -417,6 +417,102 @@ fn ready_frame() -> String {
 }
 
 ///|
+async test "shard resumes from a saved session and exposes snapshots" {
+  let transport = FakeTransport()
+  let urls : Array[String] = []
+  let saved : @gateway.Session = {
+    id: "sess",
+    resume_url: "wss://resume.example",
+    sequence: 41L,
+  }
+  @async.with_task_group(group => {
+    let shard = @gateway.Shard::start(
+      group,
+      token="tok",
+      intents=@model.Intents::none(),
+      gateway_url="wss://gateway.example",
+      resume=saved,
+      connector=url => {
+        urls.push(url)
+        (transport : &@gateway.GatewayTransport)
+      },
+    )
+    saved.sequence = 99L
+    transport.incoming.put(HELLO)
+    guard transport.outgoing.get()
+      is {
+        "op": Number(6, ..),
+        "d": { "session_id": String("sess"), "seq": Number(41, ..), .. },
+        ..
+      } else {
+      fail("expected saved session resume")
+    }
+    assert_true(urls[0].has_prefix("wss://resume.example/?v=10"))
+    transport.incoming.put("{\"op\":0,\"t\":\"RESUMED\",\"s\":42,\"d\":{}}")
+    guard! shard.next() is Connected(resumed=true)
+    guard shard.session() is Some(snapshot) else { fail("expected session") }
+    assert_eq(snapshot.sequence, 42L)
+    snapshot.sequence = 100L
+    guard shard.session() is Some(again) else { fail("expected session") }
+    assert_eq(again.sequence, 42L)
+    shard.close()
+    assert_true(shard.session() is None)
+  })
+}
+
+///|
+async test "stale resume url falls back to identify after three connector failures" {
+  let transport = FakeTransport()
+  let urls : Array[String] = []
+  let connected : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  @async.with_task_group(group => {
+    let shard = @gateway.Shard::start(
+      group,
+      token="tok",
+      intents=@model.Intents::none(),
+      gateway_url="wss://gateway.example",
+      resume={ id: "sess", resume_url: "wss://resume.example", sequence: 41L, },
+      connector=url => {
+        urls.push(url)
+        if url.contains("resume.example") {
+          raise GatewayTestFailure
+        }
+        connected.put(())
+        (transport : &@gateway.GatewayTransport)
+      },
+      sleeper=_ => (),
+    )
+    connected.get()
+    assert_eq(urls.length(), 4)
+    for i in 0..<3 {
+      assert_true(urls[i].has_prefix("wss://resume.example/?v=10"))
+    }
+    assert_true(urls[3].has_prefix("wss://gateway.example/?v=10"))
+    transport.incoming.put(HELLO)
+    guard! transport.outgoing.get() is { "op": Number(2, ..), .. }
+    shard.close()
+  })
+}
+
+///|
+test "session json round trip" {
+  let session : @gateway.Session = {
+    id: "sess",
+    resume_url: "wss://r",
+    sequence: 41L,
+  }
+  let encoded = session.to_json()
+  let decoded : @gateway.Session = @json.from_json(encoded)
+  assert_eq(decoded.id, session.id)
+  assert_eq(decoded.resume_url, session.resume_url)
+  assert_eq(decoded.sequence, session.sequence)
+  inspect(
+    encoded.stringify(),
+    content="{\"id\":\"sess\",\"resume_url\":\"wss://r\",\"sequence\":\"41\"}",
+  )
+}
+
+///|
 struct FakeInflater {
   messages : Array[String]
   chunks : Array[Bytes]

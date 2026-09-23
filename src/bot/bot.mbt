@@ -65,6 +65,8 @@ pub struct Bot {
   priv gateway_url_ : String?
   priv shards_ : ShardConfig
   priv compress_ : Bool
+  priv resume_ : Map[Int, @gateway.Session]
+  priv running_shards_ : Ref[Array[ManagedShard]]
   priv identify_queue_ : &@queue.IdentifyQueue?
   priv sync_ : @app.CommandScope?
   priv sync_unowned_ : @framework.UnownedCommands
@@ -102,6 +104,8 @@ pub struct Bot {
 /// `sync_unowned=Keep` also preserves commands registered by other owners.
 /// Deletions are reported through the app's warning hook. In multi-process
 /// sharding, enable synchronization in exactly one process.
+/// `resume` seeds saved sessions per shard id so those shards RESUME instead
+/// of identifying (see `Bot::sessions`).
 pub fn Bot::Bot(
   app : @app.App,
   token~ : String,
@@ -114,6 +118,7 @@ pub fn Bot::Bot(
   identify_queue? : &@queue.IdentifyQueue,
   sync? : @app.CommandScope,
   sync_unowned? : @framework.UnownedCommands = Delete,
+  resume? : Map[Int, @gateway.Session] = Map([]),
 ) -> Bot {
   {
     app_: app,
@@ -124,6 +129,8 @@ pub fn Bot::Bot(
     gateway_url_: gateway_url,
     shards_: shards,
     compress_: compress,
+    resume_: resume,
+    running_shards_: Ref([]),
     identify_queue_: identify_queue,
     sync_: sync,
     sync_unowned_: sync_unowned,
@@ -139,6 +146,19 @@ pub fn Bot::Bot(
     gateway_bot_info_: Ref(None),
     identify_spacing_ms_: Ref(5250),
   }
+}
+
+///|
+/// Live gateway sessions keyed by shard id, for persisting RESUME state.
+/// Empty while the bot is not running or before READY.
+pub fn Bot::sessions(self : Bot) -> Map[Int, @gateway.Session] {
+  let sessions : Map[Int, @gateway.Session] = Map([])
+  for owner in self.running_shards_.val {
+    if owner.shard.session() is Some(session) {
+      sessions[owner.id] = session
+    }
+  }
+  sessions
 }
 
 ///|
@@ -478,6 +498,11 @@ pub async fn Bot::run(self : Bot) -> Unit {
   if self.token_.is_empty() {
     raise @app.AppConfigError::EmptyToken
   }
+  if self.compress_ && !@gateway.zlib_stream_supported() {
+    raise BotError::InvalidShardConfig(
+      message="compress=true requires zlib-stream inflate, which this backend does not provide",
+    )
+  }
   let intents = self.resolved_intents()
   let owns_client = self.client_ is None
   let client = self.client_.unwrap_or_else(() => Client(self.token_))
@@ -510,6 +535,8 @@ pub async fn Bot::run(self : Bot) -> Unit {
       managed_shards.push({ id: shard_id, shard, context: None, })
       shard_handles.push(shard)
     }
+    self.running_shards_.val = managed_shards
+    group.add_defer(() => self.running_shards_.val = [])
     group.add_defer(() => {
       @async.protect_from_cancel(() => close_shards(shard_handles))
     })

@@ -89,6 +89,66 @@ const BOT_HELLO : String =
   #|{"op":10,"d":{"heartbeat_interval":60000}}
 
 ///|
+async test "bot resumes saved sessions and reports live sessions" {
+  let transport = BotFakeTransport()
+  let urls : Array[String] = []
+  let app = @app.App()
+  let saved : @gateway.Session = {
+    id: "sess",
+    resume_url: "wss://resume.example",
+    sequence: 41L,
+  }
+  let bot = Bot(
+    app,
+    token="test-token",
+    intents=@model.Intents::guilds(),
+    gateway_url="wss://gateway.example",
+    resume={ 0: saved },
+  )
+  bot.connector_.val = Some(url => {
+    urls.push(url)
+    (transport : &@gateway.GatewayTransport)
+  })
+  let resumed = Ref(false)
+  bot.on_telemetry(event => {
+    if event is @telemetry.ShardResumed(shard_id=0) {
+      resumed.val = true
+    }
+  })
+  assert_true(bot.sessions().is_empty())
+  let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
+  bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
+  @async.with_task_group(group => {
+    let running = group.spawn(no_wait=true, () => bot.run())
+    transport.incoming.put(BOT_HELLO)
+    guard transport.outgoing.get()
+      is {
+        "op": Number(6, ..),
+        "d": { "session_id": String("sess"), "seq": Number(41, ..), .. },
+        ..
+      } else {
+      fail("expected resume")
+    }
+    assert_true(urls[0].has_prefix("wss://resume.example/?v=10"))
+    transport.incoming.put("{\"op\":0,\"t\":\"RESUMED\",\"s\":43,\"d\":{}}")
+    while !resumed.val {
+      @async.pause()
+    }
+    let sessions = bot.sessions()
+    guard sessions.get(0) is Some(session) else {
+      fail("expected live session")
+    }
+    assert_eq(session.sequence, 43L)
+    // A READY provides a context through the existing shutdown seam.
+    transport.incoming.put(bot_ready_frame())
+    let ctx = ready_contexts.get()
+    ctx.shutdown()
+    running.wait()
+    assert_true(bot.sessions().is_empty())
+  })
+}
+
+///|
 fn bot_ready_frame() -> String {
   (
     #|{"op":0,"s":1,"t":"READY","d":{"v":10,"user":{"id":"1","username":"bot","discriminator":"0","global_name":null,"avatar":null},"guilds":[],"session_id":"sess-bot","resume_gateway_url":"wss://resume.example","application":{"id":"42"},"shard":[0,1]}}

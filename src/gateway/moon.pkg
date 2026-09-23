@@ -23,7 +23,9 @@ import {
 
 // The gateway runs on native, JavaScript, and moonrun Wasm; zlib-stream compression is native-only.
 
-warnings = "-29"
+// `resume` is the public API label and is reserved by the current compiler.
+
+warnings = "-29-35"
 
 supported_targets = "js + native + wasm"
 
@@ -38,6 +40,7 @@ options(
     "capabilities_test.mbt": [ "js", "native", "wasm" ],
     "gateway_js_test.mbt": [ "js" ],
     "gateway_test.mbt": [ "js", "native", "wasm" ],
+    "extends.mbt": [ "js", "native", "wasm" ],
     "inflater.mbt": [ "js", "native", "wasm" ],
     "pkg.generated.mbti": [ "native" ],
     "platform.js.mbt": [ "js" ],

@@ -28,7 +28,9 @@ import {
 
 // This package is intentionally empty on non-native targets.
 
-warnings = "-29"
+// `resume` is the public API label and is reserved by the current compiler.
+
+warnings = "-29-35"
 
 supported_targets = "js + native + wasm"
 

@@ -7,6 +7,7 @@ import {
   "gaato/discord/telemetry",
   "moonbitlang/async",
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
   "moonbitlang/core/random",
 }
 
@@ -50,7 +51,7 @@ pub(all) struct Session {
   id : String
   resume_url : String
   mut sequence : Int64
-} derive(@debug.Debug)
+} derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub struct Shard {
   // private fields
@@ -59,7 +60,8 @@ pub async fn Shard::close(Self) -> Unit noraise
 pub fn Shard::latency_ms(Self) -> Int64?
 pub async fn Shard::next(Self) -> ShardEvent
 pub async fn Shard::send(Self, Json) -> Unit
-pub fn[X] Shard::start(@async.TaskGroup[X], token~ : String, intents~ : @model.Intents, capabilities? : @model.GatewayCapabilities, gateway_url? : String, shard_id? : Int, shard_count? : Int, identify_queue? : &@queue.IdentifyQueue, event_filter? : (@model.EventKind) -> Bool, connector? : async (String) -> &GatewayTransport, compress? : Bool, inflater_factory? : () -> &Inflater raise, queue_capacity? : Int, telemetry? : (@telemetry.TelemetryEvent) -> Unit, sleeper? : async (Int) -> Unit, rand? : @random.Rand) -> Self
+pub fn Shard::session(Self) -> Session?
+pub fn[X] Shard::start(@async.TaskGroup[X], token~ : String, intents~ : @model.Intents, capabilities? : @model.GatewayCapabilities, gateway_url? : String, shard_id? : Int, shard_count? : Int, identify_queue? : &@queue.IdentifyQueue, event_filter? : (@model.EventKind) -> Bool, connector? : async (String) -> &GatewayTransport, compress? : Bool, inflater_factory? : () -> &Inflater raise, queue_capacity? : Int, telemetry? : (@telemetry.TelemetryEvent) -> Unit, sleeper? : async (Int) -> Unit, rand? : @random.Rand, resume? : Session) -> Self
 pub fn Shard::state(Self) -> ShardState
 
 pub(all) enum ShardEvent {

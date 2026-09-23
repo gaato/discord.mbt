@@ -110,7 +110,7 @@ run; the gateway/voice loops are additionally tested via injected sleepers):
 | src/http/handles_channel.mbt | 3 | `with_typing` refresh-failure arm sits behind the real 8-second cadence. |
 | src/bot/middleware.mbt | 1 | Middleware chain cancellation arm. |
 | src/bot/shard_manager.mbt | 6 | Multi-shard session-start-limit and staggered-identify paths over live gateways. |
-| src/bot/bot.mbt | 19 | Gateway run-loop teardown/cancellation arms; startup, intents, telemetry, and event routing are covered. |
+| src/bot/bot.mbt | 20 | Gateway run-loop teardown/cancellation arms; startup, intents, telemetry, and event routing are covered. Compress pre-check raises only on js/wasm where zlib-stream is unavailable. |
 | src/bot/voice.mbt | 19 | Credential timeouts have no injectable timer; the endpoint fallback contradicts the collector predicate; disconnect/cancellation catches; and the new-join/rejoin closures cross `join_voice`'s unseamed live `VoiceConnection::start`. Cache, gate, collector, and failed-watcher-rejoin behaviour is tested. |
 
 Defensive arms unreachable by construction:

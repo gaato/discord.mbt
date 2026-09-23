@@ -91,6 +91,7 @@ fn[X] Bot::start_managed_shard(
         connector~,
         compress=self.compress_,
         telemetry=event => self.emit_telemetry(event),
+        resume?=self.resume_.get(shard_id),
       )
     None =>
       @gateway.Shard::start(
@@ -105,6 +106,7 @@ fn[X] Bot::start_managed_shard(
         event_filter~,
         compress=self.compress_,
         telemetry=event => self.emit_telemetry(event),
+        resume?=self.resume_.get(shard_id),
       )
   }
 }

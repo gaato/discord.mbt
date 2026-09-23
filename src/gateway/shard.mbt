@@ -32,6 +32,18 @@ pub fn Shard::state(self : Shard) -> ShardState {
 }
 
 ///|
+/// A copy of the current gateway session, or `None` before the first READY
+/// and after the session was invalidated. Persist it to RESUME after a
+/// restart.
+pub fn Shard::session(self : Shard) -> Session? {
+  self.session.map(s => {
+    id: s.id,
+    resume_url: s.resume_url,
+    sequence: s.sequence,
+  })
+}
+
+///|
 /// Latest heartbeat round-trip time in milliseconds.
 pub fn Shard::latency_ms(self : Shard) -> Int64? {
   self.latency
@@ -121,7 +133,8 @@ async fn Shard::finish_transport(
 }
 
 ///|
-/// Spawn a shard into `group` and return its handle.
+/// Spawn a shard into `group` and return its handle. `resume` seeds the
+/// session so the first connection attempts RESUME at its `resume_url`.
 pub fn[X] Shard::start(
   group : @async.TaskGroup[X],
   token~ : String,
@@ -139,6 +152,7 @@ pub fn[X] Shard::start(
   telemetry? : (@telemetry.TelemetryEvent) -> Unit = _ => (),
   sleeper? : async (Int) -> Unit = ms => @async.sleep(ms),
   rand? : @random.Rand = @random.Rand::new(),
+  resume? : Session,
 ) -> Shard {
   let shard = Shard::{
     events: Queue(kind=Blocking(queue_capacity)),
@@ -146,7 +160,11 @@ pub fn[X] Shard::start(
     send_gate: Semaphore(1),
     transport: None,
     state: Disconnected(reconnect_attempts=0),
-    session: None,
+    session: resume.map(s => {
+      id: s.id,
+      resume_url: s.resume_url,
+      sequence: s.sequence,
+    }),
     latency: None,
     closing: false,
     runner: None,
@@ -244,6 +262,10 @@ async fn Shard::run(
       _ if @async.is_being_cancelled() => return
       _ => {
         attempts += 1
+        // A persisted resume_url can point at a dead host; fall back to gateway_url.
+        if attempts >= 3 && self.session is Some(_) {
+          self.session = None
+        }
         self.state = Disconnected(reconnect_attempts=attempts)
         self.emit_telemetry(
           ShardDisconnected(shard_id~, code=None, will_resume=false),
