@@ -31,12 +31,19 @@ async fn route_request(
     conn.skip_request_body()
     return text_response(404, "not found")
   }
+  // A request without both signature headers cannot verify, so answer before
+  // buffering a body that an unauthenticated client controls.
+  guard request.headers.get("x-signature-ed25519") is Some(signature) &&
+    request.headers.get("x-signature-timestamp") is Some(timestamp) else {
+    conn.skip_request_body()
+    return text_response(401, "missing signature")
+  }
   let body_bytes = body_reader.read_all().binary()
   endpoint.handle_signed_http(
     {
       http_method: "POST",
-      signature: request.headers.get("x-signature-ed25519"),
-      timestamp: request.headers.get("x-signature-timestamp"),
+      signature: Some(signature),
+      timestamp: Some(timestamp),
       body: body_bytes,
     },
     verifier,

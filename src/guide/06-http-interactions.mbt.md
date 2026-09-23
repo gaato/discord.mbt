@@ -222,7 +222,8 @@ test "http interaction declarations compile" {
 ```
 
 The server validates and expands the public key before binding its socket, then
-reuses that verifier for every request. It verifies signatures against the raw
+reuses that verifier for every request. It answers 401 before reading the body
+when either signature header is missing, verifies signatures against the raw
 body, handles Discord PINGs, dispatches through `App::serve`, and maps the
 outcome like `handle_signed_http`: 404 for `NoRoute`, 202 for `NoResponse`,
 504 for `TimedOut`. Use a reverse proxy for public HTTPS termination.
