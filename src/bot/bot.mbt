@@ -55,7 +55,8 @@ priv struct ServiceHandler {
 }
 
 ///|
-/// Native gateway executor for a gateway-free application core.
+/// Gateway executor for a gateway-free application core on native, JavaScript,
+/// and Wasm. Voice connections are native-only.
 pub struct Bot {
   priv app_ : @app.App
   priv token_ : String
@@ -610,8 +611,7 @@ pub async fn Bot::run(self : Bot) -> Unit {
                 framework_: router,
                 collector_: self.collector_,
                 group_: group,
-                voice_connections_: Map([]),
-                voice_join_gates_: Map([]),
+                voice_: VoiceSessions::new(),
                 shutdown_requested_: shutdown_requested,
               }
               owner.context = Some(created)

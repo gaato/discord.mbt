@@ -13,14 +13,3 @@ pub using @voice {
   type VoiceReceiveStream,
   SILENCE_FRAME,
 }
-
-///|
-/// Native gateway executor and typed event descriptors.
-pub using @bot {
-  type Bot,
-  type GatewayCtx,
-  type EventType,
-  type Events,
-  type BotError,
-  type ShardConfig,
-}

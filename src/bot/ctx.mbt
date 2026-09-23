@@ -1,5 +1,6 @@
 ///|
 /// Gateway-only services passed to event and service handlers after READY.
+#warnings("-unused_field")
 pub struct GatewayCtx {
   priv app_ : @app.AppCtx
   priv mut ready_ : @model.Ready
@@ -10,11 +11,7 @@ pub struct GatewayCtx {
   priv framework_ : @framework.Framework
   priv collector_ : EventCollector
   priv group_ : @async.TaskGroup[Unit]
-  priv voice_connections_ : Map[
-    @model.Id[@model.GuildMarker],
-    @voice.VoiceConnection,
-  ]
-  priv voice_join_gates_ : Map[@model.Id[@model.GuildMarker], @async.Semaphore]
+  priv voice_ : VoiceSessions
   priv shutdown_requested_ : Ref[Bool]
 }
 

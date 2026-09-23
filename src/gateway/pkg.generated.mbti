@@ -52,6 +52,7 @@ pub(all) struct Session {
   resume_url : String
   mut sequence : Int64
 } derive(ToJson, @debug.Debug, @json.FromJson)
+pub fn Session::to_json(Self) -> Json
 
 pub struct Shard {
   // private fields

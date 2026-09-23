@@ -30,6 +30,7 @@ options(
   targets: {
     "overview.mbt.md": [ "native" ],
     "facade_native.mbt": [ "native" ],
+    "facade_gateway.mbt": [ "native", "js", "wasm" ],
     "facade_server.mbt": [ "native", "wasm" ],
     "facade_server_test.mbt": [ "native", "wasm" ],
     "readme_native_test.mbt": [ "native" ],

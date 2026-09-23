@@ -26,7 +26,7 @@ import {
   "moonbitlang/async/aqueue",
 } for "wbtest"
 
-// This package is intentionally empty on non-native targets.
+// The gateway executor runs on native, JavaScript, and moonrun Wasm; voice is native-only.
 
 // `resume` is the public API label and is reserved by the current compiler.
 
@@ -36,19 +36,21 @@ supported_targets = "js + native + wasm"
 
 options(
   targets: {
-    "bot.mbt": [ "native" ],
-    "collector.mbt": [ "native" ],
-    "collector_wbtest.mbt": [ "native" ],
-    "bot_wbtest.mbt": [ "native" ],
-    "ctx.mbt": [ "native" ],
-    "ctx_accessors_wbtest.mbt": [ "native" ],
-    "events.mbt": [ "native" ],
-    "events_projection_wbtest.mbt": [ "native" ],
-    "middleware.mbt": [ "native" ],
+    "bot.mbt": [ "js", "native", "wasm" ],
+    "collector.mbt": [ "js", "native", "wasm" ],
+    "collector_wbtest.mbt": [ "js", "native", "wasm" ],
+    "bot_wbtest.mbt": [ "js", "native", "wasm" ],
+    "ctx.mbt": [ "js", "native", "wasm" ],
+    "ctx_accessors_wbtest.mbt": [ "js", "native", "wasm" ],
+    "events.mbt": [ "js", "native", "wasm" ],
+    "events_projection_wbtest.mbt": [ "js", "native", "wasm" ],
+    "middleware.mbt": [ "js", "native", "wasm" ],
     "voice.mbt": [ "native" ],
+    "voice_unsupported.mbt": [ "js", "wasm" ],
+    "bot_voice_wbtest.mbt": [ "native" ],
     "pkg.generated.mbti": [ "native" ],
-    "runtime_wbtest.mbt": [ "native" ],
-    "shard_manager.mbt": [ "native" ],
-    "shard_manager_wbtest.mbt": [ "native" ],
+    "runtime_wbtest.mbt": [ "js", "native", "wasm" ],
+    "shard_manager.mbt": [ "js", "native", "wasm" ],
+    "shard_manager_wbtest.mbt": [ "js", "native", "wasm" ],
   },
 )

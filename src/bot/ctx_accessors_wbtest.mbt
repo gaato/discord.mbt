@@ -46,22 +46,6 @@ test "shard id validation rejects each invalid selection" {
 }
 
 ///|
-test "voice state command encodes a disconnect as a null channel" {
-  let disconnect = voice_state_command(
-    @model.Id::parse("100"),
-    None,
-    false,
-    true,
-  )
-  inspect(
-    disconnect.stringify(),
-    content=(
-      #|{"op":4,"d":{"guild_id":"100","channel_id":null,"self_mute":false,"self_deaf":true}}
-    ),
-  )
-}
-
-///|
 async test "gateway context exposes raw handles, refs, and waiters" {
   let transport = BotFakeTransport()
   let app = @app.App()

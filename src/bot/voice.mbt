@@ -1,4 +1,17 @@
 ///|
+/// Per-guild voice connections and join gates. Voice needs the native
+/// backend; other backends define an empty twin in `voice_unsupported.mbt`.
+priv struct VoiceSessions {
+  connections : Map[@model.Id[@model.GuildMarker], @voice.VoiceConnection]
+  join_gates : Map[@model.Id[@model.GuildMarker], @async.Semaphore]
+}
+
+///|
+fn VoiceSessions::new() -> VoiceSessions {
+  { connections: Map([]), join_gates: Map([]), }
+}
+
+///|
 fn voice_state_command(
   guild_id : @model.Id[@model.GuildMarker],
   channel_id : @model.Id[@model.ChannelMarker]?,
@@ -139,19 +152,19 @@ pub async fn GatewayCtx::join_voice(
   if !self.intents_.contains(required_intents) {
     raise @voice.VoiceError::MissingIntent(intent="GUILD_VOICE_STATES")
   }
-  let join_gate = match self.voice_join_gates_.get(guild_id) {
+  let join_gate = match self.voice_.join_gates.get(guild_id) {
     Some(gate) => gate
     None => {
       let gate = @async.Semaphore(1)
-      self.voice_join_gates_[guild_id] = gate
+      self.voice_.join_gates[guild_id] = gate
       gate
     }
   }
   join_gate.acquire()
   defer join_gate.release()
-  if self.voice_connections_.get(guild_id) is Some(existing) {
+  if self.voice_.connections.get(guild_id) is Some(existing) {
     if existing.state() is Closed(..) {
-      self.voice_connections_.remove(guild_id)
+      self.voice_.connections.remove(guild_id)
     } else {
       return existing
     }
@@ -161,7 +174,7 @@ pub async fn GatewayCtx::join_voice(
   )
   let rejoin_in_progress = Ref(false)
   let leave = () => {
-    defer self.voice_connections_.remove(guild_id)
+    defer self.voice_.connections.remove(guild_id)
     self.shard_.send(voice_state_command(guild_id, None, self_mute, self_deaf))
   }
   let rejoin = () => {
@@ -183,7 +196,7 @@ pub async fn GatewayCtx::join_voice(
     telemetry~,
   )
   wait_ready_or_disconnect(connection, timeout_ms)
-  self.voice_connections_[guild_id] = connection
+  self.voice_.connections[guild_id] = connection
   self.group_.spawn_bg(no_wait=true, allow_failure=true, () => {
     self.watch_voice_server_updates(
       guild_id, channel_id, self_mute, self_deaf, timeout_ms, connection, rejoin_in_progress,
