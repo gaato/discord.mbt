@@ -234,6 +234,7 @@ async test "bot reports supplied sessions while resolving shards" {
     client~,
     resume={ 0: saved },
   )
+  bot.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
   let events : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::message_delete(), (ctx, _) => events.put(ctx))
@@ -301,6 +302,7 @@ async test "bot identifies instead of resuming a session from another shard layo
     gateway_url="wss://gateway.example",
     resume={ 0: saved },
   )
+  bot.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
@@ -330,6 +332,93 @@ async test "bot identifies instead of resuming a session from another shard layo
     warnings.join("\n"),
     content=(
       #|ignoring saved session for shard 0: its READY was recorded for shard [0, 2] but the bot resolved shard [0, 1], so the shard identifies instead
+    ),
+  )
+}
+
+///|
+async test "bot holds a fallback IDENTIFY when the session start limit is exhausted" {
+  let first = BotFakeTransport()
+  let second = BotFakeTransport()
+  let pending : Array[BotFakeTransport] = [second, first]
+  let client = @dhttp.Client("test-token")
+  defer client.close()
+  client.middleware((_request, _next) => {
+    status: 200,
+    headers: Map([]),
+    body: Json::array([]),
+  })
+  let bot = Bot(
+    @app.App(),
+    token="test-token",
+    intents=@model.Intents::guild_messages(),
+    client~,
+    gateway_url="wss://gateway.example",
+    resume={ 0: bot_saved_session() },
+  )
+  bot.gateway_bot_info_.val = Some(manager_gateway_info(remaining=0))
+  bot.connector_.val = Some(_ => {
+    (pending.pop().unwrap() : &@gateway.GatewayTransport)
+  })
+  try
+    @async.with_task_group(group => {
+      let running = group.spawn(no_wait=true, () => bot.run())
+      first.incoming.put(BOT_HELLO)
+      guard first.outgoing.get() is { "op": Number(6, ..), .. } else {
+        fail("expected saved RESUME")
+      }
+      first.incoming.put("{\"op\":9,\"d\":false}")
+      second.incoming.put(BOT_HELLO)
+      running.wait()
+    })
+  catch {
+    SessionStartLimitExceeded(required=1, remaining=0, reset_after_ms=60000L) =>
+      ()
+    error => fail("unexpected error: \{Repr(error)}")
+  } noraise {
+    _ => fail("expected the exhausted session start limit to stop the bot")
+  }
+  assert_true(pending.is_empty())
+  assert_true(second.outgoing.try_get() is None)
+}
+
+///|
+async test "bot identifies with a warning when the session start limit cannot be read" {
+  let transport = BotFakeTransport()
+  let app = @app.App()
+  let warnings : Array[String] = []
+  app.on_warn(message => warnings.push(message))
+  let client = @dhttp.Client("test-token")
+  defer client.close()
+  client.middleware((request, _next) => {
+    let status = if request.route is GetGatewayBot { 500 } else { 200 }
+    { status, headers: Map([]), body: Json::array([]), }
+  })
+  let bot = Bot(
+    app,
+    token="test-token",
+    intents=@model.Intents::guild_messages(),
+    client~,
+    gateway_url="wss://gateway.example",
+  )
+  bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
+  bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
+  @async.with_task_group(group => {
+    let running = group.spawn(no_wait=true, () => bot.run())
+    transport.incoming.put(BOT_HELLO)
+    guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
+      fail("expected IDENTIFY")
+    }
+    transport.incoming.put(bot_ready_frame())
+    let ctx = ready_contexts.get()
+    ctx.shutdown()
+    running.wait()
+  })
+  assert_eq(warnings.length(), 1)
+  assert_true(
+    warnings[0].has_prefix(
+      "identifying shard 0 without reading the session start limit: ",
     ),
   )
 }
@@ -366,6 +455,7 @@ async test "empty Bot replay starts services on RESUMED" {
     gateway_url="wss://gateway.example",
     resume={ 0: bot_saved_session() },
   )
+  bot.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
   let service_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.service(name="empty-replay-service", ctx => service_contexts.put(ctx))
@@ -413,6 +503,7 @@ async test "bot rejects mismatched saved session before REST or connector" {
     gateway_url="wss://gateway.example",
     resume={ 0: bad },
   )
+  bot.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.connector_.val = Some(_ => {
     connector_calls.val += 1
     fail("mismatched session reached connector")
@@ -453,6 +544,7 @@ async test "rejected Bot resume uses the next actual READY" {
     sync=Global,
     resume={ 0: bot_saved_session() },
   )
+  bot.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.connector_.val = Some(url => {
     urls.push(url)
     if urls.length() == 1 {
@@ -566,6 +658,7 @@ fn middleware_runtime_bot(app : @app.App, transport : BotFakeTransport) -> Bot {
     client=Client("test-token"),
     gateway_url="wss://gateway.example",
   )
+  bot.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
   bot
 }
@@ -629,6 +722,7 @@ async test "bot without sync performs no command requests" {
     client~,
     gateway_url="wss://gateway.example",
   )
+  bot.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
@@ -684,6 +778,7 @@ async test "bot warns when sync deletes undeclared commands" {
       gateway_url="wss://gateway.example",
       sync=scope,
     )
+    bot.gateway_bot_info_.val = Some(manager_gateway_info())
     bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
     let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
     bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
@@ -747,6 +842,7 @@ async test "bot Keep preserves other owners and emits no deletion warning" {
     sync=Global,
     sync_unowned=Keep,
   )
+  bot.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
@@ -798,6 +894,7 @@ async test "bot sync failures stay fail-fast" {
       gateway_url="wss://gateway.example",
       sync=Global,
     )
+    bot.gateway_bot_info_.val = Some(manager_gateway_info())
     bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
     let ready_called = Ref(false)
     bot.on(Events::ready(), (ctx, _) => {
@@ -852,6 +949,7 @@ async test "gateway context resolves cached channels and falls back to REST" {
     client~,
     gateway_url="wss://gateway.example",
   )
+  bot.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
   let cache = @cache.InMemoryCache(resources=@cache.CacheResources::default())
   bot.attach_cache(cache)
@@ -902,6 +1000,7 @@ async test "unsupported compression rejects before REST or connector setup" {
     fail("compression reached REST")
   })
   let bot = Bot(@app.App(), token="test-token", client~, compress=true)
+  bot.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.connector_.val = Some(_ => {
     connector_calls.val += 1
     fail("compression reached connector")
@@ -1154,6 +1253,7 @@ async test "bot updates cache before typed event handlers" {
     client=Client("test-token"),
     gateway_url="wss://gateway.example",
   )
+  bot.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
   let cache = @cache.InMemoryCache(resources=CacheResources(messages=true))
   bot.attach_cache(cache)
@@ -1262,6 +1362,7 @@ async test "bot run dispatches concurrently, survives handlers, and shuts down" 
     client=Client("test-token"),
     gateway_url="wss://gateway.example",
   )
+  bot.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
@@ -1367,6 +1468,7 @@ async test "bot reports gateway decode errors and preserves dispatch" {
     client=Client("test-token"),
     gateway_url="wss://gateway.example",
   )
+  bot.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))

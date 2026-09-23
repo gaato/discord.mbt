@@ -26,6 +26,11 @@ breaking change is listed with a migration note.
   not counted against `session_start_limit.remaining`, `Bot::sessions()`
   reports the supplied snapshots until the shards start, and a snapshot whose
   READY was recorded under another shard layout is dropped with a warning.
+- `Bot` reads `session_start_limit` from `GET /gateway/bot` before every
+  IDENTIFY, including the single-shard default and the fallback after a
+  rejected RESUME, and ends `run` with `SessionStartLimitExceeded` when the
+  limit is exhausted. A limit that cannot be read is reported through the
+  warning hook and the shard identifies anyway.
 - `zlib_stream_supported()` reports Gateway compression availability.
 - The `workers_gateway` example runs a gateway bot in a Cloudflare Durable
   Object with periodic session snapshots and alarm/cron recovery. A deployed

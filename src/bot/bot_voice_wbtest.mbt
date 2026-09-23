@@ -137,6 +137,7 @@ async test "join_voice reuses its per-guild connection and handles a failed serv
     intents=@model.Intents::guild_voice_states(),
     gateway_url="wss://gateway.example",
   )
+  bot.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
   let ready : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready.put(ctx))
@@ -216,6 +217,7 @@ async test "join_voice evicts closed connections and releases its gate after sen
     intents=@model.Intents::guild_voice_states(),
     gateway_url="wss://gateway.example",
   )
+  bot.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
   let ready : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready.put(ctx))
@@ -266,6 +268,7 @@ async test "voice server watcher unregisters after collector failure or a nonrea
       intents=@model.Intents::guild_voice_states(),
       gateway_url="wss://gateway.example",
     )
+    bot.gateway_bot_info_.val = Some(manager_gateway_info())
     bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
     let ready : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
     bot.on(Events::ready(), (ctx, _) => ready.put(ctx))

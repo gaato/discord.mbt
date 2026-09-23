@@ -98,6 +98,7 @@ async test "gateway context exposes raw handles, refs, and waiters" {
     client~,
     gateway_url="wss://gateway.example",
   )
+  bot.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))

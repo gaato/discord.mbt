@@ -7,9 +7,10 @@ pub(all) suberror BotError {
   /// A shard id/count selection cannot be represented by Discord's sharding
   /// rules.
   InvalidShardConfig(message~ : String)
-  /// Identifying every selected shard without a saved session would exceed
-  /// the current identify session allowance returned by `GET /gateway/bot`.
-  /// `required` counts only those shards: a saved session sends RESUME first.
+  /// The identify session allowance returned by `GET /gateway/bot` cannot
+  /// cover the next IDENTIFY. At startup `required` counts the selected
+  /// shards without a saved session (a saved session sends RESUME first);
+  /// later it is 1 for the shard that was about to identify.
   SessionStartLimitExceeded(
     required~ : Int,
     remaining~ : Int,
@@ -97,8 +98,11 @@ pub struct Bot {
 /// must still be enabled in the developer portal). `client` supplies a
 /// preconfigured REST client; by default one is built from `token`.
 /// `shards`, `compress`, and `identify_queue` configure sharding, transport
-/// compression, and cross-process identify coordination. `capabilities` is
-/// sent in Identify (see `@model.GatewayCapabilities`).
+/// compression, and cross-process identify coordination. Every IDENTIFY, at
+/// startup or after a lost session, first reads `session_start_limit` from
+/// `GET /gateway/bot`; an exhausted limit ends `run` with
+/// `SessionStartLimitExceeded` instead of risking a token reset. `capabilities`
+/// is sent in Identify (see `@model.GatewayCapabilities`).
 ///
 /// When `sync` is omitted, the bot performs no command synchronization. When
 /// set, synchronization runs once per process after the first READY. It uses
@@ -548,6 +552,7 @@ pub async fn Bot::run(self : Bot) -> Unit {
   let resolved = self.resolve_shards(client)
   @async.with_task_group((group : @async.TaskGroup[Unit]) => {
     let filter = self.event_filter()
+    let shard_events : @aqueue.Queue[ManagedShardEvent] = Queue(kind=Unbounded)
     let identify_queue : &@queue.IdentifyQueue = match self.identify_queue_ {
       Some(queue) => queue
       None =>
@@ -556,6 +561,9 @@ pub async fn Bot::run(self : Bot) -> Unit {
           spacing_ms=self.identify_spacing_ms_.val,
         )
     }
+    let identify_queue : &@queue.IdentifyQueue = (
+      { bot: self, client, inner: identify_queue, refusals: shard_events, } :
+      IdentifyGuard)
     let managed_shards : Array[ManagedShard] = []
     let shard_handles : Array[@gateway.Shard] = []
     for shard_id in resolved.ids {
@@ -579,11 +587,10 @@ pub async fn Bot::run(self : Bot) -> Unit {
     group.add_defer(() => {
       @async.protect_from_cancel(() => close_shards(shard_handles))
     })
-    let shard_events : @aqueue.Queue[ManagedShardEvent] = Queue(kind=Unbounded)
     for owner in managed_shards {
       group.spawn_bg(no_wait=true, () => {
         for ;; {
-          shard_events.put({ owner, event: owner.shard.next(), })
+          shard_events.put(Shard(owner~, event=owner.shard.next()))
         }
       })
     }
@@ -664,9 +671,14 @@ pub async fn Bot::run(self : Bot) -> Unit {
       }
     }
     for ;; {
-      let incoming = shard_events.get()
-      let owner = incoming.owner
-      match incoming.event {
+      let (owner, event) = match shard_events.get() {
+        Shard(owner~, event~) => (owner, event)
+        IdentifyRefused(error) => {
+          close_shards(shard_handles)
+          raise error
+        }
+      }
+      match event {
         Dispatch(Ready(ready) as event) => {
           if self.cache_ is Some(cache) {
             cache.update(event)

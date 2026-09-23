@@ -45,7 +45,9 @@ bot. `/stop` disables alarms and removes the saved session because its graceful
 close code 1000 invalidates the Discord session. Restarted objects use the
 saved Gateway sequence and READY identity to process replayed events. This
 periodic snapshot does not guarantee exactly-once event handling or restore
-application-owned state or optional cache contents.
+application-owned state or optional cache contents. Each IDENTIFY first reads
+Discord's session start limit, so a restart loop stops with
+`SessionStartLimitExceeded` instead of exhausting the daily allowance.
 
 [Cloudflare's lifecycle documentation](https://developers.cloudflare.com/durable-objects/concepts/durable-object-lifecycle/)
 explains that outbound WebSockets prevent eviction for at most 15 minutes per

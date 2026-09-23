@@ -30,9 +30,10 @@ priv struct ManagedShard {
 }
 
 ///|
-priv struct ManagedShardEvent {
-  owner : ManagedShard
-  event : @gateway.ShardEvent
+priv enum ManagedShardEvent {
+  Shard(owner~ : ManagedShard, event~ : @gateway.ShardEvent)
+  /// A shard is held before IDENTIFY; `Bot::run` ends with this error.
+  IdentifyRefused(Error)
 }
 
 ///|
