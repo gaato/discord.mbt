@@ -1,19 +1,4 @@
 ///|
-/// Raised when a compressed Gateway stream cannot be initialized or decoded.
-pub(all) suberror InflateError {
-  InflateError(status~ : Int)
-  InvalidUtf8
-} derive(Debug)
-
-///|
-/// Stateful decoder seam for Gateway compression. Implementations retain one
-/// inflate context across messages. `None` means the Z_SYNC_FLUSH suffix has
-/// not arrived yet.
-pub(open) trait Inflater {
-  fn push(Self, Bytes) -> String? raise
-}
-
-///|
 priv type ZlibHandle
 
 ///|
@@ -74,4 +59,11 @@ impl Inflater for ZlibStreamInflater with fn push(self, bytes) {
 ///|
 fn new_zlib_stream_inflater() -> &Inflater raise {
   ZlibStreamInflater()
+}
+
+///|
+/// Whether this backend can inflate Discord's `zlib-stream` transport
+/// compression. True on native (zlib is loaded at runtime).
+pub fn zlib_stream_supported() -> Bool {
+  true
 }

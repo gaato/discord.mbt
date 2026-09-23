@@ -15,10 +15,13 @@ pub async fn connect_websocket(String) -> &GatewayTransport
 
 pub fn on_close(Int?, Bool) -> ReconnectPolicy
 
+pub fn zlib_stream_supported() -> Bool
+
 // Errors
 pub(all) suberror InflateError {
   InflateError(status~ : Int)
   InvalidUtf8
+  Unsupported
 } derive(@debug.Debug)
 
 pub(all) suberror TransportClosed {

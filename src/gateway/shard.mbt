@@ -223,6 +223,23 @@ async fn Shard::run(
       None => gateway_url
     }
     let compression_query = if compress { "&compress=zlib-stream" } else { "" }
+    let inflater = if compress {
+      Some(inflater_factory()) catch {
+        _ if @async.is_being_cancelled() => return
+        _ => {
+          self.state = FatallyClosed(code=0)
+          self.emit_telemetry(
+            ShardDisconnected(shard_id~, code=None, will_resume=false),
+          )
+          self.events.put(FatallyClosed(code=0)) catch {
+            _ => ()
+          }
+          break
+        }
+      }
+    } else {
+      None
+    }
     let transport = connector("\{base}/?v=10&encoding=json\{compression_query}") catch {
       _ if @async.is_being_cancelled() => return
       _ => {
@@ -239,7 +256,6 @@ async fn Shard::run(
       defer @async.protect_from_cancel(() => {
         self.finish_transport(transport, code=1000)
       })
-      let inflater = if compress { Some(inflater_factory()) } else { None }
       if compress {
         self.emit_telemetry(ShardCompressionEnabled(shard_id~))
       }
@@ -393,11 +409,7 @@ async fn Shard::run_connection(
             Json::number(shard_count.to_double()),
           ],
           "properties": {
-            "os": match @async.platform {
-              Linux => "linux"
-              MacOS => "darwin"
-              Windows => "windows"
-            },
+            "os": Json::string(identify_os()),
             "browser": "discord.mbt",
             "device": "discord.mbt",
           },

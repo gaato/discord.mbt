@@ -5,7 +5,7 @@ import {
   "gaato/discord/internal/clock",
   "moonbitlang/async",
   "moonbitlang/async/aqueue",
-  "moonbitlang/async/websocket",
+  "gaato/discord/internal/websocket",
   "moonbitlang/core/json",
   "moonbitlang/core/random",
   "moonbitlang/core/encoding/utf8",
@@ -21,22 +21,29 @@ import {
   "gaato/discord/internal/clock",
 } for "test"
 
-// This package is intentionally empty on non-native targets.
+// The gateway runs on native, JavaScript, and moonrun Wasm; zlib-stream compression is native-only.
 
 warnings = "-29"
+
+supported_targets = "js + native + wasm"
 
 options(
   "native-stub": [ "zlib_stream.c" ],
   targets: {
-    "command_limit.mbt": [ "native" ],
-    "command_limit_wbtest.mbt": [ "native" ],
+    "command_limit.mbt": [ "js", "native", "wasm" ],
+    "command_limit_wbtest.mbt": [ "js", "native", "wasm" ],
     "compression.mbt": [ "native" ],
+    "compression_unsupported.mbt": [ "js", "wasm" ],
     "compression_wbtest.mbt": [ "native" ],
-    "capabilities_test.mbt": [ "native" ],
-    "gateway_test.mbt": [ "native" ],
+    "capabilities_test.mbt": [ "js", "native", "wasm" ],
+    "gateway_js_test.mbt": [ "js" ],
+    "gateway_test.mbt": [ "js", "native", "wasm" ],
+    "inflater.mbt": [ "js", "native", "wasm" ],
     "pkg.generated.mbti": [ "native" ],
-    "shard.mbt": [ "native" ],
-    "state.mbt": [ "native" ],
-    "transport.mbt": [ "native" ],
+    "platform.js.mbt": [ "js" ],
+    "platform_native.mbt": [ "native", "wasm" ],
+    "shard.mbt": [ "js", "native", "wasm" ],
+    "state.mbt": [ "js", "native", "wasm" ],
+    "transport.mbt": [ "js", "native", "wasm" ],
   },
 )

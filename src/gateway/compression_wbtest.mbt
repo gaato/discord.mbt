@@ -2,6 +2,11 @@
 priv type TestDeflater
 
 ///|
+test "native zlib-stream support is available" {
+  assert_true(zlib_stream_supported())
+}
+
+///|
 extern "C" fn test_deflater_new() -> TestDeflater = "discord_gateway_test_deflater_new"
 
 ///|

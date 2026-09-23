@@ -103,7 +103,8 @@ run; the gateway/voice loops are additionally tested via injected sleepers):
 
 | File | Budget | Reason |
 | --- | --- | --- |
-| src/gateway/shard.mbt | 16 | Protected-shutdown and event-queue teardown catches, stale-transport and normal-return fallbacks, read-loop cancellation re-raise plumbing (async 0.22 cancellation does not pass through ordinary catches), and two OS-specific Identify properties unavailable on Linux. Malformed Hello/frame, compression-mismatch, connector/backoff, and disconnected-send arms are tested through the fake transport. |
+| src/gateway/shard.mbt | 14 | Protected-shutdown and event-queue teardown catches, stale-transport and normal-return fallbacks, and read-loop cancellation re-raise plumbing (async 0.22 cancellation does not pass through ordinary catches). Malformed Hello/frame, compression-mismatch, connector/backoff, and disconnected-send arms are tested through the fake transport. |
+| src/gateway/platform_native.mbt | 2 | Two OS-specific Identify property arms unavailable on Linux. |
 | src/gateway/compression.mbt | 3 | zlib failure statuses require a corrupted native stream state. |
 | src/ratelimit/ratelimit.mbt | 1 | Global-window sleep. |
 | src/http/handles_channel.mbt | 3 | `with_typing` refresh-failure arm sits behind the real 8-second cadence. |

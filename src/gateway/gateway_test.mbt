@@ -85,6 +85,33 @@ suberror GatewayTestFailure {
 }
 
 ///|
+async test "inflater factory failure is fatal before connecting" {
+  let calls = Ref(0)
+  let telemetry : Array[@telemetry.TelemetryEvent] = []
+  @async.with_task_group(group => {
+    let shard = @gateway.Shard::start(
+      group,
+      token="tok",
+      intents=@model.Intents::none(),
+      compress=true,
+      inflater_factory=() => raise GatewayTestFailure,
+      connector=_ => {
+        calls.val += 1
+        (FakeTransport() : &@gateway.GatewayTransport)
+      },
+      telemetry=event => telemetry.push(event),
+    )
+    guard! shard.next() is FatallyClosed(code=0)
+    assert_eq(shard.state(), FatallyClosed(code=0))
+    assert_eq(calls.val, 0)
+    assert_true(
+      telemetry.last()
+      is Some(ShardDisconnected(shard_id=0, code=None, will_resume=false)),
+    )
+  })
+}
+
+///|
 async test "shard rejects sends while connecting and cancels the connector" {
   let entered : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   let pending : @aqueue.Queue[&@gateway.GatewayTransport] = Queue(
