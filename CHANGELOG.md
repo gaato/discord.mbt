@@ -17,7 +17,9 @@ breaking change is listed with a migration note.
   metadata for replayed events before RESUMED.
 - `zlib_stream_supported()` reports Gateway compression availability.
 - The `workers_gateway` example runs a gateway bot in a Cloudflare Durable
-  Object with periodic session snapshots and alarm/cron recovery.
+  Object with periodic session snapshots and alarm/cron recovery. A deployed
+  run on 2026-09-23 answered `/ping` over the Gateway for 20 minutes without a
+  reconnect; see the example README.
 
 ### Changed
 

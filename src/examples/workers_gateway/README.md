@@ -57,12 +57,38 @@ message limit. [Workers WebSocket documentation](https://developers.cloudflare.c
 describes the outbound client API. JavaScript does not support this library's
 zlib-stream Gateway compression, so the example leaves it off.
 
+## Verified deployment
+
+This example was deployed to Cloudflare on 2026-09-23 with wrangler 4.136.3
+and run against Discord for 20 minutes. Observed:
+
+- `/start` opened the Gateway connection: Discord's `session_start_limit`
+  dropped by one IDENTIFY, and the global `/ping` command appeared after READY.
+- `/ping` from a Discord client returned `pong` twice, at 2 and 20 minutes
+  after start. Both arrived as `INTERACTION_CREATE` over the WebSocket and
+  were answered with a `204` interaction callback; the application had no
+  interactions endpoint URL configured.
+- The 30-second alarm fired 38 times with heartbeat latency logged at
+  165–169 ms. The five-minute cron reconciled four times. No disconnect,
+  resume, or exception was logged, and no second IDENTIFY was consumed, so the
+  outbound connection outlived the 15-minute eviction protection window.
+
+The object was then left running without log capture. Seventeen minutes
+later `/status` reported `running: false, enabled: true`, and twelve seconds
+after that `running: true`, while `session_start_limit` still showed the same
+single IDENTIFY. That is the alarm restarting an evicted object from its
+stored `BotSession` and resuming the Discord session. The telemetry of that
+restart was not captured: `wrangler tail` does not report the invocation that
+starts the bot while the bot is still running, so READY and RESUMED lines from
+`/start` or a restarting alarm never appear in the tail output. Enable
+Workers Logs in `wrangler.toml` if you need those lines after the fact.
+
 ## Test locally
 
 The local tests run inside workerd with fake WebSocket and REST endpoints. They
 use no real credentials or Discord requests. They cover saved-session
-restoration after a bot stops and starts again. Live object eviction still needs
-verification in a deployed environment; the local `evictDurableObject` helper
+restoration after a bot stops and starts again. Live object eviction has not
+been observed in a deployment yet; the local `evictDurableObject` helper
 stalled subsequent requests even for an empty object in this test setup.
 
 ```fish
