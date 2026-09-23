@@ -12,6 +12,7 @@ import {
   "gaato/discord/telemetry",
   "gaato/discord/voice",
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
 }
 
 // Values
@@ -29,7 +30,7 @@ pub impl Show for BotError
 pub struct Bot {
   // private fields
 }
-pub fn Bot::Bot(@app.App, token~ : String, intents? : @model.Intents, capabilities? : @model.GatewayCapabilities, client? : @http.Client, gateway_url? : String, shards? : ShardConfig, compress? : Bool, identify_queue? : &@queue.IdentifyQueue, sync? : @app.CommandScope, sync_unowned? : @framework.UnownedCommands, resume? : Map[Int, @gateway.Session]) -> Self
+pub fn Bot::Bot(@app.App, token~ : String, intents? : @model.Intents, capabilities? : @model.GatewayCapabilities, client? : @http.Client, gateway_url? : String, shards? : ShardConfig, compress? : Bool, identify_queue? : &@queue.IdentifyQueue, sync? : @app.CommandScope, sync_unowned? : @framework.UnownedCommands, resume? : Map[Int, BotSession]) -> Self
 pub fn Bot::attach_cache(Self, @cache.InMemoryCache) -> Unit
 pub fn Bot::middleware(Self, async (GatewayCtx, @model.Event, async (@model.Event) -> Unit) -> Unit) -> Unit
 pub fn[T] Bot::on(Self, EventType[T], async (GatewayCtx, T) -> Unit) -> Unit
@@ -38,7 +39,13 @@ pub fn Bot::on_event(Self, async (GatewayCtx, @model.Event) -> Unit) -> Unit
 pub fn Bot::on_telemetry(Self, (@telemetry.TelemetryEvent) -> Unit raise) -> Unit
 pub async fn Bot::run(Self) -> Unit
 pub fn Bot::service(Self, name~ : String, async (GatewayCtx) -> Unit) -> Unit
-pub fn Bot::sessions(Self) -> Map[Int, @gateway.Session]
+pub fn Bot::sessions(Self) -> Map[Int, BotSession]
+
+pub(all) struct BotSession {
+  gateway : @gateway.Session
+  ready : @model.Ready
+} derive(ToJson, @debug.Debug, @json.FromJson)
+pub fn BotSession::to_json(Self) -> Json
 
 pub struct EventType[T] {
   // private fields

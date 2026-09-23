@@ -66,7 +66,7 @@ pub struct Bot {
   priv gateway_url_ : String?
   priv shards_ : ShardConfig
   priv compress_ : Bool
-  priv resume_ : Map[Int, @gateway.Session]
+  priv resume_ : Map[Int, BotSession]
   priv running_shards_ : Ref[Array[ManagedShard]]
   priv identify_queue_ : &@queue.IdentifyQueue?
   priv sync_ : @app.CommandScope?
@@ -105,8 +105,10 @@ pub struct Bot {
 /// `sync_unowned=Keep` also preserves commands registered by other owners.
 /// Deletions are reported through the app's warning hook. In multi-process
 /// sharding, enable synchronization in exactly one process.
-/// `resume` seeds saved sessions per shard id so those shards RESUME instead
-/// of identifying (see `Bot::sessions`).
+/// `resume` seeds saved Bot sessions per shard id so those shards RESUME instead
+/// of identifying (see `Bot::sessions`). It restores gateway identity, not
+/// optional cache contents or application-owned state. `run` rejects a saved
+/// session whose gateway id disagrees with its READY session id.
 pub fn Bot::Bot(
   app : @app.App,
   token~ : String,
@@ -119,7 +121,7 @@ pub fn Bot::Bot(
   identify_queue? : &@queue.IdentifyQueue,
   sync? : @app.CommandScope,
   sync_unowned? : @framework.UnownedCommands = Delete,
-  resume? : Map[Int, @gateway.Session] = Map([]),
+  resume? : Map[Int, BotSession] = Map([]),
 ) -> Bot {
   {
     app_: app,
@@ -130,7 +132,13 @@ pub fn Bot::Bot(
     gateway_url_: gateway_url,
     shards_: shards,
     compress_: compress,
-    resume_: resume,
+    resume_: {
+      let snapshots : Map[Int, BotSession] = Map([])
+      for shard_id, snapshot in resume {
+        snapshots[shard_id] = clone_bot_session(snapshot)
+      }
+      snapshots
+    },
     running_shards_: Ref([]),
     identify_queue_: identify_queue,
     sync_: sync,
@@ -150,13 +158,17 @@ pub fn Bot::Bot(
 }
 
 ///|
-/// Live gateway sessions keyed by shard id, for persisting RESUME state.
-/// Empty while the bot is not running or before READY.
-pub fn Bot::sessions(self : Bot) -> Map[Int, @gateway.Session] {
-  let sessions : Map[Int, @gateway.Session] = Map([])
+/// Current resumable gateway state paired with READY metadata, keyed by shard
+/// id. A supplied snapshot is available while connecting; an unsaved shard
+/// appears after READY. Empty while the bot is not running. Returned values
+/// do not alias mutable runtime state.
+pub fn Bot::sessions(self : Bot) -> Map[Int, BotSession] {
+  let sessions : Map[Int, BotSession] = Map([])
   for owner in self.running_shards_.val {
-    if owner.shard.session() is Some(session) {
-      sessions[owner.id] = session
+    if owner.shard.session() is Some(gateway) &&
+      owner.context is Some(ctx) &&
+      gateway.id == ctx.ready_.session_id {
+      sessions[owner.id] = { gateway, ready: clone_ready(ctx.ready_), }
     }
   }
   sessions
@@ -504,6 +516,13 @@ pub async fn Bot::run(self : Bot) -> Unit {
       message="compress=true requires zlib-stream inflate, which this backend does not provide",
     )
   }
+  for shard_id, saved in self.resume_ {
+    if saved.gateway.id != saved.ready.session_id {
+      raise BotError::InvalidShardConfig(
+        message="saved session for shard \{shard_id} has mismatched gateway and READY session ids",
+      )
+    }
+  }
   let intents = self.resolved_intents()
   let owns_client = self.client_ is None
   let client = self.client_.unwrap_or_else(() => Client(self.token_))
@@ -553,6 +572,78 @@ pub async fn Bot::run(self : Bot) -> Unit {
     let shutdown_requested = Ref(false)
     let mut app_ctx : @app.AppCtx? = None
     let mut framework : @framework.Framework? = None
+    let initialize_context = (owner : ManagedShard, ready : @model.Ready) => {
+      if framework is None {
+        let router = @framework.Framework(client, ready.application.id)
+        let waiter : @app.ComponentWaiter = (custom_id, user, timeout_ms) => {
+          router.wait_for_component(custom_id~, user?, timeout_ms?)
+        }
+        let latency_ms = () => {
+          let mut total = 0L
+          let mut count = 0L
+          for shard in shard_handles {
+            if shard.latency_ms() is Some(latency) {
+              total += latency
+              count += 1L
+            }
+          }
+          if count == 0L {
+            None
+          } else {
+            Some(total / count)
+          }
+        }
+        let attached = self.app_.attach(
+          router,
+          client~,
+          application_id=ready.application.id,
+          waiter~,
+          latency_ms~,
+        )
+        app_ctx = Some(attached)
+        framework = Some(router)
+      }
+      guard app_ctx is Some(attached) && framework is Some(router) else {
+        abort("gateway runtime initialized without an application context")
+      }
+      match owner.context {
+        Some(existing) => {
+          existing.ready_ = ready
+          existing
+        }
+        None => {
+          let created = GatewayCtx::{
+            app_: attached,
+            ready_: ready,
+            intents_: intents,
+            shard_: owner.shard,
+            shards_: shard_handles,
+            cache_: self.cache_,
+            framework_: router,
+            collector_: self.collector_,
+            group_: group,
+            voice_: VoiceSessions::new(),
+            shutdown_requested_: shutdown_requested,
+          }
+          owner.context = Some(created)
+          created
+        }
+      }
+    }
+    // Prepare restored contexts before reading any replayed Gateway dispatch.
+    for owner in managed_shards {
+      if self.resume_.get(owner.id) is Some(saved) {
+        initialize_context(owner, clone_ready(saved.ready)) |> ignore
+      }
+    }
+    let mut services_started = false
+    let mut sync_done = false
+    let start_services = (ctx : GatewayCtx) => {
+      if !services_started {
+        services_started = true
+        self.spawn_services(group, ctx)
+      }
+    }
     for ;; {
       let incoming = shard_events.get()
       let owner = incoming.owner
@@ -561,64 +652,9 @@ pub async fn Bot::run(self : Bot) -> Unit {
           if self.cache_ is Some(cache) {
             cache.update(event)
           }
-          let first_ready = framework is None
-          if first_ready {
-            let router = @framework.Framework(client, ready.application.id)
-            let waiter : @app.ComponentWaiter = (custom_id, user, timeout_ms) => {
-              router.wait_for_component(custom_id~, user?, timeout_ms?)
-            }
-            let latency_ms = () => {
-              let mut total = 0L
-              let mut count = 0L
-              for shard in shard_handles {
-                if shard.latency_ms() is Some(latency) {
-                  total += latency
-                  count += 1L
-                }
-              }
-              if count == 0L {
-                None
-              } else {
-                Some(total / count)
-              }
-            }
-            let attached = self.app_.attach(
-              router,
-              client~,
-              application_id=ready.application.id,
-              waiter~,
-              latency_ms~,
-            )
-            app_ctx = Some(attached)
-            framework = Some(router)
-          }
-          guard app_ctx is Some(attached) && framework is Some(router) else {
-            abort("gateway runtime initialized without an application context")
-          }
-          let ctx = match owner.context {
-            Some(existing) => {
-              existing.ready_ = ready
-              existing
-            }
-            None => {
-              let created = GatewayCtx::{
-                app_: attached,
-                ready_: ready,
-                intents_: intents,
-                shard_: owner.shard,
-                shards_: shard_handles,
-                cache_: self.cache_,
-                framework_: router,
-                collector_: self.collector_,
-                group_: group,
-                voice_: VoiceSessions::new(),
-                shutdown_requested_: shutdown_requested,
-              }
-              owner.context = Some(created)
-              created
-            }
-          }
-          if first_ready {
+          let ctx = initialize_context(owner, ready)
+          if !sync_done {
+            sync_done = true
             match self.sync_ {
               Some(scope) => {
                 let report = self.app_.sync_commands(
@@ -641,8 +677,8 @@ pub async fn Bot::run(self : Bot) -> Unit {
               }
               None => ()
             }
-            self.spawn_services(group, ctx)
           }
+          start_services(ctx)
           self.collector_.dispatch(event)
           self.dispatch_event(spawner, ctx, event)
         }
@@ -652,6 +688,7 @@ pub async fn Bot::run(self : Bot) -> Unit {
           }
           match (owner.context, framework) {
             (Some(ctx), Some(router)) => {
+              start_services(ctx)
               self.collector_.dispatch(event)
               // Processing is another bounded child task. Awaiting it here
               // would deadlock handlers waiting for a later component event.
@@ -682,6 +719,7 @@ pub async fn Bot::run(self : Bot) -> Unit {
           self.observe_decode_error(event)
           match owner.context {
             Some(ctx) => {
+              start_services(ctx)
               self.collector_.dispatch(event)
               self.dispatch_event(spawner, ctx, event)
             }
@@ -691,7 +729,10 @@ pub async fn Bot::run(self : Bot) -> Unit {
               )
           }
         }
-        Connected(..) => ()
+        Connected(resumed~) =>
+          if resumed && owner.context is Some(ctx) {
+            start_services(ctx)
+          }
         Disconnected(..) => if shutdown_requested.val { break }
         FatallyClosed(code~) => {
           if shutdown_requested.val {

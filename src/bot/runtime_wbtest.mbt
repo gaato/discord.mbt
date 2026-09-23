@@ -89,59 +89,113 @@ const BOT_HELLO : String =
   #|{"op":10,"d":{"heartbeat_interval":60000}}
 
 ///|
-async test "bot resumes saved sessions and reports live sessions" {
+async test "bot restores context before replay and snapshots live sessions" {
   let transport = BotFakeTransport()
   let urls : Array[String] = []
   let app = @app.App()
-  let saved : @gateway.Session = {
-    id: "sess",
-    resume_url: "wss://resume.example",
-    sequence: 41L,
+  let commands : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  app.command(
+    @app.slash(
+      name="raw",
+      description="Raw command",
+      args=@interaction.Args::unit(),
+      handler=Raw(_ => commands.put(())),
+    ),
+  )
+  let client = @dhttp.Client("test-token")
+  defer client.close()
+  let rest_calls = Ref(0)
+  client.middleware((_request, _next) => {
+    rest_calls.val += 1
+    { status: 200, headers: Map([]), body: Json::array([]), }
+  })
+  guard @json.parse(bot_ready_frame()) is { "d": ready_json, .. } else {
+    fail("expected READY payload")
+  }
+  let ready : @model.Ready = @json.from_json(ready_json)
+  let saved : BotSession = {
+    gateway: {
+      id: ready.session_id,
+      resume_url: ready.resume_gateway_url,
+      sequence: 41L,
+    },
+    ready,
   }
   let bot = Bot(
     app,
     token="test-token",
-    intents=@model.Intents::guilds(),
+    intents=@model.Intents::guild_messages(),
+    client~,
     gateway_url="wss://gateway.example",
+    sync=Global,
     resume={ 0: saved },
   )
+  // Mutating caller-owned input after construction cannot alter the seed.
+  saved.gateway.sequence = 999L
+  saved.ready.guilds.push({ id: @model.Id::parse("999"), unavailable: true, })
   bot.connector_.val = Some(url => {
     urls.push(url)
     (transport : &@gateway.GatewayTransport)
   })
-  let resumed = Ref(false)
-  bot.on_telemetry(event => {
-    if event is @telemetry.ShardResumed(shard_id=0) {
-      resumed.val = true
-    }
+  let ready_calls = Ref(0)
+  bot.on(Events::ready(), (_, _) => ready_calls.val += 1)
+  let events : @aqueue.Queue[(GatewayCtx, String)] = Queue(kind=Unbounded)
+  bot.on(Events::message_delete(), (ctx, event) => {
+    events.put((ctx, event.id.to_string()))
   })
+  let service_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
+  bot.service(name="resume-service", ctx => service_contexts.put(ctx))
   assert_true(bot.sessions().is_empty())
-  let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
-  bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
   @async.with_task_group(group => {
     let running = group.spawn(no_wait=true, () => bot.run())
     transport.incoming.put(BOT_HELLO)
     guard transport.outgoing.get()
       is {
         "op": Number(6, ..),
-        "d": { "session_id": String("sess"), "seq": Number(41, ..), .. },
+        "d": { "session_id": String("sess-bot"), "seq": Number(41, ..), .. },
         ..
       } else {
-      fail("expected resume")
+      fail("expected saved RESUME")
     }
     assert_true(urls[0].has_prefix("wss://resume.example/?v=10"))
-    transport.incoming.put("{\"op\":0,\"t\":\"RESUMED\",\"s\":43,\"d\":{}}")
-    while !resumed.val {
-      @async.pause()
-    }
+    transport.incoming.put(message_delete_frame(42, "700"))
+    let (ctx, id) = events.get()
+    assert_eq(id, "700")
+    assert_eq(ctx.ready().session_id, "sess-bot")
+    let service_ctx = service_contexts.get()
+    assert_true(physical_equal(ctx, service_ctx))
+    transport.incoming.put(command_frame(43, "500000000000000701"))
+    commands.get()
+    assert_eq(ready_calls.val, 0)
+    assert_eq(rest_calls.val, 0)
+    transport.incoming.put("{\"op\":0,\"t\":\"RESUMED\",\"s\":44,\"d\":{}}")
+    transport.incoming.put(message_delete_frame(45, "701"))
+    let (post_ctx, post_id) = events.get()
+    assert_eq(post_id, "701")
+    assert_true(physical_equal(ctx, post_ctx))
+    assert_true(service_contexts.try_get() is None)
+    assert_eq(ready_calls.val, 0)
     let sessions = bot.sessions()
     guard sessions.get(0) is Some(session) else {
-      fail("expected live session")
+      fail("expected live BotSession")
     }
-    assert_eq(session.sequence, 43L)
-    // A READY provides a context through the existing shutdown seam.
-    transport.incoming.put(bot_ready_frame())
-    let ctx = ready_contexts.get()
+    assert_eq(session.gateway.sequence, 45L)
+    assert_eq(session.ready.session_id, "sess-bot")
+    assert_eq(session.ready.guilds.length(), 0)
+    let encoded = ToJson::to_json(session)
+    let decoded : BotSession = @json.from_json(encoded)
+    assert_eq(decoded.gateway.sequence, 45L)
+    assert_eq(decoded.ready.session_id, "sess-bot")
+    session.gateway.sequence = 777L
+    session.ready.guilds.push({
+      id: @model.Id::parse("998"),
+      unavailable: true,
+    })
+    guard bot.sessions().get(0) is Some(again) else {
+      fail("expected independent BotSession snapshot")
+    }
+    assert_eq(again.gateway.sequence, 45L)
+    assert_eq(again.ready.guilds.length(), 0)
     ctx.shutdown()
     running.wait()
     assert_true(bot.sessions().is_empty())
@@ -153,6 +207,169 @@ fn bot_ready_frame() -> String {
   (
     #|{"op":0,"s":1,"t":"READY","d":{"v":10,"user":{"id":"1","username":"bot","discriminator":"0","global_name":null,"avatar":null},"guilds":[],"session_id":"sess-bot","resume_gateway_url":"wss://resume.example","application":{"id":"42"},"shard":[0,1]}}
   )
+}
+
+///|
+fn bot_saved_session() -> BotSession raise {
+  guard @json.parse(bot_ready_frame()) is { "d": ready_json, .. } else {
+    fail("expected READY payload")
+  }
+  let ready : @model.Ready = @json.from_json(ready_json)
+  {
+    gateway: {
+      id: ready.session_id,
+      resume_url: ready.resume_gateway_url,
+      sequence: 41L,
+    },
+    ready,
+  }
+}
+
+///|
+async test "empty Bot replay starts services on RESUMED" {
+  let transport = BotFakeTransport()
+  let bot = Bot(
+    @app.App(),
+    token="test-token",
+    gateway_url="wss://gateway.example",
+    resume={ 0: bot_saved_session() },
+  )
+  bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  let service_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
+  bot.service(name="empty-replay-service", ctx => service_contexts.put(ctx))
+  let ready_calls = Ref(0)
+  bot.on(Events::ready(), (_, _) => ready_calls.val += 1)
+  @async.with_task_group(group => {
+    let running = group.spawn(no_wait=true, () => bot.run())
+    transport.incoming.put(BOT_HELLO)
+    guard transport.outgoing.get() is { "op": Number(6, ..), .. } else {
+      fail("expected RESUME")
+    }
+    assert_true(service_contexts.try_get() is None)
+    transport.incoming.put("{\"op\":0,\"t\":\"RESUMED\",\"s\":42,\"d\":{}}")
+    let ctx = service_contexts.get()
+    assert_eq(ctx.ready().session_id, "sess-bot")
+    assert_eq(ready_calls.val, 0)
+    ctx.shutdown()
+    running.wait()
+  })
+}
+
+///|
+async test "bot rejects mismatched saved session before REST or connector" {
+  let saved = bot_saved_session()
+  let bad : BotSession = {
+    gateway: {
+      id: "different",
+      resume_url: saved.gateway.resume_url,
+      sequence: 41L,
+    },
+    ready: saved.ready,
+  }
+  let client = @dhttp.Client("test-token")
+  defer client.close()
+  let rest_calls = Ref(0)
+  let connector_calls = Ref(0)
+  client.middleware((_request, _next) => {
+    rest_calls.val += 1
+    fail("mismatched session reached REST")
+  })
+  let bot = Bot(
+    @app.App(),
+    token="test-token",
+    client~,
+    gateway_url="wss://gateway.example",
+    resume={ 0: bad },
+  )
+  bot.connector_.val = Some(_ => {
+    connector_calls.val += 1
+    fail("mismatched session reached connector")
+  })
+  try bot.run() catch {
+    InvalidShardConfig(message~) =>
+      inspect(
+        message,
+        content="saved session for shard 0 has mismatched gateway and READY session ids",
+      )
+    error => fail("unexpected snapshot error: \{Repr(error)}")
+  } noraise {
+    _ => fail("mismatched snapshot unexpectedly ran")
+  }
+  assert_eq(rest_calls.val, 0)
+  assert_eq(connector_calls.val, 0)
+}
+
+///|
+async test "rejected Bot resume uses the next actual READY" {
+  let first = BotFakeTransport()
+  let second = BotFakeTransport()
+  let urls : Array[String] = []
+  let connected : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  let app = @app.App()
+  let client = @dhttp.Client("test-token")
+  defer client.close()
+  let sync_calls = Ref(0)
+  client.middleware((_request, _next) => {
+    sync_calls.val += 1
+    { status: 200, headers: Map([]), body: Json::array([]), }
+  })
+  let bot = Bot(
+    app,
+    token="test-token",
+    client~,
+    gateway_url="wss://gateway.example",
+    sync=Global,
+    resume={ 0: bot_saved_session() },
+  )
+  bot.connector_.val = Some(url => {
+    urls.push(url)
+    if urls.length() == 1 {
+      (first : &@gateway.GatewayTransport)
+    } else {
+      connected.put(())
+      (second : &@gateway.GatewayTransport)
+    }
+  })
+  let ready_calls = Ref(0)
+  let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
+  bot.on(Events::ready(), (ctx, _) => {
+    ready_calls.val += 1
+    ready_contexts.put(ctx)
+  })
+  let service_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
+  bot.service(name="new-ready-service", ctx => service_contexts.put(ctx))
+  @async.with_task_group(group => {
+    let running = group.spawn(no_wait=true, () => bot.run())
+    first.incoming.put(BOT_HELLO)
+    guard first.outgoing.get() is { "op": Number(6, ..), .. } else {
+      fail("expected saved RESUME")
+    }
+    first.incoming.put("{\"op\":9,\"d\":false}")
+    connected.get()
+    assert_eq(ready_calls.val, 0)
+    assert_eq(sync_calls.val, 0)
+    assert_true(bot.sessions().is_empty())
+    assert_true(urls[1].has_prefix("wss://gateway.example/?v=10"))
+    second.incoming.put(BOT_HELLO)
+    guard second.outgoing.get() is { "op": Number(2, ..), .. } else {
+      fail("expected Identify after invalid session")
+    }
+    second.incoming.put(
+      bot_ready_frame().replace(old="sess-bot", new="new-session"),
+    )
+    let ctx = ready_contexts.get()
+    assert_eq(ctx.ready().session_id, "new-session")
+    assert_eq(ready_calls.val, 1)
+    assert_true(sync_calls.val > 0)
+    assert_true(physical_equal(ctx, service_contexts.get()))
+    guard bot.sessions().get(0) is Some(live) else {
+      fail("expected new session snapshot")
+    }
+    assert_eq(live.gateway.id, "new-session")
+    assert_eq(live.ready.session_id, "new-session")
+    ctx.shutdown()
+    running.wait()
+  })
 }
 
 ///|

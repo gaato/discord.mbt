@@ -225,6 +225,7 @@ async fn Shard::run(
   rand~ : @random.Rand,
 ) -> Unit noraise {
   let mut attempts = 0
+  let mut consecutive_connector_failures = 0
   while !self.closing {
     if attempts > 0 {
       // full-jitter exponential backoff, capped at 30s
@@ -262,8 +263,9 @@ async fn Shard::run(
       _ if @async.is_being_cancelled() => return
       _ => {
         attempts += 1
+        consecutive_connector_failures += 1
         // A persisted resume_url can point at a dead host; fall back to gateway_url.
-        if attempts >= 3 && self.session is Some(_) {
+        if consecutive_connector_failures >= 3 && self.session is Some(_) {
           self.session = None
         }
         self.state = Disconnected(reconnect_attempts=attempts)
@@ -273,6 +275,7 @@ async fn Shard::run(
         continue
       }
     }
+    consecutive_connector_failures = 0
     self.transport = Some(transport)
     let ended = try {
       defer @async.protect_from_cancel(() => {

@@ -140,6 +140,8 @@ pub using @bot {type Bot}
 
 pub using @bot {type BotError}
 
+pub using @bot {type BotSession}
+
 pub using @app {type CheckCtx}
 
 pub using @http {type Client}

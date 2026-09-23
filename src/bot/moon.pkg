@@ -8,6 +8,7 @@ import {
   "gaato/discord/framework",
   "gaato/discord/app",
   "gaato/discord/voice",
+  "moonbitlang/core/json",
   "moonbitlang/async",
   "moonbitlang/async/aqueue",
 }
@@ -50,6 +51,8 @@ options(
     "bot_voice_wbtest.mbt": [ "native" ],
     "pkg.generated.mbti": [ "native" ],
     "runtime_wbtest.mbt": [ "js", "native", "wasm" ],
+    "session.mbt": [ "js", "native", "wasm" ],
+    "session_test.mbt": [ "js", "native", "wasm" ],
     "shard_manager.mbt": [ "js", "native", "wasm" ],
     "shard_manager_wbtest.mbt": [ "js", "native", "wasm" ],
   },

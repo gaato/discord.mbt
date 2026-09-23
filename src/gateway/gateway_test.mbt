@@ -495,6 +495,52 @@ async test "stale resume url falls back to identify after three connector failur
 }
 
 ///|
+async test "successful connector resets stale-host fallback failure count" {
+  let first = FakeTransport()
+  let fallback = FakeTransport()
+  let urls : Array[String] = []
+  let first_connected : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  let fallback_connected : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  @async.with_task_group(group => {
+    let shard = @gateway.Shard::start(
+      group,
+      token="tok",
+      intents=@model.Intents::none(),
+      gateway_url="wss://gateway.example",
+      resume={ id: "sess", resume_url: "wss://resume.example", sequence: 41L, },
+      connector=url => {
+        urls.push(url)
+        match urls.length() {
+          2 => {
+            first_connected.put(())
+            (first : &@gateway.GatewayTransport)
+          }
+          6 => {
+            fallback_connected.put(())
+            (fallback : &@gateway.GatewayTransport)
+          }
+          _ => raise GatewayTestFailure
+        }
+      },
+      sleeper=_ => (),
+    )
+    first_connected.get()
+    first.incoming.put(HELLO)
+    guard! first.outgoing.get() is { "op": Number(6, ..), .. }
+    first.server_close(Some(1001))
+    fallback_connected.get()
+    assert_eq(urls.length(), 6)
+    for i in 0..<5 {
+      assert_true(urls[i].has_prefix("wss://resume.example/?v=10"))
+    }
+    assert_true(urls[5].has_prefix("wss://gateway.example/?v=10"))
+    fallback.incoming.put(HELLO)
+    guard! fallback.outgoing.get() is { "op": Number(2, ..), .. }
+    shard.close()
+  })
+}
+
+///|
 test "session json round trip" {
   let session : @gateway.Session = {
     id: "sess",

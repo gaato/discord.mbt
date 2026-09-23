@@ -2,6 +2,7 @@
 /// Gateway executor and typed event descriptors (native, JavaScript, Wasm).
 pub using @bot {
   type Bot,
+  type BotSession,
   type GatewayCtx,
   type EventType,
   type Events,
