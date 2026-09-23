@@ -35,8 +35,9 @@ breaking change is listed with a migration note.
 - The `workers_gateway` example runs a gateway bot in a Cloudflare Durable
   Object with periodic session snapshots and alarm/cron recovery. A deployed
   run on 2026-09-23 answered `/ping` over the Gateway, resumed its session
-  after an eviction and after a redeploy, and re-identified once when Discord
-  rejected a RESUME; see the example README.
+  after an eviction and after a redeploy, and re-identified through the
+  session start limit check when Discord rejected a RESUME; see the example
+  README.
 - `InteractionHttpRequest`, `InteractionHttpBody`, `InteractionHttpResponse`,
   and `InteractionEndpoint::handle_signed_http`: one host-independent entry
   point that verifies the raw request bytes, decodes one interaction, and

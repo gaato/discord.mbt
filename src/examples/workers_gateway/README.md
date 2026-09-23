@@ -91,9 +91,14 @@ command sync). `GET /gateway/bot` afterwards showed two IDENTIFYs consumed for
 the day: the initial `/start` and this fallback. Heartbeat latency stayed at
 162–173 ms across 679 alarms and 71 cron reconciles, with no exception.
 Deploying a new Worker version moved the object to the new code within two
-minutes; heartbeats continued without a further IDENTIFY, which only a
-successful RESUME from the stored snapshot explains, although no telemetry
-line for that restart appeared in the tail within 40 minutes.
+minutes; the restarting alarm logged `ShardResumed`, so the stored snapshot
+carried the session across the deploy without an IDENTIFY. An hour later
+Discord closed that session too, the RESUME was rejected, and the fallback
+IDENTIFY first read `GET /gateway/bot` (200 in 369 ms) before
+`ShardIdentified`, which is the session start limit check that `Bot` performs
+before every IDENTIFY. `/stop` then logged a graceful close with code 1000 and
+`/start` identified again; the limit reported one IDENTIFY consumed for each
+of those fallbacks and starts.
 
 Reading the tail needs two cautions. Every alarm invocation reports about 30
 seconds of wall time because the bot's log lines are attributed to the most
@@ -101,9 +106,10 @@ recent invocation until the next event arrives, and an alarm that lands in
 the same second as the cron reconcile ends with outcome `canceled`; neither
 reflects work or failure. The records that carry connection events
 (`ShardConnecting`, `ShardResumed`, `ShardIdentified`) arrived 20–40 minutes
-after their timestamps, and the `/start` request that first started the bot
-logged no READY line at all. The example therefore enables Workers Logs in
-`wrangler.toml`; read startup and reconnect telemetry there instead.
+after their timestamps, and a `/start` request logs no READY line at all
+because the bot outlives that invocation. The example therefore enables
+Workers Logs in `wrangler.toml`; read startup and reconnect telemetry there
+instead.
 
 ## Test locally
 
