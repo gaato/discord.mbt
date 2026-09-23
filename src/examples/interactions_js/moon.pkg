@@ -1,16 +1,9 @@
 import {
   "gaato/discord",
-  "gaato/discord/http" @dhttp,
   "gaato/discord/model",
   "moonbitlang/async",
-  "moonbitlang/async/aqueue",
   "moonbitlang/async/js_async",
-  "moonbitlang/core/json",
 }
-
-import {
-  "moonbitlang/async",
-} for "test"
 
 // The shared App also builds on native for command registration.
 
@@ -19,11 +12,6 @@ warnings = "-29"
 supported_targets = "js + native"
 
 options(
-  link: {
-    "js": {
-      "exports": ["start_signed_interaction"],
-      "format": "esm",
-    },
-  },
-  targets: { "worker.mbt": [ "js" ], "worker_wbtest.mbt": [ "js" ] },
+  link: { "js": { "exports": [ "start_signed_interaction" ], "format": "esm" } },
+  targets: { "worker.mbt": [ "js" ] },
 )
