@@ -7,6 +7,8 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-09-24
+
 ### Added
 
 - The Deno and Cloudflare Workers interaction adapters now share one MoonBit
