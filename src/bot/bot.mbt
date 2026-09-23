@@ -7,8 +7,9 @@ pub(all) suberror BotError {
   /// A shard id/count selection cannot be represented by Discord's sharding
   /// rules.
   InvalidShardConfig(message~ : String)
-  /// Starting every selected shard would exceed the current identify session
-  /// allowance returned by `GET /gateway/bot`.
+  /// Identifying every selected shard without a saved session would exceed
+  /// the current identify session allowance returned by `GET /gateway/bot`.
+  /// `required` counts only those shards: a saved session sends RESUME first.
   SessionStartLimitExceeded(
     required~ : Int,
     remaining~ : Int,

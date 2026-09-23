@@ -238,7 +238,9 @@ test "event and shard declarations compile" {
 Every shard feeds the same handlers, cache, and collectors. Identify calls are
 serialized according to the `max_concurrency` rules Discord returns from
 `GET /gateway/bot`, and startup fails early if the remaining session-start
-allowance cannot cover the selected shards. For multiple processes, use the
+allowance cannot cover the selected shards that have no saved session. A
+saved session sends RESUME, which does not consume that allowance, although a
+rejected RESUME still falls back to IDENTIFY. For multiple processes, use the
 bundled coordinator described in
 [Scaling across processes](08-scaling-processes.mbt.md).
 

@@ -158,7 +158,47 @@ async test "shard config resolves auto fixed and range selections" {
   } noraise {
     _ => fail("expected session start limit failure")
   }
+
+  // A saved session RESUMEs instead of identifying, so it is not counted.
+  let saved = manager_bot_session(0, 2)
+  let resumed = Bot(app, token="test-token", shards=Fixed(count=2), resume={
+    0: saved,
+  })
+  resumed.gateway_bot_info_.val = Some(manager_gateway_info(remaining=1))
+  let resumed_config = resumed.resolve_shards(client)
+  debug_inspect(
+    (resumed_config.ids, resumed_config.count),
+    content="([0, 1], 2)",
+  )
+  let exhausted = Bot(app, token="test-token", shards=Fixed(count=2), resume={
+    0: saved,
+  })
+  exhausted.gateway_bot_info_.val = Some(manager_gateway_info(remaining=0))
+  try exhausted.resolve_shards(client) catch {
+    SessionStartLimitExceeded(required=1, remaining=0, reset_after_ms=60000L) =>
+      ()
+    error => fail("unexpected error: \{error}")
+  } noraise {
+    _ => fail("expected session start limit failure for the unsaved shard")
+  }
   client.close()
+}
+
+///|
+fn manager_bot_session(shard_id : Int, shard_count : Int) -> BotSession raise {
+  guard @json.parse(manager_ready_frame(shard_id, shard_count))
+    is { "d": ready_json, .. } else {
+    fail("expected READY payload")
+  }
+  let ready : @model.Ready = @json.from_json(ready_json)
+  {
+    gateway: {
+      id: ready.session_id,
+      resume_url: ready.resume_gateway_url,
+      sequence: 1L,
+    },
+    ready,
+  }
 }
 
 ///|

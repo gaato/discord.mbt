@@ -152,9 +152,12 @@ async fn Bot::resolve_shards(
           message="gateway max_concurrency must be positive",
         )
       }
-      if ids.length() > info.session_start_limit.remaining {
+      // A shard with a saved session sends RESUME, which does not consume the
+      // identify allowance; only a rejected RESUME falls back to IDENTIFY.
+      let required = ids.filter(id => !self.resume_.contains(id)).length()
+      if required > info.session_start_limit.remaining {
         raise BotError::SessionStartLimitExceeded(
-          required=ids.length(),
+          required~,
           remaining=info.session_start_limit.remaining,
           reset_after_ms=info.session_start_limit.reset_after,
         )
