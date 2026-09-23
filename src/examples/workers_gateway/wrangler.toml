@@ -18,3 +18,8 @@ new_sqlite_classes = ["GatewayShard"]
 
 [triggers]
 crons = ["*/5 * * * *"]
+
+# Workers Logs keeps the bot startup and reconnect telemetry that
+# `wrangler tail` delivers late or not at all.
+[observability]
+enabled = true

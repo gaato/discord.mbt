@@ -102,8 +102,8 @@ the same second as the cron reconcile ends with outcome `canceled`; neither
 reflects work or failure. The records that carry connection events
 (`ShardConnecting`, `ShardResumed`, `ShardIdentified`) arrived 20–40 minutes
 after their timestamps, and the `/start` request that first started the bot
-logged no READY line at all. Enable Workers Logs in `wrangler.toml` when you
-need startup telemetry reliably.
+logged no READY line at all. The example therefore enables Workers Logs in
+`wrangler.toml`; read startup and reconnect telemetry there instead.
 
 ## Test locally
 
