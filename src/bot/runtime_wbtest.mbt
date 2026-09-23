@@ -266,6 +266,75 @@ async test "bot reports supplied sessions while resolving shards" {
 }
 
 ///|
+async test "bot identifies instead of resuming a session from another shard layout" {
+  let transport = BotFakeTransport()
+  let app = @app.App()
+  let warnings : Array[String] = []
+  app.on_warn(message => warnings.push(message))
+  let client = @dhttp.Client("test-token")
+  defer client.close()
+  client.middleware((_request, _next) => {
+    status: 200,
+    headers: Map([]),
+    body: Json::array([]),
+  })
+  guard @json.parse(
+      bot_ready_frame().replace(old="\"shard\":[0,1]", new="\"shard\":[0,2]"),
+    )
+    is { "d": ready_json, .. } else {
+    fail("expected READY payload")
+  }
+  let ready : @model.Ready = @json.from_json(ready_json)
+  let saved : BotSession = {
+    gateway: {
+      id: ready.session_id,
+      resume_url: ready.resume_gateway_url,
+      sequence: 41L,
+    },
+    ready,
+  }
+  let bot = Bot(
+    app,
+    token="test-token",
+    intents=@model.Intents::guild_messages(),
+    client~,
+    gateway_url="wss://gateway.example",
+    resume={ 0: saved },
+  )
+  bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
+  bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
+  @async.with_task_group(group => {
+    let running = group.spawn(no_wait=true, () => bot.run())
+    transport.incoming.put(BOT_HELLO)
+    guard transport.outgoing.get()
+      is {
+        "op": Number(2, ..),
+        "d": { "shard": [Number(0, ..), Number(1, ..)], .. },
+        ..
+      } else {
+      fail("expected IDENTIFY for the resolved layout")
+    }
+    assert_true(bot.sessions().is_empty())
+    transport.incoming.put(bot_ready_frame())
+    let ctx = ready_contexts.get()
+    assert_eq(ctx.ready().session_id, "sess-bot")
+    guard bot.sessions().get(0) is Some(live) else {
+      fail("expected the new session snapshot")
+    }
+    assert_eq(live.ready.shard, Some([0, 1]))
+    ctx.shutdown()
+    running.wait()
+  })
+  inspect(
+    warnings.join("\n"),
+    content=(
+      #|ignoring saved session for shard 0: its READY was recorded for shard [0, 2] but the bot resolved shard [0, 1], so the shard identifies instead
+    ),
+  )
+}
+
+///|
 fn bot_ready_frame() -> String {
   (
     #|{"op":0,"s":1,"t":"READY","d":{"v":10,"user":{"id":"1","username":"bot","discriminator":"0","global_name":null,"avatar":null},"guilds":[],"session_id":"sess-bot","resume_gateway_url":"wss://resume.example","application":{"id":"42"},"shard":[0,1]}}

@@ -240,7 +240,9 @@ serialized according to the `max_concurrency` rules Discord returns from
 `GET /gateway/bot`, and startup fails early if the remaining session-start
 allowance cannot cover the selected shards that have no saved session. A
 saved session sends RESUME, which does not consume that allowance, although a
-rejected RESUME still falls back to IDENTIFY. For multiple processes, use the
+rejected RESUME still falls back to IDENTIFY. A saved session whose READY was
+recorded under another shard layout is dropped with a warning because its
+RESUME would keep the old guild assignment. For multiple processes, use the
 bundled coordinator described in
 [Scaling across processes](08-scaling-processes.mbt.md).
 

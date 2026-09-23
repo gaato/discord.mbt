@@ -18,6 +18,8 @@ priv struct ResolvedShardConfig {
   count : Int
   gateway_url : String
   max_concurrency : Int
+  /// Saved sessions that fit this layout, keyed by shard id.
+  resume : Map[Int, BotSession]
 }
 
 ///|
@@ -75,6 +77,7 @@ fn[X] Bot::start_managed_shard(
   shard_count~ : Int,
   identify_queue~ : &@queue.IdentifyQueue,
   event_filter~ : (@model.EventKind) -> Bool,
+  resume? : @gateway.Session,
 ) -> @gateway.Shard {
   match self.connector_.val {
     Some(connector) =>
@@ -91,7 +94,7 @@ fn[X] Bot::start_managed_shard(
         connector~,
         compress=self.compress_,
         telemetry=event => self.emit_telemetry(event),
-        resume?=self.resume_.get(shard_id).map(snapshot => snapshot.gateway),
+        resume?,
       )
     None =>
       @gateway.Shard::start(
@@ -106,7 +109,7 @@ fn[X] Bot::start_managed_shard(
         event_filter~,
         compress=self.compress_,
         telemetry=event => self.emit_telemetry(event),
-        resume?=self.resume_.get(shard_id).map(snapshot => snapshot.gateway),
+        resume?,
       )
   }
 }
@@ -124,7 +127,13 @@ async fn Bot::resolve_shards(
         Some(url) => url
         None => client.get_gateway()
       }
-      { ids, count, gateway_url, max_concurrency: 1, }
+      {
+        ids,
+        count,
+        gateway_url,
+        max_concurrency: 1,
+        resume: self.sessions_for_layout(ids, count),
+      }
     }
     Auto | Fixed(_) | Range(..) => {
       let info = self.gateway_bot_info(client)
@@ -152,9 +161,10 @@ async fn Bot::resolve_shards(
           message="gateway max_concurrency must be positive",
         )
       }
+      let resume = self.sessions_for_layout(ids, count)
       // A shard with a saved session sends RESUME, which does not consume the
       // identify allowance; only a rejected RESUME falls back to IDENTIFY.
-      let required = ids.filter(id => !self.resume_.contains(id)).length()
+      let required = ids.filter(id => !resume.contains(id)).length()
       if required > info.session_start_limit.remaining {
         raise BotError::SessionStartLimitExceeded(
           required~,
@@ -167,9 +177,36 @@ async fn Bot::resolve_shards(
         count,
         gateway_url: self.gateway_url_.unwrap_or(info.url),
         max_concurrency: info.session_start_limit.max_concurrency,
+        resume,
       }
     }
   }
+}
+
+///|
+/// The saved sessions usable for the selected shards. A RESUME keeps the
+/// guild assignment of the READY it was recorded under, so a snapshot from
+/// another shard layout is dropped with a warning and its shard identifies.
+fn Bot::sessions_for_layout(
+  self : Bot,
+  ids : Array[Int],
+  count : Int,
+) -> Map[Int, BotSession] {
+  let usable : Map[Int, BotSession] = Map([])
+  for id in ids {
+    guard self.resume_.get(id) is Some(saved) else { continue }
+    let recorded = saved.ready.shard.unwrap_or([0, 1])
+    if recorded is [recorded_id, recorded_count] &&
+      recorded_id == id &&
+      recorded_count == count {
+      usable[id] = saved
+    } else {
+      self.app_.warn(
+        "ignoring saved session for shard \{id}: its READY was recorded for shard [\{recorded.map(part => part.to_string()).join(", ")}] but the bot resolved shard [\{id}, \{count}], so the shard identifies instead",
+      )
+    }
+  }
+  usable
 }
 
 ///|

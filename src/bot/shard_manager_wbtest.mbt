@@ -181,6 +181,28 @@ async test "shard config resolves auto fixed and range selections" {
   } noraise {
     _ => fail("expected session start limit failure for the unsaved shard")
   }
+
+  // A snapshot recorded under another shard count cannot RESUME this layout.
+  let foreign_app = @app.App()
+  let warnings : Array[String] = []
+  foreign_app.on_warn(message => warnings.push(message))
+  let foreign = Bot(foreign_app, token="test-token", shards=Fixed(count=2), resume={
+    0: manager_bot_session(0, 3),
+  })
+  foreign.gateway_bot_info_.val = Some(manager_gateway_info(remaining=1))
+  try foreign.resolve_shards(client) catch {
+    SessionStartLimitExceeded(required=2, remaining=1, reset_after_ms=60000L) =>
+      ()
+    error => fail("unexpected error: \{error}")
+  } noraise {
+    _ => fail("expected the foreign snapshot to count as an identify")
+  }
+  inspect(
+    warnings.join("\n"),
+    content=(
+      #|ignoring saved session for shard 0: its READY was recorded for shard [0, 3] but the bot resolved shard [0, 2], so the shard identifies instead
+    ),
+  )
   client.close()
 }
 

@@ -163,9 +163,10 @@ pub fn Bot::Bot(
 ///|
 /// Current resumable gateway state paired with READY metadata, keyed by shard
 /// id. A supplied snapshot is available from the start of `run` until its
-/// shard replaces or invalidates it, including while `run` still resolves the
-/// shard layout over REST; an unsaved shard appears after READY. Empty while
-/// the bot is not running. Returned values do not alias mutable runtime state.
+/// shard replaces, drops, or invalidates it, including while `run` still
+/// resolves the shard layout over REST; an unsaved shard appears after READY.
+/// Empty while the bot is not running. Returned values do not alias mutable
+/// runtime state.
 pub fn Bot::sessions(self : Bot) -> Map[Int, BotSession] {
   let sessions : Map[Int, BotSession] = Map([])
   if self.starting_.val {
@@ -567,6 +568,7 @@ pub async fn Bot::run(self : Bot) -> Unit {
         shard_count=resolved.count,
         identify_queue~,
         event_filter=filter,
+        resume?=resolved.resume.get(shard_id).map(snapshot => snapshot.gateway),
       )
       managed_shards.push({ id: shard_id, shard, context: None, })
       shard_handles.push(shard)
@@ -649,7 +651,7 @@ pub async fn Bot::run(self : Bot) -> Unit {
     }
     // Prepare restored contexts before reading any replayed Gateway dispatch.
     for owner in managed_shards {
-      if self.resume_.get(owner.id) is Some(saved) {
+      if resolved.resume.get(owner.id) is Some(saved) {
         initialize_context(owner, clone_ready(saved.ready)) |> ignore
       }
     }
