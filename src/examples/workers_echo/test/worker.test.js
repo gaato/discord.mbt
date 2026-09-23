@@ -74,6 +74,7 @@ async function dispatch(request, env = {}) {
     {
       DISCORD_PUBLIC_KEY: publicKeyHex,
       DISCORD_TOKEN: "test-token",
+      DISCORD_APPLICATION_ID: "400000000000000001",
       ...env,
     },
     ctx,
@@ -118,7 +119,7 @@ describe("Cloudflare Worker interaction endpoint", () => {
   it("rejects non-POST methods", async () => {
     const { ctx, response } = await dispatch(new Request(workerUrl));
     expect(response.status).toBe(405);
-    expect(await response.text()).toBe("Method Not Allowed");
+    expect(await response.text()).toBe("method not allowed");
     await waitOnExecutionContext(ctx);
   });
 
@@ -144,14 +145,14 @@ describe("Cloudflare Worker interaction endpoint", () => {
   it("maps invalid JSON and structurally invalid interactions to 400", async () => {
     const invalidJson = await dispatch(await signedRequest("{"));
     expect(invalidJson.response.status).toBe(400);
-    expect(await invalidJson.response.text()).toBe("Invalid JSON");
+    expect(await invalidJson.response.text()).toBe("invalid interaction JSON");
 
     const invalidInteraction = await dispatch(
       await signedRequest('{"type":2}'),
     );
     expect(invalidInteraction.response.status).toBe(400);
     expect(await invalidInteraction.response.text()).toBe(
-      "Invalid interaction payload",
+      "invalid interaction JSON",
     );
     await waitOnExecutionContext(invalidInteraction.ctx);
   });
@@ -162,7 +163,7 @@ describe("Cloudflare Worker interaction endpoint", () => {
       await signedRequest(invalidUtf8),
     );
     expect(response.status).toBe(400);
-    expect(await response.text()).toBe("Invalid JSON");
+    expect(await response.text()).toBe("invalid UTF-8 body");
     await waitOnExecutionContext(ctx);
   });
 
@@ -213,7 +214,7 @@ describe("Cloudflare Worker interaction endpoint", () => {
     const body = commandBody("missing");
     const { ctx, response } = await dispatch(await signedRequest(body));
     expect(response.status).toBe(404);
-    expect(await response.text()).toBe("No interaction route");
+    expect(await response.text()).toBe("not found");
     await waitOnExecutionContext(ctx);
   });
 
@@ -332,15 +333,22 @@ describe("Cloudflare Worker interaction endpoint", () => {
 
   it("rejects a pre-aborted response waiter but completes the background", async () => {
     const moonbit = await import(
-      "../../../../_build/js/release/build/examples/workers_echo/workers_echo.js"
+      "../../../../_build/js/release/build/examples/interactions_js/interactions_js.js"
     );
     const controller = new AbortController();
     controller.abort();
-    const dispatchResult = moonbit.start_interaction(
+    const signed = await signedRequest(commandBody("echo", [
+      { name: "text", type: 3, value: "already aborted" },
+    ]));
+    const dispatchResult = moonbit.start_signed_interaction(
       "test-token",
-      commandBody("echo", [
-        { name: "text", type: 3, value: "already aborted" },
-      ]),
+      "400000000000000001",
+      publicKeyHex,
+      "POST",
+      signed.headers.get("x-signature-ed25519"),
+      timestamp,
+      new Uint8Array(await signed.arrayBuffer()),
+      "https://discord.com",
       controller.signal,
     );
     await expect(dispatchResult.response).rejects.toMatchObject({

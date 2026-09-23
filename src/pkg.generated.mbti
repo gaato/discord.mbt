@@ -202,6 +202,12 @@ pub using @app {type InteractionEndpoint}
 
 pub using @app {type InteractionHandler}
 
+pub using @app {type InteractionHttpBody}
+
+pub using @app {type InteractionHttpRequest}
+
+pub using @app {type InteractionHttpResponse}
+
 pub using @app {type InteractionOutcome}
 
 pub using @verify {type InteractionVerifier}

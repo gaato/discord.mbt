@@ -9,6 +9,14 @@ breaking change is listed with a migration note.
 
 ### Added
 
+- The Deno and Cloudflare Workers interaction adapters now share one MoonBit
+  JavaScript `App` artifact; a Spin 4.1 WASIp2 experiment verifies signed PING
+  and immediate echo through a Component Model handler.
+- The shared interaction handler now runs in Node.js and Bun tests; a Vercel
+  Node.js Function adapter passes deferred work to `waitUntil`, and a Bun
+  adapter serves signed interactions over HTTP.
+- Fastly `FetchEvent` and Lambda Function URL entry point experiments exercise
+  synchronous lifetime registration and base64 payload conversion.
 - Gateway `Shard` and `Bot` now run on JavaScript and moonrun Wasm. The
   JavaScript WebSocket client lives in `gaato/discord/internal/websocket`.
 - Gateway `Session` derives `ToJson` and `FromJson`. `Shard::start(resume~)` and

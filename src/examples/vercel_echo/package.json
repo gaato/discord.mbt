@@ -1,0 +1,8 @@
+{
+  "name": "discord-mbt-vercel-echo",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@vercel/functions": "3.9.9"
+  }
+}

@@ -1,0 +1,8 @@
+package wasi:http@0.2.6;
+
+/// Spin receives Discord Interactions through the standard proxy export, with
+/// one Spin import for the configured verification key.
+world discord {
+  include proxy;
+  import fermyon:spin/variables@2.0.0;
+}

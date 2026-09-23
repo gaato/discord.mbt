@@ -3,6 +3,7 @@ _build/
 target/
 .mooncakes/
 moon.work
+!experiments/spin_interactions/moon.work
 .moonagent/
 .repos/
 .env

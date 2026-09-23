@@ -124,6 +124,7 @@ fn encode_outcome(
 async fn run_interaction(
   token : String,
   body : String,
+  api_base_url : String,
   responses : @aqueue.Queue[WorkerResponse],
 ) -> Unit {
   let mut response_sent = false
@@ -144,9 +145,9 @@ async fn run_interaction(
         return
       }
     }
-    let client = @discord.Client(token)
+    let client = @discord.Client(token, base_url=api_base_url)
     group.add_defer(() => client.close())
-    let endpoint = worker_app().serve(
+    let endpoint = interaction_app().serve(
       group,
       client~,
       application_id=interaction.application_id,
@@ -177,11 +178,12 @@ extern "js" fn rejected_abort_response(
 pub fn start_interaction(
   token : String,
   body : String,
+  api_base_url : String,
   abort_signal : @js_async.AbortSignal,
 ) -> WorkerDispatch {
   let responses : @aqueue.Queue[WorkerResponse] = Queue(kind=Unbounded)
   let background = @js_async.Promise::from_async(() => {
-    run_interaction(token, body, responses)
+    run_interaction(token, body, api_base_url, responses)
   })
   // A client disconnect only cancels the initial-response waiter. The task
   // group belongs to the waitUntil background promise and must keep running
@@ -232,3 +234,178 @@ pub fn verify_signature(
   }
   verifier.verify(signature~, timestamp~, body~)
 }
+
+///|
+#external
+pub type WorkerHttpResponse
+
+///|
+extern "js" fn WorkerHttpResponse::bytes(
+  status : Int,
+  content_type : String,
+  body : Bytes,
+) -> Self =
+  #| (status, contentType, body) => ({ status, contentType, body })
+
+///|
+extern "js" fn WorkerHttpResponse::multipart(
+  status : Int,
+  content_type : String,
+  chunks : FixedArray[Bytes],
+) -> Self =
+  #| (status, contentType, chunks) => {
+  #|   let index = 0;
+  #|   const stream = new ReadableStream({
+  #|     pull(controller) {
+  #|       if (index >= chunks.length) return controller.close();
+  #|       controller.enqueue(chunks[index++]);
+  #|     },
+  #|   });
+  #|   return { status, contentType, body: stream };
+  #| }
+
+///|
+fn encode_http_response(
+  response : @discord.InteractionHttpResponse,
+) -> WorkerHttpResponse {
+  let content_type = response.content_type.unwrap_or("")
+  match response.body {
+    Empty => WorkerHttpResponse::bytes(response.status, content_type, b"")
+    Bytes(body) =>
+      WorkerHttpResponse::bytes(response.status, content_type, body)
+    Chunks(chunks) => {
+      let parts : Array[Bytes] = []
+      for chunk in chunks {
+        match chunk {
+          Text(text) => parts.push(utf8_encode(text))
+          Blob(bytes) => parts.push(bytes)
+        }
+      }
+      WorkerHttpResponse::multipart(
+        response.status,
+        content_type,
+        FixedArray::from_array(parts),
+      )
+    }
+  }
+}
+
+///|
+async fn run_signed_interaction(
+  token : String,
+  application_id : String,
+  public_key : String,
+  http_method : String,
+  signature : String,
+  timestamp : String,
+  body : Bytes,
+  api_base_url : String,
+  responses : @aqueue.Queue[WorkerHttpResponse],
+) -> Unit {
+  let mut response_sent = false
+  errdefer @async.protect_from_cancel(() => {
+    if !response_sent {
+      responses.put(
+        WorkerHttpResponse::bytes(
+          500,
+          "text/plain; charset=utf-8",
+          utf8_encode("internal server error"),
+        ),
+      )
+    }
+  })
+  @async.with_task_group(group => {
+    guard cached_interaction_verifier(public_key) is Some(verifier) else {
+      responses.put(
+        WorkerHttpResponse::bytes(
+          401,
+          "text/plain; charset=utf-8",
+          utf8_encode("invalid signature"),
+        ),
+      )
+      response_sent = true
+      return
+    }
+    let id : @model.ApplicationId = @model.Id::parse(application_id)
+    let client = @discord.Client(token, base_url=api_base_url)
+    group.add_defer(() => client.close())
+    let endpoint = interaction_app().serve(group, client~, application_id=id)
+    let result = endpoint.handle_signed_http(
+      {
+        http_method,
+        signature: if signature.is_empty() {
+          None
+        } else {
+          Some(signature)
+        },
+        timestamp: if timestamp.is_empty() {
+          None
+        } else {
+          Some(timestamp)
+        },
+        body,
+      },
+      verifier,
+    )
+    responses.put(encode_http_response(result))
+    response_sent = true
+  })
+}
+
+///|
+pub fn start_signed_interaction(
+  token : String,
+  application_id : String,
+  public_key : String,
+  http_method : String,
+  signature : String,
+  timestamp : String,
+  body : Bytes,
+  api_base_url : String,
+  abort_signal : @js_async.AbortSignal,
+) -> WorkerHttpDispatch {
+  let responses : @aqueue.Queue[WorkerHttpResponse] = Queue(kind=Unbounded)
+  let background = @js_async.Promise::from_async(() => {
+    run_signed_interaction(
+      token, application_id, public_key, http_method, signature, timestamp, body,
+      api_base_url, responses,
+    )
+  })
+  let response = if abort_signal_aborted(abort_signal) {
+    rejected_abort_http_response(abort_signal)
+  } else {
+    @js_async.Promise::from_async(() => responses.get(), abort_signal~)
+  }
+  WorkerHttpDispatch(response, background)
+}
+
+///|
+#external
+pub type WorkerHttpDispatch
+
+///|
+extern "js" fn WorkerHttpDispatch::WorkerHttpDispatch(
+  response : @js_async.Promise[WorkerHttpResponse],
+  background : @js_async.Promise[Unit],
+) -> Self =
+  #| (response, background) => ({ response, background })
+
+///|
+pub extern "js" fn WorkerHttpDispatch::response(
+  self : Self,
+) -> @js_async.Promise[WorkerHttpResponse] =
+  #| (dispatch) => dispatch.response
+
+///|
+pub extern "js" fn WorkerHttpDispatch::background(
+  self : Self,
+) -> @js_async.Promise[Unit] =
+  #| (dispatch) => dispatch.background
+
+///|
+extern "js" fn rejected_abort_http_response(
+  signal : @js_async.AbortSignal,
+) -> @js_async.Promise[WorkerHttpResponse] =
+  #| (signal) => Promise.reject(
+  #|   signal.reason ?? new DOMException("The operation was aborted", "AbortError"),
+  #| )

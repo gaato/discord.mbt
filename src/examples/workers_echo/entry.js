@@ -1,78 +1,11 @@
-// From this directory, run `moon build --target js --release .` first. Wrangler bundles
-// the generated ESM artifact imported below when it deploys entry.js.
-//
-// The import is dynamic because MoonBit's generated module seeds its hasher
-// with crypto.getRandomValues at module scope, which Workers forbids during
-// startup. Evaluating the module inside the first fetch invocation runs that
-// code in a request context, where random generation is allowed.
-let workerModule;
-function loadWorkerModule() {
-  workerModule ??= import(
-    "../../../_build/js/release/build/examples/workers_echo/workers_echo.js"
-  );
-  return workerModule;
-}
+import { handleInteraction } from "../interactions_js/handler.js";
 
 export default {
-  async fetch(request, env, ctx) {
-    const { start_interaction, verify_signature } = await loadWorkerModule();
-    if (request.method !== "POST") {
-      return new Response("Method Not Allowed", { status: 405 });
-    }
-
-    const signature = request.headers.get("X-Signature-Ed25519") ?? "";
-    const timestamp = request.headers.get("X-Signature-Timestamp") ?? "";
-    const bodyBytes = new Uint8Array(await request.arrayBuffer());
-    const verified = verify_signature(
-      env.DISCORD_PUBLIC_KEY ?? "",
-      signature,
-      timestamp,
-      bodyBytes,
+  fetch(request, env, ctx) {
+    return handleInteraction(
+      request,
+      { publicKey: env.DISCORD_PUBLIC_KEY, token: env.DISCORD_TOKEN, applicationId: env.DISCORD_APPLICATION_ID },
+      (background) => ctx.waitUntil(background),
     );
-    if (!verified) {
-      return new Response("Invalid request signature", { status: 401 });
-    }
-
-    let body;
-    try {
-      body = new TextDecoder("utf-8", { fatal: true }).decode(bodyBytes);
-      JSON.parse(body);
-    } catch {
-      return new Response("Invalid JSON", { status: 400 });
-    }
-
-    const { response, background } = start_interaction(
-      env.DISCORD_TOKEN ?? "",
-      body,
-      request.signal,
-    );
-    ctx.waitUntil(background);
-
-    let outcome;
-    try {
-      outcome = await response;
-    } catch {
-      return new Response("Interaction dispatch failed", { status: 500 });
-    }
-
-    switch (outcome.kind) {
-      case "Reply":
-        return new Response(outcome.stream ?? outcome.body, {
-          status: 200,
-          headers: { "content-type": outcome.contentType },
-        });
-      case "InvalidPayload":
-        return new Response("Invalid interaction payload", { status: 400 });
-      case "DispatchFailed":
-        return new Response("Interaction dispatch failed", { status: 500 });
-      case "NoRoute":
-        return new Response("No interaction route", { status: 404 });
-      case "NoResponse":
-        return new Response(null, { status: 202 });
-      case "TimedOut":
-        return new Response("Initial response timed out", { status: 504 });
-      default:
-        return new Response("Unknown interaction outcome", { status: 500 });
-    }
   },
 };

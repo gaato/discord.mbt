@@ -10,15 +10,16 @@ expanded public key between requests.
 From the repository root:
 
 ```fish
-moon build --target js --release --deny-warn src/examples/workers_echo
+moon build --target js --release --deny-warn src/examples/interactions_js
 cd src/examples/workers_echo
 npx wrangler secret put DISCORD_TOKEN
 npx wrangler secret put DISCORD_PUBLIC_KEY
+npx wrangler secret put DISCORD_APPLICATION_ID
 npx wrangler deploy
 ```
 
 The MoonBit build emits
-`_build/js/release/build/examples/workers_echo/workers_echo.js`. `entry.js`
+`_build/js/release/build/examples/interactions_js/interactions_js.js`. `entry.js`
 imports that ESM artifact, and Wrangler bundles it into the Worker.
 
 The `/file` command returns `hello.txt` as a streamed multipart callback.
@@ -51,7 +52,7 @@ the App answers it with a Pong callback.
 
 Workers have no startup phase, so command synchronization runs as a separate
 one-shot: `register/` builds the same `App` as the Worker (one definition in
-`app.mbt`, no drift possible) and diff-syncs it — nothing is sent when the
+`../interactions_js/app.mbt`, no drift possible) and diff-syncs it — nothing is sent when the
 registered commands already match. Run it after `wrangler deploy` (or from CI):
 
 ```fish

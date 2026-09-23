@@ -36,6 +36,32 @@ async fn serve_with_existing_client(
 }
 ```
 
+For an HTTP host, pass the exact request bytes and the two signature headers
+to `handle_signed_http`. The method verifies the signature before decoding
+JSON, then returns a status, optional content type, and bytes or multipart
+chunks. The host adapter translates only its request and response conventions:
+
+```mbt check
+///|
+async fn dispatch_signed_http(
+  endpoint : @discord.InteractionEndpoint,
+  verifier : @discord.InteractionVerifier,
+  raw_body : Bytes,
+  signature : String?,
+  timestamp : String?,
+) -> @discord.InteractionHttpResponse {
+  endpoint.handle_signed_http(
+    { http_method: "POST", signature, timestamp, body: raw_body, },
+    verifier,
+  )
+}
+```
+
+The public request requires no absolute URL, environment binding, or host
+execution context. Keep the `App::serve` task group alive after the initial
+response to finish deferred handlers. Hosts with `waitUntil` can attach that
+group's completion promise; other hosts choose their own lifetime policy.
+
 Command registration is a separate deploy-time step. Run a one-shot program
 that builds the same App and calls `app.sync_commands(client, application_id,
 scope~)` before starting or updating the HTTP deployment. The call returns an
@@ -120,16 +146,16 @@ async fn route_outcome(
   match outcome {
     Reply(response~, files~) => send_callback(response, files)
     NoRoute => send_status(404)
-    NoResponse => send_status(500)
-    TimedOut => send_status(202)
+    NoResponse => send_status(202)
+    TimedOut => send_status(504)
   }
 }
 ```
 
 `TimedOut` means the initial response was not available before the deadline;
-the handler remains attached to the task group. Returning HTTP 202 by itself
-does not acknowledge an interaction, so slow handlers should use a deferred
-handler mode.
+the handler remains attached to the task group. `NoResponse` is for a handler
+that already sent the callback through Discord REST. Slow handlers should
+instead use a deferred handler mode so the endpoint returns an initial ACK.
 
 ## Verify before decoding
 

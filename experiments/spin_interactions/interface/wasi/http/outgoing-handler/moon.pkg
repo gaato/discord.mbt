@@ -1,0 +1,5 @@
+warnings = "-44"
+
+import {
+  "gaato/spin-discord/interface/wasi/http/types",
+}

@@ -4,10 +4,12 @@ import {
   "gaato/discord/http" @dhttp,
   "gaato/discord/interaction",
   "gaato/discord/framework",
+  "gaato/discord/verify",
   "moonbitlang/async",
   "moonbitlang/async/aqueue",
   "moonbitlang/core/json",
   "moonbitlang/core/string",
+  "moonbitlang/core/encoding/utf8",
 }
 
 import {
@@ -15,6 +17,8 @@ import {
   "moonbitlang/core/quickcheck" @qc,
   "moonbitlang/core/json",
   "gaato/discord/model",
+  "hustcer/ed25519",
+  "moonbitlang/core/encoding/hex",
 } for "test"
 
 supported_targets = "js + native + wasm"

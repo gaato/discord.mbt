@@ -1,0 +1,12 @@
+package fermyon:spin@2.0.0;
+
+interface variables {
+  get: func(name: string) -> result<string, error>;
+
+  variant error {
+    invalid-name(string),
+    undefined(string),
+    provider(string),
+    other(string),
+  }
+}

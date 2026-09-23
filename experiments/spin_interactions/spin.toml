@@ -1,0 +1,18 @@
+spin_manifest_version = 2
+
+[application]
+name = "discord-mbt-spin-interactions"
+version = "0.1.0"
+
+[variables]
+discord_public_key = { required = true }
+
+[[trigger.http]]
+route = "/interactions"
+component = "interaction"
+
+[component.interaction]
+source = "target/discord.component.wasm"
+
+[component.interaction.variables]
+public_key = "{{ discord_public_key }}"

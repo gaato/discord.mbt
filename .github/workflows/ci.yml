@@ -143,6 +143,37 @@ jobs:
           WRANGLER_SEND_METRICS: "false"
         run: npm run bundle:check -- --outdir "$RUNNER_TEMP/workers-echo"
 
+      - name: Install Deno 2.5.0
+        run: |
+          curl --proto '=https' --tlsv1.2 --fail --show-error --silent --location \
+            https://dl.deno.land/release/v2.5.0/deno-x86_64-unknown-linux-gnu.zip \
+            --output "$RUNNER_TEMP/deno.zip"
+          echo '4561adb06b13f287a3785276cb29f377b7ffb49d54290178223b037e161446d3  '"$RUNNER_TEMP/deno.zip" | sha256sum -c
+          unzip -q "$RUNNER_TEMP/deno.zip" -d "$RUNNER_TEMP/deno"
+          echo "$RUNNER_TEMP/deno" >> "$GITHUB_PATH"
+
+      - name: Test Deno interaction adapter
+        run: |
+          moon build src/examples/interactions_js --target js --release --deny-warn
+          deno test --allow-net src/examples/deno_echo/entry.test.js
+
+      - name: Test shared interactions on Node.js
+        run: |
+          node src/examples/interactions_js/runtime.test.mjs
+          node --test src/examples/vercel_echo/adapter.test.mjs
+          node --test src/examples/fastly_echo/adapter.test.mjs
+          node --test src/examples/lambda_url_echo/adapter.test.mjs
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.4.2
+
+      - name: Test shared interactions on Bun
+        run: |
+          bun src/examples/interactions_js/runtime.test.mjs
+          bun test src/examples/bun_echo/entry.test.js
+
       - name: Install Workers gateway test dependencies
         working-directory: src/examples/workers_gateway
         run: npm ci
@@ -197,6 +228,63 @@ jobs:
 
       - name: Build HTTP interactions example
         run: moon build src/examples/interactions_http --target wasm --release --deny-warn
+
+  spin-component:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+
+      - name: Install MoonBit
+        shell: bash
+        run: |
+          curl --proto '=https' --tlsv1.2 --fail --show-error --silent --location \
+            https://cli.moonbitlang.com/install/unix.sh \
+            --output "$RUNNER_TEMP/install-moonbit.sh"
+          actual="$(shasum -a 256 "$RUNNER_TEMP/install-moonbit.sh" | awk '{print $1}')"
+          test "$actual" = "46495f8cdc0050f79b6cb195d66478d101cb3601d68506568fbe377fcdf2a9fe"
+          bash "$RUNNER_TEMP/install-moonbit.sh"
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+
+      - name: Install Spin and wasm-tools
+        run: |
+          curl --proto '=https' --tlsv1.2 --fail --show-error --silent --location \
+            https://github.com/spinframework/spin/releases/download/v4.1.0/spin-v4.1.0-linux-amd64.tar.gz \
+            --output "$RUNNER_TEMP/spin.tar.gz"
+          echo 'aeeb892f94cf861f5302546faa0bdaa82cc4be30539621299746a6dc011f3b5a  '"$RUNNER_TEMP/spin.tar.gz" | sha256sum -c
+          mkdir -p "$RUNNER_TEMP/spin"
+          tar -xzf "$RUNNER_TEMP/spin.tar.gz" -C "$RUNNER_TEMP/spin"
+          echo "$RUNNER_TEMP/spin" >> "$GITHUB_PATH"
+          curl --proto '=https' --tlsv1.2 --fail --show-error --silent --location \
+            https://github.com/bytecodealliance/wasm-tools/releases/download/v1.246.2/wasm-tools-1.246.2-x86_64-linux.tar.gz \
+            --output "$RUNNER_TEMP/wasm-tools.tar.gz"
+          echo 'f0df9428792225322e9b4344ca581f03b1740d509d6bdad33d14a810009be9ec  '"$RUNNER_TEMP/wasm-tools.tar.gz" | sha256sum -c
+          tar -xzf "$RUNNER_TEMP/wasm-tools.tar.gz" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/wasm-tools-1.246.2-x86_64-linux" >> "$GITHUB_PATH"
+
+      - name: Build and test Spin component
+        run: |
+          moon update
+          moon -C experiments/spin_interactions check --target wasm --deny-warn
+          moon -C experiments/spin_interactions fmt --check
+          moon -C experiments/spin_interactions build --target wasm --release --deny-warn
+          wasm-tools component embed experiments/spin_interactions/wit \
+            experiments/spin_interactions/_build/wasm/release/build/gaato/spin-discord/gen/gen.wasm \
+            --world wasi:http/discord --encoding utf16 \
+            --output "$RUNNER_TEMP/discord-embedded.wasm"
+          mkdir -p experiments/spin_interactions/target
+          wasm-tools component new "$RUNNER_TEMP/discord-embedded.wasm" \
+            --output experiments/spin_interactions/target/discord.component.wasm
+          node --test experiments/spin_interactions/test.mjs
 
   voice-shim:
     runs-on: ubuntu-24.04

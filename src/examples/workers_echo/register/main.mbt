@@ -38,7 +38,7 @@ async fn main {
     return
   }
   let scope = command_scope()
-  let app = @workers_echo.worker_app()
+  let app = @interactions_js.interaction_app()
   @async.with_task_group(group => {
     let client = @discord.Client(token)
     group.add_defer(() => client.close())

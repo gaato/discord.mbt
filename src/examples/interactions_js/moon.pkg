@@ -12,7 +12,7 @@ import {
   "moonbitlang/async",
 } for "test"
 
-// This example is intentionally empty on non-JavaScript targets.
+// The shared App also builds on native for command registration.
 
 warnings = "-29"
 
@@ -21,7 +21,7 @@ supported_targets = "js + native"
 options(
   link: {
     "js": {
-      "exports": [ "start_interaction", "verify_signature" ],
+      "exports": ["start_signed_interaction"],
       "format": "esm",
     },
   },

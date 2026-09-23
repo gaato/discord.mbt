@@ -182,7 +182,8 @@ resource refs, pagination, low-level routing and raw contexts, shard transport,
 coordination, observability events, or raw option declarations.
 
 - REST-only tool: `http` (brings `model`).
-- Serverless HTTP interactions (Cloudflare Workers, JS): `app` and `verify`.
+- Serverless HTTP interactions (Cloudflare Workers, Deno, Bun, and Node.js Functions,
+  JS): `app` and `verify`.
 - Native HTTP interactions server: `endpoint_http`.
 - Gateway bot: `bot`, or the `gaato/discord` facade for everything.
 
@@ -196,8 +197,15 @@ Runnable programs live under `src/examples/`:
 - `ping_gateway`: low-level Gateway and REST use.
 - `low_level`: manual Framework and Shard wiring.
 - `workers_echo`: Cloudflare Workers adapter.
+- `deno_echo`: Deno adapter for the same MoonBit interaction App.
+- `bun_echo`: Bun HTTP server adapter for the same interaction App.
+- `vercel_echo`: Vercel Node.js Function adapter for the same interaction App.
+- `fastly_echo`: Fastly `FetchEvent` entry point experiment.
+- `lambda_url_echo`: Lambda Function URL payload v2 adapter experiment.
 - `workers_gateway`: Cloudflare Durable Object running a gateway bot (no voice).
 - `interactions_http`: native signed-interactions HTTP server.
+- `experiments/spin_interactions`: WASIp2 Spin component for signed PING and
+  immediate echo; this experiment sits outside `src/examples/`.
 - `plugin_demo`: a stateful feedback feature installed as a separate package.
 - `gate_probe`: live probe for error-policy recovery and user-restricted
   component waits (needs a Discord client; guild commands only).
@@ -343,15 +351,45 @@ async fn handle_http_interaction(
 }
 ```
 
-Serverless targets such as Cloudflare Workers are first class: adapters verify
+The Cloudflare Worker, Deno, Bun, and Vercel Function HTTP adapters verify
 the raw request bytes with the reusable pure MoonBit
-`@discord.InteractionVerifier` before parsing. The `workers_echo` example is
+`@discord.InteractionVerifier` before parsing. The shared MoonBit example is
+`src/examples/interactions_js`; its host adapters use one generated
+ESM artifact and one HTTP response mapper. The shared handler is tested on
+Node.js and Bun, while the Vercel lifecycle adapter is tested with an injected
+`waitUntil` collector. These local tests do not establish hosted Vercel
+deployment behavior. `workers_echo` is
 tested inside Cloudflare's local `workerd` runtime and supports streamed
 multipart callbacks for in-memory `FileUpload` values. On native,
 `@discord.serve_interactions(group, app, addr~, public_key~, token~)` is a
 complete signed-interactions HTTP server. See the
 [HTTP interactions guide](src/guide/06-http-interactions.mbt.md) and the
-`interactions_http` and `workers_echo` examples.
+`interactions_http`, `workers_echo`, `deno_echo`, `bun_echo`, and `vercel_echo`
+examples. The separate
+[Spin experiment](experiments/spin_interactions/README.md) uses WASIp2 and
+Spin's variables import for an immediate handler. It does not yet run the
+async `App` on a general Wasm host.
+
+The JavaScript host checks cover different boundaries:
+
+| Host | Checked here | Remaining host integration |
+| --- | --- | --- |
+| Cloudflare Workers | Signed requests and deferred REST in local workerd | Production deployment |
+| Deno | `Deno.serve` adapter and signed requests | Hosted lifecycle |
+| Bun | Shared MoonBit handler and `Bun.serve` loopback endpoint | Hosted lifecycle |
+| Node.js | Shared MoonBit handler and Web APIs | HTTP hosting and process lifecycle |
+| Vercel Functions | Node.js `fetch` adapter and `waitUntil` handoff | Vercel packaging and hosted lifecycle |
+| Fastly Compute | `FetchEvent` and synchronous lifetime registration with a fake event | Fastly compilation and hosted execution |
+| Lambda Function URL | Payload v2 body and response conversion with local events | AWS invocation and deployment |
+
+Other JavaScript function platforms can reuse the handler if they provide Web
+`Request`, `Response`, `crypto.subtle`, and `fetch`. Their entry point,
+background-work API, deployment bundle, and execution limits still need
+platform-specific checks. The Spin experiment instead tests the WASIp2
+component boundary.
+The [host entry point survey](docs/interaction-host-entrypoints.md) records the
+other host conventions and the remaining API decisions, including multipart
+responses and background-work lifetime.
 
 The JavaScript REST client supports null-body 204 responses through
 `moonbitlang/async@0.22.1`; the `workers_echo` workerd suite covers a deferred

@@ -7,6 +7,7 @@ import {
   "gaato/discord/http",
   "gaato/discord/interaction",
   "gaato/discord/model",
+  "gaato/discord/verify",
   "moonbitlang/async",
   "moonbitlang/core/debug",
 }
@@ -291,11 +292,31 @@ pub struct InteractionEndpoint {
 }
 pub async fn InteractionEndpoint::handle(Self, Json, deadline_ms? : Int) -> Json?
 pub async fn InteractionEndpoint::handle_interaction(Self, @model.Interaction, deadline_ms? : Int) -> InteractionOutcome
+pub async fn InteractionEndpoint::handle_signed_http(Self, InteractionHttpRequest, @verify.InteractionVerifier, deadline_ms? : Int) -> InteractionHttpResponse
 
 pub(all) enum InteractionHandler[A] {
   Immediate(async (ImmediateCtx, A) -> CommandReply)
   Deferred(ephemeral~ : Bool, async (DeferredCtx, A) -> Unit)
   Raw(async (@framework.CommandCtx) -> Unit)
+}
+
+pub(all) enum InteractionHttpBody {
+  Empty
+  Bytes(Bytes)
+  Chunks(Array[@http.MultipartChunk])
+}
+
+pub(all) struct InteractionHttpRequest {
+  http_method : String
+  signature : String?
+  timestamp : String?
+  body : Bytes
+}
+
+pub(all) struct InteractionHttpResponse {
+  status : Int
+  content_type : String?
+  body : InteractionHttpBody
 }
 
 pub(all) enum InteractionOutcome {
