@@ -7,6 +7,7 @@ import {
   "gaato/discord/verify",
   "moonbitlang/async",
   "moonbitlang/async/aqueue",
+  "moonbitlang/async/js_async",
   "moonbitlang/core/json",
   "moonbitlang/core/string",
   "moonbitlang/core/encoding/utf8",
@@ -21,4 +22,22 @@ import {
   "moonbitlang/core/encoding/hex",
 } for "test"
 
+import {
+  "hustcer/ed25519",
+  "moonbitlang/core/encoding/hex",
+} for "wbtest"
+
+// `moonbitlang/async/js_async` only backs the JavaScript dispatch bridge, so
+// it is an unused import on native and Wasm.
+
+warnings = "-29"
+
 supported_targets = "js + native + wasm"
+
+options(
+  targets: {
+    "interaction_http.js.mbt": [ "js" ],
+    "interaction_http_js_wbtest.mbt": [ "js" ],
+    "pkg.generated.mbti": [ "native" ],
+  },
+)
