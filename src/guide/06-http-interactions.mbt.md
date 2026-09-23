@@ -235,8 +235,9 @@ npm ci
 env WRANGLER_SEND_METRICS=false npm test
 ```
 
-Gateway and Voice transports remain native-only. The JavaScript backend is for
-the REST client, signature verification, and gateway-free HTTP interactions.
+Voice remains native-only. Gateway bots also run on JavaScript (including
+Durable Objects) and moonrun Wasm; the JavaScript backend also serves REST,
+signature verification, and gateway-free HTTP interactions.
 With `moonbitlang/async@0.22.1`, the JS Fetch transport also completes
 null-body 204 responses. The `workers_echo` suite covers this with a deferred
 interaction-response deletion that runs to completion under `waitUntil`.

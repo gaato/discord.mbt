@@ -97,7 +97,9 @@ jobs:
         with:
           node-version: 24
           cache: npm
-          cache-dependency-path: src/examples/workers_echo/package-lock.json
+          cache-dependency-path: |
+            src/examples/workers_echo/package-lock.json
+            src/examples/workers_gateway/package-lock.json
 
       - name: Install MoonBit
         shell: bash
@@ -140,6 +142,22 @@ jobs:
         env:
           WRANGLER_SEND_METRICS: "false"
         run: npm run bundle:check -- --outdir "$RUNNER_TEMP/workers-echo"
+
+      - name: Install Workers gateway test dependencies
+        working-directory: src/examples/workers_gateway
+        run: npm ci
+
+      - name: Test Cloudflare Workers gateway
+        working-directory: src/examples/workers_gateway
+        env:
+          WRANGLER_SEND_METRICS: "false"
+        run: npm test
+
+      - name: Check Cloudflare Workers gateway bundle
+        working-directory: src/examples/workers_gateway
+        env:
+          WRANGLER_SEND_METRICS: "false"
+        run: npm run bundle:check -- --outdir "$RUNNER_TEMP/workers-gateway"
 
   wasm:
     runs-on: ubuntu-24.04

@@ -22,7 +22,10 @@ import {
 
 // Native-only facade imports are unused when facade_native.mbt is excluded.
 
-warnings = "-29"
+// The public Bot `resume` label is reserved by this compiler version; the
+// compiled README example exercises it so documentation stays in sync.
+
+warnings = "-29-35"
 
 supported_targets = "js + native + wasm"
 

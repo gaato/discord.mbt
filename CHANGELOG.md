@@ -7,6 +7,29 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+### Added
+
+- Gateway `Shard` and `Bot` now run on JavaScript and moonrun Wasm. The
+  JavaScript WebSocket client lives in `gaato/discord/internal/websocket`.
+- Gateway `Session` derives `ToJson` and `FromJson`. `Shard::start(resume~)` and
+  `Shard::session()` expose wire RESUME state; `Bot(resume~)` and
+  `Bot::sessions()` use `BotSession` snapshots that also retain original READY
+  metadata for replayed events before RESUMED.
+- `zlib_stream_supported()` reports Gateway compression availability.
+- The `workers_gateway` example runs a gateway bot in a Cloudflare Durable
+  Object with periodic session snapshots and alarm/cron recovery.
+
+### Changed
+
+- An inflater factory failure now closes fatally before connecting
+  (`FatallyClosed(code=0)`) instead of entering resume/backoff.
+- After three consecutive connector failures with a saved session, a shard
+  drops that session and retries the default `gateway_url`.
+- `Bot::run` raises `InvalidShardConfig` for `compress=true` on JavaScript or
+  Wasm, where zlib-stream is unavailable.
+- **Breaking:** `InflateError` gains `Unsupported`; exhaustive matches need a
+  new arm.
+
 ## [0.4.3] - 2026-09-23
 
 ### Added

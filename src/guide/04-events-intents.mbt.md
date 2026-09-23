@@ -1,6 +1,6 @@
 # Events and intents
 
-The native `Bot` executor exposes typed Gateway event descriptors through
+The `Bot` executor exposes typed Gateway event descriptors through
 `Events`. Each descriptor fixes both the payload type and the delivery intents
 associated with that event.
 
@@ -254,12 +254,16 @@ fn compressed_bot(app : @discord.App, token : String) -> @discord.Bot {
 }
 ```
 
-Each Gateway connection then requests `compress=zlib-stream` and retains one
-inflate context for that connection, including across consecutive Gateway
+On native, each compressed Gateway connection requests `compress=zlib-stream`
+and retains one inflate context, including across consecutive Gateway
 messages. Only server-to-client binary messages are decompressed; identify,
 heartbeat, and other client-to-server payloads remain uncompressed text.
 
-The zlib shared library is loaded at runtime (like the async runtime loads
+Compression is available only on native; `zlib_stream_supported()` reports
+whether the current backend can use it. On JavaScript and Wasm,
+`Bot::run` rejects `compress=true` before connecting.
+
+The zlib shared library is loaded at runtime on native (like the async runtime loads
 OpenSSL), so neither this library nor applications using it need extra link
 flags; building only requires the zlib header. If the shared library is
 missing at runtime, enabling compression raises before any connection is

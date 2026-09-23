@@ -10,7 +10,7 @@ license = "Apache-2.0"
 
 keywords = [ "discord", "bot", "gateway", "api", "voice", "interactions" ]
 
-description = "An experimental Discord library for MoonBit: native/JS/Wasm REST and interactions, plus a native gateway with voice (DAVE E2EE)."
+description = "An experimental Discord library for MoonBit: native/JS/Wasm REST, interactions, and gateway bots; native voice with DAVE E2EE."
 
 source = "src"
 

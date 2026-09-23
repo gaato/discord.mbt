@@ -58,6 +58,22 @@ fn auto_sharded_bot(app : @discord.App, token : String) -> @discord.Bot {
   Bot(app, token~, shards=Auto)
 }
 
+// README "Cloudflare Workers gateway"
+
+///|
+fn restored_bot(
+  app : @discord.App,
+  token : String,
+  saved : Map[Int, @discord.BotSession],
+) -> @discord.Bot {
+  @discord.Bot(app, token~, resume=saved)
+}
+
+///|
+fn current_bot_sessions(bot : @discord.Bot) -> Map[Int, @discord.BotSession] {
+  bot.sessions()
+}
+
 // README "HTTP interactions (experimental)"
 
 ///|
@@ -99,6 +115,8 @@ test "readme examples are wired" {
   ignore(run_echo_bot)
   ignore(subscribe_message_create)
   ignore(auto_sharded_bot)
+  ignore(restored_bot)
+  ignore(current_bot_sessions)
   ignore(handle_http_interaction)
   ignore(readme_rest_examples)
 }

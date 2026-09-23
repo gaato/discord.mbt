@@ -243,7 +243,7 @@ and followups.
 
 ## Gateway event middleware
 
-`Bot::middleware` is native-only. It receives the `GatewayCtx`, a decoded
+`Bot::middleware` receives the `GatewayCtx`, a decoded
 `Event`, and `next(event)`. Not calling `next` drops the event from typed and
 raw handlers while leaving wire-level processing intact.
 

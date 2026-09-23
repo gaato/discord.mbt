@@ -27,12 +27,16 @@ artifact, and requires it to load so transport AEAD tests cannot skip.
 `--from-json` only rechecks a stored report against the ledger; it does not
 repeat either native bootstrap or runtime load check.
 
-Snapshot at the last full measurement (2026-09-22, the 0.4.0 candidate
-including `Client::offline`): **92.9 %** across the library (8437/9077 coverage
+Snapshot at the last full measurement (2026-09-23, including JS/Wasm Gateway
+and Bot support): **92.9 %** across the library (8450/9095 coverage
 points; http 96.0 %, model 95.4 %, interaction 95.1 %, testkit 100 %, util
-100 %, bot 94.2 %, app 90.7 %, voice 85.7 %, gateway 75.7 %).
+100 %, bot 94.2 %, app 90.7 %, voice 85.7 %, gateway 76.3 %).
 
 ## Policy
+
+Files compiled only on JavaScript or Wasm (`*.js.mbt`,
+`*_unsupported.mbt`, and the JS files in `src/internal/websocket`) are outside
+the native measurement; `moon test --target js` and `--target wasm` cover them.
 
 Must be covered by tests:
 
@@ -69,12 +73,13 @@ Live socket, websocket, and FFI adapters (live-verified; no unit seam):
 | File | Budget | Reason |
 | --- | --- | --- |
 | src/gateway/transport.mbt | 37 | Real websocket adapter behind the GatewayTransport trait; every consumer is tested against FakeTransport. |
+| src/internal/websocket/native.mbt | 1 | Native/Wasm connect wrapper delegates to the upstream live WebSocket client; the JS implementation has separate loopback tests. |
 | src/voice/transport.mbt | 38 | Real voice websocket adapter behind the VoiceTransport trait. |
 | src/voice/udp.mbt | 4 | SocketVoiceUdp impls and `open_voice_udp` over a real UDP socket; parse and retry logic is covered via fakes. |
 | src/voice/shim_ffi.mbt | 3 | Extern-C glue whose arms depend on host library state. |
 | src/voice/crypto.mbt | 5 | Shim error-status translation paths; round-trips and geometry checks are covered with the shim loaded. |
-| src/http/client.mbt | 2 | Default warning sinks (`println`) of the online and offline constructors. |
-| src/http/request.mbt | 21 | Cancellation/timeout plumbing on live connections; the JSON, body-less, 204, non-JSON-error, and all three multipart named-file arms are covered by the loopback server tests. |
+| src/http/client.mbt | 4 | Default warning sinks (`println`) of the online and offline constructors, and defensive NoTransport methods bypassed by every offline request. |
+| src/http/request.mbt | 20 | Cancellation/timeout plumbing on live connections; the JSON, body-less, 204, non-JSON-error, and all three multipart named-file arms are covered by the loopback server tests. |
 | src/endpoint_http/endpoint_http.mbt | 15 | HTTP server error/cancellation arms (send failures, teardown); the request paths are covered by the signed-request e2e tests. |
 | src/coordinator/protocol.mbt | 3 | Cross-process wire error arms. |
 | src/coordinator/remote.mbt | 20 | Reconnecting remote clients against a real coordinator socket; for the cooldown store, the cancellation-during-connect arms and malformed-response arm (its outage, deadline, and gate-wait paths are covered). |
@@ -103,20 +108,21 @@ run; the gateway/voice loops are additionally tested via injected sleepers):
 
 | File | Budget | Reason |
 | --- | --- | --- |
-| src/gateway/shard.mbt | 14 | Protected-shutdown and event-queue teardown catches, stale-transport and normal-return fallbacks, and read-loop cancellation re-raise plumbing (async 0.22 cancellation does not pass through ordinary catches). Malformed Hello/frame, compression-mismatch, connector/backoff, and disconnected-send arms are tested through the fake transport. |
+| src/gateway/shard.mbt | 15 | Protected-shutdown and event-queue teardown catches (including fatal inflater failure), stale-transport and normal-return fallbacks, and read-loop cancellation re-raise plumbing (async 0.22 cancellation does not pass through ordinary catches). Malformed Hello/frame, compression-mismatch, connector/backoff, and disconnected-send arms are tested through the fake transport. |
 | src/gateway/platform_native.mbt | 2 | Two OS-specific Identify property arms unavailable on Linux. |
 | src/gateway/compression.mbt | 3 | zlib failure statuses require a corrupted native stream state. |
 | src/ratelimit/ratelimit.mbt | 1 | Global-window sleep. |
 | src/http/handles_channel.mbt | 3 | `with_typing` refresh-failure arm sits behind the real 8-second cadence. |
 | src/bot/middleware.mbt | 1 | Middleware chain cancellation arm. |
-| src/bot/shard_manager.mbt | 6 | Multi-shard session-start-limit and staggered-identify paths over live gateways. |
-| src/bot/bot.mbt | 20 | Gateway run-loop teardown/cancellation arms; startup, intents, telemetry, and event routing are covered. Compress pre-check raises only on js/wasm where zlib-stream is unavailable. |
+| src/bot/shard_manager.mbt | 7 | Live gateway discovery and default-connector startup (including saved-session projection), plus defensive shard-config arms; fake-connector startup and resume are tested. |
+| src/bot/bot.mbt | 19 | Gateway run-loop teardown/cancellation arms; startup, intents, telemetry, and event routing are covered. Compress pre-check raises only on js/wasm where zlib-stream is unavailable. |
 | src/bot/voice.mbt | 19 | Credential timeouts have no injectable timer; the endpoint fallback contradicts the collector predicate; disconnect/cancellation catches; and the new-join/rejoin closures cross `join_voice`'s unseamed live `VoiceConnection::start`. Cache, gate, collector, and failed-watcher-rejoin behaviour is tested. |
 
 Defensive arms unreachable by construction:
 
 | File | Budget | Reason |
 | --- | --- | --- |
+| src/bot/session.mbt | 1 | Abort if an already decoded READY fails its own JSON round trip; snapshot independence and serialization are tested. |
 | src/http/multipart.mbt | 3 | `attachments_json` always returns an array and boundary search never gets an empty needle. |
 | src/model/interaction.mbt | 4 | Fallbacks behind emitters that always produce objects. |
 | src/model/component.mbt | 8 | Non-object fallback plus emit arms for component kinds Discord never sends in the covered contexts. |

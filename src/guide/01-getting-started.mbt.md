@@ -96,7 +96,7 @@ test "getting started quickstart compiles" {
 }
 ```
 
-`App` owns the commands and interaction handlers. `Bot` adds the native
+`App` owns the commands and interaction handlers. `Bot` adds the
 Gateway connection and dispatch loop. Passing `sync=Global` opts into command
 synchronization once after the first READY; omitting it performs no command
 request. Use `CommandScope::Guild(guild_id)` while developing if the command

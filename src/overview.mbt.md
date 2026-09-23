@@ -9,7 +9,7 @@
 
 A Discord application library for [MoonBit](https://www.moonbitlang.com/):
 typed interaction declarations, API models, a rate-limited REST client,
-native/JS/moonrun Wasm HTTP interactions, and a native WebSocket gateway shard.
+native/JS/moonrun Wasm HTTP interactions and WebSocket gateway shards.
 
 The design follows [twilight](https://github.com/twilight-rs/twilight):
 loosely coupled packages that model the Discord API, plus an App layer for
@@ -39,7 +39,7 @@ Every native build compiles the Gateway package's `zlib_stream.c`, which
 always includes `<zlib.h>` even when `compress=false`. The zlib development
 headers are therefore required for all native builds: install `zlib1g-dev` on
 Debian/Ubuntu or `zlib-devel` on Fedora/openSUSE. The zlib shared library is
-additionally required at runtime when Gateway zlib-stream compression is used.
+additionally required at runtime when native Gateway zlib-stream compression is used.
 
 ## Install
 
@@ -48,8 +48,9 @@ moon update
 moon add gaato/discord
 ```
 
-The interaction App, REST client, and data packages support **native**,
-**JavaScript**, and **linear-memory Wasm on moonrun**. The gateway Bot executor is native-only. Both are built on
+The interaction App, REST client, data packages, and gateway Bot executor
+support **native**, **JavaScript**, and **linear-memory Wasm on moonrun**.
+Voice is native-only. These executors use
 [moonbitlang/async](https://github.com/moonbitlang/async).
 
 ## Quickstart
@@ -105,12 +106,12 @@ async fn run_echo_bot(token : String) -> Unit {
 | `gaato/discord/model` | Pure data: ~24 entity domains, gateway payloads, zero IO | Yes | Yes | Yes |
 | `gaato/discord/telemetry` | Structured REST, gateway, and dispatch observability values | Yes | Yes | Yes |
 | `gaato/discord/http` | REST `Client`, routes, rate limiting, multipart uploads | Yes | Yes | Yes |
-| `gaato/discord/gateway` | `Shard`: connection state machine, heartbeat, resume | Yes | No | No |
+| `gaato/discord/gateway` | `Shard`: connection state machine, heartbeat, resume | Yes | Yes | Yes |
 | `gaato/discord/voice` | Experimental native voice gateway v8, DAVE, RTP, and Opus send/receive | Yes | No | No |
 | `gaato/discord/interaction` | Command/component builders, typed args and autocomplete data | Yes | Yes | Yes |
 | `gaato/discord/framework` | Interaction routing, response gates, low-level response contexts | Yes | Yes | Yes |
 | `gaato/discord/app` | Gateway-free typed commands/components/modals, HTTP endpoint, sync and policy | Yes | Yes | Yes |
-| `gaato/discord/bot` | Native gateway executor and typed gateway event descriptors | Yes | No | No |
+| `gaato/discord/bot` | Gateway executor and typed gateway event descriptors | Yes | Yes | Yes |
 | `gaato/discord/endpoint_http` | Signed-interactions HTTP server (`serve_interactions`) | Yes | No | Yes |
 | `gaato/discord/cache` | Opt-in, gateway-driven in-memory cache | Yes | Yes | Yes |
 | `gaato/discord/util` | Pure helpers: permissions, mentions, timestamps, CDN URLs | Yes | Yes | Yes |
@@ -125,8 +126,9 @@ async fn run_echo_bot(token : String) -> Unit {
 moonbitlang/async, so generic WASI runtimes, browsers, and wasm-gc are not
 targets. See [Wasm runtime and permissions](#wasm-runtime-and-permissions).
 
-² Gateway/Bot and Voice exports exist only on native. The HTTP-server exports
-exist on native and Wasm. As on JS, the root retains DAVE in its dependency
+² Voice exports exist only on native. The HTTP-server exports exist on native
+and Wasm. Gateway zlib-stream compression is native-only; check
+`zlib_stream_supported()` before enabling it. As on JS, the root retains DAVE in its dependency
 graph, but `gaato/dave.available()` is false on Wasm and its safe constructors
 raise `LibraryUnavailable`. This does not enable DAVE or Voice. Packages that
 are empty on a backend do not provide that feature, even if Moon accepts them
@@ -137,8 +139,9 @@ as dependencies.
 Use `--target wasm` with the pinned MoonBit toolchain and its matching `moonrun`.
 This backend uses MoonBit host APIs for sockets, TLS, timers, and environment
 variables; it is not a browser, generic WASI, or wasm-gc application target.
-Wasm builds do not link Gateway zlib or the voice/DAVE native libraries. Node
-is still required for the build-time prebuild hooks described above.
+Wasm builds do not link the voice/DAVE native libraries, and Gateway
+zlib-stream compression is unavailable (leave `compress` off). Node is still
+required for the build-time prebuild hooks described above.
 
 The `interactions_http` example also builds for Wasm:
 
@@ -193,6 +196,7 @@ Runnable programs live under `src/examples/`:
 - `ping_gateway`: low-level Gateway and REST use.
 - `low_level`: manual Framework and Shard wiring.
 - `workers_echo`: Cloudflare Workers adapter.
+- `workers_gateway`: Cloudflare Durable Object running a gateway bot (no voice).
 - `interactions_http`: native signed-interactions HTTP server.
 - `plugin_demo`: a stateful feedback feature installed as a separate package.
 - `gate_probe`: live probe for error-policy recovery and user-restricted
@@ -351,8 +355,45 @@ complete signed-interactions HTTP server. See the
 
 The JavaScript REST client supports null-body 204 responses through
 `moonbitlang/async@0.22.1`; the `workers_echo` workerd suite covers a deferred
-interaction-response deletion end to end. Gateway and Voice transports remain
-native-only.
+interaction-response deletion end to end. Voice remains native-only; the
+gateway also runs on JavaScript and moonrun Wasm.
+
+### Cloudflare Workers gateway
+
+The [`workers_gateway` example](src/examples/workers_gateway/README.md) runs one
+gateway shard in a Durable Object with an outbound WebSocket. A bot accepts
+saved `BotSession` values through `resume~`; `bot.sessions()` returns snapshots
+containing both the Gateway session and its original READY metadata. The
+example stores them on a 30-second alarm so a restarted bot can process replayed
+events, including interactions arriving before RESUMED. Call `bot.sessions()`
+while `bot.run()` is active to capture live sessions:
+
+```mbt nocheck
+///|
+fn restored_bot(
+  app : @discord.App,
+  token : String,
+  saved : Map[Int, @discord.BotSession],
+) -> @discord.Bot {
+  @discord.Bot(app, token~, resume=saved)
+}
+
+///|
+fn current_bot_sessions(bot : @discord.Bot) -> Map[Int, @discord.BotSession] {
+  bot.sessions()
+}
+```
+
+An alarm restarts a failed bot, and a five-minute cron reconciles the object's
+stored enabled state after eviction or deployment. `/stop` disables those
+restarts and clears the saved session because a graceful close invalidates it;
+the public controls require a separate bearer secret. Snapshots are periodic:
+they do not guarantee exactly-once event handling or restore application state
+or optional cache contents. Cloudflare can evict an object after an outbound
+socket has protected it for up to 15 minutes. The JavaScript gateway does not
+support zlib-stream compression; received WebSocket messages are limited to
+32 MiB, CPU to 30 seconds per event by default, and a connected object incurs
+duration charges. See the example README for deployment and local test details.
 
 ## Typed models
 
