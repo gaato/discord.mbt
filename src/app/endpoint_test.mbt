@@ -311,6 +311,9 @@ async test "interaction endpoint dispatches captured responses and completion ou
   app.on_warn(message => warnings.push(message))
   let waiter_results : @aqueue.Queue[Bool] = Queue(kind=Unbounded)
   let slow_finished : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  // The slow handler waits for the test to release it after the deadline has
+  // been observed, so no timer ordering is involved.
+  let slow_release : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   app.command(
     @app.slash(
       name="immediate",
@@ -358,7 +361,7 @@ async test "interaction endpoint dispatches captured responses and completion ou
       description="Slow initial response",
       args=@interaction.Args::unit(),
       handler=Raw(raw => {
-        @async.sleep(100)
+        slow_release.get()
         try raw.respond(content="late") catch {
           @framework.ResponseGateError::Expired => ()
           error => raise error
@@ -442,6 +445,7 @@ async test "interaction endpoint dispatches captured responses and completion ou
       TimedOut => ()
       outcome => fail("expected TimedOut, got \{Repr(outcome)}")
     }
+    slow_release.put(())
     guard @async.with_timeout_opt(500, () => slow_finished.get()) is Some(_) else {
       fail("timed-out handler did not continue in the app task group")
     }
