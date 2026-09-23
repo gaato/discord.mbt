@@ -1,0 +1,20 @@
+import {
+  "gaato/discord",
+  "gaato/discord/gateway",
+  "gaato/discord/model",
+  "moonbitlang/async",
+  "moonbitlang/async/js_async",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+}
+
+// Bot's published `resume` label is reserved by this compiler version.
+
+warnings = "-29-35"
+
+supported_targets = "js + native"
+
+options(
+  link: { "js": { "exports": [ "start_bot" ], "format": "esm" } },
+  targets: { "worker.mbt": [ "js" ], "worker_wbtest.mbt": [ "js" ] },
+)

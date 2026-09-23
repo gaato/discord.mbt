@@ -1,0 +1,24 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "gaato/discord/examples/workers_gateway"
+
+import {
+  "gaato/discord/app",
+  "gaato/discord/bot",
+}
+
+// Values
+pub fn build_bot(String, String, Map[Int, @bot.BotSession]) -> @bot.Bot
+
+pub fn decode_sessions(String) -> Map[Int, @bot.BotSession]
+
+pub fn encode_sessions(Map[Int, @bot.BotSession]) -> String
+
+pub fn worker_app() -> @app.App
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits
