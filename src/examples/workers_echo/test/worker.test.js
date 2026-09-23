@@ -4,39 +4,28 @@ import {
 } from "cloudflare:test";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import worker from "../entry.js";
+import {
+  deferredMessageJson,
+  generateSigningKeys,
+  interaction,
+  signedRequest as sharedSignedRequest,
+  TIMESTAMP,
+} from "../../interactions_js/test_support.mjs";
 
-const encoder = new TextEncoder();
 const workerUrl = "https://worker.example/interactions";
-const timestamp = "1787716800";
 
 let privateKey;
 let publicKeyHex;
 let rotatedPrivateKey;
 let rotatedPublicKeyHex;
 
-function hex(bytes) {
-  return Array.from(new Uint8Array(bytes), (byte) =>
-    byte.toString(16).padStart(2, "0"),
-  ).join("");
-}
-
 beforeAll(async () => {
-  const keys = await crypto.subtle.generateKey(
-    { name: "Ed25519" },
-    true,
-    ["sign", "verify"],
-  );
+  const keys = await generateSigningKeys();
   privateKey = keys.privateKey;
-  publicKeyHex = hex(await crypto.subtle.exportKey("raw", keys.publicKey));
-  const rotatedKeys = await crypto.subtle.generateKey(
-    { name: "Ed25519" },
-    true,
-    ["sign", "verify"],
-  );
+  publicKeyHex = keys.publicKey;
+  const rotatedKeys = await generateSigningKeys();
   rotatedPrivateKey = rotatedKeys.privateKey;
-  rotatedPublicKeyHex = hex(
-    await crypto.subtle.exportKey("raw", rotatedKeys.publicKey),
-  );
+  rotatedPublicKeyHex = rotatedKeys.publicKey;
 });
 
 afterEach(() => {
@@ -44,26 +33,10 @@ afterEach(() => {
 });
 
 async function signedRequest(body, { signal, signingKey = privateKey } = {}) {
-  const bodyBytes =
-    typeof body === "string" ? encoder.encode(body) : new Uint8Array(body);
-  const timestampBytes = encoder.encode(timestamp);
-  const message = new Uint8Array(timestampBytes.length + bodyBytes.length);
-  message.set(timestampBytes);
-  message.set(bodyBytes, timestampBytes.length);
-  const signature = await crypto.subtle.sign(
-    { name: "Ed25519" },
-    signingKey,
-    message,
-  );
-  return new Request(workerUrl, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-signature-ed25519": hex(signature),
-      "x-signature-timestamp": timestamp,
-    },
-    body: bodyBytes,
+  return sharedSignedRequest(workerUrl, body, privateKey, {
     signal,
+    signingKey,
+    headers: { "content-type": "application/json" },
   });
 }
 
@@ -82,39 +55,6 @@ async function dispatch(request, env = {}) {
   return { ctx, response };
 }
 
-function pingBody() {
-  return JSON.stringify({
-    id: "500000000000000200",
-    application_id: "400000000000000001",
-    type: 1,
-    token: "interaction-token",
-    version: 1,
-  });
-}
-
-function commandBody(name, options) {
-  return JSON.stringify({
-    id: "500000000000000201",
-    application_id: "400000000000000001",
-    type: 2,
-    token: "interaction-token",
-    version: 1,
-    user: {
-      id: "200000000000000001",
-      username: "nelly",
-      discriminator: "0",
-      global_name: "Nelly",
-      avatar: null,
-    },
-    data: {
-      id: "600000000000000201",
-      name,
-      type: 1,
-      ...(options ? { options } : {}),
-    },
-  });
-}
-
 describe("Cloudflare Worker interaction endpoint", () => {
   it("rejects non-POST methods", async () => {
     const { ctx, response } = await dispatch(new Request(workerUrl));
@@ -125,7 +65,7 @@ describe("Cloudflare Worker interaction endpoint", () => {
 
   it("rejects missing and invalid signatures", async () => {
     const missing = await dispatch(
-      new Request(workerUrl, { method: "POST", body: pingBody() }),
+      new Request(workerUrl, { method: "POST", body: interaction(1) }),
     );
     expect(missing.response.status).toBe(401);
 
@@ -134,9 +74,9 @@ describe("Cloudflare Worker interaction endpoint", () => {
         method: "POST",
         headers: {
           "x-signature-ed25519": "00".repeat(64),
-          "x-signature-timestamp": timestamp,
+          "x-signature-timestamp": TIMESTAMP,
         },
-        body: pingBody(),
+        body: interaction(1),
       }),
     );
     expect(invalid.response.status).toBe(401);
@@ -168,7 +108,7 @@ describe("Cloudflare Worker interaction endpoint", () => {
   });
 
   it("rebuilds the cached verifier when the public key changes", async () => {
-    const body = pingBody();
+    const body = interaction(1);
     const first = await dispatch(await signedRequest(body));
     expect(first.response.status).toBe(200);
     await waitOnExecutionContext(first.ctx);
@@ -183,7 +123,7 @@ describe("Cloudflare Worker interaction endpoint", () => {
 
   it("does not reuse a cached verifier for invalid configuration", async () => {
     const { ctx, response } = await dispatch(
-      await signedRequest(pingBody()),
+      await signedRequest(interaction(1)),
       { DISCORD_PUBLIC_KEY: "z".repeat(64) },
     );
     expect(response.status).toBe(401);
@@ -191,7 +131,7 @@ describe("Cloudflare Worker interaction endpoint", () => {
   });
 
   it("answers signed PING requests", async () => {
-    const { ctx, response } = await dispatch(await signedRequest(pingBody()));
+    const { ctx, response } = await dispatch(await signedRequest(interaction(1)));
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toBe("application/json");
     expect(await response.text()).toBe('{"type":1}');
@@ -199,7 +139,7 @@ describe("Cloudflare Worker interaction endpoint", () => {
   });
 
   it("returns an exact echo response", async () => {
-    const body = commandBody("echo", [
+    const body = interaction(2, "echo", [
       { name: "text", type: 3, value: "hello from workerd" },
     ]);
     const { ctx, response } = await dispatch(await signedRequest(body));
@@ -211,7 +151,7 @@ describe("Cloudflare Worker interaction endpoint", () => {
   });
 
   it("maps unknown commands to 404", async () => {
-    const body = commandBody("missing");
+    const body = interaction(2, "missing");
     const { ctx, response } = await dispatch(await signedRequest(body));
     expect(response.status).toBe(404);
     expect(await response.text()).toBe("not found");
@@ -219,7 +159,7 @@ describe("Cloudflare Worker interaction endpoint", () => {
   });
 
   it("streams multipart file replies in wire order", async () => {
-    const body = commandBody("file");
+    const body = interaction(2, "file");
     const { ctx, response } = await dispatch(await signedRequest(body));
     expect(response.status).toBe(200);
     const contentType = response.headers.get("content-type");
@@ -243,7 +183,7 @@ describe("Cloudflare Worker interaction endpoint", () => {
   });
 
   it("allows a multipart response body to be cancelled without orphan work", async () => {
-    const body = commandBody("file");
+    const body = interaction(2, "file");
     const { ctx, response } = await dispatch(await signedRequest(body));
     const reader = response.body.getReader();
     expect((await reader.read()).done).toBe(false);
@@ -261,34 +201,14 @@ describe("Cloudflare Worker interaction endpoint", () => {
         : await input.clone().text();
       calls.push({ method, requestBody, url });
       return new Response(
-        JSON.stringify({
-          id: "700000000000000009",
-          channel_id: "800000000000000001",
-          author: {
-            id: "1",
-            username: "bot",
-            discriminator: "0",
-            avatar: null,
-          },
-          content: "Finished in the background.",
-          timestamp: "2025-06-01T10:00:00.000000+00:00",
-          edited_timestamp: null,
-          tts: false,
-          mention_everyone: false,
-          mentions: [],
-          mention_roles: [],
-          attachments: [],
-          embeds: [],
-          pinned: false,
-          type: 0,
-        }),
+        JSON.stringify(deferredMessageJson()),
         { status: 200, headers: { "content-type": "application/json" } },
       );
     });
     vi.stubGlobal("fetch", fetchMock);
 
     const controller = new AbortController();
-    const request = await signedRequest(commandBody("slow"), {
+    const request = await signedRequest(interaction(2, "slow"), {
       signal: controller.signal,
     });
     const { ctx, response } = await dispatch(request);
@@ -318,7 +238,7 @@ describe("Cloudflare Worker interaction endpoint", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const { ctx, response } = await dispatch(
-      await signedRequest(commandBody("vanish")),
+      await signedRequest(interaction(2, "vanish")),
     );
     expect(response.status).toBe(200);
     expect(await response.text()).toBe('{"type":5,"data":{}}');
@@ -337,7 +257,7 @@ describe("Cloudflare Worker interaction endpoint", () => {
     );
     const controller = new AbortController();
     controller.abort();
-    const signed = await signedRequest(commandBody("echo", [
+    const signed = await signedRequest(interaction(2, "echo", [
       { name: "text", type: 3, value: "already aborted" },
     ]));
     const dispatchResult = moonbit.start_signed_interaction(
@@ -346,7 +266,7 @@ describe("Cloudflare Worker interaction endpoint", () => {
       publicKeyHex,
       "POST",
       signed.headers.get("x-signature-ed25519"),
-      timestamp,
+      TIMESTAMP,
       new Uint8Array(await signed.arrayBuffer()),
       "https://discord.com",
       controller.signal,

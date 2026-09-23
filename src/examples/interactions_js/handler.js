@@ -34,7 +34,7 @@ export async function handleRawInteraction(input, config, scheduleBackground) {
     return new Response("Interaction dispatch failed", { status: 500 });
   }
 
-  return new Response(outcome.status === 202 ? null : outcome.body, {
+  return new Response(outcome.body, {
     status: outcome.status,
     headers: outcome.contentType
       ? { "content-type": outcome.contentType }
@@ -54,4 +54,20 @@ export async function handleInteraction(request, config, scheduleBackground) {
     config,
     scheduleBackground,
   );
+}
+
+// Track background promises on hosts without a platform waitUntil.
+export function trackBackground(onError = console.error) {
+  const pending = new Set();
+  return {
+    schedule(promise) {
+      const tracked = promise.catch(onError).finally(() => {
+        pending.delete(tracked);
+      });
+      pending.add(tracked);
+    },
+    whenIdle() {
+      return Promise.all([...pending]);
+    },
+  };
 }

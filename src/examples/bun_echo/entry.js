@@ -1,15 +1,10 @@
-import { handleInteraction } from "../interactions_js/handler.js";
+import { handleInteraction, trackBackground } from "../interactions_js/handler.js";
 
 export function createHandler(config, onBackgroundError = console.error) {
-  const pending = new Set();
+  const background = trackBackground(onBackgroundError);
   const handler = (request) =>
-    handleInteraction(request, config, (background) => {
-      const tracked = background.catch(onBackgroundError).finally(() => {
-        pending.delete(tracked);
-      });
-      pending.add(tracked);
-    });
-  handler.whenIdle = () => Promise.all([...pending]);
+    handleInteraction(request, config, (promise) => background.schedule(promise));
+  handler.whenIdle = () => background.whenIdle();
   return handler;
 }
 
