@@ -1,0 +1,17 @@
+{
+  "name": "discord.mbt",
+  "image": "ghcr.io/gaato/moonbit:0.10.14-7d59c7ec9",
+  "features": {
+    "ghcr.io/devcontainers/features/python:1": { "version": "os-provided" }
+  },
+  "onCreateCommand": "apt-get update && apt-get install -y --no-install-recommends zlib1g-dev && rm -rf /var/lib/apt/lists/*",
+  "postCreateCommand": "moon update",
+  "remoteEnv": {
+    "WRANGLER_SEND_METRICS": "false"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": ["moonbit.moonbit-lang"]
+    }
+  }
+}

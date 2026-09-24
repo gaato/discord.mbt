@@ -41,6 +41,13 @@ headers are therefore required for all native builds: install `zlib1g-dev` on
 Debian/Ubuntu or `zlib-devel` on Fedora/openSUSE. The zlib shared library is
 additionally required at runtime when native Gateway zlib-stream compression is used.
 
+The [`ghcr.io/gaato/moonbit`](https://github.com/gaato/moonbit-docker)
+toolchain image bundles the pinned toolchain with Node.js 24, `gcc`, and
+`git`; the
+repository's `.devcontainer` starts from it, CI runs in it (except the Rust
+voice shim job), and `template/Dockerfile` uses it as the builder stage for a
+distroless bot image.
+
 ## Install
 
 ```sh

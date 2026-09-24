@@ -7,6 +7,14 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+### Added
+
+- The bot template ships a `Dockerfile` that builds with the
+  `ghcr.io/gaato/moonbit` toolchain image and runs the native executable on
+  `gcr.io/distroless/base-debian13`; CI builds and starts that image. A
+  `.devcontainer` starts from the same image, and CI runs in it except the
+  Rust voice shim job.
+
 ## [0.5.0] - 2026-09-24
 
 ### Added
