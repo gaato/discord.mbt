@@ -123,7 +123,7 @@ async fn run_echo_bot(token : String) -> Unit {
 | `gaato/discord/cache` | Opt-in, gateway-driven in-memory cache | Yes | Yes | Yes |
 | `gaato/discord/util` | Pure helpers: permissions, mentions, timestamps, CDN URLs | Yes | Yes | Yes |
 | `gaato/discord/verify` | Pure MoonBit Ed25519 request verification | Yes | Yes | Yes |
-| `gaato/discord/ratelimit` | Rate limiter trait + in-memory implementation | Yes | Yes | Yes |
+| `gaato/discord/ratelimit` | In-memory Discord rate limiter for the `gaato/sdk-runtime` `RateLimiter` trait | Yes | Yes | Yes |
 | `gaato/discord/cooldown` | Command cooldown store trait + in-memory fixed windows | Yes | Yes | Yes |
 | `gaato/discord/queue` | Identify queue trait + in-memory implementation | Yes | Yes | Yes |
 | `gaato/discord/coordinator` | Experimental TCP coordinator for multi-process Identify, REST limits, and cooldowns | Yes | No | Yes |

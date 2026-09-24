@@ -163,9 +163,7 @@ describe("Cloudflare Worker interaction endpoint", () => {
     const { ctx, response } = await dispatch(await signedRequest(body));
     expect(response.status).toBe(200);
     const contentType = response.headers.get("content-type");
-    expect(contentType).toMatch(
-      /^multipart\/form-data; boundary=discordmbt-/,
-    );
+    expect(contentType).toMatch(/^multipart\/form-data; boundary=[\w-]+$/);
     const boundary = contentType.slice(contentType.indexOf("boundary=") + 9);
     const wire = new TextDecoder().decode(await response.arrayBuffer());
     const payloadIndex = wire.indexOf('name="payload_json"');
@@ -177,7 +175,7 @@ describe("Cloudflare Worker interaction endpoint", () => {
     expect(fileIndex).toBeGreaterThan(payloadIndex);
     expect(bytesIndex).toBeGreaterThan(fileIndex);
     expect(wire).toContain('"filename":"hello.txt"');
-    expect(wire).toContain("content-type: text/plain\r\n");
+    expect(wire).toContain("Content-Type: text/plain\r\n");
     expect(wire.endsWith(`--${boundary}--\r\n`)).toBe(true);
     await waitOnExecutionContext(ctx);
   });

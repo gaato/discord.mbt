@@ -3,8 +3,8 @@ package "gaato/discord/http"
 
 import {
   "gaato/discord/model",
-  "gaato/discord/ratelimit",
   "gaato/discord/telemetry",
+  "gaato/sdk-runtime",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
@@ -14,7 +14,7 @@ pub const VERSION : String = "0.5.0"
 
 pub fn attachments_json(Array[FileUpload]) -> Json
 
-pub fn encode_multipart_body(String, Array[FileUpload]) -> (String, Array[MultipartChunk]) raise DiscordHttpError
+pub fn encode_multipart_body(String, Array[FileUpload]) -> (String, Array[Bytes]) raise DiscordHttpError
 
 // Errors
 pub(all) suberror CustomRouteError {
@@ -110,7 +110,7 @@ pub async fn ChannelRef::join_thread(Self) -> Unit raise DiscordHttpError
 pub async fn ChannelRef::joined_private_archived_threads(Self, before? : @model.Id[@model.ChannelMarker], limit? : Int) -> @model.ArchivedThreads raise DiscordHttpError
 pub async fn ChannelRef::leave_thread(Self) -> Unit raise DiscordHttpError
 pub fn ChannelRef::message_ref(Self, @model.Id[@model.MessageMarker]) -> MessageRef
-pub fn ChannelRef::messages(Self, before? : @model.Id[@model.MessageMarker], after? : @model.Id[@model.MessageMarker], around? : @model.Id[@model.MessageMarker], page_size? : Int) -> Paginator[@model.Message] raise DiscordHttpError
+pub fn ChannelRef::messages(Self, before? : @model.Id[@model.MessageMarker], after? : @model.Id[@model.MessageMarker], around? : @model.Id[@model.MessageMarker], page_size? : Int) -> @sdk-runtime.Paginator[@model.Message, DiscordHttpError] raise DiscordHttpError
 pub async fn ChannelRef::pins(Self) -> Array[@model.Message] raise DiscordHttpError
 pub async fn ChannelRef::pins_page(Self, before? : @model.Timestamp, limit? : Int) -> @model.ChannelPins raise DiscordHttpError
 pub async fn ChannelRef::private_archived_threads(Self, before? : @model.Timestamp, limit? : Int) -> @model.ArchivedThreads raise DiscordHttpError
@@ -131,7 +131,7 @@ pub async fn[T] ChannelRef::with_typing(Self, async () -> T) -> T
 pub struct Client {
   // private fields
 }
-pub fn Client::Client(String, base_url? : String, api_version? : Int, limiter? : &@ratelimit.RateLimiter, transport? : &@gaato/http.Transport, max_connections? : Int, request_timeout_ms? : Int, max_retries? : Int, default_allowed_mentions? : @model.AllowedMentions) -> Self
+pub fn Client::Client(String, base_url? : String, api_version? : Int, limiter? : &@sdk-runtime.RateLimiter, transport? : &@gaato/http.Transport, max_connections? : Int, request_timeout_ms? : Int, max_retries? : Int, default_allowed_mentions? : @model.AllowedMentions) -> Self
 pub async fn Client::add_guild_member(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker], String, nick? : String, roles? : Array[@model.Id[@model.RoleMarker]], mute? : Bool, deaf? : Bool) -> @model.GuildMember? raise DiscordHttpError
 pub async fn Client::add_member_role(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker], @model.Id[@model.RoleMarker], audit_reason? : String) -> Unit raise DiscordHttpError
 pub async fn Client::add_thread_member(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.UserMarker]) -> Unit raise DiscordHttpError
@@ -350,13 +350,13 @@ pub async fn Client::modify_webhook_with_token(Self, @model.Id[@model.WebhookMar
 pub fn Client::offline(async (HttpRequest) -> HttpResponse, default_allowed_mentions? : @model.AllowedMentions) -> Self
 pub fn Client::on_telemetry(Self, (@telemetry.TelemetryEvent) -> Unit raise) -> Unit
 pub fn Client::on_warn(Self, (String) -> Unit) -> Unit
-pub fn Client::paginate_current_user_guilds(Self, before? : @model.Id[@model.GuildMarker], after? : @model.Id[@model.GuildMarker], shard? : Int, with_counts? : Bool, page_size? : Int) -> Paginator[@model.CurrentUserGuild] raise DiscordHttpError
-pub fn Client::paginate_guild_audit_log(Self, @model.Id[@model.GuildMarker], user_id? : @model.Id[@model.UserMarker], action_type? : @model.AuditLogEvent, before? : @model.Id[@model.AuditLogEntryMarker], page_size? : Int) -> Paginator[@model.AuditLogEntry] raise DiscordHttpError
-pub fn Client::paginate_guild_bans(Self, @model.Id[@model.GuildMarker], before? : @model.Id[@model.UserMarker], after? : @model.Id[@model.UserMarker], page_size? : Int) -> Paginator[@model.GuildBan] raise DiscordHttpError
-pub fn Client::paginate_guild_members(Self, @model.Id[@model.GuildMarker], after? : @model.Id[@model.UserMarker], page_size? : Int) -> Paginator[@model.GuildMember] raise DiscordHttpError
-pub fn Client::paginate_guild_scheduled_event_users(Self, @model.Id[@model.GuildMarker], @model.Id[@model.ScheduledEventMarker], with_member? : Bool, before? : @model.Id[@model.UserMarker], after? : @model.Id[@model.UserMarker], page_size? : Int) -> Paginator[@model.GuildScheduledEventUser] raise DiscordHttpError
-pub fn Client::paginate_messages(Self, @model.Id[@model.ChannelMarker], before? : @model.Id[@model.MessageMarker], after? : @model.Id[@model.MessageMarker], around? : @model.Id[@model.MessageMarker], page_size? : Int) -> Paginator[@model.Message] raise DiscordHttpError
-pub fn Client::paginate_poll_answer_voters(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], Int, after? : @model.Id[@model.UserMarker], page_size? : Int) -> Paginator[@model.User] raise DiscordHttpError
+pub fn Client::paginate_current_user_guilds(Self, before? : @model.Id[@model.GuildMarker], after? : @model.Id[@model.GuildMarker], shard? : Int, with_counts? : Bool, page_size? : Int) -> @sdk-runtime.Paginator[@model.CurrentUserGuild, DiscordHttpError] raise DiscordHttpError
+pub fn Client::paginate_guild_audit_log(Self, @model.Id[@model.GuildMarker], user_id? : @model.Id[@model.UserMarker], action_type? : @model.AuditLogEvent, before? : @model.Id[@model.AuditLogEntryMarker], page_size? : Int) -> @sdk-runtime.Paginator[@model.AuditLogEntry, DiscordHttpError] raise DiscordHttpError
+pub fn Client::paginate_guild_bans(Self, @model.Id[@model.GuildMarker], before? : @model.Id[@model.UserMarker], after? : @model.Id[@model.UserMarker], page_size? : Int) -> @sdk-runtime.Paginator[@model.GuildBan, DiscordHttpError] raise DiscordHttpError
+pub fn Client::paginate_guild_members(Self, @model.Id[@model.GuildMarker], after? : @model.Id[@model.UserMarker], page_size? : Int) -> @sdk-runtime.Paginator[@model.GuildMember, DiscordHttpError] raise DiscordHttpError
+pub fn Client::paginate_guild_scheduled_event_users(Self, @model.Id[@model.GuildMarker], @model.Id[@model.ScheduledEventMarker], with_member? : Bool, before? : @model.Id[@model.UserMarker], after? : @model.Id[@model.UserMarker], page_size? : Int) -> @sdk-runtime.Paginator[@model.GuildScheduledEventUser, DiscordHttpError] raise DiscordHttpError
+pub fn Client::paginate_messages(Self, @model.Id[@model.ChannelMarker], before? : @model.Id[@model.MessageMarker], after? : @model.Id[@model.MessageMarker], around? : @model.Id[@model.MessageMarker], page_size? : Int) -> @sdk-runtime.Paginator[@model.Message, DiscordHttpError] raise DiscordHttpError
+pub fn Client::paginate_poll_answer_voters(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], Int, after? : @model.Id[@model.UserMarker], page_size? : Int) -> @sdk-runtime.Paginator[@model.User, DiscordHttpError] raise DiscordHttpError
 pub async fn Client::pin_message(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], audit_reason? : String) -> Unit raise DiscordHttpError
 pub fn Client::ref_of_message(Self, @model.Message) -> MessageRef
 pub async fn Client::remove_guild_ban(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker], audit_reason? : String) -> Unit raise DiscordHttpError
@@ -438,10 +438,10 @@ pub struct GuildRef {
 }
 pub async fn GuildRef::active_threads(Self) -> @model.ActiveGuildThreads raise DiscordHttpError
 pub async fn GuildRef::add_member(Self, @model.Id[@model.UserMarker], String, nick? : String, roles? : Array[@model.Id[@model.RoleMarker]], mute? : Bool, deaf? : Bool) -> @model.GuildMember? raise DiscordHttpError
-pub fn GuildRef::audit_log(Self, user_id? : @model.Id[@model.UserMarker], action_type? : @model.AuditLogEvent, before? : @model.Id[@model.AuditLogEntryMarker], page_size? : Int) -> Paginator[@model.AuditLogEntry] raise DiscordHttpError
+pub fn GuildRef::audit_log(Self, user_id? : @model.Id[@model.UserMarker], action_type? : @model.AuditLogEvent, before? : @model.Id[@model.AuditLogEntryMarker], page_size? : Int) -> @sdk-runtime.Paginator[@model.AuditLogEntry, DiscordHttpError] raise DiscordHttpError
 pub fn GuildRef::auto_moderation_rule_ref(Self, @model.Id[@model.AutoModerationRuleMarker]) -> AutoModerationRuleRef
 pub async fn GuildRef::auto_moderation_rules(Self) -> Array[@model.AutoModerationRule] raise DiscordHttpError
-pub fn GuildRef::bans(Self, before? : @model.Id[@model.UserMarker], after? : @model.Id[@model.UserMarker], page_size? : Int) -> Paginator[@model.GuildBan] raise DiscordHttpError
+pub fn GuildRef::bans(Self, before? : @model.Id[@model.UserMarker], after? : @model.Id[@model.UserMarker], page_size? : Int) -> @sdk-runtime.Paginator[@model.GuildBan, DiscordHttpError] raise DiscordHttpError
 pub async fn GuildRef::begin_prune(Self, days? : Int, compute_prune_count? : Bool, include_roles? : Array[@model.Id[@model.RoleMarker]], reason? : String) -> @model.GuildPruneResult raise DiscordHttpError
 pub async fn GuildRef::bulk_ban(Self, Array[@model.Id[@model.UserMarker]], delete_message_seconds? : Int, reason? : String) -> @model.BulkBanResponse raise DiscordHttpError
 pub async fn GuildRef::channels(Self) -> Array[@model.Channel] raise DiscordHttpError
@@ -471,7 +471,7 @@ pub async fn GuildRef::integrations(Self) -> Array[@model.Integration] raise Dis
 pub async fn GuildRef::invites(Self) -> Array[@model.Invite] raise DiscordHttpError
 pub async fn GuildRef::leave(Self) -> Unit raise DiscordHttpError
 pub fn GuildRef::member_ref(Self, @model.Id[@model.UserMarker]) -> MemberRef
-pub fn GuildRef::members(Self, after? : @model.Id[@model.UserMarker], page_size? : Int) -> Paginator[@model.GuildMember] raise DiscordHttpError
+pub fn GuildRef::members(Self, after? : @model.Id[@model.UserMarker], page_size? : Int) -> @sdk-runtime.Paginator[@model.GuildMember, DiscordHttpError] raise DiscordHttpError
 pub async fn GuildRef::my_voice_state(Self) -> @model.VoiceState raise DiscordHttpError
 pub async fn GuildRef::onboarding(Self) -> @model.GuildOnboarding raise DiscordHttpError
 pub async fn GuildRef::preview(Self) -> @model.GuildPreview raise DiscordHttpError
@@ -545,25 +545,13 @@ pub async fn MessageRef::expire_poll(Self) -> @model.Message raise DiscordHttpEr
 pub async fn MessageRef::fetch(Self) -> @model.Message raise DiscordHttpError
 pub async fn MessageRef::forward(Self, @model.Id[@model.ChannelMarker]) -> @model.Message raise DiscordHttpError
 pub async fn MessageRef::pin(Self, reason? : String) -> Unit raise DiscordHttpError
-pub fn MessageRef::poll_answer_voters(Self, Int, after? : @model.Id[@model.UserMarker], page_size? : Int) -> Paginator[@model.User] raise DiscordHttpError
+pub fn MessageRef::poll_answer_voters(Self, Int, after? : @model.Id[@model.UserMarker], page_size? : Int) -> @sdk-runtime.Paginator[@model.User, DiscordHttpError] raise DiscordHttpError
 pub async fn MessageRef::react(Self, String) -> Unit raise DiscordHttpError
 pub async fn MessageRef::reactions(Self, String, typ? : @model.ReactionType, limit? : Int, after? : @model.Id[@model.UserMarker]) -> Array[@model.User] raise DiscordHttpError
 pub async fn MessageRef::reply(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], sticker_ids? : Array[@model.Id[@model.StickerMarker]], files? : Array[FileUpload], tts? : Bool, flags? : @model.MessageFlags, allowed_mentions? : @model.AllowedMentions, nonce? : @model.Nonce, enforce_nonce? : Bool, poll? : @model.PollCreateRequest) -> @model.Message raise DiscordHttpError
 pub async fn MessageRef::start_thread(Self, String, auto_archive_duration? : @model.ThreadAutoArchiveDuration, rate_limit_per_user? : Int, reason? : String) -> @model.Channel raise DiscordHttpError
 pub async fn MessageRef::unpin(Self, reason? : String) -> Unit raise DiscordHttpError
 pub async fn MessageRef::unreact(Self, String) -> Unit raise DiscordHttpError
-
-pub enum MultipartChunk {
-  Text(String)
-  Blob(Bytes)
-}
-
-pub struct Paginator[T] {
-  // private fields
-}
-pub async fn[T] Paginator::collect(Self[T], max~ : Int) -> Array[T]
-pub async fn[T] Paginator::each(Self[T], (T) -> Unit raise) -> Unit
-pub async fn[T] Paginator::next_page(Self[T]) -> Array[T]?
 
 pub struct RoleRef {
   // private fields
@@ -803,7 +791,7 @@ pub struct ScheduledEventRef {
 pub async fn ScheduledEventRef::delete(Self, reason? : String) -> Unit raise DiscordHttpError
 pub async fn ScheduledEventRef::edit(Self, channel_id? : @model.Id[@model.ChannelMarker], clear_channel_id? : Bool, entity_metadata? : @model.EntityMetadata, clear_entity_metadata? : Bool, name? : String, privacy_level? : @model.GuildScheduledEventPrivacyLevel, scheduled_start_time? : @model.Timestamp, scheduled_end_time? : @model.Timestamp, clear_scheduled_end_time? : Bool, description? : String, clear_description? : Bool, entity_type? : @model.GuildScheduledEventEntityType, status? : @model.GuildScheduledEventStatus, image? : String, clear_image? : Bool, recurrence_rule? : @model.GuildScheduledEventRecurrenceRule, clear_recurrence_rule? : Bool, reason? : String) -> @model.GuildScheduledEvent raise DiscordHttpError
 pub async fn ScheduledEventRef::fetch(Self, with_user_count? : Bool) -> @model.GuildScheduledEvent raise DiscordHttpError
-pub fn ScheduledEventRef::users(Self, with_member? : Bool, before? : @model.Id[@model.UserMarker], after? : @model.Id[@model.UserMarker], page_size? : Int) -> Paginator[@model.GuildScheduledEventUser] raise DiscordHttpError
+pub fn ScheduledEventRef::users(Self, with_member? : Bool, before? : @model.Id[@model.UserMarker], after? : @model.Id[@model.UserMarker], page_size? : Int) -> @sdk-runtime.Paginator[@model.GuildScheduledEventUser, DiscordHttpError] raise DiscordHttpError
 
 pub struct SkuRef {
   // private fields
@@ -870,6 +858,8 @@ pub async fn WebhookTokenRef::send_slack(Self, Json, thread_id? : @model.Id[@mod
 
 // Type aliases
 pub type HttpMiddleware = async (HttpRequest, async (HttpRequest) -> HttpResponse) -> HttpResponse
+
+pub type Paginator[T] = @sdk-runtime.Paginator[T, DiscordHttpError]
 
 pub using @moonbitlang/async/http {type RequestMethod}
 

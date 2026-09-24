@@ -19,15 +19,27 @@ fn error_response(message : String) -> Json {
 }
 
 ///|
-fn decode_headers(fields : Map[String, Json]) -> Map[String, String] raise {
-  let headers : Map[String, String] = Map([])
+/// The wire form of rate-limit headers: one JSON object, one value per name.
+/// A repeated header collapses to its last value, which loses nothing for the
+/// `x-ratelimit-*` and `retry-after` headers the limiter reads.
+fn encode_headers(headers : @http.Headers) -> Json {
+  let fields : Map[String, Json] = Map([])
+  for pair in headers.iter() {
+    fields[pair.0] = Json::string(pair.1)
+  }
+  Json::object(fields)
+}
+
+///|
+fn decode_headers(fields : Map[String, Json]) -> @http.Headers raise {
+  let headers = @http.Headers::new()
   for name, value in fields {
     guard value is String(text) else {
       raise CoordinatorError::InvalidResponse(
         message="header \{name} must be a string",
       )
     }
-    headers[name.to_lower()] = text
+    headers.set(name.to_lower(), text)
   }
   headers
 }

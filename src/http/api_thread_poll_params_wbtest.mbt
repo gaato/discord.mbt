@@ -26,10 +26,10 @@ test "poll create request serializes request-side media without nulls" {
 
 ///|
 async test "create message forwards the poll body" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_body = Ref(Json::null())
-  client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
+  perform.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
     { status: 200, headers: Map([]), body: Json::null(), }
   })
@@ -58,10 +58,10 @@ async test "create message forwards the poll body" {
 
 ///|
 async test "modify channel forwards the thread-only fields" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_body = Ref(Json::null())
-  client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
+  perform.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
     { status: 200, headers: Map([]), body: Json::null(), }
   })
@@ -94,11 +94,11 @@ async test "modify channel forwards the thread-only fields" {
 
 ///|
 async test "execute webhook builds thread query and body params" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_path = Ref("")
   let captured_body = Ref(Json::null())
-  client.perform_override_.val = Some((_route, path, _headers, body, _files) => {
+  perform.val = Some((_route, path, _headers, body, _files) => {
     captured_path.val = path
     captured_body.val = body.unwrap_or(Json::null())
     { status: 200, headers: Map([]), body: Json::null(), }
@@ -171,10 +171,10 @@ async test "execute webhook rejects thread_id together with thread_name" {
 
 ///|
 async test "webhook message endpoints append the thread_id query" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_path = Ref("")
-  client.perform_override_.val = Some((_route, path, _headers, _body, _files) => {
+  perform.val = Some((_route, path, _headers, _body, _files) => {
     captured_path.val = path
     { status: 204, headers: Map([]), body: Json::null(), }
   })

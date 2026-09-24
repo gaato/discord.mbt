@@ -4,26 +4,25 @@ priv suberror TelemetryHookFailure derive(Debug)
 ///|
 async test "429 retry_after longer than the request timeout retries with telemetry" {
   let limiter = TimeoutTestLimiter(() => ())
-  let client = Client(
-    "test-token",
+  let calls = Ref(0)
+  let client = wire_test_client(
+    (_path, _headers, _body) => {
+      calls.val += 1
+      if calls.val == 1 {
+        {
+          status: 429,
+          headers: { "x-ratelimit-global": "true", "retry-after": "0.06" },
+          body: { "retry_after": 0.06 },
+        }
+      } else {
+        { status: 200, headers: Map([]), body: { "ok": true }, }
+      }
+    },
     limiter~,
     max_retries=1,
     request_timeout_ms=10,
   )
   defer client.close()
-  let calls = Ref(0)
-  client.perform_override_.val = Some((_route, _path, _headers, _body, _files) => {
-    calls.val += 1
-    if calls.val == 1 {
-      {
-        status: 429,
-        headers: { "x-ratelimit-global": "true", "retry-after": "0.06" },
-        body: { "retry_after": 0.06 },
-      }
-    } else {
-      { status: 200, headers: Map([]), body: { "ok": true }, }
-    }
-  })
   let events : Array[@telemetry.TelemetryEvent] = []
   client.on_telemetry(event => events.push(event))
   let response = client.request(GetGateway)
@@ -46,25 +45,24 @@ async test "429 retry_after longer than the request timeout retries with telemet
 ///|
 async test "a timed-out attempt releases its bucket and emits telemetry without retrying" {
   let limiter = TimeoutTestLimiter(() => ())
-  let client = Client(
-    "test-token",
+  let attempts = Ref(0)
+  let cancelled = Ref(false)
+  let client = wire_test_client(
+    (_path, _headers, _body) => {
+      attempts.val += 1
+      defer {
+        cancelled.val = @async.is_being_cancelled()
+      }
+      @async.sleep(60000)
+      { status: 200, headers: Map([]), body: { "late": true }, }
+    },
     limiter~,
     request_timeout_ms=10,
     max_retries=3,
   )
   defer client.close()
-  let attempts = Ref(0)
-  let cancelled = Ref(false)
   let events : Array[@telemetry.TelemetryEvent] = []
   client.on_telemetry(event => events.push(event))
-  client.perform_override_.val = Some((_route, _path, _headers, _body, _files) => {
-    attempts.val += 1
-    defer {
-      cancelled.val = @async.is_being_cancelled()
-    }
-    @async.sleep(60000)
-    { status: 200, headers: Map([]), body: { "late": true }, }
-  })
   let route = Route::custom(request_method=Post, path="/channels/1/messages")
   try client.request(route, body={ "content": "send once" }) catch {
     Timeout(timeout_ms~) => inspect(timeout_ms, content="10")
@@ -83,13 +81,12 @@ async test "a timed-out attempt releases its bucket and emits telemetry without 
 
 ///|
 async test "telemetry hook failures flow to client warnings" {
-  let client = Client("test-token")
-  defer client.close()
-  client.perform_override_.val = Some((_route, _path, _headers, _body, _files) => {
+  let client = wire_test_client((_path, _headers, _body) => {
     status: 200,
     headers: Map([]),
     body: Json::null(),
   })
+  defer client.close()
   let warnings : Array[String] = []
   client.on_warn(message => warnings.push(message))
   client.on_telemetry(_ => raise TelemetryHookFailure)

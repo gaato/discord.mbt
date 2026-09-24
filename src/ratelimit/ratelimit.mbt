@@ -1,33 +1,19 @@
 ///|
-/// REST rate limiting strategy.
+/// REST rate limiting.
 ///
-/// The design is requester-driven: `acquire` blocks (asynchronously) in the
-/// calling task until the request may proceed, and `release` must be called
-/// exactly once per successful `acquire`, with the response's rate-limit
-/// headers when available. There is no background actor task, so a cancelled
-/// caller cleans up naturally.
+/// The client uses the `gaato/sdk-runtime` `RateLimiter` contract, which is
+/// requester-driven: `acquire` blocks (asynchronously) in the calling task
+/// until the request may proceed, and `release` is called exactly once per
+/// `acquire` that returned, with the response's rate-limit headers, or with
+/// `status=0` when no response arrived. There is no background actor task, so
+/// a cancelled caller cleans up naturally.
 ///
-/// Implementations other than `InMemoryRateLimiter` (e.g. a cross-process
-/// store) can be plugged into the HTTP client via this trait.
-pub(open) trait RateLimiter {
-  /// Wait until a request for `bucket_key` may be sent. `bucket_key` is the
-  /// client's route-level bucket (method + path template + major parameter).
-  /// `global_exempt` skips the global request-per-second limit (interaction
-  /// and webhook endpoints are exempt per Discord's documentation).
-  async fn acquire(Self, bucket_key : String, global_exempt~ : Bool) -> Unit
-
-  /// Report the outcome of the request admitted by the matching `acquire`.
-  /// `headers` must have lowercase header names; pass an empty map when the
-  /// request failed before a response arrived (`status=0`).
-  async fn release(
-    Self,
-    bucket_key : String,
-    status~ : Int,
-    headers~ : Map[String, String],
-  ) -> Unit
-}
-
-///|
+/// `bucket_key` is the client's route-level bucket (method + path template +
+/// major parameter). `global_exempt` skips the global request-per-second
+/// limit (interaction and webhook endpoints are exempt per Discord's
+/// documentation). Implementations other than `InMemoryRateLimiter` (e.g. the
+/// cross-process `RemoteRateLimiter` in `coordinator`) plug into the HTTP
+/// client through the same trait.
 priv struct Bucket {
   /// Serializes requests within one bucket: held from admission until the
   /// response headers are reported. This keeps bucket accounting exact at the
@@ -68,7 +54,7 @@ pub fn InMemoryRateLimiter::InMemoryRateLimiter(
 ///|
 async fn InMemoryRateLimiter::wait_for_global(
   self : InMemoryRateLimiter,
-) -> Unit {
+) -> Unit noraise {
   for ;; {
     let now = @clock.now_ms()
     if now < self.global_blocked_until {
@@ -89,12 +75,12 @@ async fn InMemoryRateLimiter::wait_for_global(
 }
 
 ///|
-pub extend InMemoryRateLimiter with RateLimiter::{acquire, release}
+pub extend InMemoryRateLimiter with @runtime.RateLimiter::{acquire, release}
 
 ///|
 /// Wait for bucket capacity — and the global window unless `global_exempt` —
 /// before the request is sent.
-pub impl RateLimiter for InMemoryRateLimiter with fn acquire(
+pub impl @runtime.RateLimiter for InMemoryRateLimiter with fn acquire(
   self,
   bucket_key,
   global_exempt~,
@@ -131,8 +117,9 @@ pub impl RateLimiter for InMemoryRateLimiter with fn acquire(
 
 ///|
 /// Feed the response's `x-ratelimit-*` headers back into the bucket
-/// accounting.
-pub impl RateLimiter for InMemoryRateLimiter with fn release(
+/// accounting and let the next request into the bucket. A `status` of 0
+/// (no response) only releases the gate.
+pub impl @runtime.RateLimiter for InMemoryRateLimiter with fn release(
   self,
   bucket_key,
   status~,

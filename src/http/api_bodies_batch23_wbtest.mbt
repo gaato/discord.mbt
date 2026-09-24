@@ -1,10 +1,10 @@
 ///|
 async test "channel optional bodies pin set and omitted forms" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let paths : Array[String] = []
   let bodies : Array[Json] = []
-  client.perform_override_.val = Some((_route, path, _headers, body, _files) => {
+  perform.val = Some((_route, path, _headers, body, _files) => {
     paths.push(path)
     bodies.push(body.unwrap_or(Json::null()))
     { status: 204, headers: Map([]), body: Json::null(), }
@@ -29,10 +29,10 @@ async test "channel optional bodies pin set and omitted forms" {
 
 ///|
 async test "current user body pins every set option and all omitted" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let bodies : Array[Json] = []
-  client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
+  perform.val = Some((_route, _path, _headers, body, _files) => {
     bodies.push(body.unwrap_or(Json::null()))
     { status: 200, headers: Map([]), body: Json::null(), }
   })
@@ -65,10 +65,10 @@ async test "current user body pins every set option and all omitted" {
 
 ///|
 async test "scheduled event modify body pins every set option and all omitted" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let bodies : Array[Json] = []
-  client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
+  perform.val = Some((_route, _path, _headers, body, _files) => {
     bodies.push(body.unwrap_or(Json::null()))
     { status: 200, headers: Map([]), body: Json::null(), }
   })
@@ -141,10 +141,10 @@ async test "scheduled event modify body pins every set option and all omitted" {
 
 ///|
 async test "sticker modify body pins every set option and all omitted" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let bodies : Array[Json] = []
-  client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
+  perform.val = Some((_route, _path, _headers, body, _files) => {
     bodies.push(body.unwrap_or(Json::null()))
     { status: 200, headers: Map([]), body: Json::null(), }
   })

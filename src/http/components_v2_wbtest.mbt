@@ -15,10 +15,10 @@ test "Components V2 validation permits empty incompatible arrays" {
 
 ///|
 async test "create followup combines ephemeral and Components V2 flags" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_body = Ref(Json::null())
-  client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
+  perform.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
     { status: 200, headers: Map([]), body: Json::null(), }
   })
@@ -48,10 +48,10 @@ async test "create followup combines ephemeral and Components V2 flags" {
 
 ///|
 async test "create message adds Components V2 and rejects stickers" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_body = Ref(Json::null())
-  client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
+  perform.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
     { status: 200, headers: Map([]), body: Json::null(), }
   })
@@ -89,10 +89,10 @@ async test "create message adds Components V2 and rejects stickers" {
 
 ///|
 async test "execute webhook adds Components V2 and rejects content" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_body = Ref(Json::null())
-  client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
+  perform.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
     { status: 200, headers: Map([]), body: Json::null(), }
   })
@@ -169,10 +169,10 @@ test "modal limits are reported as a validation error naming the path" {
 
 ///|
 async test "message sends reject embeds and components outside Discord's limits" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let requests = Ref(0)
-  client.perform_override_.val = Some((_route, _path, _headers, _body, _files) => {
+  perform.val = Some((_route, _path, _headers, _body, _files) => {
     requests.val += 1
     { status: 200, headers: Map([]), body: Json::null(), }
   })

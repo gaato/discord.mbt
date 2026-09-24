@@ -1,9 +1,9 @@
 ///|
 async test "handle unit delegations pin every bound id at the wire boundary" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let calls : Array[String] = []
-  client.perform_override_.val = Some((route, path, _headers, _body, _files) => {
+  perform.val = Some((route, path, _headers, _body, _files) => {
     calls.push("\{@debug.to_string(route.method_())} \{path}")
     { status: 204, headers: Map([]), body: Json::null(), }
   })

@@ -3,9 +3,9 @@
 /// JSON string by the transport layer; the Api error keeps its content
 /// verbatim instead of collapsing it to `null`.
 async test "non-json error bodies surface verbatim in the Api error" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
-  client.perform_override_.val = Some((_route, _path, _headers, _body, _files) => {
+  perform.val = Some((_route, _path, _headers, _body, _files) => {
     status: 502,
     headers: Map([]),
     body: Json::string("<html>bad gateway</html>"),
@@ -26,9 +26,9 @@ async test "non-json error bodies surface verbatim in the Api error" {
 /// A JSON error body that is not shaped like Discord's ApiError still
 /// classifies as Api with the body stringified into the message.
 async test "unshaped json error bodies fall back to a stringified message" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
-  client.perform_override_.val = Some((_route, _path, _headers, _body, _files) => {
+  perform.val = Some((_route, _path, _headers, _body, _files) => {
     status: 400,
     headers: Map([]),
     body: Json::null(),

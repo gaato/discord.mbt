@@ -292,8 +292,8 @@ The example maps malformed interaction payloads to 400, `NoRoute` to 404,
 `NoResponse` to 202, internal dispatch failures to 500, and `TimedOut` to 504.
 
 Replies containing `FileUpload` values become a multipart callback body. The
-adapter exposes a Web `ReadableStream` that emits the existing multipart text
-and `Bytes` chunks in order, without concatenating them. Cancelling that stream
+adapter exposes a Web `ReadableStream` that emits the multipart `Bytes` chunks
+in order, without concatenating them. Cancelling that stream
 drops unsent chunks and does not leave a MoonBit producer task behind.
 
 Run its signed endpoint tests in Cloudflare's local runtime with:

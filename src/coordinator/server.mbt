@@ -133,7 +133,7 @@ async fn cleanup_connection(
     if state.owners.get(bucket) is Some(owner) &&
       owner.connection.id == connection.id {
       state.owners.remove(bucket)
-      state.limiter.release(bucket, status=0, headers=Map([]))
+      state.limiter.release(bucket, status=0, headers=@http.Headers::new())
     }
     connection.held_buckets.val.remove(bucket)
   }

@@ -2,9 +2,9 @@
 /// Live-API shape observed 2026-07-16: the guild soundboard listing wraps the
 /// array in an `items` envelope, unlike the default-sound listing.
 async test "guild soundboard listing unwraps the items envelope" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
-  client.perform_override_.val = Some((_route, _path, _headers, _body, _files) => {
+  perform.val = Some((_route, _path, _headers, _body, _files) => {
     let body : Json = {
       "items": [
         {
@@ -28,9 +28,9 @@ async test "guild soundboard listing unwraps the items envelope" {
 
 ///|
 async test "default soundboard listing decodes a bare array" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
-  client.perform_override_.val = Some((_route, _path, _headers, _body, _files) => {
+  perform.val = Some((_route, _path, _headers, _body, _files) => {
     let body : Json = [
       {
         "name": "quack",

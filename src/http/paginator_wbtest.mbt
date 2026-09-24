@@ -11,7 +11,8 @@ async test "paginator advances a before cursor and stops on a short page" {
       match calls.val {
         1 => [3, 2]
         2 => [1]
-        _ => fail("short page should have ended the paginator")
+        _ =>
+          raise Validation(message="short page should have ended the paginator")
       }
     },
     page => minimum_cursor(page, value => value),
@@ -71,7 +72,7 @@ async test "paginator collect truncates without fetching another page" {
       match calls.val {
         1 => [6, 5, 4]
         2 => [3, 2, 1]
-        _ => fail("collect max should stop after two pages")
+        _ => raise Validation(message="collect max should stop after two pages")
       }
     },
     page => minimum_cursor(page, value => value),
@@ -107,7 +108,8 @@ async test "paginator each visits every remaining item" {
       match calls.val {
         1 => [4, 3]
         2 => [2]
-        _ => fail("short page should have ended the paginator")
+        _ =>
+          raise Validation(message="short page should have ended the paginator")
       }
     },
     page => minimum_cursor(page, value => value),
@@ -127,13 +129,13 @@ test "pagination validation is pre-IO" {
     Validation(_) => ()
     error => fail("unexpected error: \{Repr(error)}")
   } noraise {
-    _ => fail("expected cursor validation")
+    _ => raise Validation(message="expected cursor validation")
   }
   try client.paginate_messages(channel_id, page_size=101) catch {
     Validation(_) => ()
     error => fail("unexpected error: \{Repr(error)}")
   } noraise {
-    _ => fail("expected page size validation")
+    _ => raise Validation(message="expected page size validation")
   }
   client.close()
 }

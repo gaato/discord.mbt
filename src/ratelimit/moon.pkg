@@ -1,10 +1,16 @@
 import {
   "gaato/discord/internal/clock",
+  "gaato/sdk-runtime" @runtime,
   "moonbitlang/async",
   "moonbitlang/core/string",
 }
 
 import {
   "gaato/discord/internal/clock",
+  "gaato/http",
   "moonbitlang/async",
 } for "test"
+
+import {
+  "gaato/http",
+} for "wbtest"

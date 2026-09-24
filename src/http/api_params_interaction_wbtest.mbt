@@ -4,10 +4,10 @@
 /// envelope cannot be probed live (it needs a user-initiated interaction),
 /// so its query and decode are pinned here.
 async test "create interaction response with callback asks for the envelope" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_path = Ref("")
-  client.perform_override_.val = Some((_route, path, _headers, _body, _files) => {
+  perform.val = Some((_route, path, _headers, _body, _files) => {
     captured_path.val = path
     {
       status: 200,
@@ -45,10 +45,10 @@ async test "create interaction response with callback asks for the envelope" {
 
 ///|
 async test "create followup forwards the poll body" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_body = Ref(Json::null())
-  client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
+  perform.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
     { status: 200, headers: Map([]), body: Json::null(), }
   })
@@ -76,10 +76,10 @@ async test "create followup forwards the poll body" {
 
 ///|
 async test "edit original response forwards flags, poll, and kept attachments" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_body = Ref(Json::null())
-  client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
+  perform.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
     { status: 200, headers: Map([]), body: Json::null(), }
   })
@@ -127,10 +127,10 @@ async test "edit original response forwards flags, poll, and kept attachments" {
 
 ///|
 async test "edit followup forwards flags" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_body = Ref(Json::null())
-  client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
+  perform.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
     { status: 200, headers: Map([]), body: Json::null(), }
   })

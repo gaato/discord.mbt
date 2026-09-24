@@ -3,10 +3,10 @@
 /// 2026-07-16 parameter-completeness audit: full message references,
 /// shared client themes, retained attachments, and burst reactions.
 async test "create message forwards a full message reference" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_body = Ref(Json::null())
-  client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
+  perform.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
     { status: 200, headers: Map([]), body: Json::null(), }
   })
@@ -63,10 +63,10 @@ async test "create message rejects reply_to together with message_reference" {
 
 ///|
 async test "create message forwards a shared client theme" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_body = Ref(Json::null())
-  client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
+  perform.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
     { status: 200, headers: Map([]), body: Json::null(), }
   })
@@ -96,10 +96,10 @@ async test "create message forwards a shared client theme" {
 
 ///|
 async test "edit message merges kept attachments with new uploads" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_body = Ref(Json::null())
-  client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
+  perform.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
     { status: 200, headers: Map([]), body: Json::null(), }
   })
@@ -146,10 +146,10 @@ async test "edit message merges kept attachments with new uploads" {
 
 ///|
 async test "get reactions appends the burst type query" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_path = Ref("")
-  client.perform_override_.val = Some((_route, path, _headers, _body, _files) => {
+  perform.val = Some((_route, path, _headers, _body, _files) => {
     captured_path.val = path
     { status: 200, headers: Map([]), body: Json::array([]), }
   })
@@ -180,11 +180,11 @@ async test "get reactions appends the burst type query" {
 
 ///|
 async test "message ref forwards a message as a snapshot reference" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_body = Ref(Json::null())
   let captured_path = Ref("")
-  client.perform_override_.val = Some((_route, path, _headers, body, _files) => {
+  perform.val = Some((_route, path, _headers, body, _files) => {
     captured_path.val = path
     captured_body.val = body.unwrap_or(Json::null())
     { status: 200, headers: Map([]), body: Json::null(), }

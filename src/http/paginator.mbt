@@ -1,62 +1,12 @@
 ///|
-/// A stateful, asynchronously fetched sequence of REST result pages.
+/// A stateful, asynchronously fetched sequence of REST result pages: the
+/// `gaato/sdk-runtime` paginator with `DiscordHttpError` as its error.
 ///
 /// Call `next_page`, `each`, or `collect` sequentially; all three consume the
-/// same cursor state.
-pub struct Paginator[T] {
-  priv next_ : async () -> Array[T]?
-  priv pending_ : Ref[Array[T]?]
-}
-
-///|
-/// Fetch the next non-empty page, or `None` after the paginator reaches its
-/// end. Empty and short REST pages both mark the sequence as finished.
-pub async fn[T] Paginator::next_page(self : Paginator[T]) -> Array[T]? {
-  match self.pending_.val {
-    Some(page) => {
-      self.pending_.val = None
-      Some(page)
-    }
-    None => (self.next_)()
-  }
-}
-
-///|
-/// Apply a synchronous callback to every remaining item.
-pub async fn[T] Paginator::each(
-  self : Paginator[T],
-  f : (T) -> Unit raise,
-) -> Unit {
-  for ;; {
-    match self.next_page() {
-      Some(page) => page.each(f)
-      None => break
-    }
-  }
-}
-
-///|
-/// Collect at most `max` remaining items. A non-positive maximum performs no
-/// requests and returns an empty array.
-pub async fn[T] Paginator::collect(self : Paginator[T], max~ : Int) -> Array[T] {
-  let result : Array[T] = []
-  if max <= 0 {
-    return result
-  }
-  while result.length() < max {
-    guard self.next_page() is Some(page) else { break }
-    for index, item in page {
-      result.push(item)
-      if result.length() == max {
-        if index + 1 < page.length() {
-          self.pending_.val = Some(page[index + 1:].to_owned())
-        }
-        break
-      }
-    }
-  }
-  result
-}
+/// same cursor state. Empty and short REST pages both mark the sequence as
+/// finished, and the items a `collect` did not use come back first from the
+/// next call.
+pub type Paginator[T] = @runtime.Paginator[T, DiscordHttpError]
 
 ///|
 fn validate_page_limit(
@@ -125,34 +75,33 @@ fn[T, C : Compare] maximum_present_cursor(
 
 ///|
 /// Internal constructor shared by real endpoint paginators and fake wbtests.
+/// The cursor stays inside the fetch, so any cursor type works and a fetch
+/// that raised is retried in place.
 fn[T, C] paginator_from_cursor(
   page_size : Int,
   initial_cursor : C?,
-  fetch : async (C?, Int) -> Array[T],
+  fetch : async (C?, Int) -> Array[T] raise DiscordHttpError,
   next_cursor : (Array[T]) -> C?,
 ) -> Paginator[T] {
   let cursor = Ref(initial_cursor)
   let finished = Ref(false)
-  {
-    next_: () => {
-      if finished.val {
-        return None
-      }
-      let page = fetch(cursor.val, page_size)
-      if page.is_empty() {
-        finished.val = true
-        return None
-      }
-      let following = next_cursor(page)
-      if page.length() < page_size || following is None {
-        finished.val = true
-      } else {
-        cursor.val = following
-      }
-      Some(page)
-    },
-    pending_: Ref(None),
-  }
+  @runtime.Paginator::new(() => {
+    if finished.val {
+      return None
+    }
+    let page = fetch(cursor.val, page_size)
+    if page.is_empty() {
+      finished.val = true
+      return None
+    }
+    let following = next_cursor(page)
+    if page.length() < page_size || following is None {
+      finished.val = true
+    } else {
+      cursor.val = following
+    }
+    Some(page)
+  })
 }
 
 ///|

@@ -174,204 +174,150 @@ fn edit_attachments_field(
 }
 
 ///|
-fn ascii_bytes(text : String) -> Bytes {
-  let out : Array[Byte] = Array(capacity=text.length())
-  for ch in text {
-    out.push(ch.to_int().to_byte())
+/// The `payload_json` part of an upload, sent first.
+fn payload_part(payload_json : String) -> @multipart.Part {
+  {
+    name: "payload_json",
+    filename: None,
+    content_type: Some("application/json"),
+    body: @utf8.encode(payload_json),
   }
-  Bytes::from_array(out)
 }
 
 ///|
-fn bytes_contains(haystack : Bytes, needle : Bytes) -> Bool {
-  let n = needle.length()
-  if n == 0 {
-    return true
-  }
-  for start in 0..<=(haystack.length() - n) {
-    for j in 0..<n {
-      if haystack[start + j] != needle[j] {
-        break
-      }
-    } nobreak {
-      return true
-    }
-  }
-  false
+/// One file part under `name`, keeping the upload's bytes and media type.
+fn file_part(name : String, file : FileUpload) -> @multipart.Part {
+  @multipart.Part::file(name, file.filename, file.content_type, file.content)
 }
 
 ///|
-fn boundary_taken(
-  candidate : String,
-  payload : String,
+/// The REST upload shape: `payload_json` first, then one `files[n]` part per
+/// file.
+fn upload_parts(
+  payload_json : String,
   files : Array[FileUpload],
-) -> Bool {
-  // the candidate is pure ASCII, so a byte-level match in UTF-8 content
-  // implies (and is implied by) a character-level match
-  if payload.contains(candidate) {
-    return true
-  }
-  let needle = ascii_bytes(candidate)
-  for file in files {
-    if bytes_contains(file.content, needle) {
-      return true
-    }
-  }
-  false
-}
-
-///|
-/// Pick a boundary that provably occurs in none of the parts. Uniqueness
-/// comes from checking, not from entropy, so a weak seed is fine.
-fn fresh_boundary(
-  seed : String,
-  payload : String,
-  files : Array[FileUpload],
-) -> String {
-  for k = 0; ; k = k + 1 {
-    let candidate = "discordmbt-\{seed}-\{k}"
-    if !boundary_taken(candidate, payload, files) {
-      return candidate
-    }
-  }
-}
-
-///|
-/// One chunk of a multipart body, written to the wire in order. File
-/// contents stay as their original `Bytes` (no copying or concatenation).
-pub enum MultipartChunk {
-  Text(String)
-  Blob(Bytes)
-}
-
-///|
-/// Render the multipart body: the `payload_json` part first, then one
-/// `files[n]` part per file, then the closing delimiter.
-fn multipart_parts(
-  boundary : String,
-  payload : String,
-  files : Array[FileUpload],
-) -> Array[MultipartChunk] {
-  let parts : Array[MultipartChunk] = []
-  parts.push(
-    Text(
-      "--\{boundary}\r\n" +
-      "content-disposition: form-data; name=\"payload_json\"\r\n" +
-      "content-type: application/json\r\n\r\n" +
-      payload +
-      "\r\n",
-    ),
-  )
+) -> Array[@multipart.Part] {
+  let parts = [payload_part(payload_json)]
   for i, file in files {
-    parts.push(
-      Text(
-        "--\{boundary}\r\n" +
-        "content-disposition: form-data; name=\"files[\{i}]\"; filename=\"\{file.filename}\"\r\n" +
-        "content-type: \{file.content_type}\r\n\r\n",
-      ),
-    )
-    parts.push(Blob(file.content))
-    parts.push(Text("\r\n"))
+    parts.push(file_part("files[\{i}]", file))
   }
-  parts.push(Text("--\{boundary}--\r\n"))
   parts
 }
 
 ///|
-/// Render a multipart body with the `payload_json` part followed by one file
-/// part under a custom field name. The invite target-users upload uses this
-/// shape (`target_users_file` next to the JSON params).
-fn multipart_payload_with_named_file(
-  boundary : String,
-  payload : String,
-  file_field : String,
-  file : FileUpload,
-) -> Array[MultipartChunk] {
-  let parts : Array[MultipartChunk] = []
-  parts.push(
-    Text(
-      "--\{boundary}\r\n" +
-      "content-disposition: form-data; name=\"payload_json\"\r\n" +
-      "content-type: application/json\r\n\r\n" +
-      payload +
-      "\r\n",
-    ),
-  )
-  parts.push(
-    Text(
-      "--\{boundary}\r\n" +
-      "content-disposition: form-data; name=\"\{file_field}\"; filename=\"\{file.filename}\"\r\n" +
-      "content-type: \{file.content_type}\r\n\r\n",
-    ),
-  )
-  parts.push(Blob(file.content))
-  parts.push(Text("\r\n--\{boundary}--\r\n"))
-  parts
-}
-
-///|
-/// Render a conventional multipart form with text fields and one named file.
-/// Discord's guild-sticker and invite target-user endpoints use this shape
-/// instead of payload_json plus files[n].
-fn multipart_form_parts(
-  boundary : String,
+/// A conventional form: text fields and one named file. Discord's
+/// guild-sticker and invite target-user endpoints use this shape instead of
+/// `payload_json` plus `files[n]`.
+fn form_parts(
   fields : Array[(String, String)],
   file_field : String,
   file : FileUpload,
-) -> Array[MultipartChunk] {
-  let parts : Array[MultipartChunk] = []
+) -> Array[@multipart.Part] {
+  let parts : Array[@multipart.Part] = []
   for field in fields {
     let (name, value) = field
-    parts.push(
-      Text(
-        "--\{boundary}\r\n" +
-        "content-disposition: form-data; name=\"\{name}\"\r\n\r\n" +
-        value +
-        "\r\n",
-      ),
-    )
+    parts.push(@multipart.Part::text(name, value))
   }
-  parts.push(
-    Text(
-      "--\{boundary}\r\n" +
-      "content-disposition: form-data; name=\"\{file_field}\"; filename=\"\{file.filename}\"\r\n" +
-      "content-type: \{file.content_type}\r\n\r\n",
-    ),
-  )
-  parts.push(Blob(file.content))
-  parts.push(Text("\r\n--\{boundary}--\r\n"))
+  parts.push(file_part(file_field, file))
   parts
 }
 
 ///|
-let multipart_seq : Ref[Int] = Ref(0)
+let boundary_state : Ref[UInt64] = Ref(0UL)
 
 ///|
-/// A per-process sequence number so two requests in the same millisecond
-/// still start from different boundary seeds.
-fn next_multipart_seq() -> Int {
-  multipart_seq.val += 1
-  multipart_seq.val
+/// Boundary candidates from a small xorshift generator seeded from the clock.
+/// Uniqueness does not rest on it: `encode_parts` retries a candidate that
+/// occurs in a part.
+fn boundary_random() -> Double {
+  if boundary_state.val == 0UL {
+    boundary_state.val = @clock.now_ms().reinterpret_as_uint64() |
+      0x9E3779B97F4A7C15UL
+  }
+  let mut x = boundary_state.val
+  x = x ^ (x << 13)
+  x = x ^ (x >> 7)
+  x = x ^ (x << 17)
+  boundary_state.val = x
+  (x >> 11).to_double() / 9007199254740992.0
+}
+
+///|
+/// Encode the parts with a boundary that occurs in none of them. A candidate
+/// that collides with a part is drawn again.
+fn[T] encode_with_fresh_boundary(
+  parts : Array[@multipart.Part],
+  encoder : (Array[@multipart.Part], String) -> T raise @multipart.MultipartError,
+  random : () -> Double,
+) -> T raise DiscordHttpError {
+  for _ in 0..<16 {
+    let boundary = @multipart.make_boundary(random)
+    let encoded = encoder(parts, boundary) catch {
+      @multipart.BoundaryCollision => continue
+      error => raise Validation(message=@debug.to_string(error))
+    }
+    return encoded
+  }
+  raise Transport(message="could not choose a multipart boundary")
+}
+
+///|
+/// The body as ordered segments, for a wire request. Each part's bytes stay
+/// the caller's, so nothing is copied until the segments are joined.
+fn encode_parts(
+  parts : Array[@multipart.Part],
+  random? : () -> Double = boundary_random,
+) -> (String, Array[Bytes]) raise DiscordHttpError {
+  encode_with_fresh_boundary(parts, @multipart.encode_segments, random)
+}
+
+///|
+/// The wire request with its multipart `content-type`, and the body deferred:
+/// the segments are joined only once the rate limiter admits an attempt, so
+/// an upload waiting its turn holds no second copy of its files.
+fn multipart_request(
+  request : @ghttp.Request,
+  parts : Array[@multipart.Part],
+) -> WireRequest raise DiscordHttpError {
+  let (content_type, segments) = encode_parts(parts)
+  request.headers.set("content-type", content_type)
+  { head: request, body: Some(() => join_segments(segments)), }
+}
+
+///|
+/// The segments as one buffer, in order.
+fn join_segments(segments : Array[Bytes]) -> Bytes {
+  let size = segments.fold(init=0, (size, segment) => size + segment.length())
+  let buffer = Buffer(size_hint=size)
+  for segment in segments {
+    buffer.write_bytes(segment)
+  }
+  buffer.to_bytes()
 }
 
 ///|
 /// Encode an interaction-callback `multipart/form-data` body: the
 /// `payload_json` part followed by one `files[n]` part per file, in the same
 /// wire format as the REST upload path. Returns the `Content-Type` value
-/// (including the boundary) and the ordered wire chunks. Filenames are
-/// validated like the REST upload path.
+/// (including the boundary) and the ordered wire chunks; each file's bytes
+/// are a chunk of their own, not copied, so a host can stream the reply by
+/// writing the chunks in order.
+/// Filenames are validated like the REST upload path.
 ///
 /// ```mbt check
 /// test "keep uploaded bytes as a multipart blob chunk" {
+///   let content = b"hello"
 ///   let (content_type, chunks) = @http.encode_multipart_body("{\"type\":4}", [
-///     FileUpload("hello.txt", b"hello", content_type="text/plain"),
+///     FileUpload("hello.txt", content, content_type="text/plain"),
 ///   ])
 ///   assert_true(content_type.has_prefix("multipart/form-data; boundary="))
 ///   match chunks {
-///     [Text(payload), Text(file_header), Blob(content), ..] => {
-///       assert_true(payload.contains("payload_json"))
-///       assert_true(file_header.contains("files[0]"))
-///       assert_eq(content, b"hello")
+///     [payload_header, payload, file_header, bytes, trailer] => {
+///       assert_true(@utf8.decode_lossy(payload_header).contains("payload_json"))
+///       assert_eq(payload, b"{\"type\":4}")
+///       assert_true(@utf8.decode_lossy(file_header).contains("files[0]"))
+///       assert_true(physical_equal(bytes, content))
+///       assert_true(@utf8.decode_lossy(trailer).has_suffix("--\r\n"))
 ///     }
 ///     _ => fail("unexpected multipart chunk layout")
 ///   }
@@ -380,12 +326,11 @@ fn next_multipart_seq() -> Int {
 pub fn encode_multipart_body(
   payload_json : String,
   files : Array[FileUpload],
-) -> (String, Array[MultipartChunk]) raise DiscordHttpError {
+) -> (String, Array[Bytes]) raise DiscordHttpError {
   validate_files(files)
-  let seed = "\{@clock.now_ms()}-\{next_multipart_seq()}"
-  let boundary = fresh_boundary(seed, payload_json, files)
-  (
-    "multipart/form-data; boundary=\{boundary}",
-    multipart_parts(boundary, payload_json, files),
+  encode_with_fresh_boundary(
+    upload_parts(payload_json, files),
+    @multipart.encode_segments,
+    boundary_random,
   )
 }

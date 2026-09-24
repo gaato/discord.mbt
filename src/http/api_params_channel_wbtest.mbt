@@ -2,10 +2,10 @@
 /// Wire-shape coverage for the channel parameters added from the 2026-07-16
 /// parameter-completeness audit.
 async test "modify channel forwards voice and forum fields" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_body = Ref(Json::null())
-  client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
+  perform.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
     { status: 200, headers: Map([]), body: Json::null(), }
   })
@@ -92,10 +92,10 @@ async test "modify channel forwards voice and forum fields" {
 
 ///|
 async test "create guild channel forwards forum defaults" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_body = Ref(Json::null())
-  client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
+  perform.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
     { status: 200, headers: Map([]), body: Json::null(), }
   })
@@ -144,10 +144,10 @@ async test "create guild channel forwards forum defaults" {
 
 ///|
 async test "create channel invite forwards targets and roles" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_body = Ref(Json::null())
-  client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
+  perform.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
     { status: 200, headers: Map([]), body: Json::null(), }
   })
@@ -196,11 +196,11 @@ async test "create channel invite forwards targets and roles" {
 
 ///|
 async test "create channel invite uploads the target-users file as multipart" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_body = Ref(Json::null())
   let captured_files = Ref(0)
-  client.perform_override_.val = Some((_route, _path, _headers, body, files) => {
+  perform.val = Some((_route, _path, _headers, body, files) => {
     captured_body.val = body.unwrap_or(Json::null())
     captured_files.val = files.map_or(0, fs => fs.length())
     { status: 200, headers: Map([]), body: Json::null(), }
@@ -224,10 +224,10 @@ async test "create channel invite uploads the target-users file as multipart" {
 
 ///|
 async test "edit channel permissions omits unset allow and deny" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_body = Ref(Json::null())
-  client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
+  perform.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
     { status: 204, headers: Map([]), body: Json::null(), }
   })

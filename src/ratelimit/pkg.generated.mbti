@@ -1,6 +1,11 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "gaato/discord/ratelimit"
 
+import {
+  "gaato/http",
+  "gaato/sdk-runtime",
+}
+
 // Values
 
 // Errors
@@ -15,13 +20,9 @@ pub struct InMemoryRateLimiter {
 }
 pub fn InMemoryRateLimiter::InMemoryRateLimiter(global_limit? : Int) -> Self
 pub async fn InMemoryRateLimiter::acquire(Self, String, global_exempt~ : Bool) -> Unit
-pub async fn InMemoryRateLimiter::release(Self, String, status~ : Int, headers~ : Map[String, String]) -> Unit
-pub impl RateLimiter for InMemoryRateLimiter
+pub async fn InMemoryRateLimiter::release(Self, String, status~ : Int, headers~ : @http.Headers) -> Unit
+pub impl @sdk-runtime.RateLimiter for InMemoryRateLimiter
 
 // Type aliases
 
 // Traits
-pub(open) trait RateLimiter {
-  async fn acquire(Self, String, global_exempt~ : Bool) -> Unit
-  async fn release(Self, String, status~ : Int, headers~ : Map[String, String]) -> Unit
-}

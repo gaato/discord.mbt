@@ -76,10 +76,7 @@ async fn send_response(
     Bytes(bytes) => @io.Writer::write(conn, bytes)
     Chunks(chunks) =>
       for chunk in chunks {
-        match chunk {
-          Text(text) => conn.write_string(text)
-          Blob(bytes) => @io.Writer::write(conn, bytes)
-        }
+        @io.Writer::write(conn, chunk)
       }
   }
   conn.end_response()

@@ -275,8 +275,10 @@ async fn walk_history(
 
 `next_page()` returns `Array[T]?`, where `None` is the terminal state.
 `next_page`, `collect`, and `each` consume the same paginator state and must be
-called sequentially. See the `Client::paginate_messages` documentation for
-cursor direction details.
+called sequentially. A `collect` that stops partway through a page keeps the
+rest for the next call. `Paginator[T]` is the `gaato/sdk-runtime` paginator
+with `DiscordHttpError` as its error, so the callback of `each` may be async.
+See the `Client::paginate_messages` documentation for cursor direction details.
 
 ## Custom routes
 
@@ -321,7 +323,10 @@ The default `InMemoryRateLimiter` coordinates route buckets and Discord's
 global window inside one process. The client updates bucket state from response
 headers and retries 429 responses after the declared delay. Typed and custom
 routes use the same request path, so no separate limiter integration is
-required. A custom limiter can be passed through `Client(limiter=...)`.
+required. A custom limiter implements the `gaato/sdk-runtime` `RateLimiter`
+trait and is passed through `Client(limiter=...)`. The client calls its
+`release` exactly once for every `acquire` that returned, with the response's
+status and headers, or with status 0 when no response arrived.
 
 `Client(request_timeout_ms=30000)` bounds each single network attempt,
 including reading its response body. Rate-limit waits, 429 back-off, and user

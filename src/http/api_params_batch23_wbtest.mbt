@@ -1,9 +1,9 @@
 ///|
 async test "guild audit, ban, and member queries pin set and omitted parameters" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let paths : Array[String] = []
-  client.perform_override_.val = Some((_route, path, _headers, _body, _files) => {
+  perform.val = Some((_route, path, _headers, _body, _files) => {
     paths.push(path)
     { status: 200, headers: Map([]), body: Json::array([]), }
   })
@@ -45,10 +45,10 @@ async test "guild audit, ban, and member queries pin set and omitted parameters"
 
 ///|
 async test "current user guild query pins set and omitted parameters" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let paths : Array[String] = []
-  client.perform_override_.val = Some((_route, path, _headers, _body, _files) => {
+  perform.val = Some((_route, path, _headers, _body, _files) => {
     paths.push(path)
     { status: 200, headers: Map([]), body: Json::array([]), }
   })
@@ -73,10 +73,10 @@ async test "current user guild query pins set and omitted parameters" {
 
 ///|
 async test "message pagination query pins around before after and omitted arms" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let paths : Array[String] = []
-  client.perform_override_.val = Some((_route, path, _headers, _body, _files) => {
+  perform.val = Some((_route, path, _headers, _body, _files) => {
     paths.push(path)
     { status: 200, headers: Map([]), body: Json::array([]), }
   })
@@ -94,10 +94,10 @@ async test "message pagination query pins around before after and omitted arms" 
 
 ///|
 async test "scheduled event queries pin set and omitted parameters" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let paths : Array[String] = []
-  client.perform_override_.val = Some((_route, path, _headers, _body, _files) => {
+  perform.val = Some((_route, path, _headers, _body, _files) => {
     paths.push(path)
     { status: 200, headers: Map([]), body: Json::array([]), }
   })
@@ -139,10 +139,10 @@ async test "scheduled event queries pin set and omitted parameters" {
 
 ///|
 async test "invite poll thread and archived-thread queries pin optional arms" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let paths : Array[String] = []
-  client.perform_override_.val = Some((_route, path, _headers, _body, _files) => {
+  perform.val = Some((_route, path, _headers, _body, _files) => {
     paths.push(path)
     { status: 200, headers: Map([]), body: Json::array([]), }
   })

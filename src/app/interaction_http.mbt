@@ -9,11 +9,12 @@ pub(all) struct InteractionHttpRequest {
 }
 
 ///|
-/// A callback body. Multipart chunks retain file bytes without a second copy.
+/// A callback body. Multipart chunks are written in order and retain file
+/// bytes without a second copy.
 pub(all) enum InteractionHttpBody {
   Empty
   Bytes(Bytes)
-  Chunks(Array[@dhttp.MultipartChunk])
+  Chunks(Array[Bytes])
 }
 
 ///|

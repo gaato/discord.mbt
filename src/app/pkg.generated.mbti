@@ -303,7 +303,7 @@ pub(all) enum InteractionHandler[A] {
 pub(all) enum InteractionHttpBody {
   Empty
   Bytes(Bytes)
-  Chunks(Array[@http.MultipartChunk])
+  Chunks(Array[Bytes])
 }
 
 pub(all) struct InteractionHttpRequest {

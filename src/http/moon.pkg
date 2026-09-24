@@ -5,6 +5,8 @@ import {
   "gaato/discord/internal/clock",
   "gaato/http" @ghttp,
   "gaato/http-async" @transport,
+  "gaato/sdk-runtime" @runtime,
+  "gaato/sdk-runtime/multipart",
   "moonbitlang/async",
   "moonbitlang/async/http" @ahttp,
   "moonbitlang/core/json",

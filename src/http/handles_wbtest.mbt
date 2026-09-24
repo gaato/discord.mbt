@@ -1,10 +1,10 @@
 ///|
 async test "message ref reply delegates a message reference" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_path = Ref("")
   let captured_body = Ref(Json::null())
-  client.perform_override_.val = Some((_route, path, _headers, body, _files) => {
+  perform.val = Some((_route, path, _headers, body, _files) => {
     captured_path.val = path
     captured_body.val = body.unwrap_or(Json::null())
     { status: 200, headers: Map([]), body: Json::null(), }
@@ -27,12 +27,12 @@ async test "message ref reply delegates a message reference" {
 
 ///|
 async test "member ref ban delegates the audit reason header" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_path = Ref("")
   let captured_headers : Ref[Map[String, String]?] = Ref(None)
   let captured_body = Ref(Json::null())
-  client.perform_override_.val = Some((_route, path, headers, body, _files) => {
+  perform.val = Some((_route, path, headers, body, _files) => {
     captured_path.val = path
     captured_headers.val = Some(headers)
     captured_body.val = body.unwrap_or(Json::null())
@@ -58,11 +58,11 @@ async test "member ref ban delegates the audit reason header" {
 
 ///|
 async test "message ref pin delegates the audit reason header" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_path = Ref("")
   let captured_headers : Ref[Map[String, String]?] = Ref(None)
-  client.perform_override_.val = Some((_route, path, headers, _body, _files) => {
+  perform.val = Some((_route, path, headers, _body, _files) => {
     captured_path.val = path
     captured_headers.val = Some(headers)
     { status: 204, headers: Map([]), body: Json::null(), }
@@ -84,11 +84,11 @@ async test "message ref pin delegates the audit reason header" {
 
 ///|
 async test "channel ref send preserves create message parameters" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_path = Ref("")
   let captured_body = Ref(Json::null())
-  client.perform_override_.val = Some((_route, path, _headers, body, _files) => {
+  perform.val = Some((_route, path, _headers, body, _files) => {
     captured_path.val = path
     captured_body.val = body.unwrap_or(Json::null())
     { status: 200, headers: Map([]), body: Json::null(), }
@@ -119,11 +119,11 @@ async test "channel ref send preserves create message parameters" {
 
 ///|
 async test "channel ref fetch delegates a GET request" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_method = Ref("")
   let captured_path = Ref("")
-  client.perform_override_.val = Some((route, path, _headers, _body, _files) => {
+  perform.val = Some((route, path, _headers, _body, _files) => {
     captured_method.val = @debug.to_string(route.method_())
     captured_path.val = path
     { status: 200, headers: Map([]), body: Json::null(), }

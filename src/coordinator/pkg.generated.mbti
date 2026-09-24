@@ -4,7 +4,8 @@ package "gaato/discord/coordinator"
 import {
   "gaato/discord/cooldown",
   "gaato/discord/queue",
-  "gaato/discord/ratelimit",
+  "gaato/http",
+  "gaato/sdk-runtime",
   "moonbitlang/async",
   "moonbitlang/core/debug",
 }
@@ -53,8 +54,8 @@ pub async fn RemoteRateLimiter::acquire(Self, String, global_exempt~ : Bool) -> 
 pub fn RemoteRateLimiter::close(Self) -> Unit
 pub async fn RemoteRateLimiter::connect(String) -> Self
 pub async fn RemoteRateLimiter::ping(Self) -> Unit
-pub async fn RemoteRateLimiter::release(Self, String, status~ : Int, headers~ : Map[String, String]) -> Unit
-pub impl @ratelimit.RateLimiter for RemoteRateLimiter
+pub async fn RemoteRateLimiter::release(Self, String, status~ : Int, headers~ : @http.Headers) -> Unit
+pub impl @sdk-runtime.RateLimiter for RemoteRateLimiter
 
 pub(all) enum UnreachablePolicy {
   FailOpen

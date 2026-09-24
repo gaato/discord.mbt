@@ -78,8 +78,8 @@ Live socket, websocket, and FFI adapters (live-verified; no unit seam):
 | src/voice/udp.mbt | 4 | SocketVoiceUdp impls and `open_voice_udp` over a real UDP socket; parse and retry logic is covered via fakes. |
 | src/voice/shim_ffi.mbt | 3 | Extern-C glue whose arms depend on host library state. |
 | src/voice/crypto.mbt | 5 | Shim error-status translation paths; round-trips and geometry checks are covered with the shim loaded. |
-| src/http/client.mbt | 4 | Default warning sinks (`println`) of the online and offline constructors, and defensive NoTransport methods bypassed by every offline request. |
-| src/http/request.mbt | 20 | Cancellation/timeout plumbing on live connections; the JSON, body-less, 204, non-JSON-error, and all three multipart named-file arms are covered by the loopback server tests. |
+| src/http/client.mbt | 3 | Default warning sinks (`println`) of the online and offline constructors, and the catch-all arm the per-attempt deadline needs because `with_timeout` is typed to raise any error. |
+| src/http/request.mbt | 4 | Pre-IO rejections of sticker and invite upload shapes the typed wrappers never build, and the `Api` re-raise for middleware that raises it itself; the send loop, its retry rule, and every error mapping are covered by the fake-wire contract tests. |
 | src/endpoint_http/endpoint_http.mbt | 15 | HTTP server error/cancellation arms (send failures, teardown); the request paths are covered by the signed-request e2e tests. |
 | src/coordinator/protocol.mbt | 3 | Cross-process wire error arms. |
 | src/coordinator/remote.mbt | 20 | Reconnecting remote clients against a real coordinator socket; for the cooldown store, the cancellation-during-connect arms and malformed-response arm (its outage, deadline, and gate-wait paths are covered). |
@@ -123,7 +123,7 @@ Defensive arms unreachable by construction:
 | File | Budget | Reason |
 | --- | --- | --- |
 | src/bot/session.mbt | 1 | Abort if an already decoded READY fails its own JSON round trip; snapshot independence and serialization are tested. |
-| src/http/multipart.mbt | 3 | `attachments_json` always returns an array and boundary search never gets an empty needle. |
+| src/http/multipart.mbt | 3 | `attachments_json` always returns an array, and encoder errors other than a boundary collision, which `validate_files` rules out before encoding. |
 | src/model/interaction.mbt | 4 | Fallbacks behind emitters that always produce objects. |
 | src/model/component.mbt | 8 | Non-object fallback plus emit arms for component kinds Discord never sends in the covered contexts. |
 | src/model/message.mbt | 3 | Timestamp-parse fallback for values the Timestamp decoder already rejects. |

@@ -11,11 +11,11 @@ fn paginator_message_page(ids : Array[Int]) -> Json raise {
 
 ///|
 async test "message paginator after uses maximum cursor from canned pages" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let paths : Array[String] = []
   let calls = Ref(0)
-  client.perform_override_.val = Some((_route, path, _headers, _body, _files) => {
+  perform.val = Some((_route, path, _headers, _body, _files) => {
     paths.push(path)
     calls.val += 1
     let body = if calls.val == 1 {
@@ -40,11 +40,11 @@ async test "message paginator after uses maximum cursor from canned pages" {
 
 ///|
 async test "message paginator before uses minimum cursor from canned pages" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let paths : Array[String] = []
   let calls = Ref(0)
-  client.perform_override_.val = Some((_route, path, _headers, _body, _files) => {
+  perform.val = Some((_route, path, _headers, _body, _files) => {
     paths.push(path)
     calls.val += 1
     let body = if calls.val == 1 {
@@ -69,10 +69,10 @@ async test "message paginator before uses minimum cursor from canned pages" {
 
 ///|
 async test "message paginator around performs one fixed-cursor page" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let paths : Array[String] = []
-  client.perform_override_.val = Some((_route, path, _headers, _body, _files) => {
+  perform.val = Some((_route, path, _headers, _body, _files) => {
     paths.push(path)
     { status: 200, headers: Map([]), body: paginator_message_page([100]), }
   })
@@ -96,11 +96,11 @@ fn round2_user_json(id : Int) -> Json raise {
 
 ///|
 async test "guild member paginator skips absent users and advances by maximum id" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let paths : Array[String] = []
   let calls = Ref(0)
-  client.perform_override_.val = Some((_route, path, _headers, _body, _files) => {
+  perform.val = Some((_route, path, _headers, _body, _files) => {
     paths.push(path)
     calls.val += 1
     let body = if calls.val == 1 {
@@ -133,11 +133,11 @@ async test "guild member paginator skips absent users and advances by maximum id
 ///|
 async test "guild ban paginator covers after and before cursor directions" {
   for use_after in [true, false] {
-    let client = Client("test-token")
+    let (client, perform) = offline_test_client()
     defer client.close()
     let paths : Array[String] = []
     let calls = Ref(0)
-    client.perform_override_.val = Some((_route, path, _headers, _body, _files) => {
+    perform.val = Some((_route, path, _headers, _body, _files) => {
       paths.push(path)
       calls.val += 1
       let body = if calls.val == 1 {
@@ -173,11 +173,11 @@ async test "guild ban paginator covers after and before cursor directions" {
 
 ///|
 async test "audit log paginator extracts entries and advances by minimum id" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let paths : Array[String] = []
   let calls = Ref(0)
-  client.perform_override_.val = Some((_route, path, _headers, _body, _files) => {
+  perform.val = Some((_route, path, _headers, _body, _files) => {
     paths.push(path)
     calls.val += 1
     let entries = if calls.val == 1 {
@@ -214,11 +214,11 @@ async test "audit log paginator extracts entries and advances by minimum id" {
 
 ///|
 async test "scheduled users poll voters and current guild paginators advance" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let paths : Array[String] = []
   let counts : Map[String, Int] = Map([])
-  client.perform_override_.val = Some((_route, path, _headers, _body, _files) => {
+  perform.val = Some((_route, path, _headers, _body, _files) => {
     paths.push(path)
     let key = if path.contains("scheduled-events") {
       "scheduled"

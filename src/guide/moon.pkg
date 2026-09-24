@@ -14,7 +14,7 @@ import {
   "gaato/discord/bot",
   "gaato/discord/coordinator",
   "gaato/discord/cooldown",
-  "gaato/discord/ratelimit",
+  "gaato/sdk-runtime" @runtime,
   "gaato/discord/queue",
   "gaato/discord/cache",
   "gaato/discord/util",

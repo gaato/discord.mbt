@@ -1,11 +1,11 @@
 ///|
 async test "webhook token ref send delegates bound credentials and body" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_method = Ref("")
   let captured_path = Ref("")
   let captured_body = Ref(Json::null())
-  client.perform_override_.val = Some((route, path, _headers, body, _files) => {
+  perform.val = Some((route, path, _headers, body, _files) => {
     captured_method.val = @debug.to_string(route.method_())
     captured_path.val = path
     captured_body.val = body.unwrap_or(Json::null())
@@ -27,13 +27,13 @@ async test "webhook token ref send delegates bound credentials and body" {
 
 ///|
 async test "webhook ref edit delegates bot-authenticated audit reason" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_method = Ref("")
   let captured_path = Ref("")
   let captured_headers : Ref[Map[String, String]?] = Ref(None)
   let captured_body = Ref(Json::null())
-  client.perform_override_.val = Some((route, path, headers, body, _files) => {
+  perform.val = Some((route, path, headers, body, _files) => {
     captured_method.val = @debug.to_string(route.method_())
     captured_path.val = path
     captured_headers.val = Some(headers)
@@ -67,12 +67,12 @@ async test "webhook ref edit delegates bot-authenticated audit reason" {
 
 ///|
 async test "webhook message ref edit delegates nullable content" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_method = Ref("")
   let captured_path = Ref("")
   let captured_body = Ref(Json::null())
-  client.perform_override_.val = Some((route, path, _headers, body, _files) => {
+  perform.val = Some((route, path, _headers, body, _files) => {
     captured_method.val = @debug.to_string(route.method_())
     captured_path.val = path
     captured_body.val = body.unwrap_or(Json::null())
@@ -101,12 +101,12 @@ async test "webhook message ref edit delegates nullable content" {
 
 ///|
 async test "invite ref target users delegates the uploaded file" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_method = Ref("")
   let captured_path = Ref("")
   let captured_files : Ref[Array[FileUpload]?] = Ref(None)
-  client.perform_override_.val = Some((route, path, _headers, _body, files) => {
+  perform.val = Some((route, path, _headers, _body, files) => {
     captured_method.val = @debug.to_string(route.method_())
     captured_path.val = path
     captured_files.val = files

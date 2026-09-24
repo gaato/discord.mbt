@@ -2,10 +2,10 @@
 /// Wire-shape coverage for the application-command parameters added from the
 /// 2026-07-16 parameter-completeness audit.
 async test "create global command forwards localizations and installation scopes" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_body = Ref(Json::null())
-  client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
+  perform.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
     { status: 200, headers: Map([]), body: Json::null(), }
   })
@@ -38,9 +38,9 @@ async test "create global command forwards localizations and installation scopes
 
 ///|
 async test "create command requires a description only for chat input" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
-  client.perform_override_.val = Some((_route, _path, _headers, _body, _files) => {
+  perform.val = Some((_route, _path, _headers, _body, _files) => {
     status: 200,
     headers: Map([]),
     body: Json::null(),
@@ -58,7 +58,7 @@ async test "create command requires a description only for chat input" {
   }
   // a USER command needs no description
   let captured_body = Ref(Json::null())
-  client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
+  perform.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
     { status: 200, headers: Map([]), body: Json::null(), }
   })
@@ -73,10 +73,10 @@ async test "create command requires a description only for chat input" {
 
 ///|
 async test "edit global command clears localizations with explicit nulls" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_body = Ref(Json::null())
-  client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
+  perform.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
     { status: 200, headers: Map([]), body: Json::null(), }
   })
@@ -105,10 +105,10 @@ async test "edit global command clears localizations with explicit nulls" {
 
 ///|
 async test "command list endpoints append the with_localizations query" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_path = Ref("")
-  client.perform_override_.val = Some((_route, path, _headers, _body, _files) => {
+  perform.val = Some((_route, path, _headers, _body, _files) => {
     captured_path.val = path
     { status: 200, headers: Map([]), body: Json::array([]), }
   })

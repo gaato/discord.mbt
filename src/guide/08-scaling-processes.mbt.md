@@ -46,7 +46,7 @@ async fn run_worker(app : @discord.App, token : String) -> Unit {
   let limiter = @coordinator.RemoteRateLimiter::connect("127.0.0.1:7600")
   defer identify.close()
   defer limiter.close()
-  let client = @dhttp.Client(token, limiter=(limiter : &@ratelimit.RateLimiter))
+  let client = @dhttp.Client(token, limiter=(limiter : &@runtime.RateLimiter))
   defer client.close()
   let bot = @discord.Bot(
     app,

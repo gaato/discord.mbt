@@ -1,9 +1,9 @@
 ///|
 async test "channel pins v2 encodes pagination and decodes an empty page" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let paths : Array[String] = []
-  client.perform_override_.val = Some((_route, path, _headers, _body, _files) => {
+  perform.val = Some((_route, path, _headers, _body, _files) => {
     paths.push(path)
     { status: 200, headers: Map([]), body: { "items": [], "has_more": false }, }
   })

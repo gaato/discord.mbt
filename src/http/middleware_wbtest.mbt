@@ -3,13 +3,12 @@ priv suberror MiddlewareFailure derive(Debug)
 
 ///|
 async test "middleware execution order is onion-style" {
-  let client = Client("test-token")
-  defer client.close()
-  client.perform_override_.val = Some((_route, _path, _headers, _body, _files) => {
+  let client = wire_test_client((_path, _headers, _body) => {
     status: 200,
     headers: Map([]),
     body: { "ok": true },
   })
+  defer client.close()
   let order : Array[String] = []
   let first : HttpMiddleware = (request, next) => {
     order.push("a-in")
@@ -30,13 +29,12 @@ async test "middleware execution order is onion-style" {
 
 ///|
 async test "middleware request headers reach transport" {
-  let client = Client("test-token")
-  defer client.close()
   let captured_header = Ref("")
-  client.perform_override_.val = Some((_route, _path, headers, _body, _files) => {
+  let client = wire_test_client((_path, headers, _body) => {
     captured_header.val = headers.get_or_default("x-middleware", "")
     { status: 200, headers: Map([]), body: Json::null(), }
   })
+  defer client.close()
   client.middleware((request, next) => {
     next({ ..request, headers: { "x-middleware": "present" }, })
   })
@@ -46,13 +44,12 @@ async test "middleware request headers reach transport" {
 
 ///|
 async test "request headers default to bot auth and allow bearer override" {
-  let client = Client("test-token")
-  defer client.close()
   let captured_authorizations : Array[String] = []
-  client.perform_override_.val = Some((_route, _path, headers, _body, _files) => {
+  let client = wire_test_client((_path, headers, _body) => {
     captured_authorizations.push(headers.get_or_default("authorization", ""))
     { status: 200, headers: Map([]), body: Json::null(), }
   })
+  defer client.close()
   ignore(client.request(GetGateway))
   ignore(
     client.request(GetGateway, headers={ "authorization": "Bearer oauth-token" }),
@@ -67,15 +64,14 @@ async test "request headers default to bot auth and allow bearer override" {
 
 ///|
 async test "github-compatible webhook sends its event without bot auth" {
-  let client = Client("test-token")
-  defer client.close()
   let captured_github_event = Ref("")
   let captured_authorization = Ref(false)
-  client.perform_override_.val = Some((_route, _path, headers, _body, _files) => {
+  let client = wire_test_client((_path, headers, _body) => {
     captured_github_event.val = headers.get_or_default("x-github-event", "")
     captured_authorization.val = headers.contains("authorization")
     { status: 200, headers: Map([]), body: Json::null(), }
   })
+  defer client.close()
   let webhook_id : @model.WebhookId = Id(10UL)
   client.execute_github_compatible_webhook(
     webhook_id,
@@ -89,13 +85,12 @@ async test "github-compatible webhook sends its event without bot auth" {
 
 ///|
 async test "middleware may short-circuit without transport" {
-  let client = Client("test-token")
-  defer client.close()
   let calls = Ref(0)
-  client.perform_override_.val = Some((_route, _path, _headers, _body, _files) => {
+  let client = wire_test_client((_path, _headers, _body) => {
     calls.val += 1
     { status: 200, headers: Map([]), body: { "transport": true }, }
   })
+  defer client.close()
   client.middleware((_request, _next) => {
     status: 200,
     headers: { "x-short-circuit": "true" },
@@ -110,21 +105,24 @@ async test "middleware may short-circuit without transport" {
 
 ///|
 async test "middleware sees final response after 429 retries" {
-  let client = Client("test-token", max_retries=1, request_timeout_ms=1000)
-  defer client.close()
   let calls = Ref(0)
-  client.perform_override_.val = Some((_route, _path, _headers, _body, _files) => {
-    calls.val += 1
-    if calls.val == 1 {
-      {
-        status: 429,
-        headers: { "x-ratelimit-global": "true", "retry-after": "0" },
-        body: { "retry_after": 0.0 },
+  let client = wire_test_client(
+    (_path, _headers, _body) => {
+      calls.val += 1
+      if calls.val == 1 {
+        {
+          status: 429,
+          headers: { "x-ratelimit-global": "true", "retry-after": "0" },
+          body: { "retry_after": 0.0 },
+        }
+      } else {
+        { status: 200, headers: Map([]), body: { "ok": true }, }
       }
-    } else {
-      { status: 200, headers: Map([]), body: { "ok": true }, }
-    }
-  })
+    },
+    max_retries=1,
+    request_timeout_ms=1000,
+  )
+  defer client.close()
   let next_returns = Ref(0)
   let observed_status = Ref(0)
   client.middleware((request, next) => {
@@ -154,13 +152,12 @@ async test "middleware failures surface as transport errors" {
 
 ///|
 async test "middleware observes wire errors before API mapping" {
-  let client = Client("test-token")
-  defer client.close()
-  client.perform_override_.val = Some((_route, _path, _headers, _body, _files) => {
+  let client = wire_test_client((_path, _headers, _body) => {
     status: 404,
     headers: { "x-wire": "visible" },
     body: { "code": 10003, "message": "Unknown Channel" },
   })
+  defer client.close()
   let observed_status = Ref(0)
   let observed_header = Ref("")
   let observed_body = Ref(Json::null())

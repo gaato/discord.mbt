@@ -2,10 +2,10 @@
 /// Wire-shape coverage for the webhook and user parameters added from the
 /// 2026-07-16 parameter-completeness audit.
 async test "execute webhook forwards caller-supplied flags" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_body = Ref(Json::null())
-  client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
+  perform.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
     { status: 200, headers: Map([]), body: Json::null(), }
   })
@@ -28,11 +28,11 @@ async test "execute webhook forwards caller-supplied flags" {
 
 ///|
 async test "edit webhook message forwards flags, query, and kept attachments" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_path = Ref("")
   let captured_body = Ref(Json::null())
-  client.perform_override_.val = Some((_route, path, _headers, body, _files) => {
+  perform.val = Some((_route, path, _headers, body, _files) => {
     captured_path.val = path
     captured_body.val = body.unwrap_or(Json::null())
     { status: 200, headers: Map([]), body: Json::null(), }
@@ -77,10 +77,10 @@ async test "edit webhook message forwards flags, query, and kept attachments" {
 
 ///|
 async test "modify current user forwards and clears the banner" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_body = Ref(Json::null())
-  client.perform_override_.val = Some((_route, _path, _headers, body, _files) => {
+  perform.val = Some((_route, _path, _headers, body, _files) => {
     captured_body.val = body.unwrap_or(Json::null())
     { status: 200, headers: Map([]), body: Json::null(), }
   })

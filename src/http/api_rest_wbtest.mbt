@@ -525,25 +525,23 @@ test "guild sticker multipart uses named form fields and file" {
     .build()
   let file = FileUpload("wave.png", b"PNG", content_type="image/png")
   inspect(
-    render_parts(
-      multipart_form_parts("B", sticker_form_fields(body), "file", file),
-    ),
+    render_parts(form_parts(sticker_form_fields(body), "file", file)),
     content=(
       #|--B<CR><LF>
-      #|content-disposition: form-data; name="name"<CR><LF>
+      #|Content-Disposition: form-data; name="name"<CR><LF>
       #|<CR><LF>
       #|Wave<CR><LF>
       #|--B<CR><LF>
-      #|content-disposition: form-data; name="description"<CR><LF>
+      #|Content-Disposition: form-data; name="description"<CR><LF>
       #|<CR><LF>
       #|Wumpus waves<CR><LF>
       #|--B<CR><LF>
-      #|content-disposition: form-data; name="tags"<CR><LF>
+      #|Content-Disposition: form-data; name="tags"<CR><LF>
       #|<CR><LF>
       #|wave,hello<CR><LF>
       #|--B<CR><LF>
-      #|content-disposition: form-data; name="file"; filename="wave.png"<CR><LF>
-      #|content-type: image/png<CR><LF>
+      #|Content-Disposition: form-data; name="file"; filename="wave.png"<CR><LF>
+      #|Content-Type: image/png<CR><LF>
       #|<CR><LF>
       #|PNG<CR><LF>
       #|--B--<CR><LF>
@@ -560,11 +558,11 @@ test "invite target users multipart uses only target_users_file" {
     content_type="text/csv",
   )
   inspect(
-    render_parts(multipart_form_parts("B", [], "target_users_file", file)),
+    render_parts([file_part("target_users_file", file)]),
     content=(
       #|--B<CR><LF>
-      #|content-disposition: form-data; name="target_users_file"; filename="target-users.csv"<CR><LF>
-      #|content-type: text/csv<CR><LF>
+      #|Content-Disposition: form-data; name="target_users_file"; filename="target-users.csv"<CR><LF>
+      #|Content-Type: text/csv<CR><LF>
       #|<CR><LF>
       #|user_id<LF>
       #|123<LF>
@@ -878,9 +876,9 @@ test "add guild member body includes OAuth token and optional fields" {
 
 ///|
 async test "add guild member maps empty 204 response to None" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
-  client.perform_override_.val = Some((_route, _path, _headers, _body, _files) => {
+  perform.val = Some((_route, _path, _headers, _body, _files) => {
     status: 204,
     headers: Map([]),
     body: Json::null(),

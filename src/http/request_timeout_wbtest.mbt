@@ -13,7 +13,7 @@ fn TimeoutTestLimiter::TimeoutTestLimiter(
 }
 
 ///|
-impl @ratelimit.RateLimiter for TimeoutTestLimiter with fn acquire(
+impl @runtime.RateLimiter for TimeoutTestLimiter with fn acquire(
   self,
   _bucket_key,
   global_exempt~,
@@ -24,25 +24,28 @@ impl @ratelimit.RateLimiter for TimeoutTestLimiter with fn acquire(
 }
 
 ///|
-impl @ratelimit.RateLimiter for TimeoutTestLimiter with fn release(
+impl @runtime.RateLimiter for TimeoutTestLimiter with fn release(
   self,
   bucket_key,
   status~,
   headers~,
 ) {
-  self.releases.push((bucket_key, status, headers))
+  self.releases.push((bucket_key, status, header_map(headers)))
 }
 
 ///|
 async test "a rate-limit wait longer than the request timeout succeeds" {
   let limiter = TimeoutTestLimiter(() => @async.sleep(60))
-  let client = Client("test-token", limiter~, request_timeout_ms=10)
-  defer client.close()
   let attempts = Ref(0)
-  client.perform_override_.val = Some((_route, _path, _headers, _body, _files) => {
-    attempts.val += 1
-    { status: 200, headers: Map([]), body: { "ok": true }, }
-  })
+  let client = wire_test_client(
+    (_path, _headers, _body) => {
+      attempts.val += 1
+      { status: 200, headers: Map([]), body: { "ok": true }, }
+    },
+    limiter~,
+    request_timeout_ms=10,
+  )
+  defer client.close()
   json_inspect(client.request(GetGateway), content={ "ok": true })
   assert_eq(attempts.val, 1)
   assert_eq(limiter.acquires, 1)
@@ -51,13 +54,15 @@ async test "a rate-limit wait longer than the request timeout succeeds" {
 
 ///|
 async test "slow middleware before and after next is outside the request timeout" {
-  let client = Client("test-token", request_timeout_ms=10)
-  defer client.close()
   let attempts = Ref(0)
-  client.perform_override_.val = Some((_route, _path, _headers, _body, _files) => {
-    attempts.val += 1
-    { status: 200, headers: Map([]), body: { "ok": true }, }
-  })
+  let client = wire_test_client(
+    (_path, _headers, _body) => {
+      attempts.val += 1
+      { status: 200, headers: Map([]), body: { "ok": true }, }
+    },
+    request_timeout_ms=10,
+  )
+  defer client.close()
   client.middleware((request, next) => {
     @async.sleep(60)
     let response = next(request)
@@ -79,15 +84,18 @@ async test "cancelling a request waiting on the limiter propagates cancellation"
     started.release()
     @async.sleep(60000)
   })
-  let client = Client("test-token", limiter~, request_timeout_ms=10)
-  defer client.close()
   let attempts = Ref(0)
+  let client = wire_test_client(
+    (_path, _headers, _body) => {
+      attempts.val += 1
+      { status: 200, headers: Map([]), body: Json::null(), }
+    },
+    limiter~,
+    request_timeout_ms=10,
+  )
+  defer client.close()
   let events : Array[@telemetry.TelemetryEvent] = []
   client.on_telemetry(event => events.push(event))
-  client.perform_override_.val = Some((_route, _path, _headers, _body, _files) => {
-    attempts.val += 1
-    { status: 200, headers: Map([]), body: Json::null(), }
-  })
   @async.with_task_group(group => {
     let waiting = group.spawn(allow_failure=true, () => {
       client.request(GetGateway)
@@ -111,18 +119,21 @@ async test "cancelling a request waiting on the limiter propagates cancellation"
 ///|
 async test "cancelling a network attempt releases its bucket without retrying" {
   let limiter = TimeoutTestLimiter(() => ())
-  let client = Client("test-token", limiter~, request_timeout_ms=60000)
-  defer client.close()
   let started = @async.Semaphore(1, initial_value=0)
   let attempts = Ref(0)
+  let client = wire_test_client(
+    (_path, _headers, _body) => {
+      attempts.val += 1
+      started.release()
+      @async.sleep(60000)
+      { status: 200, headers: Map([]), body: Json::null(), }
+    },
+    limiter~,
+    request_timeout_ms=60000,
+  )
+  defer client.close()
   let events : Array[@telemetry.TelemetryEvent] = []
   client.on_telemetry(event => events.push(event))
-  client.perform_override_.val = Some((_route, _path, _headers, _body, _files) => {
-    attempts.val += 1
-    started.release()
-    @async.sleep(60000)
-    { status: 200, headers: Map([]), body: Json::null(), }
-  })
   @async.with_task_group(group => {
     let waiting = group.spawn(allow_failure=true, () => {
       client.request(GetGateway)
@@ -147,20 +158,23 @@ async test "cancelling a network attempt releases its bucket without retrying" {
 ///|
 async test "cancelling 429 back-off propagates cancellation without another attempt" {
   let limiter = TimeoutTestLimiter(() => ())
-  let client = Client("test-token", limiter~, request_timeout_ms=10)
-  defer client.close()
   let backing_off = @async.Semaphore(1, initial_value=0)
   let attempts = Ref(0)
+  let client = wire_test_client(
+    (_path, _headers, _body) => {
+      attempts.val += 1
+      { status: 429, headers: Map([]), body: { "retry_after": 60.0 }, }
+    },
+    limiter~,
+    request_timeout_ms=10,
+  )
+  defer client.close()
   let events : Array[@telemetry.TelemetryEvent] = []
   client.on_telemetry(event => {
     events.push(event)
     if event is HttpRateLimited(..) {
       backing_off.release()
     }
-  })
-  client.perform_override_.val = Some((_route, _path, _headers, _body, _files) => {
-    attempts.val += 1
-    { status: 429, headers: Map([]), body: { "retry_after": 60.0 }, }
   })
   @async.with_task_group(group => {
     let waiting = group.spawn(allow_failure=true, () => {

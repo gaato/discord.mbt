@@ -19,6 +19,32 @@ breaking change is listed with a migration note.
 
 - Requires `moonbitlang/async` 0.22.4 (was 0.22.1); the bot template depends
   on the same version.
+- **The REST send loop runs on `gaato/sdk-runtime` 0.2.1.** Rate limiting,
+  the wire exchange, 429 retries, and per-attempt telemetry now go through the
+  runtime's `Client`, which `gaato/github`, `gaato/openai`, and
+  `gaato/anthropic` share. Behavior is unchanged: only a 429 is resent, after
+  the delay in its body (then its `Retry-After` header, then one second); a
+  timed-out attempt is never resent; middleware wraps the whole retry loop;
+  `HttpRateLimited` is emitted before the back-off. Multipart bodies are
+  encoded by `gaato/sdk-runtime/multipart`, so part headers are now spelled
+  `Content-Disposition` and `Content-Type` and the boundary starts with
+  `mbt-sdk-`.
+- **Breaking:** `Client(limiter=...)` takes a `gaato/sdk-runtime`
+  `RateLimiter`, and `gaato/discord/ratelimit` no longer defines the trait.
+  Its `release` receives `headers~ : @http.Headers` (from `gaato/http`)
+  instead of a `Map[String, String]`. `InMemoryRateLimiter` and
+  `coordinator.RemoteRateLimiter` implement the new trait. Migration: import
+  the trait from `gaato/sdk-runtime` and read headers with
+  `headers.get(name)`, which is case-insensitive.
+- **Breaking:** `Paginator[T]` is now an alias for the `gaato/sdk-runtime`
+  `Paginator[T, DiscordHttpError]`. `next_page`, `collect`, and `each` raise
+  `DiscordHttpError`, and the callback of `each` may be async. Type
+  annotations that name `@http.Paginator[T]` keep compiling.
+- **Breaking:** `encode_multipart_body` returns `Array[Bytes]` chunks, and
+  `InteractionHttpBody::Chunks` carries `Array[Bytes]`; `MultipartChunk` is
+  removed. Each file's bytes are still a chunk of their own and are not
+  copied. Migration: write each chunk's bytes in order, as the `Blob` arm
+  did.
 
 ## [0.5.0] - 2026-09-24
 

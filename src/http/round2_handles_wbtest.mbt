@@ -10,10 +10,10 @@ async fn expect_round2_deserialize(call : async () -> Unit) -> Unit {
 
 ///|
 async test "application handles delegate remaining fetch and mutation methods" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let calls : Array[String] = []
-  client.perform_override_.val = Some((route, path, _headers, _body, _files) => {
+  perform.val = Some((route, path, _headers, _body, _files) => {
     calls.push("\{@debug.to_string(route.method_())} \{path}")
     { status: 200, headers: Map([]), body: Json::null(), }
   })
@@ -88,10 +88,10 @@ async test "application handles delegate remaining fetch and mutation methods" {
 
 ///|
 async test "guild asset handles delegate remaining collections and item methods" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let calls : Array[String] = []
-  client.perform_override_.val = Some((route, path, _headers, _body, _files) => {
+  perform.val = Some((route, path, _headers, _body, _files) => {
     calls.push("\{@debug.to_string(route.method_())} \{path}")
     { status: 200, headers: Map([]), body: Json::null(), }
   })
@@ -186,11 +186,11 @@ async test "guild asset handles delegate remaining collections and item methods"
 
 ///|
 async test "channel handles exercise remaining channel API routes and builders" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let calls : Array[String] = []
   let bodies : Array[Json] = []
-  client.perform_override_.val = Some((route, path, _headers, body, _files) => {
+  perform.val = Some((route, path, _headers, body, _files) => {
     calls.push("\{@debug.to_string(route.method_())} \{path}")
     bodies.push(body.unwrap_or(Json::null()))
     { status: 200, headers: Map([]), body: Json::null(), }
@@ -297,10 +297,10 @@ async test "channel handles exercise remaining channel API routes and builders" 
 
 ///|
 async test "guild handles exercise remaining guild API routes" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let calls : Array[String] = []
-  client.perform_override_.val = Some((route, path, _headers, _body, _files) => {
+  perform.val = Some((route, path, _headers, _body, _files) => {
     let verb = @debug.to_string(route.method_())
     calls.push("\{verb} \{path}")
     let body = if verb == "Put" && path == "/api/v10/guilds/400/members/401" {
@@ -396,13 +396,13 @@ async test "guild handles exercise remaining guild API routes" {
 
 ///|
 async test "user command webhook invite and gateway long-tail routes are pinned" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let calls : Array[String] = []
   let authorizations : Array[String] = []
   let bodies : Array[Json] = []
   let gateway_calls = Ref(0)
-  client.perform_override_.val = Some((route, path, headers, body, _files) => {
+  perform.val = Some((route, path, headers, body, _files) => {
     let verb = @debug.to_string(route.method_())
     calls.push("\{verb} \{path}")
     authorizations.push(headers.get_or_default("authorization", ""))

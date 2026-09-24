@@ -84,20 +84,12 @@ fn encode_js_response(
   match response.body {
     Empty => js_empty_response(response.status)
     Bytes(body) => js_bytes_response(response.status, content_type, body)
-    Chunks(chunks) => {
-      let parts : Array[Bytes] = []
-      for chunk in chunks {
-        match chunk {
-          Text(text) => parts.push(@utf8.encode(text))
-          Blob(bytes) => parts.push(bytes)
-        }
-      }
+    Chunks(chunks) =>
       js_stream_response(
         response.status,
         content_type,
-        FixedArray::from_array(parts),
+        FixedArray::from_array(chunks),
       )
-    }
   }
 }
 

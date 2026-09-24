@@ -14,17 +14,22 @@ async fn wait_until_rate_limit_gate_is_held(bucket : Bucket) -> Unit {
 async test "a cancelled bucket reset wait releases its gate" {
   let limiter = InMemoryRateLimiter()
   let key = "POST:/channels/5/messages"
-  RateLimiter::acquire(limiter, key, global_exempt=true)
-  RateLimiter::release(limiter, key, status=200, headers={
-    "x-ratelimit-remaining": "0",
-    "x-ratelimit-reset-after": "60",
-  })
+  @runtime.RateLimiter::acquire(limiter, key, global_exempt=true)
+  @runtime.RateLimiter::release(
+    limiter,
+    key,
+    status=200,
+    headers=@http.Headers::from_array([
+      ("x-ratelimit-remaining", "0"),
+      ("x-ratelimit-reset-after", "60"),
+    ]),
+  )
   guard limiter.buckets.get(key) is Some(bucket) else {
     fail("rate-limit bucket was not created")
   }
   @async.with_task_group(group => {
     let waiting = group.spawn(no_wait=true, allow_failure=true, () => {
-      RateLimiter::acquire(limiter, key, global_exempt=true)
+      @runtime.RateLimiter::acquire(limiter, key, global_exempt=true)
     })
     wait_until_rate_limit_gate_is_held(bucket)
     waiting.cancel()
@@ -40,9 +45,14 @@ async test "a cancelled bucket reset wait releases its gate" {
     bucket.gate.release()
     bucket.reset_at_ms = 0
     @async.with_timeout(100, () => {
-      RateLimiter::acquire(limiter, key, global_exempt=true)
+      @runtime.RateLimiter::acquire(limiter, key, global_exempt=true)
     })
-    RateLimiter::release(limiter, key, status=200, headers=Map([]))
+    @runtime.RateLimiter::release(
+      limiter,
+      key,
+      status=200,
+      headers=@http.Headers::new(),
+    )
   })
 }
 
@@ -50,20 +60,30 @@ async test "a cancelled bucket reset wait releases its gate" {
 async test "a shorter global 429 never shortens an existing block" {
   let limiter = InMemoryRateLimiter()
   let key = "POST:/channels/global/messages"
-  RateLimiter::acquire(limiter, key, global_exempt=true)
-  RateLimiter::release(limiter, key, status=429, headers={
-    "x-ratelimit-global": "true",
-    "retry-after": "60",
-  })
+  @runtime.RateLimiter::acquire(limiter, key, global_exempt=true)
+  @runtime.RateLimiter::release(
+    limiter,
+    key,
+    status=429,
+    headers=@http.Headers::from_array([
+      ("x-ratelimit-global", "true"),
+      ("retry-after", "60"),
+    ]),
+  )
   let first_deadline = limiter.global_blocked_until
   guard limiter.buckets.get(key) is Some(bucket) else {
     fail("rate-limit bucket was not created")
   }
   bucket.gate.acquire()
-  RateLimiter::release(limiter, key, status=429, headers={
-    "x-ratelimit-global": "true",
-    "retry-after": "1",
-  })
+  @runtime.RateLimiter::release(
+    limiter,
+    key,
+    status=429,
+    headers=@http.Headers::from_array([
+      ("x-ratelimit-global", "true"),
+      ("retry-after", "1"),
+    ]),
+  )
   assert_true(limiter.global_blocked_until >= first_deadline)
 }
 
@@ -71,9 +91,14 @@ async test "a shorter global 429 never shortens an existing block" {
 async test "a 429 without retry-after blocks its bucket for one second" {
   let limiter = InMemoryRateLimiter()
   let key = "POST:/channels/6/messages"
-  RateLimiter::acquire(limiter, key, global_exempt=true)
+  @runtime.RateLimiter::acquire(limiter, key, global_exempt=true)
   let before = @clock.now_ms()
-  RateLimiter::release(limiter, key, status=429, headers=Map([]))
+  @runtime.RateLimiter::release(
+    limiter,
+    key,
+    status=429,
+    headers=@http.Headers::new(),
+  )
   guard limiter.buckets.get(key) is Some(bucket) else {
     fail("rate-limit bucket was not created")
   }

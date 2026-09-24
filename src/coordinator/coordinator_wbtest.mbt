@@ -22,16 +22,22 @@ async test "coordinator serializes identify and HTTP limits across clients" {
     assert_true(second_admitted_at - first_admitted_at >= 25L)
 
     remote_limiter.acquire("POST:/channels/1/messages", global_exempt=false)
-    remote_limiter.release("POST:/channels/1/messages", status=200, headers={
-      "x-ratelimit-remaining": "0",
-      "x-ratelimit-reset-after": "0.04",
-    })
+    remote_limiter.release(
+      "POST:/channels/1/messages",
+      status=200,
+      headers=@http.Headers::from_array([
+        ("x-ratelimit-remaining", "0"),
+        ("x-ratelimit-reset-after", "0.04"),
+      ]),
+    )
     let rate_wait_started = @clock.now_ms()
     remote_limiter.acquire("POST:/channels/1/messages", global_exempt=false)
     let rate_wait = @clock.now_ms() - rate_wait_started
-    remote_limiter.release("POST:/channels/1/messages", status=200, headers={
-      "x-ratelimit-remaining": "1",
-    })
+    remote_limiter.release(
+      "POST:/channels/1/messages",
+      status=200,
+      headers=@http.Headers::from_array([("x-ratelimit-remaining", "1")]),
+    )
     assert_true(rate_wait >= 25L)
 
     let concurrent_bucket = "POST:/channels/2/messages"
@@ -40,15 +46,19 @@ async test "coordinator serializes identify and HTTP limits across clients" {
       let started = @clock.now_ms()
       remote_limiter.acquire(concurrent_bucket, global_exempt=false)
       let waited = @clock.now_ms() - started
-      remote_limiter.release(concurrent_bucket, status=200, headers={
-        "x-ratelimit-remaining": "1",
-      })
+      remote_limiter.release(
+        concurrent_bucket,
+        status=200,
+        headers=@http.Headers::from_array([("x-ratelimit-remaining", "1")]),
+      )
       waited
     })
     @async.sleep(10)
-    remote_limiter.release(concurrent_bucket, status=200, headers={
-      "x-ratelimit-remaining": "1",
-    })
+    remote_limiter.release(
+      concurrent_bucket,
+      status=200,
+      headers=@http.Headers::from_array([("x-ratelimit-remaining", "1")]),
+    )
     assert_true(blocked_acquire.wait() >= 8L)
 
     let raw = CoordinatorClient::connect(coordinator.addr())
@@ -121,13 +131,18 @@ async test "coordinator EOF releases a held HTTP bucket" {
     defer first.close()
     defer second.close()
     let bucket = "POST:/channels/9/messages"
-    @ratelimit.RateLimiter::acquire(first, bucket, global_exempt=true)
+    @runtime.RateLimiter::acquire(first, bucket, global_exempt=true)
     first.acquire_client.close()
 
     @async.with_timeout(1000, () => {
-      @ratelimit.RateLimiter::acquire(second, bucket, global_exempt=true)
+      @runtime.RateLimiter::acquire(second, bucket, global_exempt=true)
     })
-    @ratelimit.RateLimiter::release(second, bucket, status=0, headers=Map([]))
+    @runtime.RateLimiter::release(
+      second,
+      bucket,
+      status=0,
+      headers=@http.Headers::new(),
+    )
   })
 }
 
@@ -412,9 +427,9 @@ async test "a blocked http_acquire does not delay cooldown_acquire" {
       )
     })
     assert_false(acquired.val)
-    limiter.release(bucket, status=200, headers=Map([]))
+    limiter.release(bucket, status=200, headers=@http.Headers::new())
     blocked.wait()
-    limiter.release(bucket, status=200, headers=Map([]))
+    limiter.release(bucket, status=200, headers=@http.Headers::new())
   })
 }
 

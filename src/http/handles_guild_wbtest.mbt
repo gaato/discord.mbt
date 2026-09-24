@@ -1,12 +1,12 @@
 ///|
 async test "guild ref edit delegates nullable fields and audit reason" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_method = Ref("")
   let captured_path = Ref("")
   let captured_headers : Ref[Map[String, String]?] = Ref(None)
   let captured_body = Ref(Json::null())
-  client.perform_override_.val = Some((route, path, headers, body, _files) => {
+  perform.val = Some((route, path, headers, body, _files) => {
     captured_method.val = @debug.to_string(route.method_())
     captured_path.val = path
     captured_headers.val = Some(headers)
@@ -52,12 +52,12 @@ test "guild ref members preserves paginator validation" {
 
 ///|
 async test "member ref unban delegates the audit reason header" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_method = Ref("")
   let captured_path = Ref("")
   let captured_headers : Ref[Map[String, String]?] = Ref(None)
-  client.perform_override_.val = Some((route, path, headers, _body, _files) => {
+  perform.val = Some((route, path, headers, _body, _files) => {
     captured_method.val = @debug.to_string(route.method_())
     captured_path.val = path
     captured_headers.val = Some(headers)
@@ -81,13 +81,13 @@ async test "member ref unban delegates the audit reason header" {
 
 ///|
 async test "role ref edit delegates bound ids and audit reason" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_method = Ref("")
   let captured_path = Ref("")
   let captured_headers : Ref[Map[String, String]?] = Ref(None)
   let captured_body = Ref(Json::null())
-  client.perform_override_.val = Some((route, path, headers, body, _files) => {
+  perform.val = Some((route, path, headers, body, _files) => {
     captured_method.val = @debug.to_string(route.method_())
     captured_path.val = path
     captured_headers.val = Some(headers)
@@ -120,10 +120,10 @@ async test "role ref edit delegates bound ids and audit reason" {
 
 ///|
 async test "guild ref search messages preserves query parameters" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_path = Ref("")
-  client.perform_override_.val = Some((_route, path, _headers, _body, _files) => {
+  perform.val = Some((_route, path, _headers, _body, _files) => {
     captured_path.val = path
     { status: 200, headers: Map([]), body: Json::null(), }
   })

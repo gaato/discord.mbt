@@ -1,6 +1,7 @@
 ///|
-fn Client::request_headers(
-  self : Client,
+/// The headers every call to `route` carries before the caller's own.
+fn base_headers(
+  token : String,
   route : Route,
   audit_reason : String?,
 ) -> Map[String, String] {
@@ -9,7 +10,7 @@ fn Client::request_headers(
     "accept": "application/json",
   }
   if route.needs_auth() {
-    headers["authorization"] = "Bot \{self.token}"
+    headers["authorization"] = "Bot \{token}"
   }
   if audit_reason is Some(reason) {
     headers["x-audit-log-reason"] = reason
@@ -33,100 +34,141 @@ fn wire_method(meth : @ahttp.RequestMethod) -> String {
 }
 
 ///|
-/// Concatenates multipart parts into one request body.
-fn multipart_body(parts : Array[MultipartChunk]) -> Bytes {
-  let buffer = Buffer()
-  for part in parts {
-    match part {
-      Text(text) => buffer.write_bytes(@utf8.encode(text))
-      Blob(bytes) => buffer.write_bytes(bytes)
-    }
+/// The telemetry spelling of a wire method: `GET` is reported as `Get`.
+fn method_name(wire : String) -> String {
+  match wire {
+    "" => ""
+    _ => wire[:1].to_owned().to_upper() + wire[1:].to_owned().to_lower()
   }
-  buffer.contents()
 }
 
 ///|
-/// Execute one HTTP exchange on the transport. The response body is read in
-/// full, so the transport may keep the connection alive.
-async fn Client::perform(
+/// Discord's retry rule: only a 429 is sent again, after the delay the
+/// response asked for, and at most `max_retries` times. A timed-out or
+/// otherwise failed attempt is never resent because it may already have
+/// reached Discord; a status error is final.
+priv struct DiscordRetry {
+  max_retries : Int
+}
+
+///|
+impl @runtime.RetryDecider for DiscordRetry with fn next_delay_ms(
+  self,
+  error,
+  _request,
+  attempt,
+  _random,
+) {
+  guard error is @runtime.RateLimited(headers~, body~, ..) else { return None }
+  if attempt >= self.max_retries {
+    return None
+  }
+  let (retry_after_ms, _) = rate_limit_details(headers, body)
+  Some(retry_after_ms.to_int() + 1)
+}
+
+///|
+/// Retry delay and scope of a 429 response: the body's `retry_after` (in
+/// seconds, the more precise source), then the `Retry-After` header, then one
+/// second; `global` when the response says the whole account is limited.
+fn rate_limit_details(headers : @ghttp.Headers, body : Bytes) -> (Int64, Bool) {
+  let global = headers.get("x-ratelimit-global") is Some(_)
+  let parsed : Json? = Some(@json.parse(@utf8.decode_lossy(body))) catch {
+    _ => None
+  }
+  let from_body : Int64? = match parsed {
+    Some({ "retry_after": Number(seconds, ..), .. }) =>
+      Some((seconds * 1000.0).to_int64())
+    _ => None
+  }
+  let retry_after_ms : Int64 = match from_body {
+    Some(ms) => ms
+    None =>
+      match @runtime.retry_after_ms(headers) {
+        Some(ms) => ms.to_int64()
+        None => 1000L
+      }
+  }
+  (retry_after_ms, global)
+}
+
+///|
+/// Build the wire request for one logical call: base headers, caller
+/// headers, and the JSON or multipart body the route takes.
+fn Client::wire_request(
   self : Client,
-  route : Route,
-  body? : Json,
-  audit_reason? : String,
-  files? : Array[FileUpload],
-  extra_headers : Map[String, String],
-) -> HttpResponse {
-  let headers = self.request_headers(route, audit_reason)
-  headers.merge_in_place(extra_headers)
-  let path = self.base_path + route.path()
-  if self.perform_override_.val is Some(perform) {
-    return perform(route, path, headers, body, files)
-  }
-  let wire_body : Bytes = match (route, files, body) {
-    (CreateGuildSticker(..), Some([file]), Some(json)) => {
-      let payload = json.stringify()
-      let seed = "\{@clock.now_ms()}-\{next_multipart_seq()}"
-      let boundary = fresh_boundary(seed, payload, [file])
-      headers["content-type"] = "multipart/form-data; boundary=\{boundary}"
-      multipart_body(
-        multipart_form_parts(boundary, sticker_form_fields(json), "file", file),
-      )
-    }
-    (CreateChannelInvite(..), Some([file]), Some(json)) => {
-      let payload = json.stringify()
-      let seed = "\{@clock.now_ms()}-\{next_multipart_seq()}"
-      let boundary = fresh_boundary(seed, payload, [file])
-      headers["content-type"] = "multipart/form-data; boundary=\{boundary}"
-      multipart_body(
-        multipart_payload_with_named_file(
-          boundary, payload, "target_users_file", file,
-        ),
-      )
-    }
-    (UpdateInviteTargetUsers(..), Some([file]), None) => {
-      let seed = "\{@clock.now_ms()}-\{next_multipart_seq()}"
-      let boundary = fresh_boundary(seed, "", [file])
-      headers["content-type"] = "multipart/form-data; boundary=\{boundary}"
-      multipart_body(
-        multipart_form_parts(boundary, [], "target_users_file", file),
-      )
-    }
-    (_, Some(fs), _) if fs.length() > 0 => {
-      let payload = body.unwrap_or(Json::empty_object()).stringify()
-      let seed = "\{@clock.now_ms()}-\{next_multipart_seq()}"
-      let boundary = fresh_boundary(seed, payload, fs)
-      headers["content-type"] = "multipart/form-data; boundary=\{boundary}"
-      multipart_body(multipart_parts(boundary, payload, fs))
-    }
-    (_, _, Some(json)) => {
-      headers["content-type"] = "application/json"
-      @utf8.encode(json.stringify())
-    }
-    (_, _, None) => b""
-  }
-  let request = @ghttp.Request::new(
+  request : HttpRequest,
+) -> WireRequest raise DiscordHttpError {
+  let route = request.route
+  let headers = base_headers(self.token, route, request.audit_reason)
+  headers.merge_in_place(request.headers)
+  let wire = @ghttp.Request::new(
     wire_method(route.method_()),
-    self.base_url + path,
+    self.base_url + self.base_path + route.path(),
   )
   for name, value in headers {
-    request.headers.set(name, value)
+    wire.headers.set(name, value)
   }
-  let response = self.transport.send(request.body_bytes(wire_body))
+  match (route, request.files, request.body) {
+    (CreateGuildSticker(..), Some([file]), Some(json)) =>
+      multipart_request(
+        wire,
+        form_parts(sticker_form_fields(json), "file", file),
+      )
+    (CreateChannelInvite(..), Some([file]), Some(json)) =>
+      multipart_request(wire, [
+        payload_part(json.stringify()),
+        file_part("target_users_file", file),
+      ])
+    (UpdateInviteTargetUsers(..), Some([file]), None) =>
+      multipart_request(wire, [file_part("target_users_file", file)])
+    (_, Some(fs), _) if fs.length() > 0 =>
+      multipart_request(
+        wire,
+        upload_parts(
+          request.body.unwrap_or(Json::empty_object()).stringify(),
+          fs,
+        ),
+      )
+    (_, _, Some(json)) => {
+      wire.headers.set("content-type", "application/json")
+      { head: wire.body_bytes(@utf8.encode(json.stringify())), body: None, }
+    }
+    (_, _, None) => { head: wire, body: None, }
+  }
+}
+
+///|
+/// A wire request: its head, and its body when that is built only after
+/// rate-limit admission (a multipart upload's).
+priv struct WireRequest {
+  head : @ghttp.Request
+  body : (() -> Bytes)?
+}
+
+///|
+/// The logical response for one wire response, before status-code-to-error
+/// mapping: lowercase header names and a JSON body.
+fn decode_response(
+  status : Int,
+  headers : @ghttp.Headers,
+  body : Bytes,
+) -> HttpResponse {
   let lower_headers : Map[String, String] = Map([])
-  for pair in response.headers.iter() {
+  for pair in headers.iter() {
     lower_headers[pair.0] = pair.1
   }
-  let body_json = if response.status == 204 {
+  let body_json = if status == 204 {
     Json::null()
   } else {
     // A body that is not valid JSON (proxy error pages, empty replies) is
     // preserved as a JSON string so error paths can report its content.
-    let text = response.text() catch { _ => @utf8.decode_lossy(response.body) }
+    let text = @utf8.decode(body) catch { _ => @utf8.decode_lossy(body) }
     @json.parse(text) catch {
       _ => Json::string(text)
     }
   }
-  { status: response.status, headers: lower_headers, body: body_json, }
+  { status, headers: lower_headers, body: body_json, }
 }
 
 ///|
@@ -226,9 +268,9 @@ async fn Client::execute(self : Client, request : HttpRequest) -> HttpResponse {
       message="create channel invite accepts exactly one target-users file next to its JSON params",
     )
   }
-  match self.offline_ {
-    Some(handler) => self.answer_offline(handler, request)
-    None => self.request_inner(request)
+  match self.backend {
+    Offline(handler) => self.answer_offline(handler, request)
+    Online(runtime) => self.request_online(runtime, request)
   }
 }
 
@@ -266,7 +308,7 @@ async fn Client::answer_offline(
     ),
   )
   if response.status == 429 {
-    let (retry_after_ms, global) = rate_limit_details(response)
+    let (retry_after_ms, global) = offline_rate_limit_details(response)
     self.emit_telemetry(
       HttpRateLimited(route_bucket=bucket, global~, retry_after_ms~),
     )
@@ -276,8 +318,8 @@ async fn Client::answer_offline(
 }
 
 ///|
-/// Retry delay and scope of a 429 response.
-fn rate_limit_details(response : HttpResponse) -> (Int64, Bool) {
+/// `rate_limit_details` for a response an offline handler produced.
+fn offline_rate_limit_details(response : HttpResponse) -> (Int64, Bool) {
   let global = response.headers.get("x-ratelimit-global") is Some(_)
   let retry_after_ms : Int64 = match response.body {
     { "retry_after": Number(seconds, ..), .. } => (seconds * 1000.0).to_int64()
@@ -287,90 +329,37 @@ fn rate_limit_details(response : HttpResponse) -> (Int64, Bool) {
 }
 
 ///|
-/// Rate-limit acquisition and 429 back-off stay outside the per-attempt
-/// timeout. A timeout exits through the same cleanup as a transport failure
-/// and is never retried.
-async fn Client::request_inner(
+/// One logical call on the wire: the runtime admits it through the rate
+/// limiter, sends it, releases the bucket, reports the attempt to telemetry,
+/// and resends a 429 as `DiscordRetry` directs. Every status comes back as a
+/// response so middleware sees it raw; a 429 that outlived its retries, a
+/// transport failure, and a timed-out attempt come back as errors.
+async fn Client::request_online(
   self : Client,
+  runtime : @runtime.Client,
   request : HttpRequest,
 ) -> HttpResponse {
-  let bucket = request.route.bucket()
-  let global_exempt = request.route.is_interaction()
-  let max_attempts = self.max_retries_ + 1
-  for attempt in 0..<max_attempts {
-    self.limiter.acquire(bucket, global_exempt~) catch {
-      e if @async.is_being_cancelled() => raise e
-      e => raise DiscordHttpError::Transport(message="cancelled: \{e}")
+  let wire = self.wire_request(request)
+  let response = runtime.send(
+    wire.head,
+    bucket=request.route.bucket(),
+    global_exempt=request.route.is_interaction(),
+    body?=wire.body,
+  ) catch {
+    @runtime.Status(status~, headers~, body~) =>
+      return decode_response(status, headers, body)
+    @runtime.RateLimited(headers~, body~, ..) => {
+      let (retry_after_ms, global) = rate_limit_details(headers, body)
+      raise DiscordHttpError::RateLimited(retry_after_ms~, global~)
     }
-    let started_at = @clock.now_ms()
-    let response = try {
-      errdefer @async.protect_from_cancel(() => {
-        self.limiter.release(bucket, status=0, headers=Map([])) catch {
-          _ => ()
-        }
-        self.emit_telemetry(
-          HttpRequest(
-            route_bucket=bucket,
-            method_name=@debug.to_string(request.route.method_()),
-            status=0,
-            duration_ms=@clock.now_ms() - started_at,
-            retries=attempt,
-          ),
-        )
-      })
-      @async.with_timeout(
-        self.request_timeout_ms_,
-        () => {
-          self.perform(
-            request.route,
-            request.headers,
-            body?=request.body,
-            audit_reason?=request.audit_reason,
-            files?=request.files,
-          )
-        },
-        error=DiscordHttpError::Timeout(timeout_ms=self.request_timeout_ms_),
-      )
-    } catch {
-      e if @async.is_being_cancelled() => raise e
-      DiscordHttpError::Timeout(..) as e => raise e
-      // The transport's own deadline (the default transport shares
-      // `request_timeout_ms`) is a timeout of this attempt as well.
-      @ghttp.HttpError::Timeout(_) =>
-        raise DiscordHttpError::Timeout(timeout_ms=self.request_timeout_ms_)
-      e => raise DiscordHttpError::Transport(message="\{e}")
-    } noraise {
-      r => r
-    }
-    self.limiter.release(
-      bucket,
-      status=response.status,
-      headers=response.headers,
-    )
-    self.emit_telemetry(
-      HttpRequest(
-        route_bucket=bucket,
-        method_name=@debug.to_string(request.route.method_()),
-        status=response.status,
-        duration_ms=@clock.now_ms() - started_at,
-        retries=attempt,
-      ),
-    )
-    if response.status == 429 {
-      let (retry_after_ms, global) = rate_limit_details(response)
-      self.emit_telemetry(
-        HttpRateLimited(route_bucket=bucket, global~, retry_after_ms~),
-      )
-      if attempt == max_attempts - 1 {
-        raise DiscordHttpError::RateLimited(retry_after_ms~, global~)
-      }
-      @async.sleep(retry_after_ms.to_int() + 1)
-      continue
-    }
-    return response
+    @runtime.Transport(@ghttp.HttpError::Timeout(_)) =>
+      raise DiscordHttpError::Timeout(timeout_ms=self.request_timeout_ms_)
+    @runtime.Transport(error) =>
+      raise DiscordHttpError::Transport(message=@debug.to_string(error))
+    @runtime.Decode(message~, ..) | @runtime.Config(message) =>
+      raise DiscordHttpError::Transport(message~)
   }
-  // unreachable: the loop either returns or raises
-  raise DiscordHttpError::Transport(message="retry loop exhausted")
+  decode_response(response.status, response.headers, response.body)
 }
 
 ///|

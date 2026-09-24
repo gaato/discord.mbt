@@ -237,11 +237,11 @@ pub async fn RemoteRateLimiter::ping(self : RemoteRateLimiter) -> Unit {
 }
 
 ///|
-pub extend RemoteRateLimiter with @ratelimit.RateLimiter::{acquire, release}
+pub extend RemoteRateLimiter with @runtime.RateLimiter::{acquire, release}
 
 ///|
 /// Acquire the HTTP bucket slot from the coordinator's shared accounting.
-pub impl @ratelimit.RateLimiter for RemoteRateLimiter with fn acquire(
+pub impl @runtime.RateLimiter for RemoteRateLimiter with fn acquire(
   self,
   bucket_key,
   global_exempt~,
@@ -259,8 +259,10 @@ pub impl @ratelimit.RateLimiter for RemoteRateLimiter with fn acquire(
 }
 
 ///|
-/// Report the response's rate-limit headers back to the coordinator.
-pub impl @ratelimit.RateLimiter for RemoteRateLimiter with fn release(
+/// Report the response's rate-limit headers back to the coordinator. A
+/// release cut short by cancellation is recovered by the `errdefer` below, as
+/// the runtime's `RateLimiter` contract requires.
+pub impl @runtime.RateLimiter for RemoteRateLimiter with fn release(
   self,
   bucket_key,
   status~,
@@ -281,7 +283,7 @@ pub impl @ratelimit.RateLimiter for RemoteRateLimiter with fn release(
       "bucket": Json::string(bucket_key),
       "lease": lease,
       "status": status,
-      "headers": headers.to_json(),
+      "headers": encode_headers(headers),
     }),
   )
   self.leases.remove(bucket_key)

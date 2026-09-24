@@ -1,12 +1,12 @@
 ///|
 async test "channel ref edit delegates nullable fields and audit reason" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_method = Ref("")
   let captured_path = Ref("")
   let captured_headers : Ref[Map[String, String]?] = Ref(None)
   let captured_body = Ref(Json::null())
-  client.perform_override_.val = Some((route, path, headers, body, _files) => {
+  perform.val = Some((route, path, headers, body, _files) => {
     captured_method.val = @debug.to_string(route.method_())
     captured_path.val = path
     captured_headers.val = Some(headers)
@@ -38,11 +38,11 @@ async test "channel ref edit delegates nullable fields and audit reason" {
 
 ///|
 async test "channel ref follow keeps announcement and target direction" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_path = Ref("")
   let captured_body = Ref(Json::null())
-  client.perform_override_.val = Some((_route, path, _headers, body, _files) => {
+  perform.val = Some((_route, path, _headers, body, _files) => {
     captured_path.val = path
     captured_body.val = body.unwrap_or(Json::null())
     { status: 200, headers: Map([]), body: Json::null(), }
@@ -63,11 +63,11 @@ async test "channel ref follow keeps announcement and target direction" {
 
 ///|
 async test "channel ref create stage instance binds the channel id" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_path = Ref("")
   let captured_body = Ref(Json::null())
-  client.perform_override_.val = Some((_route, path, _headers, body, _files) => {
+  perform.val = Some((_route, path, _headers, body, _files) => {
     captured_path.val = path
     captured_body.val = body.unwrap_or(Json::null())
     { status: 200, headers: Map([]), body: Json::null(), }
@@ -93,12 +93,12 @@ priv suberror TypingBodyError {
 
 ///|
 async test "channel ref with typing sends before body and returns its value" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let calls = Ref(0)
   let captured_method = Ref("")
   let captured_path = Ref("")
-  client.perform_override_.val = Some((route, path, _headers, _body, _files) => {
+  perform.val = Some((route, path, _headers, _body, _files) => {
     calls.val += 1
     captured_method.val = @debug.to_string(route.method_())
     captured_path.val = path
@@ -119,10 +119,10 @@ async test "channel ref with typing sends before body and returns its value" {
 
 ///|
 async test "channel ref with typing propagates body errors without hanging" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let calls = Ref(0)
-  client.perform_override_.val = Some((_route, _path, _headers, _body, _files) => {
+  perform.val = Some((_route, _path, _headers, _body, _files) => {
     calls.val += 1
     { status: 204, headers: Map([]), body: Json::null(), }
   })
@@ -142,10 +142,10 @@ async test "channel ref with typing propagates body errors without hanging" {
 
 ///|
 async test "channel ref with typing propagates the initial typing failure" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let body_ran = Ref(false)
-  client.perform_override_.val = Some((_route, _path, _headers, _body, _files) => {
+  perform.val = Some((_route, _path, _headers, _body, _files) => {
     status: 403,
     headers: Map([]),
     body: { "code": 50013, "message": "Missing Permissions" },
@@ -167,10 +167,10 @@ async test "channel ref with typing propagates the initial typing failure" {
 
 ///|
 async test "message ref reaction deletions bind message and user ids" {
-  let client = Client("test-token")
+  let (client, perform) = offline_test_client()
   defer client.close()
   let captured_paths : Array[String] = []
-  client.perform_override_.val = Some((_route, path, _headers, _body, _files) => {
+  perform.val = Some((_route, path, _headers, _body, _files) => {
     captured_paths.push(path)
     { status: 204, headers: Map([]), body: Json::null(), }
   })
