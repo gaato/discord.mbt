@@ -11,8 +11,7 @@ cd my-discord-bot
 
 ## Dependencies
 
-After `gaato/discord` is published, replace `gaato/discord@0.4.2` in
-`moon.mod` with the released version and update it with Moon when needed:
+`moon.mod` pins the released `gaato/discord`; update it with Moon when needed:
 
 ```fish
 moon update
@@ -44,6 +43,22 @@ moon check /path/to/my-discord-bot/src/main --target native
 The workspace supplies the local `gaato/discord` module for the dependency in
 `moon.mod`; no source import paths need to change. Do not copy a generated
 `moon.work` into the bot project unless that workspace layout is intentional.
+
+## Run in a container
+
+The `Dockerfile` builds the bot with the
+[`ghcr.io/gaato/moonbit`](https://github.com/gaato/moonbit-docker) toolchain
+image and copies the executable onto `gcr.io/distroless/base-debian13`:
+
+```fish
+docker build -t my-discord-bot .
+docker run --rm -e DISCORD_TOKEN="your-token" my-discord-bot
+```
+
+The runtime image carries no zlib. If you enable Gateway zlib-stream
+compression, switch the final stage to a base that provides `zlib1g`, such as
+`debian:trixie-slim`. Pass `--build-arg MOONBIT_IMAGE=...` to build with
+another toolchain tag.
 
 ## Configure and run
 
