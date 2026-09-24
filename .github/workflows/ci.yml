@@ -14,6 +14,12 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Every job except voice-shim runs in ghcr.io/gaato/moonbit
+# (https://github.com/gaato/moonbit-docker), which carries the toolchain and
+# Node.js 24, and installs only project runtimes on top; voice-shim builds Rust
+# and libdave on a plain runner and installs the same toolchain with the
+# upstream script. The image tag must match this version, which the
+# containerized jobs verify.
 env:
   MOONBIT_INSTALL_VERSION: "0.10.14+7d59c7ec9"
 
@@ -21,6 +27,7 @@ jobs:
   check:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    container: ghcr.io/gaato/moonbit:0.10.14-7d59c7ec9
 
     steps:
       - name: Check out repository
@@ -28,19 +35,16 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install MoonBit
-        shell: bash
+      - name: Install build dependencies
         run: |
-          curl --proto '=https' --tlsv1.2 --fail --show-error --silent --location \
-            https://cli.moonbitlang.com/install/unix.sh \
-            --output "$RUNNER_TEMP/install-moonbit.sh"
-          actual="$(shasum -a 256 "$RUNNER_TEMP/install-moonbit.sh" | awk '{print $1}')"
-          test "$actual" = "46495f8cdc0050f79b6cb195d66478d101cb3601d68506568fbe377fcdf2a9fe"
-          bash "$RUNNER_TEMP/install-moonbit.sh"
-          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+          apt-get update
+          apt-get install -y --no-install-recommends python3 zlib1g-dev
 
       - name: Version
-        run: moon version --all
+        run: |
+          moon version --all
+          # The image tag and MOONBIT_INSTALL_VERSION must name the same toolchain.
+          moon version --all | grep -F -- "$MOONBIT_INSTALL_VERSION"
 
       - name: Update registry index
         run: moon update
@@ -85,6 +89,7 @@ jobs:
   js:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    container: ghcr.io/gaato/moonbit:0.10.14-7d59c7ec9
 
     steps:
       - name: Check out repository
@@ -92,28 +97,16 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Setup Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 24
-          cache: npm
-          cache-dependency-path: |
-            src/examples/workers_echo/package-lock.json
-            src/examples/workers_gateway/package-lock.json
-
-      - name: Install MoonBit
-        shell: bash
+      - name: Install build dependencies
         run: |
-          curl --proto '=https' --tlsv1.2 --fail --show-error --silent --location \
-            https://cli.moonbitlang.com/install/unix.sh \
-            --output "$RUNNER_TEMP/install-moonbit.sh"
-          actual="$(shasum -a 256 "$RUNNER_TEMP/install-moonbit.sh" | awk '{print $1}')"
-          test "$actual" = "46495f8cdc0050f79b6cb195d66478d101cb3601d68506568fbe377fcdf2a9fe"
-          bash "$RUNNER_TEMP/install-moonbit.sh"
-          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+          apt-get update
+          apt-get install -y --no-install-recommends unzip
 
       - name: Version
-        run: moon version --all
+        run: |
+          moon version --all
+          # The image tag and MOONBIT_INSTALL_VERSION must name the same toolchain.
+          moon version --all | grep -F -- "$MOONBIT_INSTALL_VERSION"
 
       - name: Update registry index
         run: moon update
@@ -193,6 +186,7 @@ jobs:
   wasm:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    container: ghcr.io/gaato/moonbit:0.10.14-7d59c7ec9
 
     steps:
       - name: Check out repository
@@ -200,19 +194,11 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install MoonBit
-        shell: bash
-        run: |
-          curl --proto '=https' --tlsv1.2 --fail --show-error --silent --location \
-            https://cli.moonbitlang.com/install/unix.sh \
-            --output "$RUNNER_TEMP/install-moonbit.sh"
-          actual="$(shasum -a 256 "$RUNNER_TEMP/install-moonbit.sh" | awk '{print $1}')"
-          test "$actual" = "46495f8cdc0050f79b6cb195d66478d101cb3601d68506568fbe377fcdf2a9fe"
-          bash "$RUNNER_TEMP/install-moonbit.sh"
-          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
-
       - name: Version
-        run: moon version --all
+        run: |
+          moon version --all
+          # The image tag and MOONBIT_INSTALL_VERSION must name the same toolchain.
+          moon version --all | grep -F -- "$MOONBIT_INSTALL_VERSION"
 
       - name: Update registry index
         run: moon update
@@ -232,28 +218,13 @@ jobs:
   spin-component:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    container: ghcr.io/gaato/moonbit:0.10.14-7d59c7ec9
 
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-
-      - name: Setup Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 24
-
-      - name: Install MoonBit
-        shell: bash
-        run: |
-          curl --proto '=https' --tlsv1.2 --fail --show-error --silent --location \
-            https://cli.moonbitlang.com/install/unix.sh \
-            --output "$RUNNER_TEMP/install-moonbit.sh"
-          actual="$(shasum -a 256 "$RUNNER_TEMP/install-moonbit.sh" | awk '{print $1}')"
-          test "$actual" = "46495f8cdc0050f79b6cb195d66478d101cb3601d68506568fbe377fcdf2a9fe"
-          bash "$RUNNER_TEMP/install-moonbit.sh"
-          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
 
       - name: Install Spin and wasm-tools
         run: |
@@ -345,3 +316,28 @@ jobs:
 
       - name: Test with transport shim and official libdave
         run: moon test --target native --release --deny-warn
+
+  template-image:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build the template image
+        run: docker build --tag discord-bot-template template
+
+      - name: Start the image without a token
+        run: |
+          # The executable must load on the distroless base and stop on the
+          # missing token rather than on a missing shared library.
+          set +e
+          output="$(docker run --rm -e DISCORD_TOKEN= discord-bot-template 2>&1)"
+          status=$?
+          set -e
+          echo "$output"
+          test "$status" -eq 1
+          grep -q 'AppConfigError.EmptyToken' <<<"$output"

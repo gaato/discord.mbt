@@ -26,6 +26,7 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    container: ghcr.io/gaato/moonbit:0.10.14-7d59c7ec9
     environment: mooncakes
     steps:
       - name: Check out the commit CI validated
@@ -34,16 +35,10 @@ jobs:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
           persist-credentials: false
 
-      - name: Install MoonBit
-        shell: bash
+      - name: Install build dependencies
         run: |
-          curl --proto '=https' --tlsv1.2 --fail --show-error --silent --location \
-            https://cli.moonbitlang.com/install/unix.sh \
-            --output "$RUNNER_TEMP/install-moonbit.sh"
-          actual="$(shasum -a 256 "$RUNNER_TEMP/install-moonbit.sh" | awk '{print $1}')"
-          test "$actual" = "46495f8cdc0050f79b6cb195d66478d101cb3601d68506568fbe377fcdf2a9fe"
-          bash "$RUNNER_TEMP/install-moonbit.sh"
-          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+          apt-get update
+          apt-get install -y --no-install-recommends zlib1g-dev
 
       - name: Publish
         env:
