@@ -71,6 +71,8 @@ jobs:
 
       - name: Public API drift check
         run: |
+          # The container's git sees a checkout owned by another user.
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           moon info --target native
           # Current moon removes a legacy trailing blank line from generated
           # interfaces; ignore blank-only churn while still rejecting API edits.
