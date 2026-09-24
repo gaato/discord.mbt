@@ -1,3 +1,3 @@
 ///|
-#cfg(not(target="native"))
-let _keep_native_only_wbtest_imports : Unit = ignore(@socket.unimplemented)
+#cfg(target="js")
+let _keep_js_unused_wbtest_imports : Unit = ignore(@socket.unimplemented)
