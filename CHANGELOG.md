@@ -15,6 +15,11 @@ breaking change is listed with a migration note.
   `.devcontainer` starts from the same image, and CI runs in it except the
   Rust voice shim job.
 
+### Changed
+
+- Requires `moonbitlang/async` 0.22.4 (was 0.22.1); the bot template depends
+  on the same version.
+
 ## [0.5.0] - 2026-09-24
 
 ### Added

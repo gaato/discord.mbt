@@ -722,7 +722,7 @@ async test "cancelled voice gateway sends release the serialized send gate" {
     transport.send_started.get()
     text_send.cancel()
     try text_send.wait() catch {
-      @async.TaskCancelled => ()
+      @async.WaitedTaskAlreadyCancelled => ()
       error => fail("unexpected text send error: \{Repr(error)}")
     } noraise {
       _ => fail("cancelled text send unexpectedly completed")
@@ -742,7 +742,7 @@ async test "cancelled voice gateway sends release the serialized send gate" {
     transport.send_started.get()
     binary_send.cancel()
     try binary_send.wait() catch {
-      @async.TaskCancelled => ()
+      @async.WaitedTaskAlreadyCancelled => ()
       error => fail("unexpected binary send error: \{Repr(error)}")
     } noraise {
       _ => fail("cancelled binary send unexpectedly completed")
@@ -800,7 +800,7 @@ async test "closing a voice gateway drains an in-flight writer before transport 
 
     blocked.cancel()
     try blocked.wait() catch {
-      @async.TaskCancelled => ()
+      @async.WaitedTaskAlreadyCancelled => ()
       error => fail("unexpected voice send error: \{Repr(error)}")
     } noraise {
       _ => fail("blocked voice send unexpectedly completed")

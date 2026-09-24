@@ -774,7 +774,7 @@ async test "registered command cancellation bypasses the error policy" {
     started.get()
     task.cancel()
     try task.wait() catch {
-      @async.TaskCancelled => ()
+      @async.WaitedTaskAlreadyCancelled => ()
       error => fail("unexpected cancellation error: \{Repr(error)}")
     } noraise {
       _ => fail("cancelled dispatch unexpectedly completed")

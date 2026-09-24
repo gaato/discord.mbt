@@ -99,7 +99,7 @@ async test "cancellation bypasses the rejection classifier" {
     started.get()
     task.cancel()
     try task.wait() catch {
-      @async.TaskCancelled => ()
+      @async.WaitedTaskAlreadyCancelled => ()
       error => fail("unexpected error: \{Repr(error)}")
     } noraise {
       _ => fail("expected cancellation")

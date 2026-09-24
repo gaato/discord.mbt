@@ -167,7 +167,7 @@ async test "response gate remains terminal after sink cancellation" {
     sink_started.get()
     send_task.cancel()
     try send_task.wait() catch {
-      @async.TaskCancelled => ()
+      @async.WaitedTaskAlreadyCancelled => ()
       error => fail("unexpected cancellation error: \{Repr(error)}")
     } noraise {
       _ => fail("cancelled send unexpectedly completed")

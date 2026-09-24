@@ -95,7 +95,7 @@ async test "cancelling a request waiting on the limiter propagates cancellation"
     @async.with_timeout(1000, () => started.acquire())
     waiting.cancel()
     try waiting.wait() catch {
-      @async.TaskCancelled => ()
+      @async.WaitedTaskAlreadyCancelled => ()
       error => fail("unexpected cancellation error: \{Repr(error)}")
     } noraise {
       _ => fail("cancelled request unexpectedly completed")
@@ -130,7 +130,7 @@ async test "cancelling a network attempt releases its bucket without retrying" {
     @async.with_timeout(1000, () => started.acquire())
     waiting.cancel()
     try waiting.wait() catch {
-      @async.TaskCancelled => ()
+      @async.WaitedTaskAlreadyCancelled => ()
       error => fail("unexpected cancellation error: \{Repr(error)}")
     } noraise {
       _ => fail("cancelled request unexpectedly completed")
@@ -169,7 +169,7 @@ async test "cancelling 429 back-off propagates cancellation without another atte
     @async.with_timeout(1000, () => backing_off.acquire())
     waiting.cancel()
     try waiting.wait() catch {
-      @async.TaskCancelled => ()
+      @async.WaitedTaskAlreadyCancelled => ()
       error => fail("unexpected cancellation error: \{Repr(error)}")
     } noraise {
       _ => fail("cancelled request unexpectedly completed")
@@ -204,7 +204,7 @@ async test "cancellation takes precedence over a middleware cleanup error" {
     @async.with_timeout(1000, () => started.acquire())
     waiting.cancel()
     try waiting.wait() catch {
-      @async.TaskCancelled => ()
+      @async.WaitedTaskAlreadyCancelled => ()
       error => fail("middleware masked cancellation: \{Repr(error)}")
     } noraise {
       _ => fail("cancelled request unexpectedly completed")

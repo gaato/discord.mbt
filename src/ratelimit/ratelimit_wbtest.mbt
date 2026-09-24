@@ -29,7 +29,7 @@ async test "a cancelled bucket reset wait releases its gate" {
     wait_until_rate_limit_gate_is_held(bucket)
     waiting.cancel()
     try waiting.wait() catch {
-      @async.TaskCancelled => ()
+      @async.WaitedTaskAlreadyCancelled => ()
       error => fail("unexpected cancellation error: \{Repr(error)}")
     } noraise {
       _ => fail("cancelled rate-limit wait unexpectedly completed")
