@@ -68,10 +68,10 @@ export function trackBackground(onError = console.error) {
     },
     async whenIdle() {
       await Promise.all([...pending]);
-      // The MoonBit async runtime may still have one scheduler tick queued
-      // with setTimeout(0) when the last background promise settles. Yield one
-      // macrotask turn so that tick runs first; Deno's test sanitizer otherwise
-      // reports it as a leaked timer.
+      // Until moonbitlang/async#636 lands, the MoonBit async runtime may leave
+      // one scheduler tick queued with setTimeout(0) when the last background
+      // promise settles. Yield one macrotask turn so that tick runs first;
+      // Deno's test sanitizer otherwise reports it as a leaked timer.
       await new Promise((resolve) => setTimeout(resolve, 0));
     },
   };
