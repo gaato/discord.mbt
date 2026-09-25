@@ -77,7 +77,7 @@ test "discord docs: displaying a modal (line 26)" {
   }
   let components : Array[@model.Component] = @json.from_json(component_json)
   let components_again : Array[@model.Component] = @json.from_json(
-    components.to_json(),
+    Json(components),
   )
   assert_eq("\{Repr(components)}", "\{Repr(components_again)}")
   inspect(components.length(), content="2")

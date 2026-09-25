@@ -14,7 +14,7 @@ test "application integration types round-trip" {
       @model.ApplicationIntegrationType::from_int(value.to_int()) == value,
     )
   }
-  inspect(values.to_json().stringify(), content="[0,1,99]")
+  inspect(Json(values).stringify(), content="[0,1,99]")
 }
 
 ///|
@@ -34,5 +34,5 @@ test "interaction context types round-trip" {
       @model.InteractionContextType::from_int(value.to_int()) == value,
     )
   }
-  inspect(values.to_json().stringify(), content="[0,1,2,99]")
+  inspect(Json(values).stringify(), content="[0,1,2,99]")
 }

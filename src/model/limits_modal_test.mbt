@@ -308,7 +308,7 @@ test "modal radio and checkbox groups bound options and option text" {
   let messages : Array[String] = []
   for (typ, minimum) in [(21, 2), (22, 1)] {
     let base : Json = {
-      "type": typ.to_json(),
+      "type": Json(typ),
       "custom_id": "choice",
       "options": limit_array(minimum, option),
     }

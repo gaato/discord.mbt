@@ -287,16 +287,14 @@ test "guild numeric enums preserve unknown values" {
   let premium : @model.PremiumTier = @json.from_json(@json.parse("95"))
   let nsfw : @model.NsfwLevel = @json.from_json(@json.parse("94"))
   inspect(
-    [
-      verification.to_json(),
-      notifications.to_json(),
-      content_filter.to_json(),
-      mfa.to_json(),
-      premium.to_json(),
-      nsfw.to_json(),
-    ]
-    .to_json()
-    .stringify(),
+    Json([
+      Json(verification),
+      Json(notifications),
+      Json(content_filter),
+      Json(mfa),
+      Json(premium),
+      Json(nsfw),
+    ]).stringify(),
     content=(
       #|[99,98,97,96,95,94]
     ),

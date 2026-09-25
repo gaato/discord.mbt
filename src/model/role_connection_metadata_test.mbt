@@ -13,11 +13,11 @@ test "application role connection metadata round-trips a docs-shaped fixture" {
     @json.parse(fixture),
   )
   let second : Array[@model.ApplicationRoleConnectionMetadata] = @json.from_json(
-    first.to_json(),
+    Json(first),
   )
   assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(
-    first.to_json().stringify(),
+    Json(first).stringify(),
     content=(
       #|[{"type":2,"key":"cookieseaten","name":"Cookies Eaten","name_localizations":{"de":"Gegessene Kekse"},"description":"The number of cookies eaten","description_localizations":{"de":"Die Anzahl gegessener Kekse"}}]
     ),

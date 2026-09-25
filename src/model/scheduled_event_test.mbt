@@ -105,9 +105,7 @@ test "scheduled event enums preserve unknown values" {
     @json.parse("97"),
   )
   inspect(
-    [privacy.to_json(), status.to_json(), entity.to_json()]
-    .to_json()
-    .stringify(),
+    Json([Json(privacy), Json(status), Json(entity)]).stringify(),
     content=(
       #|[99,98,97]
     ),

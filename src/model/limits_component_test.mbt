@@ -104,7 +104,7 @@ test "all select types share message and modal field boundaries" {
   let messages : Array[String] = []
   for modal in [false, true] {
     for typ in [3, 5, 6, 7, 8] {
-      let base : Json = { "type": typ.to_json(), "custom_id": "pick" }
+      let base : Json = { "type": Json(typ), "custom_id": "pick" }
       messages.push(
         limit_field_cases(
           base,
@@ -281,7 +281,7 @@ test "auto select default counts follow explicit and default selection bounds" {
   let value : Json = { "id": "123", "type": "user" }
   for modal in [false, true] {
     for typ in [5, 6, 7, 8] {
-      let base : Json = { "type": typ.to_json(), "custom_id": "entity" }
+      let base : Json = { "type": Json(typ), "custom_id": "entity" }
       messages.push(
         limit_field_cases(
           base,
@@ -381,7 +381,7 @@ test "legacy rows and per-row counts also apply inside V2 containers" {
   )
   let messages : Array[String] = []
   for typ in [3, 5, 6, 7, 8] {
-    let select : Json = { "type": typ.to_json(), "custom_id": "pick" }
+    let select : Json = { "type": Json(typ), "custom_id": "pick" }
     messages.push(
       limit_field_cases({ "type": 1 }, [
         ("components", [select], [select, select]),

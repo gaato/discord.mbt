@@ -207,7 +207,7 @@ test "invite enums preserve unknown values" {
     ),
   )
   inspect(
-    [invite_type.to_json(), target_type.to_json()].to_json().stringify(),
+    Json([Json(invite_type), Json(target_type)]).stringify(),
     content=(
       #|[99,98]
     ),

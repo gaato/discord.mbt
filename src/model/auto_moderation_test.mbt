@@ -83,7 +83,7 @@ test "auto moderation enums preserve unknown values" {
     @json.parse("98"),
   )
   inspect(
-    [trigger.to_json(), action.to_json()].to_json().stringify(),
+    Json([Json(trigger), Json(action)]).stringify(),
     content=(
       #|[99,98]
     ),

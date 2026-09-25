@@ -641,7 +641,7 @@ test "file type filters round-trip on attachment options and file uploads" {
     ),
   )
   inspect(
-    filters.to_json().stringify(),
+    Json(filters).stringify(),
     content=(
       #|["image","video","audio",".PDF","sticker"]
     ),

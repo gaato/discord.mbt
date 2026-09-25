@@ -8,7 +8,7 @@
 /// ```mbt check
 /// test "restrict an upload to images and PDFs" {
 ///   let filter : Array[@model.FileTypeFilter] = [Image, Extension(".pdf")]
-///   inspect(filter.to_json().stringify(), content="[\"image\",\".pdf\"]")
+///   inspect(Json(filter).stringify(), content="[\"image\",\".pdf\"]")
 /// }
 /// ```
 pub(all) enum FileTypeFilter {

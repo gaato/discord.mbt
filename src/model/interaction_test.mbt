@@ -520,7 +520,7 @@ test "interaction response types preserve known and unknown values" {
     ),
   )
   inspect(
-    [known.to_json(), unknown.to_json()].to_json().stringify(),
+    Json([Json(known), Json(unknown)]).stringify(),
     content=(
       #|[12,99]
     ),

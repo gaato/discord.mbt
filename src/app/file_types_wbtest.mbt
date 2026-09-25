@@ -132,7 +132,7 @@ test "file field emits a label-wrapped file upload with its filter" {
     ),
   ).show()
   inspect(
-    handle.components_.to_json().stringify(),
+    Json(handle.components_).stringify(),
     content=(
       #|[{"label":"Proof","component":{"custom_id":"proof","min_values":0,"max_values":3,"required":false,"file_types":["image",".pdf"],"type":19},"type":18}]
     ),

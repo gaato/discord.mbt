@@ -1,0 +1,69 @@
+name: Canary
+
+# The MoonBit type checks and test suites from CI, on the newest upstream
+# MoonBit release (latest) and on the nightly toolchain. A failure here with a
+# green CI means the language or toolchain changed under us. Read the two
+# channels differently:
+#   latest  - the release users install has moved: fix it, then bump the
+#             pinned image and MOONBIT_INSTALL_VERSION in ci.yml.
+#   nightly - an early warning of what the next release will do; nightly itself
+#             is sometimes broken, so confirm before changing anything.
+# The voice shim, JavaScript host runtimes, and template image stay in CI only:
+# they do not depend on the MoonBit toolchain version.
+
+on:
+  schedule:
+    - cron: "47 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  moonbit:
+    name: moonbit (${{ matrix.channel }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        channel: [latest, nightly]
+    container:
+      image: ghcr.io/gaato/moonbit:${{ matrix.channel }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install build dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends zlib1g-dev
+
+      - name: Toolchain versions
+        run: moon version --all
+
+      - name: Update registry index
+        run: moon update
+
+      - name: Type check
+        run: |
+          moon check --target native --deny-warn
+          moon check --target js --deny-warn
+          moon check --target wasm --deny-warn
+
+      - name: Format check
+        run: |
+          moon fmt --check
+          moon -C template fmt --check
+
+      - name: Test native
+        run: moon test --target native
+
+      - name: Test JavaScript
+        run: moon test --target js
+
+      - name: Test Wasm
+        run: moon test --target wasm --release

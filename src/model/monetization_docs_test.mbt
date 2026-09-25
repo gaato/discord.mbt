@@ -97,7 +97,7 @@ test "discord docs: list skus (line 85)" {
     #|  }
     #|]
   let first : Array[@model.Sku] = @json.from_json(@json.parse(fixture))
-  let second : Array[@model.Sku] = @json.from_json(first.to_json())
+  let second : Array[@model.Sku] = @json.from_json(Json(first))
   assert_eq("\{Repr(first)}", "\{Repr(second)}")
   inspect(first.length(), content="2")
   inspect(first[0].typ.to_int(), content="6")

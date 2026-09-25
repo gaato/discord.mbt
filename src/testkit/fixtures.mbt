@@ -32,7 +32,7 @@ pub fn guild_member(
 ) -> @model.GuildMember {
   let fields : Map[String, Json] = {
     "user": user.to_json(),
-    "roles": roles.to_json(),
+    "roles": Json(roles),
     "joined_at": "2024-01-01T00:00:00Z",
     "deaf": false,
     "mute": false,
@@ -88,7 +88,7 @@ pub fn message(
     "type": 0,
   }
   if components is Some(values) {
-    fields["components"] = values.to_json()
+    fields["components"] = Json(values)
   }
   try! @json.from_json(copy_json(Json::object(fields)))
 }
@@ -149,7 +149,7 @@ pub fn slash(
     "id": "800000000000000001",
     "name": name,
     "type": 1,
-    "options": options.to_json(),
+    "options": Json(options),
   }
   if resolved is Some(value) {
     fields["resolved"] = value.to_json()
@@ -238,8 +238,8 @@ pub fn component(
   }
   let fields : Map[String, Json] = {
     "custom_id": custom_id,
-    "component_type": typ.to_json(),
-    "values": values.to_json(),
+    "component_type": Json(typ),
+    "values": Json(values),
   }
   if resolved is Some(value) {
     fields["resolved"] = value.to_json()
@@ -271,7 +271,7 @@ pub fn modal(
   }
   let fields : Map[String, Json] = {
     "custom_id": custom_id,
-    "components": components.to_json(),
+    "components": Json(components),
   }
   if resolved is Some(value) {
     fields["resolved"] = value.to_json()

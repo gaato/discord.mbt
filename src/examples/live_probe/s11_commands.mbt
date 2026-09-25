@@ -101,10 +101,7 @@ async fn sec_commands(p : P) -> Unit {
     "ok"
   })
   p.probe("bulk_overwrite_global_commands (restore original)", () => {
-    let restored = c.bulk_overwrite_global_commands(
-      a,
-      original_global.map(cmd => cmd.to_json()).to_json(),
-    )
+    let restored = c.bulk_overwrite_global_commands(a, Json(original_global))
     "count=\{restored.length()}"
   })
 
@@ -168,11 +165,7 @@ async fn sec_commands(p : P) -> Unit {
     "ok"
   })
   p.probe("bulk_overwrite_guild_commands (restore original)", () => {
-    let restored = c.bulk_overwrite_guild_commands(
-      a,
-      g,
-      original_guild.map(cmd => cmd.to_json()).to_json(),
-    )
+    let restored = c.bulk_overwrite_guild_commands(a, g, Json(original_guild))
     "count=\{restored.length()}"
   })
 

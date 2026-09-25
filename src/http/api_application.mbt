@@ -194,7 +194,7 @@ fn update_application_role_connection_metadata_records_body(
       message="role connection metadata records exceed 5 entries",
     )
   }
-  records.to_json()
+  Json(records)
 }
 
 ///|

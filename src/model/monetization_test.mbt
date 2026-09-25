@@ -113,7 +113,7 @@ test "monetization enums and flags preserve unknown values" {
   let bits = (1UL << 60) | @model.SkuFlags::available().bits()
   let encoded_flags = @model.SkuFlags::from_bits(bits).to_json().stringify()
   inspect(
-    [entitlement_type.to_json(), sku_type.to_json()].to_json().stringify(),
+    Json([Json(entitlement_type), Json(sku_type)]).stringify(),
     content=(
       #|[99,98]
     ),

@@ -102,16 +102,16 @@ pub fn AllowedMentions::safe_default() -> AllowedMentions {
 pub impl ToJson for AllowedMentions with fn to_json(self) {
   let fields : Map[String, Json] = Map([])
   if self.parse is Some(parse) {
-    fields["parse"] = parse.to_json()
+    fields["parse"] = Json(parse)
   }
   if self.roles is Some(roles) {
-    fields["roles"] = roles.to_json()
+    fields["roles"] = Json(roles)
   }
   if self.users is Some(users) {
-    fields["users"] = users.to_json()
+    fields["users"] = Json(users)
   }
   if self.replied_user is Some(replied_user) {
-    fields["replied_user"] = replied_user.to_json()
+    fields["replied_user"] = Json(replied_user)
   }
   Json::object(fields)
 }
