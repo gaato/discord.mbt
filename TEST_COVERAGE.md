@@ -27,10 +27,10 @@ artifact, and requires it to load so transport AEAD tests cannot skip.
 `--from-json` only rechecks a stored report against the ledger; it does not
 repeat either native bootstrap or runtime load check.
 
-Snapshot at the last full measurement (2026-09-23, including JS/Wasm Gateway
-and Bot support): **92.9 %** across the library (8450/9095 coverage
-points; http 96.0 %, model 95.4 %, interaction 95.1 %, testkit 100 %, util
-100 %, bot 94.2 %, app 90.7 %, voice 85.7 %, gateway 76.3 %).
+Snapshot at the last full measurement (2026-09-25, after the REST layer moved
+onto `gaato/sdk-runtime`): **93.2 %** across the library (8487/9102 coverage
+points; http 96.7 %, model 95.4 %, interaction 95.1 %, testkit 100 %, util
+100 %, bot 94.6 %, app 91.3 %, voice 85.7 %, gateway 76.3 %).
 
 ## Policy
 
@@ -43,9 +43,10 @@ Must be covered by tests:
 - pure logic: codecs, projections, query/body assembly, parsers, state
   machines behind trait seams (fakes exist for gateway and voice transports);
 - every `raise` arm reachable through the public API;
-- wire boundaries via `perform_override_` wbtests (exact method/path/body),
-  or a loopback `@ahttp.Server` where the real connection path itself is the
-  subject (multipart request arms).
+- wire boundaries via `Client::offline` handlers (route and body) or a
+  scripted `@ghttp.Transport` wbtest (`wire_test_client`: exact wire request,
+  retries, limiter pairing, telemetry), or a loopback `@ahttp.Server` where
+  the real connection path itself is the subject (multipart request arms).
 
 Accepted as uncovered (needs a ledger row):
 
@@ -80,7 +81,7 @@ Live socket, websocket, and FFI adapters (live-verified; no unit seam):
 | src/voice/crypto.mbt | 5 | Shim error-status translation paths; round-trips and geometry checks are covered with the shim loaded. |
 | src/http/client.mbt | 3 | Default warning sinks (`println`) of the online and offline constructors, and the catch-all arm the per-attempt deadline needs because `with_timeout` is typed to raise any error. |
 | src/http/request.mbt | 4 | Pre-IO rejections of sticker and invite upload shapes the typed wrappers never build, and the `Api` re-raise for middleware that raises it itself; the send loop, its retry rule, and every error mapping are covered by the fake-wire contract tests. |
-| src/endpoint_http/endpoint_http.mbt | 15 | HTTP server error/cancellation arms (send failures, teardown); the request paths are covered by the signed-request e2e tests. |
+| src/endpoint_http/endpoint_http.mbt | 7 | Arms that need a broken connection or a cancellation mid-failure: a response write that fails because the peer is gone, cancellation of a failed request or write, and a server that stops after startup. Startup failure, 202/504 replies, and a request whose body fails mid-read are tested. |
 | src/coordinator/protocol.mbt | 3 | Cross-process wire error arms. |
 | src/coordinator/remote.mbt | 20 | Reconnecting remote clients against a real coordinator socket; for the cooldown store, the cancellation-during-connect arms and malformed-response arm (its outage, deadline, and gate-wait paths are covered). |
 | src/coordinator/server.mbt | 12 | Per-connection cleanup on real disconnects (the existing socket test is retry-flaky; see project notes). |
@@ -114,7 +115,7 @@ run; the gateway/voice loops are additionally tested via injected sleepers):
 | src/ratelimit/ratelimit.mbt | 1 | Global-window sleep. |
 | src/http/handles_channel.mbt | 3 | `with_typing` refresh-failure arm sits behind the real 8-second cadence. |
 | src/bot/middleware.mbt | 1 | Middleware chain cancellation arm. |
-| src/bot/shard_manager.mbt | 7 | Live gateway discovery and default-connector startup (including saved-session projection), plus defensive shard-config arms; fake-connector startup and resume are tested. |
+| src/bot/shard_manager.mbt | 4 | Live gateway discovery and default-connector startup (including saved-session projection), plus defensive shard-config arms; fake-connector startup and resume are tested. |
 | src/bot/bot.mbt | 19 | Gateway run-loop teardown/cancellation arms; startup, intents, telemetry, and event routing are covered. Compress pre-check raises only on js/wasm where zlib-stream is unavailable. |
 | src/bot/voice.mbt | 19 | Credential timeouts have no injectable timer; the endpoint fallback contradicts the collector predicate; disconnect/cancellation catches; and the new-join/rejoin closures cross `join_voice`'s unseamed live `VoiceConnection::start`. Cache, gate, collector, and failed-watcher-rejoin behaviour is tested. |
 
@@ -161,7 +162,7 @@ show-flows beyond the covered happy and failing paths):
 | src/app/command.mbt | 9 | Group/subcommand registration arms beyond the covered paths. |
 | src/app/component.mbt | 13 | Deferred-ctx accessor duplicates and waiter arms behind a live gateway. |
 | src/app/ctx.mbt | 4 | Waiter plumbing behind a live gateway. |
-| src/app/endpoint.mbt | 7 | `serve` startup with an owned token/client (creates a real Client and fetches the application id). |
+| src/app/endpoint.mbt | 5 | `serve` startup with an owned token/client (creates a real Client and fetches the application id). |
 | src/app/middleware.mbt | 4 | Component-scope middleware arms not reachable in the covered flows. |
 | src/app/modal.mbt | 20 | Show/prefill dispatch arms beyond the covered decode, validation, and error flows. |
 | src/app/policy.mbt | 4 | Member-without-user extraction, `respond_error` on a failure with no raw context, the default policy's unknown-error warning, and the policy cancellation re-raise. |

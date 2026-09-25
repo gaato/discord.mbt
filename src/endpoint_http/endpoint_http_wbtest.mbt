@@ -277,3 +277,95 @@ async test "native interactions server rejects invalid keys before startup" {
     }
   })
 }
+
+///|
+async test "interactions server answers 202, 504, and 500 and reports startup failures" {
+  let private_seed = @hex.decode(
+    "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60",
+  )
+  let public_key = "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a"
+  let timestamp = "1720951200"
+  let app = @app.App()
+  let warnings : @aqueue.Queue[String] = Queue(kind=Unbounded)
+  app.on_warn(message => ignore(warnings.try_put(message) catch { _ => false }))
+  app.command(
+    @app.slash(
+      name="silent",
+      description="No initial response",
+      args=@interaction.Args::of(
+        @interaction.arg_string(name="text", description="Ignored"),
+      ),
+      handler=Raw(_ => ()),
+    ),
+  )
+  app.command(
+    @app.slash(
+      name="slow",
+      description="Slow initial response",
+      args=@interaction.Args::of(
+        @interaction.arg_string(name="text", description="Ignored"),
+      ),
+      handler=Raw(_ => @async.sleep(50)),
+    ),
+  )
+  @async.with_task_group(group => {
+    // Without a client or a token the app cannot serve, and the server
+    // reports that from startup instead of listening.
+    try
+      serve_interactions(group, app, addr="127.0.0.1:0", public_key~) |> ignore
+    catch {
+      @app.AppConfigError::EmptyToken => ()
+      error => fail("unexpected startup error: \{Repr(error)}")
+    } noraise {
+      _ => fail("an app without a token was served")
+    }
+  })
+  @async.with_task_group(group => {
+    let server = serve_interactions(
+      group,
+      app,
+      addr="127.0.0.1:0",
+      public_key~,
+      token="test-token",
+      application_id=@model.Id::parse("400000000000000001"),
+      deadline_ms=5,
+    )
+    defer server.close()
+    let silent = command_body("silent", "x", "500000000000000104")
+    let (silent_response, silent_result) = http_request(
+      server.addr(),
+      Post,
+      "/",
+      silent,
+      signed_headers(private_seed, timestamp, silent),
+    )
+    assert_eq(silent_response.code, 202)
+    assert_eq(silent_response.reason, "Accepted")
+    assert_eq(silent_result, "")
+    let slow = command_body("slow", "x", "500000000000000105")
+    let (slow_response, slow_result) = http_request(
+      server.addr(),
+      Post,
+      "/",
+      slow,
+      signed_headers(private_seed, timestamp, slow),
+    )
+    assert_eq(slow_response.code, 504)
+    assert_eq(slow_response.reason, "Gateway Timeout")
+    assert_eq(slow_result, "initial response timed out")
+    // A body cut short of its Content-Length fails while being read.
+    let headers = signed_headers(private_seed, timestamp, "{}")
+    let socket = @socket.Tcp::connect(@socket.Addr::parse(server.addr()))
+    defer socket.close()
+    socket.write(
+      "POST / HTTP/1.1\r\nHost: localhost\r\nContent-Length: 100\r\n" +
+      "X-Signature-Ed25519: \{headers["X-Signature-Ed25519"]}\r\n" +
+      "X-Signature-Timestamp: \{timestamp}\r\n\r\n{}",
+    )
+    socket.close()
+    guard @async.with_timeout_opt(1000, () => warnings.get()) is Some(warning) else {
+      fail("a failed request was not reported")
+    }
+    assert_true(warning.has_prefix("interaction HTTP request failed: "))
+  })
+}
