@@ -12,13 +12,16 @@ RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends zlib1g-dev; \
     rm -rf /var/lib/apt/lists/*
-COPY moon.mod ./
 RUN moon update
-COPY src ./src
-RUN moon build --target native --release src/main
+# The whole context, so a workspace (`moon.work` and its members) builds too.
+COPY . ./
+# Inside a workspace the output directory carries the module name, so take
+# the executable from wherever the build put it.
+RUN moon build --target native --release src/main && \
+    install -D "$(find _build/native/release/build -path '*/main/main.exe' -print -quit)" /out/bot
 
 FROM gcr.io/distroless/base-debian13
-COPY --from=build /work/_build/native/release/build/main/main.exe /bot
+COPY --from=build /out/bot /bot
 USER nonroot:nonroot
 # DISCORD_TOKEN and optional GUILD_ID come from the environment at run time.
 ENTRYPOINT ["/bot"]

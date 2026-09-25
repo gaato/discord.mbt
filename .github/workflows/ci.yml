@@ -330,7 +330,15 @@ jobs:
           persist-credentials: false
 
       - name: Build the template image
-        run: docker build --tag discord-bot-template template
+        run: |
+          # Build against the library in this commit, not the registry: a
+          # release commit pins a version that is published only after CI.
+          stage="$RUNNER_TEMP/template-image"
+          cp -r template "$stage"
+          mkdir "$stage/discord"
+          git archive HEAD | tar -x -C "$stage/discord"
+          printf 'members = [\n  ".",\n  "discord",\n]\n' > "$stage/moon.work"
+          docker build --tag discord-bot-template "$stage"
 
       - name: Start the image without a token
         run: |
