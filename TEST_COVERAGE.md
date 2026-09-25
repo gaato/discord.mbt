@@ -28,8 +28,8 @@ artifact, and requires it to load so transport AEAD tests cannot skip.
 repeat either native bootstrap or runtime load check.
 
 Snapshot at the last full measurement (2026-09-25, after the REST layer moved
-onto `gaato/sdk-runtime`): **93.2 %** across the library (8487/9102 coverage
-points; http 96.7 %, model 95.4 %, interaction 95.1 %, testkit 100 %, util
+onto `gaato/sdk-runtime`): **93.3 %** across the library (8511/9126 coverage
+points; http 96.8 %, model 95.4 %, interaction 95.1 %, testkit 100 %, util
 100 %, bot 94.6 %, app 91.3 %, voice 85.7 %, gateway 76.3 %).
 
 ## Policy

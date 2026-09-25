@@ -160,7 +160,7 @@ corresponding ref verb. The entry points:
 | `ScheduledEventRef` | `Client::scheduled_event_ref`, `GuildRef::scheduled_event_ref` | `fetch`, `edit`, `delete`, `users` |
 | `AutoModerationRuleRef` | `Client::auto_moderation_rule_ref`, `GuildRef::auto_moderation_rule_ref` | `fetch`, `edit`, `delete` |
 | `TemplateRef` | `Client::guild_template_ref`, `GuildRef::template_ref` | `fetch`, `sync`, `edit`, `create_guild` |
-| `InviteRef` | `Client::invite_ref` | `fetch`, `delete`, `update_target_users` |
+| `InviteRef` | `Client::invite_ref` | `fetch`, `delete`, `update_target_users`, `add_target_user`, `remove_target_user`, `bulk_add_target_users`, `bulk_delete_target_users` |
 | `WebhookRef` | `Client::webhook_ref` | `fetch`, `edit`, `delete`, `with_token` |
 | `WebhookTokenRef` | `Client::webhook_token_ref`, `WebhookRef::with_token` | `fetch`, `edit`, `send`, `message_ref` |
 | `WebhookMessageRef` | `WebhookTokenRef::message_ref` | `fetch`, `edit`, `delete` |

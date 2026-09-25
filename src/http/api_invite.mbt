@@ -51,3 +51,59 @@ pub async fn Client::get_invite_target_users_job_status(
 ) -> @model.TargetUsersJobStatus raise DiscordHttpError {
   decode(self.request(GetInviteTargetUsersJobStatus(code~)))
 }
+
+///|
+/// Add one user to an invite's target users. The caller must be the inviter or
+/// have the `MANAGE_GUILD` permission.
+pub async fn Client::add_invite_target_user(
+  self : Client,
+  code : String,
+  user_id : @model.UserId,
+) -> Unit raise DiscordHttpError {
+  self.request(AddInviteTargetUser(code~, user_id~)) |> ignore
+}
+
+///|
+/// Remove one user from an invite's target users. The caller must be the
+/// inviter or have the `MANAGE_GUILD` permission.
+pub async fn Client::remove_invite_target_user(
+  self : Client,
+  code : String,
+  user_id : @model.UserId,
+) -> Unit raise DiscordHttpError {
+  self.request(RemoveInviteTargetUser(code~, user_id~)) |> ignore
+}
+
+///|
+fn invite_target_users_body(
+  user_ids : Array[@model.UserId],
+) -> Json raise DiscordHttpError {
+  if user_ids.length() > 1000 {
+    raise Validation(message="invite target users exceed 1000 users")
+  }
+  @model.ObjBuilder().field("user_ids", user_ids).build()
+}
+
+///|
+/// Add up to 1000 users to an invite's target users. The caller must be the
+/// inviter or have the `MANAGE_GUILD` permission.
+pub async fn Client::bulk_add_invite_target_users(
+  self : Client,
+  code : String,
+  user_ids : Array[@model.UserId],
+) -> Unit raise DiscordHttpError {
+  let body = invite_target_users_body(user_ids)
+  self.request(BulkAddInviteTargetUsers(code~), body~) |> ignore
+}
+
+///|
+/// Remove up to 1000 users from an invite's target users. The caller must be
+/// the inviter or have the `MANAGE_GUILD` permission.
+pub async fn Client::bulk_delete_invite_target_users(
+  self : Client,
+  code : String,
+  user_ids : Array[@model.UserId],
+) -> Unit raise DiscordHttpError {
+  let body = invite_target_users_body(user_ids)
+  self.request(BulkDeleteInviteTargetUsers(code~), body~) |> ignore
+}

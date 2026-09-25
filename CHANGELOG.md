@@ -16,6 +16,13 @@ breaking change is listed with a migration note.
   `gcr.io/distroless/base-debian13`; CI builds and starts that image. A
   `.devcontainer` starts from the same image, and CI runs in it except the
   Rust voice shim job.
+- Invite target users without a CSV (Discord docs, 2026-09-18):
+  `Client::add_invite_target_user`, `remove_invite_target_user`,
+  `bulk_add_invite_target_users`, and `bulk_delete_invite_target_users`
+  (up to 1000 users), with the matching `InviteRef` methods and `Route`
+  variants, and `target_user_ids` on `Client::create_channel_invite` and
+  `ChannelRef::create_invite`. `target_user_ids` and `target_users_file` are
+  mutually exclusive; sending both is a `Validation` error.
 
 ### Changed
 
@@ -47,6 +54,11 @@ breaking change is listed with a migration note.
   removed. Each file's bytes are still a chunk of their own and are not
   copied. Migration: write each chunk's bytes in order, as the `Blob` arm
   did.
+- **Breaking:** `ActionMetadata.custom_message` is `Nullable[String]?`, because
+  Discord documents it as nullable (2026-09-18). A rule whose action carried
+  `"custom_message": null` failed to decode before. Migration: match
+  `Some(Value(message))` where you matched `Some(message)`, and build
+  `Some(Value(message))`; `Some(Null)` clears the message.
 
 ## [0.5.0] - 2026-09-24
 

@@ -210,6 +210,28 @@ async fn sec_base_channels(p : P) -> Unit {
     }
     "code set=\{invite.code.length() > 0}"
   })
+  p.probe("create_channel_invite (target_user_ids) + target user edits", () => {
+    let target : @model.UserId = @model.Id::parse("159985870458322944")
+    let invite = c.create_channel_invite(
+      text,
+      max_age=3600,
+      max_uses=1,
+      unique=true,
+      target_user_ids=[target],
+      audit_reason="live probe targeted invite (ids)",
+    )
+    let handle = c.invite_ref(invite.code)
+    defer {
+      let _ = c.delete_invite(invite.code, audit_reason="cleanup") catch {
+        _ => invite
+      }
+    }
+    handle.remove_target_user(target)
+    handle.add_target_user(target)
+    handle.bulk_delete_target_users([target])
+    handle.bulk_add_target_users([target])
+    "add, remove, bulk-add, bulk-delete accepted"
+  })
   p.probe_err(
     "create_channel_invite (target_type Stream without live stream)",
     expect=[400],

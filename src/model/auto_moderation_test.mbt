@@ -61,7 +61,7 @@ test "auto moderation rule decodes a realistic fixture" {
       #|        {
       #|          channel_id: None,
       #|          duration_seconds: Some(60),
-      #|          custom_message: Some("Slow down"),
+      #|          custom_message: Some(Value("Slow down")),
       #|        },
       #|      ),
       #|    },
@@ -88,4 +88,16 @@ test "auto moderation enums preserve unknown values" {
       #|[99,98]
     ),
   )
+}
+
+///|
+test "auto moderation action metadata keeps a null custom_message" {
+  let metadata : @model.ActionMetadata = @json.from_json(
+    @json.parse("{\"custom_message\":null}"),
+  )
+  assert_true(metadata.custom_message is Some(Null))
+  json_inspect(metadata, content={ "custom_message": null })
+  let absent : @model.ActionMetadata = @json.from_json(@json.parse("{}"))
+  assert_true(absent.custom_message is None)
+  json_inspect(absent, content={})
 }

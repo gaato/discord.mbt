@@ -13,7 +13,7 @@ behavior is covered separately by the `src/util` tests. The three intentionally
 unimplemented rows are documented in `docs_cdn_audit.allow`.
 
 CI fetches data only from Discord's documentation at commit
-`9ce0143eaadae072e19fb13627714a4a65895ff0`. This makes pull-request checks
+`30017deef2a18229dbd21f36c7b865169dd26b6b`. This makes pull-request checks
 reproducible; it does **not** continuously monitor Discord's latest changes.
 Before a release, run against an up-to-date local docs checkout, review any
 differences, update builders/tests/baseline as appropriate, then update the

@@ -255,8 +255,11 @@ pub impl @json.FromJson for AutoModerationActionType with fn from_json(
 
 ///|
 /// Optional execution settings for an auto-moderation action.
+///
+/// `custom_message` is nullable on the wire: `Some(Null)` is a rule that
+/// explicitly has no custom message, and sending it clears one.
 pub(all) struct ActionMetadata {
   channel_id : ChannelId?
   duration_seconds : Int?
-  custom_message : String?
+  custom_message : Nullable[String]?
 } derive(ToJson, FromJson, Debug)

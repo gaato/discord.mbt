@@ -392,4 +392,23 @@ async fn sec_monetization(p : P) -> Unit {
     expect=[400, 403, 404],
     () => c.invite_ref("boguscode").target_users_job_status() |> ignore,
   )
+  let target_user : @model.UserId = @model.Id::parse("159985870458322944")
+  p.probe_err("add_invite_target_user (bogus code)", expect=[400, 403, 404], () => {
+    c.add_invite_target_user("boguscode", target_user)
+  })
+  p.probe_err(
+    "remove_invite_target_user (bogus code)",
+    expect=[400, 403, 404],
+    () => c.remove_invite_target_user("boguscode", target_user),
+  )
+  p.probe_err(
+    "bulk_add_invite_target_users (bogus code)",
+    expect=[400, 403, 404],
+    () => c.bulk_add_invite_target_users("boguscode", [target_user]),
+  )
+  p.probe_err(
+    "bulk_delete_invite_target_users (bogus code)",
+    expect=[400, 403, 404],
+    () => c.bulk_delete_invite_target_users("boguscode", [target_user]),
+  )
 }

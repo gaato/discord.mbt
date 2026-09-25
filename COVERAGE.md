@@ -198,6 +198,10 @@ Source: Discord changelog 2026-08-26, “Game Stats Widgets”.
 
 - [x] PUT /invites/{code}/target-users — Update Target Users (`Client::update_invite_target_users`)
 - [x] GET /invites/{code}/target-users/job-status — Get Target Users Job Status (`Client::get_invite_target_users_job_status`)
+- [x] PUT /invites/{code}/target-users/{user_id} — Add Target User (`Client::add_invite_target_user`)
+- [x] DELETE /invites/{code}/target-users/{user_id} — Remove Target User (`Client::remove_invite_target_user`)
+- [x] POST /invites/{code}/target-users/bulk-add — Bulk-Add Target Users (`Client::bulk_add_invite_target_users`)
+- [x] POST /invites/{code}/target-users/bulk-delete — Bulk-Delete Target Users (`Client::bulk_delete_invite_target_users`)
 
 ## Users & OAuth2
 
@@ -209,7 +213,7 @@ Source: Discord changelog 2026-08-26, “Game Stats Widgets”.
 
 ## Out of scope: non-JSON responses
 
-The transport (`Client::perform`) decodes JSON only. Binary/CSV endpoints stay
+The typed wrappers decode JSON responses only. Binary/CSV endpoints stay
 unwrapped; both remain reachable via `Route::custom` with external handling.
 
 - GET /invites/{code}/target-users — List invite target users (returns text/csv)
@@ -243,10 +247,6 @@ them.
 - GET /applications/{id} — Get Application (only the `@me` variant is documented)
 - PATCH /applications/{id} — Edit Application (only the `@me` variant is documented)
 - POST /applications/{id}/attachment — Upload ephemeral application attachment
-- PUT /invites/{code}/target-users/{user_id} — Add invite target user
-- DELETE /invites/{code}/target-users/{user_id} — Remove invite target user
-- POST /invites/{code}/target-users/bulk-add — Bulk add invite target users
-- POST /invites/{code}/target-users/bulk-delete — Bulk delete invite target users
 - GET /guilds/{id}/requests — List guild join requests
 - PATCH /guilds/{id}/requests/{user} — Act on a guild join request
 - GET /guilds/{id}/roles/member-counts — Get role member counts

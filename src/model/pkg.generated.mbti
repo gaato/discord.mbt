@@ -36,7 +36,7 @@ pub suberror TimestampError {
 pub(all) struct ActionMetadata {
   channel_id : Id[ChannelMarker]?
   duration_seconds : Int?
-  custom_message : String?
+  custom_message : Nullable[String]?
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn ActionMetadata::to_json(Self) -> Json
 

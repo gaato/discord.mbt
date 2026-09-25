@@ -84,7 +84,7 @@ jobs:
       - name: Audit CDN endpoint baseline
         run: |
           curl --proto '=https' --tlsv1.2 --fail --show-error --silent --location \
-            https://raw.githubusercontent.com/discord/discord-api-docs/9ce0143eaadae072e19fb13627714a4a65895ff0/developers/reference.mdx \
+            https://raw.githubusercontent.com/discord/discord-api-docs/30017deef2a18229dbd21f36c7b865169dd26b6b/developers/reference.mdx \
             --output "$RUNNER_TEMP/discord-reference.mdx"
           moon run scripts/docs_cdn_audit.mbtx "$RUNNER_TEMP/discord-reference.mdx" --self-test
 

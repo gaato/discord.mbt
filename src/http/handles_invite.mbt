@@ -46,3 +46,39 @@ pub async fn InviteRef::target_users_job_status(
 ) -> @model.TargetUsersJobStatus raise DiscordHttpError {
   self.client.get_invite_target_users_job_status(self.code)
 }
+
+///|
+/// Add one user to this invite's target users.
+pub async fn InviteRef::add_target_user(
+  self : InviteRef,
+  user_id : @model.UserId,
+) -> Unit raise DiscordHttpError {
+  self.client.add_invite_target_user(self.code, user_id)
+}
+
+///|
+/// Remove one user from this invite's target users.
+pub async fn InviteRef::remove_target_user(
+  self : InviteRef,
+  user_id : @model.UserId,
+) -> Unit raise DiscordHttpError {
+  self.client.remove_invite_target_user(self.code, user_id)
+}
+
+///|
+/// Add up to 1000 users to this invite's target users.
+pub async fn InviteRef::bulk_add_target_users(
+  self : InviteRef,
+  user_ids : Array[@model.UserId],
+) -> Unit raise DiscordHttpError {
+  self.client.bulk_add_invite_target_users(self.code, user_ids)
+}
+
+///|
+/// Remove up to 1000 users from this invite's target users.
+pub async fn InviteRef::bulk_delete_target_users(
+  self : InviteRef,
+  user_ids : Array[@model.UserId],
+) -> Unit raise DiscordHttpError {
+  self.client.bulk_delete_invite_target_users(self.code, user_ids)
+}

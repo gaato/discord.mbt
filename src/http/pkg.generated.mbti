@@ -92,7 +92,7 @@ pub struct ChannelRef {
 }
 pub async fn ChannelRef::add_thread_member(Self, @model.Id[@model.UserMarker]) -> Unit raise DiscordHttpError
 pub async fn ChannelRef::bulk_delete(Self, Array[@model.Id[@model.MessageMarker]], reason? : String) -> Unit raise DiscordHttpError
-pub async fn ChannelRef::create_invite(Self, max_age? : Int, max_uses? : Int, temporary? : Bool, unique? : Bool, target_type? : @model.InviteTargetType, target_user_id? : @model.Id[@model.UserMarker], target_application_id? : @model.Id[@model.ApplicationMarker], role_ids? : Array[@model.Id[@model.RoleMarker]], target_users_file? : FileUpload, reason? : String) -> @model.Invite raise DiscordHttpError
+pub async fn ChannelRef::create_invite(Self, max_age? : Int, max_uses? : Int, temporary? : Bool, unique? : Bool, target_type? : @model.InviteTargetType, target_user_id? : @model.Id[@model.UserMarker], target_application_id? : @model.Id[@model.ApplicationMarker], role_ids? : Array[@model.Id[@model.RoleMarker]], target_user_ids? : Array[@model.Id[@model.UserMarker]], target_users_file? : FileUpload, reason? : String) -> @model.Invite raise DiscordHttpError
 pub async fn ChannelRef::create_stage_instance(Self, String, privacy_level? : @model.StagePrivacyLevel, send_start_notification? : Bool, guild_scheduled_event_id? : @model.Id[@model.ScheduledEventMarker], reason? : String) -> @model.StageInstance raise DiscordHttpError
 pub async fn ChannelRef::create_webhook(Self, String, avatar? : String, reason? : String) -> @model.Webhook raise DiscordHttpError
 pub async fn ChannelRef::delete(Self, reason? : String) -> @model.Channel raise DiscordHttpError
@@ -133,6 +133,7 @@ pub struct Client {
 }
 pub fn Client::Client(String, base_url? : String, api_version? : Int, limiter? : &@sdk-runtime.RateLimiter, transport? : &@gaato/http.Transport, max_connections? : Int, request_timeout_ms? : Int, max_retries? : Int, default_allowed_mentions? : @model.AllowedMentions) -> Self
 pub async fn Client::add_guild_member(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker], String, nick? : String, roles? : Array[@model.Id[@model.RoleMarker]], mute? : Bool, deaf? : Bool) -> @model.GuildMember? raise DiscordHttpError
+pub async fn Client::add_invite_target_user(Self, String, @model.Id[@model.UserMarker]) -> Unit raise DiscordHttpError
 pub async fn Client::add_member_role(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker], @model.Id[@model.RoleMarker], audit_reason? : String) -> Unit raise DiscordHttpError
 pub async fn Client::add_thread_member(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.UserMarker]) -> Unit raise DiscordHttpError
 pub fn Client::application_emoji_ref(Self, @model.Id[@model.ApplicationMarker], @model.Id[@model.EmojiMarker]) -> ApplicationEmojiRef
@@ -140,6 +141,8 @@ pub fn Client::application_identity_ref(Self, application_id~ : @model.Id[@model
 pub fn Client::application_ref(Self, @model.Id[@model.ApplicationMarker]) -> ApplicationRef
 pub fn Client::auto_moderation_rule_ref(Self, @model.Id[@model.GuildMarker], @model.Id[@model.AutoModerationRuleMarker]) -> AutoModerationRuleRef
 pub async fn Client::begin_guild_prune(Self, @model.Id[@model.GuildMarker], days? : Int, compute_prune_count? : Bool, include_roles? : Array[@model.Id[@model.RoleMarker]], audit_reason? : String) -> @model.GuildPruneResult raise DiscordHttpError
+pub async fn Client::bulk_add_invite_target_users(Self, String, Array[@model.Id[@model.UserMarker]]) -> Unit raise DiscordHttpError
+pub async fn Client::bulk_delete_invite_target_users(Self, String, Array[@model.Id[@model.UserMarker]]) -> Unit raise DiscordHttpError
 pub async fn Client::bulk_delete_messages(Self, @model.Id[@model.ChannelMarker], Array[@model.Id[@model.MessageMarker]], audit_reason? : String) -> Unit raise DiscordHttpError
 pub async fn Client::bulk_guild_ban(Self, @model.Id[@model.GuildMarker], Array[@model.Id[@model.UserMarker]], delete_message_seconds? : Int, audit_reason? : String) -> @model.BulkBanResponse raise DiscordHttpError
 pub async fn Client::bulk_overwrite_global_commands(Self, @model.Id[@model.ApplicationMarker], Json) -> Array[@model.ApplicationCommand] raise DiscordHttpError
@@ -149,7 +152,7 @@ pub fn Client::close(Self) -> Unit
 pub async fn Client::consume_entitlement(Self, @model.Id[@model.ApplicationMarker], @model.Id[@model.EntitlementMarker]) -> Unit raise DiscordHttpError
 pub async fn Client::create_application_emoji(Self, @model.Id[@model.ApplicationMarker], String, String) -> @model.Emoji raise DiscordHttpError
 pub async fn Client::create_auto_moderation_rule(Self, @model.Id[@model.GuildMarker], String, @model.AutoModerationEventType, @model.AutoModerationTriggerType, Array[@model.AutoModerationAction], trigger_metadata? : @model.TriggerMetadata, enabled? : Bool, exempt_roles? : Array[@model.Id[@model.RoleMarker]], exempt_channels? : Array[@model.Id[@model.ChannelMarker]], audit_reason? : String) -> @model.AutoModerationRule raise DiscordHttpError
-pub async fn Client::create_channel_invite(Self, @model.Id[@model.ChannelMarker], max_age? : Int, max_uses? : Int, temporary? : Bool, unique? : Bool, target_type? : @model.InviteTargetType, target_user_id? : @model.Id[@model.UserMarker], target_application_id? : @model.Id[@model.ApplicationMarker], role_ids? : Array[@model.Id[@model.RoleMarker]], target_users_file? : FileUpload, audit_reason? : String) -> @model.Invite raise DiscordHttpError
+pub async fn Client::create_channel_invite(Self, @model.Id[@model.ChannelMarker], max_age? : Int, max_uses? : Int, temporary? : Bool, unique? : Bool, target_type? : @model.InviteTargetType, target_user_id? : @model.Id[@model.UserMarker], target_application_id? : @model.Id[@model.ApplicationMarker], role_ids? : Array[@model.Id[@model.RoleMarker]], target_user_ids? : Array[@model.Id[@model.UserMarker]], target_users_file? : FileUpload, audit_reason? : String) -> @model.Invite raise DiscordHttpError
 pub async fn Client::create_dm(Self, @model.Id[@model.UserMarker]) -> @model.Channel raise DiscordHttpError
 pub async fn Client::create_followup(Self, @model.Id[@model.ApplicationMarker], String, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[FileUpload], flags? : @model.MessageFlags, allowed_mentions? : @model.AllowedMentions, poll? : @model.PollCreateRequest) -> @model.Message raise DiscordHttpError
 pub async fn Client::create_global_command(Self, @model.Id[@model.ApplicationMarker], String, description? : String, options? : Array[@model.CommandOption], typ? : @model.ApplicationCommandType, default_member_permissions? : @model.Permissions, clear_default_member_permissions? : Bool, nsfw? : Bool, name_localizations? : Map[String, String], description_localizations? : Map[String, String], integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType], handler? : @model.EntryPointCommandHandlerType) -> @model.ApplicationCommand raise DiscordHttpError
@@ -361,6 +364,7 @@ pub async fn Client::pin_message(Self, @model.Id[@model.ChannelMarker], @model.I
 pub fn Client::ref_of_message(Self, @model.Message) -> MessageRef
 pub async fn Client::remove_guild_ban(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker], audit_reason? : String) -> Unit raise DiscordHttpError
 pub async fn Client::remove_guild_member(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker], audit_reason? : String) -> Unit raise DiscordHttpError
+pub async fn Client::remove_invite_target_user(Self, String, @model.Id[@model.UserMarker]) -> Unit raise DiscordHttpError
 pub async fn Client::remove_member_role(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker], @model.Id[@model.RoleMarker], audit_reason? : String) -> Unit raise DiscordHttpError
 pub async fn Client::remove_thread_member(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.UserMarker]) -> Unit raise DiscordHttpError
 pub async fn Client::request(Self, Route, body? : Json, audit_reason? : String, files? : Array[FileUpload], headers? : Map[String, String]) -> Json raise DiscordHttpError
@@ -513,8 +517,12 @@ pub(all) struct HttpResponse {
 pub struct InviteRef {
   // private fields
 }
+pub async fn InviteRef::add_target_user(Self, @model.Id[@model.UserMarker]) -> Unit raise DiscordHttpError
+pub async fn InviteRef::bulk_add_target_users(Self, Array[@model.Id[@model.UserMarker]]) -> Unit raise DiscordHttpError
+pub async fn InviteRef::bulk_delete_target_users(Self, Array[@model.Id[@model.UserMarker]]) -> Unit raise DiscordHttpError
 pub async fn InviteRef::delete(Self, reason? : String) -> @model.Invite raise DiscordHttpError
 pub async fn InviteRef::fetch(Self, with_counts? : Bool, guild_scheduled_event_id? : @model.Id[@model.ScheduledEventMarker]) -> @model.Invite raise DiscordHttpError
+pub async fn InviteRef::remove_target_user(Self, @model.Id[@model.UserMarker]) -> Unit raise DiscordHttpError
 pub async fn InviteRef::target_users_job_status(Self) -> @model.TargetUsersJobStatus raise DiscordHttpError
 pub async fn InviteRef::update_target_users(Self, FileUpload) -> Unit raise DiscordHttpError
 
@@ -741,6 +749,10 @@ pub(all) enum Route {
   DeleteInvite(code~ : String)
   UpdateInviteTargetUsers(code~ : String)
   GetInviteTargetUsersJobStatus(code~ : String)
+  AddInviteTargetUser(code~ : String, user_id~ : @model.Id[@model.UserMarker])
+  RemoveInviteTargetUser(code~ : String, user_id~ : @model.Id[@model.UserMarker])
+  BulkAddInviteTargetUsers(code~ : String)
+  BulkDeleteInviteTargetUsers(code~ : String)
   GetWebhook(webhook_id~ : @model.Id[@model.WebhookMarker])
   ModifyWebhook(webhook_id~ : @model.Id[@model.WebhookMarker])
   DeleteWebhook(webhook_id~ : @model.Id[@model.WebhookMarker])

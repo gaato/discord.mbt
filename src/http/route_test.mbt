@@ -1149,6 +1149,10 @@ test "invite target-user REST route metadata" {
   let routes : Array[@http.Route] = [
     UpdateInviteTargetUsers(code="moonbit"),
     GetInviteTargetUsersJobStatus(code="moonbit"),
+    AddInviteTargetUser(code="moonbit", user_id=Id(7UL)),
+    RemoveInviteTargetUser(code="moonbit", user_id=Id(7UL)),
+    BulkAddInviteTargetUsers(code="moonbit"),
+    BulkDeleteInviteTargetUsers(code="moonbit"),
   ]
   debug_inspect(
     routes.map(route_signature),
@@ -1156,6 +1160,10 @@ test "invite target-user REST route metadata" {
       #|[
       #|  "Put /invites/moonbit/target-users | PUT:/invites/{}/target-users | reason=false",
       #|  "Get /invites/moonbit/target-users/job-status | GET:/invites/{}/target-users/job-status | reason=false",
+      #|  "Put /invites/moonbit/target-users/7 | PUT:/invites/{}/target-users/{} | reason=false",
+      #|  "Delete /invites/moonbit/target-users/7 | DELETE:/invites/{}/target-users/{} | reason=false",
+      #|  "Post /invites/moonbit/target-users/bulk-add | POST:/invites/{}/target-users/bulk-add | reason=false",
+      #|  "Post /invites/moonbit/target-users/bulk-delete | POST:/invites/{}/target-users/bulk-delete | reason=false",
       #|]
     ),
   )

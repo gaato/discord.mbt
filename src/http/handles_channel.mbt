@@ -258,6 +258,7 @@ pub async fn ChannelRef::create_invite(
   target_user_id? : @model.UserId,
   target_application_id? : @model.ApplicationId,
   role_ids? : Array[@model.RoleId],
+  target_user_ids? : Array[@model.UserId],
   target_users_file? : FileUpload,
   reason? : String,
 ) -> @model.Invite raise DiscordHttpError {
@@ -271,6 +272,7 @@ pub async fn ChannelRef::create_invite(
     target_user_id?,
     target_application_id?,
     role_ids?,
+    target_user_ids?,
     target_users_file?,
     audit_reason?=reason,
   )

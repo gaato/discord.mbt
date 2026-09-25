@@ -234,8 +234,9 @@ pub async fn Client::get_channel_invites(
 /// invite open a stream (`Stream`, requires `target_user_id`) or an embedded
 /// application (`EmbeddedApplication`, requires `target_application_id`).
 /// `role_ids` grants roles to accepting users (requires `MANAGE_ROLES`);
-/// `target_users_file` restricts who may accept it (a CSV of user ids, sent
-/// as multipart form data).
+/// `target_user_ids` (up to 1000) or `target_users_file` (a CSV of user ids,
+/// sent as multipart form data) restricts who may accept it; send at most one
+/// of the two.
 pub async fn Client::create_channel_invite(
   self : Client,
   channel_id : @model.ChannelId,
@@ -247,9 +248,18 @@ pub async fn Client::create_channel_invite(
   target_user_id? : @model.UserId,
   target_application_id? : @model.ApplicationId,
   role_ids? : Array[@model.RoleId],
+  target_user_ids? : Array[@model.UserId],
   target_users_file? : FileUpload,
   audit_reason? : String,
 ) -> @model.Invite raise DiscordHttpError {
+  if target_user_ids is Some(_) && target_users_file is Some(_) {
+    raise Validation(
+      message="target_user_ids and target_users_file are mutually exclusive",
+    )
+  }
+  if target_user_ids is Some(ids) && ids.length() > 1000 {
+    raise Validation(message="target_user_ids exceeds 1000 users")
+  }
   if target_type is Some(Stream) && target_user_id is None {
     raise Validation(message="target_type Stream requires target_user_id")
   }
@@ -267,6 +277,7 @@ pub async fn Client::create_channel_invite(
     .opt("target_user_id", target_user_id)
     .opt("target_application_id", target_application_id)
     .opt("role_ids", role_ids)
+    .opt("target_user_ids", target_user_ids)
     .build()
   let files = target_users_file.map(file => [file])
   decode(

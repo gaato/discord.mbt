@@ -356,6 +356,10 @@ pub(all) enum Route {
   DeleteInvite(code~ : String)
   UpdateInviteTargetUsers(code~ : String)
   GetInviteTargetUsersJobStatus(code~ : String)
+  AddInviteTargetUser(code~ : String, user_id~ : @model.UserId)
+  RemoveInviteTargetUser(code~ : String, user_id~ : @model.UserId)
+  BulkAddInviteTargetUsers(code~ : String)
+  BulkDeleteInviteTargetUsers(code~ : String)
   GetWebhook(webhook_id~ : @model.WebhookId)
   ModifyWebhook(webhook_id~ : @model.WebhookId)
   DeleteWebhook(webhook_id~ : @model.WebhookId)
@@ -670,7 +674,9 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | CreateFollowupMessage(..)
     | CreateGlobalCommand(..)
     | CreateGuildCommand(..)
-    | DeleteApplicationIdentity(..) => Post
+    | DeleteApplicationIdentity(..)
+    | BulkAddInviteTargetUsers(..)
+    | BulkDeleteInviteTargetUsers(..) => Post
     ModifyCurrentUser
     | EditCurrentApplication
     | UpdateApplicationIdentityProfile(..)
@@ -735,7 +741,8 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | DeleteGlobalCommand(..)
     | DeleteGuildCommand(..)
     | DeleteCurrentUserApplicationRoleConnection(..)
-    | LeaveGuild(..) => Delete
+    | LeaveGuild(..)
+    | RemoveInviteTargetUser(..) => Delete
     CreateReaction(..)
     | EditChannelPermissions(..)
     | PinMessage(..)
@@ -752,7 +759,8 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | UpdateApplicationRoleConnectionMetadataRecords(..)
     | UpdateCurrentUserApplicationRoleConnection(..)
     | SyncGuildTemplate(..)
-    | UpdateInviteTargetUsers(..) => Put
+    | UpdateInviteTargetUsers(..)
+    | AddInviteTargetUser(..) => Put
     ModifyGuildOnboarding(..) | ModifyGuildIncidentActions(..) => Put
   }
 }
@@ -1023,6 +1031,13 @@ pub fn Route::path(self : Route) -> String {
       "/invites/\{percent_encode(code)}/target-users"
     GetInviteTargetUsersJobStatus(code~) =>
       "/invites/\{percent_encode(code)}/target-users/job-status"
+    AddInviteTargetUser(code~, user_id~)
+    | RemoveInviteTargetUser(code~, user_id~) =>
+      "/invites/\{percent_encode(code)}/target-users/\{user_id}"
+    BulkAddInviteTargetUsers(code~) =>
+      "/invites/\{percent_encode(code)}/target-users/bulk-add"
+    BulkDeleteInviteTargetUsers(code~) =>
+      "/invites/\{percent_encode(code)}/target-users/bulk-delete"
     GetWebhook(webhook_id~)
     | ModifyWebhook(webhook_id~)
     | DeleteWebhook(webhook_id~) => "/webhooks/\{webhook_id}"
@@ -1352,6 +1367,11 @@ pub fn Route::bucket(self : Route) -> String {
     UpdateInviteTargetUsers(..) => "PUT:/invites/{}/target-users"
     GetInviteTargetUsersJobStatus(..) =>
       "GET:/invites/{}/target-users/job-status"
+    AddInviteTargetUser(..) => "PUT:/invites/{}/target-users/{}"
+    RemoveInviteTargetUser(..) => "DELETE:/invites/{}/target-users/{}"
+    BulkAddInviteTargetUsers(..) => "POST:/invites/{}/target-users/bulk-add"
+    BulkDeleteInviteTargetUsers(..) =>
+      "POST:/invites/{}/target-users/bulk-delete"
     GetWebhook(webhook_id~) => "GET:/webhooks/\{webhook_id}"
     ModifyWebhook(webhook_id~) => "PATCH:/webhooks/\{webhook_id}"
     DeleteWebhook(webhook_id~) => "DELETE:/webhooks/\{webhook_id}"
