@@ -1,0 +1,142 @@
+name: Discord docs watch
+
+# Compares Discord's latest developer docs with the commit the library was last
+# reviewed against (scripts/discord-docs-commit). It lists the docs commits
+# since that baseline and runs the model-shape and CDN audits against the
+# latest docs. While anything needs review, one issue titled "Review Discord
+# docs changes" stays open with the current report; once the baseline is moved
+# and the audits pass, the next run closes it. An audit failure also fails the
+# run.
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: discord-docs-watch
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    container: ghcr.io/gaato/moonbit:0.10.14-7d59c7ec9
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install audit dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends python3
+
+      - name: Compare the latest docs with the baseline
+        id: compare
+        shell: bash
+        run: |
+          set -u
+          docs="$RUNNER_TEMP/discord-api-docs"
+          git clone --quiet --filter=blob:none \
+            https://github.com/discord/discord-api-docs "$docs"
+          baseline="$(cat scripts/discord-docs-commit)"
+          latest="$(git -C "$docs" rev-parse HEAD)"
+          # The backticks are Markdown for the issue body, not a substitution.
+          # shellcheck disable=SC2016
+          commits="$(git -C "$docs" log --date=short \
+            --format='- [`%h`](https://github.com/discord/discord-api-docs/commit/%H) %ad %s' \
+            "$baseline..HEAD" -- developers)"
+
+          shape_status=0
+          python3 scripts/docs_shape_audit.py "$docs" > "$RUNNER_TEMP/shape.txt" 2>&1 ||
+            shape_status=$?
+          moon update > /dev/null
+          cdn_status=0
+          moon run scripts/docs_cdn_audit.mbtx "$docs/developers/reference.mdx" \
+            --self-test > "$RUNNER_TEMP/cdn.txt" 2>&1 || cdn_status=$?
+
+          report="$RUNNER_TEMP/report.md"
+          {
+            echo "Discord's developer docs differ from the baseline this library was last reviewed against."
+            echo "Follow each change in the library, then set \`scripts/discord-docs-commit\` to the reviewed commit; the next run closes this issue."
+            echo
+            echo "- Baseline: [\`${baseline:0:7}\`](https://github.com/discord/discord-api-docs/commit/$baseline)"
+            echo "- Latest: [\`${latest:0:7}\`](https://github.com/discord/discord-api-docs/commit/$latest)"
+            echo
+            echo "## Docs commits since the baseline"
+            echo
+            if [ -n "$commits" ]; then echo "$commits"; else echo "None."; fi
+            echo
+            echo "## Shape audit (exit $shape_status)"
+            echo
+            echo '```text'
+            cat "$RUNNER_TEMP/shape.txt"
+            echo '```'
+            echo
+            echo "## CDN audit (exit $cdn_status)"
+            echo
+            echo '```text'
+            cat "$RUNNER_TEMP/cdn.txt"
+            echo '```'
+          } > "$report"
+          cat "$report" >> "$GITHUB_STEP_SUMMARY"
+
+          clean=false
+          if [ -z "$commits" ] && [ "$shape_status" -eq 0 ] && [ "$cdn_status" -eq 0 ]; then
+            clean=true
+          fi
+          audits_ok=false
+          if [ "$shape_status" -eq 0 ] && [ "$cdn_status" -eq 0 ]; then
+            audits_ok=true
+          fi
+          {
+            echo "report=$report"
+            echo "clean=$clean"
+            echo "audits_ok=$audits_ok"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Open, update, or close the review issue
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          REPORT: ${{ steps.compare.outputs.report }}
+          CLEAN: ${{ steps.compare.outputs.clean }}
+        with:
+          script: |
+            const fs = require('fs')
+            const title = 'Review Discord docs changes'
+            const { owner, repo } = context.repo
+            const open = await github.paginate(github.rest.issues.listForRepo, {
+              owner, repo, state: 'open', per_page: 100,
+            })
+            const existing = open.find(issue => !issue.pull_request && issue.title === title)
+            if (process.env.CLEAN === 'true') {
+              if (existing) {
+                await github.rest.issues.createComment({
+                  owner, repo, issue_number: existing.number,
+                  body: 'The baseline matches the latest docs and both audits pass.',
+                })
+                await github.rest.issues.update({
+                  owner, repo, issue_number: existing.number, state: 'closed',
+                })
+              }
+              return
+            }
+            const body = fs.readFileSync(process.env.REPORT, 'utf8')
+            if (!existing) {
+              await github.rest.issues.create({ owner, repo, title, body })
+            } else if (existing.body !== body) {
+              await github.rest.issues.update({
+                owner, repo, issue_number: existing.number, body,
+              })
+            }
+
+      - name: Fail when an audit fails
+        if: steps.compare.outputs.audits_ok != 'true'
+        run: exit 1

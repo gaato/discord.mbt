@@ -12,9 +12,11 @@ missing/malformed tables and stale or unexplained exceptions. Actual URL
 behavior is covered separately by the `src/util` tests. The three intentionally
 unimplemented rows are documented in `docs_cdn_audit.allow`.
 
-CI fetches data only from Discord's documentation at commit
-`30017deef2a18229dbd21f36c7b865169dd26b6b`. This makes pull-request checks
-reproducible; it does **not** continuously monitor Discord's latest changes.
-Before a release, run against an up-to-date local docs checkout, review any
-differences, update builders/tests/baseline as appropriate, then update the
-pinned commit in CI and this file together.
+CI fetches Discord's documentation at the commit in `discord-docs-commit`, the
+last docs commit whose changes the library was reviewed against. This keeps
+pull-request checks reproducible. The daily `Discord docs watch` workflow
+compares the latest docs with that baseline: it lists the docs commits since
+it and runs this audit and `docs_shape_audit.py` against the latest docs, and
+keeps one issue, "Review Discord docs changes", open while anything needs
+review. After reviewing and following the listed changes, move
+`discord-docs-commit` to the reviewed commit; the next run closes the issue.
