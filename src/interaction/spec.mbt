@@ -16,6 +16,22 @@ pub(all) struct CommandSpec {
 } derive(Debug)
 
 ///|
+/// Every documented Discord limit this declaration breaks, in declaration
+/// order. See `@model.command_limit_violations` for the checked limits.
+pub fn CommandSpec::limit_violations(
+  self : CommandSpec,
+) -> Array[@model.LimitViolation] {
+  @model.command_limit_violations(
+    typ=self.typ,
+    name=self.name,
+    name_localizations=self.name_localizations,
+    description=self.description,
+    description_localizations=self.description_localizations,
+    options=self.options,
+  )
+}
+
+///|
 /// Describe a CHAT_INPUT (slash) command.
 pub fn CommandSpec::slash(
   name : String,

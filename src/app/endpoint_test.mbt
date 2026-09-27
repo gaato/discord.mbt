@@ -814,6 +814,8 @@ test "command constructors emit context types and slash attributes" {
 ///|
 async test "context menu commands decode resolved targets" {
   let app = @app.AppBuilder()
+  let warnings : Array[String] = []
+  app.on_warn(message => warnings.push(message))
   app.command(
     @app.user_command(
       name="Inspect",
@@ -963,6 +965,9 @@ async test "context menu commands decode resolved targets" {
       outcome => fail("expected invalid target reply, got \{Repr(outcome)}")
     }
   })
+  assert_eq(warnings, [
+    "malformed interaction (Command(name=\"Inspect\")): user target is missing resolved data",
+  ])
 }
 
 ///|
@@ -1026,6 +1031,8 @@ async test "slash groups emit nested specs and dispatch direct and grouped paths
     ],
   })
   let app = @app.AppBuilder()
+  let warnings : Array[String] = []
+  app.on_warn(message => warnings.push(message))
   app.command(command)
   let direct = app_interaction(
     (
@@ -1070,6 +1077,9 @@ async test "slash groups emit nested specs and dispatch direct and grouped paths
       }
     }
   })
+  assert_eq(warnings, [
+    "malformed interaction (Command(name=\"admin\")): unknown subcommand path: missing",
+  ])
 }
 
 ///|

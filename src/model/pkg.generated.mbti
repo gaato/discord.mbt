@@ -7,6 +7,8 @@ import {
 }
 
 // Values
+pub fn command_limit_violations(typ~ : ApplicationCommandType, name~ : String, name_localizations~ : Map[String, String]?, description~ : String, description_localizations~ : Map[String, String]?, options~ : Array[CommandOption]) -> Array[LimitViolation]
+
 pub fn dispatch_event(String, Json) -> Event raise
 
 pub fn embed_limit_violations(Array[Embed]) -> Array[LimitViolation]

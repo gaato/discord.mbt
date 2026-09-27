@@ -827,3 +827,52 @@ test "app validation rejects non-positive handler capacity" {
     _ => fail("zero handler capacity unexpectedly validated")
   }
 }
+
+///|
+test "build rejects commands outside Discord's documented limits" {
+  let app = AppBuilder()
+  app.command(
+    slash(
+      name="Echo",
+      description="Echo text",
+      args=@interaction.Args::unit(),
+      handler=Raw(_ => ()),
+    ),
+  )
+  try app.build() |> ignore catch {
+    CommandOutsideLimits(command~, violation~) => {
+      inspect(command, content="Echo")
+      inspect(
+        violation.message(),
+        content="name: `E` is not allowed (lowercase letters, digits, `-`, and `_`)",
+      )
+    }
+    error => fail("unexpected error: \{Repr(error)}")
+  } noraise {
+    _ => fail("expected a command limit violation")
+  }
+  let crowded = AppBuilder()
+  crowded.command(
+    slash(
+      name="pick",
+      description="Pick a color",
+      args=@interaction.Args::of(
+        @interaction.arg_string(
+          name="color",
+          description="Color",
+          choices=Array::makei(26, index => {
+            @interaction.string_choice("c\{index}", "v\{index}")
+          }),
+        ),
+      ),
+      handler=Raw(_ => ()),
+    ),
+  )
+  try crowded.build() |> ignore catch {
+    CommandOutsideLimits(violation~, ..) =>
+      inspect(violation.message(), content="options[0].choices: 26 (0 to 25)")
+    error => fail("unexpected error: \{Repr(error)}")
+  } noraise {
+    _ => fail("expected a choice-count violation")
+  }
+}

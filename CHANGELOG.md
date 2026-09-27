@@ -17,6 +17,15 @@ breaking change is listed with a migration note.
   milliseconds left before the initial-response window closes.
 - `ResponseGate::placeholder_open()` and `close_placeholder()`, and the
   `DEFAULT_INTERACTION_DEADLINE_MS` constant (2500).
+- `@model.command_limit_violations` and `CommandSpec::limit_violations()`
+  check a command declaration against the limits Discord documents: name and
+  description lengths, including localizations; the ASCII part of the
+  CHAT_INPUT naming rule; at most 25 options per level, with unique names; at
+  most 25 choices, with their name and value lengths; `min_length` and
+  `max_length` ranges; and the 8000-unit total per command.
+  `AppBuilder::build` raises the new `AppConfigError::CommandOutsideLimits`
+  for the first violation, so a declaration Discord would reject with 400 fails
+  before any executor starts.
 
 ### Changed
 

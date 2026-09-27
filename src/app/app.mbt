@@ -28,6 +28,9 @@ pub(all) suberror AppConfigError {
   /// A `file_types` filter with more than 10 entries or an extension that is
   /// not dot-prefixed. `owner` is a command option path or modal field id.
   InvalidFileTypes(owner~ : String, reason~ : String)
+  /// A command name, description, option, or choice outside a limit Discord
+  /// documents, such as a 26th option or an uppercase slash command name.
+  CommandOutsideLimits(command~ : String, violation~ : @model.LimitViolation)
   InvalidCooldown(command~ : String, seconds~ : Int)
   InvalidMaxInFlight(value~ : Int)
 } derive(Debug)
@@ -316,8 +319,9 @@ fn validate_command_options(
 }
 
 ///|
-/// Check declarations for configuration errors: invalid command trees and
-/// cooldowns, invalid modal field counts, duplicate modal text-input ids,
+/// Check declarations for configuration errors: command names, descriptions,
+/// options, and choices outside Discord's documented limits, invalid command
+/// trees and cooldowns, invalid modal field counts, duplicate modal text-input ids,
 /// modal titles and fields outside Discord's documented limits,
 /// malformed `file_types` upload filters, empty or duplicate component/modal
 /// effective prefixes, and invalid typed route ids.
@@ -343,6 +347,9 @@ fn AppBuilder::validate(self : AppBuilder) -> Unit raise AppConfigError {
         raise DuplicateCommandPath(command=command.name_, path=path.join("/"))
       }
       paths.add(key)
+    }
+    if command.definition.limit_violations() is [violation, ..] {
+      raise CommandOutsideLimits(command=command.name_, violation~)
     }
     validate_command_options(command.name_, [], command.definition.options)
     if command.cooldown_ is Some(config) && config.seconds <= 0 {

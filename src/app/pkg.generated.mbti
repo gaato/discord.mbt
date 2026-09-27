@@ -58,6 +58,7 @@ pub(all) suberror AppConfigError {
   DuplicateModalTextInput(custom_id~ : String, field~ : String)
   ModalOutsideLimits(custom_id~ : String, violation~ : @model.LimitViolation)
   InvalidFileTypes(owner~ : String, reason~ : String)
+  CommandOutsideLimits(command~ : String, violation~ : @model.LimitViolation)
   InvalidCooldown(command~ : String, seconds~ : Int)
   InvalidMaxInFlight(value~ : Int)
 } derive(@debug.Debug)
