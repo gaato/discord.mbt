@@ -9,6 +9,10 @@ import {
 }
 
 // Values
+pub const DEFAULT_INTERACTION_DEADLINE_MS : Int = 2500
+
+pub fn classify_rest_callback_failure(Error) -> DeliveryFailure
+
 pub fn plan_command_sync(Array[@interaction.CommandSpec], Array[Json], unowned~ : UnownedCommands, guild_id? : @model.Id[@model.GuildMarker]) -> (Json?, ScopeSyncReport)
 
 pub async fn sync_command_scope(@http.Client, @model.Id[@model.ApplicationMarker], Array[@interaction.CommandSpec], unowned? : UnownedCommands, guild_id? : @model.Id[@model.GuildMarker]) -> ScopeSyncReport
@@ -36,6 +40,7 @@ pub(all) struct AutocompleteCtx {
   options : @interaction.CommandOptions
   // private fields
 }
+pub fn AutocompleteCtx::remaining_ms(Self) -> Int?
 pub async fn AutocompleteCtx::suggest(Self, Array[@model.CommandOptionChoice]) -> Unit
 
 pub(all) struct CapturedResponse {
@@ -61,6 +66,8 @@ pub async fn CommandCtx::get_followup(Self, @model.Id[@model.MessageMarker]) -> 
 pub fn CommandCtx::guild_scope(Self) -> GuildInvocation?
 pub fn[T : @interaction.CommandModel] CommandCtx::model(Self) -> T raise
 pub async fn CommandCtx::original_response(Self) -> @model.Message
+pub fn CommandCtx::remaining_ms(Self) -> Int?
+pub async fn CommandCtx::reply(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, ephemeral? : Bool) -> Unit
 pub async fn CommandCtx::respond(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, ephemeral? : Bool) -> Unit
 pub fn CommandCtx::response_state(Self) -> ResponseState
 pub fn CommandCtx::scope(Self) -> InvocationScope
@@ -87,12 +94,20 @@ pub async fn ComponentCtx::get_followup(Self, @model.Id[@model.MessageMarker]) -
 pub fn ComponentCtx::guild_scope(Self) -> GuildInvocation?
 pub fn ComponentCtx::message(Self) -> @model.Message
 pub async fn ComponentCtx::original_response(Self) -> @model.Message
+pub fn ComponentCtx::remaining_ms(Self) -> Int?
+pub async fn ComponentCtx::reply(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, ephemeral? : Bool) -> Unit
 pub async fn ComponentCtx::respond(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, ephemeral? : Bool) -> Unit
 pub fn ComponentCtx::response_state(Self) -> ResponseState
 pub fn ComponentCtx::scope(Self) -> InvocationScope
 pub async fn ComponentCtx::show_modal(Self, custom_id~ : String, title~ : String, components~ : Array[@model.Component]) -> Unit
 pub async fn ComponentCtx::update_message(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], allowed_mentions? : @model.AllowedMentions) -> Unit
 pub fn ComponentCtx::user(Self) -> @model.User
+
+pub(all) enum DeliveryFailure {
+  Rejected
+  Expired
+  Uncertain
+} derive(Eq, @debug.Debug)
 
 pub struct Framework {
   // private fields
@@ -106,7 +121,7 @@ pub fn Framework::component_id(Self, String, async (ComponentCtx) -> Unit) -> Se
 pub fn Framework::modal(Self, String, async (ModalCtx) -> Unit) -> Self
 pub fn Framework::modal_id(Self, String, async (ModalCtx) -> Unit) -> Self
 pub fn Framework::on_error(Self, async (String, Error) -> Unit) -> Self
-pub async fn Framework::process(Self, @model.Interaction) -> Bool
+pub async fn Framework::process(Self, @model.Interaction, deadline_ms? : Int) -> Bool
 pub async fn Framework::process_with(Self, @model.Interaction, gate~ : ResponseGate) -> Bool
 pub async fn Framework::sync_global(Self, unowned? : UnownedCommands) -> ScopeSyncReport
 pub async fn Framework::sync_guild(Self, @model.Id[@model.GuildMarker], unowned? : UnownedCommands) -> ScopeSyncReport
@@ -140,6 +155,8 @@ pub async fn ModalCtx::get_followup(Self, @model.Id[@model.MessageMarker]) -> @m
 pub fn ModalCtx::guild_scope(Self) -> GuildInvocation?
 pub fn ModalCtx::origin(Self) -> ModalOrigin
 pub async fn ModalCtx::original_response(Self) -> @model.Message
+pub fn ModalCtx::remaining_ms(Self) -> Int?
+pub async fn ModalCtx::reply(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, ephemeral? : Bool) -> Unit
 pub async fn ModalCtx::respond(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, ephemeral? : Bool) -> Unit
 pub fn ModalCtx::response_state(Self) -> ResponseState
 pub fn ModalCtx::scope(Self) -> InvocationScope
@@ -160,11 +177,14 @@ pub fn ResponseCapture::try_get(Self) -> CapturedResponse? raise
 pub struct ResponseGate {
   // private fields
 }
-pub fn ResponseGate::ResponseGate(@model.InteractionType, async (@model.InteractionResponse, Array[@http.FileUpload]?) -> Unit, rejected? : (Error) -> Bool) -> Self
-pub fn ResponseGate::capture(@model.Interaction) -> (Self, ResponseCapture)
+pub fn ResponseGate::ResponseGate(@model.InteractionType, async (@model.InteractionResponse, Array[@http.FileUpload]?) -> Unit, classify? : (Error) -> DeliveryFailure, deadline_ms? : Int) -> Self
+pub fn ResponseGate::capture(@model.Interaction, deadline_ms? : Int) -> (Self, ResponseCapture)
+pub fn ResponseGate::close_placeholder(Self) -> Unit
 pub fn ResponseGate::expire(Self) -> Unit
-pub fn ResponseGate::responded(Self) -> Bool
-pub fn ResponseGate::rest(@http.Client, @model.Interaction) -> Self
+pub fn ResponseGate::is_pending(Self) -> Bool
+pub fn ResponseGate::placeholder_open(Self) -> Bool
+pub fn ResponseGate::remaining_ms(Self) -> Int?
+pub fn ResponseGate::rest(@http.Client, @model.Interaction, deadline_ms? : Int) -> Self
 pub async fn ResponseGate::send(Self, @model.InteractionResponse, files? : Array[@http.FileUpload]) -> Unit
 pub fn ResponseGate::state(Self) -> ResponseState
 

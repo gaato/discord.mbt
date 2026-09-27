@@ -144,7 +144,18 @@ async test "immediate handler responding through raw then raising gets a followu
 }
 
 ///|
-async test "deferred handler failure follows up" {
+/// Run a deferred command that fails after `before_failure`, and return the
+/// method and path of every REST request the error policy made.
+async fn deferred_failure_requests(
+  before_failure : async (@app.DeferredCtx) -> Unit,
+) -> Array[String] {
+  let requests : Array[String] = []
+  let client = @dhttp.Client("test-token")
+  defer client.close()
+  client.middleware((request, _) => {
+    requests.push("\{Repr(request.route.method_())} \{request.route.path()}")
+    { status: 200, headers: Map([]), body: app_test_message().to_json(), }
+  })
   let app = @app.App()
   app.command(
     @app.slash(
@@ -155,14 +166,37 @@ async test "deferred handler failure follows up" {
         assert_true(
           ctx.raw().response_state() is Sent(DeferredChannelMessageWithSource),
         )
+        before_failure(ctx)
         raise ResponseStateFailure
       }),
     ),
   )
-  assert_state_followup(
-    app,
-    app_command("deferred-failure", "500000000000000805"),
-    Sent(DeferredChannelMessageWithSource),
+  app.error_policy((ctx, _) => ctx.respond_error(content="policy reply"))
+  let framework = state_flow_framework(app, client)
+  let interaction = app_command("deferred-failure", "500000000000000805")
+  let (gate, capture) = @framework.ResponseGate::capture(interaction)
+  assert_true(framework.process_with(interaction, gate~))
+  assert_eq(capture.get().response.typ, DeferredChannelMessageWithSource)
+  requests
+}
+
+///|
+async test "deferred handler failure replaces the loading placeholder" {
+  assert_eq(deferred_failure_requests(_ => ()), [
+    "Patch /webhooks/400000000000000001/interaction-token/messages/@original",
+  ])
+}
+
+///|
+async test "deferred handler failure after an edit follows up" {
+  assert_eq(
+    deferred_failure_requests(ctx => {
+      ctx.raw().edit_response(content="partial result") |> ignore
+    }),
+    [
+      "Patch /webhooks/400000000000000001/interaction-token/messages/@original",
+      "Post /webhooks/400000000000000001/interaction-token",
+    ],
   )
 }
 
@@ -200,7 +234,7 @@ async test "definitively rejected initial response lets the policy respond" {
       }
       responses.push(response)
     },
-    rejected=_ => true,
+    classify=_ => Rejected,
   )
   let framework = state_flow_framework(app, client)
   assert_true(

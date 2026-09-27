@@ -2,8 +2,10 @@ import {
   "gaato/discord/model",
   "gaato/discord/http" @dhttp,
   "gaato/discord/interaction",
+  "gaato/discord/internal/clock",
   "moonbitlang/async",
   "moonbitlang/async/aqueue",
+  "moonbitlang/async/cond_var",
 }
 
 import {

@@ -39,6 +39,7 @@ priv struct RegisteredModal {
   text_input_ids : Array[String]?
   file_type_filters : Array[(String, Array[@model.FileTypeFilter])]
   limit_violations : Array[@model.LimitViolation]
+  ack : AckPlan
   dispatch : async (AppCtx, @framework.ModalCtx) -> Unit
 }
 
@@ -69,7 +70,10 @@ pub struct App {
 
 ///|
 /// Create an application core. `max_in_flight` caps concurrently running
-/// interaction handlers. Cooldowns use a fresh in-memory store unless a
+/// interaction handlers; routing and component waiters are not counted, so a
+/// handler waiting for a component never blocks the interaction that wakes
+/// it. A gateway executor gives its event handlers a separate budget of the
+/// same size. Cooldowns use a fresh in-memory store unless a
 /// shared `cooldown_store` is supplied.
 pub fn App::App(
   max_in_flight? : Int = 64,
@@ -134,6 +138,7 @@ pub fn App::on_component_raw(
 ) -> Unit {
   self.components_.push({
     pattern: Prefix(prefix),
+    ack: Respond,
     dispatch: (_, _, _, raw) => handler(raw),
   })
 }
@@ -156,6 +161,7 @@ pub fn[A] App::on_modal(
       title=modal.title_,
       components=modal.fields_.definitions_,
     ),
+    ack: handler.ack_plan(),
     dispatch: (bot, raw) => dispatch_modal_handler(modal, handler, bot, raw),
   })
 }
@@ -174,6 +180,7 @@ pub fn App::on_modal_raw(
     text_input_ids: None,
     file_type_filters: [],
     limit_violations: [],
+    ack: Respond,
     dispatch: (_, raw) => handler(raw),
   })
 }
@@ -351,7 +358,9 @@ fn bounded_spawner(
 }
 
 ///|
-/// Create a bounded task spawner for an executor-owned task group.
+/// Create a bounded task spawner for an executor-owned task group. Executors
+/// use it for non-interaction work such as event handlers; interaction
+/// handlers get their own budget inside `attach`.
 pub fn App::spawner(self : App, group : @async.TaskGroup[Unit]) -> Spawner {
   bounded_spawner(group, Semaphore(self.max_in_flight_))
 }
@@ -492,21 +501,44 @@ pub fn App::attach(
     application_id_: application_id,
     latency_ms_: latency_ms,
   }
+  let limiter = @async.Semaphore(self.max_in_flight_)
+  let warn = self.warn_
   for command in self.commands_ {
     framework.command(command.definition, raw => {
-      self.run_registered_command(app_ctx, waiter, command, raw)
+      run_admitted(
+        limiter,
+        command_admission(raw),
+        (command.ack_)(raw),
+        warn,
+        "command:\{command.name_}",
+        () => self.run_registered_command(app_ctx, waiter, command, raw),
+      )
     })
     |> ignore
     if !command.suggest_routes_.is_empty() {
       framework.autocomplete(command.name_, raw => {
-        self.run_registered_autocomplete(command, raw)
+        run_admitted(
+          limiter,
+          autocomplete_admission(raw),
+          Respond,
+          warn,
+          "autocomplete:\{command.name_}",
+          () => self.run_registered_autocomplete(command, raw),
+        )
       })
       |> ignore
     }
   }
   for entry in self.components_ {
     let dispatch = raw => {
-      self.run_registered_component(app_ctx, waiter, entry, raw)
+      run_admitted(
+        limiter,
+        component_admission(raw),
+        entry.ack,
+        warn,
+        "component:\{raw.data.custom_id}",
+        () => self.run_registered_component(app_ctx, waiter, entry, raw),
+      )
     }
     match entry.pattern {
       Prefix(prefix) => framework.component(prefix, dispatch) |> ignore
@@ -514,7 +546,16 @@ pub fn App::attach(
     }
   }
   for entry in self.modals_ {
-    let dispatch = raw => self.run_registered_modal(app_ctx, entry, raw)
+    let dispatch = raw => {
+      run_admitted(
+        limiter,
+        modal_admission(raw),
+        entry.ack,
+        warn,
+        "modal:\{raw.data.custom_id}",
+        () => self.run_registered_modal(app_ctx, entry, raw),
+      )
+    }
     match entry.pattern {
       Prefix(prefix) => framework.modal(prefix, dispatch) |> ignore
       Id(id) => framework.modal_id(id, dispatch) |> ignore
@@ -522,7 +563,17 @@ pub fn App::attach(
   }
   // Registered last so explicitly configured raw handlers win by name.
   for entry in self.autocompletes_ {
-    framework.autocomplete(entry.name, entry.dispatch) |> ignore
+    framework.autocomplete(entry.name, raw => {
+      run_admitted(
+        limiter,
+        autocomplete_admission(raw),
+        Respond,
+        warn,
+        "autocomplete:\{entry.name}",
+        () => (entry.dispatch)(raw),
+      )
+    })
+    |> ignore
   }
   framework.on_error((label, error) => {
     if @async.is_being_cancelled() {

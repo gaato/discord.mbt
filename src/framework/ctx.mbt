@@ -75,6 +75,117 @@ async fn respond_modal(
 }
 
 ///|
+/// Deliver a message through whichever path the gate's state allows:
+/// the initial callback while pending, an edit of a still-loading deferred
+/// placeholder, and a followup otherwise. Editing replaces the deprecated
+/// behavior where the first followup after a deferral edits the original.
+///
+/// Verified live on 2026-09-28 with `src/examples/gate_probe`: the edit
+/// replaces the loading message and keeps the defer's visibility; after an
+/// edit or a `DeferredUpdateMessage` the reply is a separate followup; and
+/// when an unconfirmed deferral's edit fails, the fallback followup still
+/// replaces the loading message (Discord's deprecated followup-as-edit).
+async fn reply_message(
+  gate : ResponseGate,
+  client : @dhttp.Client,
+  application_id : @model.ApplicationId,
+  token : String,
+  content : String?,
+  embeds : Array[@model.Embed]?,
+  components : Array[@model.Component]?,
+  files : Array[@dhttp.FileUpload]?,
+  allowed_mentions : @model.AllowedMentions?,
+  ephemeral : Bool,
+) -> Unit {
+  gate.exclusive_reply(() => {
+    gate.wait_settled()
+    match gate.state() {
+      Pending =>
+        respond_message(
+          gate,
+          ChannelMessageWithSource,
+          content,
+          embeds,
+          components,
+          files,
+          allowed_mentions,
+          ephemeral,
+        )
+      Expired => raise ResponseGateError::Expired
+      Sent(DeferredChannelMessageWithSource)
+      | Unconfirmed(DeferredChannelMessageWithSource) if gate.placeholder_open() => {
+        let edited = try {
+          client.edit_original_response(
+            application_id,
+            token,
+            content?,
+            embeds?,
+            components?,
+            allowed_mentions?,
+            files?,
+          )
+          |> ignore
+          true
+        } catch {
+          error if @async.is_being_cancelled() => raise error
+          // An unconfirmed deferral may have no original message to edit.
+          error if gate.state() is Unconfirmed(_) => {
+            ignore(error)
+            false
+          }
+          error => raise error
+        }
+        if !edited {
+          send_followup(
+            client, application_id, token, content, embeds, components, files, allowed_mentions,
+            ephemeral,
+          )
+        }
+        // Only a delivered reply replaces the placeholder; after a failure the
+        // loading message may still be showing, so a later reply edits again.
+        gate.close_placeholder()
+      }
+      Sent(_) | Unconfirmed(_) => {
+        send_followup(
+          client, application_id, token, content, embeds, components, files, allowed_mentions,
+          ephemeral,
+        )
+        gate.close_placeholder()
+      }
+    }
+  })
+}
+
+///|
+async fn send_followup(
+  client : @dhttp.Client,
+  application_id : @model.ApplicationId,
+  token : String,
+  content : String?,
+  embeds : Array[@model.Embed]?,
+  components : Array[@model.Component]?,
+  files : Array[@dhttp.FileUpload]?,
+  allowed_mentions : @model.AllowedMentions?,
+  ephemeral : Bool,
+) -> Unit {
+  client.create_followup(
+    application_id,
+    token,
+    content?,
+    embeds?,
+    components?,
+    files?,
+    allowed_mentions?,
+    flags=if ephemeral {
+      @model.MessageFlags::ephemeral()
+    } else {
+      @model.MessageFlags::from_bits(0)
+    },
+  )
+  |> ignore
+}
+
+///|
 async fn interaction_original_response(
   client : @dhttp.Client,
   application_id : @model.ApplicationId,
@@ -251,6 +362,13 @@ pub fn CommandCtx::scope(self : CommandCtx) -> InvocationScope {
 }
 
 ///|
+/// Milliseconds left before the initial-response window closes, or `None`
+/// when the executor set no deadline.
+pub fn CommandCtx::remaining_ms(self : CommandCtx) -> Int? {
+  self.gate.remaining_ms()
+}
+
+///|
 /// The current state of this interaction's initial callback.
 pub fn CommandCtx::response_state(self : CommandCtx) -> ResponseState {
   self.gate.state()
@@ -308,6 +426,37 @@ pub fn[T : @interaction.CommandModel] CommandCtx::model(
   self : CommandCtx,
 ) -> T raise {
   T::from_options(self.options)
+}
+
+///|
+/// Send a message through whichever path the response state allows: the
+/// initial response while pending, an edit of a still-loading deferred
+/// placeholder, or a followup after any other callback. `ephemeral` cannot
+/// change an existing message, so an edited placeholder keeps the
+/// visibility chosen when deferring. Raises `ResponseGateError::Expired`
+/// once the callback window has closed unused. Concurrent replies to one
+/// interaction run one at a time, so only the first replaces the placeholder.
+pub async fn CommandCtx::reply(
+  self : CommandCtx,
+  content? : String,
+  embeds? : Array[@model.Embed],
+  components? : Array[@model.Component],
+  files? : Array[@dhttp.FileUpload],
+  allowed_mentions? : @model.AllowedMentions,
+  ephemeral? : Bool = false,
+) -> Unit {
+  reply_message(
+    self.gate,
+    self.client,
+    self.application_id,
+    self.interaction.token,
+    content,
+    embeds,
+    components,
+    files,
+    allowed_mentions,
+    ephemeral,
+  )
 }
 
 ///|
@@ -380,6 +529,7 @@ pub async fn CommandCtx::delete_response(self : CommandCtx) -> Unit {
     self.application_id,
     self.interaction.token,
   )
+  self.gate.close_placeholder()
 }
 
 ///|
@@ -395,7 +545,7 @@ pub async fn CommandCtx::edit_response(
   keep_attachments? : Array[@model.AttachmentRequest],
   poll? : @model.PollCreateRequest,
 ) -> @model.Message {
-  self.client.edit_original_response(
+  let message = self.client.edit_original_response(
     self.application_id,
     self.interaction.token,
     content?,
@@ -407,6 +557,8 @@ pub async fn CommandCtx::edit_response(
     keep_attachments?,
     poll?,
   )
+  self.gate.close_placeholder()
+  message
 }
 
 ///|
@@ -421,7 +573,7 @@ pub async fn CommandCtx::followup(
   poll? : @model.PollCreateRequest,
   ephemeral? : Bool = false,
 ) -> @model.Message {
-  self.client.create_followup(
+  let message = self.client.create_followup(
     self.application_id,
     self.interaction.token,
     content?,
@@ -436,6 +588,8 @@ pub async fn CommandCtx::followup(
       @model.MessageFlags::from_bits(0)
     },
   )
+  self.gate.close_placeholder()
+  message
 }
 
 ///|
@@ -513,6 +667,13 @@ pub fn ComponentCtx::scope(self : ComponentCtx) -> InvocationScope {
 }
 
 ///|
+/// Milliseconds left before the initial-response window closes, or `None`
+/// when the executor set no deadline.
+pub fn ComponentCtx::remaining_ms(self : ComponentCtx) -> Int? {
+  self.gate.remaining_ms()
+}
+
+///|
 /// The current state of this interaction's initial callback.
 pub fn ComponentCtx::response_state(self : ComponentCtx) -> ResponseState {
   self.gate.state()
@@ -537,6 +698,37 @@ pub fn ComponentCtx::user(self : ComponentCtx) -> @model.User {
 /// The message to which the component was attached.
 pub fn ComponentCtx::message(self : ComponentCtx) -> @model.Message {
   self.message_
+}
+
+///|
+/// Send a message through whichever path the response state allows: the
+/// initial response while pending, an edit of a still-loading deferred
+/// placeholder, or a followup after any other callback. `ephemeral` cannot
+/// change an existing message, so an edited placeholder keeps the
+/// visibility chosen when deferring. Raises `ResponseGateError::Expired`
+/// once the callback window has closed unused. Concurrent replies to one
+/// interaction run one at a time, so only the first replaces the placeholder.
+pub async fn ComponentCtx::reply(
+  self : ComponentCtx,
+  content? : String,
+  embeds? : Array[@model.Embed],
+  components? : Array[@model.Component],
+  files? : Array[@dhttp.FileUpload],
+  allowed_mentions? : @model.AllowedMentions,
+  ephemeral? : Bool = false,
+) -> Unit {
+  reply_message(
+    self.gate,
+    self.client,
+    self.application_id,
+    self.interaction.token,
+    content,
+    embeds,
+    components,
+    files,
+    allowed_mentions,
+    ephemeral,
+  )
 }
 
 ///|
@@ -638,6 +830,7 @@ pub async fn ComponentCtx::delete_response(self : ComponentCtx) -> Unit {
     self.application_id,
     self.interaction.token,
   )
+  self.gate.close_placeholder()
 }
 
 ///|
@@ -653,7 +846,7 @@ pub async fn ComponentCtx::edit_response(
   keep_attachments? : Array[@model.AttachmentRequest],
   poll? : @model.PollCreateRequest,
 ) -> @model.Message {
-  self.client.edit_original_response(
+  let message = self.client.edit_original_response(
     self.application_id,
     self.interaction.token,
     content?,
@@ -665,6 +858,8 @@ pub async fn ComponentCtx::edit_response(
     keep_attachments?,
     poll?,
   )
+  self.gate.close_placeholder()
+  message
 }
 
 ///|
@@ -679,7 +874,7 @@ pub async fn ComponentCtx::followup(
   poll? : @model.PollCreateRequest,
   ephemeral? : Bool = false,
 ) -> @model.Message {
-  self.client.create_followup(
+  let message = self.client.create_followup(
     self.application_id,
     self.interaction.token,
     content?,
@@ -694,6 +889,8 @@ pub async fn ComponentCtx::followup(
       @model.MessageFlags::from_bits(0)
     },
   )
+  self.gate.close_placeholder()
+  message
 }
 
 ///|
@@ -771,6 +968,13 @@ pub fn ModalCtx::scope(self : ModalCtx) -> InvocationScope {
 }
 
 ///|
+/// Milliseconds left before the initial-response window closes, or `None`
+/// when the executor set no deadline.
+pub fn ModalCtx::remaining_ms(self : ModalCtx) -> Int? {
+  self.gate.remaining_ms()
+}
+
+///|
 /// The current state of this interaction's initial callback.
 pub fn ModalCtx::response_state(self : ModalCtx) -> ResponseState {
   self.gate.state()
@@ -822,6 +1026,37 @@ pub fn ModalCtx::text_value(self : ModalCtx, custom_id : String) -> String? {
   }
 
   walk(self.data.components)
+}
+
+///|
+/// Send a message through whichever path the response state allows: the
+/// initial response while pending, an edit of a still-loading deferred
+/// placeholder, or a followup after any other callback. `ephemeral` cannot
+/// change an existing message, so an edited placeholder keeps the
+/// visibility chosen when deferring. Raises `ResponseGateError::Expired`
+/// once the callback window has closed unused. Concurrent replies to one
+/// interaction run one at a time, so only the first replaces the placeholder.
+pub async fn ModalCtx::reply(
+  self : ModalCtx,
+  content? : String,
+  embeds? : Array[@model.Embed],
+  components? : Array[@model.Component],
+  files? : Array[@dhttp.FileUpload],
+  allowed_mentions? : @model.AllowedMentions,
+  ephemeral? : Bool = false,
+) -> Unit {
+  reply_message(
+    self.gate,
+    self.client,
+    self.application_id,
+    self.interaction.token,
+    content,
+    embeds,
+    components,
+    files,
+    allowed_mentions,
+    ephemeral,
+  )
 }
 
 ///|
@@ -883,6 +1118,7 @@ pub async fn ModalCtx::delete_response(self : ModalCtx) -> Unit {
     self.application_id,
     self.interaction.token,
   )
+  self.gate.close_placeholder()
 }
 
 ///|
@@ -898,7 +1134,7 @@ pub async fn ModalCtx::edit_response(
   keep_attachments? : Array[@model.AttachmentRequest],
   poll? : @model.PollCreateRequest,
 ) -> @model.Message {
-  self.client.edit_original_response(
+  let message = self.client.edit_original_response(
     self.application_id,
     self.interaction.token,
     content?,
@@ -910,6 +1146,8 @@ pub async fn ModalCtx::edit_response(
     keep_attachments?,
     poll?,
   )
+  self.gate.close_placeholder()
+  message
 }
 
 ///|
@@ -924,7 +1162,7 @@ pub async fn ModalCtx::followup(
   poll? : @model.PollCreateRequest,
   ephemeral? : Bool = false,
 ) -> @model.Message {
-  self.client.create_followup(
+  let message = self.client.create_followup(
     self.application_id,
     self.interaction.token,
     content?,
@@ -939,6 +1177,8 @@ pub async fn ModalCtx::followup(
       @model.MessageFlags::from_bits(0)
     },
   )
+  self.gate.close_placeholder()
+  message
 }
 
 ///|
@@ -1006,6 +1246,13 @@ pub(all) struct AutocompleteCtx {
   data : @model.CommandData
   options : @interaction.CommandOptions
   priv gate : ResponseGate
+}
+
+///|
+/// Milliseconds left before the autocomplete response window closes, or
+/// `None` when the executor set no deadline.
+pub fn AutocompleteCtx::remaining_ms(self : AutocompleteCtx) -> Int? {
+  self.gate.remaining_ms()
 }
 
 ///|

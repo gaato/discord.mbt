@@ -9,12 +9,21 @@ pub(all) enum InteractionHandler[A] {
 ///|
 priv struct SlashRoute {
   path : Array[String]
+  ack : AckPlan
   dispatch : async (
     AppCtx,
     ComponentWaiter?,
     (String) -> Unit,
     @framework.CommandCtx,
   ) -> Unit
+}
+
+///|
+fn[A] InteractionHandler::ack_plan(self : InteractionHandler[A]) -> AckPlan {
+  match self {
+    Deferred(ephemeral~, _) => DeferMessage(ephemeral~)
+    Immediate(_) | Raw(_) => Respond
+  }
 }
 
 ///|
@@ -289,6 +298,7 @@ pub fn[A] subcommand(
     routes_: [
       {
         path: [name],
+        ack: handler.ack_plan(),
         dispatch: (bot, waiter, warn, raw) => {
           dispatch_command_handler(
             raw => decode(raw),
@@ -404,10 +414,11 @@ pub fn slash_group(
 
 ///|
 /// Add a pre-execution check. Checks run in registration order after middleware
-/// and before cooldown, argument decoding, and handler dispatch. Checks share
-/// Discord's three-second initial-response budget, so keep them fast or cache
-/// their results. Returning false is equivalent to
-/// `HandlerError::CheckFailed`.
+/// and before cooldown, argument decoding, and handler dispatch, inside
+/// Discord's three-second initial-response window. A `Deferred` command is
+/// acknowledged automatically when 1000 ms of that budget remain; immediate
+/// and raw commands are not, so keep their checks fast or cache the results.
+/// Returning false is equivalent to `HandlerError::CheckFailed`.
 pub fn[A] Command::check(self : Command[A], check : CommandCheck) -> Command[A] {
   self.checks.push(check)
   self
@@ -447,10 +458,30 @@ async fn[A] dispatch_command_handler(
       response.send(raw)
     }
     Deferred(ephemeral~, run) => {
-      raw.defer_response(ephemeral~)
+      ensure_acknowledged(command_admission(raw), DeferMessage(ephemeral~))
       run({ raw_: raw, bot_: bot, waiter_: waiter, warn_: warn, }, value)
     }
     Raw(run) => run(raw)
+  }
+}
+
+///|
+/// The acknowledgement plan of the route an invocation selects.
+fn[A] Command::ack_plan(
+  self : Command[A],
+  raw : @framework.CommandCtx,
+) -> AckPlan {
+  match self.routes {
+    None => self.handler.ack_plan()
+    Some(routes) => {
+      let key = path_key(raw.options.path())
+      for route in routes {
+        if path_key(route.path) == key {
+          return route.ack
+        }
+      }
+      Respond
+    }
   }
 }
 
@@ -540,6 +571,7 @@ pub struct RegisteredCommand {
   priv suggest_routes_ : Array[SuggestRoute]
   priv checks_ : Array[CommandCheck]
   priv cooldown_ : CooldownConfig?
+  priv ack_ : (@framework.CommandCtx) -> AckPlan
   priv dispatch : async (
     AppCtx,
     ComponentWaiter?,
@@ -565,6 +597,7 @@ pub fn[A] Command::erase(self : Command[A]) -> RegisteredCommand {
     suggest_routes_: self.suggest_routes,
     checks_: self.checks,
     cooldown_: self.cooldown,
+    ack_: raw => self.ack_plan(raw),
     dispatch: (bot, waiter, warn, raw) => {
       self.dispatch_typed(bot, waiter, warn, raw)
     },

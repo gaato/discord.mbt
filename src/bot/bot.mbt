@@ -500,13 +500,15 @@ async fn Bot::spawn_event_handlers(
 }
 
 ///|
-async fn Bot::spawn_interaction(
+fn Bot::spawn_interaction(
   self : Bot,
-  spawner : @app.Spawner,
+  group : @async.TaskGroup[Unit],
   framework : @framework.Framework,
   interaction : @model.Interaction,
 ) -> Unit {
-  spawner(() => {
+  // Admission is unbounded and never blocks the dispatch loop: the response
+  // deadline starts here, and the app applies its work budget per handler.
+  group.spawn_bg(allow_failure=true, () => {
     ignore(
       framework.process(interaction) catch {
         error if @async.is_being_cancelled() => raise error
@@ -595,6 +597,20 @@ pub async fn Bot::run(self : Bot) -> Unit {
       })
     }
     let spawner = self.app_.spawner(group)
+    // Event middleware and handler fan-out run in their own task so the
+    // dispatch loop never waits for event handler capacity; interactions,
+    // including those that wake component waiters, are always read promptly.
+    let event_jobs : @aqueue.Queue[async () -> Unit] = Queue(kind=Unbounded)
+    group.spawn_bg(no_wait=true, () => {
+      for ;; {
+        let job = event_jobs.get()
+        job()
+      }
+    })
+    let dispatch_event = (ctx : GatewayCtx, event : @model.Event) => {
+      event_jobs.try_put(() => self.dispatch_event(spawner, ctx, event))
+      |> ignore
+    }
     let shutdown_requested = Ref(false)
     let mut app_ctx : @app.AppCtx? = None
     let mut framework : @framework.Framework? = None
@@ -711,7 +727,7 @@ pub async fn Bot::run(self : Bot) -> Unit {
           }
           start_services(ctx)
           self.collector_.dispatch(event)
-          self.dispatch_event(spawner, ctx, event)
+          dispatch_event(ctx, event)
         }
         Dispatch(InteractionCreate(interaction) as event) => {
           if self.cache_ is Some(cache) {
@@ -723,8 +739,8 @@ pub async fn Bot::run(self : Bot) -> Unit {
               self.collector_.dispatch(event)
               // Processing is another bounded child task. Awaiting it here
               // would deadlock handlers waiting for a later component event.
-              self.spawn_interaction(spawner, router, interaction)
-              self.dispatch_event(spawner, ctx, event)
+              self.spawn_interaction(group, router, interaction)
+              dispatch_event(ctx, event)
             }
             _ =>
               self.app_.warn(
@@ -752,7 +768,7 @@ pub async fn Bot::run(self : Bot) -> Unit {
             Some(ctx) => {
               start_services(ctx)
               self.collector_.dispatch(event)
-              self.dispatch_event(spawner, ctx, event)
+              dispatch_event(ctx, event)
             }
             None =>
               self.app_.warn(

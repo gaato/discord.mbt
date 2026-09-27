@@ -236,12 +236,14 @@ async fn Framework::guard_errors(
 ///|
 /// Route one interaction. Returns `true` when a handler (or waiter)
 /// consumed it, `false` when nothing matched. Handler errors propagate
-/// unless an `on_error` hook is installed.
+/// unless an `on_error` hook is installed. The initial-response deadline is
+/// measured from this call, so call it as soon as the interaction arrives.
 pub async fn Framework::process(
   self : Framework,
   interaction : @model.Interaction,
+  deadline_ms? : Int = DEFAULT_INTERACTION_DEADLINE_MS,
 ) -> Bool {
-  let gate = ResponseGate::rest(self.client, interaction)
+  let gate = ResponseGate::rest(self.client, interaction, deadline_ms~)
   self.process_with(interaction, gate~)
 }
 

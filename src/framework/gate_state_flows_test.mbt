@@ -1,22 +1,30 @@
 ///|
-async test "REST gate only reopens for definitive rejection" {
-  let cases : Array[(@dhttp.DiscordHttpError, Bool)] = [
-    (Validation(message="invalid payload"), true),
+async test "REST gate classifies callback failures three ways" {
+  let cases : Array[(@dhttp.DiscordHttpError, @framework.DeliveryFailure)] = [
+    (
+      Api(status=404, error={
+        code: 10062,
+        message: "Unknown interaction",
+        errors: None,
+      }),
+      Expired,
+    ),
+    (Validation(message="invalid payload"), Rejected),
     (
       Api(status=400, error={
         code: 50035,
         message: "invalid form",
         errors: None,
       }),
-      true,
+      Rejected,
     ),
     (
       Api(status=401, error={ code: 0, message: "unauthorized", errors: None, }),
-      true,
+      Rejected,
     ),
     (
       Api(status=499, error={ code: 0, message: "rejected", errors: None, }),
-      true,
+      Rejected,
     ),
     (
       Api(status=400, error={
@@ -24,22 +32,22 @@ async test "REST gate only reopens for definitive rejection" {
         message: "acknowledged",
         errors: None,
       }),
-      false,
+      Uncertain,
     ),
     (
       Api(status=429, error={ code: 0, message: "rate limited", errors: None, }),
-      false,
+      Uncertain,
     ),
     (
       Api(status=500, error={ code: 0, message: "server error", errors: None, }),
-      false,
+      Uncertain,
     ),
-    (RateLimited(retry_after_ms=1000, global=false), false),
-    (Transport(message="connection lost"), false),
-    (Timeout(timeout_ms=100), false),
-    (Deserialize(message="invalid response"), false),
+    (RateLimited(retry_after_ms=1000, global=false), Uncertain),
+    (Transport(message="connection lost"), Uncertain),
+    (Timeout(timeout_ms=100), Uncertain),
+    (Deserialize(message="invalid response"), Uncertain),
   ]
-  for (error, rejected) in cases {
+  for (error, expected) in cases {
     let client = @dhttp.Client("test-token")
     defer client.close()
     client.middleware((_, _) => {
@@ -61,17 +69,16 @@ async test "REST gate only reopens for definitive rejection" {
     } noraise {
       _ => fail("expected sink failure")
     }
-    assert_eq(
-      gate.state(),
-      if rejected {
-        Pending
-      } else {
-        Unconfirmed(ChannelMessageWithSource)
-      },
-    )
-    assert_eq(gate.responded(), !rejected)
-    if !rejected {
-      gate.expire()
+    assert_eq(@framework.classify_rest_callback_failure(error), expected)
+    let state : @framework.ResponseState = match expected {
+      Rejected => Pending
+      Expired => Expired
+      Uncertain => Unconfirmed(ChannelMessageWithSource)
+    }
+    assert_eq(gate.state(), state)
+    assert_eq(gate.is_pending(), expected == Rejected)
+    gate.expire()
+    if expected == Uncertain {
       assert_eq(gate.state(), Unconfirmed(ChannelMessageWithSource))
     }
   }
@@ -87,9 +94,9 @@ async test "cancellation bypasses the rejection classifier" {
       started.put(())
       @async.sleep(60_000)
     },
-    rejected=_ => {
+    classify=_ => {
       classified.val = true
-      true
+      Rejected
     },
   )
   @async.with_task_group(group => {

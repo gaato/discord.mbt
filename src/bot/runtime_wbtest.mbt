@@ -1534,3 +1534,119 @@ async test "bot reports gateway decode errors and preserves dispatch" {
     running.wait()
   })
 }
+
+///|
+async test "saturated event handlers never delay interaction routing" {
+  let transport = BotFakeTransport()
+  let app = @app.App(max_in_flight=1)
+  let commands : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  app.command(
+    @app.slash(
+      name="raw",
+      description="Raw command",
+      args=@interaction.Args::unit(),
+      handler=Raw(_ => commands.put(())),
+    ),
+  )
+  let bot = middleware_runtime_bot(app, transport)
+  let release : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  let deletes : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  bot.on(Events::message_delete(), (_, _) => {
+    deletes.put(())
+    release.get()
+  })
+  let service_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
+  bot.service(name="capture-context", ctx => service_contexts.put(ctx))
+  @async.with_task_group(group => {
+    let running = group.spawn(no_wait=true, () => bot.run())
+    transport.incoming.put(BOT_HELLO)
+    guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
+      fail("expected identify")
+    }
+    transport.incoming.put(bot_ready_frame())
+    let ctx = service_contexts.get()
+    // The first handler holds the only event permit; the second waits for it.
+    transport.incoming.put(message_delete_frame(2, "700000000000000011"))
+    deletes.get()
+    transport.incoming.put(message_delete_frame(3, "700000000000000012"))
+    transport.incoming.put(command_frame(4, "500000000000000711"))
+    guard @async.with_timeout_opt(500, () => commands.get()) is Some(_) else {
+      fail("event handler capacity blocked interaction routing")
+    }
+    release.put(())
+    release.put(())
+    guard @async.with_timeout_opt(500, () => deletes.get()) is Some(_) else {
+      fail("the queued event was lost")
+    }
+    ctx.shutdown()
+    running.wait()
+  })
+}
+
+///|
+fn component_frame(sequence : Int, id : String, custom_id : String) -> String {
+  (
+    #|{"op":0,"s":SEQUENCE_PLACEHOLDER,"t":"INTERACTION_CREATE","d":{"id":"ID_PLACEHOLDER","application_id":"42","type":3,"token":"component-token","version":1,"user":{"id":"200000000000000001","username":"nelly","discriminator":"0","global_name":"Nelly","avatar":null},"message":{"id":"700000000000000001","channel_id":"6","author":{"id":"42","username":"bot","discriminator":"0","avatar":null},"content":"confirm?","timestamp":"2025-06-01T10:00:00Z","edited_timestamp":null,"tts":false,"mention_everyone":false,"mentions":[],"mention_roles":[],"attachments":[],"embeds":[],"pinned":false,"type":0},"data":{"custom_id":"CUSTOM_ID_PLACEHOLDER","component_type":2}}}
+  )
+  .replace(old="SEQUENCE_PLACEHOLDER", new=sequence.to_string())
+  .replace(old="ID_PLACEHOLDER", new=id)
+  .replace(old="CUSTOM_ID_PLACEHOLDER", new=custom_id)
+}
+
+///|
+async test "a deferred handler waiting at full capacity receives its button" {
+  let transport = BotFakeTransport()
+  let app = @app.App(max_in_flight=1)
+  let woke : @aqueue.Queue[Bool] = Queue(kind=Unbounded)
+  app.command(
+    @app.slash(
+      name="confirm",
+      description="Wait for a button",
+      args=@interaction.Args::unit(),
+      handler=Deferred(ephemeral=true, (ctx, _) => {
+        let pressed = ctx.wait_for_component(
+          custom_id="confirm-yes",
+          timeout_ms=2000,
+        )
+        woke.put(pressed is Some(_))
+      }),
+    ),
+  )
+  let client = @dhttp.Client("test-token")
+  let callbacks : @aqueue.Queue[String] = Queue(kind=Unbounded)
+  client.middleware((request, _) => {
+    callbacks.put(request.route.path())
+    { status: 204, headers: Map([]), body: Json::null(), }
+  })
+  let bot = Bot(
+    app,
+    token="test-token",
+    intents=@model.Intents::guild_messages(),
+    client~,
+    gateway_url="wss://gateway.example",
+  )
+  bot.gateway_bot_info_.val = Some(manager_gateway_info())
+  bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  let service_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
+  bot.service(name="capture-context", ctx => service_contexts.put(ctx))
+  @async.with_task_group(group => {
+    let running = group.spawn(no_wait=true, () => bot.run())
+    transport.incoming.put(BOT_HELLO)
+    guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
+      fail("expected identify")
+    }
+    transport.incoming.put(bot_ready_frame())
+    let ctx = service_contexts.get()
+    transport.incoming.put(
+      command_frame(2, "500000000000000721", name="confirm"),
+    )
+    // The deferral proves the handler holds the only permit and is waiting.
+    assert_true(callbacks.get().has_suffix("/callback"))
+    transport.incoming.put(
+      component_frame(3, "500000000000000722", "confirm-yes"),
+    )
+    assert_eq(@async.with_timeout_opt(1000, () => woke.get()), Some(true))
+    ctx.shutdown()
+    running.wait()
+  })
+}

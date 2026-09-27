@@ -111,9 +111,11 @@ fn error_response_summary(
 
 ///|
 /// Send an error without violating Discord's one-initial-response rule.
-/// Pending callbacks use an initial response; sent or unconfirmed callbacks
-/// use a best-effort followup. Expired callbacks and failures without a raw
-/// context send a payload summary to the warning hook.
+/// A pending callback gets an initial response; a deferred message whose
+/// loading placeholder is still showing is edited in place (keeping the
+/// visibility chosen when deferring); any other sent or unconfirmed callback
+/// gets a followup. Expired callbacks and failures without a raw context
+/// send a payload summary to the warning hook.
 pub async fn FailureCtx::respond_error(
   self : FailureCtx,
   content? : String,
@@ -129,77 +131,45 @@ pub async fn FailureCtx::respond_error(
     )
     return
   }
-  match self.response_state() {
-    Some(Pending) =>
-      match raw {
-        RawCommand(ctx) =>
-          ctx.respond(
-            content?,
-            embeds?,
-            components?,
-            files?,
-            allowed_mentions?,
-            ephemeral~,
-          )
-        RawComponent(ctx) =>
-          ctx.respond(
-            content?,
-            embeds?,
-            components?,
-            files?,
-            allowed_mentions?,
-            ephemeral~,
-          )
-        RawModal(ctx) =>
-          ctx.respond(
-            content?,
-            embeds?,
-            components?,
-            files?,
-            allowed_mentions?,
-            ephemeral~,
-          )
-      }
-    // Discord accepts a followup after every sent callback, including
-    // `Sent(Modal)` (verified live with `src/examples/gate_probe`).
-    Some(Sent(_)) | Some(Unconfirmed(_)) =>
-      match raw {
-        RawCommand(ctx) =>
-          ctx.followup(
-            content?,
-            embeds?,
-            components?,
-            files?,
-            allowed_mentions?,
-            ephemeral~,
-          )
-          |> ignore
-        RawComponent(ctx) =>
-          ctx.followup(
-            content?,
-            embeds?,
-            components?,
-            files?,
-            allowed_mentions?,
-            ephemeral~,
-          )
-          |> ignore
-        RawModal(ctx) =>
-          ctx.followup(
-            content?,
-            embeds?,
-            components?,
-            files?,
-            allowed_mentions?,
-            ephemeral~,
-          )
-          |> ignore
-      }
-    Some(Expired) =>
-      (self.warn_)(
-        "cannot respond to an expired interaction: \{error_response_summary(content, embeds, components, files)}",
-      )
-    None => ()
+  let replied = try {
+    match raw {
+      RawCommand(ctx) =>
+        ctx.reply(
+          content?,
+          embeds?,
+          components?,
+          files?,
+          allowed_mentions?,
+          ephemeral~,
+        )
+      RawComponent(ctx) =>
+        ctx.reply(
+          content?,
+          embeds?,
+          components?,
+          files?,
+          allowed_mentions?,
+          ephemeral~,
+        )
+      RawModal(ctx) =>
+        ctx.reply(
+          content?,
+          embeds?,
+          components?,
+          files?,
+          allowed_mentions?,
+          ephemeral~,
+        )
+    }
+    true
+  } catch {
+    @framework.ResponseGateError::Expired => false
+    error => raise error
+  }
+  if !replied {
+    (self.warn_)(
+      "cannot respond to an expired interaction: \{error_response_summary(content, embeds, components, files)}",
+    )
   }
 }
 

@@ -128,7 +128,7 @@ async test "error policy exposes the user and sends a rich initial response" {
 }
 
 ///|
-async test "error policy uses a followup after a deferred failure" {
+async test "error policy edits a deferred placeholder" {
   let client = @dhttp.Client("test-token")
   defer client.close()
   let followup_path = Ref("")
@@ -171,13 +171,11 @@ async test "error policy uses a followup after a deferred failure" {
   inspect(
     followup_path.val,
     content=(
-      #|/webhooks/400000000000000001/interaction-token
+      #|/webhooks/400000000000000001/interaction-token/messages/@original
     ),
   )
-  json_inspect(followup_body.val, content={
-    "content": "followup failure",
-    "flags": 64,
-  })
+  json_inspect(followup_body.val, content={ "content": "followup failure" })
+  assert_false(gate.placeholder_open())
 }
 
 ///|

@@ -13,8 +13,9 @@ pub type EventMiddleware = async (
 
 ///|
 /// Install gateway event middleware. The first installed middleware is
-/// outermost. The chain runs serially in the shard dispatch loop, so
-/// middleware must return promptly. A dropped event emits no EventDispatched
+/// outermost. The chain runs serially, in event order, in a dispatch task
+/// separate from the shard loop: slow middleware delays later events, never
+/// interaction routing. A dropped event emits no EventDispatched
 /// telemetry. Middleware cannot widen intents or the gateway event filter.
 pub fn Bot::middleware(self : Bot, middleware : EventMiddleware) -> Unit {
   self.event_middleware_.push(middleware)

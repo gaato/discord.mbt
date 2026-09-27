@@ -348,8 +348,16 @@ A gate is constructed one of three ways:
   `ResponseCapture`; the callback value is handed to the receiver instead of
   leaving the process. `App::serve` uses this shape so HTTP adapters can
   return the callback in the HTTP response.
-- `ResponseGate::ResponseGate(kind, sink, rejected=...)` wraps any async sink
-  for custom transports. The optional classifier defaults to `_ => false`.
+- `ResponseGate::ResponseGate(kind, sink, classify=..., deadline_ms=...)`
+  wraps any async sink for custom transports. The optional classifier
+  defaults to `_ => Uncertain`, and the gate has no deadline unless one is
+  given.
+
+`rest` and `capture` take `deadline_ms` (default
+`DEFAULT_INTERACTION_DEADLINE_MS`, 2500) measured from construction, so build
+the gate as soon as the interaction arrives. `gate.remaining_ms()` reports the
+budget left, and the contexts expose the same value through
+`ctx.remaining_ms()`.
 
 `process_with(interaction, gate~)` routes with a caller-provided gate;
 `gate.state()` returns a `ResponseState`:
@@ -360,21 +368,29 @@ A gate is constructed one of three ways:
   type before calling the sink, preventing concurrent initial callbacks.
 - `Unconfirmed(type)`: the sink raised, and Discord may or may not have
   accepted the callback. The gate stays closed to further initial callbacks.
-- `Expired`: the executor gave up the callback window before a callback was
-  sent. A later send raises `ResponseGateError::Expired`.
+- `Expired`: the callback window closed before a callback was sent, either
+  because the deadline passed or because the executor gave it up. A later send
+  raises `ResponseGateError::Expired`.
 
-If the sink raises and `rejected(error)` is true, the gate returns to `Pending`
-and re-raises the error. A different initial callback may then be sent.
-The REST gate classifies client-side `DiscordHttpError::Validation` and HTTP
-4xx API errors as definitive refusals, except status 429 and JSON error code
-40060 (already acknowledged). Server errors, transport errors, and timeouts
-remain unconfirmed. Cancellation always becomes `Unconfirmed` and never calls
-the rejection classifier.
+If the sink raises, `classify(error)` returns a `DeliveryFailure`. `Rejected`
+returns the gate to `Pending`, so a different initial callback may be sent;
+`Expired` closes the window; `Uncertain` leaves it `Unconfirmed`. The REST
+classifier (`classify_rest_callback_failure`) treats JSON error code 10062
+(Unknown Interaction) as `Expired`. Client-side `DiscordHttpError::Validation`
+and other HTTP 4xx API errors are `Rejected`, except status 429 and error code
+40060 (already acknowledged). Server errors, transport errors, and timeouts are
+`Uncertain`. Cancellation always becomes `Unconfirmed` and never calls the
+classifier. A `send` made while another callback is in flight waits for that
+delivery to finish, then sees its result.
 
 `gate.expire()` changes only `Pending` to `Expired`; other states remain
 unchanged. The HTTP interaction endpoint expires the gate on a callback
 deadline, while preserving a callback that already won the capture race.
-`gate.responded()` is true for every state except `Pending`, including expiry.
+`gate.is_pending()` is true only while an initial callback can still be sent.
+After a `DeferredChannelMessageWithSource` callback, `gate.placeholder_open()`
+stays true until the original response is edited or deleted, or a followup is
+sent. The contexts' `reply` methods use it to choose between editing the
+loading message and sending a followup.
 Command, component, and modal contexts expose the current state through
 `ctx.response_state()` without exposing their gate. App error policies read
 the same state through `FailureCtx::response_state()`.

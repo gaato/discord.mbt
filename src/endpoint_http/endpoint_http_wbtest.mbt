@@ -328,7 +328,7 @@ async test "interactions server answers 202, 504, and 500 and reports startup fa
       public_key~,
       token="test-token",
       application_id=@model.Id::parse("400000000000000001"),
-      deadline_ms=5,
+      deadline_ms=20,
     )
     defer server.close()
     let silent = command_body("silent", "x", "500000000000000104")

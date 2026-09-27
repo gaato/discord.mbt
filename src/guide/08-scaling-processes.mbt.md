@@ -130,8 +130,9 @@ directly instead of applying the admission policy.
 Each cooldown store has its own connection, independent of blocking
 `http_acquire` requests. Acquisition makes one attempt with no retries;
 `timeout_ms` (default 1000) bounds the entire operation, including connection
-queueing and reconnect time. This work runs before the handler can defer and
-spends Discord's three-second initial-response budget. Identify and REST retain
+queueing and reconnect time. This work runs before the handler and spends
+Discord's three-second initial-response budget; `Deferred` handlers are
+acknowledged automatically when 1000 ms of it remain. Identify and REST retain
 their existing retry policy; `RemoteRateLimiter` remains fail-closed because
 avoiding Discord's 429 bans is a correctness concern.
 

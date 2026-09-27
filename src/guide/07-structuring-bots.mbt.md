@@ -335,9 +335,10 @@ test "feature installer declarations compile" {
 Call `.check` more than once when a command needs several guards. The App runs
 them in registration order. The complete command path is middleware, checks,
 cooldown, argument decoding, then the handler. A check may use `ctx.app()` for
-async I/O, but checks run before the handler can defer and therefore spend
-Discord's three-second initial-response budget; keep them fast or cache their
-results. Cooldown failures use the same error policy as handler failures.
+async I/O. Checks run before the handler, inside Discord's three-second
+initial-response window. `Deferred` handlers are acknowledged automatically
+when 1000 ms of that budget remain; immediate handlers are not, so keep checks
+fast or cache their results. Cooldown failures use the same error policy as handler failures.
 
 Cooldown storage belongs to the App, with a fresh `InMemoryCooldownStore` by
 default. Command type, name, and bucket are included in each storage key, so

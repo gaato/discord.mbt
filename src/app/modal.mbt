@@ -555,6 +555,14 @@ pub(all) enum ModalSubmitHandler[A] {
 }
 
 ///|
+fn[A] ModalSubmitHandler::ack_plan(self : ModalSubmitHandler[A]) -> AckPlan {
+  match self {
+    Deferred(ephemeral~, _) => DeferMessage(ephemeral~)
+    Immediate(_) | Raw(_) => Respond
+  }
+}
+
+///|
 /// Read-only modal-submit context for handlers returning an initial message.
 pub struct ModalImmediateCtx {
   priv raw_ : @framework.ModalCtx
@@ -789,7 +797,7 @@ async fn[A] dispatch_modal_handler(
     }
     Deferred(ephemeral~, run) => {
       let value = modal.decode(raw.data.components, resolved?=raw.data.resolved)
-      raw.defer_response(ephemeral~)
+      ensure_acknowledged(modal_admission(raw), DeferMessage(ephemeral~))
       run({ raw_: raw, bot_: bot, state_: state, }, value)
     }
   }

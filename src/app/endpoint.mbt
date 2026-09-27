@@ -14,7 +14,7 @@ pub(all) enum InteractionOutcome {
 /// A gateway-free interaction dispatcher backed by a caller-owned task group.
 pub struct InteractionEndpoint {
   priv framework : @framework.Framework
-  priv spawner : Spawner
+  priv group : @async.TaskGroup[Unit]
   priv warn : (String) -> Unit
 }
 
@@ -61,13 +61,15 @@ pub async fn App::serve(
   }
   let framework = @framework.Framework(client, application_id)
   self.attach(framework, client~, application_id~) |> ignore
-  { framework, spawner: self.spawner(group), warn: self.warn_, }
+  { framework, group, warn: self.warn_, }
 }
 
 ///|
 /// Dispatch one interaction and wait only for its initial response deadline.
-/// A timed-out handler remains attached to the app's task group and continues
-/// in the background.
+/// `deadline_ms` is measured from this call: routing starts immediately, and
+/// time spent waiting for handler capacity counts against it. A timed-out
+/// handler remains attached to the app's task group and continues in the
+/// background.
 pub async fn InteractionEndpoint::handle_interaction(
   self : InteractionEndpoint,
   interaction : @model.Interaction,
@@ -76,9 +78,12 @@ pub async fn InteractionEndpoint::handle_interaction(
   if interaction.typ == Ping {
     return Reply(response={ typ: Pong, data: None, }, files=None)
   }
-  let (gate, capture) = @framework.ResponseGate::capture(interaction)
+  let (gate, capture) = @framework.ResponseGate::capture(
+    interaction,
+    deadline_ms~,
+  )
   let race : @aqueue.Queue[InteractionRace] = Queue(kind=Unbounded)
-  (self.spawner)(() => {
+  self.group.spawn_bg(allow_failure=true, () => {
     let routed = self.framework.process_with(interaction, gate~) catch {
       error if @async.is_being_cancelled() => raise error
       error => {
@@ -86,7 +91,7 @@ pub async fn InteractionEndpoint::handle_interaction(
         true
       }
     }
-    if !gate.responded() {
+    if gate.is_pending() {
       race.put(Completed(routed))
     }
   })

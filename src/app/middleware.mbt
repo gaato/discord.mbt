@@ -76,16 +76,19 @@ pub fn InteractionCtx::guild_id(self : InteractionCtx) -> @model.GuildId? {
 }
 
 ///|
-/// Send the initial response from middleware, short-circuiting the handler.
+/// Answer from middleware, typically before short-circuiting the handler.
+/// While the callback is pending this is the initial response; if a
+/// deferring route's watchdog already acknowledged, it replaces the loading
+/// placeholder, whose visibility was fixed when deferring.
 pub async fn InteractionCtx::respond(
   self : InteractionCtx,
   message : String,
   ephemeral? : Bool = true,
 ) -> Unit {
   match self.raw_ {
-    RawCommand(ctx) => ctx.respond(content=message, ephemeral~)
-    RawComponent(ctx) => ctx.respond(content=message, ephemeral~)
-    RawModal(ctx) => ctx.respond(content=message, ephemeral~)
+    RawCommand(ctx) => ctx.reply(content=message, ephemeral~)
+    RawComponent(ctx) => ctx.reply(content=message, ephemeral~)
+    RawModal(ctx) => ctx.reply(content=message, ephemeral~)
   }
 }
 

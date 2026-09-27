@@ -23,7 +23,7 @@ async test "response gate captures one valid callback" {
     data: Some({ "content": "hello" }),
   }
   gate.send(response)
-  assert_true(gate.responded())
+  assert_false(gate.is_pending())
   let captured = capture.get()
   assert_true(captured.response.typ == ChannelMessageWithSource)
   assert_true(captured.files is None)
@@ -54,7 +54,7 @@ async test "response gate rejects modal callbacks for modal submits" {
     @framework.ResponseGateError::InvalidCallback(kind~, typ~) => {
       assert_true(kind == ModalSubmit)
       assert_true(typ == Modal)
-      assert_false(gate.responded())
+      assert_true(gate.is_pending())
     }
     error => fail("unexpected error: \{Repr(error)}")
   } noraise {
@@ -94,7 +94,7 @@ async test "rejected sink error reopens the gate" {
         raise GateSinkError
       }
     },
-    rejected=_ => true,
+    classify=_ => Rejected,
   )
   try gate.send({ typ: ChannelMessageWithSource, data: None, }) catch {
     GateSinkError => ()
@@ -103,7 +103,7 @@ async test "rejected sink error reopens the gate" {
     _ => fail("expected sink failure")
   }
   assert_eq(gate.state(), Pending)
-  assert_false(gate.responded())
+  assert_true(gate.is_pending())
   gate.send({ typ: DeferredChannelMessageWithSource, data: None, })
   assert_eq(gate.state(), Sent(DeferredChannelMessageWithSource))
   assert_eq(calls.val, 2)
@@ -115,7 +115,7 @@ async test "expire blocks later sends" {
   gate.expire()
   gate.expire()
   assert_eq(gate.state(), Expired)
-  assert_true(gate.responded())
+  assert_false(gate.is_pending())
   try gate.send({ typ: ChannelMessageWithSource, data: None, }) catch {
     @framework.ResponseGateError::Expired => ()
     error => fail("unexpected error: \{Repr(error)}")
@@ -140,7 +140,7 @@ async test "response gate remains terminal after sink failure" {
     raise GateSinkError
   })
   try gate.send({ typ: ChannelMessageWithSource, data: None, }) catch {
-    GateSinkError => assert_true(gate.responded())
+    GateSinkError => assert_false(gate.is_pending())
     error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected sink failure")
@@ -172,7 +172,7 @@ async test "response gate remains terminal after sink cancellation" {
     } noraise {
       _ => fail("cancelled send unexpectedly completed")
     }
-    assert_true(gate.responded())
+    assert_false(gate.is_pending())
     try gate.send({ typ: ChannelMessageWithSource, data: None, }) catch {
       @framework.ResponseGateError::AlreadyResponded => ()
       error => fail("unexpected error: \{Repr(error)}")
@@ -180,4 +180,95 @@ async test "response gate remains terminal after sink cancellation" {
       _ => fail("expected AlreadyResponded")
     }
   })
+}
+
+///|
+async test "a pending gate expires at its deadline" {
+  let sent = Ref(0)
+  let gate = @framework.ResponseGate(
+    ApplicationCommand,
+    (_, _) => sent.val += 1,
+    deadline_ms=20,
+  )
+  assert_true(gate.remaining_ms() is Some(left) && left > 0 && left <= 20)
+  assert_true(gate.is_pending())
+  @async.sleep(40)
+  assert_eq(gate.remaining_ms(), Some(0))
+  assert_eq(gate.state(), Expired)
+  try gate.send({ typ: ChannelMessageWithSource, data: None, }) catch {
+    @framework.ResponseGateError::Expired => ()
+    error => fail("unexpected error: \{Repr(error)}")
+  } noraise {
+    _ => fail("expected an expired gate")
+  }
+  assert_eq(sent.val, 0)
+}
+
+///|
+async test "a gate without a deadline never expires on its own" {
+  let gate = @framework.ResponseGate(ApplicationCommand, (_, _) => ())
+  assert_eq(gate.remaining_ms(), None)
+  assert_true(gate.is_pending())
+}
+
+///|
+async test "only a deferred message opens the placeholder" {
+  let deferred = @framework.ResponseGate(ApplicationCommand, (_, _) => ())
+  deferred.send({ typ: DeferredChannelMessageWithSource, data: None, })
+  assert_true(deferred.placeholder_open())
+  deferred.close_placeholder()
+  assert_false(deferred.placeholder_open())
+  let message = @framework.ResponseGate(ApplicationCommand, (_, _) => ())
+  message.send({ typ: ChannelMessageWithSource, data: None, })
+  assert_false(message.placeholder_open())
+  let rejected = @framework.ResponseGate(
+    ApplicationCommand,
+    (_, _) => raise GateSinkError,
+    classify=_ => Rejected,
+  )
+  try
+    rejected.send({ typ: DeferredChannelMessageWithSource, data: None, })
+  catch {
+    GateSinkError => ()
+    error => fail("unexpected error: \{Repr(error)}")
+  } noraise {
+    _ => fail("expected sink failure")
+  }
+  assert_false(rejected.placeholder_open())
+}
+
+///|
+async test "a concurrent send observes the in-flight callback's outcome" {
+  let release : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  let attempts = Ref(0)
+  let gate = @framework.ResponseGate(
+    ApplicationCommand,
+    (_, _) => {
+      attempts.val += 1
+      if attempts.val == 1 {
+        release.get()
+        raise GateSinkError
+      }
+    },
+    classify=_ => Rejected,
+  )
+  @async.with_task_group(group => {
+    let first = group.spawn(allow_failure=true, () => {
+      gate.send({ typ: DeferredChannelMessageWithSource, data: None, })
+    })
+    let second = group.spawn(() => {
+      gate.send({ typ: ChannelMessageWithSource, data: None, })
+    })
+    release.put(())
+    try first.wait() catch {
+      GateSinkError => ()
+      error => fail("unexpected error: \{Repr(error)}")
+    } noraise {
+      _ => fail("expected the first delivery to fail")
+    }
+    second.wait()
+  })
+  // The rejected deferral reopened the window, so the waiting send went out.
+  assert_eq(attempts.val, 2)
+  assert_eq(gate.state(), Sent(ChannelMessageWithSource))
 }

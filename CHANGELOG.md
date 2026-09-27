@@ -7,6 +7,57 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+### Added
+
+- `CommandCtx::reply`, `ComponentCtx::reply`, and `ModalCtx::reply` send a
+  message through whichever path the response state allows: the initial
+  response while pending, an edit of a deferred message's loading
+  placeholder, or a followup.
+- `remaining_ms()` on every interaction context and on `ResponseGate`: the
+  milliseconds left before the initial-response window closes.
+- `ResponseGate::placeholder_open()` and `close_placeholder()`, and the
+  `DEFAULT_INTERACTION_DEADLINE_MS` constant (2500).
+
+### Changed
+
+- **Waiting handlers no longer deadlock the executor at `max_in_flight`.**
+  Routing and component waiters now run outside the handler budget. Before,
+  once `max_in_flight` handlers were all in `wait_for_component`, the button
+  press that would wake one of them could not be routed. The Gateway
+  dispatch loop also no longer waits for event-handler capacity: event
+  middleware and handler fan-out run in their own task with a separate
+  budget of the same size, so busy event handlers never delay interactions.
+- **Initial-response deadlines are measured from receipt.**
+  `InteractionEndpoint::handle_interaction`'s `deadline_ms` now includes
+  time spent waiting for handler capacity. Gateway interactions get the same
+  2500 ms deadline through `Framework::process(deadline_ms?)`. An immediate
+  or raw handler that cannot get capacity before the deadline is dropped
+  with a warning instead of answering late.
+- **Deferring routes acknowledge in time even when middleware, checks, or
+  decoding are slow.** For `Deferred`, `DeferredUpdate`, and
+  `DeferredMessage` handlers, a watchdog defers on the handler's behalf when
+  1000 ms of the budget remain. Fast failures still get an ephemeral initial
+  response. Failures after the automatic defer, and
+  `InteractionCtx::respond` from middleware, replace the loading
+  placeholder; its visibility is the one the handler declared.
+- **`FailureCtx::respond_error` edits a deferred message's loading
+  placeholder instead of sending a followup.** Discord documents the
+  followup-as-edit behavior as deprecated. After the handler has edited the
+  original response, errors are still sent as followups.
+- `ResponseGate` sorts delivery failures three ways (`DeliveryFailure`:
+  `Rejected`, `Expired`, `Uncertain`). A callback rejected with Unknown
+  Interaction (10062) now closes the window (`Expired`) instead of reopening
+  it. A pending gate whose deadline has passed reads as `Expired`. A `send`
+  made while another callback is being delivered waits for that delivery to
+  finish and then sees its result.
+- Breaking: `ResponseGate(rejected~ : (Error) -> Bool)` is now
+  `classify~ : (Error) -> DeliveryFailure`. Migration: return `Rejected`
+  where the classifier returned `true` and `Uncertain` where it returned
+  `false`. The REST classifier is public as
+  `@framework.classify_rest_callback_failure`.
+- Breaking: `ResponseGate::responded()` is replaced by `is_pending()`.
+  Migration: `gate.responded()` becomes `!gate.is_pending()`.
+
 ## [0.6.0] - 2026-09-25
 
 ### Added

@@ -166,25 +166,32 @@ fn install_maintenance(
 }
 ```
 
-Interaction middleware uses Discord's three-second initial-response window.
-If the initial response is not sent within three seconds, Discord invalidates
-the interaction token. Do not perform heavy work before `next()`. Respond from
-middleware when it owns the result, or call `next()` promptly into a
-`Deferred` handler so the handler can acknowledge before doing slow work.
+Interaction middleware runs inside Discord's three-second initial-response
+window. If no initial response is sent within three seconds, Discord
+invalidates the interaction token. Deferring routes (`Deferred`,
+`DeferredUpdate`, `DeferredMessage`) are acknowledged automatically when
+1000 ms of the budget remain, so slow middleware in front of them cannot expire
+the interaction. After that acknowledgement, `InteractionCtx::respond` replaces
+the loading message instead of sending an initial response. Immediate and raw
+routes have no fallback: keep heavy work out of middleware in front of them.
 `InteractionCtx` itself has no defer method.
 
 ## Rich error-policy responses
 
 The error policy receives the invoking user and, for interaction failures, an
 optional raw context. Prefer `respond_error` for replies because it selects an
-initial response or followup from the gate's real state. `response_state()`
+initial response, a placeholder edit, or a followup from the gate's real state. `response_state()`
 reads that state on demand, including responses sent through `raw()`:
 
 - `Some(Pending)` sends an initial callback. A definitively rejected callback
   returns the gate to this state so the policy can send a different payload.
-- `Some(Sent(type))` or `Some(Unconfirmed(type))` attempts a followup. The latter
-  means the sink raised and delivery may have succeeded; followup failures go
-  to the existing warning hook.
+- `Some(Sent(DeferredChannelMessageWithSource))` edits the loading message
+  while it is still showing; the reply keeps the visibility chosen when
+  deferring. Once the handler has edited or deleted the original response, a
+  followup is sent instead.
+- Any other `Some(Sent(type))` or `Some(Unconfirmed(type))` sends a followup.
+  `Unconfirmed` means the sink raised and delivery may have succeeded. An
+  unconfirmed deferral is edited first, with a followup as the fallback.
 - `Some(Expired)` warns with a payload summary because the executor closed the
   callback window.
 - `None` also warns: event, service, and autocomplete failures have no raw
@@ -292,9 +299,10 @@ decode-error observation, and interaction routing have already received the
 decoded wire event. In particular, dropping every event here does not disable
 slash-command routing through `App`.
 
-The event chain runs serially in each shard's dispatch loop, and `next`
-returns once handlers have been spawned rather than when they finish. Return
-promptly, just as a telemetry hook must. A dropped event emits no
+The event chain runs serially, in event order, in a dispatch task separate
+from the shard loop, and `next` returns once handlers have been spawned rather
+than when they finish. Slow middleware delays later events, never interaction
+routing; still return promptly, just as a telemetry hook must. A dropped event emits no
 `EventDispatched` telemetry. Middleware cannot widen configured intents or
 the Gateway event filter. If event middleware raises, the bot reports it to
 the warning sink and continues the dispatch loop.

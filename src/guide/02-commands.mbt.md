@@ -243,11 +243,14 @@ dispatch for commands, components, and modals. It does not run for
 autocomplete. Use checks for command-specific permissions and preconditions.
 Checks may call async services such as Discord REST through
 `ctx.app().http()`. The command path is middleware, checks in registration
-order, cooldown, argument decoding, then the handler. Checks run before the
-handler can defer, so they spend Discord's three-second initial-response budget;
-keep them fast or cache their results. A cooldown store is called only after
-all checks pass, and commands without a cooldown never call it. Remote cooldown
-acquisitions also spend that initial-response budget.
+order, cooldown, argument decoding, then the handler. All of it runs inside
+Discord's three-second initial-response window. A `Deferred` handler is
+acknowledged automatically if that work is still running when 1000 ms of the
+budget remain, so a slow check cannot expire it. A later failure then replaces
+the loading message, whose visibility the handler declared. Immediate and raw
+handlers have no such fallback, so keep checks fast or cache their results. A
+cooldown store is called only after all checks pass, and commands without a
+cooldown never call it.
 Use middleware for policy that spans interaction kinds, or inspect its routed
 target to keep the policy scoped. See [Middleware](09-middleware.mbt.md) for
 ordering, short-circuiting, and error-policy behavior.

@@ -21,6 +21,15 @@ pub(all) enum ComponentHandler[A] {
 }
 
 ///|
+fn[A] ComponentHandler::ack_plan(self : ComponentHandler[A]) -> AckPlan {
+  match self {
+    DeferredUpdate(_) => DeferUpdate
+    DeferredMessage(ephemeral~, _) => DeferMessage(ephemeral~)
+    Immediate(_) | Raw(_) => Respond
+  }
+}
+
+///|
 /// Read-only component context for handlers returning their initial callback.
 pub struct ComponentImmediateCtx {
   priv raw_ : @framework.ComponentCtx
@@ -435,12 +444,12 @@ async fn[A] ComponentRoute::dispatch_typed(
     }
     DeferredUpdate(run) => {
       let value = self.decode(raw.data.custom_id)
-      raw.defer_update()
+      ensure_acknowledged(component_admission(raw), DeferUpdate)
       run({ raw_: raw, bot_: bot, waiter_: waiter, warn_: warn, }, value)
     }
     DeferredMessage(ephemeral~, run) => {
       let value = self.decode(raw.data.custom_id)
-      raw.defer_response(ephemeral~)
+      ensure_acknowledged(component_admission(raw), DeferMessage(ephemeral~))
       run({ raw_: raw, bot_: bot, waiter_: waiter, warn_: warn, }, value)
     }
     Raw(run) => run(raw)
@@ -450,6 +459,7 @@ async fn[A] ComponentRoute::dispatch_typed(
 ///|
 priv struct RegisteredComponent {
   pattern : AppRoutePattern
+  ack : AckPlan
   dispatch : async (
     AppCtx,
     ComponentWaiter?,
@@ -465,6 +475,7 @@ fn[A] ComponentRoute::erase(
 ) -> RegisteredComponent {
   {
     pattern: Id(self.id_),
+    ack: handler.ack_plan(),
     dispatch: (bot, waiter, warn, raw) => {
       self.dispatch_typed(handler, bot, waiter, warn, raw)
     },
