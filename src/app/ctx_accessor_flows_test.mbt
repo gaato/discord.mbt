@@ -1,6 +1,6 @@
 ///|
 test "app validation rejects modals with more than five fields" {
-  let app = @app.App()
+  let app = @app.AppBuilder()
   let six = @app.ModalFields::map5(
     @app.text_field(custom_id="f1", label="f1"),
     @app.text_field(custom_id="f2", label="f2"),
@@ -13,7 +13,7 @@ test "app validation rejects modals with more than five fields" {
     @app.modal(custom_id="too-big", title="Too big", fields=six),
     Raw(_ => ()),
   )
-  try app.validate() catch {
+  try app.build() |> ignore catch {
     InvalidModalFieldCount(custom_id~, count~) => {
       inspect(custom_id, content="too-big")
       inspect(count, content="6")
@@ -26,7 +26,7 @@ test "app validation rejects modals with more than five fields" {
 
 ///|
 async test "command contexts expose their interaction and REST surfaces" {
-  let app = @app.App()
+  let app = @app.AppBuilder()
   let rest_paths : Array[String] = []
   let client = @dhttp.Client("test-token")
   defer client.close()
@@ -72,11 +72,13 @@ async test "command contexts expose their interaction and REST surfaces" {
     ),
   )
   @async.with_task_group(group => {
-    let served = app.serve(
-      group,
-      client~,
-      application_id=@model.Id::parse("400000000000000001"),
-    )
+    let served = app
+      .build()
+      .serve(
+        group,
+        client~,
+        application_id=@model.Id::parse("400000000000000001"),
+      )
     match
       served.handle_interaction(app_command("inspect", "500000000000000501")) {
       Reply(response~, ..) =>

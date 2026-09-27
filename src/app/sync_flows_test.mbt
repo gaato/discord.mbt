@@ -17,7 +17,7 @@ fn sync_stub_client(requests : Array[String], fetched : Json) -> @dhttp.Client {
 
 ///|
 async test "App Keep returns a guild report without deleting other owners" {
-  let app = @app.App()
+  let app = @app.AppBuilder()
   let requests = []
   let client = sync_stub_client(
     requests,
@@ -28,12 +28,14 @@ async test "App Keep returns a guild report without deleting other owners" {
   )
   defer client.close()
   let guild_id : @model.GuildId = @model.Id::parse("100")
-  let report = app.sync_commands(
-    client,
-    @model.Id::parse("42"),
-    scope=Guild(guild_id),
-    unowned=Keep,
-  )
+  let report = app
+    .build()
+    .sync_commands(
+      client,
+      @model.Id::parse("42"),
+      scope=Guild(guild_id),
+      unowned=Keep,
+    )
   assert_eq(report.scopes.length(), 1)
   assert_eq(report.scopes[0].guild_id, Some(guild_id))
   assert_eq(report.scopes[0].preserved, ["other", "4:Launch"])
@@ -46,7 +48,7 @@ async test "App Keep returns a guild report without deleting other owners" {
 
 ///|
 async test "global sync skips matching sets and replaces stale ones" {
-  let app = @app.App()
+  let app = @app.AppBuilder()
   app.command(
     @app.slash(
       name="ping",
@@ -71,7 +73,9 @@ async test "global sync skips matching sets and replaces stale ones" {
     ),
   )
   defer in_sync_client.close()
-  let matching = app.sync_commands(in_sync_client, application_id, scope=Global)
+  let matching = app
+    .build()
+    .sync_commands(in_sync_client, application_id, scope=Global)
   assert_eq(matching.scopes.length(), 1)
   assert_true(matching.scopes[0].guild_id is None)
   assert_false(matching.scopes[0].overwritten)
@@ -93,7 +97,9 @@ async test "global sync skips matching sets and replaces stale ones" {
     ),
   )
   defer stale_client.close()
-  let stale = app.sync_commands(stale_client, application_id, scope=Global)
+  let stale = app
+    .build()
+    .sync_commands(stale_client, application_id, scope=Global)
   assert_true(stale.scopes[0].overwritten)
   assert_eq(stale.scopes[0].updated, ["ping"])
   inspect(
@@ -109,7 +115,7 @@ async test "global sync skips matching sets and replaces stale ones" {
 async test "guild sync targets each configured guild" {
   let guild_a : @model.GuildId = @model.Id::parse("100")
   let guild_b : @model.GuildId = @model.Id::parse("101")
-  let app = @app.App()
+  let app = @app.AppBuilder()
   app.command(
     @app.slash(
       name="ping",
@@ -121,11 +127,13 @@ async test "guild sync targets each configured guild" {
   let requests : Array[String] = []
   let client = sync_stub_client(requests, Json::array([]))
   defer client.close()
-  let report = app.sync_commands(
-    client,
-    @model.Id::parse("400000000000000001"),
-    scope=Guilds([guild_a, guild_b]),
-  )
+  let report = app
+    .build()
+    .sync_commands(
+      client,
+      @model.Id::parse("400000000000000001"),
+      scope=Guilds([guild_a, guild_b]),
+    )
   assert_eq(report.scopes.map(scope => scope.guild_id), [
     Some(guild_a),
     Some(guild_b),

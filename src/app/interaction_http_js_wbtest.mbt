@@ -41,8 +41,8 @@ const JS_KEY_2 : String = "3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd5
 const JS_TIMESTAMP : String = "1720951200"
 
 ///|
-fn js_fixture_app() -> App {
-  let app = App()
+fn js_fixture_app() -> AppBuilder {
+  let app = AppBuilder()
   app.command(
     slash(
       name="echo",
@@ -170,7 +170,7 @@ async test "js dispatch returns the echo callback then completes" {
       ),
     ),
   )
-  let dispatch = js_start(app, request, public_key=JS_KEY_1)
+  let dispatch = js_start(app.build(), request, public_key=JS_KEY_1)
   let response = js_await_response(dispatch)
   assert_eq(response.status(), 200)
   assert_eq(response.content_type(), "application/json")
@@ -188,7 +188,7 @@ async test "js dispatch returns the echo callback then completes" {
 async test "js dispatch maps invalid JSON to 400" {
   let app = js_fixture_app()
   let request = js_signed_request(JS_SEED_1, "{")
-  let dispatch = js_start(app, request, public_key=JS_KEY_1)
+  let dispatch = js_start(app.build(), request, public_key=JS_KEY_1)
   let response = js_await_response(dispatch)
   assert_eq(response.status(), 400)
   assert_eq(js_read_text(response), "invalid interaction JSON")
@@ -202,7 +202,7 @@ async test "js dispatch streams a multipart reply" {
     JS_SEED_1,
     js_command_body("500000000000000201", "file", ""),
   )
-  let dispatch = js_start(app, request, public_key=JS_KEY_1)
+  let dispatch = js_start(app.build(), request, public_key=JS_KEY_1)
   let response = js_await_response(dispatch)
   assert_eq(response.status(), 200)
   let content_type = response.content_type()
@@ -241,7 +241,7 @@ async test "js dispatch rejects a pre-aborted response and still finishes" {
   let controller = @js_async.AbortController::new()
   controller.abort()
   let dispatch = js_start(
-    app,
+    app.build(),
     request,
     public_key=JS_KEY_1,
     abort_signal=controller.signal(),
@@ -261,7 +261,7 @@ async test "js dispatch answers a silent handler with 202 and no body" {
     JS_SEED_1,
     js_command_body("500000000000000203", "silent", ""),
   )
-  let dispatch = js_start(app, request, public_key=JS_KEY_1)
+  let dispatch = js_start(app.build(), request, public_key=JS_KEY_1)
   let response = js_await_response(dispatch)
   assert_eq(response.status(), 202)
   assert_eq(response.content_type(), "")
@@ -273,14 +273,14 @@ async test "js dispatch answers a silent handler with 202 and no body" {
 async test "js dispatch rebuilds the verifier when the public key rotates" {
   let app = js_fixture_app()
   let first = js_start(
-    app,
+    app.build(),
     js_signed_request(JS_SEED_1, js_ping_body()),
     public_key=JS_KEY_1,
   )
   assert_eq(js_await_response(first).status(), 200)
   js_await_background(first)
   let second = js_start(
-    app,
+    app.build(),
     js_signed_request(JS_SEED_2, js_ping_body()),
     public_key=JS_KEY_2,
   )
@@ -293,7 +293,7 @@ async test "js dispatch rejects an unusable public key without caching it" {
   let app = js_fixture_app()
   let unusable = "z".repeat(64)
   let broken = js_start(
-    app,
+    app.build(),
     js_signed_request(JS_SEED_1, js_ping_body()),
     public_key=unusable,
   )
@@ -302,7 +302,7 @@ async test "js dispatch rejects an unusable public key without caching it" {
   assert_eq(js_read_text(response), "invalid signature")
   js_await_background(broken)
   let usable = js_start(
-    app,
+    app.build(),
     js_signed_request(JS_SEED_1, js_ping_body()),
     public_key=JS_KEY_1,
   )

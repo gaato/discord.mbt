@@ -23,7 +23,7 @@ async fn[A : Eq + Debug] assert_component_route_roundtrip(
   )
   for mode in 0..<3 {
     let route = @app.component_route(id="roundtrip", state=codec)
-    let app = @app.App()
+    let app = @app.AppBuilder()
     let seen : Array[A] = []
     let errors : Array[String] = []
     app.error_policy((_, error) => errors.push("\{Repr(error)}"))
@@ -37,9 +37,9 @@ async fn[A : Eq + Debug] assert_component_route_roundtrip(
       _ => DeferredMessage(ephemeral=true, (_, state) => seen.push(state))
     }
     app.on_component(route, handler)
-    app.validate()
+    app.build() |> ignore
     let fw = @framework.Framework(client, application_id)
-    app.attach(fw, client~, application_id~) |> ignore
+    app.build().attach(fw, client~, application_id~) |> ignore
     let interaction = app_component(
       app_route_button_id(route, value),
       "500000000000002301",
@@ -102,7 +102,7 @@ async test "component state decode failure reaches the policy as Malformed" {
       }),
     ] {
     for mode in 0..<3 {
-      let app = @app.App()
+      let app = @app.AppBuilder()
       let called = Ref(false)
       let invalid = Ref(false)
       let pending = Ref(false)
@@ -122,7 +122,7 @@ async test "component state decode failure reaches the policy as Malformed" {
       }
       app.on_component(route, handler)
       let fw = @framework.Framework(client, application_id)
-      app.attach(fw, client~, application_id~) |> ignore
+      app.build().attach(fw, client~, application_id~) |> ignore
       let interaction = app_component("number:invalid", "500000000000002302")
       let (gate, capture) = @framework.ResponseGate::capture(interaction)
       assert_true(fw.process_with(interaction, gate~))
@@ -141,16 +141,16 @@ async test "typed raw component handlers skip decoding and raw prefixes stay lit
   let application_id : @model.ApplicationId = @model.Id::parse(
     "400000000000000001",
   )
-  let app = @app.App()
+  let app = @app.AppBuilder()
   let seen : Array[String] = []
   app.on_component(
     @app.component_route(id="typed", state=@app.CustomIdCodec::int()),
     Raw(raw => seen.push(raw.data.custom_id)),
   )
   app.on_component_raw(prefix="literal", raw => seen.push(raw.data.custom_id))
-  app.validate()
+  app.build() |> ignore
   let fw = @framework.Framework(client, application_id)
-  app.attach(fw, client~, application_id~) |> ignore
+  app.build().attach(fw, client~, application_id~) |> ignore
   assert_true(fw.process(app_component("typed:invalid", "500000000000002303")))
   assert_true(fw.process(app_component("literalish", "500000000000002304")))
   assert_false(fw.process(app_component("typedish", "500000000000002305")))
@@ -165,7 +165,7 @@ async test "typed modal sibling ids fall through without decoding" {
     "400000000000000001",
   )
   for sibling_route in [false, true] {
-    let app = @app.App()
+    let app = @app.AppBuilder()
     let decoded : Array[String?] = []
     let errors : Array[String] = []
     let siblings : Array[String] = []
@@ -182,9 +182,9 @@ async test "typed modal sibling ids fall through without decoding" {
         siblings.push(raw.data.custom_id)
       })
     }
-    app.validate()
+    app.build() |> ignore
     let fw = @framework.Framework(client, application_id)
-    app.attach(fw, client~, application_id~) |> ignore
+    app.build().attach(fw, client~, application_id~) |> ignore
     for id in ["feedback", "feedback:", "feedback:42"] {
       let interaction = app_modal_submit(id, "note", "500000000000002306")
       let (gate, _) = @framework.ResponseGate::capture(interaction)

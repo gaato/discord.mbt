@@ -35,10 +35,10 @@ async fn main {
       )
       let target_user_id = required_env("TARGET_USER_ID")
       let output_path = env_or("OUTPUT_PATH", "recording.ogg")
-      let app = @discord.App()
+      let app = @discord.AppBuilder()
       let intents = @model.Intents::guilds() |
         @model.Intents::guild_voice_states()
-      let bot = @discord.Bot(app, token~, intents~)
+      let bot = @discord.Bot(app.build(), token~, intents~)
       bot.service(name="voice-recorder", ctx => {
         let connection = ctx.join_voice(guild_id, channel_id)
         errdefer @async.protect_from_cancel(() => {

@@ -88,24 +88,28 @@ pub(all) suberror ModalPrefillError {
 pub struct App {
   // private fields
 }
-pub fn App::App(max_in_flight? : Int, cooldown_store? : &@cooldown.CooldownStore) -> Self
 pub fn App::attach(Self, @framework.Framework, client~ : @http.Client, application_id~ : @model.Id[@model.ApplicationMarker], waiter? : async (String, @model.Id[@model.UserMarker]?, Int?) -> @framework.ComponentCtx?, latency_ms? : () -> Int64?) -> AppCtx
-pub fn App::autocomplete(Self, String, async (@framework.AutocompleteCtx) -> Unit) -> Unit
-pub fn[A] App::command(Self, Command[A]) -> Unit
-pub fn App::error_policy(Self, async (FailureCtx, Error) -> Unit) -> Unit
-pub fn App::middleware(Self, async (InteractionCtx, async () -> Unit) -> Unit) -> Unit
-pub fn[A] App::on_component(Self, ComponentRoute[A], ComponentHandler[A]) -> Unit
-pub fn App::on_component_raw(Self, prefix~ : String, async (@framework.ComponentCtx) -> Unit) -> Unit
-pub fn[A] App::on_modal(Self, Modal[A], ModalSubmitHandler[A]) -> Unit
-pub fn App::on_modal_raw(Self, prefix~ : String, async (@framework.ModalCtx) -> Unit) -> Unit
-pub fn App::on_warn(Self, (String) -> Unit) -> Unit
-pub fn App::register(Self, RegisteredCommand) -> Unit
 pub async fn App::report_failure(Self, FailureOrigin, Error) -> Unit
 pub async fn App::serve(Self, @async.TaskGroup[Unit], client? : @http.Client, token? : String, application_id? : @model.Id[@model.ApplicationMarker]) -> InteractionEndpoint
 pub fn App::spawner(Self, @async.TaskGroup[Unit]) -> async (async () -> Unit) -> Unit
 pub async fn App::sync_commands(Self, @http.Client, @model.Id[@model.ApplicationMarker], scope~ : CommandScope, unowned? : @framework.UnownedCommands) -> SyncReport
-pub fn App::validate(Self) -> Unit raise AppConfigError
 pub fn App::warn(Self, String) -> Unit
+
+pub struct AppBuilder {
+  // private fields
+}
+pub fn AppBuilder::AppBuilder(max_in_flight? : Int, cooldown_store? : &@cooldown.CooldownStore) -> Self
+pub fn AppBuilder::autocomplete(Self, String, async (@framework.AutocompleteCtx) -> Unit) -> Unit
+pub fn AppBuilder::build(Self) -> App raise AppConfigError
+pub fn[A] AppBuilder::command(Self, Command[A]) -> Unit
+pub fn AppBuilder::error_policy(Self, async (FailureCtx, Error) -> Unit) -> Unit
+pub fn AppBuilder::middleware(Self, async (InteractionCtx, async () -> Unit) -> Unit) -> Unit
+pub fn[A] AppBuilder::on_component(Self, ComponentRoute[A], ComponentHandler[A]) -> Unit
+pub fn AppBuilder::on_component_raw(Self, prefix~ : String, async (@framework.ComponentCtx) -> Unit) -> Unit
+pub fn[A] AppBuilder::on_modal(Self, Modal[A], ModalSubmitHandler[A]) -> Unit
+pub fn AppBuilder::on_modal_raw(Self, prefix~ : String, async (@framework.ModalCtx) -> Unit) -> Unit
+pub fn AppBuilder::on_warn(Self, (String) -> Unit) -> Unit
+pub fn AppBuilder::register(Self, RegisteredCommand) -> Unit
 
 pub struct AppCtx {
   // private fields

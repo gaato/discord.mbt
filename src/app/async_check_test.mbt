@@ -59,7 +59,7 @@ async test "async check may await REST before deciding" {
       },
     }
   })
-  let app = @app.App()
+  let app = @app.AppBuilder()
   let handled = Ref(0)
   app.command(
     @app.slash(
@@ -69,7 +69,7 @@ async test "async check may await REST before deciding" {
       handler=Raw(_ => handled.val += 1),
     ).check(ctx => ctx.app().http().get_gateway() == "wss://allowed.example"),
   )
-  let framework = async_check_framework(app, client)
+  let framework = async_check_framework(app.build(), client)
   guard run_async_check(
       framework,
       async_check_interaction("rest-guarded", "500000000000000801"),
@@ -100,7 +100,7 @@ async test "async check may await REST before deciding" {
 async test "a non-HandlerError raised by a check reaches the error policy unchanged" {
   let client = @dhttp.Client("test-token")
   defer client.close()
-  let app = @app.App()
+  let app = @app.AppBuilder()
   let received = Ref(false)
   app.error_policy((_, error) => {
     match error {
@@ -116,7 +116,7 @@ async test "a non-HandlerError raised by a check reaches the error policy unchan
       handler=Raw(_ => fail("handler must not run")),
     ).check(_ => raise AsyncCheckFailure),
   )
-  let framework = async_check_framework(app, client)
+  let framework = async_check_framework(app.build(), client)
   assert_true(
     run_async_check(
       framework,

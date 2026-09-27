@@ -11,18 +11,15 @@ async test "app context exposes an optional latency provider" {
   let application_id : @model.ApplicationId = @model.Id::parse(
     "400000000000000001",
   )
-  let app = App()
-  let with_provider = app.attach(
-    Framework(client, application_id),
-    client~,
-    application_id~,
-    latency_ms=() => Some(42L),
-  )
-  let without_provider = app.attach(
-    Framework(client, application_id),
-    client~,
-    application_id~,
-  )
+  let app = AppBuilder()
+  let with_provider = app
+    .build()
+    .attach(Framework(client, application_id), client~, application_id~, latency_ms=() => {
+      Some(42L)
+    })
+  let without_provider = app
+    .build()
+    .attach(Framework(client, application_id), client~, application_id~)
   debug_inspect(with_provider.latency_ms(), content="Some(42)")
   debug_inspect(without_provider.latency_ms(), content="None")
 }
@@ -301,7 +298,7 @@ async fn dispatch_guard_interaction(
 async test "command checks run in order and stop before the handler" {
   let client = @dhttp.Client("test-token")
   defer client.close()
-  let app = App()
+  let app = AppBuilder()
   let trace : Array[String] = []
   let errors : Array[String] = []
   app.error_policy((_, error) => {
@@ -334,7 +331,9 @@ async test "command checks run in order and stop before the handler" {
     client,
     @model.Id::parse("400000000000000001"),
   )
-  app.attach(
+  app
+  .build()
+  .attach(
     framework,
     client~,
     application_id=@model.Id::parse("400000000000000001"),
@@ -352,7 +351,7 @@ async test "command checks run in order and stop before the handler" {
 async test "built-in scope and permission checks use invocation data" {
   let client = @dhttp.Client("test-token")
   defer client.close()
-  let app = App()
+  let app = AppBuilder()
   let handled : Array[String] = []
   let errors : Array[String] = []
   app.error_policy((_, error) => {
@@ -385,7 +384,9 @@ async test "built-in scope and permission checks use invocation data" {
     client,
     @model.Id::parse("400000000000000001"),
   )
-  app.attach(
+  app
+  .build()
+  .attach(
     framework,
     client~,
     application_id=@model.Id::parse("400000000000000001"),
@@ -422,7 +423,7 @@ async test "built-in scope and permission checks use invocation data" {
 async test "command guild_scope raises in DMs and returns the guild bundle" {
   let client = @dhttp.Client("test-token")
   defer client.close()
-  let app = App()
+  let app = AppBuilder()
   let guild_ids : Array[String] = []
   app.command(
     slash(
@@ -440,7 +441,9 @@ async test "command guild_scope raises in DMs and returns the guild bundle" {
     client,
     @model.Id::parse("400000000000000001"),
   )
-  app.attach(
+  app
+  .build()
+  .attach(
     framework,
     client~,
     application_id=@model.Id::parse("400000000000000001"),
@@ -472,7 +475,7 @@ async test "command cooldown reports retry time and recovers" {
   let client = @dhttp.Client("test-token")
   defer client.close()
   let clock = Ref(1_000L)
-  let app = App(
+  let app = AppBuilder(
     cooldown_store=@cooldown.InMemoryCooldownStore(now=() => clock.val),
   )
   let handled = Ref(0)
@@ -495,7 +498,9 @@ async test "command cooldown reports retry time and recovers" {
     client,
     @model.Id::parse("400000000000000001"),
   )
-  app.attach(
+  app
+  .build()
+  .attach(
     framework,
     client~,
     application_id=@model.Id::parse("400000000000000001"),
@@ -527,7 +532,7 @@ async test "command cooldown reports retry time and recovers" {
 async test "guild and global cooldown buckets share the intended scope" {
   let client = @dhttp.Client("test-token")
   defer client.close()
-  let app = App(
+  let app = AppBuilder(
     cooldown_store=@cooldown.InMemoryCooldownStore(now=() => 1_000L),
   )
   let guild_runs = Ref(0)
@@ -559,7 +564,9 @@ async test "guild and global cooldown buckets share the intended scope" {
     client,
     @model.Id::parse("400000000000000001"),
   )
-  app.attach(
+  app
+  .build()
+  .attach(
     framework,
     client~,
     application_id=@model.Id::parse("400000000000000001"),
@@ -604,7 +611,7 @@ async test "guild and global cooldown buckets share the intended scope" {
 
 ///|
 test "command validation rejects non-positive cooldowns" {
-  let app = App()
+  let app = AppBuilder()
   app.command(
     slash(
       name="invalid-cooldown",
@@ -613,7 +620,7 @@ test "command validation rejects non-positive cooldowns" {
       handler=Raw(_ => ()),
     ).cooldown(seconds=0),
   )
-  try app.validate() catch {
+  try app.build() |> ignore catch {
     InvalidCooldown(command~, seconds~) => {
       inspect(command, content="invalid-cooldown")
       inspect(seconds, content="0")
@@ -654,7 +661,7 @@ test "initial response emits explicit typed allowed mentions" {
 
 ///|
 test "app validates command type names and slash child structure" {
-  let duplicate = App()
+  let duplicate = AppBuilder()
   let command = slash(
     name="same",
     description="Duplicate",
@@ -663,13 +670,13 @@ test "app validates command type names and slash child structure" {
   )
   duplicate.command(command)
   duplicate.command(command)
-  try duplicate.validate() catch {
+  try duplicate.build() |> ignore catch {
     DuplicateCommand(name~) => inspect(name, content="same")
     error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected duplicate command error")
   }
-  let mixed = App()
+  let mixed = AppBuilder()
   mixed.command(
     slash(
       name="shared",
@@ -679,8 +686,8 @@ test "app validates command type names and slash child structure" {
     ),
   )
   mixed.command(user_command(name="shared", handler=Raw(_ => ())))
-  mixed.validate()
-  let duplicate_path = App()
+  mixed.build() |> ignore
+  let duplicate_path = AppBuilder()
   duplicate_path.command(
     slash_group(name="admin", description="Administrative tools", children=[
       subcommand(
@@ -697,7 +704,7 @@ test "app validates command type names and slash child structure" {
       ),
     ]),
   )
-  try duplicate_path.validate() catch {
+  try duplicate_path.build() |> ignore catch {
     DuplicateCommandPath(command~, path~) => {
       inspect(command, content="admin")
       inspect(path, content="ping")
@@ -706,7 +713,7 @@ test "app validates command type names and slash child structure" {
   } noraise {
     _ => fail("expected duplicate path error")
   }
-  let nested_group = App()
+  let nested_group = AppBuilder()
   nested_group.command(
     slash_group(name="admin", description="Administrative tools", children=[
       subcommand_group(name="outer", description="Outer group", children=[
@@ -714,7 +721,7 @@ test "app validates command type names and slash child structure" {
       ]),
     ]),
   )
-  try nested_group.validate() catch {
+  try nested_group.build() |> ignore catch {
     NestedSubcommandGroup(command~, path~) => {
       inspect(command, content="admin")
       inspect(path, content="outer/inner")
@@ -723,7 +730,7 @@ test "app validates command type names and slash child structure" {
   } noraise {
     _ => fail("expected nested group error")
   }
-  let choices_and_suggest = App()
+  let choices_and_suggest = AppBuilder()
   choices_and_suggest.command(
     slash(
       name="search",
@@ -739,7 +746,7 @@ test "app validates command type names and slash child structure" {
       handler=Raw(_ => ()),
     ),
   )
-  try choices_and_suggest.validate() catch {
+  try choices_and_suggest.build() |> ignore catch {
     ChoicesWithAutocomplete(command~, path~) => {
       inspect(command, content="search")
       inspect(path, content="query")
@@ -748,7 +755,7 @@ test "app validates command type names and slash child structure" {
   } noraise {
     _ => fail("expected choices and autocomplete error")
   }
-  let invalid_order = App()
+  let invalid_order = AppBuilder()
   invalid_order.command(
     slash(
       name="ordered",
@@ -761,7 +768,7 @@ test "app validates command type names and slash child structure" {
       handler=Raw(_ => ()),
     ),
   )
-  try invalid_order.validate() catch {
+  try invalid_order.build() |> ignore catch {
     RequiredOptionAfterOptional(command~, path~) => {
       inspect(command, content="ordered")
       inspect(path, content="required")
@@ -776,7 +783,7 @@ test "app validates command type names and slash child structure" {
 async test "registered command cancellation bypasses the error policy" {
   let client = @dhttp.Client("test-token")
   defer client.close()
-  let app = App()
+  let app = AppBuilder()
   let policy_calls = Ref(0)
   app.error_policy((_, _) => policy_calls.val += 1)
   let started : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
@@ -791,7 +798,7 @@ async test "registered command cancellation bypasses the error policy" {
       }),
     ),
   )
-  let framework = policy_test_framework(app, client)
+  let framework = policy_test_framework(app.build(), client)
   let interaction = policy_test_interaction("cancelled", "500000000000000703")
   let (gate, _) = @framework.ResponseGate::capture(interaction)
   @async.with_task_group(group => {
@@ -813,7 +820,7 @@ async test "registered command cancellation bypasses the error policy" {
 
 ///|
 test "app validation rejects non-positive handler capacity" {
-  try App(max_in_flight=0).validate() catch {
+  try AppBuilder(max_in_flight=0).validate() catch {
     InvalidMaxInFlight(value~) => assert_eq(value, 0)
     error => fail("unexpected validation error: \{Repr(error)}")
   } noraise {

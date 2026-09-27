@@ -20,8 +20,8 @@ async fn dispatch(
 }
 
 ///|
-fn raw_app(run : async (@framework.CommandCtx) -> Unit) -> @app.App {
-  let app = @app.App()
+fn raw_app(run : async (@framework.CommandCtx) -> Unit) -> @app.AppBuilder {
+  let app = @app.AppBuilder()
   app.on_warn(_ => ())
   app.command(
     @app.slash(
@@ -59,7 +59,7 @@ async test "the default policy answers every HandlerError with an error reply" {
   for case in cases {
     let (error, expected) = case
     let app = raw_app(_ => raise error)
-    let (matched, captured) = dispatch(app, @testkit.slash("run"))
+    let (matched, captured) = dispatch(app.build(), @testkit.slash("run"))
     assert_true(matched)
     guard captured
       is Some(
@@ -76,7 +76,7 @@ async test "the default policy hides internal failures behind a generic reply" {
   let warnings : Array[String] = []
   let app = raw_app(_ => raise HandlerBoom)
   app.on_warn(message => warnings.push(message))
-  let (matched, captured) = dispatch(app, @testkit.slash("run"))
+  let (matched, captured) = dispatch(app.build(), @testkit.slash("run"))
   assert_true(matched)
   guard captured
     is Some(
@@ -92,7 +92,7 @@ async test "the default policy hides internal failures behind a generic reply" {
   })
   let malformed_warnings : Array[String] = []
   malformed.on_warn(message => malformed_warnings.push(message))
-  let (_, captured) = dispatch(malformed, @testkit.slash("run"))
+  let (_, captured) = dispatch(malformed.build(), @testkit.slash("run"))
   guard captured
     is Some(
       { response: { data: Some({ "content": String(content), .. }), .. }, .. }
@@ -135,10 +135,10 @@ async test "checks, argument decoding, and middleware fail through the policy" {
     next()
     order.push("after")
   })
-  let (matched, _) = dispatch(checked, @testkit.slash("missing"))
+  let (matched, _) = dispatch(checked.build(), @testkit.slash("missing"))
   assert_false(matched)
   for name in ["checked", "decode", "run"] {
-    let (matched, captured) = dispatch(checked, @testkit.slash(name))
+    let (matched, captured) = dispatch(checked.build(), @testkit.slash(name))
     assert_true(matched)
     assert_true(captured is None)
   }
@@ -167,7 +167,7 @@ async test "a reply followed by a failing policy keeps the reply and warns" {
     assert_true(error is HandlerBoom)
     raise PolicyBoom
   })
-  let (_, captured) = dispatch(app, @testkit.slash("run"))
+  let (_, captured) = dispatch(app.build(), @testkit.slash("run"))
   json_inspect(captured.unwrap().response.to_json(), content={
     "type": 4,
     "data": { "content": "sent" },
@@ -183,7 +183,7 @@ async test "response validation and double responses fail inside the handler" {
     ctx.respond(embeds=[@model.Embed(description="x".repeat(4097))])
   })
   invalid.error_policy((_, error) => failures.push(error))
-  let (_, captured) = dispatch(invalid, @testkit.slash("run"))
+  let (_, captured) = dispatch(invalid.build(), @testkit.slash("run"))
   assert_true(captured is None)
   assert_true(failures is [@http.DiscordHttpError::Validation(..)])
   let doubled = raw_app(ctx => {
@@ -191,14 +191,14 @@ async test "response validation and double responses fail inside the handler" {
     ctx.respond(content="second")
   })
   doubled.error_policy((_, error) => failures.push(error))
-  let (_, captured) = dispatch(doubled, @testkit.slash("run"))
+  let (_, captured) = dispatch(doubled.build(), @testkit.slash("run"))
   assert_true(captured is Some(_))
   assert_eq(failures.length(), 2)
 }
 
 ///|
 async test "component and modal failures expose the interaction and user" {
-  let app = @app.App()
+  let app = @app.AppBuilder()
   let seen : Array[(@app.FailureOrigin, @model.User?)] = []
   app.error_policy((ctx, _) => {
     assert_true(ctx.interaction() is Some(_))
@@ -215,7 +215,7 @@ async test "component and modal failures expose the interaction and user" {
       @testkit.modal("form", base~),
       @testkit.component("button"),
     ] {
-    let (matched, captured) = dispatch(app, input)
+    let (matched, captured) = dispatch(app.build(), input)
     assert_true(matched)
     assert_true(captured is None)
   }
@@ -231,13 +231,13 @@ async test "component and modal failures expose the interaction and user" {
 
 ///|
 async test "raw autocomplete failures stay in the Framework" {
-  let app = @app.App()
+  let app = @app.AppBuilder()
   let warnings : Array[String] = []
   app.on_warn(message => warnings.push(message))
   app.error_policy((_, _) => fail("raw autocomplete must not call App policy"))
   app.autocomplete("find", _ => raise HandlerBoom)
   let (matched, captured) = dispatch(
-    app,
+    app.build(),
     @testkit.autocomplete("find", options=[]),
   )
   assert_true(matched)
@@ -247,7 +247,7 @@ async test "raw autocomplete failures stay in the Framework" {
 
 ///|
 async test "a failing typed suggestion reaches the policy and sends no choices" {
-  let app = @app.App()
+  let app = @app.AppBuilder()
   app.on_warn(_ => ())
   app.command(
     @app.slash(
@@ -268,7 +268,7 @@ async test "a failing typed suggestion reaches the policy and sends no choices" 
     "focused": true,
   })
   let (matched, captured) = dispatch(
-    app,
+    app.build(),
     @testkit.autocomplete("find", options=[option]),
   )
   assert_true(matched)
@@ -280,11 +280,11 @@ async test "a failing typed suggestion reaches the policy and sends no choices" 
 
 ///|
 async test "a malformed component payload is rejected before the handler" {
-  let app = @app.App()
+  let app = @app.AppBuilder()
   app.on_component_raw(prefix="button", _ => fail("must reject"))
   let interaction = @testkit.component("button")
   let client = @http.Client::offline(_ => fail("no REST call expected"))
-  try dispatch(app, { ..interaction, message: None, }, client~) catch {
+  try dispatch(app.build(), { ..interaction, message: None, }, client~) catch {
     _ => ()
   } noraise {
     _ => fail("expected the framework to reject the payload")

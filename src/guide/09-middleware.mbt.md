@@ -12,7 +12,7 @@ Registration returns `Unit`, so cascade syntax keeps related setup together:
 ///|
 fn register_in_order(
   client : @dhttp.Client,
-  app : @discord.App,
+  app : @discord.AppBuilder,
   bot : @discord.Bot,
   http_a : @dhttp.HttpMiddleware,
   http_b : @dhttp.HttpMiddleware,
@@ -127,7 +127,7 @@ fn deny_banned_users(banned : Set[@model.UserId]) -> @app.InteractionMiddleware 
 
 ///|
 fn install_ban_list(
-  app : @discord.App,
+  app : @discord.AppBuilder,
   banned_users : Set[@model.UserId],
 ) -> Unit {
   app.middleware(deny_banned_users(banned_users))
@@ -159,7 +159,7 @@ fn maintenance_mode(enabled : Ref[Bool]) -> @app.InteractionMiddleware {
 
 ///|
 fn install_maintenance(
-  app : @discord.App,
+  app : @discord.AppBuilder,
   maintenance_enabled : Ref[Bool],
 ) -> Unit {
   app.middleware(maintenance_mode(maintenance_enabled))
@@ -199,7 +199,7 @@ reads that state on demand, including responses sent through `raw()`:
 
 ```mbt check
 ///|
-fn install_rich_error_policy(app : @discord.App) -> Unit {
+fn install_rich_error_policy(app : @discord.AppBuilder) -> Unit {
   app.error_policy((failure, error) => {
     let username = match failure.user() {
       Some(user) => user.username
@@ -332,7 +332,7 @@ async test "middleware failure after next uses the handler's sent state" {
       ),
     }
   })
-  let app = @discord.App()
+  let app = @discord.AppBuilder()
   let warnings : Array[String] = []
   let states : Array[@framework.ResponseState?] = []
   app.on_warn(message => warnings.push(message))
@@ -354,7 +354,7 @@ async test "middleware failure after next uses the handler's sent state" {
   })
   let application_id = @model.Id::parse("400000000000000001")
   let framework = @framework.Framework(client, application_id)
-  app.attach(framework, client~, application_id~) |> ignore
+  app.build().attach(framework, client~, application_id~) |> ignore
   let interaction : @model.Interaction = @json.from_json(
     @json.parse(
       (
@@ -414,7 +414,7 @@ fn unban_command() -> @discord.Command[Unit] {
 
 ///|
 pub fn install_moderation(
-  app : @discord.App,
+  app : @discord.AppBuilder,
   banned~ : Set[@model.UserId],
 ) -> Unit {
   app.middleware(deny_banned_users(banned))

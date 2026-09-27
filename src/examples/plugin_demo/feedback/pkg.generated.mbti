@@ -7,7 +7,7 @@ import {
 }
 
 // Values
-pub fn install_feedback(@app.App, config~ : FeedbackConfig) -> Unit
+pub fn install_feedback(@app.AppBuilder, config~ : FeedbackConfig) -> Unit
 
 // Errors
 
@@ -22,7 +22,7 @@ pub struct FeedbackFeature {
   // private fields
 }
 pub fn FeedbackFeature::FeedbackFeature(FeedbackConfig) -> Self
-pub fn FeedbackFeature::install(Self, @app.App) -> Unit
+pub fn FeedbackFeature::install(Self, @app.AppBuilder) -> Unit
 pub fn FeedbackFeature::stored_count(Self) -> Int
 
 // Type aliases

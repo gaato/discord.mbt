@@ -150,7 +150,7 @@ async fn main {
       println("[error] set GUILD_ID: the probe only registers guild commands")
       return
     }
-    let app = @discord.App()
+    let app = @discord.AppBuilder()
     app
     ..command(overflow_command())
     ..command(raw_command())
@@ -187,7 +187,7 @@ async fn main {
       )
       println("[policy] respond_error delivered")
     })
-    let bot = @discord.Bot(app, token~, sync=scope)
+    let bot = @discord.Bot(app.build(), token~, sync=scope)
     bot.on(@discord.Events::ready(), (_ctx, ready) => {
       println("[bot] ready as \{ready.user.username}")
     })

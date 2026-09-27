@@ -5,7 +5,7 @@ async test "deadline races preserve every accepted capture" {
   let timings = [(0, 0), (1, 1), (0, 10), (10, 0)]
   for _attempt in 0..<4 {
     for (delay, deadline) in timings {
-      let app = @app.App()
+      let app = @app.AppBuilder()
       let states : @aqueue.Queue[@framework.ResponseState] = Queue(
         kind=Unbounded,
       )
@@ -28,11 +28,13 @@ async test "deadline races preserve every accepted capture" {
         states.put(ctx.response_state().unwrap())
       })
       @async.with_task_group(group => {
-        let endpoint = app.serve(
-          group,
-          client~,
-          application_id=@model.Id::parse("400000000000000001"),
-        )
+        let endpoint = app
+          .build()
+          .serve(
+            group,
+            client~,
+            application_id=@model.Id::parse("400000000000000001"),
+          )
         let outcome = @async.with_timeout(1000, () => {
           endpoint.handle_interaction(
             app_command("racing", "500000000000000811"),

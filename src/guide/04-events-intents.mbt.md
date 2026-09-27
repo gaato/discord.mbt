@@ -149,7 +149,7 @@ Register a decode observer only when the raw payload is needed for diagnostics:
 
 ```mbt check
 ///|
-fn observe_decode_errors(app : @discord.App, bot : @discord.Bot) -> Unit {
+fn observe_decode_errors(app : @discord.AppBuilder, bot : @discord.Bot) -> Unit {
   app.on_warn(message => println("[warn] \{message}"))
   bot.on_decode_error((marker, payload) => {
     println("\{marker}: \{payload.stringify()}")

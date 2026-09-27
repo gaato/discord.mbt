@@ -1,10 +1,10 @@
 ///|
 fn expect_invalid_file_types(
-  app : App,
+  app : AppBuilder,
   owner : String,
   reason : String,
 ) -> Unit raise {
-  try app.validate() catch {
+  try app.build() |> ignore catch {
     InvalidFileTypes(owner=actual_owner, reason=actual_reason) => {
       inspect(actual_owner, content=owner)
       inspect(actual_reason, content=reason)
@@ -17,7 +17,7 @@ fn expect_invalid_file_types(
 
 ///|
 test "app validation rejects malformed attachment option file types" {
-  let too_many = App()
+  let too_many = AppBuilder()
   too_many.command(
     slash(
       name="upload",
@@ -33,7 +33,7 @@ test "app validation rejects malformed attachment option file types" {
     ),
   )
   expect_invalid_file_types(too_many, "upload/file", "11 entries (at most 10)")
-  let bare_extension = App()
+  let bare_extension = AppBuilder()
   bare_extension.command(
     slash(
       name="upload",
@@ -49,7 +49,7 @@ test "app validation rejects malformed attachment option file types" {
   expect_invalid_file_types(
     bare_extension, "upload/file", "extension pdf is not dot-prefixed",
   )
-  let valid = App()
+  let valid = AppBuilder()
   valid.command(
     slash(
       name="upload",
@@ -63,12 +63,12 @@ test "app validation rejects malformed attachment option file types" {
       handler=Raw(_ => ()),
     ),
   )
-  valid.validate()
+  valid.build() |> ignore
 }
 
 ///|
 test "app validation rejects malformed modal file field types" {
-  let app = App()
+  let app = AppBuilder()
   app.on_modal(
     modal(
       custom_id="report",

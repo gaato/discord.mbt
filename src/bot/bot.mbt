@@ -524,7 +524,6 @@ fn Bot::spawn_interaction(
 ///|
 /// Connect and process gateway events until graceful shutdown or a fatal close.
 pub async fn Bot::run(self : Bot) -> Unit {
-  self.app_.validate()
   if self.token_.is_empty() {
     raise @app.AppConfigError::EmptyToken
   }

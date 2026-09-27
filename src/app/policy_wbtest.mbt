@@ -59,7 +59,7 @@ fn policy_test_framework(
 async test "error policy exposes the user and sends a rich initial response" {
   let client = @dhttp.Client("test-token")
   defer client.close()
-  let app = App()
+  let app = AppBuilder()
   app.command(
     slash(
       name="rich-failure",
@@ -89,7 +89,7 @@ async test "error policy exposes the user and sends a rich initial response" {
       allowed_mentions=@model.AllowedMentions::none(),
     )
   })
-  let framework = policy_test_framework(app, client)
+  let framework = policy_test_framework(app.build(), client)
   let interaction = policy_test_interaction(
     "rich-failure", "500000000000000701",
   )
@@ -146,7 +146,7 @@ async test "error policy edits a deferred placeholder" {
       ),
     }
   })
-  let app = App()
+  let app = AppBuilder()
   app.command(
     slash(
       name="deferred-failure",
@@ -161,7 +161,7 @@ async test "error policy edits a deferred placeholder" {
     )
     ctx.respond_error(content="followup failure")
   })
-  let framework = policy_test_framework(app, client)
+  let framework = policy_test_framework(app.build(), client)
   let interaction = policy_test_interaction(
     "deferred-failure", "500000000000000702",
   )

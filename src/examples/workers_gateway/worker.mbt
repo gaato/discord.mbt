@@ -44,7 +44,8 @@ pub fn start_bot(
   sessions_json : String,
   abort_signal : @js_async.AbortSignal,
 ) -> BotHandle {
-  let bot = build_bot(token, gateway_url, decode_sessions(sessions_json))
+  // Invalid declarations are a deployment error: abort so the host sees it.
+  let bot = try! build_bot(token, gateway_url, decode_sessions(sessions_json))
   let finished = @js_async.Promise::from_async(() => bot.run(), abort_signal~)
   // async 0.22.1 queues cancellation from plain JS without scheduling a turn.
   // A no-op exported coroutine wakes that scheduler after the abort event.

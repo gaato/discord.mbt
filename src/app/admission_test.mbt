@@ -1,6 +1,6 @@
 ///|
 async test "a handler waiting at full capacity still receives its component" {
-  let app = @app.App(max_in_flight=1)
+  let app = @app.AppBuilder(max_in_flight=1)
   let waiting : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   let woke : @aqueue.Queue[Bool] = Queue(kind=Unbounded)
   app.command(
@@ -25,7 +25,7 @@ async test "a handler waiting at full capacity still receives its component" {
   let waiter : @app.ComponentWaiter = (custom_id, user, timeout_ms) => {
     framework.wait_for_component(custom_id~, user?, timeout_ms?)
   }
-  app.attach(framework, client~, application_id~, waiter~) |> ignore
+  app.build().attach(framework, client~, application_id~, waiter~) |> ignore
   @async.with_task_group(group => {
     let command = app_command("confirm", "500000000000000900")
     group.spawn_bg(() => {
@@ -43,7 +43,7 @@ async test "a handler waiting at full capacity still receives its component" {
 
 ///|
 async test "handler capacity waits count against the response deadline" {
-  let app = @app.App(max_in_flight=1)
+  let app = @app.AppBuilder(max_in_flight=1)
   let warnings : Array[String] = []
   app.on_warn(message => warnings.push(message))
   let release : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
@@ -74,11 +74,13 @@ async test "handler capacity waits count against the response deadline" {
   let client = @dhttp.Client("test-token")
   defer client.close()
   @async.with_task_group(group => {
-    let endpoint = app.serve(
-      group,
-      client~,
-      application_id=@model.Id::parse("400000000000000001"),
-    )
+    let endpoint = app
+      .build()
+      .serve(
+        group,
+        client~,
+        application_id=@model.Id::parse("400000000000000001"),
+      )
     group.spawn_bg(() => {
       endpoint.handle_interaction(
         app_command("hold", "500000000000000902"),
@@ -103,7 +105,7 @@ async test "handler capacity waits count against the response deadline" {
 
 ///|
 async test "slow middleware on a deferring route is acknowledged automatically" {
-  let app = @app.App()
+  let app = @app.AppBuilder()
   let requests : Array[String] = []
   let client = @dhttp.Client("test-token")
   defer client.close()
@@ -140,11 +142,13 @@ async test "slow middleware on a deferring route is acknowledged automatically" 
     ),
   )
   @async.with_task_group(group => {
-    let endpoint = app.serve(
-      group,
-      client~,
-      application_id=@model.Id::parse("400000000000000001"),
-    )
+    let endpoint = app
+      .build()
+      .serve(
+        group,
+        client~,
+        application_id=@model.Id::parse("400000000000000001"),
+      )
     // 1100 ms leaves 100 ms before the watchdog's 1000 ms margin.
     guard endpoint.handle_interaction(
         app_command("report", "500000000000000904"),
@@ -174,7 +178,7 @@ async test "slow middleware on a deferring route is acknowledged automatically" 
 
 ///|
 async test "fast failures on a deferring route stay ephemeral initial responses" {
-  let app = @app.App()
+  let app = @app.AppBuilder()
   app.command(
     @app.slash(
       name="refused",
@@ -186,11 +190,13 @@ async test "fast failures on a deferring route stay ephemeral initial responses"
   let client = @dhttp.Client("test-token")
   defer client.close()
   @async.with_task_group(group => {
-    let endpoint = app.serve(
-      group,
-      client~,
-      application_id=@model.Id::parse("400000000000000001"),
-    )
+    let endpoint = app
+      .build()
+      .serve(
+        group,
+        client~,
+        application_id=@model.Id::parse("400000000000000001"),
+      )
     guard endpoint.handle_interaction(
         app_command("refused", "500000000000000906"),
       )

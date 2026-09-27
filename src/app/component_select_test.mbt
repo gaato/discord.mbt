@@ -23,7 +23,7 @@ fn app_select_component(
 
 ///|
 async test "component selects expose values, resolved objects, and reply kinds" {
-  let app = @app.App()
+  let app = @app.AppBuilder()
   let pick = @app.component_route(id="pick", state=@app.CustomIdCodec::string())
   let bare = @app.component_route(id="bare", state=@app.CustomIdCodec::string())
   let button = @app.component_route(
@@ -95,11 +95,13 @@ async test "component selects expose values, resolved objects, and reply kinds" 
   )
   defer client.close()
   @async.with_task_group(group => {
-    let served = app.serve(
-      group,
-      client~,
-      application_id=@model.Id::parse("400000000000000001"),
-    )
+    let served = app
+      .build()
+      .serve(
+        group,
+        client~,
+        application_id=@model.Id::parse("400000000000000001"),
+      )
     match
       served.handle_interaction(
         app_select_component(
@@ -146,7 +148,7 @@ async test "component selects expose values, resolved objects, and reply kinds" 
 
 ///|
 async test "dm_only checks pass for direct-message invocations" {
-  let app = @app.App()
+  let app = @app.AppBuilder()
   let handled : Array[String] = []
   app.command(
     @app.slash(
@@ -166,11 +168,13 @@ async test "dm_only checks pass for direct-message invocations" {
   )
   defer client.close()
   @async.with_task_group(group => {
-    let served = app.serve(
-      group,
-      client~,
-      application_id=@model.Id::parse("400000000000000001"),
-    )
+    let served = app
+      .build()
+      .serve(
+        group,
+        client~,
+        application_id=@model.Id::parse("400000000000000001"),
+      )
     match
       served.handle_interaction(app_command("dm-ok", "500000000000000304")) {
       Reply(response~, ..) =>

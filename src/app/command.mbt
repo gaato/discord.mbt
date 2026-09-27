@@ -323,7 +323,7 @@ pub fn[A] subcommand(
 
 ///|
 /// Define a slash subcommand group. Nested groups are retained for validation
-/// and rejected by `App::validate`, never by panic or abort here.
+/// and rejected by `AppBuilder::build`, never by panic or abort here.
 pub fn subcommand_group(
   name~ : String,
   description~ : String,

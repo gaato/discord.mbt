@@ -30,10 +30,11 @@ pub using @model {
 pub using @interaction {type Arg, type Args, type SuggestCtx}
 
 ///|
-/// Gateway-free application declarations, typed interaction handlers, command
-/// synchronization, and error policy contexts.
+/// Gateway-free application declarations (built with `AppBuilder`), typed
+/// interaction handlers, command synchronization, and error policy contexts.
 pub using @app {
   type App,
+  type AppBuilder,
   type AppCtx,
   type InteractionEndpoint,
   type InteractionOutcome,

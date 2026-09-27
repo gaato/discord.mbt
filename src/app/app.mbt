@@ -55,8 +55,10 @@ priv struct AutocompleteHandler {
 pub type Spawner = async (async () -> Unit) -> Unit
 
 ///|
-/// Gateway-free application declarations shared by gateway and HTTP executors.
-pub struct App {
+/// Collects application declarations: commands, component and modal routes,
+/// autocomplete handlers, middleware, and failure hooks. `build` validates
+/// them into an immutable `App`.
+pub struct AppBuilder {
   priv max_in_flight_ : Int
   priv commands_ : Array[RegisteredCommand]
   priv components_ : Array[RegisteredComponent]
@@ -69,16 +71,32 @@ pub struct App {
 }
 
 ///|
-/// Create an application core. `max_in_flight` caps concurrently running
-/// interaction handlers; routing and component waiters are not counted, so a
-/// handler waiting for a component never blocks the interaction that wakes
-/// it. A gateway executor gives its event handlers a separate budget of the
-/// same size. Cooldowns use a fresh in-memory store unless a
-/// shared `cooldown_store` is supplied.
-pub fn App::App(
+/// Validated, immutable application declarations shared by gateway and HTTP
+/// executors. Build one with `AppBuilder::build`; every `App` has passed
+/// validation, so executors and `attach` never see an invalid declaration.
+pub struct App {
+  priv max_in_flight_ : Int
+  priv commands_ : Array[RegisteredCommand]
+  priv components_ : Array[RegisteredComponent]
+  priv modals_ : Array[RegisteredModal]
+  priv autocompletes_ : Array[AutocompleteHandler]
+  priv middleware_ : Array[InteractionMiddleware]
+  priv policy_ : ErrorPolicy?
+  priv warn_ : (String) -> Unit
+  priv cooldown_store_ : &@cooldown.CooldownStore
+}
+
+///|
+/// Start collecting application declarations. `max_in_flight` caps
+/// concurrently running interaction handlers; routing and component waiters
+/// are not counted, so a handler waiting for a component never blocks the
+/// interaction that wakes it. A gateway executor gives its event handlers a
+/// separate budget of the same size. Cooldowns use a fresh in-memory store
+/// unless a shared `cooldown_store` is supplied.
+pub fn AppBuilder::AppBuilder(
   max_in_flight? : Int = 64,
   cooldown_store? : &@cooldown.CooldownStore,
-) -> App {
+) -> AppBuilder {
   {
     max_in_flight_: max_in_flight,
     commands_: [],
@@ -95,17 +113,38 @@ pub fn App::App(
 }
 
 ///|
+/// Validate the declarations and freeze them into an `App`. Later changes to
+/// this builder do not affect the returned `App`.
+pub fn AppBuilder::build(self : AppBuilder) -> App raise AppConfigError {
+  self.validate()
+  {
+    max_in_flight_: self.max_in_flight_,
+    commands_: self.commands_.copy(),
+    components_: self.components_.copy(),
+    modals_: self.modals_.copy(),
+    autocompletes_: self.autocompletes_.copy(),
+    middleware_: self.middleware_.copy(),
+    policy_: self.policy_,
+    warn_: self.warn_,
+    cooldown_store_: self.cooldown_store_,
+  }
+}
+
+///|
 /// Install middleware around every command, component, and modal handler
 /// (not autocomplete). First installed is outermost. Runs inside the error
 /// policy: raising HandlerError behaves exactly like a failing check.
-pub fn App::middleware(self : App, middleware : InteractionMiddleware) -> Unit {
+pub fn AppBuilder::middleware(
+  self : AppBuilder,
+  middleware : InteractionMiddleware,
+) -> Unit {
   self.middleware_.push(middleware)
 }
 
 ///|
 /// Register a typed slash or context-menu command built with the
 /// `command` / `user_command` / `message_command` builders.
-pub fn[A] App::command(self : App, command : Command[A]) -> Unit {
+pub fn[A] AppBuilder::command(self : AppBuilder, command : Command[A]) -> Unit {
   self.register(command.erase())
 }
 
@@ -113,15 +152,18 @@ pub fn[A] App::command(self : App, command : Command[A]) -> Unit {
 /// Register a type-erased command. `App::command` is the typed
 /// entry point; use this when composing pre-erased commands, e.g. from
 /// a plugin.
-pub fn App::register(self : App, command : RegisteredCommand) -> Unit {
+pub fn AppBuilder::register(
+  self : AppBuilder,
+  command : RegisteredCommand,
+) -> Unit {
   self.commands_.push(command)
 }
 
 ///|
 /// Route a component's exact id or `id:state`, decoding state before the handler.
 /// Use the same route's `custom_id` when building buttons and selects.
-pub fn[A] App::on_component(
-  self : App,
+pub fn[A] AppBuilder::on_component(
+  self : AppBuilder,
   route : ComponentRoute[A],
   handler : ComponentHandler[A],
 ) -> Unit {
@@ -130,9 +172,9 @@ pub fn[A] App::on_component(
 
 ///|
 /// Register a fully raw literal-prefix component route. Longer prefixes win.
-/// `App::validate` rejects empty or duplicate effective prefixes.
-pub fn App::on_component_raw(
-  self : App,
+/// `AppBuilder::build` rejects empty or duplicate effective prefixes.
+pub fn AppBuilder::on_component_raw(
+  self : AppBuilder,
   prefix~ : String,
   handler : async (@framework.ComponentCtx) -> Unit,
 ) -> Unit {
@@ -147,8 +189,8 @@ pub fn App::on_component_raw(
 /// Route submissions of the typed `modal` to `handler`; field values
 /// are decoded through the modal's `ModalFields` before the handler
 /// runs. Matches the exact modal id or that id followed by `:` and state.
-pub fn[A] App::on_modal(
-  self : App,
+pub fn[A] AppBuilder::on_modal(
+  self : AppBuilder,
   modal : Modal[A],
   handler : ModalSubmitHandler[A],
 ) -> Unit {
@@ -168,9 +210,9 @@ pub fn[A] App::on_modal(
 
 ///|
 /// Register a fully raw literal-prefix modal route. Longer prefixes win.
-/// `App::validate` rejects empty or duplicate effective prefixes.
-pub fn App::on_modal_raw(
-  self : App,
+/// `AppBuilder::build` rejects empty or duplicate effective prefixes.
+pub fn AppBuilder::on_modal_raw(
+  self : AppBuilder,
   prefix~ : String,
   handler : async (@framework.ModalCtx) -> Unit,
 ) -> Unit {
@@ -188,8 +230,8 @@ pub fn App::on_modal_raw(
 ///|
 /// Register a raw autocomplete handler. A raw handler takes precedence over
 /// Arg-level `suggest` handlers registered for the same command name.
-pub fn App::autocomplete(
-  self : App,
+pub fn AppBuilder::autocomplete(
+  self : AppBuilder,
   name : String,
   handler : async (@framework.AutocompleteCtx) -> Unit,
 ) -> Unit {
@@ -201,14 +243,17 @@ pub fn App::autocomplete(
 /// policy maps `HandlerError` variants to ephemeral user-facing messages.
 /// For `Malformed` and any other error it warns with the details and shows
 /// the user only a generic message.
-pub fn App::error_policy(self : App, policy : ErrorPolicy) -> Unit {
+pub fn AppBuilder::error_policy(
+  self : AppBuilder,
+  policy : ErrorPolicy,
+) -> Unit {
   self.policy_ = Some(policy)
 }
 
 ///|
 /// Replace the warning hook used for non-fatal diagnostics (default:
 /// `println`).
-pub fn App::on_warn(self : App, hook : (String) -> Unit) -> Unit {
+pub fn AppBuilder::on_warn(self : AppBuilder, hook : (String) -> Unit) -> Unit {
   self.warn_ = hook
 }
 
@@ -276,8 +321,8 @@ fn validate_command_options(
 /// modal titles and fields outside Discord's documented limits,
 /// malformed `file_types` upload filters, empty or duplicate component/modal
 /// effective prefixes, and invalid typed route ids.
-/// Executors call this at startup; call it directly in a test to fail fast.
-pub fn App::validate(self : App) -> Unit raise AppConfigError {
+/// `build` calls this before freezing the declarations.
+fn AppBuilder::validate(self : AppBuilder) -> Unit raise AppConfigError {
   if self.max_in_flight_ <= 0 {
     raise InvalidMaxInFlight(value=self.max_in_flight_)
   }
@@ -488,7 +533,8 @@ async fn App::run_registered_autocomplete(
 /// Wire every registered command, component, modal, and autocomplete
 /// route into `framework` and return the `AppCtx` shared by handlers.
 /// Called by the built-in executors (`Bot`, the HTTP endpoint); only
-/// custom executors need it directly.
+/// custom executors need it directly. Each call gets its own handler budget
+/// of `max_in_flight`.
 pub fn App::attach(
   self : App,
   framework : @framework.Framework,

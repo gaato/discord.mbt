@@ -4,7 +4,7 @@ pub fn build_bot(
   token : String,
   gateway_url : String,
   saved_sessions : Map[Int, @discord.BotSession],
-) -> @discord.Bot {
+) -> @discord.Bot raise @discord.AppConfigError {
   let bot = @discord.Bot(
     worker_app(),
     token~,

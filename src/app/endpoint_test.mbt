@@ -103,7 +103,7 @@ fn app_modal_submit(
 
 ///|
 async test "timed-out interaction expires its gate" {
-  let app = @app.App()
+  let app = @app.AppBuilder()
   let release : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   let failures : @aqueue.Queue[(@framework.ResponseState?, Bool)] = Queue(
     kind=Unbounded,
@@ -130,11 +130,13 @@ async test "timed-out interaction expires its gate" {
   let client = @dhttp.Client("test-token")
   defer client.close()
   @async.with_task_group(group => {
-    let endpoint = app.serve(
-      group,
-      client~,
-      application_id=@model.Id::parse("400000000000000001"),
-    )
+    let endpoint = app
+      .build()
+      .serve(
+        group,
+        client~,
+        application_id=@model.Id::parse("400000000000000001"),
+      )
     assert_true(
       endpoint.handle_interaction(
         app_command("late-response", "500000000000000810"),
@@ -166,7 +168,7 @@ fn autocomplete_choices(
 
 ///|
 async test "app-level waits default to the invoking user" {
-  let app = @app.App()
+  let app = @app.AppBuilder()
   let seen : Array[String] = []
   let waiter : @app.ComponentWaiter = (custom_id, user, _timeout_ms) => {
     let filter = match user {
@@ -202,7 +204,9 @@ async test "app-level waits default to the invoking user" {
     client,
     @model.Id::parse("400000000000000001"),
   )
-  app.attach(
+  app
+  .build()
+  .attach(
     framework,
     client~,
     application_id=@model.Id::parse("400000000000000001"),
@@ -226,7 +230,7 @@ async test "app-level waits default to the invoking user" {
 
 ///|
 async test "WaitFrom::Anyone passes no user filter" {
-  let app = @app.App()
+  let app = @app.AppBuilder()
   let seen : Array[@model.UserId?] = []
   let waiter : @app.ComponentWaiter = (_custom_id, user, _timeout_ms) => {
     seen.push(user)
@@ -249,7 +253,9 @@ async test "WaitFrom::Anyone passes no user filter" {
     client,
     @model.Id::parse("400000000000000001"),
   )
-  app.attach(
+  app
+  .build()
+  .attach(
     framework,
     client~,
     application_id=@model.Id::parse("400000000000000001"),
@@ -264,7 +270,7 @@ async test "WaitFrom::Anyone passes no user filter" {
 
 ///|
 async test "WaitFrom::User passes that user" {
-  let app = @app.App()
+  let app = @app.AppBuilder()
   let seen : Array[@model.UserId?] = []
   let waiter : @app.ComponentWaiter = (_custom_id, user, _timeout_ms) => {
     seen.push(user)
@@ -291,7 +297,9 @@ async test "WaitFrom::User passes that user" {
     client,
     @model.Id::parse("400000000000000001"),
   )
-  app.attach(
+  app
+  .build()
+  .attach(
     framework,
     client~,
     application_id=@model.Id::parse("400000000000000001"),
@@ -306,7 +314,7 @@ async test "WaitFrom::User passes that user" {
 
 ///|
 async test "interaction endpoint dispatches captured responses and completion outcomes" {
-  let app = @app.App()
+  let app = @app.AppBuilder()
   let warnings : Array[String] = []
   app.on_warn(message => warnings.push(message))
   let waiter_results : @aqueue.Queue[Bool] = Queue(kind=Unbounded)
@@ -373,7 +381,7 @@ async test "interaction endpoint dispatches captured responses and completion ou
     ),
   )
   @async.with_task_group(group => {
-    try app.serve(group, token="") catch {
+    try app.build().serve(group, token="") catch {
       @app.AppConfigError::EmptyToken => ()
       error => fail("unexpected error: \{Repr(error)}")
     } noraise {
@@ -388,11 +396,13 @@ async test "interaction endpoint dispatches captured responses and completion ou
   defer client.close()
   @async.with_task_group(group => {
     // Explicit client/id must perform no startup HTTP.
-    let app = app.serve(
-      group,
-      client~,
-      application_id=@model.Id::parse("400000000000000001"),
-    )
+    let app = app
+      .build()
+      .serve(
+        group,
+        client~,
+        application_id=@model.Id::parse("400000000000000001"),
+      )
     match app.handle_interaction(app_ping()) {
       Reply(response~, files~) => {
         assert_true(response.typ == Pong)
@@ -464,7 +474,7 @@ async test "interaction endpoint dispatches captured responses and completion ou
 
 ///|
 async test "interaction endpoint dispatches component and typed modal handlers" {
-  let app = @app.App()
+  let app = @app.AppBuilder()
   let update = @app.component_route(
     id="update",
     state=@app.CustomIdCodec::string(),
@@ -540,11 +550,13 @@ async test "interaction endpoint dispatches component and typed modal handlers" 
   )
   defer client.close()
   @async.with_task_group(group => {
-    let app = app.serve(
-      group,
-      client~,
-      application_id=@model.Id::parse("400000000000000001"),
-    )
+    let app = app
+      .build()
+      .serve(
+        group,
+        client~,
+        application_id=@model.Id::parse("400000000000000001"),
+      )
     match
       app.handle_interaction(app_command("open-form", "500000000000000400")) {
       Reply(response~, files=_) => {
@@ -636,7 +648,7 @@ async test "interaction endpoint dispatches component and typed modal handlers" 
 
 ///|
 async test "typed autocomplete dispatches partial and nested focused options" {
-  let app = @app.App()
+  let app = @app.AppBuilder()
   let warnings : Array[String] = []
   app.on_warn(message => warnings.push(message))
   app.command(
@@ -724,11 +736,13 @@ async test "typed autocomplete dispatches partial and nested focused options" {
   )
   defer client.close()
   @async.with_task_group(group => {
-    let app = app.serve(
-      group,
-      client~,
-      application_id=@model.Id::parse("400000000000000001"),
-    )
+    let app = app
+      .build()
+      .serve(
+        group,
+        client~,
+        application_id=@model.Id::parse("400000000000000001"),
+      )
     match app.handle_interaction(nested) {
       Reply(response~, files=_) => {
         let choices = autocomplete_choices(response)
@@ -799,7 +813,7 @@ test "command constructors emit context types and slash attributes" {
 
 ///|
 async test "context menu commands decode resolved targets" {
-  let app = @app.App()
+  let app = @app.AppBuilder()
   app.command(
     @app.user_command(
       name="Inspect",
@@ -911,11 +925,13 @@ async test "context menu commands decode resolved targets" {
   )
   defer client.close()
   @async.with_task_group(group => {
-    let app = app.serve(
-      group,
-      client~,
-      application_id=@model.Id::parse("400000000000000001"),
-    )
+    let app = app
+      .build()
+      .serve(
+        group,
+        client~,
+        application_id=@model.Id::parse("400000000000000001"),
+      )
     match app.handle_interaction(user_interaction) {
       Reply(response~, files=_) =>
         inspect(
@@ -1009,7 +1025,7 @@ async test "slash groups emit nested specs and dispatch direct and grouped paths
       },
     ],
   })
-  let app = @app.App()
+  let app = @app.AppBuilder()
   app.command(command)
   let direct = app_interaction(
     (
@@ -1033,11 +1049,13 @@ async test "slash groups emit nested specs and dispatch direct and grouped paths
   )
   defer client.close()
   @async.with_task_group(group => {
-    let app = app.serve(
-      group,
-      client~,
-      application_id=@model.Id::parse("400000000000000001"),
-    )
+    let app = app
+      .build()
+      .serve(
+        group,
+        client~,
+        application_id=@model.Id::parse("400000000000000001"),
+      )
     for
       pair in [
         (direct, "pong"),
@@ -1056,7 +1074,7 @@ async test "slash groups emit nested specs and dispatch direct and grouped paths
 
 ///|
 async test "arg_int32 suggestions receive an Int and reject out-of-range input" {
-  let app = @app.App()
+  let app = @app.AppBuilder()
   let failures : Array[Bool] = []
   app.error_policy((_ctx, error) => {
     failures.push(
@@ -1098,11 +1116,13 @@ async test "arg_int32 suggestions receive an Int and reject out-of-range input" 
   )
   defer client.close()
   @async.with_task_group(group => {
-    let app = app.serve(
-      group,
-      client~,
-      application_id=@model.Id::parse("400000000000000001"),
-    )
+    let app = app
+      .build()
+      .serve(
+        group,
+        client~,
+        application_id=@model.Id::parse("400000000000000001"),
+      )
     match app.handle_interaction(focused("12")) {
       Reply(response~, files=_) => {
         let choices = autocomplete_choices(response)

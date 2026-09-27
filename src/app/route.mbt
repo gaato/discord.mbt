@@ -145,7 +145,7 @@ pub struct ComponentRoute[A] {
 ///|
 /// Define a component route matching `id` or `id:state`.
 /// The id may itself contain `:`, so ids that are already in use elsewhere
-/// (`bot:rolemenu`) keep working. `App::validate` rejects empty ids, ids over
+/// (`bot:rolemenu`) keep working. `AppBuilder::build` rejects empty ids, ids over
 /// 100 units, and an id that extends another typed route's id at a `:`
 /// (`ticket` beside `ticket:close`), because the shorter route's state could
 /// then produce a custom id the longer route receives.
@@ -153,14 +153,14 @@ pub struct ComponentRoute[A] {
 /// ```mbt check
 /// test "build a component from its route" {
 ///   let route = @app.component_route(id="page", state=@app.CustomIdCodec::int())
-///   let app = @app.App()
+///   let app = @app.AppBuilder()
 ///   app.on_component(
 ///     route,
 ///     Immediate((_, page) => @app.ComponentReply::message(content="Page \{page}")),
 ///   )
 ///   let _ = @interaction.button(custom_id=route.custom_id(2), label="Next")
 ///   assert_eq(route.custom_id(2), "page:2")
-///   app.validate()
+///   app.build() |> ignore
 /// }
 /// ```
 pub fn[A] component_route(

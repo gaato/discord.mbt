@@ -174,7 +174,7 @@ async fn main {
       state=@discord.CustomIdCodec::string(),
     )
     let token = @env.get_env_var("DISCORD_TOKEN").unwrap_or("")
-    let app = @discord.App()
+    let app = @discord.AppBuilder()
     app
     ..command(demo_command(feedback_route, done_route))
     ..command(wave_command())
@@ -202,7 +202,7 @@ async fn main {
       }),
     )
 
-    let bot = @discord.Bot(app, token~, sync=command_scope())
+    let bot = @discord.Bot(app.build(), token~, sync=command_scope())
     bot.on(@discord.Events::ready(), (_ctx, ready) => {
       println("[bot] ready as \{ready.user.username}")
     })

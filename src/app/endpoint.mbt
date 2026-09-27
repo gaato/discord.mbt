@@ -42,7 +42,6 @@ pub async fn App::serve(
   token? : String,
   application_id? : @model.ApplicationId,
 ) -> InteractionEndpoint {
-  self.validate()
   let (client, owns_client) = match client {
     Some(client) => (client, false)
     None => {

@@ -83,7 +83,7 @@ test "fixtures derive guild actors and reject contradictory context" {
 
 ///|
 async test "context command fixtures resolve targets and component/modal fixtures dispatch" {
-  let app = @app.App()
+  let app = @app.AppBuilder()
   app.command(
     @app.user_command(
       name="User",
@@ -109,7 +109,7 @@ async test "context command fixtures resolve targets and component/modal fixture
   let framework = @framework.Framework(client, application_id)
   let failures : Array[Error] = []
   app.error_policy((_, error) => failures.push(error))
-  app.attach(framework, client~, application_id~) |> ignore
+  app.build().attach(framework, client~, application_id~) |> ignore
   for
     input in [
       @testkit.user_command("User", @testkit.user()),

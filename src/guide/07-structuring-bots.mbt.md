@@ -4,7 +4,10 @@ Put each bot feature in its own package and export an installer:
 
 ```mbt check
 ///|
-pub fn install_feedback(app : @discord.App, config~ : FeedbackConfig) -> Unit {
+pub fn install_feedback(
+  app : @discord.AppBuilder,
+  config~ : FeedbackConfig,
+) -> Unit {
   app.middleware(feedback_access_policy(config))
   FeedbackFeature(config).install(app)
 }
@@ -13,17 +16,24 @@ pub fn install_feedback(app : @discord.App, config~ : FeedbackConfig) -> Unit {
 The installer registers middleware, commands, components, and modals that
 belong to the feature. App middleware is global, so a feature-specific policy
 should inspect its routed target and call `next()` for unrelated interactions.
-See [Middleware](09-middleware.mbt.md) for a complete installer example. A
-feature that consumes Gateway events also accepts `Bot`:
+See [Middleware](09-middleware.mbt.md) for a complete installer example.
+
+A `Bot` runs a built `App`, so declarations must be complete before the bot
+exists. A feature that also consumes Gateway events therefore exports two
+functions: an installer for its declarations and an attach function for its
+event handlers:
 
 ```mbt check
 ///|
 pub fn install_starboard(
-  app : @discord.App,
-  bot : @discord.Bot,
+  app : @discord.AppBuilder,
   config~ : StarboardConfig,
 ) -> Unit {
   install_starboard_commands(app, config)
+}
+
+///|
+pub fn attach_starboard(bot : @discord.Bot, config~ : StarboardConfig) -> Unit {
   bot.on(@discord.Events::message_reaction_add(), (ctx, event) => {
     handle_star(event, ctx.app().http(), config)
   })
@@ -39,11 +49,12 @@ fn compose(
   command_scope : @discord.CommandScope,
   feedback_config : FeedbackConfig,
   starboard_config : StarboardConfig,
-) -> Unit {
-  let app = @discord.App()
-  let bot = @discord.Bot(app, token~, sync=command_scope)
+) -> Unit raise @discord.AppConfigError {
+  let app = @discord.AppBuilder()
   install_feedback(app, config=feedback_config)
-  install_starboard(app, bot, config=starboard_config)
+  install_starboard(app, config=starboard_config)
+  let bot = @discord.Bot(app.build(), token~, sync=command_scope)
+  attach_starboard(bot, config=starboard_config)
 }
 ```
 
@@ -141,7 +152,7 @@ fn handle_star(
 
 ///|
 fn install_starboard_commands(
-  app : @discord.App,
+  app : @discord.AppBuilder,
   config : StarboardConfig,
 ) -> Unit {
   ignore(app)
@@ -192,7 +203,7 @@ pub fn FeedbackFeature::FeedbackFeature(
 ///|
 pub fn FeedbackFeature::install(
   self : FeedbackFeature,
-  app : @discord.App,
+  app : @discord.AppBuilder,
 ) -> Unit {
   let modal = feedback_modal()
   app.command(feedback_command(modal, self.config_.cooldown_seconds))
@@ -216,7 +227,10 @@ pub fn FeedbackFeature::stored(self : FeedbackFeature) -> Int {
 }
 
 ///|
-fn keep_feature_value(app : @discord.App, config : FeedbackConfig) -> Unit {
+fn keep_feature_value(
+  app : @discord.AppBuilder,
+  config : FeedbackConfig,
+) -> Unit {
   let feedback = FeedbackFeature(config)
   feedback.install(app)
   println("stored so far: \{feedback.stored()}")
@@ -240,7 +254,7 @@ pub(all) struct FeedbackConfig {
 
 ///|
 fn wire_feedback(
-  app : @discord.App,
+  app : @discord.AppBuilder,
   feedback_channel_id : @model.ChannelId,
 ) -> Unit {
   let feedback_config = FeedbackConfig::{
@@ -308,7 +322,7 @@ Installers own the command policy for their feature:
 ```mbt check
 ///|
 fn register_guarded_feedback(
-  app : @discord.App,
+  app : @discord.AppBuilder,
   config : FeedbackConfig,
 ) -> Unit {
   let modal = feedback_modal()
@@ -342,7 +356,7 @@ fast or cache their results. Cooldown failures use the same error policy as hand
 
 Cooldown storage belongs to the App, with a fresh `InMemoryCooldownStore` by
 default. Command type, name, and bucket are included in each storage key, so
-features sharing a store do not collide. Supply `App(cooldown_store=...)` when
+features sharing a store do not collide. Supply `AppBuilder(cooldown_store=...)` when
 windows must be shared across Apps or processes; the portable `CooldownStore`
 trait and native `RemoteCooldownStore` are described under
 [Shared cooldowns](08-scaling-processes.mbt.md#shared-cooldowns).

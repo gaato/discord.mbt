@@ -128,6 +128,8 @@ pub using @model {type AllowedMentionsError}
 
 pub using @app {type App}
 
+pub using @app {type AppBuilder}
+
 pub using @app {type AppConfigError}
 
 pub using @app {type AppCtx}

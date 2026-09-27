@@ -78,7 +78,7 @@ the second handler argument is the ticket carried in the custom id.
 
 ```mbt check
 ///|
-fn register_ticket_handlers(app : @discord.App) -> Unit {
+fn register_ticket_handlers(app : @discord.AppBuilder) -> Unit {
   app.on_component(
     close_ticket,
     Immediate((_, ticket) => {
@@ -121,7 +121,7 @@ and fit within 100 UTF-16 units. An id may contain `:` — a bot that adopts
 typed routes can keep ids already attached to posted messages, such as
 `bot:rolemenu` — but two typed ids may not nest at a `:` boundary: `ticket`
 beside `ticket:close` is rejected, because state encoded for `ticket` could
-reach the `ticket:close` handler. `App::validate` also rejects
+reach the `ticket:close` handler. `AppBuilder::build` also rejects
 duplicate effective prefixes: typed `ticket-close` collides with raw
 `ticket-close:`. `on_component_raw(prefix~, handler)` and `on_modal_raw`
 retain literal-prefix routing for advanced handlers. Strict prefix overlaps
@@ -220,7 +220,7 @@ fn feedback_button(ticket : Int) -> @model.Component raise {
 }
 
 ///|
-fn register_feedback(app : @discord.App) -> Unit {
+fn register_feedback(app : @discord.AppBuilder) -> Unit {
   app.on_component(
     open_feedback,
     Immediate((_, ticket) => {
@@ -259,8 +259,8 @@ options, 40 components in a Components V2 message — and rejects the whole
 request with 400 Invalid Form Body when one is exceeded. The library checks
 them locally: typed send helpers raise `DiscordHttpError::Validation` naming the
 offending path (such as `components[0].components[2].label`), and
-`App::validate` applies the modal limits to registered modals at startup, so a
-bad declaration fails before the first interaction. The same checks are
+`AppBuilder::build` applies the modal limits to registered modals, so a bad
+declaration fails before any executor starts. The same checks are
 available as `@model.message_component_limit_violations`,
 `@model.modal_limit_violations`, and `@model.embed_limit_violations`.
 
@@ -299,7 +299,7 @@ let upload_report : @discord.Modal[Array[@model.Attachment]] = @discord.modal(
 ```
 
 Filters match file extensions only, so validate the attachment contents
-before trusting them. `App::validate` rejects a filter with more than 10
+before trusting them. `AppBuilder::build` rejects a filter with more than 10
 entries or an extension without its leading dot.
 
 ## Waiting for one component
@@ -331,10 +331,10 @@ let confirm_command : @discord.Command[Unit] = @discord.slash(
 
 ///|
 test "component and modal declarations compile" {
-  let app = @discord.App()
+  let app = @discord.AppBuilder()
   register_ticket_handlers(app)
   register_feedback(app)
-  app.validate()
+  app.build() |> ignore
   assert_eq(ticket_controls(42).length(), 1)
   guard feedback_button(42) is Button(button) else { fail("expected button") }
   assert_eq(button.custom_id, Some("open-feedback:42"))

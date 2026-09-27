@@ -77,7 +77,7 @@ bucket during connection cleanup.
 
 ## Shared cooldowns
 
-`App()` creates a fresh `InMemoryCooldownStore`. To enforce the same command
+`AppBuilder()` creates a fresh `InMemoryCooldownStore`. To enforce the same command
 cooldown across processes, inject a shared store into **every process that
 serves interactions**, including HTTP interaction workers:
 
@@ -93,7 +93,9 @@ async test "shared cooldown store wiring" {
       on_error=error => println("cooldown coordinator: \{error}"),
     )
     defer cooldown.close()
-    let app = @app.App(cooldown_store=(cooldown : &@cooldown.CooldownStore))
+    let app = @app.AppBuilder(
+      cooldown_store=(cooldown : &@cooldown.CooldownStore),
+    )
     app.command(
       @app.slash(
         name="limited",
@@ -102,7 +104,7 @@ async test "shared cooldown store wiring" {
         handler=Raw(_ => ()),
       ).cooldown(seconds=10, bucket=User),
     )
-    app.validate()
+    app.build() |> ignore
     cooldown.ping()
   })
 }

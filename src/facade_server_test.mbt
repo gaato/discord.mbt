@@ -8,7 +8,7 @@ async test "root facade serves HTTP interactions and rejects unsigned requests" 
     @async.with_task_group(group => {
       let server : @discord.InteractionsServer = @discord.serve_interactions(
         group,
-        @discord.App(),
+        @discord.AppBuilder().build(),
         addr="127.0.0.1:0",
         public_key="d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
         client~,

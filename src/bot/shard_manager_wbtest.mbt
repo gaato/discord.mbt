@@ -116,8 +116,8 @@ async fn[T] manager_get(queue : @aqueue.Queue[T], stage : String) -> T {
 ///|
 async test "shard config resolves auto fixed and range selections" {
   let client = @dhttp.Client("test-token")
-  let app = @app.App()
-  let auto = Bot(app, token="test-token", shards=Auto)
+  let app = @app.AppBuilder()
+  let auto = Bot(app.build(), token="test-token", shards=Auto)
   assert_false(auto.compress_)
   auto.gateway_bot_info_.val = Some(manager_gateway_info(shards=3))
   let auto_config = auto.resolve_shards(client)
@@ -126,17 +126,17 @@ async test "shard config resolves auto fixed and range selections" {
     content="([0, 1, 2], 3, 1)",
   )
 
-  let fixed = Bot(app, token="test-token", shards=Fixed(count=2))
+  let fixed = Bot(app.build(), token="test-token", shards=Fixed(count=2))
   fixed.gateway_bot_info_.val = Some(manager_gateway_info())
   let fixed_config = fixed.resolve_shards(client)
   debug_inspect((fixed_config.ids, fixed_config.count), content="([0, 1], 2)")
 
-  let compressed = Bot(app, token="test-token", compress=true)
+  let compressed = Bot(app.build(), token="test-token", compress=true)
   assert_true(compressed.compress_)
 
   let injected_queue = @queue.InMemoryQueue()
   let coordinated = Bot(
-    app,
+    app.build(),
     token="test-token",
     identify_queue=(injected_queue : &@queue.IdentifyQueue),
   )
@@ -144,12 +144,16 @@ async test "shard config resolves auto fixed and range selections" {
     fail("expected injected identify queue")
   }
 
-  let ranged = Bot(app, token="test-token", shards=Range(ids=[1, 3], count=4))
+  let ranged = Bot(
+    app.build(),
+    token="test-token",
+    shards=Range(ids=[1, 3], count=4),
+  )
   ranged.gateway_bot_info_.val = Some(manager_gateway_info())
   let range_config = ranged.resolve_shards(client)
   debug_inspect((range_config.ids, range_config.count), content="([1, 3], 4)")
 
-  let limited = Bot(app, token="test-token", shards=Fixed(count=2))
+  let limited = Bot(app.build(), token="test-token", shards=Fixed(count=2))
   limited.gateway_bot_info_.val = Some(manager_gateway_info(remaining=1))
   try limited.resolve_shards(client) catch {
     SessionStartLimitExceeded(required=2, remaining=1, reset_after_ms=60000L) =>
@@ -161,7 +165,7 @@ async test "shard config resolves auto fixed and range selections" {
 
   // A saved session RESUMEs instead of identifying, so it is not counted.
   let saved = manager_bot_session(0, 2)
-  let resumed = Bot(app, token="test-token", shards=Fixed(count=2), resume={
+  let resumed = Bot(app.build(), token="test-token", shards=Fixed(count=2), resume={
     0: saved,
   })
   resumed.gateway_bot_info_.val = Some(manager_gateway_info(remaining=1))
@@ -170,7 +174,7 @@ async test "shard config resolves auto fixed and range selections" {
     (resumed_config.ids, resumed_config.count),
     content="([0, 1], 2)",
   )
-  let exhausted = Bot(app, token="test-token", shards=Fixed(count=2), resume={
+  let exhausted = Bot(app.build(), token="test-token", shards=Fixed(count=2), resume={
     0: saved,
   })
   exhausted.gateway_bot_info_.val = Some(manager_gateway_info(remaining=0))
@@ -183,12 +187,15 @@ async test "shard config resolves auto fixed and range selections" {
   }
 
   // A snapshot recorded under another shard count cannot RESUME this layout.
-  let foreign_app = @app.App()
+  let foreign_app = @app.AppBuilder()
   let warnings : Array[String] = []
   foreign_app.on_warn(message => warnings.push(message))
-  let foreign = Bot(foreign_app, token="test-token", shards=Fixed(count=2), resume={
-    0: manager_bot_session(0, 3),
-  })
+  let foreign = Bot(
+    foreign_app.build(),
+    token="test-token",
+    shards=Fixed(count=2),
+    resume={ 0: manager_bot_session(0, 3) },
+  )
   foreign.gateway_bot_info_.val = Some(manager_gateway_info(remaining=1))
   try foreign.resolve_shards(client) catch {
     SessionStartLimitExceeded(required=2, remaining=1, reset_after_ms=60000L) =>
@@ -228,9 +235,9 @@ async test "fixed shards share identify queue and dispatch path" {
   let first = ManagerFakeTransport()
   let second = ManagerFakeTransport()
   let pending : Array[ManagerFakeTransport] = [second, first]
-  let app = @app.App()
+  let app = @app.AppBuilder()
   let bot = Bot(
-    app,
+    app.build(),
     token="test-token",
     intents=@model.Intents::guild_messages(),
     client=Client("test-token"),
@@ -313,9 +320,9 @@ async test "fatal close fails the manager and closes sibling shards" {
   let first = ManagerFakeTransport()
   let second = ManagerFakeTransport()
   let pending : Array[ManagerFakeTransport] = [second, first]
-  let app = @app.App()
+  let app = @app.AppBuilder()
   let bot = Bot(
-    app,
+    app.build(),
     token="test-token",
     client=Client("test-token"),
     shards=Fixed(count=2),

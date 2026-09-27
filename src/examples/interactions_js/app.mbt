@@ -54,12 +54,12 @@ fn file_command() -> @discord.Command[Unit] {
 ///|
 /// The shared command set used by the JavaScript HTTP adapters and the native
 /// registration runner.
-pub fn interaction_app() -> @discord.App {
-  let app = @discord.App()
+pub fn interaction_app() -> @discord.App raise @discord.AppConfigError {
+  let app = @discord.AppBuilder()
   app
   ..command(echo_command())
   ..command(file_command())
   ..command(slow_command())
   .command(vanish_command())
-  app
+  app.build()
 }

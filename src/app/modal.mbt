@@ -475,9 +475,9 @@ pub fn[A, B, C, D, E, Z] ModalFields::map5(
 ///       @app.text_field(custom_id="details", label="Details").optional(),
 ///     ),
 ///   )
-///   let app = @app.App()
+///   let app = @app.AppBuilder()
 ///   app.on_modal(feedback, Raw(_ => ()))
-///   app.validate()
+///   app.build() |> ignore
 ///   let _ : @app.ModalHandle = feedback.show(state="draft")
 /// }
 /// ```

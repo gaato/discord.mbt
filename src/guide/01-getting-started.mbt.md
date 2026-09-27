@@ -78,9 +78,9 @@ async fn getting_started_main() -> Unit {
   @signal.set_global_cancellation_signals([SIGINT, SIGTERM])
   @async.handle_cancellation(() => {
     let token = @env.get_env_var("DISCORD_TOKEN").unwrap_or("")
-    let app = @discord.App()
+    let app = @discord.AppBuilder()
     app.command(echo_command())
-    let bot = @discord.Bot(app, token~, sync=Global)
+    let bot = @discord.Bot(app.build(), token~, sync=Global)
     bot.on(@discord.Events::ready(), (_, ready) => {
       println("ready as \{ready.user.username}")
     })
@@ -96,8 +96,10 @@ test "getting started quickstart compiles" {
 }
 ```
 
-`App` owns the commands and interaction handlers. `Bot` adds the
-Gateway connection and dispatch loop. Passing `sync=Global` opts into command
+`AppBuilder` collects the commands and interaction handlers, and `build()`
+validates them and freezes them into an `App`; a bad
+declaration fails there, before any connection. `Bot` adds the Gateway
+connection and dispatch loop. Passing `sync=Global` opts into command
 synchronization once after the first READY; omitting it performs no command
 request. Use `CommandScope::Guild(guild_id)` while developing if the command
 should appear immediately in one guild.

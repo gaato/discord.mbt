@@ -29,7 +29,7 @@ fn state_flow_client(routes : Array[String]) -> @dhttp.Client {
 
 ///|
 async fn assert_state_followup(
-  app : @app.App,
+  app : @app.AppBuilder,
   interaction : @model.Interaction,
   expected : @framework.ResponseState,
 ) -> Unit {
@@ -44,7 +44,7 @@ async fn assert_state_followup(
     states.push(ctx.response_state())
     ctx.respond_error(content="policy reply")
   })
-  let framework = state_flow_framework(app, client)
+  let framework = state_flow_framework(app.build(), client)
   let (gate, capture) = @framework.ResponseGate::capture(interaction)
   assert_true(framework.process_with(interaction, gate~))
   assert_eq(states, [Some(expected)])
@@ -56,7 +56,7 @@ async fn assert_state_followup(
 
 ///|
 async test "raw command handler that responds then raises gets a followup" {
-  let app = @app.App()
+  let app = @app.AppBuilder()
   app.command(
     @app.slash(
       name="raw-failure",
@@ -79,7 +79,7 @@ async test "raw command handler that responds then raises gets a followup" {
 
 ///|
 async test "raw component handler that responds then raises gets a followup" {
-  let app = @app.App()
+  let app = @app.AppBuilder()
   let route = @app.component_route(id="raw", state=@app.CustomIdCodec::string())
   app.on_component(
     route,
@@ -99,7 +99,7 @@ async test "raw component handler that responds then raises gets a followup" {
 
 ///|
 async test "raw modal handler that responds then raises gets a followup" {
-  let app = @app.App()
+  let app = @app.AppBuilder()
   app.on_modal(
     @app.modal(
       custom_id="raw-form",
@@ -124,7 +124,7 @@ async test "raw modal handler that responds then raises gets a followup" {
 
 ///|
 async test "immediate handler responding through raw then raising gets a followup" {
-  let app = @app.App()
+  let app = @app.AppBuilder()
   app.command(
     @app.slash(
       name="immediate-failure",
@@ -156,7 +156,7 @@ async fn deferred_failure_requests(
     requests.push("\{Repr(request.route.method_())} \{request.route.path()}")
     { status: 200, headers: Map([]), body: app_test_message().to_json(), }
   })
-  let app = @app.App()
+  let app = @app.AppBuilder()
   app.command(
     @app.slash(
       name="deferred-failure",
@@ -172,7 +172,7 @@ async fn deferred_failure_requests(
     ),
   )
   app.error_policy((ctx, _) => ctx.respond_error(content="policy reply"))
-  let framework = state_flow_framework(app, client)
+  let framework = state_flow_framework(app.build(), client)
   let interaction = app_command("deferred-failure", "500000000000000805")
   let (gate, capture) = @framework.ResponseGate::capture(interaction)
   assert_true(framework.process_with(interaction, gate~))
@@ -202,7 +202,7 @@ async test "deferred handler failure after an edit follows up" {
 
 ///|
 async test "definitively rejected initial response lets the policy respond" {
-  let app = @app.App()
+  let app = @app.AppBuilder()
   let routes : Array[String] = []
   let client = state_flow_client(routes)
   defer client.close()
@@ -236,7 +236,7 @@ async test "definitively rejected initial response lets the policy respond" {
     },
     classify=_ => Rejected,
   )
-  let framework = state_flow_framework(app, client)
+  let framework = state_flow_framework(app.build(), client)
   assert_true(
     framework.process_with(app_command("rejected", "500000000000000806"), gate~),
   )
@@ -253,7 +253,7 @@ async test "definitively rejected initial response lets the policy respond" {
 
 ///|
 async test "unconfirmed initial response is followed up" {
-  let app = @app.App()
+  let app = @app.AppBuilder()
   let routes : Array[String] = []
   let client = state_flow_client(routes)
   defer client.close()
@@ -278,7 +278,7 @@ async test "unconfirmed initial response is followed up" {
     calls.val += 1
     raise ResponseStateFailure
   })
-  let framework = state_flow_framework(app, client)
+  let framework = state_flow_framework(app.build(), client)
   assert_true(
     framework.process_with(
       app_command("unconfirmed", "500000000000000807"),
@@ -294,7 +294,7 @@ async test "unconfirmed initial response is followed up" {
 
 ///|
 async test "middleware raising after next follows up when the handler already responded" {
-  let app = @app.App()
+  let app = @app.AppBuilder()
   app.middleware((_, next) => {
     next()
     raise ResponseStateFailure
@@ -316,7 +316,7 @@ async test "middleware raising after next follows up when the handler already re
 
 ///|
 async test "expired interaction only warns" {
-  let app = @app.App()
+  let app = @app.AppBuilder()
   let warnings : Array[String] = []
   let states : Array[@framework.ResponseState?] = []
   let routes : Array[String] = []
@@ -340,7 +340,7 @@ async test "expired interaction only warns" {
   let interaction = app_command("expired", "500000000000000809")
   let (gate, capture) = @framework.ResponseGate::capture(interaction)
   gate.expire()
-  let framework = state_flow_framework(app, client)
+  let framework = state_flow_framework(app.build(), client)
   assert_true(framework.process_with(interaction, gate~))
   assert_eq(states, [Some(Expired)])
   assert_eq(gate.state(), Expired)
@@ -348,5 +348,81 @@ async test "expired interaction only warns" {
   assert_eq(routes, [])
   assert_eq(warnings, [
     "cannot respond to an expired interaction: policy reply", "cannot respond to an expired interaction: files-only error response",
+  ])
+}
+
+///|
+async test "a failed fallback keeps an unconfirmed placeholder open" {
+  let client = @dhttp.Client("test-token")
+  defer client.close()
+  client.middleware((_, _) => raise ResponseStateFailure)
+  let replies : Array[Bool] = []
+  let app = @app.AppBuilder()
+  app.command(
+    @app.slash(
+      name="unconfirmed",
+      description="Deferral with an uncertain outcome",
+      args=@interaction.Args::unit(),
+      handler=Raw(raw => {
+        raw.defer_response() catch {
+          ResponseStateFailure => ()
+          error => raise error
+        }
+        let delivered = try {
+          raw.reply(content="late") |> ignore
+          true
+        } catch {
+          @dhttp.DiscordHttpError::Transport(..) => false
+          error => raise error
+        }
+        replies.push(delivered)
+      }),
+    ),
+  )
+  let framework = state_flow_framework(app.build(), client)
+  let interaction = app_command("unconfirmed", "500000000000000807")
+  let gate = @framework.ResponseGate(ApplicationCommand, (_, _) => {
+    raise ResponseStateFailure
+  })
+  assert_true(framework.process_with(interaction, gate~))
+  assert_eq(gate.state(), Unconfirmed(DeferredChannelMessageWithSource))
+  // Both the edit and the followup failed, so the loading message may still
+  // be showing and the next reply must try to edit it again.
+  assert_eq(replies, [false])
+  assert_true(gate.placeholder_open())
+}
+
+///|
+async test "concurrent replies edit the placeholder once, then follow up" {
+  let requests : Array[String] = []
+  let client = @dhttp.Client("test-token")
+  defer client.close()
+  client.middleware((request, _) => {
+    requests.push("\{Repr(request.route.method_())} \{request.route.path()}")
+    // Keep the edit in flight so the second reply decides while it runs.
+    @async.sleep(50)
+    { status: 200, headers: Map([]), body: app_test_message().to_json(), }
+  })
+  let app = @app.AppBuilder()
+  app.command(
+    @app.slash(
+      name="twice",
+      description="Two replies at once",
+      args=@interaction.Args::unit(),
+      handler=Raw(raw => {
+        raw.defer_response()
+        @async.with_task_group(group => {
+          group.spawn_bg(() => raw.reply(content="first"))
+          group.spawn_bg(() => raw.reply(content="second"))
+        })
+      }),
+    ),
+  )
+  let framework = state_flow_framework(app.build(), client)
+  let interaction = app_command("twice", "500000000000000808")
+  let (gate, _) = @framework.ResponseGate::capture(interaction)
+  assert_true(framework.process_with(interaction, gate~))
+  assert_eq(requests, [
+    "Patch /webhooks/400000000000000001/interaction-token/messages/@original", "Post /webhooks/400000000000000001/interaction-token",
   ])
 }

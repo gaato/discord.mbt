@@ -70,10 +70,10 @@ async fn main {
       Some(s) => @string.parse_int(s) catch { _ => DEFAULT_RUN_SECONDS }
       None => DEFAULT_RUN_SECONDS
     }
-    let app = @discord.App()
+    let app = @discord.AppBuilder()
     app.command(echo_command())
 
-    let bot = @discord.Bot(app, token~, sync=command_scope())
+    let bot = @discord.Bot(app.build(), token~, sync=command_scope())
     bot.on(@discord.Events::ready(), (_ctx, ready) => {
       println("[bot] ready as \{ready.user.username}")
     })

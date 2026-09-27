@@ -58,7 +58,7 @@ fn build_router(
   or exact ids with optional `:state` via `component_id` / `modal_id`.
   The longest effective prefix wins (`id + ":"` for id routes), with ties
   retaining registration order. Component waiters (below) take precedence.
-  Framework accepts duplicate and empty routes; `App::validate` rejects them.
+  Framework accepts duplicate and empty routes; `AppBuilder::build` rejects them.
 
 ```mbt check
 ///|

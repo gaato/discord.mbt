@@ -1,6 +1,6 @@
 ///|
 async test "component and modal failures flow through the error policy" {
-  let app = @app.App()
+  let app = @app.AppBuilder()
   let boom = @app.component_route(id="boom", state=@app.CustomIdCodec::string())
   let late_boom = @app.component_route(
     id="late-boom",
@@ -42,11 +42,13 @@ async test "component and modal failures flow through the error policy" {
   )
   defer client.close()
   @async.with_task_group(group => {
-    let served = app.serve(
-      group,
-      client~,
-      application_id=@model.Id::parse("400000000000000001"),
-    )
+    let served = app
+      .build()
+      .serve(
+        group,
+        client~,
+        application_id=@model.Id::parse("400000000000000001"),
+      )
     // A failing immediate component handler answers through the policy.
     match
       served.handle_interaction(

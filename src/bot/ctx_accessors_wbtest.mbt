@@ -48,7 +48,7 @@ test "shard id validation rejects each invalid selection" {
 ///|
 async test "gateway context exposes raw handles, refs, and waiters" {
   let transport = BotFakeTransport()
-  let app = @app.App()
+  let app = @app.AppBuilder()
   let client = @dhttp.Client("test-token")
   defer client.close()
   client.middleware((request, _next) => {
@@ -92,7 +92,7 @@ async test "gateway context exposes raw handles, refs, and waiters" {
     { status: 200, headers: Map([]), body, }
   })
   let bot = Bot(
-    app,
+    app.build(),
     token="test-token",
     intents=@model.Intents::guild_messages(),
     client~,

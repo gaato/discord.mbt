@@ -43,21 +43,19 @@ async fn main {
   @async.handle_cancellation(() => {
     let token = @env.get_env_var("DISCORD_TOKEN").unwrap_or("")
     let public_key = @env.get_env_var("PUBLIC_KEY").unwrap_or("")
-    let app = @app.App()
+    let app = @app.AppBuilder()
     app.command(echo_command())
     @async.with_task_group(group => {
       let client = @dhttp.Client(token)
       group.add_defer(() => client.close())
       let application_id = client.get_current_application().id
-      let report = app.sync_commands(
-        client,
-        application_id,
-        scope=command_scope(),
-      )
+      let report = app
+        .build()
+        .sync_commands(client, application_id, scope=command_scope())
       println("[http] command sync: \{Repr(report)}")
       let server = @endpoint_http.serve_interactions(
         group,
-        app,
+        app.build(),
         addr="0.0.0.0:\{port()}",
         public_key~,
         client~,

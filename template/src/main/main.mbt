@@ -32,10 +32,10 @@ async fn main {
   @signal.set_global_cancellation_signals([SIGINT, SIGTERM])
   @async.handle_cancellation(() => {
     let token = @env.get_env_var("DISCORD_TOKEN").unwrap_or("")
-    let app = @discord.App()
+    let app = @discord.AppBuilder()
     app.command(ping_command())
 
-    let bot = @discord.Bot(app, token~, sync=command_scope())
+    let bot = @discord.Bot(app.build(), token~, sync=command_scope())
     bot.on(@discord.Events::ready(), (_, ready) => {
       println("[bot] ready as \{ready.user.username}")
     })

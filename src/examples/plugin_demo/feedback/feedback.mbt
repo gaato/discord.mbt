@@ -62,7 +62,7 @@ fn feedback_modal() -> @discord.Modal[FeedbackForm] {
 /// Register this feature's command and modal handler on an App.
 pub fn FeedbackFeature::install(
   self : FeedbackFeature,
-  app : @discord.App,
+  app : @discord.AppBuilder,
 ) -> Unit {
   let modal = feedback_modal()
   app.command(
@@ -98,6 +98,9 @@ pub fn FeedbackFeature::install(
 ///|
 /// Install a feedback feature without retaining its state handle. The
 /// registered closures keep the feature alive.
-pub fn install_feedback(app : @discord.App, config~ : FeedbackConfig) -> Unit {
+pub fn install_feedback(
+  app : @discord.AppBuilder,
+  config~ : FeedbackConfig,
+) -> Unit {
   FeedbackFeature(config).install(app)
 }

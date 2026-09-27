@@ -1,7 +1,7 @@
 ///|
 /// The one command handled by this gateway example.
-pub fn worker_app() -> @discord.App {
-  let app = @discord.App()
+pub fn worker_app() -> @discord.App raise @discord.AppConfigError {
+  let app = @discord.AppBuilder()
   app.command(
     @discord.slash(
       name="ping",
@@ -10,5 +10,5 @@ pub fn worker_app() -> @discord.App {
       handler=Immediate((_, _) => @discord.CommandReply::message(content="pong")),
     ),
   )
-  app
+  app.build()
 }

@@ -95,9 +95,9 @@ async fn run_echo_bot(token : String) -> Unit {
       )
     }),
   )
-  let app = @discord.App()
+  let app = @discord.AppBuilder()
   app.command(echo)
-  let bot = @discord.Bot(app, token~, sync=Global)
+  let bot = @discord.Bot(app.build(), token~, sync=Global)
   bot.on(@discord.Events::ready(), (_ctx, ready) => {
     println("ready as \{ready.user.username}")
   })
@@ -221,12 +221,13 @@ Runnable programs live under `src/examples/`:
 
 ## App core and executors
 
-`App` owns the interaction declaration: commands, components, modals,
-autocomplete routes, and the error policy. It has no gateway dependency.
-After building an App, choose an executor:
+An `AppBuilder` collects the interaction declaration: commands, components,
+modals, autocomplete routes, middleware, and the error policy. `build()`
+validates it into an immutable `App`, which has no gateway dependency. Hand
+the App to an executor:
 
-- `Bot(app, token~)` connects to the gateway and routes
-  `InteractionCreate` events through the App.
+- `Bot(app, token~)` connects to the gateway and routes `InteractionCreate`
+  events through the App.
 - `app.serve(group, token~)` creates an `InteractionEndpoint` for an HTTP
   adapter.
 
@@ -303,7 +304,7 @@ the `dave_probe`, `voice_player`, and `voice_recorder` examples, and the accepte
 `CommandScope` selects global, guild, or multi-guild registration. Pass
 `sync=scope` to `Bot` to synchronize once after the first READY; when omitted,
 the bot makes no command request. HTTP executors never synchronize commands.
-For those deployments, call `app.sync_commands(client, application_id,
+For those deployments, call `app.build().sync_commands(client, application_id,
 scope~)` from a one-shot registration program. It returns an `@app.SyncReport`
 whose `scopes` list each scope's created, updated, deleted, unchanged, and
 preserved command names, plus whether an overwrite was sent.

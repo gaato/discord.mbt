@@ -6,7 +6,7 @@ import {
 }
 
 // Values
-pub fn interaction_app() -> @app.App
+pub fn interaction_app() -> @app.App raise @app.AppConfigError
 
 // Errors
 

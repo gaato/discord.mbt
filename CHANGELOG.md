@@ -77,6 +77,18 @@ breaking change is listed with a migration note.
 - Breaking: `CustomIdCodec::custom(decode~)` and `imap(to~)` accept a decoder
   that may raise any error. A `HandlerError` keeps its meaning; any other
   error becomes `Malformed`. Existing decoders compile unchanged.
+- **Breaking: declarations are collected by `AppBuilder`, and `App` is the
+  validated, immutable result.** `AppBuilder::build()` runs every check that
+  `App::validate` ran and raises `AppConfigError`. `Bot`, `App::serve`,
+  `App::attach`, `App::start_signed_http`, `serve_interactions`, and
+  `App::sync_commands` take an `App`, so an executor can no longer start from
+  unvalidated declarations. A built `App` cannot change: registering more
+  handlers on its builder does not affect it. `App::validate` is gone.
+  Migration: construct `AppBuilder(...)` where you constructed `App(...)`,
+  and pass `app.build()` to the executor after every declaration is
+  registered. A feature installer that also needs `Bot` for events splits
+  into one function that takes the builder and one that takes the `Bot`; see
+  [Structuring bots](src/guide/07-structuring-bots.mbt.md).
 
 ## [0.6.0] - 2026-09-25
 

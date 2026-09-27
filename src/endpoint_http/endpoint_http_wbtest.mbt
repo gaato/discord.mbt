@@ -99,7 +99,7 @@ async test "interactions server authenticates and dispatches HTTP requests" {
   )
   let public_key = "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a"
   let timestamp = "1720951200"
-  let app = @app.App()
+  let app = @app.AppBuilder()
   app.command(
     @app.slash(
       name="echo",
@@ -133,7 +133,7 @@ async test "interactions server authenticates and dispatches HTTP requests" {
   @async.with_task_group(group => {
     let server = serve_interactions(
       group,
-      app,
+      app.build(),
       addr="127.0.0.1:0",
       public_key~,
       client=discord_client,
@@ -258,12 +258,12 @@ async test "interactions server authenticates and dispatches HTTP requests" {
 
 ///|
 async test "native interactions server rejects invalid keys before startup" {
-  let app = @app.App()
+  let app = @app.AppBuilder()
   @async.with_task_group(group => {
     try
       serve_interactions(
         group,
-        app,
+        app.build(),
         addr="127.0.0.1:0",
         public_key="00",
         token="",
@@ -285,7 +285,7 @@ async test "interactions server answers 202, 504, and 500 and reports startup fa
   )
   let public_key = "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a"
   let timestamp = "1720951200"
-  let app = @app.App()
+  let app = @app.AppBuilder()
   let warnings : @aqueue.Queue[String] = Queue(kind=Unbounded)
   app.on_warn(message => ignore(warnings.try_put(message) catch { _ => false }))
   app.command(
@@ -312,7 +312,8 @@ async test "interactions server answers 202, 504, and 500 and reports startup fa
     // Without a client or a token the app cannot serve, and the server
     // reports that from startup instead of listening.
     try
-      serve_interactions(group, app, addr="127.0.0.1:0", public_key~) |> ignore
+      serve_interactions(group, app.build(), addr="127.0.0.1:0", public_key~)
+      |> ignore
     catch {
       @app.AppConfigError::EmptyToken => ()
       error => fail("unexpected startup error: \{Repr(error)}")
@@ -323,7 +324,7 @@ async test "interactions server answers 202, 504, and 500 and reports startup fa
   @async.with_task_group(group => {
     let server = serve_interactions(
       group,
-      app,
+      app.build(),
       addr="127.0.0.1:0",
       public_key~,
       token="test-token",

@@ -186,7 +186,7 @@ test "modal show rejects unknown and non-text prefill keys" {
 
 ///|
 test "app validation rejects duplicate modal text input ids" {
-  let app = App()
+  let app = AppBuilder()
   let form = modal(
     custom_id="duplicate",
     title="Duplicate fields",
@@ -197,7 +197,7 @@ test "app validation rejects duplicate modal text input ids" {
     ),
   )
   app.on_modal(form, Raw(_ => ()))
-  try app.validate() catch {
+  try app.build() |> ignore catch {
     DuplicateModalTextInput(custom_id~, field~) => {
       inspect(custom_id, content="duplicate")
       inspect(field, content="same")
@@ -232,17 +232,17 @@ test "modal show appends state and emits modern label components" {
 }
 
 ///|
-/// The first limit violation `App::validate` reports for a one-field modal.
+/// The first limit violation `AppBuilder::build` reports for a one-field modal.
 fn[A] modal_limit_violation(
   field : ModalField[A],
   title? : String = "Limits",
 ) -> String {
-  let app = App()
+  let app = AppBuilder()
   app.on_modal(
     modal(custom_id="limits", title~, fields=ModalFields::of(field)),
     Raw(_ => ()),
   )
-  try app.validate() catch {
+  try app.build() |> ignore catch {
     ModalOutsideLimits(custom_id="limits", violation~) =>
       "\{violation.custom_id.unwrap_or("-")} \{violation.message()}"
     error => "unexpected error: \{Repr(error)}"

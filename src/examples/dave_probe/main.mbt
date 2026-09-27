@@ -504,9 +504,9 @@ async fn main {
   let channel_id : @model.ChannelId = @model.Id::parse(
     required_env("CHANNEL_ID"),
   )
-  let app = @discord.App()
+  let app = @discord.AppBuilder()
   let intents = @model.Intents::guilds() | @model.Intents::guild_voice_states()
-  let bot = @discord.Bot(app, token~, intents~)
+  let bot = @discord.Bot(app.build(), token~, intents~)
   let completed = Ref(false)
   let failure : Ref[String?] = Ref(None)
   bot.service(name="dave-probe", ctx => {

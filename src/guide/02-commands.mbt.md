@@ -235,8 +235,8 @@ async test "command sync keeps the entry point under either ownership policy" {
 ## Checks and app middleware
 
 A command check is a per-command gate. Cooldown keys include command type,
-command name, and the selected User, Guild, or Global bucket. `App()` keeps
-windows in a fresh in-memory store; pass `App(cooldown_store=...)` to share them
+command name, and the selected User, Guild, or Global bucket. `AppBuilder()` keeps
+windows in a fresh in-memory store; pass `AppBuilder(cooldown_store=...)` to share them
 between Apps or processes. See [Shared cooldowns](08-scaling-processes.mbt.md#shared-cooldowns).
 App middleware is application-global and wraps checks, cooldowns, and handler
 dispatch for commands, components, and modals. It does not run for

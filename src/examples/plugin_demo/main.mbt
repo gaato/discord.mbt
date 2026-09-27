@@ -30,12 +30,12 @@ fn feedback_channel() -> @model.ChannelId? {
 ///|
 async fn run_bot(channel_id : @model.ChannelId) -> Unit {
   let token = @env.get_env_var("DISCORD_TOKEN").unwrap_or("")
-  let app = @discord.App()
+  let app = @discord.AppBuilder()
   @feedback.install_feedback(
     app,
     config=FeedbackConfig(destination_channel=channel_id, cooldown_seconds=30),
   )
-  let bot = @discord.Bot(app, token~, sync=command_scope())
+  let bot = @discord.Bot(app.build(), token~, sync=command_scope())
   bot.on(@discord.Events::ready(), (_, ready) => {
     println("[bot] ready as \{ready.user.username}; try /feedback")
   })

@@ -63,7 +63,7 @@ response to finish deferred handlers. Hosts with `waitUntil` can attach that
 group's completion promise; other hosts choose their own lifetime policy.
 
 Command registration is a separate deploy-time step. Run a one-shot program
-that builds the same App and calls `app.sync_commands(client, application_id,
+that builds the same App and calls `app.build().sync_commands(client, application_id,
 scope~)` before starting or updating the HTTP deployment. The call returns an
 `@app.SyncReport`; print it to see each scope's changes and `overwritten` flag:
 
@@ -192,14 +192,14 @@ The native facade includes a complete signed-interactions server:
 ```mbt check
 ///|
 async fn run_server(
-  app : @discord.App,
+  app : @discord.AppBuilder,
   public_key : String,
   token : String,
 ) -> Unit {
   @async.with_task_group(group => {
     let server = @discord.serve_interactions(
       group,
-      app,
+      app.build(),
       addr="127.0.0.1:8080",
       public_key~,
       token~,
@@ -252,14 +252,16 @@ a reference host adapter.
 ```mbt nocheck
 ///|
 fn dispatch_on_js_host(
-  app : @discord.App,
+  app : @discord.AppBuilder,
   request : @discord.InteractionHttpRequest,
   token : String,
   application_id : @model.ApplicationId,
   public_key : String,
   abort_signal : @js_async.AbortSignal,
 ) -> @discord.InteractionHttpDispatch {
-  app.start_signed_http(
+  app
+  .build()
+  .start_signed_http(
     request,
     token~,
     application_id~,
@@ -271,10 +273,10 @@ fn dispatch_on_js_host(
 
 ## Cloudflare Workers
 
-On per-request runtimes such as Workers, constructing `App()` for every request
+On per-request runtimes such as Workers, constructing `AppBuilder()` for every request
 also rebuilds its in-memory cooldown store. Those cooldowns are therefore inert
 across requests. Implement `gaato/discord/cooldown.CooldownStore` over KV or a
-Durable Object and inject it with `App(cooldown_store=...)` to enforce real
+Durable Object and inject it with `AppBuilder(cooldown_store=...)` to enforce real
 cooldowns. The implementation must own its clock and atomically acquire each
 key's window; account for the storage service's consistency and atomicity
 guarantees. The TCP `RemoteCooldownStore` is native-only.

@@ -86,10 +86,10 @@ async fn main {
         defer close_source()
         let done : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
         let tracked = TrackedOggSource::{ source, done, finished: false, }
-        let app = @discord.App()
+        let app = @discord.AppBuilder()
         let intents = @model.Intents::guilds() |
           @model.Intents::guild_voice_states()
-        let bot = @discord.Bot(app, token~, intents~)
+        let bot = @discord.Bot(app.build(), token~, intents~)
         bot.service(name="voice-player", ctx => {
           let connection = ctx.join_voice(guild_id, channel_id)
           errdefer @async.protect_from_cancel(() => {

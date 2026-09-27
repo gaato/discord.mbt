@@ -10,7 +10,7 @@ fn route_test_modal(id : String) -> @app.Modal[String] {
 ///|
 test "validate rejects duplicate component routes" {
   for raw in [false, true] {
-    let app = @app.App()
+    let app = @app.AppBuilder()
     let route = @app.component_route(
       id="ticket",
       state=@app.CustomIdCodec::unit(),
@@ -22,7 +22,7 @@ test "validate rejects duplicate component routes" {
         app.on_component(route, Raw(_ => ()))
       }
     }
-    try app.validate() catch {
+    try app.build() |> ignore catch {
       @app.AppConfigError::DuplicateComponentRoute(custom_id~) =>
         assert_eq(custom_id, "ticket")
       error => fail("unexpected error: \{Repr(error)}")
@@ -35,7 +35,7 @@ test "validate rejects duplicate component routes" {
 ///|
 test "validate rejects duplicate modal routes" {
   for raw in [false, true] {
-    let app = @app.App()
+    let app = @app.AppBuilder()
     let modal = route_test_modal("ticket")
     for _ in 0..<2 {
       if raw {
@@ -44,7 +44,7 @@ test "validate rejects duplicate modal routes" {
         app.on_modal(modal, Raw(_ => ()))
       }
     }
-    try app.validate() catch {
+    try app.build() |> ignore catch {
       @app.AppConfigError::DuplicateModalRoute(custom_id~) =>
         assert_eq(custom_id, "ticket")
       error => fail("unexpected error: \{Repr(error)}")
@@ -57,7 +57,7 @@ test "validate rejects duplicate modal routes" {
 ///|
 test "validate rejects empty component routes" {
   for raw in [false, true] {
-    let app = @app.App()
+    let app = @app.AppBuilder()
     if raw {
       app.on_component_raw(prefix="", _ => ())
     } else {
@@ -66,7 +66,7 @@ test "validate rejects empty component routes" {
         Raw(_ => ()),
       )
     }
-    try app.validate() catch {
+    try app.build() |> ignore catch {
       @app.AppConfigError::EmptyComponentRoute => ()
       error => fail("unexpected error: \{Repr(error)}")
     } noraise {
@@ -78,13 +78,13 @@ test "validate rejects empty component routes" {
 ///|
 test "validate rejects empty modal routes" {
   for raw in [false, true] {
-    let app = @app.App()
+    let app = @app.AppBuilder()
     if raw {
       app.on_modal_raw(prefix="", _ => ())
     } else {
       app.on_modal(route_test_modal(""), Raw(_ => ()))
     }
-    try app.validate() catch {
+    try app.build() |> ignore catch {
       @app.AppConfigError::EmptyModalRoute => ()
       error => fail("unexpected error: \{Repr(error)}")
     } noraise {
@@ -96,8 +96,8 @@ test "validate rejects empty modal routes" {
 ///|
 test "id route collides with its literal prefix form" {
   for raw_first in [false, true] {
-    let components = @app.App()
-    let modals = @app.App()
+    let components = @app.AppBuilder()
+    let modals = @app.AppBuilder()
     if raw_first {
       components.on_component_raw(prefix="a:", _ => ())
       modals.on_modal_raw(prefix="a:", _ => ())
@@ -112,14 +112,14 @@ test "id route collides with its literal prefix form" {
       modals.on_modal_raw(prefix="a:", _ => ())
     }
     let duplicate = if raw_first { "a" } else { "a:" }
-    try components.validate() catch {
+    try components.build() |> ignore catch {
       @app.AppConfigError::DuplicateComponentRoute(custom_id~) =>
         assert_eq(custom_id, duplicate)
       error => fail("unexpected error: \{Repr(error)}")
     } noraise {
       _ => fail("expected duplicate component route")
     }
-    try modals.validate() catch {
+    try modals.build() |> ignore catch {
       @app.AppConfigError::DuplicateModalRoute(custom_id~) =>
         assert_eq(custom_id, duplicate)
       error => fail("unexpected error: \{Repr(error)}")
@@ -133,7 +133,7 @@ test "id route collides with its literal prefix form" {
 test "invalid route ids are rejected" {
   for id in ["x".repeat(101), "😀".repeat(51)] {
     for modal in [false, true] {
-      let app = @app.App()
+      let app = @app.AppBuilder()
       if modal {
         app.on_modal(route_test_modal(id), Raw(_ => ()))
       } else {
@@ -142,7 +142,7 @@ test "invalid route ids are rejected" {
           Raw(_ => ()),
         )
       }
-      try app.validate() catch {
+      try app.build() |> ignore catch {
         @app.AppConfigError::InvalidRouteId(custom_id~, reason~) => {
           assert_eq(custom_id, id)
           assert_false(reason.is_empty())
@@ -163,7 +163,7 @@ test "typed route ids may contain the separator but not nest at it" {
   )
   assert_eq(route.custom_id(7), "bot:rolemenu:7")
   assert_eq(route.decode("bot:rolemenu:7"), 7)
-  let legal = @app.App()
+  let legal = @app.AppBuilder()
   legal.on_component(route, Raw(_ => ()))
   legal.on_modal(route_test_modal("bot:rolemenu"), Raw(_ => ()))
   // Siblings share a prefix without either extending the other at a `:`.
@@ -174,10 +174,10 @@ test "typed route ids may contain the separator but not nest at it" {
     )
     legal.on_modal(route_test_modal(id), Raw(_ => ()))
   }
-  legal.validate()
+  legal.build() |> ignore
   for ids in [("bot", "bot:rolemenu"), ("bot:rolemenu", "bot")] {
     for modal in [false, true] {
-      let app = @app.App()
+      let app = @app.AppBuilder()
       for id in [ids.0, ids.1] {
         if modal {
           app.on_modal(route_test_modal(id), Raw(_ => ()))
@@ -188,7 +188,7 @@ test "typed route ids may contain the separator but not nest at it" {
           )
         }
       }
-      try app.validate() catch {
+      try app.build() |> ignore catch {
         @app.AppConfigError::InvalidRouteId(custom_id~, reason~) => {
           assert_eq(custom_id, ids.1)
           assert_true(reason.contains("'\{ids.0}'"))
@@ -203,7 +203,7 @@ test "typed route ids may contain the separator but not nest at it" {
 
 ///|
 test "strict prefix routes and separate interaction kinds remain legal" {
-  let app = @app.App()
+  let app = @app.AppBuilder()
   for prefix in ["ticket:", "ticket:close:"] {
     app.on_component_raw(prefix~, _ => ())
     app.on_modal_raw(prefix~, _ => ())
@@ -215,5 +215,5 @@ test "strict prefix routes and separate interaction kinds remain legal" {
     )
     app.on_modal(route_test_modal(id), Raw(_ => ()))
   }
-  app.validate()
+  app.build() |> ignore
 }

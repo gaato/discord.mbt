@@ -18,7 +18,7 @@ async test "two commands sharing one store do not collide" {
   let client = @dhttp.Client("test-token")
   defer client.close()
   let store = @cooldown.InMemoryCooldownStore(now=() => 1_000L)
-  let app = App(cooldown_store=store)
+  let app = AppBuilder(cooldown_store=store)
   let handled : Array[String] = []
   let retries = Ref(0)
   app.error_policy((_, error) => {
@@ -40,7 +40,7 @@ async test "two commands sharing one store do not collide" {
       ).cooldown(seconds=10, bucket=Global),
     )
   }
-  let framework = middleware_test_framework(app, client)
+  let framework = middleware_test_framework(app.build(), client)
   for name in ["first", "second", "first", "second"] {
     dispatch_guard_interaction(
       framework,
@@ -56,7 +56,7 @@ async test "commands without a cooldown never touch the store" {
   let client = @dhttp.Client("test-token")
   defer client.close()
   let store = CountingCooldownStore::{ calls: [], }
-  let app = App(cooldown_store=store)
+  let app = AppBuilder(cooldown_store=store)
   let handled = Ref(0)
   app.command(
     slash(
@@ -66,7 +66,7 @@ async test "commands without a cooldown never touch the store" {
       handler=Raw(_ => handled.val += 1),
     ),
   )
-  let framework = middleware_test_framework(app, client)
+  let framework = middleware_test_framework(app.build(), client)
   dispatch_guard_interaction(
     framework,
     guard_dm_interaction("unlimited", "500000000000000020"),
@@ -80,7 +80,7 @@ async test "cooldown store is called only after every check passes" {
   let client = @dhttp.Client("test-token")
   defer client.close()
   let store = CountingCooldownStore::{ calls: [], }
-  let app = App(cooldown_store=store)
+  let app = AppBuilder(cooldown_store=store)
   let allowed = Ref(false)
   let handled = Ref(0)
   app.error_policy((_, error) => {
@@ -103,7 +103,7 @@ async test "cooldown store is called only after every check passes" {
     })
     .cooldown(seconds=10, bucket=User),
   )
-  let framework = middleware_test_framework(app, client)
+  let framework = middleware_test_framework(app.build(), client)
   dispatch_guard_interaction(
     framework,
     guard_dm_interaction("checked", "500000000000000020"),
@@ -126,7 +126,7 @@ async test "Apps sharing a cooldown store observe the same command window" {
   let handled = Ref(0)
   let denied = Ref(0)
   for _ in 0..<2 {
-    let app = App(cooldown_store=store)
+    let app = AppBuilder(cooldown_store=store)
     app.command(
       slash(
         name="shared",
@@ -141,7 +141,7 @@ async test "Apps sharing a cooldown store observe the same command window" {
       }
       denied.val += 1
     })
-    let framework = middleware_test_framework(app, client)
+    let framework = middleware_test_framework(app.build(), client)
     dispatch_guard_interaction(
       framework,
       guard_dm_interaction("shared", "500000000000000020"),
@@ -156,7 +156,7 @@ async test "command type separates cooldown keys even with the same name" {
   let client = @dhttp.Client("test-token")
   defer client.close()
   let store = CountingCooldownStore::{ calls: [], }
-  let app = App(cooldown_store=store)
+  let app = AppBuilder(cooldown_store=store)
   let handled = Ref(0)
   app.command(
     slash(
@@ -172,7 +172,7 @@ async test "command type separates cooldown keys even with the same name" {
       bucket=Global,
     ),
   )
-  let framework = middleware_test_framework(app, client)
+  let framework = middleware_test_framework(app.build(), client)
   let slash_interaction = guard_dm_interaction("shared", "500000000000000020")
   guard slash_interaction.data is Some(Command(data)) else {
     fail("expected command data")

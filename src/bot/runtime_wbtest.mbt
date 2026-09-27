@@ -1,22 +1,22 @@
 ///|
 test "intent derivation strips privileged intents and warns" {
-  let app = @app.App()
-  let bot = Bot(app, token="token")
+  let app = @app.AppBuilder()
   let warnings : Array[String] = []
   app.on_warn(message => warnings.push(message))
+  let bot = Bot(app.build(), token="token")
   bot.on(Events::message_create(), (_, _) => ())
   bot.on(Events::guild_member_add(), (_, _) => ())
   inspect(bot.resolved_intents().bits(), content="4608")
   inspect(warnings.length(), content="1")
   assert_true(warnings[0].contains("privileged intent"))
-  let explicit_app = @app.App()
+  let explicit_app = @app.AppBuilder()
+  let explicit_warnings : Array[String] = []
+  explicit_app.on_warn(message => explicit_warnings.push(message))
   let explicit = Bot(
-    explicit_app,
+    explicit_app.build(),
     token="token",
     intents=@model.Intents::guilds(),
   )
-  let explicit_warnings : Array[String] = []
-  explicit_app.on_warn(message => explicit_warnings.push(message))
   explicit.on(Events::message_create(), (_, _) => ())
   inspect(explicit.resolved_intents().bits(), content="1")
   inspect(explicit_warnings.length(), content="1")
@@ -24,8 +24,8 @@ test "intent derivation strips privileged intents and warns" {
 
 ///|
 test "cache attachment keeps the gateway filter open and shares state" {
-  let app = @app.App()
-  let bot = Bot(app, token="token")
+  let app = @app.AppBuilder()
+  let bot = Bot(app.build(), token="token")
   let cache = @cache.InMemoryCache(resources=@cache.CacheResources::default())
   bot.attach_cache(cache)
   let filter = bot.event_filter()
@@ -46,10 +46,10 @@ priv suberror RuntimeTestFailure {
 
 ///|
 test "bot telemetry hook failures flow to app warnings" {
-  let app = @app.App()
+  let app = @app.AppBuilder()
   let warnings : Array[String] = []
   app.on_warn(message => warnings.push(message))
-  let bot = Bot(app, token="test-token")
+  let bot = Bot(app.build(), token="test-token")
   bot.on_telemetry(_ => raise RuntimeTestFailure)
   bot.emit_telemetry(DecodeError(marker="DECODE_ERROR:test"))
   inspect(warnings.length(), content="1")
@@ -92,7 +92,7 @@ const BOT_HELLO : String =
 async test "bot restores context before replay and snapshots live sessions" {
   let transport = BotFakeTransport()
   let urls : Array[String] = []
-  let app = @app.App()
+  let app = @app.AppBuilder()
   let commands : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   app.command(
     @app.slash(
@@ -122,7 +122,7 @@ async test "bot restores context before replay and snapshots live sessions" {
     ready,
   }
   let bot = Bot(
-    app,
+    app.build(),
     token="test-token",
     intents=@model.Intents::guild_messages(),
     client~,
@@ -205,7 +205,7 @@ async test "bot restores context before replay and snapshots live sessions" {
 ///|
 async test "bot reports supplied sessions while resolving shards" {
   let transport = BotFakeTransport()
-  let app = @app.App()
+  let app = @app.AppBuilder()
   let client = @dhttp.Client("test-token")
   defer client.close()
   let gateway_requested : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
@@ -228,7 +228,7 @@ async test "bot reports supplied sessions while resolving shards" {
     ready,
   }
   let bot = Bot(
-    app,
+    app.build(),
     token="test-token",
     intents=@model.Intents::guild_messages(),
     client~,
@@ -269,7 +269,7 @@ async test "bot reports supplied sessions while resolving shards" {
 ///|
 async test "bot identifies instead of resuming a session from another shard layout" {
   let transport = BotFakeTransport()
-  let app = @app.App()
+  let app = @app.AppBuilder()
   let warnings : Array[String] = []
   app.on_warn(message => warnings.push(message))
   let client = @dhttp.Client("test-token")
@@ -295,7 +295,7 @@ async test "bot identifies instead of resuming a session from another shard layo
     ready,
   }
   let bot = Bot(
-    app,
+    app.build(),
     token="test-token",
     intents=@model.Intents::guild_messages(),
     client~,
@@ -349,7 +349,7 @@ async test "bot holds a fallback IDENTIFY when the session start limit is exhaus
     body: Json::array([]),
   })
   let bot = Bot(
-    @app.App(),
+    @app.AppBuilder().build(),
     token="test-token",
     intents=@model.Intents::guild_messages(),
     client~,
@@ -385,7 +385,7 @@ async test "bot holds a fallback IDENTIFY when the session start limit is exhaus
 ///|
 async test "bot identifies with a warning when the session start limit cannot be read" {
   let transport = BotFakeTransport()
-  let app = @app.App()
+  let app = @app.AppBuilder()
   let warnings : Array[String] = []
   app.on_warn(message => warnings.push(message))
   let client = @dhttp.Client("test-token")
@@ -395,7 +395,7 @@ async test "bot identifies with a warning when the session start limit cannot be
     { status, headers: Map([]), body: Json::array([]), }
   })
   let bot = Bot(
-    app,
+    app.build(),
     token="test-token",
     intents=@model.Intents::guild_messages(),
     client~,
@@ -450,7 +450,7 @@ fn bot_saved_session() -> BotSession raise {
 async test "empty Bot replay starts services on RESUMED" {
   let transport = BotFakeTransport()
   let bot = Bot(
-    @app.App(),
+    @app.AppBuilder().build(),
     token="test-token",
     gateway_url="wss://gateway.example",
     resume={ 0: bot_saved_session() },
@@ -497,7 +497,7 @@ async test "bot rejects mismatched saved session before REST or connector" {
     fail("mismatched session reached REST")
   })
   let bot = Bot(
-    @app.App(),
+    @app.AppBuilder().build(),
     token="test-token",
     client~,
     gateway_url="wss://gateway.example",
@@ -528,7 +528,7 @@ async test "rejected Bot resume uses the next actual READY" {
   let second = BotFakeTransport()
   let urls : Array[String] = []
   let connected : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
-  let app = @app.App()
+  let app = @app.AppBuilder()
   let client = @dhttp.Client("test-token")
   defer client.close()
   let sync_calls = Ref(0)
@@ -537,7 +537,7 @@ async test "rejected Bot resume uses the next actual READY" {
     { status: 200, headers: Map([]), body: Json::array([]), }
   })
   let bot = Bot(
-    app,
+    app.build(),
     token="test-token",
     client~,
     gateway_url="wss://gateway.example",
@@ -666,8 +666,8 @@ fn middleware_runtime_bot(app : @app.App, transport : BotFakeTransport) -> Bot {
 ///|
 async test "gateway contexts expose heartbeat latency" {
   let transport = BotFakeTransport()
-  let app = @app.App()
-  let bot = middleware_runtime_bot(app, transport)
+  let app = @app.AppBuilder()
+  let bot = middleware_runtime_bot(app.build(), transport)
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
   @async.with_task_group(group => {
@@ -707,7 +707,7 @@ async test "gateway contexts expose heartbeat latency" {
 ///|
 async test "bot without sync performs no command requests" {
   let transport = BotFakeTransport()
-  let app = @app.App()
+  let app = @app.AppBuilder()
   let rest_paths : Array[String] = []
   let client = @dhttp.Client("test-token")
   defer client.close()
@@ -716,7 +716,7 @@ async test "bot without sync performs no command requests" {
     { status: 200, headers: Map([]), body: Json::array([]), }
   })
   let bot = Bot(
-    app,
+    app.build(),
     token="test-token",
     intents=@model.Intents::guilds(),
     client~,
@@ -754,7 +754,7 @@ async test "bot warns when sync deletes undeclared commands" {
     ] {
     let (scope, targets) = entry
     let transport = BotFakeTransport()
-    let app = @app.App()
+    let app = @app.AppBuilder()
     let warnings = []
     app.on_warn(message => warnings.push(message))
     let client = @dhttp.Client("test-token")
@@ -771,7 +771,7 @@ async test "bot warns when sync deletes undeclared commands" {
       { status: 200, headers: Map([]), body, }
     })
     let bot = Bot(
-      app,
+      app.build(),
       token="test-token",
       intents=@model.Intents::guilds(),
       client~,
@@ -805,7 +805,7 @@ async test "bot warns when sync deletes undeclared commands" {
 ///|
 async test "bot Keep preserves other owners and emits no deletion warning" {
   let transport = BotFakeTransport()
-  let app = @app.App()
+  let app = @app.AppBuilder()
   app.command(
     @app.slash(
       name="ping",
@@ -834,7 +834,7 @@ async test "bot Keep preserves other owners and emits no deletion warning" {
     { status: 200, headers: Map([]), body, }
   })
   let bot = Bot(
-    app,
+    app.build(),
     token="test-token",
     intents=@model.Intents::guilds(),
     client~,
@@ -871,7 +871,7 @@ async test "bot Keep preserves other owners and emits no deletion warning" {
 async test "bot sync failures stay fail-fast" {
   for fail_get in [true, false] {
     let transport = BotFakeTransport()
-    let app = @app.App()
+    let app = @app.AppBuilder()
     let warnings = []
     app.on_warn(message => warnings.push(message))
     let client = @dhttp.Client("test-token")
@@ -887,7 +887,7 @@ async test "bot sync failures stay fail-fast" {
       }
     })
     let bot = Bot(
-      app,
+      app.build(),
       token="test-token",
       intents=@model.Intents::guilds(),
       client~,
@@ -925,7 +925,7 @@ async test "bot sync failures stay fail-fast" {
 ///|
 async test "gateway context resolves cached channels and falls back to REST" {
   let transport = BotFakeTransport()
-  let app = @app.App()
+  let app = @app.AppBuilder()
   let rest_calls = Ref(0)
   let client = @dhttp.Client("test-token")
   defer client.close()
@@ -943,7 +943,7 @@ async test "gateway context resolves cached channels and falls back to REST" {
     }
   })
   let bot = Bot(
-    app,
+    app.build(),
     token="test-token",
     intents=@model.Intents::guilds(),
     client~,
@@ -999,7 +999,12 @@ async test "unsupported compression rejects before REST or connector setup" {
     rest_calls.val += 1
     fail("compression reached REST")
   })
-  let bot = Bot(@app.App(), token="test-token", client~, compress=true)
+  let bot = Bot(
+    @app.AppBuilder().build(),
+    token="test-token",
+    client~,
+    compress=true,
+  )
   bot.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.connector_.val = Some(_ => {
     connector_calls.val += 1
@@ -1022,8 +1027,8 @@ async test "unsupported compression rejects before REST or connector setup" {
 ///|
 async test "event middleware drops handlers after wire-level cache updates" {
   let transport = BotFakeTransport()
-  let app = @app.App()
-  let bot = middleware_runtime_bot(app, transport)
+  let app = @app.AppBuilder()
+  let bot = middleware_runtime_bot(app.build(), transport)
   let cache = @cache.InMemoryCache(resources=CacheResources(messages=true))
   bot.attach_cache(cache)
   bot.middleware((_, event, next) => {
@@ -1076,8 +1081,8 @@ async test "event middleware drops handlers after wire-level cache updates" {
 ///|
 async test "event middleware transforms events for typed handlers" {
   let transport = BotFakeTransport()
-  let app = @app.App()
-  let bot = middleware_runtime_bot(app, transport)
+  let app = @app.AppBuilder()
+  let bot = middleware_runtime_bot(app.build(), transport)
   bot.middleware((_, event, next) => {
     match event {
       MessageCreate(payload) => {
@@ -1111,8 +1116,8 @@ async test "event middleware transforms events for typed handlers" {
 ///|
 async test "event middleware order is onion-style" {
   let transport = BotFakeTransport()
-  let app = @app.App()
-  let bot = middleware_runtime_bot(app, transport)
+  let app = @app.AppBuilder()
+  let bot = middleware_runtime_bot(app.build(), transport)
   let trace : Array[String] = []
   let first : EventMiddleware = (_, event, next) => {
     match event {
@@ -1164,7 +1169,7 @@ async test "event middleware order is onion-style" {
 ///|
 async test "interaction routing survives dropped gateway events" {
   let transport = BotFakeTransport()
-  let app = @app.App()
+  let app = @app.AppBuilder()
   let commands : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   app.command(
     @app.slash(
@@ -1174,7 +1179,7 @@ async test "interaction routing survives dropped gateway events" {
       handler=Raw(_ => commands.put(())),
     ),
   )
-  let bot = middleware_runtime_bot(app, transport)
+  let bot = middleware_runtime_bot(app.build(), transport)
   bot.middleware((_, _, _) => ())
   let service_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.service(name="capture-context", ctx => service_contexts.put(ctx))
@@ -1198,10 +1203,10 @@ async test "interaction routing survives dropped gateway events" {
 ///|
 async test "event middleware failures warn and preserve later dispatch" {
   let transport = BotFakeTransport()
-  let app = @app.App()
+  let app = @app.AppBuilder()
   let warnings : Array[String] = []
   app.on_warn(message => warnings.push(message))
-  let bot = middleware_runtime_bot(app, transport)
+  let bot = middleware_runtime_bot(app.build(), transport)
   let failed = Ref(false)
   bot.middleware((_, event, next) => {
     match event {
@@ -1245,9 +1250,9 @@ async test "event middleware failures warn and preserve later dispatch" {
 ///|
 async test "bot updates cache before typed event handlers" {
   let transport = BotFakeTransport()
-  let app = @app.App()
+  let app = @app.AppBuilder()
   let bot = Bot(
-    app,
+    app.build(),
     token="test-token",
     intents=@model.Intents::guild_messages(),
     client=Client("test-token"),
@@ -1283,8 +1288,8 @@ async test "bot updates cache before typed event handlers" {
 ///|
 async test "message update handlers receive the cached previous revision" {
   let transport = BotFakeTransport()
-  let app = @app.App()
-  let bot = middleware_runtime_bot(app, transport)
+  let app = @app.AppBuilder()
+  let bot = middleware_runtime_bot(app.build(), transport)
   let cache = @cache.InMemoryCache(resources=CacheResources(messages=true))
   bot.attach_cache(cache)
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
@@ -1321,8 +1326,8 @@ async test "message update handlers receive the cached previous revision" {
 ///|
 async test "message update handlers receive no before when messages are disabled" {
   let transport = BotFakeTransport()
-  let app = @app.App()
-  let bot = middleware_runtime_bot(app, transport)
+  let app = @app.AppBuilder()
+  let bot = middleware_runtime_bot(app.build(), transport)
   bot.attach_cache(InMemoryCache(resources=@cache.CacheResources::default()))
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
@@ -1347,25 +1352,15 @@ async test "message update handlers receive no before when messages are disabled
 
 ///|
 async test "bot run dispatches concurrently, survives handlers, and shuts down" {
-  let empty_app = @app.App()
-  try Bot(empty_app, token="").run() catch {
+  let empty_app = @app.AppBuilder()
+  try Bot(empty_app.build(), token="").run() catch {
     @app.AppConfigError::EmptyToken => ()
     error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected empty token error")
   }
   let transport = BotFakeTransport()
-  let app = @app.App(max_in_flight=8)
-  let bot = Bot(
-    app,
-    token="test-token",
-    client=Client("test-token"),
-    gateway_url="wss://gateway.example",
-  )
-  bot.gateway_bot_info_.val = Some(manager_gateway_info())
-  bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
-  let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
-  bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
+  let app = @app.AppBuilder(max_in_flight=8)
   let command_count = Ref(0)
   let first_started : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   let release_first : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
@@ -1395,6 +1390,18 @@ async test "bot run dispatches concurrently, survives handlers, and shuts down" 
       handler=Raw(_ => raise RuntimeTestFailure),
     ),
   )
+  let policy_calls : @aqueue.Queue[String] = Queue(kind=Unbounded)
+  app.error_policy((failure, _) => policy_calls.put("\{Repr(failure.origin())}"))
+  let bot = Bot(
+    app.build(),
+    token="test-token",
+    client=Client("test-token"),
+    gateway_url="wss://gateway.example",
+  )
+  bot.gateway_bot_info_.val = Some(manager_gateway_info())
+  bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
+  bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
   let event_calls : @aqueue.Queue[Int] = Queue(kind=Unbounded)
   let event_count = Ref(0)
   bot.on(Events::message_delete(), (_, _) => {
@@ -1404,8 +1411,6 @@ async test "bot run dispatches concurrently, survives handlers, and shuts down" 
       raise RuntimeTestFailure
     }
   })
-  let policy_calls : @aqueue.Queue[String] = Queue(kind=Unbounded)
-  app.error_policy((failure, _) => policy_calls.put("\{Repr(failure.origin())}"))
   // No raw event handler is registered, so the gateway filter can reject
   // unrelated events before decoding/queuing them.
   let filter = bot.event_filter()
@@ -1448,8 +1453,8 @@ async test "bot run dispatches concurrently, survives handlers, and shuts down" 
 ///|
 async test "bot reports gateway decode errors and preserves dispatch" {
   // Decode-error observers do not request any additional event kinds.
-  let filter_app = @app.App()
-  let filter_bot = Bot(filter_app, token="test-token")
+  let filter_app = @app.AppBuilder()
+  let filter_bot = Bot(filter_app.build(), token="test-token")
   filter_bot.on_decode_error((_, _) => ())
   let filter = filter_bot.event_filter()
   assert_true(filter(KReady))
@@ -1458,11 +1463,11 @@ async test "bot reports gateway decode errors and preserves dispatch" {
   assert_false(filter(KInviteDelete))
 
   let transport = BotFakeTransport()
-  let app = @app.App()
+  let app = @app.AppBuilder()
   let warnings : Array[String] = []
   app.on_warn(message => warnings.push(message))
   let bot = Bot(
-    app,
+    app.build(),
     token="test-token",
     intents=@model.Intents::guild_messages(),
     client=Client("test-token"),
@@ -1538,7 +1543,7 @@ async test "bot reports gateway decode errors and preserves dispatch" {
 ///|
 async test "saturated event handlers never delay interaction routing" {
   let transport = BotFakeTransport()
-  let app = @app.App(max_in_flight=1)
+  let app = @app.AppBuilder(max_in_flight=1)
   let commands : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   app.command(
     @app.slash(
@@ -1548,7 +1553,7 @@ async test "saturated event handlers never delay interaction routing" {
       handler=Raw(_ => commands.put(())),
     ),
   )
-  let bot = middleware_runtime_bot(app, transport)
+  let bot = middleware_runtime_bot(app.build(), transport)
   let release : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   let deletes : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   bot.on(Events::message_delete(), (_, _) => {
@@ -1596,7 +1601,7 @@ fn component_frame(sequence : Int, id : String, custom_id : String) -> String {
 ///|
 async test "a deferred handler waiting at full capacity receives its button" {
   let transport = BotFakeTransport()
-  let app = @app.App(max_in_flight=1)
+  let app = @app.AppBuilder(max_in_flight=1)
   let woke : @aqueue.Queue[Bool] = Queue(kind=Unbounded)
   app.command(
     @app.slash(
@@ -1619,7 +1624,7 @@ async test "a deferred handler waiting at full capacity receives its button" {
     { status: 204, headers: Map([]), body: Json::null(), }
   })
   let bot = Bot(
-    app,
+    app.build(),
     token="test-token",
     intents=@model.Intents::guild_messages(),
     client~,

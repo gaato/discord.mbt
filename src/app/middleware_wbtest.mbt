@@ -103,7 +103,7 @@ async fn process_middleware_interaction(
 async test "interaction middleware order covers commands components and modals" {
   let client = @dhttp.Client("test-token")
   defer client.close()
-  let app = App()
+  let app = AppBuilder()
   let trace : Array[String] = []
   let first : InteractionMiddleware = (ctx, next) => {
     let target = middleware_target_label(ctx.target())
@@ -138,7 +138,7 @@ async test "interaction middleware order covers commands components and modals" 
   guard button is Button(button) else { fail("expected a button") }
   app.on_component(route, Raw(_ => trace.push("component:button:item:handler")))
   app.on_modal_raw(prefix="form:", _ => trace.push("modal:form:item:handler"))
-  let framework = middleware_test_framework(app, client)
+  let framework = middleware_test_framework(app.build(), client)
   process_middleware_interaction(
     framework,
     middleware_command_interaction("ordered", "500000000000000601"),
@@ -168,7 +168,7 @@ async test "interaction middleware short-circuits checks and handler" {
   let client = @dhttp.Client("test-token")
   defer client.close()
   let store = CountingCooldownStore::{ calls: [], }
-  let app = App(cooldown_store=store)
+  let app = AppBuilder(cooldown_store=store)
   let check_ran = Ref(false)
   let handler_ran = Ref(false)
   app.middleware((_ctx, _next) => ())
@@ -185,7 +185,7 @@ async test "interaction middleware short-circuits checks and handler" {
     })
     .cooldown(seconds=10, bucket=Global),
   )
-  let framework = middleware_test_framework(app, client)
+  let framework = middleware_test_framework(app.build(), client)
   process_middleware_interaction(
     framework,
     middleware_command_interaction("short-circuit", "500000000000000610"),
@@ -200,7 +200,7 @@ async test "interaction middleware short-circuits checks and handler" {
 async test "interaction middleware may send the initial response" {
   let client = @dhttp.Client("test-token")
   defer client.close()
-  let app = App()
+  let app = AppBuilder()
   let handler_ran = Ref(false)
   app.middleware((ctx, _next) => ctx.respond("blocked"))
   app.command(
@@ -211,7 +211,7 @@ async test "interaction middleware may send the initial response" {
       handler=Raw(_ => handler_ran.val = true),
     ),
   )
-  let framework = middleware_test_framework(app, client)
+  let framework = middleware_test_framework(app.build(), client)
   guard process_middleware_interaction(
       framework,
       middleware_command_interaction("respond", "500000000000000620"),
@@ -232,7 +232,7 @@ async test "interaction middleware may send the initial response" {
 async test "middleware CheckFailed matches a failing command check" {
   let client = @dhttp.Client("test-token")
   defer client.close()
-  let app = App()
+  let app = AppBuilder()
   app.middleware((ctx, next) => {
     match ctx.target() {
       Command(name~) if name == "middleware-denied" =>
@@ -256,7 +256,7 @@ async test "middleware CheckFailed matches a failing command check" {
       handler=Raw(_ => fail("check-denied handler must not run")),
     ).check(_ => false),
   )
-  let framework = middleware_test_framework(app, client)
+  let framework = middleware_test_framework(app.build(), client)
   guard process_middleware_interaction(
       framework,
       middleware_command_interaction("middleware-denied", "500000000000000630"),
@@ -287,7 +287,7 @@ async test "middleware CheckFailed matches a failing command check" {
 async test "middleware guild_scope failures flow through the error policy" {
   let client = @dhttp.Client("test-token")
   defer client.close()
-  let app = App()
+  let app = AppBuilder()
   app.middleware((ctx, next) => {
     match ctx.target() {
       Command(name~) if name == "guild-required" => {
@@ -305,7 +305,7 @@ async test "middleware guild_scope failures flow through the error policy" {
       handler=Raw(_ => fail("guild-required handler must not run in a DM")),
     ),
   )
-  let framework = middleware_test_framework(app, client)
+  let framework = middleware_test_framework(app.build(), client)
   guard process_middleware_interaction(
       framework,
       middleware_command_interaction("guild-required", "500000000000000632"),
@@ -325,7 +325,7 @@ async test "middleware guild_scope failures flow through the error policy" {
 async test "interaction middleware wraps command checks" {
   let client = @dhttp.Client("test-token")
   defer client.close()
-  let app = App()
+  let app = AppBuilder()
   let trace : Array[String] = []
   app.middleware((_ctx, next) => {
     trace.push("middleware-in")
@@ -343,7 +343,7 @@ async test "interaction middleware wraps command checks" {
       true
     }),
   )
-  let framework = middleware_test_framework(app, client)
+  let framework = middleware_test_framework(app.build(), client)
   process_middleware_interaction(
     framework,
     middleware_command_interaction("wrapped-check", "500000000000000640"),
@@ -359,7 +359,7 @@ async test "interaction middleware wraps command checks" {
 async test "autocomplete bypasses interaction middleware" {
   let client = @dhttp.Client("test-token")
   defer client.close()
-  let app = App()
+  let app = AppBuilder()
   let middleware_ran = Ref(false)
   let autocomplete_ran = Ref(false)
   app.middleware((_ctx, next) => {
@@ -370,7 +370,7 @@ async test "autocomplete bypasses interaction middleware" {
     autocomplete_ran.val = true
     raw.suggest([])
   })
-  let framework = middleware_test_framework(app, client)
+  let framework = middleware_test_framework(app.build(), client)
   guard process_middleware_interaction(
       framework,
       middleware_autocomplete_interaction("search", "500000000000000650"),

@@ -131,7 +131,7 @@ async test "join_voice reuses its per-guild connection and handles a failed serv
   let client = @dhttp.Client("test-token")
   defer client.close()
   let bot = Bot(
-    @app.App(),
+    @app.AppBuilder().build(),
     token="test-token",
     client~,
     intents=@model.Intents::guild_voice_states(),
@@ -211,7 +211,7 @@ async test "join_voice evicts closed connections and releases its gate after sen
   let client = @dhttp.Client("test-token")
   defer client.close()
   let bot = Bot(
-    @app.App(),
+    @app.AppBuilder().build(),
     token="test-token",
     client~,
     intents=@model.Intents::guild_voice_states(),
@@ -262,7 +262,7 @@ async test "voice server watcher unregisters after collector failure or a nonrea
     let client = @dhttp.Client("test-token")
     defer client.close()
     let bot = Bot(
-      @app.App(),
+      @app.AppBuilder().build(),
       token="test-token",
       client~,
       intents=@model.Intents::guild_voice_states(),
@@ -322,8 +322,8 @@ async test "voice server watcher unregisters after collector failure or a nonrea
 ///|
 async test "voice credentials register both collectors before opcode 4" {
   let transport = BotFakeTransport()
-  let app = @app.App()
-  let bot = middleware_runtime_bot(app, transport)
+  let app = @app.AppBuilder()
+  let bot = middleware_runtime_bot(app.build(), transport)
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
   @async.with_task_group(group => {
@@ -379,8 +379,8 @@ async test "voice credentials register both collectors before opcode 4" {
 ///|
 async test "join_voice fails before opcode 4 without guild voice states intent" {
   let transport = BotFakeTransport()
-  let app = @app.App()
-  let bot = middleware_runtime_bot(app, transport)
+  let app = @app.AppBuilder()
+  let bot = middleware_runtime_bot(app.build(), transport)
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
   @async.with_task_group(group => {

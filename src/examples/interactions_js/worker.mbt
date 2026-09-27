@@ -18,7 +18,9 @@ pub fn start_signed_interaction(
   // sees a thrown exception instead of a 500 dispatched to Discord.
   let application_id = try! (
     @model.Id::parse(application_id) : @model.ApplicationId)
-  interaction_app().start_signed_http(
+  // Invalid declarations are a deployment error for the same reason.
+  let app = try! interaction_app()
+  app.start_signed_http(
     {
       http_method,
       signature: if signature.is_empty() {

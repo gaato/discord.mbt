@@ -14,7 +14,7 @@ checks, middleware, and error policy as a live executor.
 ```mbt check
 ///|
 async test "an immediate command" {
-  let app = @app.App()
+  let app = @app.AppBuilder()
   app.command(
     @app.slash(
       name="hello",
@@ -23,11 +23,11 @@ async test "an immediate command" {
       handler=Immediate((_, _) => @app.CommandReply::message(content="Hello!")),
     ),
   )
-  app.validate()
+  app.build() |> ignore
   let client = @http.Client::offline(_ => fail("no REST call expected"))
   let application_id = @testkit.default_application_id()
   let framework = @framework.Framework(client, application_id)
-  app.attach(framework, client~, application_id~) |> ignore
+  app.build().attach(framework, client~, application_id~) |> ignore
   let interaction = @testkit.slash("hello")
   let (gate, capture) = @framework.ResponseGate::capture(interaction)
   assert_true(framework.process_with(interaction, gate~))
@@ -82,7 +82,7 @@ exactly as online.
 ```mbt check
 ///|
 async test "a command using REST" {
-  let app = @app.App()
+  let app = @app.AppBuilder()
   app.command(
     @app.slash(
       name="gateway",
@@ -102,7 +102,7 @@ async test "a command using REST" {
   })
   let application_id = @testkit.default_application_id()
   let framework = @framework.Framework(client, application_id)
-  app.attach(framework, client~, application_id~) |> ignore
+  app.build().attach(framework, client~, application_id~) |> ignore
   let interaction = @testkit.slash("gateway")
   let (gate, capture) = @framework.ResponseGate::capture(interaction)
   assert_true(framework.process_with(interaction, gate~))
@@ -130,7 +130,7 @@ policy with one that records the original error:
 ```mbt check
 ///|
 async test "a failing handler" {
-  let app = @app.App()
+  let app = @app.AppBuilder()
   app.command(
     @app.slash(
       name="boom",
@@ -144,7 +144,7 @@ async test "a failing handler" {
   let client = @http.Client::offline(_ => fail("no REST call expected"))
   let application_id = @testkit.default_application_id()
   let framework = @framework.Framework(client, application_id)
-  app.attach(framework, client~, application_id~) |> ignore
+  app.build().attach(framework, client~, application_id~) |> ignore
   let interaction = @testkit.slash("boom")
   let (gate, capture) = @framework.ResponseGate::capture(interaction)
   assert_true(framework.process_with(interaction, gate~))
