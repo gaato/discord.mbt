@@ -15,7 +15,7 @@ conservatively in UTF-16 units. Treat decoded state as untrusted input and
 authorize the user again in the handler.
 
 `route.decode(custom_id)` is the inverse: it reads the state back from an id
-the route produced, and raises `HandlerError::InvalidArgument` for an id that
+the route produced, and raises `HandlerError::Malformed` for an id that
 belongs to another route or whose state does not decode. Typed handlers
 receive the state already decoded, so reach for it where an id arrives
 undecoded — the `ComponentCtx` returned by `wait_for_component`, or a test
@@ -109,7 +109,11 @@ Component interaction contexts expose a non-optional `message()`, plus
 with `:` and splits at the first separator; only the final segment may contain
 `:`. `imap` and `custom` support application types. Encoding ambiguous segments
 raises `CustomIdError::SeparatorInSegment`; oversized ids raise `TooLong`.
-Decode failures reach the error policy as `HandlerError::InvalidArgument`.
+A `custom` or `imap` decoder may raise any error. A `HandlerError` it raises
+keeps its meaning; any other decode failure reaches the error policy as
+`HandlerError::Malformed`. The app produced the state, so state that does not
+decode is stale or tampered with, not input the user can correct. The default
+policy logs the reason and tells the user the interaction is out of date.
 
 Typed routes match the exact id or that id followed by `:` and state, so
 `ticket-closeish` does not match `ticket-close`. Route ids must be nonempty

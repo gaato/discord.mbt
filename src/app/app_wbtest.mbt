@@ -199,7 +199,7 @@ test "localized group and context command builders reach their specs" {
 }
 
 ///|
-test "command argument decode errors become InvalidArgument" {
+test "missing options are malformed; failed validations are user input" {
   let fixture =
     #|{
     #|  "id": "107000000000000201",
@@ -215,11 +215,38 @@ test "command argument decode errors become InvalidArgument" {
       debug_inspect(
         error,
         content=(
-          #|InvalidArgument("MissingOption(name=\"text\")")
+          #|Malformed(reason="MissingOption(name=\"text\")")
         ),
       )
   } noraise {
     _ => fail("expected decode to fail")
+  }
+  let bounded = @interaction.Args::of(
+    @interaction.arg_int(name="count", description="Count").validate(value => {
+      if value > 10L {
+        Some("must be at most 10")
+      } else {
+        None
+      }
+    }),
+  )
+  let fixture =
+    #|{
+    #|  "id": "107000000000000202",
+    #|  "name": "roll",
+    #|  "type": 1,
+    #|  "options": [{ "name": "count", "type": 4, "value": 11 }]
+    #|}
+  try decode_command_args(bounded, command_options(fixture)) catch {
+    error =>
+      debug_inspect(
+        error,
+        content=(
+          #|InvalidInput(name=Some("count"), message="must be at most 10")
+        ),
+      )
+  } noraise {
+    _ => fail("expected validation to fail")
   }
 }
 

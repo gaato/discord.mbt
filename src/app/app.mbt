@@ -198,8 +198,9 @@ pub fn App::autocomplete(
 
 ///|
 /// Replace the error policy invoked when a handler raises. The default
-/// policy maps `HandlerError` variants to ephemeral user-facing
-/// messages and warns about everything else.
+/// policy maps `HandlerError` variants to ephemeral user-facing messages.
+/// For `Malformed` and any other error it warns with the details and shows
+/// the user only a generic message.
 pub fn App::error_policy(self : App, policy : ErrorPolicy) -> Unit {
   self.policy_ = Some(policy)
 }

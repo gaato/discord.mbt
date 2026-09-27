@@ -5,7 +5,7 @@ test "select fields raise on missing submissions and map transforms values" {
   ])
   let empty : Array[@model.Component] = []
   try (colors.decode_)(submission(empty)) |> ignore catch {
-    InvalidArgument(message) =>
+    Malformed(reason=message) =>
       inspect(message, content="missing modal field: color")
     _ => fail("unexpected modal error")
   } noraise {

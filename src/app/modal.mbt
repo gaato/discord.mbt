@@ -209,7 +209,7 @@ pub fn text_field(
       match find_modal_component(submission.components, custom_id) {
         Some(TextInput({ value: Some(value), .. })) if !value.is_empty() =>
           value
-        _ => raise InvalidArgument("missing modal field: \{custom_id}")
+        _ => raise Malformed(reason="missing modal field: \{custom_id}")
       }
     },
   }
@@ -242,7 +242,7 @@ pub fn select_field(
       match find_modal_component(submission.components, custom_id) {
         Some(StringSelect({ values: Some(values), .. })) if !values.is_empty() =>
           values
-        _ => raise InvalidArgument("missing modal field: \{custom_id}")
+        _ => raise Malformed(reason="missing modal field: \{custom_id}")
       }
     },
   }
@@ -277,15 +277,15 @@ pub fn file_field(
       guard find_modal_component(submission.components, custom_id)
         is Some(FileUpload({ values: Some(ids), .. })) &&
         !ids.is_empty() else {
-        raise InvalidArgument("missing modal field: \{custom_id}")
+        raise Malformed(reason="missing modal field: \{custom_id}")
       }
       let attachments = submission.resolved
         .bind(resolved => resolved.attachments)
         .unwrap_or({})
       ids.map(id => {
         guard attachments.get(id) is Some(attachment) else {
-          raise InvalidArgument(
-            "unresolved attachment \{id} in modal field: \{custom_id}",
+          raise Malformed(
+            reason="unresolved attachment \{id} in modal field: \{custom_id}",
           )
         }
         attachment
@@ -341,7 +341,7 @@ pub fn[A] ModalField::validate(
     decode_: submission => {
       let value = (self.decode_)(submission)
       match check(value) {
-        Some(message) => raise InvalidArgument(message)
+        Some(message) => raise InvalidInput(name=None, message~)
         None => value
       }
     },

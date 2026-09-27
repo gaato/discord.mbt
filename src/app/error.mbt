@@ -30,5 +30,29 @@ pub(all) suberror HandlerError {
   CheckFailed
   MissingPermission(@model.Permissions)
   OnCooldown(retry_after_ms~ : Int64)
-  InvalidArgument(String)
+  /// A submitted value the user can correct, such as an argument outside its
+  /// declared range. `message` is shown to the user; `name` identifies the
+  /// option when there is one.
+  InvalidInput(name~ : String?, message~ : String)
+  /// The interaction does not match what the app declared: typically a stale
+  /// command registration, an old component, or a payload missing data
+  /// Discord should have sent. `reason` is for logs and never shown to users.
+  Malformed(reason~ : String)
 } derive(Debug)
+
+///|
+/// Keep a `HandlerError` raised by user code as is, and classify any other
+/// decode failure as a malformed interaction.
+fn malformed_unless_handler_error(error : Error) -> HandlerError {
+  match error {
+    UserMessage(..) as error => error
+    GuildOnly => GuildOnly
+    DmOnly => DmOnly
+    CheckFailed => CheckFailed
+    MissingPermission(_) as error => error
+    OnCooldown(..) as error => error
+    InvalidInput(..) as error => error
+    Malformed(..) as error => error
+    error => Malformed(reason=Repr(error).to_string())
+  }
+}

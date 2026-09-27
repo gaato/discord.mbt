@@ -178,6 +178,15 @@ pub async fn FailureCtx::respond_error(
 pub type ErrorPolicy = async (FailureCtx, Error) -> Unit
 
 ///|
+/// Tell the user an interaction failed without echoing internal details.
+/// Event, service, and autocomplete failures have nobody to tell.
+async fn respond_if_interactive(ctx : FailureCtx, message : String) -> Unit {
+  if ctx.raw_ is Some(_) {
+    ctx.respond_error(content=message)
+  }
+}
+
+///|
 fn default_error_policy(warn : (String) -> Unit) -> ErrorPolicy {
   (ctx, error) => {
     match error {
@@ -199,9 +208,20 @@ fn default_error_policy(warn : (String) -> Unit) -> ErrorPolicy {
         ctx.respond_error(
           content="This command is on cooldown. Try again in \{retry_after_ms} ms.",
         )
-      HandlerError::InvalidArgument(message) =>
-        ctx.respond_error(content="Invalid argument: \{message}")
-      _ => warn("unhandled app failure (\{Repr(ctx.origin())}): \{Repr(error)}")
+      HandlerError::InvalidInput(name=Some(name), message~) =>
+        ctx.respond_error(content="Invalid value for \{name}: \{message}")
+      HandlerError::InvalidInput(name=None, message~) =>
+        ctx.respond_error(content="Invalid input: \{message}")
+      HandlerError::Malformed(reason~) => {
+        warn("malformed interaction (\{Repr(ctx.origin())}): \{reason}")
+        respond_if_interactive(
+          ctx, "This interaction is out of date. Please try again.",
+        )
+      }
+      _ => {
+        warn("unhandled app failure (\{Repr(ctx.origin())}): \{Repr(error)}")
+        respond_if_interactive(ctx, "Something went wrong.")
+      }
     }
   }
 }

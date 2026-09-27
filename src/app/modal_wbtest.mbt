@@ -83,13 +83,14 @@ test "modal field optional default and validation semantics" {
     ),
   )
   try validated.decode(invalid) catch {
-    InvalidArgument(message) => inspect(message, content="code must be ok")
+    InvalidInput(name=None, message~) =>
+      inspect(message, content="code must be ok")
     error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected validation failure")
   }
   try validated.decode([]) catch {
-    InvalidArgument(message) =>
+    Malformed(reason=message) =>
       inspect(message, content="missing modal field: code")
     error => fail("unexpected error: \{Repr(error)}")
   } noraise {

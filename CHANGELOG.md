@@ -57,6 +57,26 @@ breaking change is listed with a migration note.
   `@framework.classify_rest_callback_failure`.
 - Breaking: `ResponseGate::responded()` is replaced by `is_pending()`.
   Migration: `gate.responded()` becomes `!gate.is_pending()`.
+- **User-correctable input and malformed interactions are separate errors.**
+  `HandlerError::InvalidArgument(String)` is replaced by
+  `InvalidInput(name~ : String?, message~ : String)` and
+  `Malformed(reason~ : String)`.
+  - A failed `Arg::validate` or `ModalField::validate` is `InvalidInput`,
+    and its message is shown to the user.
+  - A missing or mistyped option, missing resolved data, an unknown
+    subcommand path, a missing required modal field, and component state
+    that does not decode are `Malformed`. The default policy logs the reason
+    and tells the user only that the interaction is out of date.
+  - Before, the `Repr` of the underlying error was shown to the user.
+  Migration: match `InvalidInput(..)` for errors the user can correct and
+  `Malformed(..)` for the rest, and raise `InvalidInput(name=None, message=...)`
+  where you raised `InvalidArgument(message)` for user input.
+- The default error policy answers errors that are not `HandlerError`s with
+  an ephemeral "Something went wrong." and warns with the details. Before, it
+  only warned, and a deferred interaction kept its loading message forever.
+- Breaking: `CustomIdCodec::custom(decode~)` and `imap(to~)` accept a decoder
+  that may raise any error. A `HandlerError` keeps its meaning; any other
+  error becomes `Malformed`. Existing decoders compile unchanged.
 
 ## [0.6.0] - 2026-09-25
 

@@ -74,7 +74,8 @@ pub(all) suberror HandlerError {
   CheckFailed
   MissingPermission(@model.Permissions)
   OnCooldown(retry_after_ms~ : Int64)
-  InvalidArgument(String)
+  InvalidInput(name~ : String?, message~ : String)
+  Malformed(reason~ : String)
 } derive(@debug.Debug)
 
 pub(all) suberror ModalPrefillError {
@@ -211,11 +212,11 @@ pub(all) enum CooldownBucket {
 pub struct CustomIdCodec[A] {
   // private fields
 }
-pub fn[A] CustomIdCodec::custom(encode~ : (A) -> String, decode~ : (String) -> A raise HandlerError) -> Self[A]
+pub fn[A] CustomIdCodec::custom(encode~ : (A) -> String, decode~ : (String) -> A raise) -> Self[A]
 pub fn[A] CustomIdCodec::decode(Self[A], String) -> A raise HandlerError
 pub fn[A] CustomIdCodec::encode(Self[A], A) -> String raise CustomIdError
 pub fn[M] CustomIdCodec::id() -> Self[@model.Id[M]]
-pub fn[A, B] CustomIdCodec::imap(Self[A], to~ : (A) -> B raise HandlerError, from~ : (B) -> A) -> Self[B]
+pub fn[A, B] CustomIdCodec::imap(Self[A], to~ : (A) -> B raise, from~ : (B) -> A) -> Self[B]
 pub fn CustomIdCodec::int() -> Self[Int]
 pub fn CustomIdCodec::string() -> Self[String]
 pub fn CustomIdCodec::unit() -> Self[Unit]

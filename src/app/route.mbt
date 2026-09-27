@@ -20,7 +20,7 @@ fn check_custom_id_length(custom_id : String) -> Unit raise CustomIdError {
 /// Custom encode/decode functions and `imap` mappings must preserve round trips.
 pub struct CustomIdCodec[A] {
   priv encode_ : (A) -> String
-  priv decode_ : (String) -> A raise HandlerError
+  priv decode_ : (String) -> A raise
   priv validate_ : (A) -> Unit raise CustomIdError
 }
 
@@ -29,7 +29,7 @@ pub struct CustomIdCodec[A] {
 pub fn CustomIdCodec::unit() -> CustomIdCodec[Unit] {
   CustomIdCodec::custom(encode=_ => "", decode=text => {
     guard text.is_empty() else {
-      raise InvalidArgument("expected no component state")
+      raise Malformed(reason="expected no component state")
     }
   })
 }
@@ -44,9 +44,7 @@ pub fn CustomIdCodec::string() -> CustomIdCodec[String] {
 /// Encode and decode a decimal integer.
 pub fn CustomIdCodec::int() -> CustomIdCodec[Int] {
   CustomIdCodec::custom(encode=value => value.to_string(), decode=text => {
-    @string.parse_int(text) catch {
-      source => raise InvalidArgument("\{Repr(source)}")
-    }
+    @string.parse_int(text)
   })
 }
 
@@ -54,17 +52,17 @@ pub fn CustomIdCodec::int() -> CustomIdCodec[Int] {
 /// Encode and decode a snowflake without losing its phantom resource type.
 pub fn[M] CustomIdCodec::id() -> CustomIdCodec[@model.Id[M]] {
   CustomIdCodec::custom(encode=value => value.to_string(), decode=text => {
-    @model.Id::parse(text) catch {
-      source => raise InvalidArgument("\{Repr(source)}")
-    }
+    @model.Id::parse(text)
   })
 }
 
 ///|
-/// Define a reversible encoding. Decode failures should raise `InvalidArgument`.
+/// Define a reversible encoding. A decode failure that is not a `HandlerError`
+/// reaches the error policy as `HandlerError::Malformed`: component state is
+/// produced by the app, so state that does not decode is stale or tampered.
 pub fn[A] CustomIdCodec::custom(
   encode~ : (A) -> String,
-  decode~ : (String) -> A raise HandlerError,
+  decode~ : (String) -> A raise,
 ) -> CustomIdCodec[A] {
   { encode_: encode, decode_: decode, validate_: _ => (), }
 }
@@ -81,11 +79,11 @@ pub fn[A, B] CustomIdCodec::zip(
     encode_: value => "\{(self.encode_)(value.0)}:\{(other.encode_)(value.1)}",
     decode_: text => {
       guard text.find(":") is Some(index) else {
-        raise InvalidArgument("expected ':' between component state segments")
+        raise Malformed(reason="expected ':' between component state segments")
       }
       (
-        self.decode(text[:index].to_owned()),
-        other.decode(text[index + 1:].to_owned()),
+        (self.decode_)(text[:index].to_owned()),
+        (other.decode_)(text[index + 1:].to_owned()),
       )
     },
     validate_: value => {
@@ -103,12 +101,12 @@ pub fn[A, B] CustomIdCodec::zip(
 /// Map a codec to another type using a fallible decode and a reverse mapping.
 pub fn[A, B] CustomIdCodec::imap(
   self : CustomIdCodec[A],
-  to~ : (A) -> B raise HandlerError,
+  to~ : (A) -> B raise,
   from~ : (B) -> A,
 ) -> CustomIdCodec[B] {
   {
     encode_: value => (self.encode_)(from(value)),
-    decode_: text => to(self.decode(text)),
+    decode_: text => to((self.decode_)(text)),
     validate_: value => (self.validate_)(from(value)),
   }
 }
@@ -132,7 +130,9 @@ pub fn[A] CustomIdCodec::decode(
   self : CustomIdCodec[A],
   text : String,
 ) -> A raise HandlerError {
-  (self.decode_)(text)
+  (self.decode_)(text) catch {
+    source => raise malformed_unless_handler_error(source)
+  }
 }
 
 ///|
@@ -189,8 +189,8 @@ pub fn[A] ComponentRoute::custom_id(
 /// `custom_id`. Typed handlers receive the state already decoded; use this for
 /// ids that reach you undecoded, such as the `ComponentCtx` returned by
 /// `wait_for_component`, and in tests. An id that belongs to another route, or
-/// whose state does not decode, raises `HandlerError::InvalidArgument`. The
-/// decoded state is untrusted input.
+/// whose state does not decode, raises `HandlerError::Malformed`. The decoded
+/// state is untrusted input.
 ///
 /// ```mbt check
 /// test {
@@ -210,13 +210,11 @@ pub fn[A] ComponentRoute::decode(
   } else if custom_id.has_prefix("\{self.id_}:") {
     custom_id[self.id_.length() + 1:].to_owned()
   } else {
-    raise InvalidArgument(
-      "custom id \{custom_id} does not belong to route \{self.id_}",
+    raise Malformed(
+      reason="custom id \{custom_id} does not belong to route \{self.id_}",
     )
   }
-  self.state_.decode(text) catch {
-    source => raise InvalidArgument("\{Repr(source)}")
-  }
+  self.state_.decode(text)
 }
 
 ///|

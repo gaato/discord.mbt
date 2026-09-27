@@ -108,7 +108,7 @@ test "modal file field decodes resolved attachments" {
   try
     (fields.decode_)({ components: data.components, resolved: None, }) |> ignore
   catch {
-    InvalidArgument(message) =>
+    Malformed(reason=message) =>
       inspect(
         message,
         content="unresolved attachment 111 in modal field: proof",

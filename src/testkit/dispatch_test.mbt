@@ -49,7 +49,12 @@ async test "the default policy answers every HandlerError with an error reply" {
     (CheckFailed, "cannot use"),
     (MissingPermission(@model.Permissions(8UL)), "Missing required permission"),
     (OnCooldown(retry_after_ms=250L), "250 ms"),
-    (InvalidArgument("bad"), "Invalid argument: bad"),
+    (
+      InvalidInput(name=Some("count"), message="bad"),
+      "Invalid value for count: bad",
+    ),
+    (InvalidInput(name=None, message="bad"), "Invalid input: bad"),
+    (Malformed(reason="stale"), "out of date"),
   ]
   for case in cases {
     let (error, expected) = case
@@ -64,6 +69,38 @@ async test "the default policy answers every HandlerError with an error reply" {
     }
     assert_true(content.contains(expected))
   }
+}
+
+///|
+async test "the default policy hides internal failures behind a generic reply" {
+  let warnings : Array[String] = []
+  let app = raw_app(_ => raise HandlerBoom)
+  app.on_warn(message => warnings.push(message))
+  let (matched, captured) = dispatch(app, @testkit.slash("run"))
+  assert_true(matched)
+  guard captured
+    is Some(
+      { response: { data: Some({ "content": String(content), .. }), .. }, .. }
+    ) else {
+    fail("expected a generic error reply")
+  }
+  assert_eq(content, "Something went wrong.")
+  assert_eq(warnings.length(), 1)
+  assert_true(warnings[0].contains("HandlerBoom"))
+  let malformed = raw_app(_ => {
+    raise @app.HandlerError::Malformed(reason="secret internals")
+  })
+  let malformed_warnings : Array[String] = []
+  malformed.on_warn(message => malformed_warnings.push(message))
+  let (_, captured) = dispatch(malformed, @testkit.slash("run"))
+  guard captured
+    is Some(
+      { response: { data: Some({ "content": String(content), .. }), .. }, .. }
+    ) else {
+    fail("expected an out-of-date reply")
+  }
+  assert_false(content.contains("secret"))
+  assert_true(malformed_warnings[0].contains("secret internals"))
 }
 
 ///|
@@ -109,7 +146,7 @@ async test "checks, argument decoding, and middleware fail through the policy" {
     failures
     is [
       @app.HandlerError::CheckFailed,
-      @app.HandlerError::InvalidArgument(_),
+      @app.HandlerError::Malformed(..),
       @app.HandlerError::CheckFailed,
     ],
   )

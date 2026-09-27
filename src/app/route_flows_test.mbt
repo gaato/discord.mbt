@@ -88,7 +88,7 @@ async test "component route round-trips zip state into the handler" {
 }
 
 ///|
-async test "component state decode failure reaches the policy as InvalidArgument" {
+async test "component state decode failure reaches the policy as Malformed" {
   let client = @dhttp.Client("test-token")
   defer client.close()
   let application_id : @model.ApplicationId = @model.Id::parse(
@@ -98,7 +98,7 @@ async test "component state decode failure reaches the policy as InvalidArgument
     codec in [
       @app.CustomIdCodec::int(),
       @app.CustomIdCodec::custom(encode=(value : Int) => value.to_string(), decode=_ => {
-        raise @app.HandlerError::GuildOnly
+        fail("undecodable state")
       }),
     ] {
     for mode in 0..<3 {
@@ -107,7 +107,7 @@ async test "component state decode failure reaches the policy as InvalidArgument
       let invalid = Ref(false)
       let pending = Ref(false)
       app.error_policy((ctx, error) => {
-        invalid.val = error is @app.HandlerError::InvalidArgument(_)
+        invalid.val = error is @app.HandlerError::Malformed(..)
         pending.val = ctx.response_state() is Some(Pending)
       })
       let route = @app.component_route(id="number", state=codec)

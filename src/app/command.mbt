@@ -69,14 +69,17 @@ fn[A] suggest_routes(
 }
 
 ///|
-/// Decode slash arguments and translate reader errors into a stable handler
-/// error understood by the App error policy.
+/// Decode slash arguments. A failed `Arg` validation is input the user can
+/// correct; a missing or mistyped option means the payload does not match the
+/// registered command, which the user cannot fix.
 fn[A] decode_command_args(
   args : @interaction.Args[A],
   options : @interaction.CommandOptions,
 ) -> A raise HandlerError {
   args.decode(options) catch {
-    source => raise InvalidArgument("\{Repr(source)}")
+    @interaction.ArgsDecodeError::Validation(name~, message~) =>
+      raise InvalidInput(name=Some(name), message~)
+    source => raise malformed_unless_handler_error(source)
   }
 }
 
@@ -145,7 +148,7 @@ pub fn[A] slash(
 ///|
 fn target_key(raw : @framework.CommandCtx) -> String raise HandlerError {
   guard raw.data.target_id is Some(target_id) else {
-    raise InvalidArgument("context command is missing target_id")
+    raise Malformed(reason="context command is missing target_id")
   }
   target_id.to_string()
 }
@@ -156,10 +159,10 @@ fn decode_target_user(
 ) -> @framework.TargetUser raise HandlerError {
   let key = target_key(raw)
   guard raw.data.resolved is Some(_) else {
-    raise InvalidArgument("user target is missing resolved data")
+    raise Malformed(reason="user target is missing resolved data")
   }
   guard raw.target_user() is Some(target) else {
-    raise InvalidArgument("resolved user target \{key} was not found")
+    raise Malformed(reason="resolved user target \{key} was not found")
   }
   target
 }
@@ -170,10 +173,10 @@ fn decode_target_message(
 ) -> @model.Message raise HandlerError {
   let key = target_key(raw)
   guard raw.data.resolved is Some(_) else {
-    raise InvalidArgument("message target is missing resolved data")
+    raise Malformed(reason="message target is missing resolved data")
   }
   guard raw.target_message() is Some(message) else {
-    raise InvalidArgument("resolved message target \{key} was not found")
+    raise Malformed(reason="resolved message target \{key} was not found")
   }
   message
 }
@@ -512,8 +515,8 @@ async fn[A] Command::dispatch_typed(
           return
         }
       }
-      raise HandlerError::InvalidArgument(
-        "unknown subcommand path: \{if path.is_empty() { "<empty>" } else { path.join("/") }}",
+      raise HandlerError::Malformed(
+        reason="unknown subcommand path: \{if path.is_empty() { "<empty>" } else { path.join("/") }}",
       )
     }
   }
@@ -527,8 +530,8 @@ async fn dispatch_suggest(
 ) -> Unit {
   let path = raw.options.path()
   guard raw.options.focused_input() is Some(input) else {
-    raise HandlerError::InvalidArgument(
-      "autocomplete payload has no focused option",
+    raise HandlerError::Malformed(
+      reason="autocomplete payload has no focused option",
     )
   }
   for route in routes {
@@ -556,8 +559,8 @@ async fn dispatch_suggest(
     }
   }
   let display_path = if path.is_empty() { "<root>" } else { path.join("/") }
-  raise HandlerError::InvalidArgument(
-    "no autocomplete route for \{display_path}:\{input.name()}",
+  raise HandlerError::Malformed(
+    reason="no autocomplete route for \{display_path}:\{input.name()}",
   )
 }
 

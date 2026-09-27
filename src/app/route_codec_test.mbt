@@ -61,7 +61,7 @@ test "zip rejects a separator in a non-final segment" {
     }
   }
   try codec.decode("missing-separator") |> ignore catch {
-    @app.HandlerError::InvalidArgument(_) => ()
+    @app.HandlerError::Malformed(..) => ()
     error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected missing separator error")
@@ -76,14 +76,14 @@ test "custom and imap codecs round-trip application state" {
       match text {
         "yes" => true
         "no" => false
-        _ => raise @app.HandlerError::InvalidArgument("expected yes or no")
+        _ => fail("expected yes or no")
       }
     },
   ).imap(to=value => if value { 1 } else { 0 }, from=value => value == 1)
   assert_eq(codec.decode(codec.encode(1)), 1)
   assert_eq(codec.decode(codec.encode(0)), 0)
   try codec.decode("maybe") |> ignore catch {
-    @app.HandlerError::InvalidArgument(_) => ()
+    @app.HandlerError::Malformed(..) => ()
     error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected invalid custom state")
@@ -91,14 +91,19 @@ test "custom and imap codecs round-trip application state" {
   let positive = @app.CustomIdCodec::int().imap(
     to=value => {
       guard value > 0 else {
-        raise @app.HandlerError::InvalidArgument("expected positive state")
+        raise @app.HandlerError::UserMessage(
+          message="expected positive state",
+          ephemeral=true,
+        )
       }
       value
     },
     from=value => value,
   )
+  // A HandlerError raised by application code keeps its meaning.
   try positive.decode("0") |> ignore catch {
-    @app.HandlerError::InvalidArgument(_) => ()
+    @app.HandlerError::UserMessage(message~, ..) =>
+      assert_eq(message, "expected positive state")
     error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected imap validation error")
@@ -198,14 +203,14 @@ test "quickcheck custom id zip int string encode then decode is identity" {
 ///|
 test "built-in codecs reject state they cannot decode" {
   try @app.CustomIdCodec::unit().decode("extra") catch {
-    @app.HandlerError::InvalidArgument(_) => ()
+    @app.HandlerError::Malformed(..) => ()
     error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("unit accepted state")
   }
   let id : @app.CustomIdCodec[@model.UserId] = @app.CustomIdCodec::id()
   try id.decode("not-a-snowflake") |> ignore catch {
-    @app.HandlerError::InvalidArgument(_) => ()
+    @app.HandlerError::Malformed(..) => ()
     error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("id accepted a non-snowflake")
@@ -225,7 +230,7 @@ test "a route decodes the ids it produces and rejects foreign ones" {
   assert_eq(bare.decode(bare.custom_id(())), ())
   for foreign in ["docsy:3:x", "other:3:x", "docs:indicator", "docs"] {
     try route.decode(foreign) |> ignore catch {
-      @app.HandlerError::InvalidArgument(_) => ()
+      @app.HandlerError::Malformed(..) => ()
       error => fail("unexpected error: \{Repr(error)}")
     } noraise {
       _ => fail("decoded a foreign or malformed id: \{foreign}")

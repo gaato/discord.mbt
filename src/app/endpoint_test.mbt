@@ -942,7 +942,7 @@ async test "context menu commands decode resolved targets" {
           response
           .to_json()
           .stringify()
-          .contains("Invalid argument: user target is missing resolved data"),
+          .contains("This interaction is out of date."),
         )
       outcome => fail("expected invalid target reply, got \{Repr(outcome)}")
     }
@@ -1042,7 +1042,7 @@ async test "slash groups emit nested specs and dispatch direct and grouped paths
       pair in [
         (direct, "pong"),
         (grouped, "renamed:Moon"),
-        (unknown, "Invalid argument: unknown subcommand path: missing"),
+        (unknown, "This interaction is out of date."),
       ] {
       let (interaction, expected) = pair
       match app.handle_interaction(interaction) {
