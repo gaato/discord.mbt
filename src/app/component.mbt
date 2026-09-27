@@ -249,10 +249,21 @@ pub fn ComponentImmediateCtx::message(
 }
 
 ///|
-/// Escape hatch for advanced inspection. Calling response methods on the
-/// raw value opts out of this wrapper's response discipline.
-/// Failure handling still follows the gate's real response state.
-pub fn ComponentImmediateCtx::raw(
+/// Milliseconds left to return the initial response, or `None` when the
+/// executor set no deadline.
+pub fn ComponentImmediateCtx::remaining_ms(
+  self : ComponentImmediateCtx,
+) -> Int? {
+  self.raw_.remaining_ms()
+}
+
+///|
+/// Escape hatch to the underlying context. Its response methods bypass this
+/// handler's discipline of returning its initial response: a callback sent
+/// through it makes the returned reply fail with
+/// `ResponseGateError::AlreadyResponded`, which reaches the error policy.
+/// Prefer the read-only accessors on this context.
+pub fn ComponentImmediateCtx::unchecked_raw(
   self : ComponentImmediateCtx,
 ) -> @framework.ComponentCtx {
   self.raw_

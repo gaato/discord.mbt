@@ -131,7 +131,7 @@ async test "immediate handler responding through raw then raising gets a followu
       description="Respond through raw",
       args=@interaction.Args::unit(),
       handler=Immediate((ctx, _) => {
-        ctx.raw().respond(content="initial")
+        ctx.unchecked_raw().respond(content="initial")
         raise ResponseStateFailure
       }),
     ),

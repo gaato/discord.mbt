@@ -26,6 +26,8 @@ breaking change is listed with a migration note.
   `AppBuilder::build` raises the new `AppConfigError::CommandOutsideLimits`
   for the first violation, so a declaration Discord would reject with 400 fails
   before any executor starts.
+- `remaining_ms()` on `ImmediateCtx`, `ComponentImmediateCtx`, and
+  `ModalImmediateCtx`: the budget left to return the initial response.
 
 ### Changed
 
@@ -98,6 +100,11 @@ breaking change is listed with a migration note.
   registered. A feature installer that also needs `Bot` for events splits
   into one function that takes the builder and one that takes the `Bot`; see
   [Structuring bots](src/guide/07-structuring-bots.mbt.md).
+- Breaking: `raw()` on `ImmediateCtx`, `ComponentImmediateCtx`, and
+  `ModalImmediateCtx` is renamed `unchecked_raw()`. Its response methods
+  bypass the rule that an immediate handler answers by returning its reply;
+  the name now says so. Behavior is unchanged. Migration: rename the call, or
+  use the context's read-only accessors. Deferred contexts keep `raw()`.
 
 ## [0.6.0] - 2026-09-25
 

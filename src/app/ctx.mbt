@@ -125,10 +125,21 @@ pub fn ImmediateCtx::guild_id(self : ImmediateCtx) -> @model.GuildId? {
 }
 
 ///|
-/// Escape hatch for advanced read-only inspection. Calling response methods on
-/// this raw value opts out of the immediate-handler response discipline.
-/// Failure handling still follows the gate's real response state.
-pub fn ImmediateCtx::raw(self : ImmediateCtx) -> @framework.CommandCtx {
+/// Milliseconds left to return the initial response, or `None` when the
+/// executor set no deadline.
+pub fn ImmediateCtx::remaining_ms(self : ImmediateCtx) -> Int? {
+  self.raw_.remaining_ms()
+}
+
+///|
+/// Escape hatch to the underlying context. Its response methods bypass this
+/// handler's discipline of returning its initial response: a callback sent
+/// through it makes the returned reply fail with
+/// `ResponseGateError::AlreadyResponded`, which reaches the error policy.
+/// Prefer the read-only accessors on this context.
+pub fn ImmediateCtx::unchecked_raw(
+  self : ImmediateCtx,
+) -> @framework.CommandCtx {
   self.raw_
 }
 

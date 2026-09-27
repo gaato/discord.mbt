@@ -50,7 +50,8 @@ async test "command contexts expose their interaction and REST surfaces" {
       handler=Immediate((ctx, _) => {
         assert_eq(ctx.interaction().token, "interaction-token")
         assert_true(ctx.guild_id() is None)
-        assert_eq(ctx.raw().interaction.token, "interaction-token")
+        assert_eq(ctx.unchecked_raw().interaction.token, "interaction-token")
+        assert_true(ctx.remaining_ms() is Some(left) && left > 0)
         @app.CommandReply::message(content="inspected")
       }),
     ),

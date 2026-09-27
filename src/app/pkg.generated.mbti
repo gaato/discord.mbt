@@ -186,11 +186,12 @@ pub fn ComponentImmediateCtx::guild_id(Self) -> @model.Id[@model.GuildMarker]?
 pub fn ComponentImmediateCtx::guild_scope(Self) -> @framework.GuildInvocation raise HandlerError
 pub fn ComponentImmediateCtx::interaction(Self) -> @model.Interaction
 pub fn ComponentImmediateCtx::message(Self) -> @model.Message
-pub fn ComponentImmediateCtx::raw(Self) -> @framework.ComponentCtx
+pub fn ComponentImmediateCtx::remaining_ms(Self) -> Int?
 pub fn ComponentImmediateCtx::scope(Self) -> @framework.InvocationScope
 pub fn ComponentImmediateCtx::selected_channels(Self) -> Array[@model.Channel]
 pub fn ComponentImmediateCtx::selected_roles(Self) -> Array[@model.Role]
 pub fn ComponentImmediateCtx::selected_users(Self) -> Array[@model.User]
+pub fn ComponentImmediateCtx::unchecked_raw(Self) -> @framework.ComponentCtx
 pub fn ComponentImmediateCtx::user(Self) -> @model.User
 pub fn ComponentImmediateCtx::values(Self) -> Array[String]
 
@@ -273,8 +274,9 @@ pub fn ImmediateCtx::app(Self) -> AppCtx
 pub fn ImmediateCtx::guild_id(Self) -> @model.Id[@model.GuildMarker]?
 pub fn ImmediateCtx::guild_scope(Self) -> @framework.GuildInvocation raise HandlerError
 pub fn ImmediateCtx::interaction(Self) -> @model.Interaction
-pub fn ImmediateCtx::raw(Self) -> @framework.CommandCtx
+pub fn ImmediateCtx::remaining_ms(Self) -> Int?
 pub fn ImmediateCtx::scope(Self) -> @framework.InvocationScope
+pub fn ImmediateCtx::unchecked_raw(Self) -> @framework.CommandCtx
 pub fn ImmediateCtx::user(Self) -> @model.User
 
 pub struct InitialResponse {
@@ -390,9 +392,10 @@ pub fn ModalImmediateCtx::guild_id(Self) -> @model.Id[@model.GuildMarker]?
 pub fn ModalImmediateCtx::guild_scope(Self) -> @framework.GuildInvocation raise HandlerError
 pub fn ModalImmediateCtx::interaction(Self) -> @model.Interaction
 pub fn ModalImmediateCtx::origin(Self) -> @framework.ModalOrigin
-pub fn ModalImmediateCtx::raw(Self) -> @framework.ModalCtx
+pub fn ModalImmediateCtx::remaining_ms(Self) -> Int?
 pub fn ModalImmediateCtx::scope(Self) -> @framework.InvocationScope
 pub fn ModalImmediateCtx::state(Self) -> String?
+pub fn ModalImmediateCtx::unchecked_raw(Self) -> @framework.ModalCtx
 pub fn ModalImmediateCtx::user(Self) -> @model.User
 
 pub(all) enum ModalSubmitHandler[A] {

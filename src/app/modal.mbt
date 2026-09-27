@@ -647,10 +647,21 @@ pub fn ModalImmediateCtx::state(self : ModalImmediateCtx) -> String? {
 }
 
 ///|
-/// Escape hatch for advanced inspection. Calling response methods on the
-/// raw value opts out of this wrapper's response discipline.
-/// Failure handling still follows the gate's real response state.
-pub fn ModalImmediateCtx::raw(self : ModalImmediateCtx) -> @framework.ModalCtx {
+/// Milliseconds left to return the initial response, or `None` when the
+/// executor set no deadline.
+pub fn ModalImmediateCtx::remaining_ms(self : ModalImmediateCtx) -> Int? {
+  self.raw_.remaining_ms()
+}
+
+///|
+/// Escape hatch to the underlying context. Its response methods bypass this
+/// handler's discipline of returning its initial response: a callback sent
+/// through it makes the returned reply fail with
+/// `ResponseGateError::AlreadyResponded`, which reaches the error policy.
+/// Prefer the read-only accessors on this context.
+pub fn ModalImmediateCtx::unchecked_raw(
+  self : ModalImmediateCtx,
+) -> @framework.ModalCtx {
   self.raw_
 }
 
