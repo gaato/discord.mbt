@@ -124,7 +124,7 @@ Defensive arms unreachable by construction:
 | File | Budget | Reason |
 | --- | --- | --- |
 | src/bot/session.mbt | 1 | Abort if an already decoded READY fails its own JSON round trip; snapshot independence and serialization are tested. |
-| src/http/multipart.mbt | 3 | `attachments_json` always returns an array, and encoder errors other than a boundary collision, which `validate_files` rules out before encoding. |
+| src/http/multipart.mbt | 2 | `attachments_json` always returns an array, and encoder errors other than a boundary collision, which `validate_files` rules out before encoding. |
 | src/model/interaction.mbt | 4 | Fallbacks behind emitters that always produce objects. |
 | src/model/component.mbt | 8 | Non-object fallback plus emit arms for component kinds Discord never sends in the covered contexts. |
 | src/model/message.mbt | 3 | Timestamp-parse fallback for values the Timestamp decoder already rejects. |
@@ -161,13 +161,14 @@ show-flows beyond the covered happy and failing paths):
 | src/app/check.mbt | 2 | Permission-check arms needing resolved member permissions in a guild payload. |
 | src/app/command.mbt | 9 | Group/subcommand registration arms beyond the covered paths. |
 | src/app/admission.mbt | 10 | Acknowledgement-plan arms for kinds that never carry that plan, the autocomplete gate stubs, the cancellation re-raise, and the watchdog's failed-defer warning (the defer itself is covered). |
-| src/app/component.mbt | 14 | Deferred-ctx accessor duplicates and waiter arms behind a live gateway. |
+| src/app/component.mbt | 12 | Deferred-ctx accessor duplicates and waiter arms behind a live gateway. |
 | src/app/ctx.mbt | 4 | Waiter plumbing behind a live gateway. |
 | src/app/endpoint.mbt | 6 | `serve` startup with an owned token/client (creates a real Client and fetches the application id), and the endpoint's cancellation re-raise. |
 | src/app/middleware.mbt | 4 | Component-scope middleware arms not reachable in the covered flows. |
-| src/app/modal.mbt | 21 | Show/prefill dispatch arms beyond the covered decode, validation, and error flows. |
+| src/app/modal.mbt | 18 | Show/prefill dispatch arms beyond the covered decode, validation, and error flows. |
 | src/app/policy.mbt | 2 | Member-without-user extraction and the policy cancellation re-raise. |
-| src/framework/ctx.mbt | 25 | Autocomplete/modal response variants beyond the covered response-management flows. |
+| src/framework/ctx.mbt | 5 | Autocomplete response variants and nested-component lookup arms beyond the covered flows. |
+| src/framework/responder.mbt | 3 | `reply`'s cancellation re-raise, the re-raise of an edit failure on a confirmed deferral, and the followup fallback after an unconfirmed deferral's edit fails (verified live with `gate_probe`, 2026-09-28). |
 | src/framework/sync.mbt | 1 | Option-comparison early exit not hit by the covered spec shapes (moved from `src/app/sync.mbt`). |
 | src/framework/framework.mbt | 9 | Dispatch fallbacks for unroutable interactions. |
 | src/framework/gate.mbt | 3 | The callback rule for an unknown interaction type, the cancellation re-raise during delivery, and a `send` that waits for an in-flight delivery to settle. |

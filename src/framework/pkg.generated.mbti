@@ -67,8 +67,8 @@ pub fn CommandCtx::guild_scope(Self) -> GuildInvocation?
 pub fn[T : @interaction.CommandModel] CommandCtx::model(Self) -> T raise
 pub async fn CommandCtx::original_response(Self) -> @model.Message
 pub fn CommandCtx::remaining_ms(Self) -> Int?
-pub async fn CommandCtx::reply(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, ephemeral? : Bool) -> Unit
-pub async fn CommandCtx::respond(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, ephemeral? : Bool) -> Unit
+pub async fn CommandCtx::reply(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, poll? : @model.PollCreateRequest, ephemeral? : Bool) -> Unit
+pub async fn CommandCtx::respond(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, poll? : @model.PollCreateRequest, ephemeral? : Bool) -> Unit
 pub fn CommandCtx::response_state(Self) -> ResponseState
 pub fn CommandCtx::scope(Self) -> InvocationScope
 pub async fn CommandCtx::show_modal(Self, custom_id~ : String, title~ : String, components~ : Array[@model.Component]) -> Unit
@@ -95,12 +95,12 @@ pub fn ComponentCtx::guild_scope(Self) -> GuildInvocation?
 pub fn ComponentCtx::message(Self) -> @model.Message
 pub async fn ComponentCtx::original_response(Self) -> @model.Message
 pub fn ComponentCtx::remaining_ms(Self) -> Int?
-pub async fn ComponentCtx::reply(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, ephemeral? : Bool) -> Unit
-pub async fn ComponentCtx::respond(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, ephemeral? : Bool) -> Unit
+pub async fn ComponentCtx::reply(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, poll? : @model.PollCreateRequest, ephemeral? : Bool) -> Unit
+pub async fn ComponentCtx::respond(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, poll? : @model.PollCreateRequest, ephemeral? : Bool) -> Unit
 pub fn ComponentCtx::response_state(Self) -> ResponseState
 pub fn ComponentCtx::scope(Self) -> InvocationScope
 pub async fn ComponentCtx::show_modal(Self, custom_id~ : String, title~ : String, components~ : Array[@model.Component]) -> Unit
-pub async fn ComponentCtx::update_message(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], allowed_mentions? : @model.AllowedMentions) -> Unit
+pub async fn ComponentCtx::update_message(Self, content? : String, clear_content? : Bool, embeds? : Array[@model.Embed], components? : Array[@model.Component], allowed_mentions? : @model.AllowedMentions, files? : Array[@http.FileUpload], keep_attachments? : Array[@model.AttachmentRequest], poll? : @model.PollCreateRequest) -> Unit
 pub fn ComponentCtx::user(Self) -> @model.User
 
 pub(all) enum DeliveryFailure {
@@ -146,6 +146,7 @@ pub(all) struct ModalCtx {
   // private fields
 }
 pub async fn ModalCtx::defer_response(Self, ephemeral? : Bool) -> Unit
+pub async fn ModalCtx::defer_update(Self) -> Unit
 pub async fn ModalCtx::delete_followup(Self, @model.Id[@model.MessageMarker]) -> Unit
 pub async fn ModalCtx::delete_response(Self) -> Unit
 pub async fn ModalCtx::edit_followup(Self, @model.Id[@model.MessageMarker], content? : String, clear_content? : Bool, embeds? : Array[@model.Embed], components? : Array[@model.Component], allowed_mentions? : @model.AllowedMentions, files? : Array[@http.FileUpload], keep_attachments? : Array[@model.AttachmentRequest]) -> @model.Message
@@ -156,11 +157,12 @@ pub fn ModalCtx::guild_scope(Self) -> GuildInvocation?
 pub fn ModalCtx::origin(Self) -> ModalOrigin
 pub async fn ModalCtx::original_response(Self) -> @model.Message
 pub fn ModalCtx::remaining_ms(Self) -> Int?
-pub async fn ModalCtx::reply(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, ephemeral? : Bool) -> Unit
-pub async fn ModalCtx::respond(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, ephemeral? : Bool) -> Unit
+pub async fn ModalCtx::reply(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, poll? : @model.PollCreateRequest, ephemeral? : Bool) -> Unit
+pub async fn ModalCtx::respond(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, poll? : @model.PollCreateRequest, ephemeral? : Bool) -> Unit
 pub fn ModalCtx::response_state(Self) -> ResponseState
 pub fn ModalCtx::scope(Self) -> InvocationScope
 pub fn ModalCtx::text_value(Self, String) -> String?
+pub async fn ModalCtx::update_message(Self, content? : String, clear_content? : Bool, embeds? : Array[@model.Embed], components? : Array[@model.Component], allowed_mentions? : @model.AllowedMentions, files? : Array[@http.FileUpload], keep_attachments? : Array[@model.AttachmentRequest], poll? : @model.PollCreateRequest) -> Unit
 pub fn ModalCtx::user(Self) -> @model.User
 
 pub(all) enum ModalOrigin {

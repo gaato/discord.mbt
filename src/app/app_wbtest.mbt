@@ -640,10 +640,10 @@ test "initial response data matches framework message response shape" {
   )
   json_inspect(response.message_data(), content={
     "content": "done",
+    "flags": 64,
     "attachments": [
       { "id": 0, "filename": "report.txt", "description": "Result report" },
     ],
-    "flags": 64,
   })
 }
 

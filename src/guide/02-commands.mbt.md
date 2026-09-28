@@ -206,8 +206,15 @@ test "guild command declaration compiles" {
   Error policies follow the gate's real state, so a Raw handler that responds
   and then raises receives an error followup through `respond_error`.
 
-`edit_original` and `followup` return the resulting message; append
-`|> ignore` when the handler does not need it.
+Every deferred context — command, component, and modal — has the same
+message surface: `original()`, `edit_original`, and `delete_original()` for
+the deferred response, and `followup`, `get_followup`, `edit_followup`, and
+`delete_followup` for the messages sent after it. `edit_original` and
+`followup` return the resulting message; append `|> ignore` when the handler
+does not need it. A followup's return value is the only way to learn the id a
+later `edit_followup` or `delete_followup` needs. When `edit_original` adds
+`files`, the new uploads replace the existing attachments unless
+`keep_attachments` lists the ones to retain.
 
 Register every command with `app.command(command)`. To synchronize the
 declarations, pass a `CommandScope` to `Bot(sync=...)` or call

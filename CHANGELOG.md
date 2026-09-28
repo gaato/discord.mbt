@@ -28,6 +28,21 @@ breaking change is listed with a migration note.
   before any executor starts.
 - `remaining_ms()` on `ImmediateCtx`, `ComponentImmediateCtx`, and
   `ModalImmediateCtx`: the budget left to return the initial response.
+- `DeferredCtx`, `ComponentDeferredCtx`, and `ModalDeferredCtx` share one
+  message surface: `original()`, `edit_original`, `delete_original()`,
+  `followup`, `get_followup`, `edit_followup`, and `delete_followup`.
+  Managing a followup no longer requires dropping to `raw()`.
+- Every message a library surface sends passes every field Discord accepts
+  for that callback. `poll` is accepted by initial replies
+  (`CommandReply::message`, `ComponentReply::message`,
+  `InitialResponse::message`, and the raw `respond` and `reply`), by
+  followups, and by `edit_original`. `keep_attachments` is accepted by
+  `edit_original`. Component updates accept `clear_content`, `files`,
+  `keep_attachments`, and `poll`.
+- `ModalCtx::update_message` and `ModalCtx::defer_update` edit the message
+  whose component opened the modal. A modal opened by a command has no such
+  message, so both raise `ResponseGateError::InvalidCallback` without sending
+  anything.
 
 ### Changed
 
@@ -105,6 +120,23 @@ breaking change is listed with a migration note.
   bypass the rule that an immediate handler answers by returning its reply;
   the name now says so. Behavior is unchanged. Migration: rename the call, or
   use the context's read-only accessors. Deferred contexts keep `raw()`.
+- Breaking: `ComponentReply::UpdateMessage` carries a `MessageUpdate` value
+  instead of four labeled fields, matching `Message(InitialResponse)`.
+  `ComponentReply::update_message(...)` builds it and is unchanged for
+  existing arguments. Migration: replace a direct
+  `UpdateMessage(content~, embeds~, components~, allowed_mentions~)` with
+  `ComponentReply::update_message(content?, embeds?, components?,
+  allowed_mentions?)`, and match `UpdateMessage(_)` without destructuring.
+- `ComponentDeferredCtx::edit_original(files=...)` on a `DeferredUpdate`
+  handler replaced the host message's attachments with no way to keep them;
+  pass `keep_attachments` to retain the existing ones.
+
+### Fixed
+
+- A poll combined with Components V2 is rejected before sending on every
+  message path. The check existed but no REST call passed the poll to it,
+  so `create_message`, `create_followup`, `edit_original_response`, and
+  `execute_webhook` sent bodies Discord rejects.
 
 ## [0.6.0] - 2026-09-25
 

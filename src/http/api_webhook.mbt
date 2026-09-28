@@ -251,7 +251,11 @@ pub async fn Client::execute_webhook(
     query_params.push("with_components=\{value}")
   }
   let flags = message_flags_with_components_v2(
-    flags, content, embeds, components,
+    flags,
+    content,
+    embeds,
+    components,
+    has_poll=poll is Some(_),
   )
   let builder = @model.ObjBuilder()
     .opt("content", content)

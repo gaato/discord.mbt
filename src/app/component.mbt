@@ -1,12 +1,7 @@
 ///|
 /// Initial response returned by an immediate component handler.
 pub(all) enum ComponentReply {
-  UpdateMessage(
-    content~ : String?,
-    embeds~ : Array[@model.Embed]?,
-    components~ : Array[@model.Component]?,
-    allowed_mentions~ : @model.AllowedMentions?
-  )
+  UpdateMessage(MessageUpdate)
   Message(InitialResponse)
   ShowModal(ModalHandle)
 }
@@ -46,14 +41,32 @@ pub struct ComponentDeferredCtx {
 }
 
 ///|
-/// Reply by editing the message that hosts the component.
+/// Reply by editing the message that hosts the component. Omitted fields keep
+/// their current value; `clear_content` removes the text, and
+/// `keep_attachments` lists the existing attachments to retain alongside new
+/// `files` (see `MessageUpdate`).
 pub fn ComponentReply::update_message(
   content? : String,
+  clear_content? : Bool = false,
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
   allowed_mentions? : @model.AllowedMentions,
+  files? : Array[@dhttp.FileUpload],
+  keep_attachments? : Array[@model.AttachmentRequest],
+  poll? : @model.PollCreateRequest,
 ) -> ComponentReply {
-  UpdateMessage(content~, embeds~, components~, allowed_mentions~)
+  UpdateMessage(
+    MessageUpdate(
+      content?,
+      clear_content~,
+      embeds?,
+      components?,
+      allowed_mentions?,
+      files?,
+      keep_attachments?,
+      poll?,
+    ),
+  )
 }
 
 ///|
@@ -65,6 +78,7 @@ pub fn ComponentReply::message(
   components? : Array[@model.Component],
   files? : Array[@dhttp.FileUpload],
   allowed_mentions? : @model.AllowedMentions,
+  poll? : @model.PollCreateRequest,
   ephemeral? : Bool = false,
 ) -> ComponentReply {
   Message(
@@ -74,6 +88,7 @@ pub fn ComponentReply::message(
       components?,
       files?,
       allowed_mentions?,
+      poll?,
       ephemeral~,
     ),
   )
@@ -90,6 +105,7 @@ async fn InitialResponse::send_component(
     components?=self.components_,
     files?=self.files_,
     allowed_mentions?=self.allowed_mentions_,
+    poll?=self.poll_,
     ephemeral=self.ephemeral_,
   )
 }
@@ -100,8 +116,7 @@ async fn ComponentReply::send(
   ctx : @framework.ComponentCtx,
 ) -> Unit {
   match self {
-    UpdateMessage(content~, embeds~, components~, allowed_mentions~) =>
-      ctx.update_message(content?, embeds?, components?, allowed_mentions?)
+    UpdateMessage(update) => update.send_component(ctx)
     Message(response) => response.send_component(ctx)
     ShowModal(handle) => handle.send_component(ctx)
   }
@@ -373,8 +388,18 @@ pub fn ComponentDeferredCtx::raw(
 }
 
 ///|
+/// Fetch the original response.
+pub async fn ComponentDeferredCtx::original(
+  self : ComponentDeferredCtx,
+) -> @model.Message {
+  self.raw_.original_response()
+}
+
+///|
 /// Edit the original response after deferring. For `DeferredUpdate`
-/// handlers this edits the component's host message.
+/// handlers this edits the component's host message. New `files` replace
+/// the existing attachments unless `keep_attachments` lists the ones to retain;
+/// `poll` can be added only here, while editing the deferred response.
 pub async fn ComponentDeferredCtx::edit_original(
   self : ComponentDeferredCtx,
   content? : String,
@@ -383,6 +408,8 @@ pub async fn ComponentDeferredCtx::edit_original(
   components? : Array[@model.Component],
   allowed_mentions? : @model.AllowedMentions,
   files? : Array[@dhttp.FileUpload],
+  keep_attachments? : Array[@model.AttachmentRequest],
+  poll? : @model.PollCreateRequest,
 ) -> @model.Message {
   self.raw_.edit_response(
     content?,
@@ -391,7 +418,17 @@ pub async fn ComponentDeferredCtx::edit_original(
     components?,
     allowed_mentions?,
     files?,
+    keep_attachments?,
+    poll?,
   )
+}
+
+///|
+/// Delete the original response.
+pub async fn ComponentDeferredCtx::delete_original(
+  self : ComponentDeferredCtx,
+) -> Unit {
+  self.raw_.delete_response()
 }
 
 ///|
@@ -403,6 +440,7 @@ pub async fn ComponentDeferredCtx::followup(
   components? : Array[@model.Component],
   files? : Array[@dhttp.FileUpload],
   allowed_mentions? : @model.AllowedMentions,
+  poll? : @model.PollCreateRequest,
   ephemeral? : Bool = false,
 ) -> @model.Message {
   self.raw_.followup(
@@ -411,8 +449,53 @@ pub async fn ComponentDeferredCtx::followup(
     components?,
     files?,
     allowed_mentions?,
+    poll?,
     ephemeral~,
   )
+}
+
+///|
+/// Fetch a followup message sent for this interaction.
+pub async fn ComponentDeferredCtx::get_followup(
+  self : ComponentDeferredCtx,
+  message_id : @model.MessageId,
+) -> @model.Message {
+  self.raw_.get_followup(message_id)
+}
+
+///|
+/// Edit a followup message sent for this interaction. New `files` replace
+/// its attachments unless `keep_attachments` lists the ones to retain.
+pub async fn ComponentDeferredCtx::edit_followup(
+  self : ComponentDeferredCtx,
+  message_id : @model.MessageId,
+  content? : String,
+  clear_content? : Bool = false,
+  embeds? : Array[@model.Embed],
+  components? : Array[@model.Component],
+  allowed_mentions? : @model.AllowedMentions,
+  files? : Array[@dhttp.FileUpload],
+  keep_attachments? : Array[@model.AttachmentRequest],
+) -> @model.Message {
+  self.raw_.edit_followup(
+    message_id,
+    content?,
+    clear_content~,
+    embeds?,
+    components?,
+    allowed_mentions?,
+    files?,
+    keep_attachments?,
+  )
+}
+
+///|
+/// Delete a followup message sent for this interaction.
+pub async fn ComponentDeferredCtx::delete_followup(
+  self : ComponentDeferredCtx,
+  message_id : @model.MessageId,
+) -> Unit {
+  self.raw_.delete_followup(message_id)
 }
 
 ///|

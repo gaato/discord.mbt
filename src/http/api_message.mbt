@@ -89,6 +89,7 @@ pub async fn Client::create_message(
     embeds,
     components,
     sticker_ids?,
+    has_poll=poll is Some(_),
   )
   let body = self
     .with_channel_allowed_mentions(

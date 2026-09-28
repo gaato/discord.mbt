@@ -6,6 +6,7 @@ pub struct InitialResponse {
   priv components_ : Array[@model.Component]?
   priv files_ : Array[@dhttp.FileUpload]?
   priv allowed_mentions_ : @model.AllowedMentions?
+  priv poll_ : @model.PollCreateRequest?
   priv ephemeral_ : Bool
 }
 
@@ -24,6 +25,7 @@ pub fn CommandReply::message(
   components? : Array[@model.Component],
   files? : Array[@dhttp.FileUpload],
   allowed_mentions? : @model.AllowedMentions,
+  poll? : @model.PollCreateRequest,
   ephemeral? : Bool = false,
 ) -> CommandReply {
   Message(
@@ -33,6 +35,7 @@ pub fn CommandReply::message(
       components?,
       files?,
       allowed_mentions?,
+      poll?,
       ephemeral~,
     ),
   )
@@ -46,6 +49,7 @@ pub fn InitialResponse::message(
   components? : Array[@model.Component],
   files? : Array[@dhttp.FileUpload],
   allowed_mentions? : @model.AllowedMentions,
+  poll? : @model.PollCreateRequest,
   ephemeral? : Bool = false,
 ) -> InitialResponse {
   {
@@ -54,6 +58,7 @@ pub fn InitialResponse::message(
     components_: components,
     files_: files,
     allowed_mentions_: allowed_mentions,
+    poll_: poll,
     ephemeral_: ephemeral,
   }
 }
@@ -64,26 +69,15 @@ pub fn InitialResponse::message(
 fn InitialResponse::message_data(
   self : InitialResponse,
 ) -> Json raise @dhttp.DiscordHttpError {
-  let flags = @dhttp.message_flags_with_components_v2(
-    if self.ephemeral_ {
-      Some(@model.MessageFlags::ephemeral())
-    } else {
-      None
-    },
-    self.content_,
-    self.embeds_,
-    self.components_,
+  @dhttp.interaction_message_data(
+    content?=self.content_,
+    embeds?=self.embeds_,
+    components?=self.components_,
+    allowed_mentions?=self.allowed_mentions_,
+    files?=self.files_,
+    poll?=self.poll_,
+    ephemeral=self.ephemeral_,
   )
-  let builder = @model.ObjBuilder()
-    .opt("content", self.content_)
-    .opt("embeds", self.embeds_)
-    .opt("components", self.components_)
-    .opt("allowed_mentions", self.allowed_mentions_)
-  if self.files_ is Some(files) && files.length() > 0 {
-    builder.field("attachments", @dhttp.attachments_json(files)) |> ignore
-  }
-  builder.opt("flags", flags) |> ignore
-  builder.build()
 }
 
 ///|
@@ -97,6 +91,7 @@ async fn InitialResponse::send(
     components?=self.components_,
     files?=self.files_,
     allowed_mentions?=self.allowed_mentions_,
+    poll?=self.poll_,
     ephemeral=self.ephemeral_,
   )
 }
@@ -110,4 +105,63 @@ async fn CommandReply::send(
     Message(response) => response.send(ctx)
     ShowModal(handle) => handle.send_command(ctx)
   }
+}
+
+///|
+/// An `UPDATE_MESSAGE` callback: edits the message that hosts the component
+/// (or, for a modal, the message whose component opened it). Omitted fields
+/// keep their current value.
+pub struct MessageUpdate {
+  priv content_ : String?
+  priv clear_content_ : Bool
+  priv embeds_ : Array[@model.Embed]?
+  priv components_ : Array[@model.Component]?
+  priv allowed_mentions_ : @model.AllowedMentions?
+  priv files_ : Array[@dhttp.FileUpload]?
+  priv keep_attachments_ : Array[@model.AttachmentRequest]?
+  priv poll_ : @model.PollCreateRequest?
+}
+
+///|
+/// Describe an update of the host message. `clear_content` removes the text
+/// (it cannot be combined with `content`). New `files` replace the existing
+/// attachments unless `keep_attachments` lists the ones to retain; an empty
+/// `keep_attachments` removes every existing attachment.
+pub fn MessageUpdate::MessageUpdate(
+  content? : String,
+  clear_content? : Bool = false,
+  embeds? : Array[@model.Embed],
+  components? : Array[@model.Component],
+  allowed_mentions? : @model.AllowedMentions,
+  files? : Array[@dhttp.FileUpload],
+  keep_attachments? : Array[@model.AttachmentRequest],
+  poll? : @model.PollCreateRequest,
+) -> MessageUpdate {
+  {
+    content_: content,
+    clear_content_: clear_content,
+    embeds_: embeds,
+    components_: components,
+    allowed_mentions_: allowed_mentions,
+    files_: files,
+    keep_attachments_: keep_attachments,
+    poll_: poll,
+  }
+}
+
+///|
+async fn MessageUpdate::send_component(
+  self : MessageUpdate,
+  ctx : @framework.ComponentCtx,
+) -> Unit {
+  ctx.update_message(
+    content?=self.content_,
+    clear_content=self.clear_content_,
+    embeds?=self.embeds_,
+    components?=self.components_,
+    allowed_mentions?=self.allowed_mentions_,
+    files?=self.files_,
+    keep_attachments?=self.keep_attachments_,
+    poll?=self.poll_,
+  )
 }

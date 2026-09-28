@@ -204,7 +204,7 @@ payload for that kind:
 |---|---|---|
 | `CommandCtx` | slash and context-menu commands | `options`, `model()`, `show_modal` |
 | `ComponentCtx` | buttons and select menus | `message()`, `update_message`, `defer_update`, `show_modal` |
-| `ModalCtx` | modal submits | `text_value(custom_id)`, `origin()` |
+| `ModalCtx` | modal submits | `text_value(custom_id)`, `origin()`, `update_message`, `defer_update` (component-opened modals only) |
 | `AutocompleteCtx` | focused autocomplete options | `suggest(choices)` |
 
 `CommandCtx`, `ComponentCtx`, and `ModalCtx` share the response lifecycle:

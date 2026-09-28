@@ -202,7 +202,15 @@ pub fn DeferredCtx::raw(self : DeferredCtx) -> @framework.CommandCtx {
 }
 
 ///|
-/// Edit the original response after deferring.
+/// Fetch the original response.
+pub async fn DeferredCtx::original(self : DeferredCtx) -> @model.Message {
+  self.raw_.original_response()
+}
+
+///|
+/// Edit the original response after deferring. New `files` replace
+/// the existing attachments unless `keep_attachments` lists the ones to retain;
+/// `poll` can be added only here, while editing the deferred response.
 pub async fn DeferredCtx::edit_original(
   self : DeferredCtx,
   content? : String,
@@ -211,6 +219,8 @@ pub async fn DeferredCtx::edit_original(
   components? : Array[@model.Component],
   allowed_mentions? : @model.AllowedMentions,
   files? : Array[@dhttp.FileUpload],
+  keep_attachments? : Array[@model.AttachmentRequest],
+  poll? : @model.PollCreateRequest,
 ) -> @model.Message {
   self.raw_.edit_response(
     content?,
@@ -219,7 +229,15 @@ pub async fn DeferredCtx::edit_original(
     components?,
     allowed_mentions?,
     files?,
+    keep_attachments?,
+    poll?,
   )
+}
+
+///|
+/// Delete the original response.
+pub async fn DeferredCtx::delete_original(self : DeferredCtx) -> Unit {
+  self.raw_.delete_response()
 }
 
 ///|
@@ -231,6 +249,7 @@ pub async fn DeferredCtx::followup(
   components? : Array[@model.Component],
   files? : Array[@dhttp.FileUpload],
   allowed_mentions? : @model.AllowedMentions,
+  poll? : @model.PollCreateRequest,
   ephemeral? : Bool = false,
 ) -> @model.Message {
   self.raw_.followup(
@@ -239,8 +258,53 @@ pub async fn DeferredCtx::followup(
     components?,
     files?,
     allowed_mentions?,
+    poll?,
     ephemeral~,
   )
+}
+
+///|
+/// Fetch a followup message sent for this interaction.
+pub async fn DeferredCtx::get_followup(
+  self : DeferredCtx,
+  message_id : @model.MessageId,
+) -> @model.Message {
+  self.raw_.get_followup(message_id)
+}
+
+///|
+/// Edit a followup message sent for this interaction. New `files` replace
+/// its attachments unless `keep_attachments` lists the ones to retain.
+pub async fn DeferredCtx::edit_followup(
+  self : DeferredCtx,
+  message_id : @model.MessageId,
+  content? : String,
+  clear_content? : Bool = false,
+  embeds? : Array[@model.Embed],
+  components? : Array[@model.Component],
+  allowed_mentions? : @model.AllowedMentions,
+  files? : Array[@dhttp.FileUpload],
+  keep_attachments? : Array[@model.AttachmentRequest],
+) -> @model.Message {
+  self.raw_.edit_followup(
+    message_id,
+    content?,
+    clear_content~,
+    embeds?,
+    components?,
+    allowed_mentions?,
+    files?,
+    keep_attachments?,
+  )
+}
+
+///|
+/// Delete a followup message sent for this interaction.
+pub async fn DeferredCtx::delete_followup(
+  self : DeferredCtx,
+  message_id : @model.MessageId,
+) -> Unit {
+  self.raw_.delete_followup(message_id)
 }
 
 ///|

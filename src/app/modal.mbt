@@ -734,7 +734,17 @@ pub fn ModalDeferredCtx::raw(self : ModalDeferredCtx) -> @framework.ModalCtx {
 }
 
 ///|
-/// Edit the original response after deferring.
+/// Fetch the original response.
+pub async fn ModalDeferredCtx::original(
+  self : ModalDeferredCtx,
+) -> @model.Message {
+  self.raw_.original_response()
+}
+
+///|
+/// Edit the original response after deferring. New `files` replace
+/// the existing attachments unless `keep_attachments` lists the ones to retain;
+/// `poll` can be added only here, while editing the deferred response.
 pub async fn ModalDeferredCtx::edit_original(
   self : ModalDeferredCtx,
   content? : String,
@@ -743,6 +753,8 @@ pub async fn ModalDeferredCtx::edit_original(
   components? : Array[@model.Component],
   allowed_mentions? : @model.AllowedMentions,
   files? : Array[@dhttp.FileUpload],
+  keep_attachments? : Array[@model.AttachmentRequest],
+  poll? : @model.PollCreateRequest,
 ) -> @model.Message {
   self.raw_.edit_response(
     content?,
@@ -751,7 +763,15 @@ pub async fn ModalDeferredCtx::edit_original(
     components?,
     allowed_mentions?,
     files?,
+    keep_attachments?,
+    poll?,
   )
+}
+
+///|
+/// Delete the original response.
+pub async fn ModalDeferredCtx::delete_original(self : ModalDeferredCtx) -> Unit {
+  self.raw_.delete_response()
 }
 
 ///|
@@ -763,6 +783,7 @@ pub async fn ModalDeferredCtx::followup(
   components? : Array[@model.Component],
   files? : Array[@dhttp.FileUpload],
   allowed_mentions? : @model.AllowedMentions,
+  poll? : @model.PollCreateRequest,
   ephemeral? : Bool = false,
 ) -> @model.Message {
   self.raw_.followup(
@@ -771,8 +792,53 @@ pub async fn ModalDeferredCtx::followup(
     components?,
     files?,
     allowed_mentions?,
+    poll?,
     ephemeral~,
   )
+}
+
+///|
+/// Fetch a followup message sent for this interaction.
+pub async fn ModalDeferredCtx::get_followup(
+  self : ModalDeferredCtx,
+  message_id : @model.MessageId,
+) -> @model.Message {
+  self.raw_.get_followup(message_id)
+}
+
+///|
+/// Edit a followup message sent for this interaction. New `files` replace
+/// its attachments unless `keep_attachments` lists the ones to retain.
+pub async fn ModalDeferredCtx::edit_followup(
+  self : ModalDeferredCtx,
+  message_id : @model.MessageId,
+  content? : String,
+  clear_content? : Bool = false,
+  embeds? : Array[@model.Embed],
+  components? : Array[@model.Component],
+  allowed_mentions? : @model.AllowedMentions,
+  files? : Array[@dhttp.FileUpload],
+  keep_attachments? : Array[@model.AttachmentRequest],
+) -> @model.Message {
+  self.raw_.edit_followup(
+    message_id,
+    content?,
+    clear_content~,
+    embeds?,
+    components?,
+    allowed_mentions?,
+    files?,
+    keep_attachments?,
+  )
+}
+
+///|
+/// Delete a followup message sent for this interaction.
+pub async fn ModalDeferredCtx::delete_followup(
+  self : ModalDeferredCtx,
+  message_id : @model.MessageId,
+) -> Unit {
+  self.raw_.delete_followup(message_id)
 }
 
 ///|
@@ -786,6 +852,7 @@ async fn InitialResponse::send_modal(
     components?=self.components_,
     files?=self.files_,
     allowed_mentions?=self.allowed_mentions_,
+    poll?=self.poll_,
     ephemeral=self.ephemeral_,
   )
 }

@@ -72,7 +72,14 @@ pub async fn Client::edit_original_response(
   poll? : @model.PollCreateRequest,
 ) -> @model.Message raise DiscordHttpError {
   let builder = edit_attachments_field(
-    message_patch_builder(content, clear_content, embeds, components, flags)
+    message_patch_builder(
+      content,
+      clear_content,
+      embeds,
+      components,
+      flags,
+      has_poll=poll is Some(_),
+    )
     .opt("allowed_mentions", allowed_mentions)
     .opt("poll", poll),
     keep_attachments,
@@ -123,7 +130,11 @@ pub async fn Client::create_followup(
     )
   }
   let flags = message_flags_with_components_v2(
-    flags, content, embeds, components,
+    flags,
+    content,
+    embeds,
+    components,
+    has_poll=poll is Some(_),
   )
   let builder = @model.ObjBuilder()
     .opt("content", content)

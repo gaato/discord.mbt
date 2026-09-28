@@ -29,10 +29,15 @@ fn message_patch_builder(
   embeds : Array[@model.Embed]?,
   components : Array[@model.Component]?,
   flags : @model.MessageFlags?,
+  has_poll? : Bool = false,
 ) -> @model.ObjBuilder raise DiscordHttpError {
   validate_content(content)
   let flags = message_flags_with_components_v2(
-    flags, content, embeds, components,
+    flags,
+    content,
+    embeds,
+    components,
+    has_poll~,
   )
   @model.ObjBuilder()
   .und("content", patch_nullable("content", content, clear_content))

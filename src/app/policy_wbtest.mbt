@@ -114,9 +114,9 @@ async test "error policy exposes the user and sends a rich initial response" {
           "type": 1,
         },
       ],
+      "flags": 64,
       "allowed_mentions": { "parse": [] },
       "attachments": [{ "id": 0, "filename": "error.txt" }],
-      "flags": 64,
     },
   })
   debug_inspect(

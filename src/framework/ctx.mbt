@@ -1,257 +1,4 @@
 ///|
-/// Build the `data` object of a message-style interaction response.
-fn message_response_data(
-  content : String?,
-  embeds : Array[@model.Embed]?,
-  components : Array[@model.Component]?,
-  files : Array[@dhttp.FileUpload]?,
-  allowed_mentions : @model.AllowedMentions?,
-  ephemeral : Bool,
-) -> Json raise @dhttp.DiscordHttpError {
-  let flags = @dhttp.message_flags_with_components_v2(
-    if ephemeral {
-      Some(@model.MessageFlags::ephemeral())
-    } else {
-      None
-    },
-    content,
-    embeds,
-    components,
-  )
-  let builder = @model.ObjBuilder()
-    .opt("content", content)
-    .opt("embeds", embeds)
-    .opt("components", components)
-    .opt("allowed_mentions", allowed_mentions)
-  if files is Some(fs) && fs.length() > 0 {
-    builder.field("attachments", @dhttp.attachments_json(fs)) |> ignore
-  }
-  builder.opt("flags", flags) |> ignore
-  builder.build()
-}
-
-///|
-async fn respond_message(
-  gate : ResponseGate,
-  typ : @model.InteractionResponseType,
-  content : String?,
-  embeds : Array[@model.Embed]?,
-  components : Array[@model.Component]?,
-  files : Array[@dhttp.FileUpload]?,
-  allowed_mentions : @model.AllowedMentions?,
-  ephemeral : Bool,
-) -> Unit {
-  gate.send(
-    {
-      typ,
-      data: Some(
-        message_response_data(
-          content, embeds, components, files, allowed_mentions, ephemeral,
-        ),
-      ),
-    },
-    files?,
-  )
-}
-
-///|
-async fn respond_modal(
-  gate : ResponseGate,
-  custom_id : String,
-  title : String,
-  components : Array[@model.Component],
-) -> Unit {
-  @dhttp.validate_modal_limits(title, components)
-  gate.send({
-    typ: Modal,
-    data: Some(
-      @model.ObjBuilder()
-      .field("custom_id", custom_id)
-      .field("title", title)
-      .field("components", components)
-      .build(),
-    ),
-  })
-}
-
-///|
-/// Deliver a message through whichever path the gate's state allows:
-/// the initial callback while pending, an edit of a still-loading deferred
-/// placeholder, and a followup otherwise. Editing replaces the deprecated
-/// behavior where the first followup after a deferral edits the original.
-///
-/// Verified live on 2026-09-28 with `src/examples/gate_probe`: the edit
-/// replaces the loading message and keeps the defer's visibility; after an
-/// edit or a `DeferredUpdateMessage` the reply is a separate followup; and
-/// when an unconfirmed deferral's edit fails, the fallback followup still
-/// replaces the loading message (Discord's deprecated followup-as-edit).
-async fn reply_message(
-  gate : ResponseGate,
-  client : @dhttp.Client,
-  application_id : @model.ApplicationId,
-  token : String,
-  content : String?,
-  embeds : Array[@model.Embed]?,
-  components : Array[@model.Component]?,
-  files : Array[@dhttp.FileUpload]?,
-  allowed_mentions : @model.AllowedMentions?,
-  ephemeral : Bool,
-) -> Unit {
-  gate.exclusive_reply(() => {
-    gate.wait_settled()
-    match gate.state() {
-      Pending =>
-        respond_message(
-          gate,
-          ChannelMessageWithSource,
-          content,
-          embeds,
-          components,
-          files,
-          allowed_mentions,
-          ephemeral,
-        )
-      Expired => raise ResponseGateError::Expired
-      Sent(DeferredChannelMessageWithSource)
-      | Unconfirmed(DeferredChannelMessageWithSource) if gate.placeholder_open() => {
-        let edited = try {
-          client.edit_original_response(
-            application_id,
-            token,
-            content?,
-            embeds?,
-            components?,
-            allowed_mentions?,
-            files?,
-          )
-          |> ignore
-          true
-        } catch {
-          error if @async.is_being_cancelled() => raise error
-          // An unconfirmed deferral may have no original message to edit.
-          error if gate.state() is Unconfirmed(_) => {
-            ignore(error)
-            false
-          }
-          error => raise error
-        }
-        if !edited {
-          send_followup(
-            client, application_id, token, content, embeds, components, files, allowed_mentions,
-            ephemeral,
-          )
-        }
-        // Only a delivered reply replaces the placeholder; after a failure the
-        // loading message may still be showing, so a later reply edits again.
-        gate.close_placeholder()
-      }
-      Sent(_) | Unconfirmed(_) => {
-        send_followup(
-          client, application_id, token, content, embeds, components, files, allowed_mentions,
-          ephemeral,
-        )
-        gate.close_placeholder()
-      }
-    }
-  })
-}
-
-///|
-async fn send_followup(
-  client : @dhttp.Client,
-  application_id : @model.ApplicationId,
-  token : String,
-  content : String?,
-  embeds : Array[@model.Embed]?,
-  components : Array[@model.Component]?,
-  files : Array[@dhttp.FileUpload]?,
-  allowed_mentions : @model.AllowedMentions?,
-  ephemeral : Bool,
-) -> Unit {
-  client.create_followup(
-    application_id,
-    token,
-    content?,
-    embeds?,
-    components?,
-    files?,
-    allowed_mentions?,
-    flags=if ephemeral {
-      @model.MessageFlags::ephemeral()
-    } else {
-      @model.MessageFlags::from_bits(0)
-    },
-  )
-  |> ignore
-}
-
-///|
-async fn interaction_original_response(
-  client : @dhttp.Client,
-  application_id : @model.ApplicationId,
-  token : String,
-) -> @model.Message {
-  client.get_original_response(application_id, token)
-}
-
-///|
-async fn delete_interaction_response(
-  client : @dhttp.Client,
-  application_id : @model.ApplicationId,
-  token : String,
-) -> Unit {
-  client.delete_original_response(application_id, token)
-}
-
-///|
-async fn interaction_followup(
-  client : @dhttp.Client,
-  application_id : @model.ApplicationId,
-  token : String,
-  message_id : @model.MessageId,
-) -> @model.Message {
-  client.get_followup(application_id, token, message_id)
-}
-
-///|
-async fn edit_interaction_followup(
-  client : @dhttp.Client,
-  application_id : @model.ApplicationId,
-  token : String,
-  message_id : @model.MessageId,
-  content : String?,
-  clear_content : Bool,
-  embeds : Array[@model.Embed]?,
-  components : Array[@model.Component]?,
-  allowed_mentions : @model.AllowedMentions?,
-  files : Array[@dhttp.FileUpload]?,
-  keep_attachments : Array[@model.AttachmentRequest]?,
-) -> @model.Message {
-  client.edit_followup(
-    application_id,
-    token,
-    message_id,
-    content?,
-    clear_content~,
-    embeds?,
-    components?,
-    allowed_mentions?,
-    files?,
-    keep_attachments?,
-  )
-}
-
-///|
-async fn delete_interaction_followup(
-  client : @dhttp.Client,
-  application_id : @model.ApplicationId,
-  token : String,
-  message_id : @model.MessageId,
-) -> Unit {
-  client.delete_followup(application_id, token, message_id)
-}
-
-///|
 /// Proof that an interaction was invoked in a guild: the guild id and the
 /// invoking member, both validated when the context was built.
 pub(all) struct GuildInvocation {
@@ -429,6 +176,17 @@ pub fn[T : @interaction.CommandModel] CommandCtx::model(
 }
 
 ///|
+/// The operations this interaction's token allows.
+fn CommandCtx::responder(self : CommandCtx) -> Responder {
+  {
+    gate: self.gate,
+    client: self.client,
+    application_id: self.application_id,
+    token: self.interaction.token,
+  }
+}
+
+///|
 /// Send a message through whichever path the response state allows: the
 /// initial response while pending, an edit of a still-loading deferred
 /// placeholder, or a followup after any other callback. `ephemeral` cannot
@@ -443,20 +201,12 @@ pub async fn CommandCtx::reply(
   components? : Array[@model.Component],
   files? : Array[@dhttp.FileUpload],
   allowed_mentions? : @model.AllowedMentions,
+  poll? : @model.PollCreateRequest,
   ephemeral? : Bool = false,
 ) -> Unit {
-  reply_message(
-    self.gate,
-    self.client,
-    self.application_id,
-    self.interaction.token,
-    content,
-    embeds,
-    components,
-    files,
-    allowed_mentions,
-    ephemeral,
-  )
+  self
+  .responder()
+  .reply(content, embeds, components, files, allowed_mentions, poll, ephemeral)
 }
 
 ///|
@@ -468,35 +218,20 @@ pub async fn CommandCtx::respond(
   components? : Array[@model.Component],
   files? : Array[@dhttp.FileUpload],
   allowed_mentions? : @model.AllowedMentions,
+  poll? : @model.PollCreateRequest,
   ephemeral? : Bool = false,
 ) -> Unit {
-  respond_message(
-    self.gate,
+  self
+  .responder()
+  .respond(
     ChannelMessageWithSource,
-    content,
-    embeds,
-    components,
-    files,
-    allowed_mentions,
-    ephemeral,
-  )
-}
-
-///|
-/// Acknowledge now and reply later via `edit_response` / `followup`.
-pub async fn CommandCtx::defer_response(
-  self : CommandCtx,
-  ephemeral? : Bool = false,
-) -> Unit {
-  respond_message(
-    self.gate,
-    DeferredChannelMessageWithSource,
-    None,
-    None,
-    None,
-    None,
-    None,
-    ephemeral,
+    content?,
+    embeds?,
+    components?,
+    files?,
+    allowed_mentions?,
+    poll?,
+    ephemeral~,
   )
 }
 
@@ -508,32 +243,33 @@ pub async fn CommandCtx::show_modal(
   title~ : String,
   components~ : Array[@model.Component],
 ) -> Unit {
-  respond_modal(self.gate, custom_id, title, components)
+  self.responder().show_modal(custom_id, title, components)
+}
+
+///|
+/// Acknowledge now and reply later via `edit_response` / `followup`.
+pub async fn CommandCtx::defer_response(
+  self : CommandCtx,
+  ephemeral? : Bool = false,
+) -> Unit {
+  self.responder().defer_message(ephemeral)
 }
 
 ///|
 /// Fetch the original response to this command interaction.
 pub async fn CommandCtx::original_response(self : CommandCtx) -> @model.Message {
-  interaction_original_response(
-    self.client,
-    self.application_id,
-    self.interaction.token,
-  )
+  self.responder().original()
 }
 
 ///|
 /// Delete the original response to this command interaction.
 pub async fn CommandCtx::delete_response(self : CommandCtx) -> Unit {
-  delete_interaction_response(
-    self.client,
-    self.application_id,
-    self.interaction.token,
-  )
-  self.gate.close_placeholder()
+  self.responder().delete_original()
 }
 
 ///|
-/// Edit the original response (typically after `defer`).
+/// Edit the original response to this command interaction. `poll` may only
+/// be added while editing a deferred response.
 pub async fn CommandCtx::edit_response(
   self : CommandCtx,
   content? : String,
@@ -545,24 +281,16 @@ pub async fn CommandCtx::edit_response(
   keep_attachments? : Array[@model.AttachmentRequest],
   poll? : @model.PollCreateRequest,
 ) -> @model.Message {
-  let message = self.client.edit_original_response(
-    self.application_id,
-    self.interaction.token,
-    content?,
-    clear_content~,
-    embeds?,
-    components?,
-    allowed_mentions?,
-    files?,
-    keep_attachments?,
-    poll?,
+  self
+  .responder()
+  .edit_original(
+    content, clear_content, embeds, components, allowed_mentions, files, keep_attachments,
+    poll,
   )
-  self.gate.close_placeholder()
-  message
 }
 
 ///|
-/// Send a followup message after the initial response.
+/// Send a followup message for this command interaction.
 pub async fn CommandCtx::followup(
   self : CommandCtx,
   content? : String,
@@ -573,23 +301,11 @@ pub async fn CommandCtx::followup(
   poll? : @model.PollCreateRequest,
   ephemeral? : Bool = false,
 ) -> @model.Message {
-  let message = self.client.create_followup(
-    self.application_id,
-    self.interaction.token,
-    content?,
-    embeds?,
-    components?,
-    files?,
-    allowed_mentions?,
-    poll?,
-    flags=if ephemeral {
-      @model.MessageFlags::ephemeral()
-    } else {
-      @model.MessageFlags::from_bits(0)
-    },
+  self
+  .responder()
+  .followup(
+    content, embeds, components, files, allowed_mentions, poll, ephemeral,
   )
-  self.gate.close_placeholder()
-  message
 }
 
 ///|
@@ -598,12 +314,7 @@ pub async fn CommandCtx::get_followup(
   self : CommandCtx,
   message_id : @model.MessageId,
 ) -> @model.Message {
-  interaction_followup(
-    self.client,
-    self.application_id,
-    self.interaction.token,
-    message_id,
-  )
+  self.responder().get_followup(message_id)
 }
 
 ///|
@@ -619,17 +330,10 @@ pub async fn CommandCtx::edit_followup(
   files? : Array[@dhttp.FileUpload],
   keep_attachments? : Array[@model.AttachmentRequest],
 ) -> @model.Message {
-  edit_interaction_followup(
-    self.client,
-    self.application_id,
-    self.interaction.token,
-    message_id,
-    content,
-    clear_content,
-    embeds,
-    components,
-    allowed_mentions,
-    files,
+  self
+  .responder()
+  .edit_followup(
+    message_id, content, clear_content, embeds, components, allowed_mentions, files,
     keep_attachments,
   )
 }
@@ -640,12 +344,7 @@ pub async fn CommandCtx::delete_followup(
   self : CommandCtx,
   message_id : @model.MessageId,
 ) -> Unit {
-  delete_interaction_followup(
-    self.client,
-    self.application_id,
-    self.interaction.token,
-    message_id,
-  )
+  self.responder().delete_followup(message_id)
 }
 
 ///|
@@ -701,6 +400,17 @@ pub fn ComponentCtx::message(self : ComponentCtx) -> @model.Message {
 }
 
 ///|
+/// The operations this interaction's token allows.
+fn ComponentCtx::responder(self : ComponentCtx) -> Responder {
+  {
+    gate: self.gate,
+    client: self.client,
+    application_id: self.application_id,
+    token: self.interaction.token,
+  }
+}
+
+///|
 /// Send a message through whichever path the response state allows: the
 /// initial response while pending, an edit of a still-loading deferred
 /// placeholder, or a followup after any other callback. `ephemeral` cannot
@@ -715,20 +425,12 @@ pub async fn ComponentCtx::reply(
   components? : Array[@model.Component],
   files? : Array[@dhttp.FileUpload],
   allowed_mentions? : @model.AllowedMentions,
+  poll? : @model.PollCreateRequest,
   ephemeral? : Bool = false,
 ) -> Unit {
-  reply_message(
-    self.gate,
-    self.client,
-    self.application_id,
-    self.interaction.token,
-    content,
-    embeds,
-    components,
-    files,
-    allowed_mentions,
-    ephemeral,
-  )
+  self
+  .responder()
+  .reply(content, embeds, components, files, allowed_mentions, poll, ephemeral)
 }
 
 ///|
@@ -740,17 +442,20 @@ pub async fn ComponentCtx::respond(
   components? : Array[@model.Component],
   files? : Array[@dhttp.FileUpload],
   allowed_mentions? : @model.AllowedMentions,
+  poll? : @model.PollCreateRequest,
   ephemeral? : Bool = false,
 ) -> Unit {
-  respond_message(
-    self.gate,
+  self
+  .responder()
+  .respond(
     ChannelMessageWithSource,
-    content,
-    embeds,
-    components,
-    files,
-    allowed_mentions,
-    ephemeral,
+    content?,
+    embeds?,
+    components?,
+    files?,
+    allowed_mentions?,
+    poll?,
+    ephemeral~,
   )
 }
 
@@ -759,19 +464,26 @@ pub async fn ComponentCtx::respond(
 pub async fn ComponentCtx::update_message(
   self : ComponentCtx,
   content? : String,
+  clear_content? : Bool = false,
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
   allowed_mentions? : @model.AllowedMentions,
+  files? : Array[@dhttp.FileUpload],
+  keep_attachments? : Array[@model.AttachmentRequest],
+  poll? : @model.PollCreateRequest,
 ) -> Unit {
-  respond_message(
-    self.gate,
+  self
+  .responder()
+  .respond(
     UpdateMessage,
-    content,
-    embeds,
-    components,
-    None,
-    allowed_mentions,
-    false,
+    content?,
+    clear_content~,
+    embeds?,
+    components?,
+    allowed_mentions?,
+    files?,
+    keep_attachments?,
+    poll?,
   )
 }
 
@@ -783,7 +495,7 @@ pub async fn ComponentCtx::show_modal(
   title~ : String,
   components~ : Array[@model.Component],
 ) -> Unit {
-  respond_modal(self.gate, custom_id, title, components)
+  self.responder().show_modal(custom_id, title, components)
 }
 
 ///|
@@ -792,22 +504,13 @@ pub async fn ComponentCtx::defer_response(
   self : ComponentCtx,
   ephemeral? : Bool = false,
 ) -> Unit {
-  respond_message(
-    self.gate,
-    DeferredChannelMessageWithSource,
-    None,
-    None,
-    None,
-    None,
-    None,
-    ephemeral,
-  )
+  self.responder().defer_message(ephemeral)
 }
 
 ///|
 /// Acknowledge without any visible change (edit later if needed).
 pub async fn ComponentCtx::defer_update(self : ComponentCtx) -> Unit {
-  self.gate.send({ typ: DeferredUpdateMessage, data: None, })
+  self.responder().defer_update()
 }
 
 ///|
@@ -815,26 +518,18 @@ pub async fn ComponentCtx::defer_update(self : ComponentCtx) -> Unit {
 pub async fn ComponentCtx::original_response(
   self : ComponentCtx,
 ) -> @model.Message {
-  interaction_original_response(
-    self.client,
-    self.application_id,
-    self.interaction.token,
-  )
+  self.responder().original()
 }
 
 ///|
 /// Delete the original response to this component interaction.
 pub async fn ComponentCtx::delete_response(self : ComponentCtx) -> Unit {
-  delete_interaction_response(
-    self.client,
-    self.application_id,
-    self.interaction.token,
-  )
-  self.gate.close_placeholder()
+  self.responder().delete_original()
 }
 
 ///|
-/// Edit the original interaction response after deferring.
+/// Edit the original response to this component interaction. `poll` may only
+/// be added while editing a deferred response.
 pub async fn ComponentCtx::edit_response(
   self : ComponentCtx,
   content? : String,
@@ -846,24 +541,16 @@ pub async fn ComponentCtx::edit_response(
   keep_attachments? : Array[@model.AttachmentRequest],
   poll? : @model.PollCreateRequest,
 ) -> @model.Message {
-  let message = self.client.edit_original_response(
-    self.application_id,
-    self.interaction.token,
-    content?,
-    clear_content~,
-    embeds?,
-    components?,
-    allowed_mentions?,
-    files?,
-    keep_attachments?,
-    poll?,
+  self
+  .responder()
+  .edit_original(
+    content, clear_content, embeds, components, allowed_mentions, files, keep_attachments,
+    poll,
   )
-  self.gate.close_placeholder()
-  message
 }
 
 ///|
-/// Send a component-interaction followup message.
+/// Send a followup message for this component interaction.
 pub async fn ComponentCtx::followup(
   self : ComponentCtx,
   content? : String,
@@ -874,23 +561,11 @@ pub async fn ComponentCtx::followup(
   poll? : @model.PollCreateRequest,
   ephemeral? : Bool = false,
 ) -> @model.Message {
-  let message = self.client.create_followup(
-    self.application_id,
-    self.interaction.token,
-    content?,
-    embeds?,
-    components?,
-    files?,
-    allowed_mentions?,
-    poll?,
-    flags=if ephemeral {
-      @model.MessageFlags::ephemeral()
-    } else {
-      @model.MessageFlags::from_bits(0)
-    },
+  self
+  .responder()
+  .followup(
+    content, embeds, components, files, allowed_mentions, poll, ephemeral,
   )
-  self.gate.close_placeholder()
-  message
 }
 
 ///|
@@ -899,12 +574,7 @@ pub async fn ComponentCtx::get_followup(
   self : ComponentCtx,
   message_id : @model.MessageId,
 ) -> @model.Message {
-  interaction_followup(
-    self.client,
-    self.application_id,
-    self.interaction.token,
-    message_id,
-  )
+  self.responder().get_followup(message_id)
 }
 
 ///|
@@ -920,17 +590,10 @@ pub async fn ComponentCtx::edit_followup(
   files? : Array[@dhttp.FileUpload],
   keep_attachments? : Array[@model.AttachmentRequest],
 ) -> @model.Message {
-  edit_interaction_followup(
-    self.client,
-    self.application_id,
-    self.interaction.token,
-    message_id,
-    content,
-    clear_content,
-    embeds,
-    components,
-    allowed_mentions,
-    files,
+  self
+  .responder()
+  .edit_followup(
+    message_id, content, clear_content, embeds, components, allowed_mentions, files,
     keep_attachments,
   )
 }
@@ -941,12 +604,7 @@ pub async fn ComponentCtx::delete_followup(
   self : ComponentCtx,
   message_id : @model.MessageId,
 ) -> Unit {
-  delete_interaction_followup(
-    self.client,
-    self.application_id,
-    self.interaction.token,
-    message_id,
-  )
+  self.responder().delete_followup(message_id)
 }
 
 ///|
@@ -1029,6 +687,17 @@ pub fn ModalCtx::text_value(self : ModalCtx, custom_id : String) -> String? {
 }
 
 ///|
+/// The operations this interaction's token allows.
+fn ModalCtx::responder(self : ModalCtx) -> Responder {
+  {
+    gate: self.gate,
+    client: self.client,
+    application_id: self.application_id,
+    token: self.interaction.token,
+  }
+}
+
+///|
 /// Send a message through whichever path the response state allows: the
 /// initial response while pending, an edit of a still-loading deferred
 /// placeholder, or a followup after any other callback. `ephemeral` cannot
@@ -1043,20 +712,12 @@ pub async fn ModalCtx::reply(
   components? : Array[@model.Component],
   files? : Array[@dhttp.FileUpload],
   allowed_mentions? : @model.AllowedMentions,
+  poll? : @model.PollCreateRequest,
   ephemeral? : Bool = false,
 ) -> Unit {
-  reply_message(
-    self.gate,
-    self.client,
-    self.application_id,
-    self.interaction.token,
-    content,
-    embeds,
-    components,
-    files,
-    allowed_mentions,
-    ephemeral,
-  )
+  self
+  .responder()
+  .reply(content, embeds, components, files, allowed_mentions, poll, ephemeral)
 }
 
 ///|
@@ -1068,17 +729,56 @@ pub async fn ModalCtx::respond(
   components? : Array[@model.Component],
   files? : Array[@dhttp.FileUpload],
   allowed_mentions? : @model.AllowedMentions,
+  poll? : @model.PollCreateRequest,
   ephemeral? : Bool = false,
 ) -> Unit {
-  respond_message(
-    self.gate,
+  self
+  .responder()
+  .respond(
     ChannelMessageWithSource,
-    content,
-    embeds,
-    components,
-    files,
-    allowed_mentions,
-    ephemeral,
+    content?,
+    embeds?,
+    components?,
+    files?,
+    allowed_mentions?,
+    poll?,
+    ephemeral~,
+  )
+}
+
+///|
+/// Edit the message whose component opened this modal. A modal opened by
+/// a command has no such message, so this raises
+/// `ResponseGateError::InvalidCallback` without sending anything.
+pub async fn ModalCtx::update_message(
+  self : ModalCtx,
+  content? : String,
+  clear_content? : Bool = false,
+  embeds? : Array[@model.Embed],
+  components? : Array[@model.Component],
+  allowed_mentions? : @model.AllowedMentions,
+  files? : Array[@dhttp.FileUpload],
+  keep_attachments? : Array[@model.AttachmentRequest],
+  poll? : @model.PollCreateRequest,
+) -> Unit {
+  guard self.origin() is FromComponent(_) else {
+    raise ResponseGateError::InvalidCallback(
+      kind=ModalSubmit,
+      typ=UpdateMessage,
+    )
+  }
+  self
+  .responder()
+  .respond(
+    UpdateMessage,
+    content?,
+    clear_content~,
+    embeds?,
+    components?,
+    allowed_mentions?,
+    files?,
+    keep_attachments?,
+    poll?,
   )
 }
 
@@ -1088,41 +788,38 @@ pub async fn ModalCtx::defer_response(
   self : ModalCtx,
   ephemeral? : Bool = false,
 ) -> Unit {
-  respond_message(
-    self.gate,
-    DeferredChannelMessageWithSource,
-    None,
-    None,
-    None,
-    None,
-    None,
-    ephemeral,
-  )
+  self.responder().defer_message(ephemeral)
+}
+
+///|
+/// Acknowledge without changing the message whose component opened this
+/// modal (edit it later with `edit_response`). A modal opened by a command
+/// has no such message, so this raises `ResponseGateError::InvalidCallback`.
+pub async fn ModalCtx::defer_update(self : ModalCtx) -> Unit {
+  guard self.origin() is FromComponent(_) else {
+    raise ResponseGateError::InvalidCallback(
+      kind=ModalSubmit,
+      typ=DeferredUpdateMessage,
+    )
+  }
+  self.responder().defer_update()
 }
 
 ///|
 /// Fetch the original response to this modal interaction.
 pub async fn ModalCtx::original_response(self : ModalCtx) -> @model.Message {
-  interaction_original_response(
-    self.client,
-    self.application_id,
-    self.interaction.token,
-  )
+  self.responder().original()
 }
 
 ///|
 /// Delete the original response to this modal interaction.
 pub async fn ModalCtx::delete_response(self : ModalCtx) -> Unit {
-  delete_interaction_response(
-    self.client,
-    self.application_id,
-    self.interaction.token,
-  )
-  self.gate.close_placeholder()
+  self.responder().delete_original()
 }
 
 ///|
-/// Edit the original modal interaction response after deferring.
+/// Edit the original response to this modal interaction. `poll` may only
+/// be added while editing a deferred response.
 pub async fn ModalCtx::edit_response(
   self : ModalCtx,
   content? : String,
@@ -1134,24 +831,16 @@ pub async fn ModalCtx::edit_response(
   keep_attachments? : Array[@model.AttachmentRequest],
   poll? : @model.PollCreateRequest,
 ) -> @model.Message {
-  let message = self.client.edit_original_response(
-    self.application_id,
-    self.interaction.token,
-    content?,
-    clear_content~,
-    embeds?,
-    components?,
-    allowed_mentions?,
-    files?,
-    keep_attachments?,
-    poll?,
+  self
+  .responder()
+  .edit_original(
+    content, clear_content, embeds, components, allowed_mentions, files, keep_attachments,
+    poll,
   )
-  self.gate.close_placeholder()
-  message
 }
 
 ///|
-/// Send a modal-interaction followup message.
+/// Send a followup message for this modal interaction.
 pub async fn ModalCtx::followup(
   self : ModalCtx,
   content? : String,
@@ -1162,23 +851,11 @@ pub async fn ModalCtx::followup(
   poll? : @model.PollCreateRequest,
   ephemeral? : Bool = false,
 ) -> @model.Message {
-  let message = self.client.create_followup(
-    self.application_id,
-    self.interaction.token,
-    content?,
-    embeds?,
-    components?,
-    files?,
-    allowed_mentions?,
-    poll?,
-    flags=if ephemeral {
-      @model.MessageFlags::ephemeral()
-    } else {
-      @model.MessageFlags::from_bits(0)
-    },
+  self
+  .responder()
+  .followup(
+    content, embeds, components, files, allowed_mentions, poll, ephemeral,
   )
-  self.gate.close_placeholder()
-  message
 }
 
 ///|
@@ -1187,12 +864,7 @@ pub async fn ModalCtx::get_followup(
   self : ModalCtx,
   message_id : @model.MessageId,
 ) -> @model.Message {
-  interaction_followup(
-    self.client,
-    self.application_id,
-    self.interaction.token,
-    message_id,
-  )
+  self.responder().get_followup(message_id)
 }
 
 ///|
@@ -1208,17 +880,10 @@ pub async fn ModalCtx::edit_followup(
   files? : Array[@dhttp.FileUpload],
   keep_attachments? : Array[@model.AttachmentRequest],
 ) -> @model.Message {
-  edit_interaction_followup(
-    self.client,
-    self.application_id,
-    self.interaction.token,
-    message_id,
-    content,
-    clear_content,
-    embeds,
-    components,
-    allowed_mentions,
-    files,
+  self
+  .responder()
+  .edit_followup(
+    message_id, content, clear_content, embeds, components, allowed_mentions, files,
     keep_attachments,
   )
 }
@@ -1229,12 +894,7 @@ pub async fn ModalCtx::delete_followup(
   self : ModalCtx,
   message_id : @model.MessageId,
 ) -> Unit {
-  delete_interaction_followup(
-    self.client,
-    self.application_id,
-    self.interaction.token,
-    message_id,
-  )
+  self.responder().delete_followup(message_id)
 }
 
 ///|
