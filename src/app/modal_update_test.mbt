@@ -152,3 +152,63 @@ test "modal show reports each kind of invalid response" {
     ),
   )
 }
+
+///|
+async test "a rejected modal update is answered even when every handler slot is busy" {
+  let app = @app.AppBuilder(max_in_flight=1)
+  let errors : Array[String] = []
+  app.error_policy((ctx, error) => {
+    errors.push("\{Repr(error)}")
+    ctx.respond_error(content="failed")
+  })
+  let release : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  let holding : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  app.command(
+    @app.slash(
+      name="hold",
+      description="Hold the only permit",
+      args=@interaction.Args::unit(),
+      handler=Raw(_ => {
+        holding.put(())
+        release.get()
+      }),
+    ),
+  )
+  app.on_modal(
+    ticket_modal(),
+    DeferredUpdate((_, _, _) => fail("handler must not run")),
+  )
+  let client = @dhttp.Client("test-token")
+  defer client.close()
+  @async.with_task_group(group => {
+    let endpoint = app
+      .build()
+      .serve(
+        group,
+        access=Client(client),
+        application_id=@model.Id::parse("400000000000000001"),
+      )
+    group.spawn_bg(() => {
+      endpoint.handle_interaction(
+        app_command("hold", "500000000000000955"),
+        deadline_ms=5000,
+      )
+      |> ignore
+    })
+    holding.get()
+    let outcome = endpoint.handle_interaction(
+      app_modal_submit("ticket-note:3", "done", "500000000000000956"),
+      deadline_ms=200,
+    )
+    guard outcome is Reply(response~, ..) else {
+      fail("expected the policy's reply, got \{Repr(outcome)}")
+    }
+    json_inspect(response.to_json(), content={
+      "type": 4,
+      "data": { "content": "failed", "flags": 64 },
+    })
+    assert_eq(errors.length(), 1)
+    assert_true(errors[0].has_prefix("UnsupportedResponse("))
+    release.put(())
+  })
+}

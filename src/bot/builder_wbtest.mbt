@@ -74,3 +74,59 @@ async test "a bot runs once at a time and may run again after it stops" {
     })
   }
 }
+
+///|
+async test "a supplied client's telemetry reaches the bot once, across restarts" {
+  let requests = Ref(0)
+  let client = @dhttp.Client::offline(_ => {
+    requests.val += 1
+    @dhttp.HttpResponse::{
+      status: 200,
+      headers: Map([]),
+      body: {
+        "id": "1",
+        "username": "bot",
+        "discriminator": "0",
+        "global_name": null,
+        "avatar": null,
+      },
+    }
+  })
+  let app = @app.AppBuilder()
+  let builder = BotBuilder(
+    app.build(),
+    token="test-token",
+    intents=@model.Intents::guild_messages(),
+    client~,
+    gateway_url="wss://gateway.example",
+  )
+  builder.core.gateway_bot_info_.val = Some(manager_gateway_info())
+  let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
+  builder.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
+  let http_events = Ref(0)
+  builder.on_telemetry(event => {
+    if event is HttpRequest(..) {
+      http_events.val += 1
+    }
+  })
+  let bot = builder.build()
+  for _ in 0..<2 {
+    let transport = BotFakeTransport()
+    bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+    @async.with_task_group(group => {
+      let running = group.spawn(no_wait=true, () => bot.run())
+      transport.incoming.put(BOT_HELLO)
+      guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
+        fail("expected identify")
+      }
+      transport.incoming.put(bot_ready_frame())
+      let ctx = ready_contexts.get()
+      ctx.shutdown()
+      running.wait()
+    })
+  }
+  let before = requests.val
+  client.get_current_user() |> ignore
+  assert_eq(requests.val, before + 1)
+  assert_eq(http_events.val, before + 1)
+}

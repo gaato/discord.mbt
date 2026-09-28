@@ -129,8 +129,9 @@ breaking change is listed with a migration note.
   handlers on its builder does not affect it. `App::validate` is gone.
   Migration: construct `AppBuilder(...)` where you constructed `App(...)`,
   and pass `app.build()` to the executor after every declaration is
-  registered. A feature installer that also needs `Bot` for events splits
-  into one function that takes the builder and one that takes the `Bot`; see
+  registered. A feature installer that also needs the gateway for events
+  splits into one function that takes the `AppBuilder` and one that takes
+  the `BotBuilder` (see the `BotBuilder` entry below); see
   [Structuring bots](src/guide/07-structuring-bots.mbt.md).
 - Breaking: `raw()` on `ImmediateCtx`, `ComponentImmediateCtx`, and
   `ModalImmediateCtx` is renamed `unchecked_raw()`. Its response methods
@@ -236,6 +237,9 @@ breaking change is listed with a migration note.
 
 ### Fixed
 
+- `App::serve` and `serve_interactions` close the client they built from a
+  token when the startup `GET /applications/@me` fails, instead of keeping
+  it open until the caller's task group ends.
 - A poll combined with Components V2 is rejected before sending on every
   message path. The check existed but no REST call passed the poll to it,
   so `create_message`, `create_followup`, `edit_original_response`, and

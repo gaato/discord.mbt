@@ -59,3 +59,31 @@ async test "deadline races preserve every accepted capture" {
     }
   }
 }
+
+///|
+async test "serve looks up the application id when it is not given" {
+  let lookups = Ref(0)
+  let client = @dhttp.Client::offline(request => {
+    lookups.val += 1
+    assert_true(request.route is GetCurrentApplication)
+    {
+      status: 200,
+      headers: Map([]),
+      body: {
+        "id": "400000000000000001",
+        "name": "app",
+        "icon": null,
+        "description": "",
+        "bot_public": true,
+        "bot_require_code_grant": false,
+        "verify_key": "key",
+        "team": null,
+      },
+    }
+  })
+  defer client.close()
+  @async.with_task_group(group => {
+    @app.AppBuilder().build().serve(group, access=Client(client)) |> ignore
+  })
+  assert_eq(lookups.val, 1)
+}

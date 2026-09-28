@@ -649,6 +649,18 @@ fn[S, A] ModalSubmitHandler::ack_plan(
 }
 
 ///|
+/// Reject a submission this handler cannot answer: an update of a modal that
+/// a command opened.
+fn[S, A] ModalSubmitHandler::preflight(
+  self : ModalSubmitHandler[S, A],
+  raw : @framework.ModalCtx,
+) -> Unit raise HandlerError {
+  if self is DeferredUpdate(_) {
+    require_component_origin(raw)
+  }
+}
+
+///|
 fn require_component_origin(
   raw : @framework.ModalCtx,
 ) -> Unit raise HandlerError {

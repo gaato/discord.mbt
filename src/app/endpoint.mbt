@@ -60,12 +60,17 @@ pub async fn App::serve(
       (@dhttp.Client(token), true)
     }
   }
-  if owns_client {
-    group.add_defer(() => client.close())
-  }
   let application_id = match application_id {
     Some(id) => id
-    None => client.get_current_application().id
+    None => {
+      // A failed lookup must not leave an owned client open until the
+      // caller's (possibly long-lived) group ends.
+      errdefer (if owns_client { client.close() })
+      client.get_current_application().id
+    }
+  }
+  if owns_client {
+    group.add_defer(() => client.close())
   }
   let framework = @framework.Framework(client, application_id)
   self.attach(framework, client~, application_id~) |> ignore

@@ -198,23 +198,26 @@ pub fn BotBuilder::build(self : BotBuilder) -> Bot raise BotConfigError {
   for shard_id, saved in core.resume_ {
     resume[shard_id] = clone_bot_session(saved)
   }
-  {
-    core: {
-      ..core,
-      resume_: resume,
-      typed_events_: core.typed_events_.copy(),
-      raw_events_: core.raw_events_.copy(),
-      event_middleware_: core.event_middleware_.copy(),
-      decode_errors_: core.decode_errors_.copy(),
-      telemetry_: core.telemetry_.copy(),
-      services_: core.services_.copy(),
-      starting_: Ref(false),
-      running_shards_: Ref([]),
-      collector_: EventCollector(),
-      frozen_intents_: Some(core.resolved_intents()),
-    },
-    running_: Ref(false),
+  let built : BotCore = {
+    ..core,
+    resume_: resume,
+    typed_events_: core.typed_events_.copy(),
+    raw_events_: core.raw_events_.copy(),
+    event_middleware_: core.event_middleware_.copy(),
+    decode_errors_: core.decode_errors_.copy(),
+    telemetry_: core.telemetry_.copy(),
+    services_: core.services_.copy(),
+    starting_: Ref(false),
+    running_shards_: Ref([]),
+    collector_: EventCollector(),
+    frozen_intents_: Some(core.resolved_intents()),
   }
+  // Forward the supplied client's REST telemetry once per built bot; a client
+  // the bot builds itself is hooked when each run creates it.
+  if built.client_ is Some(client) {
+    client.on_telemetry(event => built.emit_telemetry(event))
+  }
+  { core: built, running_: Ref(false), }
 }
 
 ///|

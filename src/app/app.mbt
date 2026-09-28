@@ -43,6 +43,9 @@ priv struct RegisteredModal {
   file_type_filters : Array[(String, Array[@model.FileTypeFilter])]
   limit_violations : Array[@model.LimitViolation]
   ack : (@framework.ModalCtx) -> AckPlan
+  // Rejects a submission the handler cannot answer before it takes handler
+  // capacity, so the error policy answers even when every slot is busy.
+  preflight : (@framework.ModalCtx) -> Unit raise HandlerError
   dispatch : async (
     AppCtx,
     ComponentWaiter?,
@@ -212,6 +215,7 @@ pub fn[S, A] AppBuilder::on_modal(
       components=modal.fields_.definitions_,
     ),
     ack: raw => handler.ack_plan(raw),
+    preflight: raw => handler.preflight(raw),
     dispatch: (bot, waiter, warn, raw) => {
       dispatch_modal_handler(modal, handler, bot, waiter, warn, raw)
     },
@@ -233,6 +237,7 @@ pub fn AppBuilder::on_modal_raw(
     file_type_filters: [],
     limit_violations: [],
     ack: _ => Respond,
+    preflight: _ => (),
     dispatch: (_, _, _, raw) => handler(raw),
   })
 }
@@ -614,6 +619,20 @@ pub fn App::attach(
   }
   for entry in self.modals_ {
     let dispatch = raw => {
+      (entry.preflight)(raw) catch {
+        error => {
+          invoke_error_policy(
+            self.current_policy(),
+            failure_context(
+              Modal(custom_id=raw.data.custom_id),
+              Some(RawModal(raw)),
+              self.warn_,
+            ),
+            error,
+          )
+          return
+        }
+      }
       run_admitted(
         limiter,
         modal_admission(raw),

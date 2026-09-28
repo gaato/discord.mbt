@@ -221,8 +221,8 @@ declarations, pass a `CommandScope` to `BotBuilder(sync=...)` or call
 `app.sync_commands(client, application_id, scope~)` from a one-shot program.
 The call returns a sync report. Both paths default to deleting undeclared
 commands in the selected scope, while always preserving the Entry Point
-command. Use `unowned=Keep` on `sync_commands` or `sync_unowned=Keep` on `Bot`
-for a scope shared with other command owners.
+command. Use `unowned=Keep` on `sync_commands` or `sync_unowned=Keep` on
+`BotBuilder` for a scope shared with other command owners.
 
 ```mbt check
 ///|

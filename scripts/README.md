@@ -35,19 +35,22 @@ function mentions is exported by the facade too, so a bot that imports only
 the facade and `@model` can name everything its golden path hands it. Second,
 no public function takes two consecutive positional arguments of the same type
 (resource ids aside), which callers could swap without a compile error.
-Deliberate exceptions are listed in `api_surface_audit.allow` with a reason:
-`@pkg.*` leaves a whole focused package to direct imports, and
-`positional @pkg.function` excuses one function. Unknown or stale entries fail
-the audit.
+Deliberate exceptions are listed in `api_surface_audit.allow`, one type
+(`@pkg.Type`) or function (`positional @pkg.function`) per line with a reason,
+so every new gap needs its own decision. Unknown or stale entries fail the
+audit.
 
-# Interaction callback field audit
+# Interaction message field audit
 
 ```fish
-moon run scripts/docs_callback_audit.mbtx ~/ghq/github.com/discord/discord-api-docs/developers/interactions/receiving-and-responding.mdx --self-test
+moon run scripts/docs_callback_audit.mbtx ~/ghq/github.com/discord/discord-api-docs --self-test
 ```
 
-Compares the "Messages" table of the interaction callback data with the fields
-every message-bearing interaction surface sends (`@http.interaction_message_data`).
-A field Discord adds or removes fails the audit until the library follows it or
-`docs_callback_audit.allow` explains why it is not offered. CI and the daily
-docs watch run it next to the CDN audit.
+For each interaction message surface — the initial callback and updates
+(Interaction Callback Data), followups (Execute Webhook), and edits (Edit
+Webhook Message) — compares the documented parameters with the fields the
+library sends, and checks that every claimed field still appears in the
+functions that build that body. A field Discord adds or removes fails the
+audit until the library follows it or `docs_callback_audit.allow` explains why
+that surface does not send it. CI and the daily docs watch run it next to the
+CDN audit.

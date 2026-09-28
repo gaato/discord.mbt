@@ -558,7 +558,11 @@ async fn BotCore::run(self : BotCore) -> Unit {
   let owns_client = self.client_ is None
   let client = self.client_.unwrap_or_else(() => Client(self.token_))
   defer (if owns_client { client.close() })
-  client.on_telemetry(event => self.emit_telemetry(event))
+  // A supplied client got its forwarding hook once, in `BotBuilder::build`;
+  // hooking it on every run would repeat each event after a restart.
+  if owns_client {
+    client.on_telemetry(event => self.emit_telemetry(event))
+  }
   // Supplied snapshots stay visible through `sessions()` until the shards
   // exist, so a periodic persister never observes an empty map mid-startup.
   self.starting_.val = true
@@ -582,6 +586,12 @@ async fn BotCore::run(self : BotCore) -> Unit {
       IdentifyGuard)
     let managed_shards : Array[ManagedShard] = []
     let shard_handles : Array[@gateway.Shard] = []
+    // Register cleanup before any shard starts, so it is in place however the
+    // group ends; the arrays fill in below.
+    group.add_defer(() => self.running_shards_.val = [])
+    group.add_defer(() => {
+      @async.protect_from_cancel(() => close_shards(shard_handles))
+    })
     for shard_id in resolved.ids {
       let shard = self.start_managed_shard(
         group,
@@ -599,10 +609,6 @@ async fn BotCore::run(self : BotCore) -> Unit {
     }
     self.running_shards_.val = managed_shards
     self.starting_.val = false
-    group.add_defer(() => self.running_shards_.val = [])
-    group.add_defer(() => {
-      @async.protect_from_cancel(() => close_shards(shard_handles))
-    })
     for owner in managed_shards {
       group.spawn_bg(no_wait=true, () => {
         for ;; {

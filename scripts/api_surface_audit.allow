@@ -1,15 +1,62 @@
 # Types the facade's surface mentions but deliberately leaves to a focused
 # package (see the doc comment on src/facade.mbt), and functions whose
-# consecutive positional arguments of one type are deliberate.
+# consecutive positional arguments of one type are deliberate. Every entry
+# names one type or function, so a new gap always needs its own reason.
 
-@http.*            # REST resource refs, raw requests, and pagination live in gaato/discord/http; the facade exports the client, its error, and the refs a gateway context hands out
-@framework.*       # the low-level router and the raw contexts behind Raw handlers live in gaato/discord/framework
-@gateway.*         # shard transport primitives live in gaato/discord/gateway
-@interaction.*     # raw option builders, CommandSpec, and option decoding live in gaato/discord/interaction
-@telemetry.*       # observability events live in gaato/discord/telemetry
-@queue.*           # identify queues are multi-process plumbing (gaato/discord/queue)
-@cooldown.*        # custom cooldown stores are an extension point (gaato/discord/cooldown)
-@voice.*           # voice transport internals behind the experimental VoiceConnection
+# REST resource refs, raw requests, and pagination live in gaato/discord/http
+@http.ApiError                # REST resource refs, raw requests, and pagination
+@http.ApplicationEmojiRef     # REST resource refs, raw requests, and pagination
+@http.ApplicationIdentityRef  # REST resource refs, raw requests, and pagination
+@http.AutoModerationRuleRef   # REST resource refs, raw requests, and pagination
+@http.EmojiRef                # REST resource refs, raw requests, and pagination
+@http.EntitlementRef          # REST resource refs, raw requests, and pagination
+@http.GlobalCommandRef        # REST resource refs, raw requests, and pagination
+@http.GuildChannelPosition    # REST resource refs, raw requests, and pagination
+@http.GuildCommandRef         # REST resource refs, raw requests, and pagination
+@http.HttpRequest             # REST resource refs, raw requests, and pagination
+@http.HttpResponse            # REST resource refs, raw requests, and pagination
+@http.InviteRef               # REST resource refs, raw requests, and pagination
+@http.RoleRef                 # REST resource refs, raw requests, and pagination
+@http.Route                   # REST resource refs, raw requests, and pagination
+@http.ScheduledEventRef       # REST resource refs, raw requests, and pagination
+@http.SkuRef                  # REST resource refs, raw requests, and pagination
+@http.SoundboardSoundRef      # REST resource refs, raw requests, and pagination
+@http.StickerRef              # REST resource refs, raw requests, and pagination
+@http.TemplateRef             # REST resource refs, raw requests, and pagination
+@http.WebhookRef              # REST resource refs, raw requests, and pagination
+@http.WebhookTokenRef         # REST resource refs, raw requests, and pagination
+
+# the low-level router and the raw contexts behind Raw handlers live in gaato/discord/framework
+@framework.AutocompleteCtx  # the low-level router and the raw contexts behind Raw handlers
+@framework.CommandCtx       # the low-level router and the raw contexts behind Raw handlers
+@framework.Framework        # the low-level router and the raw contexts behind Raw handlers
+@framework.ModalCtx         # the low-level router and the raw contexts behind Raw handlers
+@framework.ScopeSyncReport  # the low-level router and the raw contexts behind Raw handlers
+@framework.UnownedCommands  # the low-level router and the raw contexts behind Raw handlers
+
+# shard transport primitives live in gaato/discord/gateway
+@gateway.Session  # shard transport primitives
+@gateway.Shard    # shard transport primitives
+
+# raw option builders, CommandSpec, and option decoding live in gaato/discord/interaction
+@interaction.CommandOptions  # raw option builders, CommandSpec, and option decoding
+@interaction.CommandSpec     # raw option builders, CommandSpec, and option decoding
+@interaction.SuggestHandler  # raw option builders, CommandSpec, and option decoding
+
+# observability events live in gaato/discord/telemetry
+@telemetry.TelemetryEvent  # observability events
+
+# identify queues are multi-process plumbing in gaato/discord/queue
+@queue.IdentifyQueue  # identify queues
+
+# custom cooldown stores are an extension point in gaato/discord/cooldown
+@cooldown.CooldownStore  # custom cooldown stores
+
+# voice transport internals behind the experimental VoiceConnection
+@voice.VoiceCredentials   # voice transport internals behind the experimental VoiceConnection
+@voice.VoiceGatewayEvent  # voice transport internals behind the experimental VoiceConnection
+@voice.VoiceTransport     # voice transport internals behind the experimental VoiceConnection
+@voice.VoiceUdp           # voice transport internals behind the experimental VoiceConnection
 @app.FailureRaw    # raw failure details are implementation-facing
 @app.RegisteredCommand  # type-erased command registration is implementation-facing
 

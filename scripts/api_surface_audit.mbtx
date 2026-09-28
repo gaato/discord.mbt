@@ -253,9 +253,13 @@ fn closure_gaps(
     }
   }
   for line in facade.lines {
-    if function_name(line) is Some(fn_name) {
+    let owner = match function_name(line) {
+      Some(fn_name) => Some(fn_name)
+      None => if line.has_prefix("pub type ") { Some(line) } else { None }
+    }
+    if owner is Some(label) {
       for reference in references(line, "", Set([])) {
-        record(reference.0, reference.1, "facade \{fn_name}")
+        record(reference.0, reference.1, "facade \{label}")
       }
     }
   }
@@ -323,11 +327,10 @@ fn positional_pairs(packages : Map[String, Interface]) -> Map[String, String] {
         }
       }
       let params = split_params(line[open + 1:close].to_owned())
+      // Labeled parameters print as `name~ : T` or `name? : T`; positional
+      // ones print as a bare type, which may itself be an `Option` (`T?`).
       let positional = params.filter(param => {
-        !param.contains("~") &&
-        !param.contains("?") &&
-        !param.has_prefix("Self") &&
-        !param.contains(":")
+        !param.contains(" : ") && !param.has_prefix("Self")
       })
       for index in 1..<positional.length() {
         let current = positional[index]
@@ -344,17 +347,6 @@ fn positional_pairs(packages : Map[String, Interface]) -> Map[String, String] {
 }
 
 ///|
-/// Whether allow entry `pattern` covers `key`. `@pkg.*` covers every closure
-/// gap in that package; other entries match exactly.
-fn allow_covers(pattern : String, key : String) -> Bool {
-  if pattern.has_suffix(".*") {
-    key.has_prefix(pattern[0:pattern.length() - 1].to_owned())
-  } else {
-    pattern == key
-  }
-}
-
-///|
 fn audit(
   facade_text : String,
   package_texts : Map[String, String],
@@ -367,22 +359,14 @@ fn audit(
   }
   let problems : Array[String] = []
   let used : Set[String] = Set([])
-  let covered = (key : String) => {
-    for pattern in allowed {
-      if allow_covers(pattern, key) {
-        used.add(pattern)
-        return true
-      }
-    }
-    false
-  }
   for key, via in closure_gaps(parse_interface(facade_text), packages) {
-    if !covered(key) {
+    if allowed.contains(key) {
+      used.add(key)
+    } else {
       problems.push("facade does not export \{key} (mentioned by \{via})")
     }
   }
   for key, typ in positional_pairs(packages) {
-    // Positional exceptions are listed one by one, never by package.
     if allowed.contains("positional \{key}") {
       used.add("positional \{key}")
     } else {
@@ -436,6 +420,20 @@ async fn main {
     })
     must_fail(() => audit(facade, package_texts, ""))
     must_fail(() => {
+      audit(
+        facade.replace(old="pub using @framework {type ComponentCtx}", new=""),
+        package_texts,
+        allow,
+      )
+    })
+    must_fail(() => {
+      audit(
+        facade + "\npub type Leak = @app.ComponentWaiter\n",
+        package_texts,
+        allow,
+      )
+    })
+    must_fail(() => {
       audit(facade, package_texts, allow + "\n@app.Nothing # stale\n")
     })
     let http = package_texts.get("http").unwrap()
@@ -443,6 +441,10 @@ async fn main {
     unlabeled["http"] = http +
       "\npub fn Client::swap(Self, String, String) -> Unit\n"
     must_fail(() => audit(facade, unlabeled, allow))
+    let optional_pair = package_texts.copy()
+    optional_pair["http"] = http +
+      "\npub fn Client::swap_opt(Self, String?, String?) -> Unit\n"
+    must_fail(() => audit(facade, optional_pair, allow))
     println("API surface audit self-tests: OK")
   }
   println("API surface: OK")

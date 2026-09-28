@@ -99,7 +99,14 @@ async test "handler capacity waits count against the response deadline" {
     )
     assert_true(outcome is TimedOut)
     release.put(())
-    @async.sleep(20)
+    // The admission waiter reports the drop when its own capacity wait times
+    // out; under load that can land after the endpoint's timeout, so wait for
+    // it instead of sleeping a fixed time.
+    @async.with_timeout(2000, () => {
+      while warnings.is_empty() {
+        @async.sleep(5)
+      }
+    })
     assert_false(quick_ran.val)
     assert_eq(warnings, [
       "interaction dropped (command:quick): no handler capacity before the response deadline",

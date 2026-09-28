@@ -281,7 +281,8 @@ heartbeat, and other client-to-server payloads remain uncompressed text.
 
 Compression is available only on native; `zlib_stream_supported()` reports
 whether the current backend can use it. On JavaScript and Wasm,
-`Bot::run` rejects `compress=true` before connecting.
+`BotBuilder::build` rejects `compress=true` with
+`BotConfigError::CompressionUnavailable`.
 
 The zlib shared library is loaded at runtime on native (like the async runtime loads
 OpenSSL), so neither this library nor applications using it need extra link

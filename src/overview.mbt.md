@@ -248,14 +248,14 @@ typed modals route through the same App — see the
 [commands](src/guide/02-commands.mbt.md) and
 [components and modals](src/guide/03-components-modals.mbt.md) guides.
 
-`Client`, `App`, and `Bot` each accept onion-style middleware — around one
+`Client`, `AppBuilder`, and `BotBuilder` each accept onion-style middleware — around one
 logical REST call, around routed interaction dispatch, and around gateway
 event fan-out — plus structured telemetry callbacks. See the
 [middleware guide](src/guide/09-middleware.mbt.md).
 
 ### Gateway executor
 
-`Bot` adds typed gateway event subscriptions and services:
+`BotBuilder` adds typed gateway event subscriptions and services:
 
 ```mbt nocheck
 bot.on(@discord.Events::message_create(), (ctx, event) => {
@@ -342,9 +342,9 @@ pre-execution checks and fixed-window cooldowns. See the
 
 ## HTTP interactions (experimental)
 
-`App::serve(group, token~)` starts the HTTP interaction executor and returns
-an `InteractionEndpoint` that uses the App's declarations and error policy
-without opening a gateway. `handle` accepts decoded interaction JSON and
+`App::serve(group, access=Token(token))` starts the HTTP interaction
+executor and returns an `InteractionEndpoint` that uses the App's
+declarations and error policy without opening a gateway. `handle` accepts decoded interaction JSON and
 returns callback JSON for `Reply`; the caller owns the task group, so
 handlers that defer keep running on it after `handle` returns:
 

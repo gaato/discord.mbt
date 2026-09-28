@@ -164,7 +164,7 @@ show-flows beyond the covered happy and failing paths):
 | src/app/admission.mbt | 10 | Acknowledgement-plan arms for kinds that never carry that plan, the autocomplete gate stubs, the cancellation re-raise, and the watchdog's failed-defer warning (the defer itself is covered). |
 | src/app/component.mbt | 10 | Deferred-ctx accessor duplicates and waiter arms behind a live gateway. |
 | src/app/ctx.mbt | 4 | Waiter plumbing behind a live gateway. |
-| src/app/endpoint.mbt | 6 | `serve` startup with an owned token/client (creates a real Client and fetches the application id), and the endpoint's cancellation re-raise. |
+| src/app/endpoint.mbt | 6 | Closing an owned client when the startup application lookup fails (needs a real token and network), the endpoint's cancellation re-raise and processing-failure warning, and outcome arms the covered flows do not reach. |
 | src/app/middleware.mbt | 4 | Component-scope middleware arms not reachable in the covered flows. |
 | src/app/modal.mbt | 16 | Show/prefill dispatch arms beyond the covered decode, validation, and error flows. |
 | src/app/policy.mbt | 2 | Member-without-user extraction and the policy cancellation re-raise. |
@@ -176,7 +176,7 @@ show-flows beyond the covered happy and failing paths):
 | src/interaction/args.mbt | 8 | Suggest-handler closures that only run inside a live autocomplete dispatch. |
 | src/interaction/options.mbt | 8 | Focused-option accessors for kinds not used by any covered command shape. |
 | src/cache/cache.mbt | 17 | Permission-overwrite computation arms needing full guild channel fixtures. |
-| src/http/api_application.mbt | 3 | Emit arms of optional request fields not exercised by the pinned shapes. |
+| src/http/api_application.mbt | 2 | Emit arms of optional request fields not exercised by the pinned shapes. |
 | src/http/api_channel.mbt | 15 | Remaining optional-parameter emit arms. |
 | src/http/api_guild.mbt | 4 | Remaining optional-parameter emit arms. |
 | src/http/api_interaction.mbt | 3 | Callback-with-files arms needing a live token. |

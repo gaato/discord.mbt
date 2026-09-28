@@ -5,7 +5,8 @@ interactions, and decoded Gateway events. All three use the same onion model.
 Code before `next` can inspect, change, or stop work; code after `next` observes
 the completed inner operation.
 
-Register middleware with the `middleware` method on `Client`, `App`, or `Bot`.
+Register middleware with the `middleware` method on `Client`, `AppBuilder`, or
+`BotBuilder`.
 Registration returns `Unit`, so cascade syntax keeps related setup together:
 
 ```mbt check
