@@ -58,7 +58,7 @@ pub fn file_upload(custom_id~ : String, min_values? : Int, max_values? : Int, re
 
 pub fn guild_only() -> async (@app.CheckCtx) -> Bool
 
-pub fn int_choice(String, Int64, name_localizations? : Map[String, String]) -> @model.CommandOptionChoice
+pub fn int_choice(name~ : String, value~ : Int64, name_localizations? : Map[String, String]) -> @model.CommandOptionChoice
 
 pub fn label(label~ : String, component~ : @model.Component, description? : String) -> @model.Component
 
@@ -74,7 +74,7 @@ pub fn message_command(name~ : String, handler~ : @app.InteractionHandler[@model
 
 pub fn[S, A] modal(custom_id~ : String, title~ : String, state~ : @app.CustomIdCodec[S], fields~ : @app.ModalFields[A]) -> @app.Modal[S, A]
 
-pub fn number_choice(String, Double, name_localizations? : Map[String, String]) -> @model.CommandOptionChoice
+pub fn number_choice(name~ : String, value~ : Double, name_localizations? : Map[String, String]) -> @model.CommandOptionChoice
 
 pub fn required_permissions(@model.Permissions) -> async (@app.CheckCtx) -> Bool
 
@@ -94,7 +94,7 @@ pub fn[A] slash(name~ : String, description~ : String, args~ : @interaction.Args
 
 pub fn slash_group(name~ : String, description~ : String, children~ : Array[@app.SlashChild], default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType], name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @app.Command[Unit]
 
-pub fn string_choice(String, String, name_localizations? : Map[String, String]) -> @model.CommandOptionChoice
+pub fn string_choice(name~ : String, value~ : String, name_localizations? : Map[String, String]) -> @model.CommandOptionChoice
 
 pub fn string_select(custom_id~ : String, options~ : Array[@model.SelectOption], placeholder? : String, min_values? : Int, max_values? : Int, disabled? : Bool) -> @model.Component
 

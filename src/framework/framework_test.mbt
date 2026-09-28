@@ -499,7 +499,9 @@ async test "raw autocomplete suggestions are truncated to 25 choices" {
   fw.autocomplete("search", ctx => {
     let choices = []
     for i in 0..<30 {
-      choices.push(@interaction.string_choice("choice-\{i}", "value-\{i}"))
+      choices.push(
+        @interaction.string_choice(name="choice-\{i}", value="value-\{i}"),
+      )
     }
     ctx.suggest(choices)
   })

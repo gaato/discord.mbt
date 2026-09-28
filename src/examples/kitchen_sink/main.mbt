@@ -60,7 +60,7 @@ fn name_argument() -> @discord.Arg[String] {
       let query = input.to_lower()
       ["Ada", "Grace", "Linus", "MoonBit"]
       .filter(name => query.is_empty() || name.to_lower().has_prefix(query))
-      .map(name => @discord.string_choice(name, name))
+      .map(name => @discord.string_choice(name~, value=name))
     },
   )
 }

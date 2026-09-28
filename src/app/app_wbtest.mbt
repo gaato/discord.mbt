@@ -79,7 +79,7 @@ test "localized command builders reach the registration payload" {
         name_localizations={ "ja": "スタイル" },
         description_localizations={ "ja": "あいさつの形式" },
         choices=[
-          @interaction.string_choice("Friendly", "friendly", name_localizations={
+          @interaction.string_choice(name="Friendly", value="friendly", name_localizations={
             "ja": "親しみやすい",
           }),
         ],
@@ -739,8 +739,8 @@ test "app validates command type names and slash child structure" {
         @interaction.arg_string(
           name="query",
           description="Query",
-          choices=[@interaction.string_choice("Moon", "moon")],
-          suggest=(_, value) => [@interaction.string_choice(value, value)],
+          choices=[@interaction.string_choice(name="Moon", value="moon")],
+          suggest=(_, value) => [@interaction.string_choice(name=value, value~)],
         ),
       ),
       handler=Raw(_ => ()),
@@ -861,7 +861,7 @@ test "build rejects commands outside Discord's documented limits" {
           name="color",
           description="Color",
           choices=Array::makei(26, index => {
-            @interaction.string_choice("c\{index}", "v\{index}")
+            @interaction.string_choice(name="c\{index}", value="v\{index}")
           }),
         ),
       ),

@@ -301,8 +301,8 @@ pub fn sub_command_group(
 ///|
 /// Describe a string-valued option choice.
 pub fn string_choice(
-  name : String,
-  value : String,
+  name~ : String,
+  value~ : String,
   name_localizations? : Map[String, String],
 ) -> @model.CommandOptionChoice {
   {
@@ -315,8 +315,8 @@ pub fn string_choice(
 ///|
 /// Describe an integer-valued option choice.
 pub fn int_choice(
-  name : String,
-  value : Int64,
+  name~ : String,
+  value~ : Int64,
   name_localizations? : Map[String, String],
 ) -> @model.CommandOptionChoice {
   {
@@ -329,8 +329,8 @@ pub fn int_choice(
 ///|
 /// Describe a number-valued option choice.
 pub fn number_choice(
-  name : String,
-  value : Double,
+  name~ : String,
+  value~ : Double,
   name_localizations? : Map[String, String],
 ) -> @model.CommandOptionChoice {
   {

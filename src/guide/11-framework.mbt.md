@@ -261,7 +261,7 @@ async fn suggest_names(ctx : @framework.AutocompleteCtx) -> Unit {
   ctx.suggest(
     ["Ada", "Grace", "Linus"]
     .filter(name => query.is_empty() || name.to_lower().has_prefix(query))
-    .map(name => @interaction.string_choice(name, name)),
+    .map(name => @interaction.string_choice(name~, value=name)),
   )
 }
 ```

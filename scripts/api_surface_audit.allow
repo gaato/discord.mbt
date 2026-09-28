@@ -72,4 +72,3 @@ positional @interaction.string_option             # raw option builder; the type
 positional @interaction.sub_command               # raw option builder; the typed subcommand builder labels every argument
 positional @interaction.sub_command_group         # raw option builder; the typed subcommand_group builder labels every argument
 positional @interaction.user_option               # raw option builder; the typed arg_* builders label every argument
-positional @interaction.string_choice             # (name, value) like int_choice and number_choice; pending a decision on labeling the golden-path choice builders

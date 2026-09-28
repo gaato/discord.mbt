@@ -20,8 +20,8 @@ struct PaintArgs {
 ///|
 let paint_args : @discord.Args[PaintArgs] = @discord.Args::map2(
   @discord.arg_string(name="color", description="Paint color", choices=[
-    @discord.string_choice("Red", "red"),
-    @discord.string_choice("Blue", "blue"),
+    @discord.string_choice(name="Red", value="red"),
+    @discord.string_choice(name="Blue", value="blue"),
   ]),
   @discord.arg_int32(name="coats", description="Number of coats", min=1, max=5).with_default(
     1,
@@ -59,7 +59,7 @@ let localized_greeting : @discord.Command[String] = @discord.slash(
       name_localizations={ "ja": "スタイル" },
       description_localizations={ "ja": "あいさつの種類" },
       choices=[
-        @discord.string_choice("Friendly", "friendly", name_localizations={
+        @discord.string_choice(name="Friendly", value="friendly", name_localizations={
           "ja": "フレンドリー",
         }),
       ],
@@ -95,7 +95,7 @@ fn name_argument() -> @discord.Arg[String] {
     let query = input.to_lower()
     ["Ada", "Grace", "Linus"]
     .filter(name => query.is_empty() || name.to_lower().has_prefix(query))
-    .map(name => @discord.string_choice(name, name))
+    .map(name => @discord.string_choice(name~, value=name))
   })
 }
 ```

@@ -15,8 +15,8 @@ test "slash command registration payload includes every scalar option kind" {
         "Operating mode",
         required=true,
         choices=[
-          @interaction.string_choice("Fast", "fast"),
-          @interaction.string_choice("Safe", "safe"),
+          @interaction.string_choice(name="Fast", value="fast"),
+          @interaction.string_choice(name="Safe", value="safe"),
         ],
         min_length=1,
         max_length=16,
@@ -26,8 +26,8 @@ test "slash command registration payload includes every scalar option kind" {
         "Retry count",
         required=true,
         choices=[
-          @interaction.int_choice("Once", 1L),
-          @interaction.int_choice("Three times", 3L),
+          @interaction.int_choice(name="Once", value=1L),
+          @interaction.int_choice(name="Three times", value=3L),
         ],
         min_value=0L,
         max_value=10L,
@@ -36,8 +36,8 @@ test "slash command registration payload includes every scalar option kind" {
         "threshold",
         "Alert threshold",
         choices=[
-          @interaction.number_choice("Low", 0.25),
-          @interaction.number_choice("High", 0.75),
+          @interaction.number_choice(name="Low", value=0.25),
+          @interaction.number_choice(name="High", value=0.75),
         ],
         min_value=0.0,
         max_value=1.0,
@@ -133,11 +133,15 @@ test "slash command registration payload includes every scalar option kind" {
 test "choice builders serialize name localizations" {
   json_inspect(
     [
-      @interaction.string_choice("Fast", "fast", name_localizations={
+      @interaction.string_choice(name="Fast", value="fast", name_localizations={
         "ja": "高速",
       }).to_json(),
-      @interaction.int_choice("Once", 1L, name_localizations={ "ja": "1回" }).to_json(),
-      @interaction.number_choice("Low", 0.25, name_localizations={ "ja": "低" }).to_json(),
+      @interaction.int_choice(name="Once", value=1L, name_localizations={
+        "ja": "1回",
+      }).to_json(),
+      @interaction.number_choice(name="Low", value=0.25, name_localizations={
+        "ja": "低",
+      }).to_json(),
     ],
     content=[
       {

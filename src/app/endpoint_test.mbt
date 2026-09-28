@@ -696,7 +696,10 @@ async test "typed autocomplete dispatches partial and nested focused options" {
           let choices = []
           for i in 0..<30 {
             choices.push(
-              @interaction.string_choice("\{value}-\{i}", "\{value}-\{i}"),
+              @interaction.string_choice(
+                name="\{value}-\{i}",
+                value="\{value}-\{i}",
+              ),
             )
           }
           choices
@@ -716,7 +719,7 @@ async test "typed autocomplete dispatches partial and nested focused options" {
             @interaction.arg_int(name="code", description="Item code", suggest=(
               _,
               value,
-            ) => [@interaction.int_choice("code \{value}", value)]),
+            ) => [@interaction.int_choice(name="code \{value}", value~)]),
           ),
           handler=Raw(_ => ()),
         ),
@@ -731,13 +734,13 @@ async test "typed autocomplete dispatches partial and nested focused options" {
         @interaction.arg_string(name="query", description="Query", suggest=(
           _,
           value,
-        ) => [@interaction.string_choice("generated", value)]),
+        ) => [@interaction.string_choice(name="generated", value~)]),
       ),
       handler=Raw(_ => ()),
     ),
   )
   app.autocomplete("manual", raw => {
-    raw.suggest([@interaction.string_choice("raw", "raw")])
+    raw.suggest([@interaction.string_choice(name="raw", value="raw")])
   })
   let top = app_interaction(
     (
@@ -1129,8 +1132,8 @@ async test "arg_int32 suggestions receive an Int and reject out-of-range input" 
           suggest=(_, value) => {
             [
               @interaction.int_choice(
-                "page \{value + 1}",
-                (value + 1).to_int64(),
+                name="page \{value + 1}",
+                value=(value + 1).to_int64(),
               ),
             ]
           },

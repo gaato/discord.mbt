@@ -43,7 +43,7 @@ pub fn container(components~ : Array[@model.Component], accent_color? : Int, spo
 
 pub fn file_upload(custom_id~ : String, min_values? : Int, max_values? : Int, required? : Bool, file_types? : Array[@model.FileTypeFilter]) -> @model.Component
 
-pub fn int_choice(String, Int64, name_localizations? : Map[String, String]) -> @model.CommandOptionChoice
+pub fn int_choice(name~ : String, value~ : Int64, name_localizations? : Map[String, String]) -> @model.CommandOptionChoice
 
 pub fn integer_option(String, String, required? : Bool, choices? : Array[@model.CommandOptionChoice], min_value? : Int64, max_value? : Int64, autocomplete? : Bool, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @model.CommandOption
 
@@ -59,7 +59,7 @@ pub fn mentionable_option(String, String, required? : Bool, name_localizations? 
 
 pub fn mentionable_select(custom_id~ : String, placeholder? : String, min_values? : Int, max_values? : Int, disabled? : Bool) -> @model.Component
 
-pub fn number_choice(String, Double, name_localizations? : Map[String, String]) -> @model.CommandOptionChoice
+pub fn number_choice(name~ : String, value~ : Double, name_localizations? : Map[String, String]) -> @model.CommandOptionChoice
 
 pub fn number_option(String, String, required? : Bool, choices? : Array[@model.CommandOptionChoice], min_value? : Double, max_value? : Double, autocomplete? : Bool, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @model.CommandOption
 
@@ -73,7 +73,7 @@ pub fn select_option(label~ : String, value~ : String, description? : String, em
 
 pub fn separator(divider? : Bool, spacing? : Int) -> @model.Component
 
-pub fn string_choice(String, String, name_localizations? : Map[String, String]) -> @model.CommandOptionChoice
+pub fn string_choice(name~ : String, value~ : String, name_localizations? : Map[String, String]) -> @model.CommandOptionChoice
 
 pub fn string_option(String, String, required? : Bool, choices? : Array[@model.CommandOptionChoice], min_length? : Int, max_length? : Int, autocomplete? : Bool, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @model.CommandOption
 

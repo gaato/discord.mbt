@@ -34,7 +34,7 @@ test "typed suggestions set autocomplete and survive Arg combinators" {
   let base = @interaction.arg_string(name="query", description="Search query", suggest=(
     _,
     value,
-  ) => [@interaction.string_choice(value, value)])
+  ) => [@interaction.string_choice(name=value, value~)])
   json_inspect(@interaction.Args::of(base).definitions(), content=[
     {
       "type": 3,
@@ -354,7 +354,7 @@ test "arg_int32 registers the Int range it can decode" {
   json_inspect(
     @interaction.Args::of(
       @interaction.arg_int32(name="times", description="Times", choices=[
-        @interaction.int_choice("Once", 1L),
+        @interaction.int_choice(name="Once", value=1L),
       ]),
     ).definitions(),
     content=[

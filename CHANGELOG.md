@@ -231,6 +231,12 @@ breaking change is listed with a migration note.
   `GuildRef::create_sticker`; `name~` on `create_guild_from_template`.
   Migration: add the labels, e.g. `create_emoji("wave", data_uri)` becomes
   `create_emoji(name="wave", image=data_uri)`.
+- Breaking: `string_choice`, `int_choice`, and `number_choice` take
+  `name~` and `value~` by label. `name` is the label users see and `value`
+  is what the handler receives; for `string_choice` both are strings and
+  could be swapped without a compile error. Migration:
+  `string_choice("Ada", "ada")` becomes
+  `string_choice(name="Ada", value="ada")`, and likewise for the other two.
 - `ComponentDeferredCtx::edit_original(files=...)` on a `DeferredUpdate`
   handler replaced the host message's attachments with no way to keep them;
   pass `keep_attachments` to retain the existing ones.
