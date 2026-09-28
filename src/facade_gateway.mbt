@@ -10,4 +10,5 @@ pub using @bot {
   type Events,
   type BotError,
   type ShardConfig,
+  type EventMiddleware,
 }

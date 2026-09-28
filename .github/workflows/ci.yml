@@ -81,6 +81,10 @@ jobs:
       - name: Generated extend declarations check
         run: python3 scripts/gen_extends.py --check
 
+      - name: Public API surface audit
+        # After the drift check, so it audits the committed interfaces.
+        run: moon run scripts/api_surface_audit.mbtx --self-test
+
       - name: Audit CDN endpoint baseline
         run: |
           curl --proto '=https' --tlsv1.2 --fail --show-error --silent --location \

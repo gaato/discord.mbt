@@ -7,6 +7,8 @@ import {
   "gaato/discord/bot",
   "gaato/discord/endpoint_http",
   "gaato/discord/verify",
+  "gaato/discord/framework",
+  "gaato/discord/cache",
 }
 
 import {
@@ -15,7 +17,6 @@ import {
   "gaato/discord/model",
   "gaato/discord/telemetry",
   "gaato/discord/interaction",
-  "gaato/discord/framework",
   "gaato/discord/http" @dhttp,
   "moonbitlang/async/http" @ahttp,
 } for "test"

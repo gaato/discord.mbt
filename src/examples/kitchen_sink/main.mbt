@@ -111,7 +111,7 @@ fn demo_command(
 }
 
 ///|
-fn wave_command() -> @discord.Command[@framework.TargetUser] {
+fn wave_command() -> @discord.Command[@discord.TargetUser] {
   @discord.user_command(
     name="Wave",
     handler=Immediate((_, target) => {

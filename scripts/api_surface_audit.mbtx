@@ -1,0 +1,449 @@
+///|
+/// Audit the public API surface recorded in the generated interfaces.
+///
+/// 1. Facade closure: every type that a facade-exported type or function
+///    mentions is itself exported by the facade (`src/pkg.generated.mbti`),
+///    so a program that imports only `@discord` (plus the `@model` data
+///    package) can name everything the golden path hands it.
+/// 2. Positional arguments: no public function takes two consecutive
+///    positional arguments of the same type (other than resource ids), which
+///    would let callers swap them silently.
+///
+/// Deliberate exceptions live in `scripts/api_surface_audit.allow`, one per
+/// line with a `#` reason. Unknown or stale entries fail the audit.
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/fs",
+  "moonbitlang/core/env",
+}
+
+///|
+/// Library packages whose types the facade is expected to close over.
+/// `@model` is excluded on purpose: it is the data package every program
+/// imports next to the facade.
+let tracked : Array[String] = [
+  "app", "bot", "cache", "cooldown", "coordinator", "endpoint_http", "framework",
+  "gateway", "http", "interaction", "queue", "ratelimit", "telemetry", "verify",
+  "voice",
+]
+
+///|
+struct Interface {
+  lines : Array[String]
+  types : Set[String]
+}
+
+///|
+fn is_ident_char(c : Char) -> Bool {
+  c.is_ascii_alphabetic() || c.is_ascii_digit() || c == '_'
+}
+
+///|
+/// The type names a package interface defines.
+fn defined_types(lines : Array[String]) -> Set[String] {
+  let found : Set[String] = Set([])
+  for line in lines {
+    for keyword in [
+      "pub struct ", "pub(all) struct ", "pub enum ", "pub(all) enum ", "pub suberror ",
+      "pub(all) suberror ", "pub type ", "pub trait ", "pub(open) trait ",
+    ] {
+      if line.has_prefix(keyword) {
+        let rest = line[keyword.length():]
+        let name = StringBuilder()
+        for c in rest {
+          if !is_ident_char(c) {
+            break
+          }
+          name.write_char(c)
+        }
+        found.add(name.to_string())
+      }
+    }
+  }
+  found
+}
+
+///|
+fn parse_interface(text : String) -> Interface {
+  let lines = text.split("\n").map(line => line.to_owned()).to_array()
+  { lines, types: defined_types(lines) }
+}
+
+///|
+/// Split `text` into maximal identifier runs, remembering whether each was
+/// written as `@pkg.Name`.
+fn references(
+  text : String,
+  owner_pkg : String,
+  owner_types : Set[String],
+) -> Array[(String, String)] {
+  let result : Array[(String, String)] = []
+  let chars = text.to_array()
+  let mut i = 0
+  while i < chars.length() {
+    let c = chars[i]
+    if c == '@' {
+      // @pkg.Name
+      let mut j = i + 1
+      let pkg = StringBuilder()
+      while j < chars.length() && is_ident_char(chars[j]) {
+        pkg.write_char(chars[j])
+        j += 1
+      }
+      if j < chars.length() && chars[j] == '.' {
+        j += 1
+        let name = StringBuilder()
+        while j < chars.length() && is_ident_char(chars[j]) {
+          name.write_char(chars[j])
+          j += 1
+        }
+        let name = name.to_string()
+        if name.length() > 0 && name.to_array()[0].is_ascii_uppercase() {
+          result.push((pkg.to_string(), name))
+        }
+      }
+      i = j
+    } else if is_ident_char(c) {
+      let name = StringBuilder()
+      let mut j = i
+      while j < chars.length() && is_ident_char(chars[j]) {
+        name.write_char(chars[j])
+        j += 1
+      }
+      let name = name.to_string()
+      // A bare name after `.` belongs to a qualified path handled above.
+      if (i == 0 || chars[i - 1] != '.') && owner_types.contains(name) {
+        result.push((owner_pkg, name))
+      }
+      i = j
+    } else {
+      i += 1
+    }
+  }
+  result
+}
+
+///|
+/// The name after `fn` (and any type parameters) on a function line, such as
+/// `App::serve`, or `None` for a non-function line.
+fn function_name(line : String) -> String? {
+  let rest = if line.has_prefix("pub async fn") {
+    line["pub async fn".length():].to_owned()
+  } else if line.has_prefix("pub fn") {
+    line["pub fn".length():].to_owned()
+  } else {
+    return None
+  }
+  let chars = rest.to_array()
+  let mut i = 0
+  if i < chars.length() && chars[i] == '[' {
+    let mut depth = 0
+    while i < chars.length() {
+      if chars[i] == '[' {
+        depth += 1
+      } else if chars[i] == ']' {
+        depth -= 1
+        if depth == 0 {
+          i += 1
+          break
+        }
+      }
+      i += 1
+    }
+  }
+  while i < chars.length() && chars[i] == ' ' {
+    i += 1
+  }
+  let name = StringBuilder()
+  while i < chars.length() && chars[i] != '(' {
+    name.write_char(chars[i])
+    i += 1
+  }
+  Some(name.to_string())
+}
+
+///|
+/// The lines that make up exported type `name`'s surface in `iface`: its
+/// methods and, for a transparent type, its fields or variants.
+fn surface_lines(iface : Interface, name : String) -> Array[String] {
+  let result : Array[String] = []
+  let mut in_body = false
+  for line in iface.lines {
+    if in_body {
+      if line.has_prefix("}") {
+        in_body = false
+      } else {
+        result.push(line)
+      }
+      continue
+    }
+    if function_name(line) is Some(fn_name) &&
+      fn_name.has_prefix("\{name}::") {
+      result.push(line)
+      continue
+    }
+    for keyword in [
+      "pub(all) struct ", "pub(all) enum ", "pub(all) suberror ", "pub type ",
+    ] {
+      if line.has_prefix(keyword + name) {
+        let after = line[(keyword + name).length():].to_owned()
+        if after.has_prefix(" ") || after.has_prefix("[") || after.is_empty() {
+          result.push(line)
+          if line.has_suffix("{") {
+            in_body = true
+          }
+        }
+      }
+    }
+  }
+  result
+}
+
+///|
+fn parse_allow(text : String) -> Set[String] raise {
+  let allowed : Set[String] = Set([])
+  for raw in text.split("\n") {
+    let line = raw.trim().to_owned()
+    if line.is_empty() || line.has_prefix("#") {
+      continue
+    }
+    let parts = line.split("#").to_array()
+    if parts.length() < 2 || parts[1].trim().is_empty() {
+      fail("allow entry requires a reason: \{line}")
+    }
+    let key = parts[0].trim().to_owned()
+    if allowed.contains(key) {
+      fail("duplicate allow entry: \{key}")
+    }
+    allowed.add(key)
+  }
+  allowed
+}
+
+///|
+/// Types the facade leaves unexported although its surface mentions them,
+/// keyed `@pkg.Name`, with one place each is mentioned.
+fn closure_gaps(
+  facade : Interface,
+  packages : Map[String, Interface],
+) -> Map[String, String] {
+  let exported : Set[String] = Set([])
+  let roots : Array[(String, String)] = []
+  for line in facade.lines {
+    // pub using @pkg {type Name}
+    guard line.has_prefix("pub using @") else { continue }
+    let rest = line["pub using @".length():].to_owned()
+    guard rest.find(" {") is Some(space) else { continue }
+    let pkg = rest[0:space].to_owned()
+    let body = rest[space + 2:].to_owned()
+    let name = body
+      .replace(old="type ", new="")
+      .replace(old="trait ", new="")
+      .replace(old="}", new="")
+      .trim()
+      .to_owned()
+    exported.add("@\{pkg}.\{name}")
+    roots.push((pkg, name))
+  }
+  let gaps : Map[String, String] = Map([])
+  let record = (pkg : String, name : String, via : String) => {
+    let key = "@\{pkg}.\{name}"
+    if tracked.contains(pkg) && !exported.contains(key) && !gaps.contains(key) {
+      gaps[key] = via
+    }
+  }
+  for line in facade.lines {
+    if function_name(line) is Some(fn_name) {
+      for reference in references(line, "", Set([])) {
+        record(reference.0, reference.1, "facade \{fn_name}")
+      }
+    }
+  }
+  for root in roots {
+    let (pkg, name) = root
+    guard packages.get(pkg) is Some(iface) else { continue }
+    for line in surface_lines(iface, name) {
+      for reference in references(line, pkg, iface.types) {
+        record(reference.0, reference.1, "@\{pkg}.\{name}")
+      }
+    }
+  }
+  gaps
+}
+
+///|
+/// Split a parameter list at top-level commas.
+fn split_params(params : String) -> Array[String] {
+  let result : Array[String] = []
+  let current = StringBuilder()
+  let mut depth = 0
+  for c in params {
+    if c == '(' || c == '[' || c == '{' {
+      depth += 1
+    } else if c == ')' || c == ']' || c == '}' {
+      depth -= 1
+    }
+    if c == ',' && depth == 0 {
+      result.push(current.to_string().trim().to_owned())
+      current.reset()
+    } else {
+      current.write_char(c)
+    }
+  }
+  let last = current.to_string().trim().to_owned()
+  if !last.is_empty() {
+    result.push(last)
+  }
+  result
+}
+
+///|
+/// Public functions with two consecutive positional parameters of the same
+/// type, keyed by `@pkg.Function`.
+fn positional_pairs(packages : Map[String, Interface]) -> Map[String, String] {
+  let found : Map[String, String] = Map([])
+  for pkg, iface in packages {
+    for line in iface.lines {
+      guard function_name(line) is Some(fn_name) else { continue }
+      guard line.find(fn_name + "(") is Some(start) else { continue }
+      let open = start + fn_name.length()
+      // The parameter list ends at the `)` that closes the first `(`.
+      let chars = line.to_array()
+      let mut depth = 0
+      let mut close = open
+      for index in open..<chars.length() {
+        if chars[index] == '(' {
+          depth += 1
+        } else if chars[index] == ')' {
+          depth -= 1
+          if depth == 0 {
+            close = index
+            break
+          }
+        }
+      }
+      let params = split_params(line[open + 1:close].to_owned())
+      let positional = params.filter(param => {
+        !param.contains("~") &&
+        !param.contains("?") &&
+        !param.has_prefix("Self") &&
+        !param.contains(":")
+      })
+      for index in 1..<positional.length() {
+        let current = positional[index]
+        if current == positional[index - 1] &&
+          !current.contains("Id[") &&
+          !current.has_prefix("@async.TaskGroup") {
+          found["@\{pkg}.\{fn_name}"] = current
+          break
+        }
+      }
+    }
+  }
+  found
+}
+
+///|
+/// Whether allow entry `pattern` covers `key`. `@pkg.*` covers every closure
+/// gap in that package; other entries match exactly.
+fn allow_covers(pattern : String, key : String) -> Bool {
+  if pattern.has_suffix(".*") {
+    key.has_prefix(pattern[0:pattern.length() - 1].to_owned())
+  } else {
+    pattern == key
+  }
+}
+
+///|
+fn audit(
+  facade_text : String,
+  package_texts : Map[String, String],
+  allow_text : String,
+) -> Unit raise {
+  let allowed = parse_allow(allow_text)
+  let packages : Map[String, Interface] = Map([])
+  for pkg, text in package_texts {
+    packages[pkg] = parse_interface(text)
+  }
+  let problems : Array[String] = []
+  let used : Set[String] = Set([])
+  let covered = (key : String) => {
+    for pattern in allowed {
+      if allow_covers(pattern, key) {
+        used.add(pattern)
+        return true
+      }
+    }
+    false
+  }
+  for key, via in closure_gaps(parse_interface(facade_text), packages) {
+    if !covered(key) {
+      problems.push("facade does not export \{key} (mentioned by \{via})")
+    }
+  }
+  for key, typ in positional_pairs(packages) {
+    // Positional exceptions are listed one by one, never by package.
+    if allowed.contains("positional \{key}") {
+      used.add("positional \{key}")
+    } else {
+      problems.push(
+        "\{key} takes consecutive positional \{typ} arguments; label them",
+      )
+    }
+  }
+  for key in allowed {
+    if !used.contains(key) {
+      problems.push("stale allow entry: \{key}")
+    }
+  }
+  if !problems.is_empty() {
+    problems.sort()
+    fail(problems.join("\n"))
+  }
+}
+
+///|
+fn must_fail(run : () -> Unit raise) -> Unit raise {
+  try run() catch {
+    _ => ()
+  } noraise {
+    _ => fail("negative audit self-test unexpectedly passed")
+  }
+}
+
+///|
+async fn main {
+  let args = @env.args()
+  let self_test = args.length() == 2 && args[1] == "--self-test"
+  if args.length() > 2 || (args.length() == 2 && !self_test) {
+    fail("usage: moon run scripts/api_surface_audit.mbtx [--self-test]")
+  }
+  let facade = @fs.read_file("src/pkg.generated.mbti").text()
+  let package_texts : Map[String, String] = Map([])
+  for pkg in tracked {
+    package_texts[pkg] = @fs.read_file("src/\{pkg}/pkg.generated.mbti").text()
+  }
+  let allow = @fs.read_file("scripts/api_surface_audit.allow").text()
+  audit(facade, package_texts, allow)
+  if self_test {
+    // Dropping a re-export, an allow entry, or a label must each fail.
+    must_fail(() => {
+      audit(
+        facade.replace(old="pub using @app {type ModalReply}", new=""),
+        package_texts,
+        allow,
+      )
+    })
+    must_fail(() => audit(facade, package_texts, ""))
+    must_fail(() => {
+      audit(facade, package_texts, allow + "\n@app.Nothing # stale\n")
+    })
+    let http = package_texts.get("http").unwrap()
+    let unlabeled = package_texts.copy()
+    unlabeled["http"] = http +
+      "\npub fn Client::swap(Self, String, String) -> Unit\n"
+    must_fail(() => audit(facade, unlabeled, allow))
+    println("API surface audit self-tests: OK")
+  }
+  println("API surface: OK")
+}

@@ -4,6 +4,7 @@ package "gaato/discord"
 import {
   "gaato/discord/app",
   "gaato/discord/bot",
+  "gaato/discord/cache",
   "gaato/discord/endpoint_http",
   "gaato/discord/framework",
   "gaato/discord/http",
@@ -136,6 +137,8 @@ pub using @app {type AppCtx}
 
 pub using @app {type AppWarning}
 
+pub using @http {type ApplicationRef}
+
 pub using @interaction {type Arg}
 
 pub using @interaction {type Args}
@@ -150,6 +153,14 @@ pub using @bot {type BotError}
 
 pub using @bot {type BotSession}
 
+pub using @cache {type CacheLimit}
+
+pub using @cache {type CacheLimits}
+
+pub using @cache {type CacheResources}
+
+pub using @http {type ChannelRef}
+
 pub using @app {type CheckCtx}
 
 pub using @http {type Client}
@@ -161,6 +172,8 @@ pub type CommandCheck = async (@app.CheckCtx) -> Bool
 pub using @app {type CommandReply}
 
 pub using @app {type CommandScope}
+
+pub using @framework {type ComponentCtx}
 
 pub using @app {type ComponentDeferredCtx}
 
@@ -180,9 +193,13 @@ pub using @app {type CustomIdError}
 
 pub using @app {type DeferredCtx}
 
+pub using @http {type DiscordHttpError}
+
 pub type ErrorPolicy = async (@app.FailureCtx, Error) -> Unit
 
 pub using @model {type Event}
+
+pub type EventMiddleware = async (@bot.GatewayCtx, @model.Event, async (@model.Event) -> Unit) -> Unit
 
 pub using @bot {type EventType}
 
@@ -198,13 +215,21 @@ pub using @model {type GatewayCapabilities}
 
 pub using @bot {type GatewayCtx}
 
+pub using @framework {type GuildInvocation}
+
+pub using @http {type GuildRef}
+
 pub using @app {type HandlerError}
 
 pub using @app {type ImmediateCtx}
 
+pub using @cache {type InMemoryCache}
+
 pub using @app {type InitialResponse}
 
 pub using @model {type Intents}
+
+pub using @app {type InteractionCtx}
 
 pub using @app {type InteractionEndpoint}
 
@@ -218,11 +243,19 @@ pub using @app {type InteractionHttpResponse}
 
 pub using @app {type InteractionOutcome}
 
+pub using @app {type InteractionTarget}
+
 pub using @verify {type InteractionVerifier}
 
 pub using @verify {type InteractionVerifierError}
 
 pub using @endpoint_http {type InteractionsServer}
+
+pub using @framework {type InvocationScope}
+
+pub using @http {type MemberRef}
+
+pub using @http {type MessageRef}
 
 pub using @app {type MessageUpdate}
 
@@ -238,6 +271,8 @@ pub using @app {type ModalHandle}
 
 pub using @app {type ModalImmediateCtx}
 
+pub using @framework {type ModalOrigin}
+
 pub using @app {type ModalReply}
 
 pub using @app {type ModalShowError}
@@ -250,6 +285,8 @@ pub using @voice {type OggOpusSource}
 
 pub using @voice {type OggOpusWriter}
 
+pub using @framework {type ResponseState}
+
 pub using @app {type RestAccess}
 
 pub using @bot {type ShardConfig}
@@ -257,6 +294,12 @@ pub using @bot {type ShardConfig}
 pub using @app {type SlashChild}
 
 pub using @interaction {type SuggestCtx}
+
+pub using @app {type SyncReport}
+
+pub using @framework {type TargetUser}
+
+pub using @http {type UserRef}
 
 pub using @voice {type VoiceConnection}
 

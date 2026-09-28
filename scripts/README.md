@@ -20,3 +20,22 @@ it and runs this audit and `docs_shape_audit.py` against the latest docs, and
 keeps one issue, "Review Discord docs changes", open while anything needs
 review. After reviewing and following the listed changes, move
 `discord-docs-commit` to the reviewed commit; the next run closes the issue.
+
+# Public API surface audit
+
+From the repository root, after `moon info`:
+
+```fish
+moon run scripts/api_surface_audit.mbtx --self-test
+```
+
+The audit reads the generated interfaces and enforces two rules. First, the
+`gaato/discord` facade is closed: every type that a facade-exported type or
+function mentions is exported by the facade too, so a bot that imports only
+the facade and `@model` can name everything its golden path hands it. Second,
+no public function takes two consecutive positional arguments of the same type
+(resource ids aside), which callers could swap without a compile error.
+Deliberate exceptions are listed in `api_surface_audit.allow` with a reason:
+`@pkg.*` leaves a whole focused package to direct imports, and
+`positional @pkg.function` excuses one function. Unknown or stale entries fail
+the audit.

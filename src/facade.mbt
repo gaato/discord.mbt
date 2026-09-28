@@ -1,12 +1,14 @@
 ///|
 /// Golden-path names that a typical bot uses directly: application
 /// declarations and handler contexts, typed arguments and components, common
-/// models, the REST client, executors, verification, and voice.
+/// models, the REST client, executors, verification, and voice. Every type
+/// these names mention is exported here too, unless it belongs to one of the
+/// focused packages below; `scripts/api_surface_audit.mbtx` keeps it so.
 ///
 /// Not re-exported — import the focused package instead:
 /// - `gaato/discord/http` for resource refs and pagination.
-/// - `gaato/discord/framework` for the low-level router and raw contexts used
-///   by `Raw` handlers.
+/// - `gaato/discord/framework` for the low-level router and the raw contexts
+///   used by `Raw` handlers.
 /// - `gaato/discord/gateway` for shard transport primitives.
 /// - `gaato/discord/coordinator` for multi-process coordination.
 /// - `gaato/discord/telemetry` for observability events.
@@ -14,7 +16,37 @@
 ///   low-level option decoding.
 /// - `gaato/discord/app` for implementation-facing registration, spawning,
 ///   waiting, and raw failure details.
-pub using @dhttp {type Client, type FileUpload}
+pub using @dhttp {
+  type Client,
+  type FileUpload,
+  type DiscordHttpError,
+  type MessageRef,
+  type ChannelRef,
+  type GuildRef,
+  type MemberRef,
+  type UserRef,
+  type ApplicationRef,
+}
+
+///|
+/// Invocation and response types every handler context hands out, and the
+/// unanswered `ComponentCtx` a component wait returns.
+pub using @framework {
+  type ComponentCtx,
+  type GuildInvocation,
+  type InvocationScope,
+  type ModalOrigin,
+  type ResponseState,
+  type TargetUser,
+}
+
+///|
+pub using @cache {
+  type InMemoryCache,
+  type CacheResources,
+  type CacheLimits,
+  type CacheLimit,
+}
 
 ///|
 pub using @model {
@@ -38,6 +70,9 @@ pub using @app {
   type AppWarning,
   type AppCtx,
   type InteractionEndpoint,
+  type InteractionCtx,
+  type InteractionTarget,
+  type SyncReport,
   type RestAccess,
   type InteractionOutcome,
   type InteractionHttpRequest,

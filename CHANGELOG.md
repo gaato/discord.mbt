@@ -50,6 +50,17 @@ breaking change is listed with a migration note.
   message, so both raise `ResponseGateError::InvalidCallback` without sending
   anything.
 
+- The `gaato/discord` facade now exports every type its golden path hands
+  out: `ComponentCtx`, `GuildInvocation`, `InvocationScope`, `ModalOrigin`,
+  `ResponseState`, and `TargetUser` from the framework; `DiscordHttpError`
+  and the refs a gateway context returns (`MessageRef`, `ChannelRef`,
+  `GuildRef`, `MemberRef`, `UserRef`, `ApplicationRef`); `InMemoryCache` with
+  its `CacheResources`, `CacheLimits`, and `CacheLimit`; `InteractionCtx`,
+  `InteractionTarget`, and `SyncReport`; `EventMiddleware`; and the new types
+  of this release. `scripts/api_surface_audit.mbtx` checks in CI that the
+  facade stays closed and that no public function takes swappable positional
+  arguments.
+
 ### Changed
 
 - **Waiting handlers no longer deadlock the executor at `max_in_flight`.**

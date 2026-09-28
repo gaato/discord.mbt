@@ -1,0 +1,28 @@
+# Types the facade's surface mentions but deliberately leaves to a focused
+# package (see the doc comment on src/facade.mbt), and functions whose
+# consecutive positional arguments of one type are deliberate.
+
+@http.*            # REST resource refs, raw requests, and pagination live in gaato/discord/http; the facade exports the client, its error, and the refs a gateway context hands out
+@framework.*       # the low-level router and the raw contexts behind Raw handlers live in gaato/discord/framework
+@gateway.*         # shard transport primitives live in gaato/discord/gateway
+@interaction.*     # raw option builders, CommandSpec, and option decoding live in gaato/discord/interaction
+@telemetry.*       # observability events live in gaato/discord/telemetry
+@queue.*           # identify queues are multi-process plumbing (gaato/discord/queue)
+@cooldown.*        # custom cooldown stores are an extension point (gaato/discord/cooldown)
+@voice.*           # voice transport internals behind the experimental VoiceConnection
+@app.FailureRaw    # raw failure details are implementation-facing
+@app.RegisteredCommand  # type-erased command registration is implementation-facing
+
+positional @interaction.CommandSpec::slash        # raw declaration builder; mirrors Discord's (name, description) order
+positional @interaction.attachment_option         # raw option builder; the typed arg_* builders label every argument
+positional @interaction.boolean_option            # raw option builder; the typed arg_* builders label every argument
+positional @interaction.channel_option            # raw option builder; the typed arg_* builders label every argument
+positional @interaction.integer_option            # raw option builder; the typed arg_* builders label every argument
+positional @interaction.mentionable_option        # raw option builder; the typed arg_* builders label every argument
+positional @interaction.number_option             # raw option builder; the typed arg_* builders label every argument
+positional @interaction.role_option               # raw option builder; the typed arg_* builders label every argument
+positional @interaction.string_option             # raw option builder; the typed arg_* builders label every argument
+positional @interaction.sub_command               # raw option builder; the typed subcommand builder labels every argument
+positional @interaction.sub_command_group         # raw option builder; the typed subcommand_group builder labels every argument
+positional @interaction.user_option               # raw option builder; the typed arg_* builders label every argument
+positional @interaction.string_choice             # (name, value) like int_choice and number_choice; pending a decision on labeling the golden-path choice builders

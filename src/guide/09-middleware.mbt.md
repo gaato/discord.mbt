@@ -334,7 +334,7 @@ async test "middleware failure after next uses the handler's sent state" {
   })
   let app = @discord.AppBuilder()
   let warnings : Array[String] = []
-  let states : Array[@framework.ResponseState?] = []
+  let states : Array[@discord.ResponseState?] = []
   app.on_warn(warning => warnings.push(warning.to_string()))
   app.middleware((_, next) => {
     next()
