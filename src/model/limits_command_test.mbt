@@ -162,3 +162,40 @@ test "a command totals at most 8000 units, counting its longest localization" {
   )
   assert_eq(slash_violations(options=Array::makei(2, wide)), [])
 }
+
+///|
+test "localized descriptions, option names, and choice names are checked" {
+  let option = command_option({
+    "type": 3,
+    "name": "topic",
+    "description": "Topic",
+    "name_localizations": { "de": "Thema Name" },
+    "description_localizations": { "de": "" },
+    "choices": [
+      {
+        "name": "Soup",
+        "value": "soup",
+        "name_localizations": { "de": "s".repeat(101) },
+      },
+    ],
+  })
+  let violations = @model.command_limit_violations(
+    typ=ChatInput,
+    name="menu",
+    name_localizations=None,
+    description="Menu",
+    description_localizations=Some({ "de": "d".repeat(101) }),
+    options=[option],
+  ).map(violation => violation.message())
+  debug_inspect(
+    violations,
+    content=(
+      #|[
+      #|  "description_localizations.de: 101 units (1 to 100)",
+      #|  "options[0].name_localizations.de: `T` is not allowed (lowercase letters, digits, `-`, and `_`)",
+      #|  "options[0].description_localizations.de: 0 units (1 to 100)",
+      #|  "options[0].choices[0].name_localizations.de: 101 units (1 to 100)",
+      #|]
+    ),
+  )
+}
