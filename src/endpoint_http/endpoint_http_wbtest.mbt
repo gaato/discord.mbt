@@ -287,7 +287,9 @@ async test "interactions server answers 202, 504, and 500 and reports startup fa
   let timestamp = "1720951200"
   let app = @app.AppBuilder()
   let warnings : @aqueue.Queue[String] = Queue(kind=Unbounded)
-  app.on_warn(message => ignore(warnings.try_put(message) catch { _ => false }))
+  app.on_warn(warning => {
+    ignore(warnings.try_put(warning.to_string()) catch { _ => false })
+  })
   app.command(
     @app.slash(
       name="silent",

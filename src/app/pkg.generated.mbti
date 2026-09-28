@@ -94,7 +94,7 @@ pub async fn App::report_failure(Self, FailureOrigin, Error) -> Unit
 pub async fn App::serve(Self, @async.TaskGroup[Unit], client? : @http.Client, token? : String, application_id? : @model.Id[@model.ApplicationMarker]) -> InteractionEndpoint
 pub fn App::spawner(Self, @async.TaskGroup[Unit]) -> async (async () -> Unit) -> Unit
 pub async fn App::sync_commands(Self, @http.Client, @model.Id[@model.ApplicationMarker], scope~ : CommandScope, unowned? : @framework.UnownedCommands) -> SyncReport
-pub fn App::warn(Self, String) -> Unit
+pub fn App::warn(Self, AppWarning) -> Unit
 
 pub struct AppBuilder {
   // private fields
@@ -109,7 +109,7 @@ pub fn[A] AppBuilder::on_component(Self, ComponentRoute[A], ComponentHandler[A])
 pub fn AppBuilder::on_component_raw(Self, prefix~ : String, async (@framework.ComponentCtx) -> Unit) -> Unit
 pub fn[A] AppBuilder::on_modal(Self, Modal[A], ModalSubmitHandler[A]) -> Unit
 pub fn AppBuilder::on_modal_raw(Self, prefix~ : String, async (@framework.ModalCtx) -> Unit) -> Unit
-pub fn AppBuilder::on_warn(Self, (String) -> Unit) -> Unit
+pub fn AppBuilder::on_warn(Self, (AppWarning) -> Unit) -> Unit
 pub fn AppBuilder::register(Self, RegisteredCommand) -> Unit
 
 pub struct AppCtx {
@@ -119,6 +119,23 @@ pub fn AppCtx::application_id(Self) -> @model.Id[@model.ApplicationMarker]
 pub fn AppCtx::application_ref(Self) -> @http.ApplicationRef
 pub fn AppCtx::http(Self) -> @http.Client
 pub fn AppCtx::latency_ms(Self) -> Int64?
+
+pub(all) enum AppWarning {
+  AutoDeferFailed(target~ : String, error~ : Error)
+  InteractionDropped(target~ : String)
+  ErrorResponseWithoutInteraction(summary~ : String)
+  ErrorResponseExpired(summary~ : String)
+  MalformedInteraction(origin~ : FailureOrigin, reason~ : String)
+  UnhandledFailure(origin~ : FailureOrigin, error~ : Error)
+  ErrorPolicyFailed(error~ : Error)
+  AutocompleteTruncated(command_path~ : String, option~ : String, count~ : Int)
+  HandlerFailed(target~ : String, error~ : Error)
+  WaiterUnavailable
+  InteractionProcessingFailed(error~ : Error)
+  Executor(source~ : String, message~ : String)
+} derive(@debug.Debug)
+pub fn AppWarning::to_string(Self) -> String
+pub impl Show for AppWarning
 
 pub struct CheckCtx {
   // private fields

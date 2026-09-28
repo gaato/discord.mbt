@@ -38,7 +38,7 @@ async fn assert_state_followup(
   let states : Array[@framework.ResponseState?] = []
   let client = state_flow_client(routes)
   defer client.close()
-  app.on_warn(message => warnings.push(message))
+  app.on_warn(warning => warnings.push(warning.to_string()))
   app.error_policy((ctx, error) => {
     assert_true(error is ResponseStateFailure)
     states.push(ctx.response_state())
@@ -208,7 +208,7 @@ async test "definitively rejected initial response lets the policy respond" {
   defer client.close()
   let states : Array[@framework.ResponseState?] = []
   let warnings : Array[String] = []
-  app.on_warn(message => warnings.push(message))
+  app.on_warn(warning => warnings.push(warning.to_string()))
   app.command(
     @app.slash(
       name="rejected",
@@ -259,7 +259,7 @@ async test "unconfirmed initial response is followed up" {
   defer client.close()
   let states : Array[@framework.ResponseState?] = []
   let warnings : Array[String] = []
-  app.on_warn(message => warnings.push(message))
+  app.on_warn(warning => warnings.push(warning.to_string()))
   app.command(
     @app.slash(
       name="unconfirmed",
@@ -322,7 +322,7 @@ async test "expired interaction only warns" {
   let routes : Array[String] = []
   let client = state_flow_client(routes)
   defer client.close()
-  app.on_warn(message => warnings.push(message))
+  app.on_warn(warning => warnings.push(warning.to_string()))
   app.command(
     @app.slash(
       name="expired",

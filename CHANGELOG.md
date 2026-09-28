@@ -127,6 +127,15 @@ breaking change is listed with a migration note.
   `UpdateMessage(content~, embeds~, components~, allowed_mentions~)` with
   `ComponentReply::update_message(content?, embeds?, components?,
   allowed_mentions?)`, and match `UpdateMessage(_)` without destructuring.
+- Breaking: warnings are structured. `AppBuilder::on_warn` takes
+  `(AppWarning) -> Unit` and `App::warn` takes an `AppWarning`. Each variant
+  names one situation (`InteractionDropped`, `MalformedInteraction`,
+  `AutocompleteTruncated`, ...) and carries its data; gateway warnings arrive
+  as `Executor(source="gateway", message~)`. `Show` renders the same text the
+  hook used to receive, and the default hook still prints it. Migration:
+  `app.on_warn(message => log(message))` becomes
+  `app.on_warn(warning => log(warning.to_string()))`, or match the variants
+  you act on.
 - `ComponentDeferredCtx::edit_original(files=...)` on a `DeferredUpdate`
   handler replaced the host message's attachments with no way to keep them;
   pass `keep_attachments` to retain the existing ones.

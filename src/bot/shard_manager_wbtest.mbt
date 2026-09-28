@@ -189,7 +189,7 @@ async test "shard config resolves auto fixed and range selections" {
   // A snapshot recorded under another shard count cannot RESUME this layout.
   let foreign_app = @app.AppBuilder()
   let warnings : Array[String] = []
-  foreign_app.on_warn(message => warnings.push(message))
+  foreign_app.on_warn(warning => warnings.push(warning.to_string()))
   let foreign = Bot(
     foreign_app.build(),
     token="test-token",

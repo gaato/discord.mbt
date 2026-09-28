@@ -91,7 +91,7 @@ async fn handle_request(
   verifier : @verify.InteractionVerifier,
   path : String,
   deadline_ms : Int,
-  warn : (String) -> Unit,
+  warn : (@app.AppWarning) -> Unit,
 ) -> Unit {
   let response = try
     route_request(
@@ -100,7 +100,12 @@ async fn handle_request(
   catch {
     error if @async.is_being_cancelled() => raise error
     error => {
-      warn("interaction HTTP request failed: \{Repr(error)}")
+      warn(
+        @app.Executor(
+          source="http",
+          message="interaction HTTP request failed: \{Repr(error)}",
+        ),
+      )
       text_response(500, "internal server error")
     }
   } noraise {
@@ -109,7 +114,12 @@ async fn handle_request(
   send_response(conn, response) catch {
     error if @async.is_being_cancelled() => raise error
     error => {
-      warn("interaction HTTP response failed: \{Repr(error)}")
+      warn(
+        @app.Executor(
+          source="http",
+          message="interaction HTTP response failed: \{Repr(error)}",
+        ),
+      )
       conn.close()
     }
   }
@@ -159,7 +169,7 @@ pub async fn[X] serve_interactions(
   let address = server.addr.to_string()
   let runner : Ref[@async.TaskGroup[Unit]?] = Ref(None)
   let startup : @aqueue.Queue[ServerStartup] = Queue(kind=Unbounded)
-  let warn : (String) -> Unit = message => app.warn(message)
+  let warn : (@app.AppWarning) -> Unit = warning => app.warn(warning)
   group.spawn_bg(allow_failure=true, () => {
     let mut ready = false
     @async.with_task_group(inner => {
@@ -178,7 +188,12 @@ pub async fn[X] serve_interactions(
       error if @async.is_being_cancelled() => raise error
       error =>
         if ready {
-          warn("interaction HTTP server stopped: \{Repr(error)}")
+          warn(
+            @app.Executor(
+              source="http",
+              message="interaction HTTP server stopped: \{Repr(error)}",
+            ),
+          )
         } else {
           startup.put(Failed(error))
         }

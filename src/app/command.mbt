@@ -13,7 +13,7 @@ priv struct SlashRoute {
   dispatch : async (
     AppCtx,
     ComponentWaiter?,
-    (String) -> Unit,
+    (AppWarning) -> Unit,
     @framework.CommandCtx,
   ) -> Unit
 }
@@ -451,7 +451,7 @@ async fn[A] dispatch_command_handler(
   handler : InteractionHandler[A],
   bot : AppCtx,
   waiter : ComponentWaiter?,
-  warn : (String) -> Unit,
+  warn : (AppWarning) -> Unit,
   raw : @framework.CommandCtx,
 ) -> Unit {
   let value = decode(raw)
@@ -493,7 +493,7 @@ async fn[A] Command::dispatch_typed(
   self : Command[A],
   bot : AppCtx,
   waiter : ComponentWaiter?,
-  warn : (String) -> Unit,
+  warn : (AppWarning) -> Unit,
   raw : @framework.CommandCtx,
 ) -> Unit {
   match self.routes {
@@ -525,7 +525,7 @@ async fn[A] Command::dispatch_typed(
 ///|
 async fn dispatch_suggest(
   routes : Array[SuggestRoute],
-  warn : (String) -> Unit,
+  warn : (AppWarning) -> Unit,
   raw : @framework.AutocompleteCtx,
 ) -> Unit {
   let path = raw.options.path()
@@ -547,9 +547,7 @@ async fn dispatch_suggest(
       let choices = if choices.length() > 25 {
         let count = choices.length()
         let command_path = [raw.data.name, ..path].join("/")
-        warn(
-          "autocomplete choices truncated for command path \{command_path}, option \{input.name()}: \{count} choices exceeds the limit of 25",
-        )
+        warn(AutocompleteTruncated(command_path~, option=input.name(), count~))
         choices[:25].to_owned()
       } else {
         choices
@@ -578,7 +576,7 @@ pub struct RegisteredCommand {
   priv dispatch : async (
     AppCtx,
     ComponentWaiter?,
-    (String) -> Unit,
+    (AppWarning) -> Unit,
     @framework.CommandCtx,
   ) -> Unit
 }

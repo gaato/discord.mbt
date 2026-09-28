@@ -75,7 +75,7 @@ async test "the default policy answers every HandlerError with an error reply" {
 async test "the default policy hides internal failures behind a generic reply" {
   let warnings : Array[String] = []
   let app = raw_app(_ => raise HandlerBoom)
-  app.on_warn(message => warnings.push(message))
+  app.on_warn(warning => warnings.push(warning.to_string()))
   let (matched, captured) = dispatch(app.build(), @testkit.slash("run"))
   assert_true(matched)
   guard captured
@@ -91,7 +91,7 @@ async test "the default policy hides internal failures behind a generic reply" {
     raise @app.HandlerError::Malformed(reason="secret internals")
   })
   let malformed_warnings : Array[String] = []
-  malformed.on_warn(message => malformed_warnings.push(message))
+  malformed.on_warn(warning => malformed_warnings.push(warning.to_string()))
   let (_, captured) = dispatch(malformed.build(), @testkit.slash("run"))
   guard captured
     is Some(
@@ -160,7 +160,7 @@ async test "a reply followed by a failing policy keeps the reply and warns" {
     raise HandlerBoom
   })
   let warnings : Array[String] = []
-  app.on_warn(message => warnings.push(message))
+  app.on_warn(warning => warnings.push(warning.to_string()))
   let state : Ref[@framework.ResponseState?] = Ref(None)
   app.error_policy((ctx, error) => {
     state.val = ctx.response_state()
@@ -233,7 +233,7 @@ async test "component and modal failures expose the interaction and user" {
 async test "raw autocomplete failures stay in the Framework" {
   let app = @app.AppBuilder()
   let warnings : Array[String] = []
-  app.on_warn(message => warnings.push(message))
+  app.on_warn(warning => warnings.push(warning.to_string()))
   app.error_policy((_, _) => fail("raw autocomplete must not call App policy"))
   app.autocomplete("find", _ => raise HandlerBoom)
   let (matched, captured) = dispatch(

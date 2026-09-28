@@ -15,7 +15,7 @@ pub(all) enum InteractionOutcome {
 pub struct InteractionEndpoint {
   priv framework : @framework.Framework
   priv group : @async.TaskGroup[Unit]
-  priv warn : (String) -> Unit
+  priv warn : (AppWarning) -> Unit
 }
 
 ///|
@@ -86,7 +86,7 @@ pub async fn InteractionEndpoint::handle_interaction(
     let routed = self.framework.process_with(interaction, gate~) catch {
       error if @async.is_being_cancelled() => raise error
       error => {
-        (self.warn)("interaction processing failed: \{Repr(error)}")
+        (self.warn)(InteractionProcessingFailed(error~))
         true
       }
     }

@@ -2,7 +2,7 @@
 test "intent derivation strips privileged intents and warns" {
   let app = @app.AppBuilder()
   let warnings : Array[String] = []
-  app.on_warn(message => warnings.push(message))
+  app.on_warn(warning => warnings.push(warning.to_string()))
   let bot = Bot(app.build(), token="token")
   bot.on(Events::message_create(), (_, _) => ())
   bot.on(Events::guild_member_add(), (_, _) => ())
@@ -11,7 +11,7 @@ test "intent derivation strips privileged intents and warns" {
   assert_true(warnings[0].contains("privileged intent"))
   let explicit_app = @app.AppBuilder()
   let explicit_warnings : Array[String] = []
-  explicit_app.on_warn(message => explicit_warnings.push(message))
+  explicit_app.on_warn(warning => explicit_warnings.push(warning.to_string()))
   let explicit = Bot(
     explicit_app.build(),
     token="token",
@@ -48,7 +48,7 @@ priv suberror RuntimeTestFailure {
 test "bot telemetry hook failures flow to app warnings" {
   let app = @app.AppBuilder()
   let warnings : Array[String] = []
-  app.on_warn(message => warnings.push(message))
+  app.on_warn(warning => warnings.push(warning.to_string()))
   let bot = Bot(app.build(), token="test-token")
   bot.on_telemetry(_ => raise RuntimeTestFailure)
   bot.emit_telemetry(DecodeError(marker="DECODE_ERROR:test"))
@@ -271,7 +271,7 @@ async test "bot identifies instead of resuming a session from another shard layo
   let transport = BotFakeTransport()
   let app = @app.AppBuilder()
   let warnings : Array[String] = []
-  app.on_warn(message => warnings.push(message))
+  app.on_warn(warning => warnings.push(warning.to_string()))
   let client = @dhttp.Client("test-token")
   defer client.close()
   client.middleware((_request, _next) => {
@@ -387,7 +387,7 @@ async test "bot identifies with a warning when the session start limit cannot be
   let transport = BotFakeTransport()
   let app = @app.AppBuilder()
   let warnings : Array[String] = []
-  app.on_warn(message => warnings.push(message))
+  app.on_warn(warning => warnings.push(warning.to_string()))
   let client = @dhttp.Client("test-token")
   defer client.close()
   client.middleware((request, _next) => {
@@ -756,7 +756,7 @@ async test "bot warns when sync deletes undeclared commands" {
     let transport = BotFakeTransport()
     let app = @app.AppBuilder()
     let warnings = []
-    app.on_warn(message => warnings.push(message))
+    app.on_warn(warning => warnings.push(warning.to_string()))
     let client = @dhttp.Client("test-token")
     defer client.close()
     client.middleware((request, _next) => {
@@ -815,7 +815,7 @@ async test "bot Keep preserves other owners and emits no deletion warning" {
     ),
   )
   let warnings = []
-  app.on_warn(message => warnings.push(message))
+  app.on_warn(warning => warnings.push(warning.to_string()))
   let bodies : Array[Json] = []
   let client = @dhttp.Client("test-token")
   defer client.close()
@@ -873,7 +873,7 @@ async test "bot sync failures stay fail-fast" {
     let transport = BotFakeTransport()
     let app = @app.AppBuilder()
     let warnings = []
-    app.on_warn(message => warnings.push(message))
+    app.on_warn(warning => warnings.push(warning.to_string()))
     let client = @dhttp.Client("test-token")
     defer client.close()
     client.middleware((request, _next) => {
@@ -1205,7 +1205,7 @@ async test "event middleware failures warn and preserve later dispatch" {
   let transport = BotFakeTransport()
   let app = @app.AppBuilder()
   let warnings : Array[String] = []
-  app.on_warn(message => warnings.push(message))
+  app.on_warn(warning => warnings.push(warning.to_string()))
   let bot = middleware_runtime_bot(app.build(), transport)
   let failed = Ref(false)
   bot.middleware((_, event, next) => {
@@ -1465,7 +1465,7 @@ async test "bot reports gateway decode errors and preserves dispatch" {
   let transport = BotFakeTransport()
   let app = @app.AppBuilder()
   let warnings : Array[String] = []
-  app.on_warn(message => warnings.push(message))
+  app.on_warn(warning => warnings.push(warning.to_string()))
   let bot = Bot(
     app.build(),
     token="test-token",

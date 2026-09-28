@@ -7,7 +7,7 @@ async test "component and modal failures flow through the error policy" {
     state=@app.CustomIdCodec::string(),
   )
   let warnings : Array[String] = []
-  app.on_warn(message => warnings.push(message))
+  app.on_warn(warning => warnings.push(warning.to_string()))
   app.on_component(
     boom,
     Immediate((_, _) => {

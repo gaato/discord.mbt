@@ -22,7 +22,10 @@ impl @queue.IdentifyQueue for IdentifyGuard with fn wait_for_identify(
   let info = self.bot.gateway_bot_info(self.client) catch {
     error => {
       self.bot.app_.warn(
-        "identifying shard \{shard_id} without reading the session start limit: \{Repr(error)}",
+        @app.Executor(
+          source="gateway",
+          message="identifying shard \{shard_id} without reading the session start limit: \{Repr(error)}",
+        ),
       )
       return
     }

@@ -26,7 +26,7 @@ pub(all) enum FailureRaw {
 pub struct FailureCtx {
   priv origin_ : FailureOrigin
   priv raw_ : FailureRaw?
-  priv warn_ : (String) -> Unit
+  priv warn_ : (AppWarning) -> Unit
 }
 
 ///|
@@ -127,7 +127,9 @@ pub async fn FailureCtx::respond_error(
 ) -> Unit {
   guard self.raw_ is Some(raw) else {
     (self.warn_)(
-      "cannot respond to a non-interaction failure: \{error_response_summary(content, embeds, components, files)}",
+      ErrorResponseWithoutInteraction(
+        summary=error_response_summary(content, embeds, components, files),
+      ),
     )
     return
   }
@@ -168,7 +170,9 @@ pub async fn FailureCtx::respond_error(
   }
   if !replied {
     (self.warn_)(
-      "cannot respond to an expired interaction: \{error_response_summary(content, embeds, components, files)}",
+      ErrorResponseExpired(
+        summary=error_response_summary(content, embeds, components, files),
+      ),
     )
   }
 }
@@ -187,7 +191,7 @@ async fn respond_if_interactive(ctx : FailureCtx, message : String) -> Unit {
 }
 
 ///|
-fn default_error_policy(warn : (String) -> Unit) -> ErrorPolicy {
+fn default_error_policy(warn : (AppWarning) -> Unit) -> ErrorPolicy {
   (ctx, error) => {
     match error {
       HandlerError::UserMessage(message~, ephemeral~) =>
@@ -213,13 +217,13 @@ fn default_error_policy(warn : (String) -> Unit) -> ErrorPolicy {
       HandlerError::InvalidInput(name=None, message~) =>
         ctx.respond_error(content="Invalid input: \{message}")
       HandlerError::Malformed(reason~) => {
-        warn("malformed interaction (\{Repr(ctx.origin())}): \{reason}")
+        warn(MalformedInteraction(origin=ctx.origin(), reason~))
         respond_if_interactive(
           ctx, "This interaction is out of date. Please try again.",
         )
       }
       _ => {
-        warn("unhandled app failure (\{Repr(ctx.origin())}): \{Repr(error)}")
+        warn(UnhandledFailure(origin=ctx.origin(), error~))
         respond_if_interactive(ctx, "Something went wrong.")
       }
     }
@@ -234,6 +238,6 @@ async fn invoke_error_policy(
 ) -> Unit {
   policy(ctx, error) catch {
     policy_error if @async.is_being_cancelled() => raise policy_error
-    policy_error => (ctx.warn_)("error policy failed: \{Repr(policy_error)}")
+    policy_error => (ctx.warn_)(ErrorPolicyFailed(error=policy_error))
   }
 }

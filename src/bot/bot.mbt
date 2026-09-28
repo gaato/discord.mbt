@@ -203,7 +203,13 @@ pub fn Bot::on_telemetry(
 fn Bot::emit_telemetry(self : Bot, event : @telemetry.TelemetryEvent) -> Unit {
   for hook in self.telemetry_ {
     hook(event) catch {
-      error => self.app_.warn("telemetry hook failed: \{Repr(error)}")
+      error =>
+        self.app_.warn(
+          @app.Executor(
+            source="gateway",
+            message="telemetry hook failed: \{Repr(error)}",
+          ),
+        )
     }
   }
 }
@@ -281,7 +287,12 @@ fn Bot::observe_decode_error(self : Bot, event : @model.Event) -> Unit {
   match event {
     Unknown(t~, d~) if t.has_prefix("DECODE_ERROR:") => {
       // Never include `d`: payloads can contain user content and credentials.
-      self.app_.warn("gateway event decode failure: \{t}")
+      self.app_.warn(
+        @app.Executor(
+          source="gateway",
+          message="gateway event decode failure: \{t}",
+        ),
+      )
       self.emit_telemetry(DecodeError(marker=t))
       for handler in self.decode_errors_ {
         handler(t, d)
@@ -311,7 +322,10 @@ fn Bot::resolved_intents(self : Bot) -> @model.Intents {
         let required = subscription.required_intents
         if required.bits() != 0U && (required & explicit).bits() == 0U {
           self.app_.warn(
-            "event \{Repr(subscription.kind)} may not be delivered; add one of its required intents explicitly",
+            @app.Executor(
+              source="gateway",
+              message="event \{Repr(subscription.kind)} may not be delivered; add one of its required intents explicitly",
+            ),
           )
         }
       }
@@ -324,14 +338,20 @@ fn Bot::resolved_intents(self : Bot) -> @model.Intents {
         let required = subscription.required_intents
         if (required & privileged).bits() != 0U {
           self.app_.warn(
-            "event \{Repr(subscription.kind)} requires a privileged intent; pass intents explicitly",
+            @app.Executor(
+              source="gateway",
+              message="event \{Repr(subscription.kind)} requires a privileged intent; pass intents explicitly",
+            ),
           )
         }
         derived = derived | required
       }
       if !self.raw_events_.is_empty() {
         self.app_.warn(
-          "raw event handlers do not imply gateway intents; pass intents explicitly for the events they consume",
+          @app.Executor(
+            source="gateway",
+            message="raw event handlers do not imply gateway intents; pass intents explicitly for the events they consume",
+          ),
         )
       }
       let privileged_bits = derived.bits() & privileged.bits()
@@ -513,7 +533,7 @@ fn Bot::spawn_interaction(
       framework.process(interaction) catch {
         error if @async.is_being_cancelled() => raise error
         error => {
-          self.app_.warn("interaction processing failed: \{Repr(error)}")
+          self.app_.warn(@app.InteractionProcessingFailed(error~))
           false
         }
       },
@@ -716,7 +736,10 @@ pub async fn Bot::run(self : Bot) -> Unit {
                       Some(guild_id) => "guild \{guild_id}"
                     }
                     self.app_.warn(
-                      "command sync deleted \{scope.deleted.join(", ")} in \{target}; use sync_unowned=Keep to preserve undeclared commands",
+                      @app.Executor(
+                        source="gateway",
+                        message="command sync deleted \{scope.deleted.join(", ")} in \{target}; use sync_unowned=Keep to preserve undeclared commands",
+                      ),
                     )
                   }
                 }
@@ -743,7 +766,10 @@ pub async fn Bot::run(self : Bot) -> Unit {
             }
             _ =>
               self.app_.warn(
-                "dropping INTERACTION_CREATE received before shard \{owner.id} READY",
+                @app.Executor(
+                  source="gateway",
+                  message="dropping INTERACTION_CREATE received before shard \{owner.id} READY",
+                ),
               )
           }
         }
@@ -771,7 +797,10 @@ pub async fn Bot::run(self : Bot) -> Unit {
             }
             None =>
               self.app_.warn(
-                "dropping \{Repr(event_kind(event))} received before shard \{owner.id} READY",
+                @app.Executor(
+                  source="gateway",
+                  message="dropping \{Repr(event_kind(event))} received before shard \{owner.id} READY",
+                ),
               )
           }
         }

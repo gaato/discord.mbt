@@ -45,7 +45,7 @@ async test "a handler waiting at full capacity still receives its component" {
 async test "handler capacity waits count against the response deadline" {
   let app = @app.AppBuilder(max_in_flight=1)
   let warnings : Array[String] = []
-  app.on_warn(message => warnings.push(message))
+  app.on_warn(warning => warnings.push(warning.to_string()))
   let release : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   let holding : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   let quick_ran = Ref(false)

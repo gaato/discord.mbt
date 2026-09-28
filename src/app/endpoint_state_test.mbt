@@ -10,7 +10,7 @@ async test "deadline races preserve every accepted capture" {
         kind=Unbounded,
       )
       let warnings : Array[String] = []
-      app.on_warn(message => warnings.push(message))
+      app.on_warn(warning => warnings.push(warning.to_string()))
       app.command(
         @app.slash(
           name="racing",

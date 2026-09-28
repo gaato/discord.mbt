@@ -99,7 +99,7 @@ async fn run_admitted(
   limiter : @async.Semaphore,
   gate : AdmissionGate,
   plan : AckPlan,
-  warn : (String) -> Unit,
+  warn : (AppWarning) -> Unit,
   label : String,
   body : async () -> Unit,
 ) -> Unit {
@@ -112,7 +112,7 @@ async fn run_admitted(
         if (gate.is_pending)() {
           ensure_acknowledged(gate, plan) catch {
             error if @async.is_being_cancelled() => raise error
-            error => warn("automatic defer failed (\{label}): \{Repr(error)}")
+            error => warn(AutoDeferFailed(target=label, error~))
           }
         }
       })
@@ -132,9 +132,7 @@ async fn run_admitted(
           })
           |> ignore
           if !acquired.val {
-            warn(
-              "interaction dropped (\{label}): no handler capacity before the response deadline",
-            )
+            warn(InteractionDropped(target=label))
             return
           }
         }

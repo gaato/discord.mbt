@@ -69,7 +69,7 @@ pub struct AppBuilder {
   priv autocompletes_ : Array[AutocompleteHandler]
   priv middleware_ : Array[InteractionMiddleware]
   priv mut policy_ : ErrorPolicy?
-  priv mut warn_ : (String) -> Unit
+  priv mut warn_ : (AppWarning) -> Unit
   priv cooldown_store_ : &@cooldown.CooldownStore
 }
 
@@ -85,7 +85,7 @@ pub struct App {
   priv autocompletes_ : Array[AutocompleteHandler]
   priv middleware_ : Array[InteractionMiddleware]
   priv policy_ : ErrorPolicy?
-  priv warn_ : (String) -> Unit
+  priv warn_ : (AppWarning) -> Unit
   priv cooldown_store_ : &@cooldown.CooldownStore
 }
 
@@ -108,7 +108,7 @@ pub fn AppBuilder::AppBuilder(
     autocompletes_: [],
     middleware_: [],
     policy_: None,
-    warn_: message => println(message),
+    warn_: warning => println(warning.to_string()),
     cooldown_store_: cooldown_store.unwrap_or_else(() => {
       @cooldown.InMemoryCooldownStore()
     }),
@@ -254,9 +254,12 @@ pub fn AppBuilder::error_policy(
 }
 
 ///|
-/// Replace the warning hook used for non-fatal diagnostics (default:
-/// `println`).
-pub fn AppBuilder::on_warn(self : AppBuilder, hook : (String) -> Unit) -> Unit {
+/// Replace the warning hook used for non-fatal diagnostics. The hook receives
+/// an `AppWarning`; by default its one-line `to_string()` form is printed.
+pub fn AppBuilder::on_warn(
+  self : AppBuilder,
+  hook : (AppWarning) -> Unit,
+) -> Unit {
   self.warn_ = hook
 }
 
@@ -422,7 +425,7 @@ pub fn App::spawner(self : App, group : @async.TaskGroup[Unit]) -> Spawner {
 fn failure_context(
   origin : FailureOrigin,
   raw : FailureRaw?,
-  warn : (String) -> Unit,
+  warn : (AppWarning) -> Unit,
 ) -> FailureCtx {
   { origin_: origin, raw_: raw, warn_: warn, }
 }
@@ -633,7 +636,7 @@ pub fn App::attach(
     if @async.is_being_cancelled() {
       raise error
     }
-    (self.warn_)("framework handler failed (\{label}): \{Repr(error)}")
+    (self.warn_)(HandlerFailed(target=label, error~))
   })
   |> ignore
   app_ctx
@@ -705,7 +708,7 @@ pub async fn App::report_failure(
 }
 
 ///|
-/// Emit a message through the app's warning hook.
-pub fn App::warn(self : App, message : String) -> Unit {
-  (self.warn_)(message)
+/// Emit a structured warning through the app's warning hook.
+pub fn App::warn(self : App, warning : AppWarning) -> Unit {
+  (self.warn_)(warning)
 }

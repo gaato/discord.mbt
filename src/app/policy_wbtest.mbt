@@ -181,8 +181,8 @@ async test "error policy edits a deferred placeholder" {
 ///|
 async test "non-interaction error responses warn with a payload summary" {
   let warnings : Array[String] = []
-  let ctx = failure_context(Service(name="worker"), None, message => {
-    warnings.push(message)
+  let ctx = failure_context(Service(name="worker"), None, warning => {
+    warnings.push(warning.to_string())
   })
   assert_true(ctx.raw() is None)
   assert_true(ctx.response_state() is None)

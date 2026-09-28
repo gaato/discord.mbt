@@ -35,6 +35,7 @@ pub using @interaction {type Arg, type Args, type SuggestCtx}
 pub using @app {
   type App,
   type AppBuilder,
+  type AppWarning,
   type AppCtx,
   type InteractionEndpoint,
   type InteractionOutcome,

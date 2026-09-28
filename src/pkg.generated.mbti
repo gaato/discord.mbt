@@ -134,6 +134,8 @@ pub using @app {type AppConfigError}
 
 pub using @app {type AppCtx}
 
+pub using @app {type AppWarning}
+
 pub using @interaction {type Arg}
 
 pub using @interaction {type Args}

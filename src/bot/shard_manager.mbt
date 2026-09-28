@@ -203,7 +203,10 @@ fn Bot::sessions_for_layout(
       usable[id] = saved
     } else {
       self.app_.warn(
-        "ignoring saved session for shard \{id}: its READY was recorded for shard [\{recorded.map(part => part.to_string()).join(", ")}] but the bot resolved shard [\{id}, \{count}], so the shard identifies instead",
+        @app.Executor(
+          source="gateway",
+          message="ignoring saved session for shard \{id}: its READY was recorded for shard [\{recorded.map(part => part.to_string()).join(", ")}] but the bot resolved shard [\{id}, \{count}], so the shard identifies instead",
+        ),
       )
     }
   }

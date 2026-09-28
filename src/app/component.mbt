@@ -37,7 +37,7 @@ pub struct ComponentDeferredCtx {
   priv raw_ : @framework.ComponentCtx
   priv bot_ : AppCtx
   priv waiter_ : ComponentWaiter?
-  priv warn_ : (String) -> Unit
+  priv warn_ : (AppWarning) -> Unit
 }
 
 ///|
@@ -513,9 +513,7 @@ pub async fn ComponentDeferredCtx::wait_for_component(
     Some(waiter) =>
       waiter(custom_id, from.user_filter(self.user().id), timeout_ms)
     None => {
-      (self.warn_)(
-        "component waiting is unavailable without a gateway connection",
-      )
+      (self.warn_)(WaiterUnavailable)
       None
     }
   }
@@ -527,7 +525,7 @@ async fn[A] ComponentRoute::dispatch_typed(
   handler : ComponentHandler[A],
   bot : AppCtx,
   waiter : ComponentWaiter?,
-  warn : (String) -> Unit,
+  warn : (AppWarning) -> Unit,
   raw : @framework.ComponentCtx,
 ) -> Unit {
   match handler {
@@ -557,7 +555,7 @@ priv struct RegisteredComponent {
   dispatch : async (
     AppCtx,
     ComponentWaiter?,
-    (String) -> Unit,
+    (AppWarning) -> Unit,
     @framework.ComponentCtx,
   ) -> Unit
 }

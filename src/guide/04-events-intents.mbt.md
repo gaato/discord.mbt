@@ -143,14 +143,14 @@ If any raw handlers are used, pass the complete intended bitfield to
 
 Known events that fail typed decoding are still delivered to raw handlers as
 an `Event::Unknown` value whose marker starts with `DECODE_ERROR:`. The `App`
-warning hook receives a summary without the payload.
+warning hook receives an `AppWarning` summary without the payload.
 
 Register a decode observer only when the raw payload is needed for diagnostics:
 
 ```mbt check
 ///|
 fn observe_decode_errors(app : @discord.AppBuilder, bot : @discord.Bot) -> Unit {
-  app.on_warn(message => println("[warn] \{message}"))
+  app.on_warn(warning => println("[warn] \{warning.to_string()}"))
   bot.on_decode_error((marker, payload) => {
     println("\{marker}: \{payload.stringify()}")
   })

@@ -240,7 +240,7 @@ test "rich error policy declaration compiles" {
 ```
 
 `FailureCtx::user()` and `raw()` return `None` for Gateway event, service, and autocomplete
-failures. In that case `respond_error` sends a summary to the warning hook
+failures. In that case `respond_error` sends an `AppWarning` summary to the warning hook
 because there is no interaction response target. The raw command, component,
 and modal contexts are escape hatches; responding through them directly can
 attempt a second initial callback, so ordinary policies should continue to use
@@ -335,7 +335,7 @@ async test "middleware failure after next uses the handler's sent state" {
   let app = @discord.AppBuilder()
   let warnings : Array[String] = []
   let states : Array[@framework.ResponseState?] = []
-  app.on_warn(message => warnings.push(message))
+  app.on_warn(warning => warnings.push(warning.to_string()))
   app.middleware((_, next) => {
     next()
     raise @app.HandlerError::UserMessage(message="after next", ephemeral=true)

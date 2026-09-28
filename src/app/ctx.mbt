@@ -149,7 +149,7 @@ pub struct DeferredCtx {
   priv raw_ : @framework.CommandCtx
   priv bot_ : AppCtx
   priv waiter_ : ComponentWaiter?
-  priv warn_ : (String) -> Unit
+  priv warn_ : (AppWarning) -> Unit
 }
 
 ///|
@@ -320,9 +320,7 @@ pub async fn DeferredCtx::wait_for_component(
     Some(waiter) =>
       waiter(custom_id, from.user_filter(self.user().id), timeout_ms)
     None => {
-      (self.warn_)(
-        "component waiting is unavailable without a gateway connection",
-      )
+      (self.warn_)(WaiterUnavailable)
       None
     }
   }

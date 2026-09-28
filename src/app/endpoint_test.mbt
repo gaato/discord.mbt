@@ -109,7 +109,7 @@ async test "timed-out interaction expires its gate" {
     kind=Unbounded,
   )
   let warnings : Array[String] = []
-  app.on_warn(message => warnings.push(message))
+  app.on_warn(warning => warnings.push(warning.to_string()))
   app.command(
     @app.slash(
       name="late-response",
@@ -316,7 +316,7 @@ async test "WaitFrom::User passes that user" {
 async test "interaction endpoint dispatches captured responses and completion outcomes" {
   let app = @app.AppBuilder()
   let warnings : Array[String] = []
-  app.on_warn(message => warnings.push(message))
+  app.on_warn(warning => warnings.push(warning.to_string()))
   let waiter_results : @aqueue.Queue[Bool] = Queue(kind=Unbounded)
   let slow_finished : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   // The slow handler waits for the test to release it after the deadline has
@@ -650,7 +650,7 @@ async test "interaction endpoint dispatches component and typed modal handlers" 
 async test "typed autocomplete dispatches partial and nested focused options" {
   let app = @app.AppBuilder()
   let warnings : Array[String] = []
-  app.on_warn(message => warnings.push(message))
+  app.on_warn(warning => warnings.push(warning.to_string()))
   app.command(
     @app.slash(
       name="search",
@@ -815,7 +815,7 @@ test "command constructors emit context types and slash attributes" {
 async test "context menu commands decode resolved targets" {
   let app = @app.AppBuilder()
   let warnings : Array[String] = []
-  app.on_warn(message => warnings.push(message))
+  app.on_warn(warning => warnings.push(warning.to_string()))
   app.command(
     @app.user_command(
       name="Inspect",
@@ -1032,7 +1032,7 @@ async test "slash groups emit nested specs and dispatch direct and grouped paths
   })
   let app = @app.AppBuilder()
   let warnings : Array[String] = []
-  app.on_warn(message => warnings.push(message))
+  app.on_warn(warning => warnings.push(warning.to_string()))
   app.command(command)
   let direct = app_interaction(
     (

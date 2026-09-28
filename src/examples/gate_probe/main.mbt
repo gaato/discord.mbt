@@ -357,7 +357,7 @@ async fn main {
         ephemeral=true,
       )
     })
-    ..on_warn(message => println("[warn] \{message}"))
+    ..on_warn(warning => println("[warn] \{warning.to_string()}"))
     .error_policy((failure, error) => {
       let state = failure.response_state()
       println(
