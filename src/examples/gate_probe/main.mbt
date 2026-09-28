@@ -209,6 +209,112 @@ fn update_fail_command() -> @discord.Command[Unit] {
 }
 
 ///|
+/// A modal whose typed state is the ticket number it closes.
+fn close_modal(custom_id : String) -> @discord.Modal[Int, String?] {
+  @discord.modal(
+    custom_id~,
+    title="Close ticket",
+    state=@discord.CustomIdCodec::int(),
+    fields=@discord.ModalFields::of(
+      @discord.text_field(custom_id="note", label="Closing note").optional(),
+    ),
+  )
+}
+
+///|
+fn close_immediate_modal() -> @discord.Modal[Int, String?] {
+  close_modal("probe-close-now")
+}
+
+///|
+fn close_deferred_modal() -> @discord.Modal[Int, String?] {
+  close_modal("probe-close-later")
+}
+
+///|
+fn open_close_route(id : String) -> @discord.ComponentRoute[Int] {
+  @discord.component_route(id~, state=@discord.CustomIdCodec::int())
+}
+
+///|
+/// `/probe-modal-update`: a message with two buttons, each opening a modal
+/// that carries the ticket number as typed state. Submitting either modal must
+/// replace THIS message in place (no new message): the first through an
+/// immediate `ModalReply::update_message`, the second through `DeferredUpdate`
+/// and `edit_original`.
+fn modal_update_command() -> @discord.Command[Unit] {
+  @discord.slash(
+    name="probe-modal-update",
+    description="Buttons open modals whose submit updates this message",
+    args=@discord.Args::unit(),
+    handler=Immediate((_, _) => {
+      @discord.CommandReply::message(
+        content="Ticket #7 is open. Close it through either modal.",
+        components=[
+          @discord.action_row([
+            @discord.button(
+              custom_id=open_close_route("probe-open-now").custom_id(7),
+              label="Close (immediate)",
+            ),
+            @discord.button(
+              custom_id=open_close_route("probe-open-later").custom_id(7),
+              label="Close (deferred)",
+            ),
+          ]),
+        ],
+      )
+    }),
+  )
+}
+
+///|
+/// `/probe-modal-update-cmd`: a command opens the same modal directly. There
+/// is no message to update, so the submit must fail before sending anything:
+/// expect `[policy] ... error=UnsupportedResponse(...)` and one ephemeral
+/// policy reply.
+fn modal_update_from_command() -> @discord.Command[Unit] {
+  @discord.slash(
+    name="probe-modal-update-cmd",
+    description="A command-opened modal tries to update a message it lacks",
+    args=@discord.Args::unit(),
+    handler=Immediate((_, _) => ShowModal(close_immediate_modal().show(9))),
+  )
+}
+
+///|
+fn modal_confirm_route() -> @discord.ComponentRoute[@model.InteractionId] {
+  @discord.component_route(
+    id="probe-modal-confirm",
+    state=@discord.CustomIdCodec::id(),
+  )
+}
+
+///|
+fn wait_modal() -> @discord.Modal[Unit, String?] {
+  @discord.modal(
+    custom_id="probe-wait-modal",
+    title="Wait from a modal",
+    state=@discord.CustomIdCodec::unit(),
+    fields=@discord.ModalFields::of(
+      @discord.text_field(custom_id="note", label="Anything").optional(),
+    ),
+  )
+}
+
+///|
+/// `/probe-modal-wait`: a modal submit posts a button and waits for your
+/// click from inside the modal handler. The click must turn the message into
+/// "confirmed by <you>".
+fn modal_wait_command() -> @discord.Command[Unit] {
+  @discord.slash(
+    name="probe-modal-wait",
+    description="A modal submit posts a button and waits for it",
+    args=@discord.Args::unit(),
+    handler=Immediate((_, _) => ShowModal(wait_modal().show(()))),
+  )
+}
+
+///|
 /// `/probe-slow-check` and `/probe-slow-pass`: a check sleeps 2 s, past the
 /// 1.5 s point where the watchdog defers a Deferred route. The loading message
 /// must appear on time; then the failing check's reply (or the handler's
@@ -335,6 +441,68 @@ async fn main {
     ..command(slow_check_command(pass=true))
     ..command(unconfirmed_command(edit_fails=false))
     ..command(unconfirmed_command(edit_fails=true))
+    ..command(modal_update_command())
+    ..command(modal_update_from_command())
+    ..command(modal_wait_command())
+    ..on_component(
+      open_close_route("probe-open-now"),
+      Immediate((_, ticket) => ShowModal(close_immediate_modal().show(ticket))),
+    )
+    ..on_component(
+      open_close_route("probe-open-later"),
+      Immediate((_, ticket) => ShowModal(close_deferred_modal().show(ticket))),
+    )
+    ..on_modal(
+      close_immediate_modal(),
+      Immediate((ctx, ticket, note) => {
+        println("[modal-update] immediate, origin=\{Repr(ctx.origin())}")
+        @discord.ModalReply::update_message(
+          content="Ticket #\{ticket} closed (immediate update): \{note.unwrap_or("-")}",
+          components=[],
+        )
+      }),
+    )
+    ..on_modal(
+      close_deferred_modal(),
+      DeferredUpdate((ctx, ticket, note) => {
+        println("[modal-update] deferred update acknowledged")
+        ctx.edit_original(
+          content="Ticket #\{ticket} closed (deferred update): \{note.unwrap_or("-")}",
+          components=[],
+        )
+        |> ignore
+      }),
+    )
+    ..on_modal(
+      wait_modal(),
+      DeferredMessage(ephemeral=false, (ctx, _, _) => {
+        let waited = ctx.interaction().id
+        ctx.edit_original(content="Press to confirm (waiting 60 s).", components=[
+          @discord.action_row([
+            @discord.button(
+              custom_id=modal_confirm_route().custom_id(waited),
+              label="Confirm",
+              style=Success,
+            ),
+          ]),
+        ])
+        |> ignore
+        match
+          ctx.wait_for_component(
+            modal_confirm_route(),
+            waited,
+            timeout_ms=60000,
+          ) {
+          Some(click) =>
+            click.update_message(
+              content="confirmed by \{click.user().username}",
+              components=[],
+            )
+          None =>
+            ctx.edit_original(content="wait timed out", components=[]) |> ignore
+        }
+      }),
+    )
     ..on_component(
       update_route(),
       DeferredUpdate((_, _) => raise ProbeFailure("raised after DeferredUpdate")),
@@ -432,6 +600,15 @@ async fn main {
     )
     println(
       "[try] /probe-unconfirmed-edit-fails → '[unconfirmed] failing the placeholder edit…'; the fallback followup replaces the loading message (Discord's deprecated followup-as-edit)",
+    )
+    println(
+      "[try] /probe-modal-update → press each button and submit: the SAME message becomes 'Ticket #7 closed (immediate|deferred update)'",
+    )
+    println(
+      "[try] /probe-modal-update-cmd → submit: one ephemeral policy reply; '[policy] ... error=UnsupportedResponse(...)'",
+    )
+    println(
+      "[try] /probe-modal-wait → submit, then press Confirm: the message becomes 'confirmed by <you>'",
     )
     try
       @async.with_timeout_opt(run_seconds() * 1000, () => bot.build().run())
