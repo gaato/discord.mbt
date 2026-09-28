@@ -169,15 +169,15 @@ pub async fn GuildRef::emojis(
 /// Create a custom emoji in this guild.
 pub async fn GuildRef::create_emoji(
   self : GuildRef,
-  name : String,
-  image : String,
+  name~ : String,
+  image~ : String,
   roles? : Array[@model.RoleId],
   reason? : String,
 ) -> @model.Emoji raise DiscordHttpError {
   self.client.create_guild_emoji(
     self.guild_id,
-    name,
-    image,
+    name~,
+    image~,
     roles?,
     audit_reason?=reason,
   )
@@ -196,17 +196,17 @@ pub async fn GuildRef::stickers(
 pub async fn GuildRef::create_sticker(
   self : GuildRef,
   file : FileUpload,
-  name : String,
-  description : String,
-  tags : String,
+  name~ : String,
+  description~ : String,
+  tags~ : String,
   reason? : String,
 ) -> @model.Sticker raise DiscordHttpError {
   self.client.create_guild_sticker(
     self.guild_id,
     file,
-    name,
-    description,
-    tags,
+    name~,
+    description~,
+    tags~,
     audit_reason?=reason,
   )
 }
@@ -223,8 +223,8 @@ pub async fn GuildRef::soundboard_sounds(
 /// Create a soundboard sound in this guild.
 pub async fn GuildRef::create_soundboard_sound(
   self : GuildRef,
-  name : String,
-  sound : String,
+  name~ : String,
+  sound~ : String,
   volume? : Double,
   emoji_id? : @model.EmojiId,
   emoji_name? : String,
@@ -232,8 +232,8 @@ pub async fn GuildRef::create_soundboard_sound(
 ) -> @model.SoundboardSound raise DiscordHttpError {
   self.client.create_guild_soundboard_sound(
     self.guild_id,
-    name,
-    sound,
+    name~,
+    sound~,
     volume?,
     emoji_id?,
     emoji_name?,
@@ -625,7 +625,7 @@ pub async fn TemplateRef::create_guild(
   name : String,
   icon? : String,
 ) -> @model.Guild raise DiscordHttpError {
-  self.client.create_guild_from_template(self.code, name, icon?)
+  self.client.create_guild_from_template(self.code, name~, icon?)
 }
 
 ///|

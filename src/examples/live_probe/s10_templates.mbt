@@ -50,7 +50,7 @@ async fn sec_templates(p : P) -> Unit {
   // the refusal is observable. A second attempt has been seen to stall for
   // 60s, so the handle variant is not exercised live.
   p.probe_err("create_guild_from_template (bots forbidden)", expect=[400], () => {
-    c.create_guild_from_template(tcode, "live-probe-child") |> ignore
+    c.create_guild_from_template(tcode, name="live-probe-child") |> ignore
   })
   p.push(
     "TemplateRef::create_guild",

@@ -45,8 +45,8 @@ pub async fn Client::get_guild_emoji(
 pub async fn Client::create_guild_emoji(
   self : Client,
   guild_id : @model.GuildId,
-  name : String,
-  image : String,
+  name~ : String,
+  image~ : String,
   roles? : Array[@model.RoleId],
   audit_reason? : String,
 ) -> @model.Emoji raise DiscordHttpError {
@@ -111,8 +111,8 @@ pub async fn Client::get_application_emoji(
 pub async fn Client::create_application_emoji(
   self : Client,
   application_id : @model.ApplicationId,
-  name : String,
-  image : String,
+  name~ : String,
+  image~ : String,
 ) -> @model.Emoji raise DiscordHttpError {
   let body = create_application_emoji_body(name, image)
   decode(self.request(CreateApplicationEmoji(application_id~), body~))

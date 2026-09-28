@@ -613,7 +613,13 @@ async test "guild sticker upload rejects files over 512 KiB before transport" {
     content_type="image/png",
   )
   try
-    client.create_guild_sticker(guild_id, file, "wave", "", "greeting")
+    client.create_guild_sticker(
+      guild_id,
+      file,
+      name="wave",
+      description="",
+      tags="greeting",
+    )
   catch {
     Validation(message~) =>
       inspect(message, content="guild sticker file exceeds 512 KiB")

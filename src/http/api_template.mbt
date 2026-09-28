@@ -70,7 +70,7 @@ pub async fn Client::get_guild_template(
 pub async fn Client::create_guild_from_template(
   self : Client,
   template_code : String,
-  name : String,
+  name~ : String,
   icon? : String,
 ) -> @model.Guild raise DiscordHttpError {
   let body = create_guild_from_template_body(name, icon)

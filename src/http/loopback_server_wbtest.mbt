@@ -129,9 +129,9 @@ async test "create guild sticker sends one multipart form with named file" {
       let sticker = client.create_guild_sticker(
         @model.Id::parse("100"),
         FileUpload("boing.png", b"PNGDATA", content_type="image/png"),
-        "boing",
-        "a description",
-        "tag",
+        name="boing",
+        description="a description",
+        tags="tag",
       )
       inspect(sticker.name, content="boing")
       guard exchanges is [exchange] else {

@@ -315,10 +315,10 @@ pub async fn ApplicationRef::emojis(
 /// Create a custom emoji owned by this application.
 pub async fn ApplicationRef::create_emoji(
   self : ApplicationRef,
-  name : String,
-  image : String,
+  name~ : String,
+  image~ : String,
 ) -> @model.Emoji raise DiscordHttpError {
-  self.client.create_application_emoji(self.application_id, name, image)
+  self.client.create_application_emoji(self.application_id, name~, image~)
 }
 
 ///|

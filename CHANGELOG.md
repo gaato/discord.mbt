@@ -210,6 +210,15 @@ breaking change is listed with a migration note.
 - The examples and the project template stop on an invalid `GUILD_ID`
   instead of falling back to a global command sync, which would have deleted
   every undeclared global command.
+- Breaking: REST calls whose positional arguments had the same type take
+  those arguments by label, so swapping them no longer compiles:
+  `name~`, `image~` on `create_guild_emoji`, `create_application_emoji`, and
+  the `GuildRef`/`ApplicationRef` `create_emoji`; `name~`, `sound~` on
+  `create_guild_soundboard_sound` and `GuildRef::create_soundboard_sound`;
+  `name~`, `description~`, `tags~` on `create_guild_sticker` and
+  `GuildRef::create_sticker`; `name~` on `create_guild_from_template`.
+  Migration: add the labels, e.g. `create_emoji("wave", data_uri)` becomes
+  `create_emoji(name="wave", image=data_uri)`.
 - `ComponentDeferredCtx::edit_original(files=...)` on a `DeferredUpdate`
   handler replaced the host message's attachments with no way to keep them;
   pass `keep_attachments` to retain the existing ones.

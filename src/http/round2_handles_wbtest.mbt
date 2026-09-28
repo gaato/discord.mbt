@@ -32,7 +32,7 @@ async test "application handles delegate remaining fetch and mutation methods" {
   })
   expect_round2_deserialize(() => app.emojis() |> ignore)
   expect_round2_deserialize(() => {
-    app.create_emoji("wave", "data:image/png;base64,AAAA") |> ignore
+    app.create_emoji(name="wave", image="data:image/png;base64,AAAA") |> ignore
   })
   expect_round2_deserialize(() => {
     app.global_commands(with_localizations=true) |> ignore
@@ -104,21 +104,25 @@ async test "guild asset handles delegate remaining collections and item methods"
   let guild = client.guild_ref(guild_id)
   expect_round2_deserialize(() => guild.emojis() |> ignore)
   expect_round2_deserialize(() => {
-    guild.create_emoji("wave", "data:image/png;base64,AAAA") |> ignore
+    guild.create_emoji(name="wave", image="data:image/png;base64,AAAA")
+    |> ignore
   })
   expect_round2_deserialize(() => guild.stickers() |> ignore)
   expect_round2_deserialize(() => {
     guild.create_sticker(
       FileUpload("wave.png", b"PNG", content_type="image/png"),
-      "wave",
-      "friendly wave",
-      "wave",
+      name="wave",
+      description="friendly wave",
+      tags="wave",
     )
     |> ignore
   })
   expect_round2_deserialize(() => guild.soundboard_sounds() |> ignore)
   expect_round2_deserialize(() => {
-    guild.create_soundboard_sound("ding", "data:audio/ogg;base64,AAAA")
+    guild.create_soundboard_sound(
+      name="ding",
+      sound="data:audio/ogg;base64,AAAA",
+    )
     |> ignore
   })
   expect_round2_deserialize(() => {

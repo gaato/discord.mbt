@@ -65,8 +65,8 @@ pub async fn Client::get_guild_soundboard_sound(
 pub async fn Client::create_guild_soundboard_sound(
   self : Client,
   guild_id : @model.GuildId,
-  name : String,
-  sound : String,
+  name~ : String,
+  sound~ : String,
   volume? : Double,
   emoji_id? : @model.EmojiId,
   emoji_name? : String,

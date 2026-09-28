@@ -86,9 +86,9 @@ pub async fn Client::create_guild_sticker(
   self : Client,
   guild_id : @model.GuildId,
   file : FileUpload,
-  name : String,
-  description : String,
-  tags : String,
+  name~ : String,
+  description~ : String,
+  tags~ : String,
   audit_reason? : String,
 ) -> @model.Sticker raise DiscordHttpError {
   validate_sticker_fields(

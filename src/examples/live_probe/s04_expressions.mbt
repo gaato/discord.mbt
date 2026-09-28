@@ -11,8 +11,8 @@ async fn sec_expressions(p : P) -> Unit {
   p.probe("create_guild_emoji", () => {
     let emoji = c.create_guild_emoji(
       g,
-      "probe_emoji",
-      data_uri,
+      name="probe_emoji",
+      image=data_uri,
       audit_reason="live probe",
     )
     p.s.emoji = emoji_id_of(emoji)
@@ -38,7 +38,7 @@ async fn sec_expressions(p : P) -> Unit {
     "name=\{p.s.emoji_name}"
   })
   p.probe("delete_guild_emoji (secondary)", () => {
-    let emoji = c.create_guild_emoji(g, "probe_tmp_emoji", data_uri)
+    let emoji = c.create_guild_emoji(g, name="probe_tmp_emoji", image=data_uri)
     let id = need(emoji_id_of(emoji), "secondary emoji id")
     c.delete_guild_emoji(g, id, audit_reason="live probe cleanup")
     "ok"
@@ -48,8 +48,8 @@ async fn sec_expressions(p : P) -> Unit {
   p.probe("create/list/get/modify/delete application emoji", () => {
     let created = c.create_application_emoji(
       p.app_id,
-      "probe_app_emoji",
-      data_uri,
+      name="probe_app_emoji",
+      image=data_uri,
     )
     let id = need(emoji_id_of(created), "app emoji id")
     let listed = c.list_application_emojis(p.app_id)
@@ -72,9 +72,9 @@ async fn sec_expressions(p : P) -> Unit {
     let sticker = c.create_guild_sticker(
       g,
       file,
-      "probe sticker",
-      "created by live probe",
-      "robot",
+      name="probe sticker",
+      description="created by live probe",
+      tags="robot",
       audit_reason="live probe",
     )
     p.s.sticker = Some(sticker.id)
@@ -122,8 +122,8 @@ async fn sec_expressions(p : P) -> Unit {
   p.probe("create_guild_soundboard_sound", () => {
     let sound = c.create_guild_soundboard_sound(
       g,
-      "probe-sound",
-      "data:audio/mpeg;base64," + MP3_B64,
+      name="probe-sound",
+      sound="data:audio/mpeg;base64," + MP3_B64,
       volume=0.5,
       emoji_name="🔔",
       audit_reason="live probe",
