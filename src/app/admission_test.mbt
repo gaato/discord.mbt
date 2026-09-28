@@ -11,7 +11,11 @@ async test "a handler waiting at full capacity still receives its component" {
       handler=Deferred(ephemeral=true, (ctx, _) => {
         waiting.put(())
         let pressed = ctx.wait_for_component(
-          custom_id="confirm-yes",
+          @app.component_route(
+            id="confirm-yes",
+            state=@app.CustomIdCodec::unit(),
+          ),
+          (),
           timeout_ms=2000,
         )
         woke.put(pressed is Some(_))

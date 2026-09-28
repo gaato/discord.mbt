@@ -157,7 +157,15 @@ async test "gateway context exposes raw handles, refs, and waiters" {
       ctx.wait_for(Events::message_create(), _ => false, timeout_ms=1) is None,
     )
     assert_true(
-      ctx.wait_for_component(custom_id="never-clicked", timeout_ms=1) is None,
+      ctx.wait_for_component(
+        @app.component_route(
+          id="never-clicked",
+          state=@app.CustomIdCodec::unit(),
+        ),
+        (),
+        timeout_ms=1,
+      )
+      is None,
     )
     ctx.shutdown()
     running.wait()

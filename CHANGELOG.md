@@ -165,6 +165,18 @@ breaking change is listed with a migration note.
   fit in 100 UTF-16 units. Migration: rename the type in `catch` arms and
   match `InvalidCustomId(TooLong(..))` where you matched
   `CustomIdError::TooLong`.
+- Breaking: waits name the component by route and state instead of a raw
+  custom id. `wait_for_component(route, state, from?, timeout_ms?)` on
+  `DeferredCtx` and `ComponentDeferredCtx`, and
+  `GatewayCtx::wait_for_component(route, state, user?, timeout_ms?)`, wait
+  for exactly `route.custom_id(state)`, so the button and the wait are built
+  from the same values. `ModalDeferredCtx` gains the same wait: a modal
+  submission can now post a button and wait for it. Migration: replace
+  `wait_for_component(custom_id="confirm:\{id}")` with a route such as
+  `component_route(id="confirm", state=CustomIdCodec::id())` used for both
+  the button (`route.custom_id(id)`) and the wait
+  (`wait_for_component(route, id)`). `Framework::wait_for_component` keeps
+  its string id for low-level use.
 - `ComponentDeferredCtx::edit_original(files=...)` on a `DeferredUpdate`
   handler replaced the host message's attachments with no way to keep them;
   pass `keep_attachments` to retain the existing ones.

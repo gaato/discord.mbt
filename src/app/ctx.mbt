@@ -308,19 +308,49 @@ pub async fn DeferredCtx::delete_followup(
 }
 
 ///|
-/// Wait for the next component interaction with an exact custom id. By
-/// default, only the invoking user may satisfy the wait.
-pub async fn DeferredCtx::wait_for_component(
+/// Wait for the next click on the component `route.custom_id(state)`
+/// identifies — build the button with the same route and state. By default
+/// only the invoking user may satisfy the wait; pass `from=Anyone` for a
+/// public flow or `from=User(id)` for someone else. Returns `None` on
+/// timeout, or at once without a gateway connection. Raises `CustomIdError`
+/// when the state does not encode.
+///
+/// The returned context has not been answered, and the waited interaction does
+/// not pass through admission or the automatic defer: respond to it (for
+/// example `update_message` or `defer_update`) within three seconds.
+pub async fn[A] DeferredCtx::wait_for_component(
   self : DeferredCtx,
-  custom_id~ : String,
+  route : ComponentRoute[A],
+  state : A,
   from? : WaitFrom = Invoker,
   timeout_ms? : Int,
 ) -> @framework.ComponentCtx? {
-  match self.waiter_ {
-    Some(waiter) =>
-      waiter(custom_id, from.user_filter(self.user().id), timeout_ms)
+  wait_for_route(
+    self.waiter_,
+    self.warn_,
+    route,
+    state,
+    from.user_filter(self.user().id),
+    timeout_ms,
+  )
+}
+
+///|
+/// Wait through the executor's waiter for the exact id `route` builds from
+/// `state`, warning when the executor has no gateway to deliver it.
+async fn[A] wait_for_route(
+  waiter : ComponentWaiter?,
+  warn : (AppWarning) -> Unit,
+  route : ComponentRoute[A],
+  state : A,
+  user : @model.UserId?,
+  timeout_ms : Int?,
+) -> @framework.ComponentCtx? {
+  let custom_id = route.custom_id(state)
+  match waiter {
+    Some(waiter) => waiter(custom_id, user, timeout_ms)
     None => {
-      (self.warn_)(WaiterUnavailable)
+      warn(WaiterUnavailable)
       None
     }
   }

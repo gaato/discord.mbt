@@ -308,9 +308,11 @@ entries or an extension without its leading dot.
 
 ## Waiting for one component
 
-A deferred handler can wait for an exact custom ID. By default, only the user
-who invoked the command or component may satisfy the wait. Waiters take
-precedence over registered component handlers.
+A deferred handler — command, component, or modal — can wait for one click.
+Name the button with a route and a state value, then wait for the same route
+and value: the two cannot drift apart, and the state keeps concurrent waits
+from colliding. By default, only the user who invoked the handler may satisfy
+the wait. Waiters take precedence over registered component handlers.
 
 ```mbt check
 ///|
@@ -319,14 +321,22 @@ let confirm_command : @discord.Command[Unit] = @discord.slash(
   description="Ask for confirmation",
   args=@discord.Args::unit(),
   handler=Deferred(ephemeral=false, (ctx, _) => {
-    let custom_id = "confirm:\{ctx.interaction().id}"
+    let confirm = @discord.component_route(
+      id="confirm",
+      state=@discord.CustomIdCodec::id(),
+    )
+    let waited = ctx.interaction().id
     ctx.edit_original(content="Continue?", components=[
       @discord.action_row([
-        @discord.button(custom_id~, label="Confirm", style=Success),
+        @discord.button(
+          custom_id=confirm.custom_id(waited),
+          label="Confirm",
+          style=Success,
+        ),
       ]),
     ])
     |> ignore
-    match ctx.wait_for_component(custom_id~, timeout_ms=30_000) {
+    match ctx.wait_for_component(confirm, waited, timeout_ms=30_000) {
       Some(click) => click.update_message(content="Confirmed", components=[])
       None => ctx.edit_original(content="Timed out", components=[]) |> ignore
     }
@@ -348,10 +358,17 @@ test "component and modal declarations compile" {
 ```
 
 For a public poll, opt out of the user filter explicitly with
-`ctx.wait_for_component(custom_id~, from=Anyone, timeout_ms=30_000)`. Keep an
-interaction-specific value in the exact ID when concurrent waits are possible;
+`ctx.wait_for_component(route, state, from=Anyone, timeout_ms=30_000)`. Keep
+an interaction-specific value in the state when concurrent waits are possible;
 the unique value prevents two waits from colliding, while the default
 `Invoker` filter provides user safety.
+
+The waited click comes back as the lower-level `ComponentCtx`, unanswered.
+It does not pass through the App's admission or automatic defer, so answer it
+yourself — `update_message`, `defer_update`, or `respond` — within Discord's
+three seconds. A gateway event handler can wait too, through
+`GatewayCtx::wait_for_component(route, state, user?)`; an event has no
+invoking user, so that wait accepts anyone unless `user` is given.
 
 ```mbt check
 ///|

@@ -671,6 +671,8 @@ pub struct ModalImmediateCtx {
 pub struct ModalDeferredCtx {
   priv raw_ : @framework.ModalCtx
   priv bot_ : AppCtx
+  priv waiter_ : ComponentWaiter?
+  priv warn_ : (AppWarning) -> Unit
 }
 
 ///|
@@ -933,6 +935,34 @@ async fn InitialResponse::send_modal(
 }
 
 ///|
+/// Wait for the next click on the component `route.custom_id(state)`
+/// identifies — build the button with the same route and state. By default
+/// only the invoking user may satisfy the wait; pass `from=Anyone` for a
+/// public flow or `from=User(id)` for someone else. Returns `None` on
+/// timeout, or at once without a gateway connection. Raises `CustomIdError`
+/// when the state does not encode.
+///
+/// The returned context has not been answered, and the waited interaction does
+/// not pass through admission or the automatic defer: respond to it (for
+/// example `update_message` or `defer_update`) within three seconds.
+pub async fn[A] ModalDeferredCtx::wait_for_component(
+  self : ModalDeferredCtx,
+  route : ComponentRoute[A],
+  state : A,
+  from? : WaitFrom = Invoker,
+  timeout_ms? : Int,
+) -> @framework.ComponentCtx? {
+  wait_for_route(
+    self.waiter_,
+    self.warn_,
+    route,
+    state,
+    from.user_filter(self.user().id),
+    timeout_ms,
+  )
+}
+
+///|
 async fn MessageUpdate::send_modal(
   self : MessageUpdate,
   ctx : @framework.ModalCtx,
@@ -963,6 +993,8 @@ async fn[S, A] dispatch_modal_handler(
   modal : Modal[S, A],
   handler : ModalSubmitHandler[S, A],
   bot : AppCtx,
+  waiter : ComponentWaiter?,
+  warn : (AppWarning) -> Unit,
   raw : @framework.ModalCtx,
 ) -> Unit {
   let decode = () => {
@@ -979,13 +1011,13 @@ async fn[S, A] dispatch_modal_handler(
     DeferredMessage(ephemeral~, run) => {
       let (state, form) = decode()
       ensure_acknowledged(modal_admission(raw), DeferMessage(ephemeral~))
-      run({ raw_: raw, bot_: bot, }, state, form)
+      run({ raw_: raw, bot_: bot, waiter_: waiter, warn_: warn, }, state, form)
     }
     DeferredUpdate(run) => {
       require_component_origin(raw)
       let (state, form) = decode()
       ensure_acknowledged(modal_admission(raw), DeferUpdate)
-      run({ raw_: raw, bot_: bot, }, state, form)
+      run({ raw_: raw, bot_: bot, waiter_: waiter, warn_: warn, }, state, form)
     }
   }
 }

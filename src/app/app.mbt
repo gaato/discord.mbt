@@ -43,7 +43,12 @@ priv struct RegisteredModal {
   file_type_filters : Array[(String, Array[@model.FileTypeFilter])]
   limit_violations : Array[@model.LimitViolation]
   ack : (@framework.ModalCtx) -> AckPlan
-  dispatch : async (AppCtx, @framework.ModalCtx) -> Unit
+  dispatch : async (
+    AppCtx,
+    ComponentWaiter?,
+    (AppWarning) -> Unit,
+    @framework.ModalCtx,
+  ) -> Unit
 }
 
 ///|
@@ -207,7 +212,9 @@ pub fn[S, A] AppBuilder::on_modal(
       components=modal.fields_.definitions_,
     ),
     ack: raw => handler.ack_plan(raw),
-    dispatch: (bot, raw) => dispatch_modal_handler(modal, handler, bot, raw),
+    dispatch: (bot, waiter, warn, raw) => {
+      dispatch_modal_handler(modal, handler, bot, waiter, warn, raw)
+    },
   })
 }
 
@@ -226,7 +233,7 @@ pub fn AppBuilder::on_modal_raw(
     file_type_filters: [],
     limit_violations: [],
     ack: _ => Respond,
-    dispatch: (_, raw) => handler(raw),
+    dispatch: (_, _, _, raw) => handler(raw),
   })
 }
 
@@ -495,6 +502,7 @@ async fn App::run_registered_component(
 async fn App::run_registered_modal(
   self : App,
   bot : AppCtx,
+  waiter : ComponentWaiter?,
   entry : RegisteredModal,
   raw : @framework.ModalCtx,
 ) -> Unit {
@@ -503,7 +511,9 @@ async fn App::run_registered_modal(
     target_: Modal(custom_id=raw.data.custom_id),
     raw_: failure_raw,
   }
-  self.run_middleware(ctx, 0, () => (entry.dispatch)(bot, raw)) catch {
+  self.run_middleware(ctx, 0, () => {
+    (entry.dispatch)(bot, waiter, self.warn_, raw)
+  }) catch {
     error if @async.is_being_cancelled() => raise error
     error =>
       invoke_error_policy(
@@ -610,7 +620,7 @@ pub fn App::attach(
         (entry.ack)(raw),
         warn,
         "modal:\{raw.data.custom_id}",
-        () => self.run_registered_modal(app_ctx, entry, raw),
+        () => self.run_registered_modal(app_ctx, waiter, entry, raw),
       )
     }
     match entry.pattern {

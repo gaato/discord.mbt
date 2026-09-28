@@ -161,11 +161,11 @@ show-flows beyond the covered happy and failing paths):
 | src/app/check.mbt | 2 | Permission-check arms needing resolved member permissions in a guild payload. |
 | src/app/command.mbt | 9 | Group/subcommand registration arms beyond the covered paths. |
 | src/app/admission.mbt | 10 | Acknowledgement-plan arms for kinds that never carry that plan, the autocomplete gate stubs, the cancellation re-raise, and the watchdog's failed-defer warning (the defer itself is covered). |
-| src/app/component.mbt | 12 | Deferred-ctx accessor duplicates and waiter arms behind a live gateway. |
+| src/app/component.mbt | 10 | Deferred-ctx accessor duplicates and waiter arms behind a live gateway. |
 | src/app/ctx.mbt | 4 | Waiter plumbing behind a live gateway. |
 | src/app/endpoint.mbt | 6 | `serve` startup with an owned token/client (creates a real Client and fetches the application id), and the endpoint's cancellation re-raise. |
 | src/app/middleware.mbt | 4 | Component-scope middleware arms not reachable in the covered flows. |
-| src/app/modal.mbt | 17 | Show/prefill dispatch arms beyond the covered decode, validation, and error flows. |
+| src/app/modal.mbt | 16 | Show/prefill dispatch arms beyond the covered decode, validation, and error flows. |
 | src/app/policy.mbt | 2 | Member-without-user extraction and the policy cancellation re-raise. |
 | src/framework/ctx.mbt | 5 | Autocomplete response variants and nested-component lookup arms beyond the covered flows. |
 | src/framework/responder.mbt | 3 | `reply`'s cancellation re-raise, the re-raise of an edit failure on a confirmed deferral, and the followup fallback after an unconfirmed deferral's edit fails (verified live with `gate_probe`, 2026-09-28). |

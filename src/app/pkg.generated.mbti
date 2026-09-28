@@ -192,7 +192,7 @@ pub fn ComponentDeferredCtx::selected_roles(Self) -> Array[@model.Role]
 pub fn ComponentDeferredCtx::selected_users(Self) -> Array[@model.User]
 pub fn ComponentDeferredCtx::user(Self) -> @model.User
 pub fn ComponentDeferredCtx::values(Self) -> Array[String]
-pub async fn ComponentDeferredCtx::wait_for_component(Self, custom_id~ : String, from? : WaitFrom, timeout_ms? : Int) -> @framework.ComponentCtx?
+pub async fn[A] ComponentDeferredCtx::wait_for_component(Self, ComponentRoute[A], A, from? : WaitFrom, timeout_ms? : Int) -> @framework.ComponentCtx?
 
 pub(all) enum ComponentHandler[A] {
   Immediate(async (ComponentImmediateCtx, A) -> ComponentReply)
@@ -269,7 +269,7 @@ pub async fn DeferredCtx::original(Self) -> @model.Message
 pub fn DeferredCtx::raw(Self) -> @framework.CommandCtx
 pub fn DeferredCtx::scope(Self) -> @framework.InvocationScope
 pub fn DeferredCtx::user(Self) -> @model.User
-pub async fn DeferredCtx::wait_for_component(Self, custom_id~ : String, from? : WaitFrom, timeout_ms? : Int) -> @framework.ComponentCtx?
+pub async fn[A] DeferredCtx::wait_for_component(Self, ComponentRoute[A], A, from? : WaitFrom, timeout_ms? : Int) -> @framework.ComponentCtx?
 
 pub struct FailureCtx {
   // private fields
@@ -396,6 +396,7 @@ pub async fn ModalDeferredCtx::original(Self) -> @model.Message
 pub fn ModalDeferredCtx::raw(Self) -> @framework.ModalCtx
 pub fn ModalDeferredCtx::scope(Self) -> @framework.InvocationScope
 pub fn ModalDeferredCtx::user(Self) -> @model.User
+pub async fn[A] ModalDeferredCtx::wait_for_component(Self, ComponentRoute[A], A, from? : WaitFrom, timeout_ms? : Int) -> @framework.ComponentCtx?
 
 pub struct ModalField[A] {
   // private fields

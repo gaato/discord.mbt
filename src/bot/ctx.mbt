@@ -140,15 +140,25 @@ pub fn GatewayCtx::ref_of_message(
 }
 
 ///|
-/// Wait for the next component interaction with an exact custom id, optionally
-/// restricted to one invoking user.
-pub async fn GatewayCtx::wait_for_component(
+/// Wait for the next click on the component `route.custom_id(state)`
+/// identifies, optionally only from `user`. A gateway event has no invoking
+/// user, so unlike the interaction contexts' `from` filter this one defaults to
+/// anyone. Returns `None` on timeout; raises `CustomIdError` when the state
+/// does not encode. The returned context has not been answered and skips the
+/// automatic defer: respond to it within three seconds. For an id not built by
+/// a route, use `framework_raw().wait_for_component(custom_id~)`.
+pub async fn[A] GatewayCtx::wait_for_component(
   self : GatewayCtx,
-  custom_id~ : String,
+  route : @app.ComponentRoute[A],
+  state : A,
   user? : @model.UserId,
   timeout_ms? : Int,
 ) -> @framework.ComponentCtx? {
-  self.framework_.wait_for_component(custom_id~, user?, timeout_ms?)
+  self.framework_.wait_for_component(
+    custom_id=route.custom_id(state),
+    user?,
+    timeout_ms?,
+  )
 }
 
 ///|

@@ -1610,7 +1610,11 @@ async test "a deferred handler waiting at full capacity receives its button" {
       args=@interaction.Args::unit(),
       handler=Deferred(ephemeral=true, (ctx, _) => {
         let pressed = ctx.wait_for_component(
-          custom_id="confirm-yes",
+          @app.component_route(
+            id="confirm-yes",
+            state=@app.CustomIdCodec::unit(),
+          ),
+          (),
           timeout_ms=2000,
         )
         woke.put(pressed is Some(_))

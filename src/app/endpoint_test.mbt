@@ -184,7 +184,14 @@ async test "app-level waits default to the invoking user" {
       description="Wait with the safe default",
       args=@interaction.Args::unit(),
       handler=Deferred(ephemeral=false, (ctx, _) => {
-        ctx.wait_for_component(custom_id="command-default") |> ignore
+        ctx.wait_for_component(
+          @app.component_route(
+            id="command-default",
+            state=@app.CustomIdCodec::unit(),
+          ),
+          (),
+        )
+        |> ignore
       }),
     ),
   )
@@ -195,7 +202,14 @@ async test "app-level waits default to the invoking user" {
   app.on_component(
     route,
     DeferredUpdate((ctx, _) => {
-      ctx.wait_for_component(custom_id="component-default") |> ignore
+      ctx.wait_for_component(
+        @app.component_route(
+          id="component-default",
+          state=@app.CustomIdCodec::unit(),
+        ),
+        (),
+      )
+      |> ignore
     }),
   )
   let client = @dhttp.Client("test-token")
@@ -242,7 +256,11 @@ async test "WaitFrom::Anyone passes no user filter" {
       description="Wait for anyone",
       args=@interaction.Args::unit(),
       handler=Deferred(ephemeral=false, (ctx, _) => {
-        ctx.wait_for_component(custom_id="anyone", from=@app.WaitFrom::Anyone)
+        ctx.wait_for_component(
+          @app.component_route(id="anyone", state=@app.CustomIdCodec::unit()),
+          (),
+          from=@app.WaitFrom::Anyone,
+        )
         |> ignore
       }),
     ),
@@ -284,7 +302,11 @@ async test "WaitFrom::User passes that user" {
       args=@interaction.Args::unit(),
       handler=Deferred(ephemeral=false, (ctx, _) => {
         ctx.wait_for_component(
-          custom_id="specific-user",
+          @app.component_route(
+            id="specific-user",
+            state=@app.CustomIdCodec::unit(),
+          ),
+          (),
           from=@app.WaitFrom::User(allowed_user),
         )
         |> ignore
@@ -354,7 +376,8 @@ async test "interaction endpoint dispatches captured responses and completion ou
         assert_true(ctx.user().id.to_string() == "200000000000000001")
         waiter_results.put(
           ctx.wait_for_component(
-            custom_id="never",
+            @app.component_route(id="never", state=@app.CustomIdCodec::unit()),
+            (),
             from=@app.WaitFrom::Anyone,
             timeout_ms=1,
           )

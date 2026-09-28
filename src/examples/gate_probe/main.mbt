@@ -98,16 +98,28 @@ fn wait_command() -> @discord.Command[Bool] {
       ).with_default(false),
     ),
     handler=Deferred(ephemeral=false, (ctx, anyone) => {
-      let custom_id = "probe-wait:\{ctx.interaction().id}"
+      // The interaction id makes each wait's button unique; the same route
+      // builds the button and the wait.
+      let wait_route = @discord.component_route(
+        id="probe-wait",
+        state=@discord.CustomIdCodec::id(),
+      )
+      let waited = ctx.interaction().id
       let from : @discord.WaitFrom = if anyone { Anyone } else { Invoker }
       ctx.edit_original(
         content="Waiting 60 s for a click (from=\{Repr(from)}). Ask another account to press it too.",
         components=[
-          @discord.action_row([@discord.button(custom_id~, label="Press me")]),
+          @discord.action_row([
+            @discord.button(
+              custom_id=wait_route.custom_id(waited),
+              label="Press me",
+            ),
+          ]),
         ],
       )
       |> ignore
-      match ctx.wait_for_component(custom_id~, from~, timeout_ms=60000) {
+      match
+        ctx.wait_for_component(wait_route, waited, from~, timeout_ms=60000) {
         Some(click) => {
           println("[wait] satisfied by \{click.user().username}")
           click.update_message(
