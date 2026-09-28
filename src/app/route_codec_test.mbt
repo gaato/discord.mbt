@@ -113,16 +113,17 @@ test "custom and imap codecs round-trip application state" {
 ///|
 test "modal show enforces the custom id limit" {
   let modal = route_test_modal("feedback")
-  modal.show(state="x".repeat(91)) |> ignore
-  route_test_modal("x".repeat(100)).show() |> ignore
+  modal.show("x".repeat(91)) |> ignore
+  // Empty string state encodes to the bare id.
+  route_test_modal("x".repeat(100)).show("") |> ignore
   for
     show in [
-      () => modal.show(state="x".repeat(92)),
-      () => route_test_modal("x".repeat(101)).show(),
-      () => route_test_modal("😀".repeat(50)).show(state=""),
+      () => modal.show("x".repeat(92)),
+      () => route_test_modal("x".repeat(101)).show(""),
+      () => route_test_modal("😀".repeat(49) + "x").show("y"),
     ] {
     try show() |> ignore catch {
-      @app.CustomIdError::TooLong(custom_id~, length~) => {
+      @app.ModalShowError::InvalidCustomId(TooLong(custom_id~, length~)) => {
         assert_eq(length, 101)
         assert_eq(custom_id.length(), length)
       }

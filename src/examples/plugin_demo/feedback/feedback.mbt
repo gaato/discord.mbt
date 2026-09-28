@@ -41,10 +41,11 @@ pub fn FeedbackFeature::stored_count(self : FeedbackFeature) -> Int {
 }
 
 ///|
-fn feedback_modal() -> @discord.Modal[FeedbackForm] {
+fn feedback_modal() -> @discord.Modal[Unit, FeedbackForm] {
   @discord.modal(
     custom_id="plugin-feedback",
     title="Send feedback",
+    state=@discord.CustomIdCodec::unit(),
     fields=@discord.ModalFields::map2(
       @discord.text_field(custom_id="topic", label="Topic", max_length=100),
       @discord.text_field(
@@ -70,14 +71,14 @@ pub fn FeedbackFeature::install(
       name="feedback",
       description="Send feedback to the bot maintainers",
       args=@discord.Args::unit(),
-      handler=Immediate((_, _) => ShowModal(modal.show())),
+      handler=Immediate((_, _) => ShowModal(modal.show(()))),
     )
     .check(@discord.guild_only())
     .cooldown(seconds=self.config_.cooldown_seconds, bucket=User),
   )
   app.on_modal(
     modal,
-    Deferred(ephemeral=true, (ctx, form) => {
+    DeferredMessage(ephemeral=true, (ctx, _, form) => {
       let details = form.details.unwrap_or("(no details)")
       ctx
       .app()

@@ -10,7 +10,12 @@ test "app validation rejects modals with more than five fields" {
     (a, b, c, d, e) => (a, b, c, d, e),
   ).zip(@app.ModalFields::of(@app.text_field(custom_id="f6", label="f6")))
   app.on_modal(
-    @app.modal(custom_id="too-big", title="Too big", fields=six),
+    @app.modal(
+      custom_id="too-big",
+      title="Too big",
+      state=@app.CustomIdCodec::unit(),
+      fields=six,
+    ),
     Raw(_ => ()),
   )
   try app.build() |> ignore catch {

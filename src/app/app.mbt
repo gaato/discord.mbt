@@ -42,7 +42,7 @@ priv struct RegisteredModal {
   text_input_ids : Array[String]?
   file_type_filters : Array[(String, Array[@model.FileTypeFilter])]
   limit_violations : Array[@model.LimitViolation]
-  ack : AckPlan
+  ack : (@framework.ModalCtx) -> AckPlan
   dispatch : async (AppCtx, @framework.ModalCtx) -> Unit
 }
 
@@ -192,13 +192,13 @@ pub fn AppBuilder::on_component_raw(
 /// Route submissions of the typed `modal` to `handler`; field values
 /// are decoded through the modal's `ModalFields` before the handler
 /// runs. Matches the exact modal id or that id followed by `:` and state.
-pub fn[A] AppBuilder::on_modal(
+pub fn[S, A] AppBuilder::on_modal(
   self : AppBuilder,
-  modal : Modal[A],
-  handler : ModalSubmitHandler[A],
+  modal : Modal[S, A],
+  handler : ModalSubmitHandler[S, A],
 ) -> Unit {
   self.modals_.push({
-    pattern: Id(modal.custom_id_),
+    pattern: Id(modal.route_.id_),
     field_count: Some(modal.fields_.definitions_.length()),
     text_input_ids: Some(modal_text_input_ids(modal.fields_.definitions_)),
     file_type_filters: modal_file_type_filters(modal.fields_.definitions_),
@@ -206,7 +206,7 @@ pub fn[A] AppBuilder::on_modal(
       title=modal.title_,
       components=modal.fields_.definitions_,
     ),
-    ack: handler.ack_plan(),
+    ack: raw => handler.ack_plan(raw),
     dispatch: (bot, raw) => dispatch_modal_handler(modal, handler, bot, raw),
   })
 }
@@ -225,7 +225,7 @@ pub fn AppBuilder::on_modal_raw(
     text_input_ids: None,
     file_type_filters: [],
     limit_violations: [],
-    ack: Respond,
+    ack: _ => Respond,
     dispatch: (_, raw) => handler(raw),
   })
 }
@@ -607,7 +607,7 @@ pub fn App::attach(
       run_admitted(
         limiter,
         modal_admission(raw),
-        entry.ack,
+        (entry.ack)(raw),
         warn,
         "modal:\{raw.data.custom_id}",
         () => self.run_registered_modal(app_ctx, entry, raw),

@@ -1,8 +1,9 @@
 ///|
-fn route_test_modal(id : String) -> @app.Modal[String] {
+fn route_test_modal(id : String) -> @app.Modal[String, String] {
   @app.modal(
     custom_id=id,
     title="Route validation",
+    state=@app.CustomIdCodec::string(),
     fields=@app.ModalFields::of(@app.text_field(custom_id="note", label="Note")),
   )
 }

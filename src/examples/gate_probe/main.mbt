@@ -71,10 +71,11 @@ fn modal_command() -> @discord.Command[Unit] {
 }
 
 ///|
-fn note_modal() -> @discord.Modal[String?] {
+fn note_modal() -> @discord.Modal[Unit, String?] {
   @discord.modal(
     custom_id="probe-note",
     title="Gate probe",
+    state=@discord.CustomIdCodec::unit(),
     fields=@discord.ModalFields::of(
       @discord.text_field(custom_id="note", label="Note").optional(),
     ),
@@ -340,8 +341,8 @@ async fn main {
     })
     ..on_modal(
       note_modal(),
-      Immediate((_, note) => {
-        @discord.InitialResponse::message(
+      Immediate((_, _, note) => {
+        @discord.ModalReply::message(
           content="modal submitted: \{note.unwrap_or("(empty)")}",
           ephemeral=true,
         )

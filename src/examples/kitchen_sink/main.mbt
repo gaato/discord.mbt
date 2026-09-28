@@ -27,10 +27,12 @@ struct Feedback {
 }
 
 ///|
-fn feedback_modal() -> @discord.Modal[Feedback] {
+/// The modal carries the greeted name as typed state, like a component route.
+fn feedback_modal() -> @discord.Modal[String, Feedback] {
   @discord.modal(
     custom_id="demo-feedback",
     title="Demo feedback",
+    state=@discord.CustomIdCodec::string(),
     fields=@discord.ModalFields::map2(
       @discord.text_field(
         custom_id="topic",
@@ -181,7 +183,7 @@ async fn main {
     ..command(quote_command())
     ..on_component(
       feedback_route,
-      Immediate((_, name) => ShowModal(feedback.show(state=name))),
+      Immediate((_, name) => ShowModal(feedback.show(name))),
     )
     ..on_component(
       done_route,
@@ -192,12 +194,14 @@ async fn main {
     )
     .on_modal(
       feedback,
-      Immediate((ctx, form) => {
+      // Opened from the greeting's button, so the submit can update that
+      // message in place.
+      Immediate((_, name, form) => {
         let details = form.details.unwrap_or("(no details)")
-        @discord.InitialResponse::message(
-          content="Feedback from \{ctx.state().unwrap_or("unknown")}:\n" +
+        @discord.ModalReply::update_message(
+          content="Hello, \{name}! Feedback received:\n" +
             "**\{form.topic}**\n\{details}",
-          ephemeral=true,
+          components=[],
         )
       }),
     )

@@ -166,15 +166,15 @@ async test "typed modal sibling ids fall through without decoding" {
   )
   for sibling_route in [false, true] {
     let app = @app.AppBuilder()
-    let decoded : Array[String?] = []
+    let decoded : Array[String] = []
     let errors : Array[String] = []
     let siblings : Array[String] = []
     app.error_policy((_, error) => errors.push("\{Repr(error)}"))
     app.on_modal(
       route_test_modal("feedback"),
-      Immediate((ctx, _) => {
-        decoded.push(ctx.state())
-        @app.InitialResponse::message(content="ok")
+      Immediate((_, state, _) => {
+        decoded.push(state)
+        @app.ModalReply::message(content="ok")
       }),
     )
     if sibling_route {
@@ -194,7 +194,7 @@ async test "typed modal sibling ids fall through without decoding" {
       fw.process(app_modal_submit("feedbackish", "note", "500000000000002307")),
       sibling_route,
     )
-    assert_eq(decoded, [None, Some(""), Some("42")])
+    assert_eq(decoded, ["", "", "42"])
     assert_eq(errors, [])
     assert_eq(siblings, if sibling_route { ["feedbackish"] } else { [] })
   }

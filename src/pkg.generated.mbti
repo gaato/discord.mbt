@@ -71,7 +71,7 @@ pub fn mentionable_select(custom_id~ : String, placeholder? : String, min_values
 
 pub fn message_command(name~ : String, handler~ : @app.InteractionHandler[@model.Message], default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType], name_localizations? : Map[String, String]) -> @app.Command[@model.Message]
 
-pub fn[A] modal(custom_id~ : String, title~ : String, fields~ : @app.ModalFields[A]) -> @app.Modal[A]
+pub fn[S, A] modal(custom_id~ : String, title~ : String, state~ : @app.CustomIdCodec[S], fields~ : @app.ModalFields[A]) -> @app.Modal[S, A]
 
 pub fn number_choice(String, Double, name_localizations? : Map[String, String]) -> @model.CommandOptionChoice
 
@@ -220,6 +220,8 @@ pub using @verify {type InteractionVerifierError}
 
 pub using @endpoint_http {type InteractionsServer}
 
+pub using @app {type MessageUpdate}
+
 pub using @app {type Modal}
 
 pub using @app {type ModalDeferredCtx}
@@ -231,6 +233,10 @@ pub using @app {type ModalFields}
 pub using @app {type ModalHandle}
 
 pub using @app {type ModalImmediateCtx}
+
+pub using @app {type ModalReply}
+
+pub using @app {type ModalShowError}
 
 pub using @app {type ModalSubmitHandler}
 

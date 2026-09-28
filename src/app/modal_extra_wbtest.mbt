@@ -96,10 +96,3 @@ test "legacy action rows thread through ids, prefill, and optional marking" {
     fail("expected non-label components to pass through unchanged")
   }
 }
-
-///|
-test "modal state parsing accepts ids already matched by the router" {
-  assert_true(modal_state("feedback", "feedback") is None)
-  assert_true(modal_state("feedback", "feedback:s-1") is Some("s-1"))
-  assert_true(modal_state("feedback", "feedback:") is Some(""))
-}

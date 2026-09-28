@@ -42,8 +42,9 @@ pub fn CommandReply::message(
 }
 
 ///|
-/// Construct an initial channel-message response.
-pub fn InitialResponse::message(
+/// Construct an initial channel-message response. Handlers build one through
+/// `CommandReply::message`, `ComponentReply::message`, or `ModalReply::message`.
+fn InitialResponse::message(
   content? : String,
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],

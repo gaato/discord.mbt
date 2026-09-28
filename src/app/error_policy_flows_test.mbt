@@ -29,11 +29,12 @@ async test "component and modal failures flow through the error policy" {
   let boom_form = @app.modal(
     custom_id="boom-form",
     title="Boom",
+    state=@app.CustomIdCodec::unit(),
     fields=@app.ModalFields::of(@app.text_field(custom_id="note", label="Note")),
   )
   app.on_modal(
     boom_form,
-    Immediate((_, _) => raise @app.HandlerError::GuildOnly),
+    Immediate((_, _, _) => raise @app.HandlerError::GuildOnly),
   )
   let client = @dhttp.Client(
     "test-token",

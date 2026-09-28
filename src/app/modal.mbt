@@ -22,10 +22,11 @@ priv struct ModalSubmission {
 }
 
 ///|
-/// A typed modal definition. The field decoder is retained for the matching
-/// `on_modal` registration while `show` erases it into a `ModalHandle`.
-pub struct Modal[A] {
-  priv custom_id_ : String
+/// A typed modal definition: a route id with typed state, and typed fields.
+/// The decoders are retained for the matching `on_modal` registration while
+/// `show` erases them into a `ModalHandle`.
+pub struct Modal[S, A] {
+  priv route_ : ComponentRoute[S]
   priv title_ : String
   priv fields_ : ModalFields[A]
 }
@@ -40,8 +41,11 @@ pub struct ModalHandle {
 }
 
 ///|
-/// Invalid per-show text-input prefill configuration.
-pub(all) suberror ModalPrefillError {
+/// Why `Modal::show` could not prepare a modal response.
+pub(all) suberror ModalShowError {
+  /// The state does not encode, or the complete custom id exceeds 100 UTF-16
+  /// units.
+  InvalidCustomId(CustomIdError)
   UnknownCustomId(custom_id~ : String)
   NonTextInput(custom_id~ : String)
   /// The value exceeds Discord's 4000 UTF-16 unit limit for a text input.
@@ -164,7 +168,7 @@ fn prefill_modal_component(
 fn prefill_modal_components(
   components : Array[@model.Component],
   values : Map[String, String],
-) -> Array[@model.Component] raise ModalPrefillError {
+) -> Array[@model.Component] raise ModalShowError {
   for custom_id, value in values {
     match find_modal_component(components, custom_id) {
       Some(TextInput(_)) =>
@@ -464,13 +468,16 @@ pub fn[A, B, C, D, E, Z] ModalFields::map5(
 }
 
 ///|
-/// Define a typed modal.
+/// Define a typed modal. Like `component_route`, `state` encodes the value
+/// carried in the custom id after `custom_id:`; pass `CustomIdCodec::unit()`
+/// for a modal without state. Handlers receive the decoded state and form.
 ///
 /// ```mbt check
 /// test "construct and validate a typed modal" {
 ///   let feedback = @app.modal(
 ///     custom_id="feedback",
 ///     title="Feedback",
+///     state=@app.CustomIdCodec::int(),
 ///     fields=@app.ModalFields::of(
 ///       @app.text_field(custom_id="details", label="Details").optional(),
 ///     ),
@@ -478,33 +485,37 @@ pub fn[A, B, C, D, E, Z] ModalFields::map5(
 ///   let app = @app.AppBuilder()
 ///   app.on_modal(feedback, Raw(_ => ()))
 ///   app.build() |> ignore
-///   let _ : @app.ModalHandle = feedback.show(state="draft")
+///   let _ : @app.ModalHandle = feedback.show(42)
 /// }
 /// ```
-pub fn[A] modal(
+pub fn[S, A] modal(
   custom_id~ : String,
   title~ : String,
+  state~ : CustomIdCodec[S],
   fields~ : ModalFields[A],
-) -> Modal[A] {
-  { custom_id_: custom_id, title_: title, fields_: fields, }
+) -> Modal[S, A] {
+  {
+    route_: component_route(id=custom_id, state~),
+    title_: title,
+    fields_: fields,
+  }
 }
 
 ///|
-/// Prepare a modal response, optionally appending opaque state after `:` and
-/// overriding text-input defaults by `custom_id` for this response only.
-/// Raises `ModalPrefillError` when an override key is unknown, does not name
-/// a text input, or carries a value over 4000 UTF-16 units.
-/// Raises `CustomIdError::TooLong` when the complete id exceeds 100 UTF-16 units.
-pub fn[A] Modal::show(
-  self : Modal[A],
-  state? : String,
+/// Prepare a modal response carrying `state`, optionally overriding
+/// text-input defaults by `custom_id` for this response only. Raises
+/// `ModalShowError::InvalidCustomId` when the state does not encode or the
+/// complete id exceeds 100 UTF-16 units, and the other variants when an
+/// override key is unknown, does not name a text input, or carries a value
+/// over 4000 UTF-16 units.
+pub fn[S, A] Modal::show(
+  self : Modal[S, A],
+  state : S,
   values? : Map[String, String],
-) -> ModalHandle raise {
-  let custom_id = match state {
-    Some(value) => "\{self.custom_id_}:\{value}"
-    None => self.custom_id_
+) -> ModalHandle raise ModalShowError {
+  let custom_id = self.route_.custom_id(state) catch {
+    error => raise InvalidCustomId(error)
   }
-  check_custom_id_length(custom_id)
   let components = match values {
     Some(overrides) =>
       prefill_modal_components(self.fields_.definitions_, overrides)
@@ -514,8 +525,8 @@ pub fn[A] Modal::show(
 }
 
 ///|
-fn[A] Modal::decode(
-  self : Modal[A],
+fn[S, A] Modal::decode(
+  self : Modal[S, A],
   components : Array[@model.Component],
   resolved? : @model.ResolvedData,
 ) -> A raise HandlerError {
@@ -547,18 +558,104 @@ async fn ModalHandle::send_component(
 }
 
 ///|
-/// Execution strategy for a typed modal submission.
-pub(all) enum ModalSubmitHandler[A] {
-  Immediate(async (ModalImmediateCtx, A) -> InitialResponse)
-  Deferred(ephemeral~ : Bool, async (ModalDeferredCtx, A) -> Unit)
+/// Initial response returned by an immediate modal handler.
+pub(all) enum ModalReply {
+  /// Edit the message whose component opened the modal. A modal opened by a
+  /// command has no such message; replying this way raises
+  /// `HandlerError::UnsupportedResponse` before anything is sent.
+  UpdateMessage(MessageUpdate)
+  Message(InitialResponse)
+}
+
+///|
+/// Reply with a new message; set `ephemeral=true` to show it only to the
+/// submitting user.
+pub fn ModalReply::message(
+  content? : String,
+  embeds? : Array[@model.Embed],
+  components? : Array[@model.Component],
+  files? : Array[@dhttp.FileUpload],
+  allowed_mentions? : @model.AllowedMentions,
+  poll? : @model.PollCreateRequest,
+  ephemeral? : Bool = false,
+) -> ModalReply {
+  Message(
+    InitialResponse::message(
+      content?,
+      embeds?,
+      components?,
+      files?,
+      allowed_mentions?,
+      poll?,
+      ephemeral~,
+    ),
+  )
+}
+
+///|
+/// Reply by editing the message whose component opened the modal. Omitted
+/// fields keep their current value (see `MessageUpdate`).
+pub fn ModalReply::update_message(
+  content? : String,
+  clear_content? : Bool = false,
+  embeds? : Array[@model.Embed],
+  components? : Array[@model.Component],
+  allowed_mentions? : @model.AllowedMentions,
+  files? : Array[@dhttp.FileUpload],
+  keep_attachments? : Array[@model.AttachmentRequest],
+  poll? : @model.PollCreateRequest,
+) -> ModalReply {
+  UpdateMessage(
+    MessageUpdate(
+      content?,
+      clear_content~,
+      embeds?,
+      components?,
+      allowed_mentions?,
+      files?,
+      keep_attachments?,
+      poll?,
+    ),
+  )
+}
+
+///|
+/// Execution strategy for a typed modal submission. Handlers receive the
+/// decoded state and form.
+pub(all) enum ModalSubmitHandler[S, A] {
+  Immediate(async (ModalImmediateCtx, S, A) -> ModalReply)
+  DeferredMessage(ephemeral~ : Bool, async (ModalDeferredCtx, S, A) -> Unit)
+  /// Acknowledge without changing the message whose component opened the
+  /// modal, then run; `edit_original` edits that message. A modal opened by a
+  /// command has no such message, so the submission fails with
+  /// `HandlerError::UnsupportedResponse` before anything is sent.
+  DeferredUpdate(async (ModalDeferredCtx, S, A) -> Unit)
   Raw(async (@framework.ModalCtx) -> Unit)
 }
 
 ///|
-fn[A] ModalSubmitHandler::ack_plan(self : ModalSubmitHandler[A]) -> AckPlan {
+/// How this submission is acknowledged. An update of a modal opened by a
+/// command is never deferred: it fails before the handler runs, and the
+/// policy answers with an initial message.
+fn[S, A] ModalSubmitHandler::ack_plan(
+  self : ModalSubmitHandler[S, A],
+  raw : @framework.ModalCtx,
+) -> AckPlan {
   match self {
-    Deferred(ephemeral~, _) => DeferMessage(ephemeral~)
-    Immediate(_) | Raw(_) => Respond
+    DeferredMessage(ephemeral~, _) => DeferMessage(ephemeral~)
+    DeferredUpdate(_) if raw.origin() is FromComponent(_) => DeferUpdate
+    DeferredUpdate(_) | Immediate(_) | Raw(_) => Respond
+  }
+}
+
+///|
+fn require_component_origin(
+  raw : @framework.ModalCtx,
+) -> Unit raise HandlerError {
+  guard raw.origin() is FromComponent(_) else {
+    raise UnsupportedResponse(
+      reason="modal \{raw.data.custom_id} was opened by a command, so there is no message to update",
+    )
   }
 }
 
@@ -567,7 +664,6 @@ fn[A] ModalSubmitHandler::ack_plan(self : ModalSubmitHandler[A]) -> AckPlan {
 pub struct ModalImmediateCtx {
   priv raw_ : @framework.ModalCtx
   priv bot_ : AppCtx
-  priv state_ : String?
 }
 
 ///|
@@ -575,15 +671,6 @@ pub struct ModalImmediateCtx {
 pub struct ModalDeferredCtx {
   priv raw_ : @framework.ModalCtx
   priv bot_ : AppCtx
-  priv state_ : String?
-}
-
-///|
-fn modal_state(base : String, custom_id : String) -> String? {
-  if custom_id == base {
-    return None
-  }
-  Some(custom_id[base.length() + 1:].to_owned())
 }
 
 ///|
@@ -638,12 +725,6 @@ pub fn ModalImmediateCtx::interaction(
 /// maybe-guild flows where DMs are valid.
 pub fn ModalImmediateCtx::guild_id(self : ModalImmediateCtx) -> @model.GuildId? {
   self.raw_.interaction.guild_id
-}
-
-///|
-/// The opaque state string passed to `Modal::show`, if any.
-pub fn ModalImmediateCtx::state(self : ModalImmediateCtx) -> String? {
-  self.state_
 }
 
 ///|
@@ -717,12 +798,6 @@ pub fn ModalDeferredCtx::interaction(
 /// maybe-guild flows where DMs are valid.
 pub fn ModalDeferredCtx::guild_id(self : ModalDeferredCtx) -> @model.GuildId? {
   self.raw_.interaction.guild_id
-}
-
-///|
-/// The opaque state string passed to `Modal::show`, if any.
-pub fn ModalDeferredCtx::state(self : ModalDeferredCtx) -> String? {
-  self.state_
 }
 
 ///|
@@ -858,25 +933,59 @@ async fn InitialResponse::send_modal(
 }
 
 ///|
-async fn[A] dispatch_modal_handler(
-  modal : Modal[A],
-  handler : ModalSubmitHandler[A],
+async fn MessageUpdate::send_modal(
+  self : MessageUpdate,
+  ctx : @framework.ModalCtx,
+) -> Unit {
+  require_component_origin(ctx)
+  ctx.update_message(
+    content?=self.content_,
+    clear_content=self.clear_content_,
+    embeds?=self.embeds_,
+    components?=self.components_,
+    allowed_mentions?=self.allowed_mentions_,
+    files?=self.files_,
+    keep_attachments?=self.keep_attachments_,
+    poll?=self.poll_,
+  )
+}
+
+///|
+async fn ModalReply::send(self : ModalReply, ctx : @framework.ModalCtx) -> Unit {
+  match self {
+    UpdateMessage(update) => update.send_modal(ctx)
+    Message(response) => response.send_modal(ctx)
+  }
+}
+
+///|
+async fn[S, A] dispatch_modal_handler(
+  modal : Modal[S, A],
+  handler : ModalSubmitHandler[S, A],
   bot : AppCtx,
   raw : @framework.ModalCtx,
 ) -> Unit {
-  let route = raw.data.custom_id
-  let state = modal_state(modal.custom_id_, route)
+  let decode = () => {
+    let state = modal.route_.decode(raw.data.custom_id)
+    let form = modal.decode(raw.data.components, resolved?=raw.data.resolved)
+    (state, form)
+  }
   match handler {
     Raw(run) => run(raw)
     Immediate(run) => {
-      let value = modal.decode(raw.data.components, resolved?=raw.data.resolved)
-      let response = run({ raw_: raw, bot_: bot, state_: state, }, value)
-      response.send_modal(raw)
+      let (state, form) = decode()
+      run({ raw_: raw, bot_: bot, }, state, form).send(raw)
     }
-    Deferred(ephemeral~, run) => {
-      let value = modal.decode(raw.data.components, resolved?=raw.data.resolved)
+    DeferredMessage(ephemeral~, run) => {
+      let (state, form) = decode()
       ensure_acknowledged(modal_admission(raw), DeferMessage(ephemeral~))
-      run({ raw_: raw, bot_: bot, state_: state, }, value)
+      run({ raw_: raw, bot_: bot, }, state, form)
+    }
+    DeferredUpdate(run) => {
+      require_component_origin(raw)
+      let (state, form) = decode()
+      ensure_acknowledged(modal_admission(raw), DeferUpdate)
+      run({ raw_: raw, bot_: bot, }, state, form)
     }
   }
 }

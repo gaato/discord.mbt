@@ -38,6 +38,11 @@ pub(all) suberror HandlerError {
   /// command registration, an old component, or a payload missing data
   /// Discord should have sent. `reason` is for logs and never shown to users.
   Malformed(reason~ : String)
+  /// The handler chose a response Discord does not accept for this
+  /// interaction, such as updating the message of a modal a command opened.
+  /// It is an app bug, not a user error: `reason` is for logs, and the default
+  /// policy tells the user only that something went wrong.
+  UnsupportedResponse(reason~ : String)
 } derive(Debug)
 
 ///|
@@ -53,6 +58,7 @@ fn malformed_unless_handler_error(error : Error) -> HandlerError {
     OnCooldown(..) as error => error
     InvalidInput(..) as error => error
     Malformed(..) as error => error
+    UnsupportedResponse(..) as error => error
     error => Malformed(reason=Repr(error).to_string())
   }
 }

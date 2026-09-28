@@ -100,10 +100,11 @@ fn feedback_access_policy(
 }
 
 ///|
-fn feedback_modal() -> @discord.Modal[String] {
+fn feedback_modal() -> @discord.Modal[Unit, String] {
   @discord.modal(
     custom_id="feedback",
     title="Feedback",
+    state=@discord.CustomIdCodec::unit(),
     fields=@discord.ModalFields::map1(
       @discord.text_field(custom_id="text", label="Feedback"),
       text => text,
@@ -113,7 +114,7 @@ fn feedback_modal() -> @discord.Modal[String] {
 
 ///|
 fn feedback_command(
-  modal : @discord.Modal[String],
+  modal : @discord.Modal[Unit, String],
   cooldown_seconds : Int,
 ) -> @discord.Command[Unit] {
   ignore(cooldown_seconds)
@@ -121,7 +122,7 @@ fn feedback_command(
     name="feedback",
     description="Send feedback",
     args=@discord.Args::unit(),
-    handler=Immediate((_, _) => ShowModal(modal.show())),
+    handler=Immediate((_, _) => ShowModal(modal.show(()))),
   )
 }
 
@@ -209,7 +210,7 @@ pub fn FeedbackFeature::install(
   app.command(feedback_command(modal, self.config_.cooldown_seconds))
   app.on_modal(
     modal,
-    Deferred(ephemeral=true, (ctx, form) => {
+    DeferredMessage(ephemeral=true, (ctx, _, form) => {
       store_feedback(ctx.app().http(), self.config_, ctx.user(), form)
       self.stored_ += 1
       ctx.edit_original(content="Thanks. Your feedback was saved.") |> ignore
@@ -330,7 +331,7 @@ fn register_guarded_feedback(
       name="feedback",
       description="Send feedback",
       args=@discord.Args::unit(),
-      handler=Immediate((_, _) => ShowModal(modal.show())),
+      handler=Immediate((_, _) => ShowModal(modal.show(()))),
     )
     .check(@discord.guild_only())
     .cooldown(seconds=config.cooldown_seconds, bucket=User)

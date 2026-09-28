@@ -73,6 +73,7 @@ test "app validation rejects malformed modal file field types" {
     modal(
       custom_id="report",
       title="Report",
+      state=CustomIdCodec::unit(),
       fields=ModalFields::of(
         file_field(custom_id="proof", label="Proof", file_types=[Extension("")]),
       ),
@@ -124,13 +125,14 @@ test "file field emits a label-wrapped file upload with its filter" {
   let handle = modal(
     custom_id="report",
     title="Report",
+    state=CustomIdCodec::unit(),
     fields=ModalFields::of(
       file_field(custom_id="proof", label="Proof", max_values=3, file_types=[
         Image,
         Extension(".pdf"),
       ]).optional(),
     ),
-  ).show()
+  ).show(())
   inspect(
     Json(handle.components_).stringify(),
     content=(

@@ -25,6 +25,7 @@ test "modal fields decode label and legacy action-row submissions" {
   let form = modal(
     custom_id="feedback",
     title="Feedback",
+    state=CustomIdCodec::unit(),
     fields=test_modal_fields(),
   )
   let modern = submitted_components(
@@ -67,6 +68,7 @@ test "modal field optional default and validation semantics" {
   let validated = modal(
     custom_id="validated",
     title="Validated",
+    state=CustomIdCodec::unit(),
     fields=ModalFields::of(
       text_field(custom_id="code", label="Code").validate(value => {
         if value == "ok" {
@@ -123,11 +125,12 @@ test "modal show overrides prefills without changing its definition" {
   let form = modal(
     custom_id="feedback",
     title="Feedback",
+    state=CustomIdCodec::unit(),
     fields=ModalFields::of(
       text_field(custom_id="note", label="Note", value="static-default"),
     ),
   )
-  let overridden = form.show(values={ "note": "per-request" })
+  let overridden = form.show((), values={ "note": "per-request" })
   json_inspect(overridden.components_, content=[
     {
       "label": "Note",
@@ -141,7 +144,7 @@ test "modal show overrides prefills without changing its definition" {
       "type": 18,
     },
   ])
-  let pristine = form.show()
+  let pristine = form.show(())
   json_inspect(pristine.components_, content=[
     {
       "label": "Note",
@@ -162,6 +165,7 @@ test "modal show rejects unknown and non-text prefill keys" {
   let form = modal(
     custom_id="feedback",
     title="Feedback",
+    state=CustomIdCodec::unit(),
     fields=ModalFields::map2(
       text_field(custom_id="note", label="Note"),
       select_field(custom_id="color", label="Color", options=[
@@ -170,13 +174,13 @@ test "modal show rejects unknown and non-text prefill keys" {
       (note, colors) => (note, colors),
     ),
   )
-  try form.show(values={ "missing": "value" }) |> ignore catch {
+  try form.show((), values={ "missing": "value" }) |> ignore catch {
     UnknownCustomId(custom_id~) => inspect(custom_id, content="missing")
     error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected unknown custom id error")
   }
-  try form.show(values={ "color": "blue" }) |> ignore catch {
+  try form.show((), values={ "color": "blue" }) |> ignore catch {
     NonTextInput(custom_id~) => inspect(custom_id, content="color")
     error => fail("unexpected error: \{Repr(error)}")
   } noraise {
@@ -190,6 +194,7 @@ test "app validation rejects duplicate modal text input ids" {
   let form = modal(
     custom_id="duplicate",
     title="Duplicate fields",
+    state=CustomIdCodec::unit(),
     fields=ModalFields::map2(
       text_field(custom_id="same", label="First"),
       text_field(custom_id="same", label="Second"),
@@ -213,8 +218,9 @@ test "modal show appends state and emits modern label components" {
   let handle = modal(
     custom_id="feedback",
     title="Feedback",
+    state=CustomIdCodec::string(),
     fields=ModalFields::of(text_field(custom_id="note", label="Note")),
-  ).show(state="ticket-7")
+  ).show("ticket-7")
   inspect(handle.custom_id_, content="feedback:ticket-7")
   inspect(handle.title_, content="Feedback")
   json_inspect(handle.components_, content=[
@@ -239,7 +245,12 @@ fn[A] modal_limit_violation(
 ) -> String {
   let app = AppBuilder()
   app.on_modal(
-    modal(custom_id="limits", title~, fields=ModalFields::of(field)),
+    modal(
+      custom_id="limits",
+      title~,
+      state=CustomIdCodec::unit(),
+      fields=ModalFields::of(field),
+    ),
     Raw(_ => ()),
   )
   try app.build() |> ignore catch {
@@ -353,10 +364,11 @@ test "modal show rejects a prefill value over 4000 units" {
   let form = modal(
     custom_id="edit",
     title="Edit",
+    state=CustomIdCodec::unit(),
     fields=ModalFields::of(text_field(custom_id="body", label="Body")),
   )
-  form.show(values={ "body": "x".repeat(4000) }) |> ignore
-  try form.show(values={ "body": "x".repeat(4001) }) |> ignore catch {
+  form.show((), values={ "body": "x".repeat(4000) }) |> ignore
+  try form.show((), values={ "body": "x".repeat(4001) }) |> ignore catch {
     ValueTooLong(custom_id~, length~) => {
       inspect(custom_id, content="body")
       inspect(length, content="4001")

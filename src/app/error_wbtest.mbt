@@ -9,6 +9,7 @@ test "handler errors raised by user code keep their meaning through decoding" {
     OnCooldown(retry_after_ms=1000),
     InvalidInput(name=Some("n"), message="bad"),
     Malformed(reason="stale"),
+    UnsupportedResponse(reason="no message to update"),
   ]
   for error in kept {
     assert_eq(

@@ -196,12 +196,13 @@ async test "component and modal deferred contexts share the message surface" {
   let form = @app.modal(
     custom_id="note",
     title="Note",
+    state=@app.CustomIdCodec::unit(),
     fields=@app.ModalFields::of(@app.text_field(custom_id="note", label="Note")),
   )
   let modals = @app.AppBuilder()
   modals.on_modal(
     form,
-    Deferred(ephemeral=true, (ctx, _) => {
+    DeferredMessage(ephemeral=true, (ctx, _, _) => {
       ignore(ctx.raw())
       ctx.original() |> ignore
       ctx.edit_original(content="edited") |> ignore

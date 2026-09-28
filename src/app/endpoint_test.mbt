@@ -487,6 +487,7 @@ async test "interaction endpoint dispatches component and typed modal handlers" 
   let feedback = @app.modal(
     custom_id="feedback",
     title="Feedback",
+    state=@app.CustomIdCodec::string(),
     fields=@app.ModalFields::of(@app.text_field(custom_id="note", label="Note")),
   )
   app.command(
@@ -494,7 +495,7 @@ async test "interaction endpoint dispatches component and typed modal handlers" 
       name="open-form",
       description="Open the feedback form",
       args=@interaction.Args::unit(),
-      handler=Immediate((_, _) => ShowModal(feedback.show(state="from-command"))),
+      handler=Immediate((_, _) => ShowModal(feedback.show("from-command"))),
     ),
   )
   app.on_component(
@@ -508,7 +509,7 @@ async test "interaction endpoint dispatches component and typed modal handlers" 
   )
   app.on_component(
     open,
-    Immediate((_, state) => ShowModal(feedback.show(state~))),
+    Immediate((_, state) => ShowModal(feedback.show(state))),
   )
   app.on_component(
     defer_route,
@@ -519,23 +520,24 @@ async test "interaction endpoint dispatches component and typed modal handlers" 
   )
   app.on_modal(
     feedback,
-    Immediate((ctx, note) => {
+    Immediate((ctx, state, note) => {
       assert_true(ctx.scope() is Dm(_))
       assert_true(ctx.user().id.to_string() == "200000000000000001")
       assert_true(ctx.origin() is FromCommand)
-      @app.InitialResponse::message(
-        content="saved:\{note}:\{ctx.state().unwrap_or("none")}",
+      @app.ModalReply::message(
+        content="saved:\{note}:\{if state.is_empty() { "none" } else { state }}",
       )
     }),
   )
   let deferred_feedback = @app.modal(
     custom_id="deferred-feedback",
     title="Deferred feedback",
+    state=@app.CustomIdCodec::unit(),
     fields=@app.ModalFields::of(@app.text_field(custom_id="note", label="Note")),
   )
   app.on_modal(
     deferred_feedback,
-    Deferred(ephemeral=false, (ctx, _) => {
+    DeferredMessage(ephemeral=false, (ctx, _, _) => {
       assert_true(ctx.scope() is Dm(_))
       guard ctx.origin() is FromComponent(message) else {
         fail("expected a component-origin modal")

@@ -180,8 +180,8 @@ test "Components V2 declarations compile" {
 
 ## Typed modals
 
-Define modal fields once, then use the same `Modal[A]` for display and typed
-submission decoding:
+Define a modal once — its state codec and fields — then use the same
+`Modal[S, A]` for display and for typed decoding of the submission:
 
 ```mbt check
 ///|
@@ -191,9 +191,10 @@ struct Feedback {
 } derive(Debug)
 
 ///|
-let feedback : @discord.Modal[Feedback] = @discord.modal(
+let feedback : @discord.Modal[Int, Feedback] = @discord.modal(
   custom_id="feedback",
   title="Feedback",
+  state=@discord.CustomIdCodec::int(),
   fields=@discord.ModalFields::map2(
     @discord.text_field(
       custom_id="topic",
@@ -206,12 +207,9 @@ let feedback : @discord.Modal[Feedback] = @discord.modal(
 )
 
 ///|
-let feedback_state : @discord.CustomIdCodec[Int] = @discord.CustomIdCodec::int()
-
-///|
 let open_feedback : @discord.ComponentRoute[Int] = @discord.component_route(
   id="open-feedback",
-  state=feedback_state,
+  state=@discord.CustomIdCodec::int(),
 )
 
 ///|
@@ -224,20 +222,17 @@ fn register_feedback(app : @discord.AppBuilder) -> Unit {
   app.on_component(
     open_feedback,
     Immediate((_, ticket) => {
-      ShowModal(
-        feedback.show(state=feedback_state.encode(ticket), values={
-          "topic": "Follow-up",
-        }),
-      )
+      ShowModal(feedback.show(ticket, values={ "topic": "Follow-up" }))
     }),
   )
   app.on_modal(
     feedback,
-    Immediate((ctx, form) => {
-      let ticket = feedback_state.decode(ctx.state().unwrap_or(""))
-      @discord.InitialResponse::message(
+    Immediate((_, ticket, form) => {
+      // The button that opened this modal sits on a message, so the submit
+      // can replace that message instead of posting a new one.
+      @discord.ModalReply::update_message(
         content="ticket=\{ticket}; topic=\{form.topic}",
-        ephemeral=true,
+        components=[],
       )
     }),
   )
@@ -248,7 +243,7 @@ fn register_feedback(app : @discord.AppBuilder) -> Unit {
 `Modal::show(values=...)` overrides selected text inputs for one response and
 does not mutate the modal definition, so later calls return to the static
 default. Override keys are text-input `custom_id` values. An unknown key or a
-key naming a non-text field raises `ModalPrefillError` instead of being
+key naming a non-text field raises `ModalShowError` instead of being
 silently ignored, and so does a value over Discord's 4000-unit text-input
 limit: check the length before calling `show` when the prefill comes from
 longer content such as an embed description (4096).
@@ -267,12 +262,20 @@ available as `@model.message_component_limit_violations`,
 Raw `Client::request` and raw interaction callback JSON remain escape hatches;
 they do not promise complete outgoing model validation.
 
-`ModalImmediateCtx::origin()` distinguishes a modal opened from a component
-from one opened from a command. `state()` is the value passed to `show`.
-Modal fields stay typed by `Modal[A]`; encode typed modal state with a codec
-when calling `show`, then decode `ctx.state()` in the submission handler as
-above. `show` checks the complete custom id, including state, against the same
-100-unit limit and raises `CustomIdError::TooLong` if it is exceeded.
+A `Modal[S, A]` is a route like `component_route`: `state` is the codec for
+the value `show` carries in the custom id, and handlers receive the decoded
+state next to the decoded form — `(ctx, state, form)`. Use
+`CustomIdCodec::unit()` for a modal without state. State that does not decode
+is `HandlerError::Malformed`, exactly as for components. `show` checks the
+complete custom id against the 100-unit limit and raises
+`ModalShowError::InvalidCustomId` if the state does not fit.
+
+A submission can answer with a new message (`ModalReply::message`,
+`DeferredMessage`) or, when a component opened the modal, by editing that
+component's message (`ModalReply::update_message`, `DeferredUpdate`).
+`ctx.origin()` tells the two apart. A modal opened by a command has no message
+to edit, so an update reply fails with `HandlerError::UnsupportedResponse`
+before anything is sent, and the error policy answers instead.
 
 ### File uploads
 
@@ -284,9 +287,10 @@ slash commands through `arg_attachment(file_types=...)`:
 
 ```mbt check
 ///|
-let upload_report : @discord.Modal[Array[@model.Attachment]] = @discord.modal(
+let upload_report : @discord.Modal[Unit, Array[@model.Attachment]] = @discord.modal(
   custom_id="upload-report",
   title="Report",
+  state=@discord.CustomIdCodec::unit(),
   fields=@discord.ModalFields::of(
     @discord.file_field(
       custom_id="proof",

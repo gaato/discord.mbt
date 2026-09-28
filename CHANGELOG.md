@@ -39,6 +39,12 @@ breaking change is listed with a migration note.
   followups, and by `edit_original`. `keep_attachments` is accepted by
   `edit_original`. Component updates accept `clear_content`, `files`,
   `keep_attachments`, and `poll`.
+- Modal submissions can update the message whose component opened the modal:
+  `ModalReply::update_message` from an `Immediate` handler, or the new
+  `ModalSubmitHandler::DeferredUpdate`. A modal opened by a command has no
+  such message; the submission then fails with the new
+  `HandlerError::UnsupportedResponse` before anything is sent, and the error
+  policy answers with a message instead.
 - `ModalCtx::update_message` and `ModalCtx::defer_update` edit the message
   whose component opened the modal. A modal opened by a command has no such
   message, so both raise `ResponseGateError::InvalidCallback` without sending
@@ -136,6 +142,29 @@ breaking change is listed with a migration note.
   `app.on_warn(message => log(message))` becomes
   `app.on_warn(warning => log(warning.to_string()))`, or match the variants
   you act on.
+- Breaking: modal state is typed, like component route state. `modal`
+  takes `state~ : CustomIdCodec[S]` and returns `Modal[S, A]`;
+  `Modal::show(state, values?)` takes the state value; handlers receive
+  `(ctx, state, form)`; `ModalImmediateCtx::state()` and
+  `ModalDeferredCtx::state()` are removed. Migration: pass
+  `state=CustomIdCodec::unit()` and call `show(())` for a modal without state;
+  replace `show(state=codec.encode(value))` plus `codec.decode(ctx.state()...)`
+  with `state=codec`, `show(value)`, and the handler's `state` argument; add
+  the state parameter to handlers (`(ctx, form)` becomes `(ctx, _, form)`).
+  State that does not decode is `HandlerError::Malformed`.
+- Breaking: modal handlers answer with `ModalReply`. `Immediate` returns
+  `ModalReply` instead of `InitialResponse`, `Deferred` is renamed
+  `DeferredMessage` (matching `ComponentHandler`), and
+  `InitialResponse::message` is no longer public: every immediate reply is
+  built with its reply type's `message`. Migration:
+  `InitialResponse::message(...)` becomes `ModalReply::message(...)`, and
+  `Deferred(ephemeral~, ...)` becomes `DeferredMessage(ephemeral~, ...)`.
+- Breaking: `Modal::show` raises `ModalShowError` instead of an untyped
+  error. `ModalPrefillError` is renamed `ModalShowError` and gains
+  `InvalidCustomId(CustomIdError)` for state that does not encode or does not
+  fit in 100 UTF-16 units. Migration: rename the type in `catch` arms and
+  match `InvalidCustomId(TooLong(..))` where you matched
+  `CustomIdError::TooLong`.
 - `ComponentDeferredCtx::edit_original(files=...)` on a `DeferredUpdate`
   handler replaced the host message's attachments with no way to keep them;
   pass `keep_attachments` to retain the existing ones.

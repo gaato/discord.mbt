@@ -23,7 +23,7 @@ pub fn guild_only() -> async (CheckCtx) -> Bool
 
 pub fn message_command(name~ : String, handler~ : InteractionHandler[@model.Message], default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType], name_localizations? : Map[String, String]) -> Command[@model.Message]
 
-pub fn[A] modal(custom_id~ : String, title~ : String, fields~ : ModalFields[A]) -> Modal[A]
+pub fn[S, A] modal(custom_id~ : String, title~ : String, state~ : CustomIdCodec[S], fields~ : ModalFields[A]) -> Modal[S, A]
 
 pub fn required_permissions(@model.Permissions) -> async (CheckCtx) -> Bool
 
@@ -77,9 +77,11 @@ pub(all) suberror HandlerError {
   OnCooldown(retry_after_ms~ : Int64)
   InvalidInput(name~ : String?, message~ : String)
   Malformed(reason~ : String)
+  UnsupportedResponse(reason~ : String)
 } derive(@debug.Debug)
 
-pub(all) suberror ModalPrefillError {
+pub(all) suberror ModalShowError {
+  InvalidCustomId(CustomIdError)
   UnknownCustomId(custom_id~ : String)
   NonTextInput(custom_id~ : String)
   ValueTooLong(custom_id~ : String, length~ : Int)
@@ -107,7 +109,7 @@ pub fn AppBuilder::error_policy(Self, async (FailureCtx, Error) -> Unit) -> Unit
 pub fn AppBuilder::middleware(Self, async (InteractionCtx, async () -> Unit) -> Unit) -> Unit
 pub fn[A] AppBuilder::on_component(Self, ComponentRoute[A], ComponentHandler[A]) -> Unit
 pub fn AppBuilder::on_component_raw(Self, prefix~ : String, async (@framework.ComponentCtx) -> Unit) -> Unit
-pub fn[A] AppBuilder::on_modal(Self, Modal[A], ModalSubmitHandler[A]) -> Unit
+pub fn[S, A] AppBuilder::on_modal(Self, Modal[S, A], ModalSubmitHandler[S, A]) -> Unit
 pub fn AppBuilder::on_modal_raw(Self, prefix~ : String, async (@framework.ModalCtx) -> Unit) -> Unit
 pub fn AppBuilder::on_warn(Self, (AppWarning) -> Unit) -> Unit
 pub fn AppBuilder::register(Self, RegisteredCommand) -> Unit
@@ -309,7 +311,6 @@ pub fn ImmediateCtx::user(Self) -> @model.User
 pub struct InitialResponse {
   // private fields
 }
-pub fn InitialResponse::message(content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, poll? : @model.PollCreateRequest, ephemeral? : Bool) -> Self
 
 pub struct InteractionCtx {
   // private fields
@@ -372,10 +373,10 @@ pub struct MessageUpdate {
 }
 pub fn MessageUpdate::MessageUpdate(content? : String, clear_content? : Bool, embeds? : Array[@model.Embed], components? : Array[@model.Component], allowed_mentions? : @model.AllowedMentions, files? : Array[@http.FileUpload], keep_attachments? : Array[@model.AttachmentRequest], poll? : @model.PollCreateRequest) -> Self
 
-pub struct Modal[A] {
+pub struct Modal[S, A] {
   // private fields
 }
-pub fn[A] Modal::show(Self[A], state? : String, values? : Map[String, String]) -> ModalHandle raise
+pub fn[S, A] Modal::show(Self[S, A], S, values? : Map[String, String]) -> ModalHandle raise ModalShowError
 
 pub struct ModalDeferredCtx {
   // private fields
@@ -394,7 +395,6 @@ pub fn ModalDeferredCtx::origin(Self) -> @framework.ModalOrigin
 pub async fn ModalDeferredCtx::original(Self) -> @model.Message
 pub fn ModalDeferredCtx::raw(Self) -> @framework.ModalCtx
 pub fn ModalDeferredCtx::scope(Self) -> @framework.InvocationScope
-pub fn ModalDeferredCtx::state(Self) -> String?
 pub fn ModalDeferredCtx::user(Self) -> @model.User
 
 pub struct ModalField[A] {
@@ -431,13 +431,20 @@ pub fn ModalImmediateCtx::interaction(Self) -> @model.Interaction
 pub fn ModalImmediateCtx::origin(Self) -> @framework.ModalOrigin
 pub fn ModalImmediateCtx::remaining_ms(Self) -> Int?
 pub fn ModalImmediateCtx::scope(Self) -> @framework.InvocationScope
-pub fn ModalImmediateCtx::state(Self) -> String?
 pub fn ModalImmediateCtx::unchecked_raw(Self) -> @framework.ModalCtx
 pub fn ModalImmediateCtx::user(Self) -> @model.User
 
-pub(all) enum ModalSubmitHandler[A] {
-  Immediate(async (ModalImmediateCtx, A) -> InitialResponse)
-  Deferred(ephemeral~ : Bool, async (ModalDeferredCtx, A) -> Unit)
+pub(all) enum ModalReply {
+  UpdateMessage(MessageUpdate)
+  Message(InitialResponse)
+}
+pub fn ModalReply::message(content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, poll? : @model.PollCreateRequest, ephemeral? : Bool) -> Self
+pub fn ModalReply::update_message(content? : String, clear_content? : Bool, embeds? : Array[@model.Embed], components? : Array[@model.Component], allowed_mentions? : @model.AllowedMentions, files? : Array[@http.FileUpload], keep_attachments? : Array[@model.AttachmentRequest], poll? : @model.PollCreateRequest) -> Self
+
+pub(all) enum ModalSubmitHandler[S, A] {
+  Immediate(async (ModalImmediateCtx, S, A) -> ModalReply)
+  DeferredMessage(ephemeral~ : Bool, async (ModalDeferredCtx, S, A) -> Unit)
+  DeferredUpdate(async (ModalDeferredCtx, S, A) -> Unit)
   Raw(async (@framework.ModalCtx) -> Unit)
 }
 

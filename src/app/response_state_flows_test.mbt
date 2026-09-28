@@ -104,6 +104,7 @@ async test "raw modal handler that responds then raises gets a followup" {
     @app.modal(
       custom_id="raw-form",
       title="Raw form",
+      state=@app.CustomIdCodec::unit(),
       fields=@app.ModalFields::of(
         @app.text_field(custom_id="note", label="Note"),
       ),

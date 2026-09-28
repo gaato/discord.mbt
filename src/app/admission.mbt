@@ -61,7 +61,8 @@ fn modal_admission(raw : @framework.ModalCtx) -> AdmissionGate {
     defer_now: plan => {
       match plan {
         DeferMessage(ephemeral~) => raw.defer_response(ephemeral~)
-        Respond | DeferUpdate => ()
+        DeferUpdate => raw.defer_update()
+        Respond => ()
       }
     },
   }
