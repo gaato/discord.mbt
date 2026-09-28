@@ -43,21 +43,18 @@ fn echo_command() -> @discord.Command[EchoArgs] {
 }
 
 ///|
-fn command_scope() -> @discord.CommandScope {
+/// The command sync scope: the `GUILD_ID` guild when set, otherwise global.
+/// An invalid `GUILD_ID` stops the program: falling back to a global sync
+/// would delete every undeclared global command.
+fn command_scope() -> @discord.CommandScope raise {
   match @env.get_env_var("GUILD_ID") {
     Some(raw) => {
-      let guild_id : @model.GuildId? = Some(@model.Id::parse(raw)) catch {
-        _ => None
+      let guild_id : @model.GuildId = @model.Id::parse(raw) catch {
+        _ => fail("GUILD_ID is not a valid guild id: \{raw}")
       }
-      match guild_id {
-        Some(value) => Guild(value)
-        None => {
-          println("[bot] invalid GUILD_ID, syncing globally")
-          Global
-        }
-      }
+      @discord.CommandScope::Guild(guild_id)
     }
-    None => Global
+    None => @discord.CommandScope::Global
   }
 }
 

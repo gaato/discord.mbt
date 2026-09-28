@@ -211,9 +211,9 @@ async test "component and modal failures expose the interaction and user" {
   let base = @testkit.interaction(guild~)
   for
     input in [
-      @testkit.component("button", base~),
+      @testkit.button("button", base~),
       @testkit.modal("form", base~),
-      @testkit.component("button"),
+      @testkit.button("button"),
     ] {
     let (matched, captured) = dispatch(app.build(), input)
     assert_true(matched)
@@ -282,7 +282,7 @@ async test "a failing typed suggestion reaches the policy and sends no choices" 
 async test "a malformed component payload is rejected before the handler" {
   let app = @app.AppBuilder()
   app.on_component_raw(prefix="button", _ => fail("must reject"))
-  let interaction = @testkit.component("button")
+  let interaction = @testkit.button("button")
   let client = @http.Client::offline(_ => fail("no REST call expected"))
   try dispatch(app.build(), { ..interaction, message: None, }, client~) catch {
     _ => ()

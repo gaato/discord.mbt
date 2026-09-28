@@ -45,8 +45,10 @@ REST, so they arrive at the offline handler like any other call.
 ## Fixtures
 
 `user`, `guild_member`, `role`, and `message` provide minimal typed models.
-`slash`, `user_command`, `message_command`, `autocomplete`, `component`, and
-`modal` provide interactions. Defaults have fixed IDs, a fixed timestamp,
+`slash`, `user_command`, `message_command`, `autocomplete`, `button`,
+`select`, and `modal` provide interactions; `button` and `select` produce the
+component payloads Discord sends (a button carries no `values`), and
+`component_raw` builds any other shape, including malformed ones. Defaults have fixed IDs, a fixed timestamp,
 synthetic tokens, and fresh collections; no global counter or wall clock is
 used. Override common context with `interaction(...)` and pass it as `base`.
 Use ordinary model struct updates for fields outside these small constructors,
@@ -58,7 +60,7 @@ test "a guild component interaction" {
   let actor = @testkit.user(username="tester")
   let membership = @testkit.guild_member(user=actor, roles=[@testkit.role().id])
   let base = @testkit.interaction(guild=(@model.Id(42UL), membership))
-  let input = @testkit.component("ticket:close:42", base~)
+  let input = @testkit.button("ticket:close:42", base~)
   assert_eq(input.guild_member.unwrap().user.unwrap().username, "tester")
 }
 ```

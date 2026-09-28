@@ -222,12 +222,69 @@ pub fn message_command(
 }
 
 ///|
-pub fn component(
+/// The select menu a `select` fixture submits.
+pub(all) enum SelectKind {
+  StringSelect
+  UserSelect
+  RoleSelect
+  MentionableSelect
+  ChannelSelect
+} derive(Eq, Debug)
+
+///|
+fn SelectKind::component_type(self : SelectKind) -> Int {
+  match self {
+    StringSelect => 3
+    UserSelect => 5
+    RoleSelect => 6
+    MentionableSelect => 7
+    ChannelSelect => 8
+  }
+}
+
+///|
+/// A click on the button `custom_id` attached to `message`. Discord sends no
+/// `values` for a button, so the fixture does not either.
+pub fn button(
   custom_id : String,
   message? : @model.Message = message(),
-  typ? : Int = 2,
-  values? : Array[String] = [],
+  base? : @model.Interaction,
+) -> @model.Interaction raise FixtureError {
+  component_raw(custom_id, typ=2, message~, base?)
+}
+
+///|
+/// A submission of the select menu `custom_id` with the chosen `values`.
+/// User, role, mentionable, and channel selects also carry the entities
+/// Discord resolved for those values in `resolved`.
+pub fn select(
+  custom_id : String,
+  values~ : Array[String],
+  kind? : SelectKind = StringSelect,
   resolved? : @model.ResolvedData,
+  message? : @model.Message = message(),
+  base? : @model.Interaction,
+) -> @model.Interaction raise FixtureError {
+  component_raw(
+    custom_id,
+    typ=kind.component_type(),
+    values~,
+    resolved?,
+    message~,
+    base?,
+  )
+}
+
+///|
+/// A component interaction with an explicit `component_type`, for shapes the
+/// typed `button` and `select` fixtures do not produce, including malformed
+/// ones. `values` is sent only when given.
+pub fn component_raw(
+  custom_id : String,
+  typ~ : Int,
+  values? : Array[String],
+  resolved? : @model.ResolvedData,
+  message? : @model.Message = message(),
   base? : @model.Interaction,
 ) -> @model.Interaction raise FixtureError {
   let base = base.unwrap_or_else(() => {
@@ -239,7 +296,9 @@ pub fn component(
   let fields : Map[String, Json] = {
     "custom_id": custom_id,
     "component_type": Json(typ),
-    "values": Json(values),
+  }
+  if values is Some(chosen) {
+    fields["values"] = Json(chosen)
   }
   if resolved is Some(value) {
     fields["resolved"] = value.to_json()

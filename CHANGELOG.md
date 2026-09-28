@@ -200,6 +200,16 @@ breaking change is listed with a migration note.
   allowed passing neither (an error at startup) or both (the token was
   silently ignored). Migration: `token~` becomes `access=Token(token)` and
   `client~` becomes `access=Client(client)`.
+- Breaking: `@testkit.component(custom_id, typ?, values?)` is split into
+  fixtures that produce what Discord sends: `button(custom_id)` (no
+  `values`) and `select(custom_id, values~, kind?)` with a typed
+  `SelectKind`. `component_raw(custom_id, typ~, values?)` builds any other
+  shape, including malformed ones. Migration: `component(id)` becomes
+  `button(id)`, `component(id, typ=5, values~)` becomes
+  `select(id, kind=UserSelect, values~)`.
+- The examples and the project template stop on an invalid `GUILD_ID`
+  instead of falling back to a global command sync, which would have deleted
+  every undeclared global command.
 - `ComponentDeferredCtx::edit_original(files=...)` on a `DeferredUpdate`
   handler replaced the host message's attachments with no way to keep them;
   pass `keep_attachments` to retain the existing ones.

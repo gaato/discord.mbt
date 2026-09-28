@@ -24,7 +24,12 @@ test "fixture overrides preserve permissions resolved data and modal origin" {
     is Some(Command({ resolved: Some(_), .. })),
   )
   assert_true(
-    @testkit.component("pick", typ=5, values=[actor.id.to_string()], resolved~).data
+    @testkit.select(
+      "pick",
+      kind=UserSelect,
+      values=[actor.id.to_string()],
+      resolved~,
+    ).data
     is Some(Component({ resolved: Some(_), .. })),
   )
   let source = @testkit.message(components=[], channel_id=@model.Id(12UL))
@@ -69,12 +74,10 @@ test "fixtures derive guild actors and reject contradictory context" {
   }
   let message = @testkit.message(channel_id=@model.Id(123UL))
   assert_eq(
-    @testkit.component("button", message~).channel_id,
+    @testkit.button("button", message~).channel_id,
     Some(message.channel_id),
   )
-  try
-    @testkit.component("button", message~, base=@testkit.interaction())
-  catch {
+  try @testkit.button("button", message~, base=@testkit.interaction()) catch {
     @testkit.FixtureError::InconsistentContext(_) => ()
   } noraise {
     _ => fail("expected channel mismatch")
@@ -114,7 +117,7 @@ async test "context command fixtures resolve targets and component/modal fixture
     input in [
       @testkit.user_command("User", @testkit.user()),
       @testkit.message_command("Message", @testkit.message()),
-      @testkit.component("button"),
+      @testkit.button("button"),
       @testkit.modal("form"),
     ] {
     let (gate, capture) = @framework.ResponseGate::capture(input)
@@ -122,4 +125,35 @@ async test "context command fixtures resolve targets and component/modal fixture
     assert_true(capture.try_get() is Some(_))
   }
   assert_true(failures.is_empty())
+}
+
+///|
+test "component fixtures match the shapes Discord sends" {
+  guard @testkit.button("ok").data is Some(Component(button)) else {
+    fail("expected component data")
+  }
+  assert_eq(button.component_type, 2)
+  assert_true(button.values is None)
+  let kinds : Array[(@testkit.SelectKind, Int)] = [
+    (StringSelect, 3),
+    (UserSelect, 5),
+    (RoleSelect, 6),
+    (MentionableSelect, 7),
+    (ChannelSelect, 8),
+  ]
+  for entry in kinds {
+    let (kind, expected) = entry
+    guard @testkit.select("pick", kind~, values=["a"]).data
+      is Some(Component(select)) else {
+      fail("expected component data")
+    }
+    assert_eq(select.component_type, expected)
+    assert_eq(select.values, Some(["a"]))
+  }
+  guard @testkit.component_raw("odd", typ=99, values=[]).data
+    is Some(Component(raw)) else {
+    fail("expected component data")
+  }
+  assert_eq(raw.component_type, 99)
+  assert_eq(raw.values, Some([]))
 }

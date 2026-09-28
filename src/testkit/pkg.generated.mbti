@@ -9,7 +9,9 @@ import {
 // Values
 pub fn autocomplete(String, options~ : Array[@model.CommandDataOption], base? : @model.Interaction) -> @model.Interaction
 
-pub fn component(String, message? : @model.Message, typ? : Int, values? : Array[String], resolved? : @model.ResolvedData, base? : @model.Interaction) -> @model.Interaction raise FixtureError
+pub fn button(String, message? : @model.Message, base? : @model.Interaction) -> @model.Interaction raise FixtureError
+
+pub fn component_raw(String, typ~ : Int, values? : Array[String], resolved? : @model.ResolvedData, message? : @model.Message, base? : @model.Interaction) -> @model.Interaction raise FixtureError
 
 pub fn default_application_id() -> @model.Id[@model.ApplicationMarker]
 
@@ -25,6 +27,8 @@ pub fn modal(String, components? : Array[@model.Component], resolved? : @model.R
 
 pub fn role(id? : @model.Id[@model.RoleMarker], name? : String, permissions? : @model.Permissions) -> @model.Role
 
+pub fn select(String, values~ : Array[String], kind? : SelectKind, resolved? : @model.ResolvedData, message? : @model.Message, base? : @model.Interaction) -> @model.Interaction raise FixtureError
+
 pub fn slash(String, options? : Array[@model.CommandDataOption], resolved? : @model.ResolvedData, base? : @model.Interaction) -> @model.Interaction
 
 pub fn user(id? : @model.Id[@model.UserMarker], username? : String, bot? : Bool) -> @model.User
@@ -37,6 +41,13 @@ pub(all) suberror FixtureError {
 } derive(Eq, @debug.Debug)
 
 // Types and methods
+pub(all) enum SelectKind {
+  StringSelect
+  UserSelect
+  RoleSelect
+  MentionableSelect
+  ChannelSelect
+} derive(Eq, @debug.Debug)
 
 // Type aliases
 
