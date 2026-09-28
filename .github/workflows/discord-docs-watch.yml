@@ -2,11 +2,11 @@ name: Discord docs watch
 
 # Compares Discord's latest developer docs with the commit the library was last
 # reviewed against (scripts/discord-docs-commit). It lists the docs commits
-# since that baseline and runs the model-shape and CDN audits against the
-# latest docs. While anything needs review, one issue titled "Review Discord
-# docs changes" stays open with the current report; once the baseline is moved
-# and the audits pass, the next run closes it. An audit failure also fails the
-# run.
+# since that baseline and runs the model-shape, CDN, and interaction callback
+# audits against the latest docs. While anything needs review, one issue titled
+# "Review Discord docs changes" stays open with the current report; once the
+# baseline is moved and the audits pass, the next run closes it. An audit
+# failure also fails the run.
 
 on:
   schedule:
@@ -63,6 +63,9 @@ jobs:
           cdn_status=0
           moon run scripts/docs_cdn_audit.mbtx "$docs/developers/reference.mdx" \
             --self-test > "$RUNNER_TEMP/cdn.txt" 2>&1 || cdn_status=$?
+          callback_status=0
+          moon run scripts/docs_callback_audit.mbtx "$docs" \
+            --self-test > "$RUNNER_TEMP/callback.txt" 2>&1 || callback_status=$?
 
           report="$RUNNER_TEMP/report.md"
           {
@@ -87,15 +90,23 @@ jobs:
             echo '```text'
             cat "$RUNNER_TEMP/cdn.txt"
             echo '```'
+            echo
+            echo "## Interaction callback audit (exit $callback_status)"
+            echo
+            echo '```text'
+            cat "$RUNNER_TEMP/callback.txt"
+            echo '```'
           } > "$report"
           cat "$report" >> "$GITHUB_STEP_SUMMARY"
 
           clean=false
-          if [ -z "$commits" ] && [ "$shape_status" -eq 0 ] && [ "$cdn_status" -eq 0 ]; then
+          if [ -z "$commits" ] && [ "$shape_status" -eq 0 ] && [ "$cdn_status" -eq 0 ] &&
+            [ "$callback_status" -eq 0 ]; then
             clean=true
           fi
           audits_ok=false
-          if [ "$shape_status" -eq 0 ] && [ "$cdn_status" -eq 0 ]; then
+          if [ "$shape_status" -eq 0 ] && [ "$cdn_status" -eq 0 ] &&
+            [ "$callback_status" -eq 0 ]; then
             audits_ok=true
           fi
           {
@@ -122,7 +133,7 @@ jobs:
               if (existing) {
                 await github.rest.issues.createComment({
                   owner, repo, issue_number: existing.number,
-                  body: 'The baseline matches the latest docs and both audits pass.',
+                  body: 'The baseline matches the latest docs and every audit passes.',
                 })
                 await github.rest.issues.update({
                   owner, repo, issue_number: existing.number, state: 'closed',

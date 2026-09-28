@@ -39,3 +39,15 @@ Deliberate exceptions are listed in `api_surface_audit.allow` with a reason:
 `@pkg.*` leaves a whole focused package to direct imports, and
 `positional @pkg.function` excuses one function. Unknown or stale entries fail
 the audit.
+
+# Interaction callback field audit
+
+```fish
+moon run scripts/docs_callback_audit.mbtx ~/ghq/github.com/discord/discord-api-docs/developers/interactions/receiving-and-responding.mdx --self-test
+```
+
+Compares the "Messages" table of the interaction callback data with the fields
+every message-bearing interaction surface sends (`@http.interaction_message_data`).
+A field Discord adds or removes fails the audit until the library follows it or
+`docs_callback_audit.allow` explains why it is not offered. CI and the daily
+docs watch run it next to the CDN audit.

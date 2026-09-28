@@ -1,0 +1,301 @@
+///|
+/// Audit the message fields each interaction message surface sends against
+/// Discord's documentation.
+///
+/// Three surfaces, each a documented parameter table and the library functions
+/// that build its body:
+///
+/// - `callback`: the "Messages" table of Interaction Callback Data, built by
+///   `interaction_message_data` (initial replies and component/modal updates).
+/// - `followup`: the Execute Webhook JSON/Form params, built by
+///   `Client::create_followup`.
+/// - `edit`: the Edit Webhook Message JSON/Form params, built by
+///   `Client::edit_original_response` and `Client::edit_followup`.
+///
+/// Every documented field must be sent by the surface or excused in
+/// `docs_callback_audit.allow` as `surface field # reason`. Every field a
+/// surface claims to send must still be documented and must appear as a
+/// string literal in the functions that build it, so the claim cannot outlive
+/// the implementation. Unknown or stale allow entries fail the audit.
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/fs",
+  "moonbitlang/core/env",
+}
+
+///|
+struct Surface {
+  name : String
+  /// Documentation file under the docs checkout, and the heading that starts
+  /// the section holding the parameter table.
+  doc : String
+  section : String
+  table : String
+  /// Fields the library sends on this surface.
+  sends : Array[String]
+  /// Source files and functions (including shared helpers) that build the body.
+  builders : Array[(String, String)]
+}
+
+///|
+/// Helpers shared by every message body: content/embeds/components/flags and
+/// the `attachments` array.
+let shared_builders : Array[(String, String)] = [
+  ("src/http/patch_fields.mbt", "message_patch_builder"),
+  ("src/http/multipart.mbt", "edit_attachments_field"),
+]
+
+///|
+fn surfaces() -> Array[Surface] {
+  [
+    {
+      name: "callback",
+      doc: "developers/interactions/receiving-and-responding.mdx",
+      section: "###### Interaction Callback Data Structure",
+      table: "###### Messages",
+      sends: [
+        "content", "embeds", "allowed_mentions", "flags", "components", "attachments",
+        "poll",
+      ],
+      builders: [
+        ("src/http/interaction_callback.mbt", "interaction_message_data"),
+        ..shared_builders,
+      ],
+    },
+    {
+      name: "followup",
+      doc: "developers/resources/webhook.mdx",
+      section: "## Execute Webhook",
+      table: "###### JSON/Form Params",
+      sends: [
+        "content", "embeds", "allowed_mentions", "components", "attachments", "flags",
+        "poll",
+      ],
+      builders: [
+        ("src/http/api_interaction.mbt", "Client::create_followup"),
+        ("src/http/multipart.mbt", "attachments_json"),
+      ],
+    },
+    {
+      name: "edit",
+      doc: "developers/resources/webhook.mdx",
+      section: "## Edit Webhook Message",
+      table: "###### JSON/Form Params",
+      sends: [
+        "content", "embeds", "flags", "allowed_mentions", "components", "attachments",
+        "poll",
+      ],
+      builders: [
+        ("src/http/api_interaction.mbt", "Client::edit_original_response"),
+        ("src/http/api_interaction.mbt", "Client::edit_followup"),
+        ..shared_builders,
+      ],
+    },
+  ]
+}
+
+///|
+/// The field names of the first table after `table` inside `section`.
+fn table_fields(
+  text : String,
+  section : String,
+  table : String,
+) -> Array[String] raise {
+  let lines = text.split("\n").map(line => line.to_owned()).to_array()
+  guard lines.search_by(line => line.trim() == section) is Some(start) else {
+    fail("missing section \{section}")
+  }
+  let mut index = start + 1
+  while index < lines.length() && lines[index].trim() != table {
+    if lines[index].has_prefix("## ") {
+      fail("missing \{table} in \{section}")
+    }
+    index += 1
+  }
+  if index >= lines.length() {
+    fail("missing \{table} in \{section}")
+  }
+  let fields : Array[String] = []
+  let mut in_table = false
+  for line in lines[index + 1:] {
+    let line = line.trim().to_owned()
+    if line.has_prefix("#") {
+      break
+    }
+    if !line.has_prefix("|") {
+      if in_table {
+        break
+      }
+      continue
+    }
+    in_table = true
+    let cells = line.split("|").to_array()
+    guard cells.length() > 2 else { continue }
+    let cell = cells[1].trim().to_owned()
+    if cell == "Field" || cell.has_prefix("-") {
+      continue
+    }
+    let name = StringBuilder()
+    for c in cell {
+      if c.is_ascii_alphabetic() || c.is_ascii_digit() || c == '_' {
+        name.write_char(c)
+      } else {
+        break
+      }
+    }
+    fields.push(name.to_string())
+  }
+  if fields.is_empty() {
+    fail("empty \{table} in \{section}")
+  }
+  fields
+}
+
+///|
+/// The text of function `name` in `source`: from its `fn` line to the next
+/// top-level block.
+fn function_body(source : String, name : String) -> String raise {
+  guard source.find("fn \{name}(") is Some(start) else {
+    fail("missing builder function \{name}")
+  }
+  let rest = source[start:].to_owned()
+  match rest.find("\n///|") {
+    Some(end) => rest[0:end].to_owned()
+    None => rest
+  }
+}
+
+///|
+fn audit(
+  docs : Map[String, String],
+  sources : Map[String, String],
+  allow_text : String,
+) -> Unit raise {
+  let allowed : Set[String] = Set([])
+  for raw in allow_text.split("\n") {
+    let line = raw.trim().to_owned()
+    if line.is_empty() || line.has_prefix("#") {
+      continue
+    }
+    let parts = line.split("#").to_array()
+    if parts.length() < 2 || parts[1].trim().is_empty() {
+      fail("allow entry requires a reason: \{line}")
+    }
+    let key = parts[0].trim().to_owned()
+    if allowed.contains(key) {
+      fail("duplicate allow entry: \{key}")
+    }
+    allowed.add(key)
+  }
+  let problems : Array[String] = []
+  let used : Set[String] = Set([])
+  for surface in surfaces() {
+    guard docs.get(surface.doc) is Some(text) else {
+      fail("missing docs file \{surface.doc}")
+    }
+    let documented = table_fields(text, surface.section, surface.table)
+    let built = StringBuilder()
+    for builder in surface.builders {
+      guard sources.get(builder.0) is Some(source) else {
+        fail("missing source \{builder.0}")
+      }
+      built.write_string(function_body(source, builder.1))
+    }
+    let built = built.to_string()
+    for field in documented {
+      let key = "\{surface.name} \{field}"
+      if surface.sends.contains(field) {
+        if allowed.contains(key) {
+          problems.push("stale allow entry: \{key} is sent")
+        }
+      } else if allowed.contains(key) {
+        used.add(key)
+      } else {
+        problems.push("\{surface.name}: `\{field}` is neither sent nor explained")
+      }
+    }
+    for field in surface.sends {
+      if !documented.contains(field) {
+        problems.push(
+          "\{surface.name}: the library sends `\{field}`, which Discord no longer documents",
+        )
+      }
+      if !built.contains("\"\{field}\"") {
+        problems.push(
+          "\{surface.name}: `\{field}` is claimed but no builder writes \"\{field}\"",
+        )
+      }
+    }
+  }
+  for key in allowed {
+    if !used.contains(key) && !problems.iter().any(p => p.contains(key)) {
+      problems.push("stale allow entry: \{key}")
+    }
+  }
+  if !problems.is_empty() {
+    fail(problems.join("\n"))
+  }
+}
+
+///|
+fn must_fail(run : () -> Unit raise) -> Unit raise {
+  try run() catch {
+    _ => ()
+  } noraise {
+    _ => fail("negative audit self-test unexpectedly passed")
+  }
+}
+
+///|
+async fn main {
+  let args = @env.args()
+  let self_test = args.length() == 3 && args[2] == "--self-test"
+  if args.length() < 2 || args.length() > 3 ||
+    (args.length() == 3 && !self_test) {
+    fail(
+      "usage: moon run scripts/docs_callback_audit.mbtx DISCORD_API_DOCS_DIR [--self-test]",
+    )
+  }
+  let docs : Map[String, String] = Map([])
+  let sources : Map[String, String] = Map([])
+  for surface in surfaces() {
+    if !docs.contains(surface.doc) {
+      docs[surface.doc] = @fs.read_file("\{args[1]}/\{surface.doc}").text()
+    }
+    for builder in surface.builders {
+      if !sources.contains(builder.0) {
+        sources[builder.0] = @fs.read_file(builder.0).text()
+      }
+    }
+  }
+  let allow = @fs.read_file("scripts/docs_callback_audit.allow").text()
+  audit(docs, sources, allow)
+  if self_test {
+    let callback_doc = "developers/interactions/receiving-and-responding.mdx"
+    let webhook_doc = "developers/resources/webhook.mdx"
+    // A new documented field, a dropped one, and a builder that stops writing
+    // a claimed field must each fail, as must missing or stale allow entries.
+    let added = docs.copy()
+    added[callback_doc] = docs[callback_doc].replace(
+      old="| poll?",
+      new="| survey?           | object | New |\n| poll?",
+    )
+    must_fail(() => audit(added, sources, allow))
+    let dropped = docs.copy()
+    dropped[webhook_doc] = docs[webhook_doc].replace(
+      old="| poll \\*\\*\\*\\*",
+      new="| gone",
+    )
+    must_fail(() => audit(dropped, sources, allow))
+    let unbuilt = sources.copy()
+    unbuilt["src/http/interaction_callback.mbt"] = sources["src/http/interaction_callback.mbt"].replace(
+      old="\"poll\"",
+      new="\"pole\"",
+    )
+    must_fail(() => audit(docs, unbuilt, allow))
+    must_fail(() => audit(docs, sources, ""))
+    must_fail(() => audit(docs, sources, allow + "\ncallback content # stale\n"))
+    println("callback audit self-tests: OK")
+  }
+  println("interaction message fields: OK")
+}

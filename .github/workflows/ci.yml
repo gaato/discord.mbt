@@ -92,6 +92,16 @@ jobs:
             --output "$RUNNER_TEMP/discord-reference.mdx"
           moon run scripts/docs_cdn_audit.mbtx "$RUNNER_TEMP/discord-reference.mdx" --self-test
 
+      - name: Audit interaction message fields
+        run: |
+          docs="$RUNNER_TEMP/discord-api-docs"
+          base="https://raw.githubusercontent.com/discord/discord-api-docs/$(cat scripts/discord-docs-commit)"
+          for page in developers/interactions/receiving-and-responding.mdx developers/resources/webhook.mdx; do
+            curl --proto '=https' --tlsv1.2 --fail --show-error --silent --location \
+              --create-dirs "$base/$page" --output "$docs/$page"
+          done
+          moon run scripts/docs_callback_audit.mbtx "$docs" --self-test
+
   js:
     runs-on: ubuntu-24.04
     timeout-minutes: 20

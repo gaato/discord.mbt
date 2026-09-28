@@ -1,0 +1,14 @@
+# Documented message fields an interaction surface deliberately does not send,
+# as `surface field # reason`. Surfaces: callback (initial replies and
+# updates), followup (Execute Webhook), edit (Edit Webhook Message).
+
+callback tts            # text-to-speech replies are not exposed on any interaction surface
+followup tts            # text-to-speech replies are not exposed on any interaction surface
+followup username       # Discord does not support it for interaction followups (Create Followup Message)
+followup avatar_url     # Discord does not support it for interaction followups (Create Followup Message)
+followup thread_name    # forum thread creation belongs to Execute Webhook, not interaction followups
+followup applied_tags   # forum thread tags belong to Execute Webhook, not interaction followups
+followup files          # multipart transport: FileUpload values become files[n] parts
+followup payload_json   # multipart transport: the JSON body travels as payload_json with files
+edit files              # multipart transport: FileUpload values become files[n] parts
+edit payload_json       # multipart transport: the JSON body travels as payload_json with files
