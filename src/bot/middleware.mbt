@@ -17,13 +17,13 @@ pub type EventMiddleware = async (
 /// separate from the shard loop: slow middleware delays later events, never
 /// interaction routing. A dropped event emits no EventDispatched
 /// telemetry. Middleware cannot widen intents or the gateway event filter.
-pub fn Bot::middleware(self : Bot, middleware : EventMiddleware) -> Unit {
+fn BotCore::middleware(self : BotCore, middleware : EventMiddleware) -> Unit {
   self.event_middleware_.push(middleware)
 }
 
 ///|
-async fn Bot::run_event_middleware(
-  self : Bot,
+async fn BotCore::run_event_middleware(
+  self : BotCore,
   spawner : @app.Spawner,
   ctx : GatewayCtx,
   index : Int,
@@ -39,8 +39,8 @@ async fn Bot::run_event_middleware(
 }
 
 ///|
-async fn Bot::dispatch_event(
-  self : Bot,
+async fn BotCore::dispatch_event(
+  self : BotCore,
   spawner : @app.Spawner,
   ctx : GatewayCtx,
   event : @model.Event,

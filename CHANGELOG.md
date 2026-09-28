@@ -177,6 +177,29 @@ breaking change is listed with a migration note.
   the button (`route.custom_id(id)`) and the wait
   (`wait_for_component(route, id)`). `Framework::wait_for_component` keeps
   its string id for low-level use.
+- Breaking: the gateway bot is split into `BotBuilder` and `Bot`, like
+  `AppBuilder` and `App`. `BotBuilder(app, token~, ...)` takes the former
+  `Bot(...)` arguments and owns every registration (`on`, `on_event`,
+  `middleware`, `service`, `attach_cache`, `on_telemetry`,
+  `on_decode_error`). `build()` validates the configuration — an empty token,
+  `compress=true` without zlib-stream support, a shard selection Discord
+  cannot represent, a saved session whose ids disagree — and raises the new
+  `BotConfigError` before any connection, where `run` used to raise
+  `AppConfigError::EmptyToken` or `BotError::InvalidShardConfig`. It also
+  resolves intents once. The resulting `Bot` keeps `run` and `sessions`;
+  registering on the builder afterwards does not change it. `run` raises the
+  new `BotError::AlreadyRunning` while the same bot is running and may run
+  again after it returns. `BotError::InvalidShardConfig` is replaced by
+  `InvalidGatewayInfo` for layouts Discord supplies at run time. Migration:
+  `let bot = Bot(app, token~)` becomes `let bot = BotBuilder(app, token~)`,
+  `bot.run()` becomes `bot.build().run()`, keep the built `Bot` where you
+  read `sessions()`, and a feature's `attach_x(bot : Bot)` takes a
+  `BotBuilder`.
+- Breaking: `App::serve` and `serve_interactions` take a required
+  `access~ : RestAccess` instead of optional `client` and `token`, which
+  allowed passing neither (an error at startup) or both (the token was
+  silently ignored). Migration: `token~` becomes `access=Token(token)` and
+  `client~` becomes `access=Client(client)`.
 - `ComponentDeferredCtx::edit_original(files=...)` on a `DeferredUpdate`
   handler replaced the host message's attachments with no way to keep them;
   pass `keep_attachments` to retain the existing ones.

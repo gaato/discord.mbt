@@ -8,7 +8,7 @@ associated with that event.
 
 ```mbt check
 ///|
-fn register_handlers(bot : @discord.Bot) -> Unit {
+fn register_handlers(bot : @discord.BotBuilder) -> Unit {
   bot.on(@discord.Events::ready(), (_, ready) => {
     println("ready as \{ready.user.username}")
   })
@@ -56,7 +56,7 @@ let gateway_ping : @discord.Command[Unit] = @discord.slash(
 )
 
 ///|
-fn observe_shard_latency(bot : @discord.Bot) -> Unit {
+fn observe_shard_latency(bot : @discord.BotBuilder) -> Unit {
   bot.on(@discord.Events::ready(), (ctx, _) => {
     println("this shard: \{latency_text(ctx.latency_ms())}")
   })
@@ -74,7 +74,7 @@ unfurls and pin changes. Gate edit-only work with `is_edit()`:
 
 ```mbt check
 ///|
-fn register_message_edits(bot : @discord.Bot) -> Unit {
+fn register_message_edits(bot : @discord.BotBuilder) -> Unit {
   bot.on(@discord.Events::message_update(), (_, event) => {
     if event.is_edit() {
       match event.before {
@@ -96,7 +96,7 @@ exact edit detection should enable the messages cache.
 
 ## Automatic intent derivation
 
-When `Bot(...)` omits `intents`, `Bot` unions the delivery intents required by
+When `BotBuilder(...)` omits `intents`, `build()` unions the delivery intents required by
 all typed subscriptions, then removes privileged intents. For example,
 `message_create()` contributes `GUILD_MESSAGES | DIRECT_MESSAGES`.
 
@@ -120,8 +120,8 @@ let explicit_intents : @model.Intents = @model.Intents::guilds() |
 fn bot_with_explicit_intents(
   app : @discord.App,
   token : String,
-) -> @discord.Bot {
-  Bot(app, token~, intents=explicit_intents)
+) -> @discord.BotBuilder {
+  @discord.BotBuilder(app, token~, intents=explicit_intents)
 }
 
 ///|
@@ -137,7 +137,7 @@ need ordinary user-authored message content.
 
 Raw handlers registered with `bot.on_event` also cannot imply an intent set.
 If any raw handlers are used, pass the complete intended bitfield to
-`Bot(...)`.
+`BotBuilder(...)`.
 
 ## Decode errors
 
@@ -149,7 +149,10 @@ Register a decode observer only when the raw payload is needed for diagnostics:
 
 ```mbt check
 ///|
-fn observe_decode_errors(app : @discord.AppBuilder, bot : @discord.Bot) -> Unit {
+fn observe_decode_errors(
+  app : @discord.AppBuilder,
+  bot : @discord.BotBuilder,
+) -> Unit {
   app.on_warn(warning => println("[warn] \{warning.to_string()}"))
   bot.on_decode_error((marker, payload) => {
     println("\{marker}: \{payload.stringify()}")
@@ -172,8 +175,11 @@ the cut-over, opt in to test with the Identify capability:
 
 ```mbt check
 ///|
-fn obfuscation_test_bot(app : @discord.App, token : String) -> @discord.Bot {
-  @discord.Bot(
+fn obfuscation_test_bot(
+  app : @discord.App,
+  token : String,
+) -> @discord.BotBuilder {
+  @discord.BotBuilder(
     app,
     token~,
     capabilities=@discord.GatewayCapabilities::channel_obfuscation(),
@@ -183,12 +189,12 @@ fn obfuscation_test_bot(app : @discord.App, token : String) -> @discord.Bot {
 
 ## Gateway event middleware
 
-`Bot::middleware` can filter an event by omitting `next`, or transform the
+`BotBuilder::middleware` can filter an event by omitting `next`, or transform the
 event passed to typed and raw handlers:
 
 ```mbt check
 ///|
-fn filter_and_tag(bot : @discord.Bot) -> Unit {
+fn filter_and_tag(bot : @discord.BotBuilder) -> Unit {
   bot.middleware((_, event, next) => {
     match event {
       MessageCreate(created) if created.message.author.bot is Some(true) => ()
@@ -217,10 +223,17 @@ contract and registration order.
 
 ```mbt check
 ///|
-fn sharded_bots(app : @discord.App, token : String) -> Array[@discord.Bot] {
-  let auto = @discord.Bot(app, token~, shards=Auto) // recommended count
-  let fixed = @discord.Bot(app, token~, shards=Fixed(count=4)) // explicit local count
-  let ranged = @discord.Bot(app, token~, shards=Range(ids=[0, 1], count=8))
+fn sharded_bots(
+  app : @discord.App,
+  token : String,
+) -> Array[@discord.BotBuilder] {
+  let auto = @discord.BotBuilder(app, token~, shards=Auto) // recommended count
+  let fixed = @discord.BotBuilder(app, token~, shards=Fixed(count=4)) // explicit local count
+  let ranged = @discord.BotBuilder(
+    app,
+    token~,
+    shards=Range(ids=[0, 1], count=8),
+  )
   [auto, fixed, ranged]
 }
 
@@ -252,12 +265,12 @@ bundled coordinator described in
 ## Gateway compression
 
 Gateway `zlib-stream` transport compression is opt-in. Pass `compress=true`
-to `Bot(...)` (or `Shard::start` at the lower level):
+to `BotBuilder(...)` (or `Shard::start` at the lower level):
 
 ```mbt check
 ///|
-fn compressed_bot(app : @discord.App, token : String) -> @discord.Bot {
-  Bot(app, token~, compress=true)
+fn compressed_bot(app : @discord.App, token : String) -> @discord.BotBuilder {
+  @discord.BotBuilder(app, token~, compress=true)
 }
 ```
 
@@ -284,7 +297,7 @@ it to a `Bot` to apply every decoded event before event handlers run:
 
 ```mbt check
 ///|
-fn install_cache(bot : @discord.Bot) -> @cache.InMemoryCache {
+fn install_cache(bot : @discord.BotBuilder) -> @cache.InMemoryCache {
   let cache = @cache.InMemoryCache(
     resources=CacheResources(presences=true, messages=true),
     limits=CacheLimits(
@@ -346,7 +359,7 @@ with a cache-first lookup. This is useful because
 
 ```mbt check
 ///|
-fn register_channel_resolution(bot : @discord.Bot) -> Unit {
+fn register_channel_resolution(bot : @discord.BotBuilder) -> Unit {
   bot.on(@discord.Events::message_create(), (ctx, event) => {
     if ctx.cache() is Some(cache) {
       ignore(cache.channel(event.message.channel_id))

@@ -93,7 +93,7 @@ pub struct App {
 }
 pub fn App::attach(Self, @framework.Framework, client~ : @http.Client, application_id~ : @model.Id[@model.ApplicationMarker], waiter? : async (String, @model.Id[@model.UserMarker]?, Int?) -> @framework.ComponentCtx?, latency_ms? : () -> Int64?) -> AppCtx
 pub async fn App::report_failure(Self, FailureOrigin, Error) -> Unit
-pub async fn App::serve(Self, @async.TaskGroup[Unit], client? : @http.Client, token? : String, application_id? : @model.Id[@model.ApplicationMarker]) -> InteractionEndpoint
+pub async fn App::serve(Self, @async.TaskGroup[Unit], access~ : RestAccess, application_id? : @model.Id[@model.ApplicationMarker]) -> InteractionEndpoint
 pub fn App::spawner(Self, @async.TaskGroup[Unit]) -> async (async () -> Unit) -> Unit
 pub async fn App::sync_commands(Self, @http.Client, @model.Id[@model.ApplicationMarker], scope~ : CommandScope, unowned? : @framework.UnownedCommands) -> SyncReport
 pub fn App::warn(Self, AppWarning) -> Unit
@@ -453,6 +453,11 @@ pub struct RegisteredCommand {
   // private fields
 }
 pub fn RegisteredCommand::name(Self) -> String
+
+pub(all) enum RestAccess {
+  Token(String)
+  Client(@http.Client)
+}
 
 pub struct SlashChild {
   // private fields

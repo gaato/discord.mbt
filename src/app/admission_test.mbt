@@ -82,7 +82,7 @@ async test "handler capacity waits count against the response deadline" {
       .build()
       .serve(
         group,
-        client~,
+        access=Client(client),
         application_id=@model.Id::parse("400000000000000001"),
       )
     group.spawn_bg(() => {
@@ -150,7 +150,7 @@ async test "slow middleware on a deferring route is acknowledged automatically" 
       .build()
       .serve(
         group,
-        client~,
+        access=Client(client),
         application_id=@model.Id::parse("400000000000000001"),
       )
     // 1100 ms leaves 100 ms before the watchdog's 1000 ms margin.
@@ -198,7 +198,7 @@ async test "fast failures on a deferring route stay ephemeral initial responses"
       .build()
       .serve(
         group,
-        client~,
+        access=Client(client),
         application_id=@model.Id::parse("400000000000000001"),
       )
     guard endpoint.handle_interaction(

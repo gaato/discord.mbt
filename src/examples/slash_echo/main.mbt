@@ -73,11 +73,12 @@ async fn main {
     let app = @discord.AppBuilder()
     app.command(echo_command())
 
-    let bot = @discord.Bot(app.build(), token~, sync=command_scope())
+    let bot = @discord.BotBuilder(app.build(), token~, sync=command_scope())
     bot.on(@discord.Events::ready(), (_ctx, ready) => {
       println("[bot] ready as \{ready.user.username}")
     })
-    @async.with_timeout_opt(run_seconds * 1000, () => bot.run()) |> ignore
+    @async.with_timeout_opt(run_seconds * 1000, () => bot.build().run())
+    |> ignore
   })
   |> ignore
   println("[bot] shutting down")

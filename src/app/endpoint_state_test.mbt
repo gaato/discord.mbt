@@ -32,7 +32,7 @@ async test "deadline races preserve every accepted capture" {
           .build()
           .serve(
             group,
-            client~,
+            access=Client(client),
             application_id=@model.Id::parse("400000000000000001"),
           )
         let outcome = @async.with_timeout(1000, () => {

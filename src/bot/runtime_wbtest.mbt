@@ -3,35 +3,37 @@ test "intent derivation strips privileged intents and warns" {
   let app = @app.AppBuilder()
   let warnings : Array[String] = []
   app.on_warn(warning => warnings.push(warning.to_string()))
-  let bot = Bot(app.build(), token="token")
+  let bot = BotBuilder(app.build(), token="token")
   bot.on(Events::message_create(), (_, _) => ())
   bot.on(Events::guild_member_add(), (_, _) => ())
-  inspect(bot.resolved_intents().bits(), content="4608")
+  inspect(bot.core.resolved_intents().bits(), content="4608")
   inspect(warnings.length(), content="1")
   assert_true(warnings[0].contains("privileged intent"))
   let explicit_app = @app.AppBuilder()
   let explicit_warnings : Array[String] = []
   explicit_app.on_warn(warning => explicit_warnings.push(warning.to_string()))
-  let explicit = Bot(
+  let explicit = BotBuilder(
     explicit_app.build(),
     token="token",
     intents=@model.Intents::guilds(),
   )
   explicit.on(Events::message_create(), (_, _) => ())
-  inspect(explicit.resolved_intents().bits(), content="1")
+  inspect(explicit.core.resolved_intents().bits(), content="1")
   inspect(explicit_warnings.length(), content="1")
 }
 
 ///|
 test "cache attachment keeps the gateway filter open and shares state" {
   let app = @app.AppBuilder()
-  let bot = Bot(app.build(), token="token")
+  let bot = BotBuilder(app.build(), token="token")
   let cache = @cache.InMemoryCache(resources=@cache.CacheResources::default())
   bot.attach_cache(cache)
-  let filter = bot.event_filter()
+  let filter = bot.core.event_filter()
   assert_true(filter(KReady))
   assert_true(filter(KInviteDelete))
-  guard bot.cache_ is Some(attached) else { fail("expected attached cache") }
+  guard bot.core.cache_ is Some(attached) else {
+    fail("expected attached cache")
+  }
   attached.update(
     GuildDelete({ id: @model.Id::parse("100"), unavailable: true, }),
   )
@@ -49,9 +51,9 @@ test "bot telemetry hook failures flow to app warnings" {
   let app = @app.AppBuilder()
   let warnings : Array[String] = []
   app.on_warn(warning => warnings.push(warning.to_string()))
-  let bot = Bot(app.build(), token="test-token")
+  let bot = BotBuilder(app.build(), token="test-token")
   bot.on_telemetry(_ => raise RuntimeTestFailure)
-  bot.emit_telemetry(DecodeError(marker="DECODE_ERROR:test"))
+  bot.core.emit_telemetry(DecodeError(marker="DECODE_ERROR:test"))
   inspect(warnings.length(), content="1")
   assert_true(warnings[0].contains("telemetry hook failed"))
 }
@@ -121,7 +123,7 @@ async test "bot restores context before replay and snapshots live sessions" {
     },
     ready,
   }
-  let bot = Bot(
+  let bot = BotBuilder(
     app.build(),
     token="test-token",
     intents=@model.Intents::guild_messages(),
@@ -133,7 +135,7 @@ async test "bot restores context before replay and snapshots live sessions" {
   // Mutating caller-owned input after construction cannot alter the seed.
   saved.gateway.sequence = 999L
   saved.ready.guilds.push({ id: @model.Id::parse("999"), unavailable: true, })
-  bot.connector_.val = Some(url => {
+  bot.core.connector_.val = Some(url => {
     urls.push(url)
     (transport : &@gateway.GatewayTransport)
   })
@@ -145,9 +147,10 @@ async test "bot restores context before replay and snapshots live sessions" {
   })
   let service_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.service(name="resume-service", ctx => service_contexts.put(ctx))
-  assert_true(bot.sessions().is_empty())
+  let bot_bot = bot.build()
+  assert_true(bot_bot.sessions().is_empty())
   @async.with_task_group(group => {
-    let running = group.spawn(no_wait=true, () => bot.run())
+    let running = group.spawn(no_wait=true, () => bot_bot.run())
     transport.incoming.put(BOT_HELLO)
     guard transport.outgoing.get()
       is {
@@ -175,7 +178,7 @@ async test "bot restores context before replay and snapshots live sessions" {
     assert_true(physical_equal(ctx, post_ctx))
     assert_true(service_contexts.try_get() is None)
     assert_eq(ready_calls.val, 0)
-    let sessions = bot.sessions()
+    let sessions = bot_bot.sessions()
     guard sessions.get(0) is Some(session) else {
       fail("expected live BotSession")
     }
@@ -191,14 +194,14 @@ async test "bot restores context before replay and snapshots live sessions" {
       id: @model.Id::parse("998"),
       unavailable: true,
     })
-    guard bot.sessions().get(0) is Some(again) else {
+    guard bot_bot.sessions().get(0) is Some(again) else {
       fail("expected independent BotSession snapshot")
     }
     assert_eq(again.gateway.sequence, 45L)
     assert_eq(again.ready.guilds.length(), 0)
     ctx.shutdown()
     running.wait()
-    assert_true(bot.sessions().is_empty())
+    assert_true(bot_bot.sessions().is_empty())
   })
 }
 
@@ -227,23 +230,24 @@ async test "bot reports supplied sessions while resolving shards" {
     },
     ready,
   }
-  let bot = Bot(
+  let bot = BotBuilder(
     app.build(),
     token="test-token",
     intents=@model.Intents::guild_messages(),
     client~,
     resume={ 0: saved },
   )
-  bot.gateway_bot_info_.val = Some(manager_gateway_info())
-  bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
+  bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
   let events : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::message_delete(), (ctx, _) => events.put(ctx))
-  assert_true(bot.sessions().is_empty())
+  let bot_bot = bot.build()
+  assert_true(bot_bot.sessions().is_empty())
   @async.with_task_group(group => {
-    let running = group.spawn(no_wait=true, () => bot.run())
+    let running = group.spawn(no_wait=true, () => bot_bot.run())
     gateway_requested.get()
     // The gateway lookup is still pending: the supplied snapshot is reported.
-    guard bot.sessions().get(0) is Some(pending) else {
+    guard bot_bot.sessions().get(0) is Some(pending) else {
       fail("expected supplied BotSession while resolving shards")
     }
     assert_eq(pending.gateway.sequence, 41L)
@@ -254,7 +258,7 @@ async test "bot reports supplied sessions while resolving shards" {
     guard transport.outgoing.get() is { "op": Number(6, ..), .. } else {
       fail("expected saved RESUME")
     }
-    guard bot.sessions().get(0) is Some(connecting) else {
+    guard bot_bot.sessions().get(0) is Some(connecting) else {
       fail("expected BotSession while connecting")
     }
     assert_eq(connecting.gateway.sequence, 41L)
@@ -262,7 +266,7 @@ async test "bot reports supplied sessions while resolving shards" {
     let ctx = events.get()
     ctx.shutdown()
     running.wait()
-    assert_true(bot.sessions().is_empty())
+    assert_true(bot_bot.sessions().is_empty())
   })
 }
 
@@ -294,7 +298,7 @@ async test "bot identifies instead of resuming a session from another shard layo
     },
     ready,
   }
-  let bot = Bot(
+  let bot = BotBuilder(
     app.build(),
     token="test-token",
     intents=@model.Intents::guild_messages(),
@@ -302,12 +306,13 @@ async test "bot identifies instead of resuming a session from another shard layo
     gateway_url="wss://gateway.example",
     resume={ 0: saved },
   )
-  bot.gateway_bot_info_.val = Some(manager_gateway_info())
-  bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
+  bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
+  let bot_bot = bot.build()
   @async.with_task_group(group => {
-    let running = group.spawn(no_wait=true, () => bot.run())
+    let running = group.spawn(no_wait=true, () => bot_bot.run())
     transport.incoming.put(BOT_HELLO)
     guard transport.outgoing.get()
       is {
@@ -317,11 +322,11 @@ async test "bot identifies instead of resuming a session from another shard layo
       } else {
       fail("expected IDENTIFY for the resolved layout")
     }
-    assert_true(bot.sessions().is_empty())
+    assert_true(bot_bot.sessions().is_empty())
     transport.incoming.put(bot_ready_frame())
     let ctx = ready_contexts.get()
     assert_eq(ctx.ready().session_id, "sess-bot")
-    guard bot.sessions().get(0) is Some(live) else {
+    guard bot_bot.sessions().get(0) is Some(live) else {
       fail("expected the new session snapshot")
     }
     assert_eq(live.ready.shard, Some([0, 1]))
@@ -348,7 +353,7 @@ async test "bot holds a fallback IDENTIFY when the session start limit is exhaus
     headers: Map([]),
     body: Json::array([]),
   })
-  let bot = Bot(
+  let bot = BotBuilder(
     @app.AppBuilder().build(),
     token="test-token",
     intents=@model.Intents::guild_messages(),
@@ -356,13 +361,14 @@ async test "bot holds a fallback IDENTIFY when the session start limit is exhaus
     gateway_url="wss://gateway.example",
     resume={ 0: bot_saved_session() },
   )
-  bot.gateway_bot_info_.val = Some(manager_gateway_info(remaining=0))
-  bot.connector_.val = Some(_ => {
+  bot.core.gateway_bot_info_.val = Some(manager_gateway_info(remaining=0))
+  bot.core.connector_.val = Some(_ => {
     (pending.pop().unwrap() : &@gateway.GatewayTransport)
   })
+  let bot_bot = bot.build()
   try
     @async.with_task_group(group => {
-      let running = group.spawn(no_wait=true, () => bot.run())
+      let running = group.spawn(no_wait=true, () => bot_bot.run())
       first.incoming.put(BOT_HELLO)
       guard first.outgoing.get() is { "op": Number(6, ..), .. } else {
         fail("expected saved RESUME")
@@ -394,18 +400,19 @@ async test "bot identifies with a warning when the session start limit cannot be
     let status = if request.route is GetGatewayBot { 500 } else { 200 }
     { status, headers: Map([]), body: Json::array([]), }
   })
-  let bot = Bot(
+  let bot = BotBuilder(
     app.build(),
     token="test-token",
     intents=@model.Intents::guild_messages(),
     client~,
     gateway_url="wss://gateway.example",
   )
-  bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
+  let bot_bot = bot.build()
   @async.with_task_group(group => {
-    let running = group.spawn(no_wait=true, () => bot.run())
+    let running = group.spawn(no_wait=true, () => bot_bot.run())
     transport.incoming.put(BOT_HELLO)
     guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected IDENTIFY")
@@ -449,20 +456,21 @@ fn bot_saved_session() -> BotSession raise {
 ///|
 async test "empty Bot replay starts services on RESUMED" {
   let transport = BotFakeTransport()
-  let bot = Bot(
+  let bot = BotBuilder(
     @app.AppBuilder().build(),
     token="test-token",
     gateway_url="wss://gateway.example",
     resume={ 0: bot_saved_session() },
   )
-  bot.gateway_bot_info_.val = Some(manager_gateway_info())
-  bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
+  bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
   let service_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.service(name="empty-replay-service", ctx => service_contexts.put(ctx))
   let ready_calls = Ref(0)
   bot.on(Events::ready(), (_, _) => ready_calls.val += 1)
+  let bot_bot = bot.build()
   @async.with_task_group(group => {
-    let running = group.spawn(no_wait=true, () => bot.run())
+    let running = group.spawn(no_wait=true, () => bot_bot.run())
     transport.incoming.put(BOT_HELLO)
     guard transport.outgoing.get() is { "op": Number(6, ..), .. } else {
       fail("expected RESUME")
@@ -478,7 +486,7 @@ async test "empty Bot replay starts services on RESUMED" {
 }
 
 ///|
-async test "bot rejects mismatched saved session before REST or connector" {
+async test "build rejects a mismatched saved session before REST or connector" {
   let saved = bot_saved_session()
   let bad : BotSession = {
     gateway: {
@@ -496,27 +504,23 @@ async test "bot rejects mismatched saved session before REST or connector" {
     rest_calls.val += 1
     fail("mismatched session reached REST")
   })
-  let bot = Bot(
+  let bot = BotBuilder(
     @app.AppBuilder().build(),
     token="test-token",
     client~,
     gateway_url="wss://gateway.example",
     resume={ 0: bad },
   )
-  bot.gateway_bot_info_.val = Some(manager_gateway_info())
-  bot.connector_.val = Some(_ => {
+  bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
+  bot.core.connector_.val = Some(_ => {
     connector_calls.val += 1
     fail("mismatched session reached connector")
   })
-  try bot.run() catch {
-    InvalidShardConfig(message~) =>
-      inspect(
-        message,
-        content="saved session for shard 0 has mismatched gateway and READY session ids",
-      )
+  try bot.build() |> ignore catch {
+    MismatchedSession(shard_id~) => assert_eq(shard_id, 0)
     error => fail("unexpected snapshot error: \{Repr(error)}")
   } noraise {
-    _ => fail("mismatched snapshot unexpectedly ran")
+    _ => fail("mismatched snapshot unexpectedly built")
   }
   assert_eq(rest_calls.val, 0)
   assert_eq(connector_calls.val, 0)
@@ -536,7 +540,7 @@ async test "rejected Bot resume uses the next actual READY" {
     sync_calls.val += 1
     { status: 200, headers: Map([]), body: Json::array([]), }
   })
-  let bot = Bot(
+  let bot = BotBuilder(
     app.build(),
     token="test-token",
     client~,
@@ -544,8 +548,8 @@ async test "rejected Bot resume uses the next actual READY" {
     sync=Global,
     resume={ 0: bot_saved_session() },
   )
-  bot.gateway_bot_info_.val = Some(manager_gateway_info())
-  bot.connector_.val = Some(url => {
+  bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
+  bot.core.connector_.val = Some(url => {
     urls.push(url)
     if urls.length() == 1 {
       (first : &@gateway.GatewayTransport)
@@ -562,8 +566,9 @@ async test "rejected Bot resume uses the next actual READY" {
   })
   let service_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.service(name="new-ready-service", ctx => service_contexts.put(ctx))
+  let bot_bot = bot.build()
   @async.with_task_group(group => {
-    let running = group.spawn(no_wait=true, () => bot.run())
+    let running = group.spawn(no_wait=true, () => bot_bot.run())
     first.incoming.put(BOT_HELLO)
     guard first.outgoing.get() is { "op": Number(6, ..), .. } else {
       fail("expected saved RESUME")
@@ -572,7 +577,7 @@ async test "rejected Bot resume uses the next actual READY" {
     connected.get()
     assert_eq(ready_calls.val, 0)
     assert_eq(sync_calls.val, 0)
-    assert_true(bot.sessions().is_empty())
+    assert_true(bot_bot.sessions().is_empty())
     assert_true(urls[1].has_prefix("wss://gateway.example/?v=10"))
     second.incoming.put(BOT_HELLO)
     guard second.outgoing.get() is { "op": Number(2, ..), .. } else {
@@ -586,7 +591,7 @@ async test "rejected Bot resume uses the next actual READY" {
     assert_eq(ready_calls.val, 1)
     assert_true(sync_calls.val > 0)
     assert_true(physical_equal(ctx, service_contexts.get()))
-    guard bot.sessions().get(0) is Some(live) else {
+    guard bot_bot.sessions().get(0) is Some(live) else {
       fail("expected new session snapshot")
     }
     assert_eq(live.gateway.id, "new-session")
@@ -650,16 +655,19 @@ fn channel_create_frame(sequence : Int, id : String) -> String {
 }
 
 ///|
-fn middleware_runtime_bot(app : @app.App, transport : BotFakeTransport) -> Bot {
-  let bot = Bot(
+fn middleware_runtime_bot(
+  app : @app.App,
+  transport : BotFakeTransport,
+) -> BotBuilder {
+  let bot = BotBuilder(
     app,
     token="test-token",
     intents=@model.Intents::guild_messages(),
     client=Client("test-token"),
     gateway_url="wss://gateway.example",
   )
-  bot.gateway_bot_info_.val = Some(manager_gateway_info())
-  bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
+  bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
   bot
 }
 
@@ -670,8 +678,9 @@ async test "gateway contexts expose heartbeat latency" {
   let bot = middleware_runtime_bot(app.build(), transport)
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
+  let bot_bot = bot.build()
   @async.with_task_group(group => {
-    let running = group.spawn(no_wait=true, () => bot.run())
+    let running = group.spawn(no_wait=true, () => bot_bot.run())
     transport.incoming.put(BOT_HELLO)
     guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected identify")
@@ -715,19 +724,20 @@ async test "bot without sync performs no command requests" {
     rest_paths.push(request.route.path())
     { status: 200, headers: Map([]), body: Json::array([]), }
   })
-  let bot = Bot(
+  let bot = BotBuilder(
     app.build(),
     token="test-token",
     intents=@model.Intents::guilds(),
     client~,
     gateway_url="wss://gateway.example",
   )
-  bot.gateway_bot_info_.val = Some(manager_gateway_info())
-  bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
+  bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
+  let bot_bot = bot.build()
   @async.with_task_group(group => {
-    let running = group.spawn(no_wait=true, () => bot.run())
+    let running = group.spawn(no_wait=true, () => bot_bot.run())
     transport.incoming.put(BOT_HELLO)
     guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected identify")
@@ -770,7 +780,7 @@ async test "bot warns when sync deletes undeclared commands" {
       }
       { status: 200, headers: Map([]), body, }
     })
-    let bot = Bot(
+    let bot = BotBuilder(
       app.build(),
       token="test-token",
       intents=@model.Intents::guilds(),
@@ -778,12 +788,12 @@ async test "bot warns when sync deletes undeclared commands" {
       gateway_url="wss://gateway.example",
       sync=scope,
     )
-    bot.gateway_bot_info_.val = Some(manager_gateway_info())
-    bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+    bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
+    bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
     let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
     bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
     @async.with_task_group(group => {
-      let running = group.spawn(no_wait=true, () => bot.run())
+      let running = group.spawn(no_wait=true, () => bot.build().run())
       transport.incoming.put(BOT_HELLO)
       guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
         fail("expected identify")
@@ -833,7 +843,7 @@ async test "bot Keep preserves other owners and emits no deletion warning" {
     }
     { status: 200, headers: Map([]), body, }
   })
-  let bot = Bot(
+  let bot = BotBuilder(
     app.build(),
     token="test-token",
     intents=@model.Intents::guilds(),
@@ -842,12 +852,13 @@ async test "bot Keep preserves other owners and emits no deletion warning" {
     sync=Global,
     sync_unowned=Keep,
   )
-  bot.gateway_bot_info_.val = Some(manager_gateway_info())
-  bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
+  bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
+  let bot_bot = bot.build()
   @async.with_task_group(group => {
-    let running = group.spawn(no_wait=true, () => bot.run())
+    let running = group.spawn(no_wait=true, () => bot_bot.run())
     transport.incoming.put(BOT_HELLO)
     guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected identify")
@@ -886,7 +897,7 @@ async test "bot sync failures stay fail-fast" {
         body: Json::array([{ "id": "10", "name": "old" }]),
       }
     })
-    let bot = Bot(
+    let bot = BotBuilder(
       app.build(),
       token="test-token",
       intents=@model.Intents::guilds(),
@@ -894,8 +905,8 @@ async test "bot sync failures stay fail-fast" {
       gateway_url="wss://gateway.example",
       sync=Global,
     )
-    bot.gateway_bot_info_.val = Some(manager_gateway_info())
-    bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+    bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
+    bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
     let ready_called = Ref(false)
     bot.on(Events::ready(), (ctx, _) => {
       ready_called.val = true
@@ -903,7 +914,7 @@ async test "bot sync failures stay fail-fast" {
     })
     try
       @async.with_task_group(group => {
-        let running = group.spawn(no_wait=true, () => bot.run())
+        let running = group.spawn(no_wait=true, () => bot.build().run())
         transport.incoming.put(BOT_HELLO)
         guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
           fail("expected identify")
@@ -942,15 +953,15 @@ async test "gateway context resolves cached channels and falls back to REST" {
       },
     }
   })
-  let bot = Bot(
+  let bot = BotBuilder(
     app.build(),
     token="test-token",
     intents=@model.Intents::guilds(),
     client~,
     gateway_url="wss://gateway.example",
   )
-  bot.gateway_bot_info_.val = Some(manager_gateway_info())
-  bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
+  bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
   let cache = @cache.InMemoryCache(resources=@cache.CacheResources::default())
   bot.attach_cache(cache)
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
@@ -962,8 +973,9 @@ async test "gateway context resolves cached channels and falls back to REST" {
     let channel = ctx.resolve_channel(event.id)
     resolved.put((channel.id.to_string(), channel.typ))
   })
+  let bot_bot = bot.build()
   @async.with_task_group(group => {
-    let running = group.spawn(no_wait=true, () => bot.run())
+    let running = group.spawn(no_wait=true, () => bot_bot.run())
     transport.incoming.put(BOT_HELLO)
     guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected identify")
@@ -987,7 +999,7 @@ async test "gateway context resolves cached channels and falls back to REST" {
 }
 
 ///|
-async test "unsupported compression rejects before REST or connector setup" {
+async test "build rejects unsupported compression before REST or connector setup" {
   if @gateway.zlib_stream_supported() {
     return
   }
@@ -999,26 +1011,22 @@ async test "unsupported compression rejects before REST or connector setup" {
     rest_calls.val += 1
     fail("compression reached REST")
   })
-  let bot = Bot(
+  let bot = BotBuilder(
     @app.AppBuilder().build(),
     token="test-token",
     client~,
     compress=true,
   )
-  bot.gateway_bot_info_.val = Some(manager_gateway_info())
-  bot.connector_.val = Some(_ => {
+  bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
+  bot.core.connector_.val = Some(_ => {
     connector_calls.val += 1
     fail("compression reached connector")
   })
-  try bot.run() catch {
-    InvalidShardConfig(message~) =>
-      inspect(
-        message,
-        content="compress=true requires zlib-stream inflate, which this backend does not provide",
-      )
+  try bot.build() |> ignore catch {
+    CompressionUnavailable => ()
     error => fail("unexpected compression error: \{Repr(error)}")
   } noraise {
-    _ => fail("unsupported compression unexpectedly ran")
+    _ => fail("unsupported compression unexpectedly built")
   }
   assert_eq(rest_calls.val, 0)
   assert_eq(connector_calls.val, 0)
@@ -1048,8 +1056,9 @@ async test "event middleware drops handlers after wire-level cache updates" {
       _ => ()
     }
   })
+  let bot_bot = bot.build()
   @async.with_task_group(group => {
-    let running = group.spawn(no_wait=true, () => bot.run())
+    let running = group.spawn(no_wait=true, () => bot_bot.run())
     transport.incoming.put(BOT_HELLO)
     guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected identify")
@@ -1098,8 +1107,9 @@ async test "event middleware transforms events for typed handlers" {
   bot.on(Events::message_create(), (_, event) => {
     contents.put(event.message.content)
   })
+  let bot_bot = bot.build()
   @async.with_task_group(group => {
-    let running = group.spawn(no_wait=true, () => bot.run())
+    let running = group.spawn(no_wait=true, () => bot_bot.run())
     transport.incoming.put(BOT_HELLO)
     guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected identify")
@@ -1144,8 +1154,9 @@ async test "event middleware order is onion-style" {
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
   let handled : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   bot.on(Events::message_delete(), (_, _) => handled.put(()))
+  let bot_bot = bot.build()
   @async.with_task_group(group => {
-    let running = group.spawn(no_wait=true, () => bot.run())
+    let running = group.spawn(no_wait=true, () => bot_bot.run())
     transport.incoming.put(BOT_HELLO)
     guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected identify")
@@ -1183,8 +1194,9 @@ async test "interaction routing survives dropped gateway events" {
   bot.middleware((_, _, _) => ())
   let service_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.service(name="capture-context", ctx => service_contexts.put(ctx))
+  let bot_bot = bot.build()
   @async.with_task_group(group => {
-    let running = group.spawn(no_wait=true, () => bot.run())
+    let running = group.spawn(no_wait=true, () => bot_bot.run())
     transport.incoming.put(BOT_HELLO)
     guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected identify")
@@ -1223,8 +1235,9 @@ async test "event middleware failures warn and preserve later dispatch" {
   bot.on(Events::message_delete(), (_, event) => {
     handled.put(event.id.to_string())
   })
+  let bot_bot = bot.build()
   @async.with_task_group(group => {
-    let running = group.spawn(no_wait=true, () => bot.run())
+    let running = group.spawn(no_wait=true, () => bot_bot.run())
     transport.incoming.put(BOT_HELLO)
     guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected identify")
@@ -1251,15 +1264,15 @@ async test "event middleware failures warn and preserve later dispatch" {
 async test "bot updates cache before typed event handlers" {
   let transport = BotFakeTransport()
   let app = @app.AppBuilder()
-  let bot = Bot(
+  let bot = BotBuilder(
     app.build(),
     token="test-token",
     intents=@model.Intents::guild_messages(),
     client=Client("test-token"),
     gateway_url="wss://gateway.example",
   )
-  bot.gateway_bot_info_.val = Some(manager_gateway_info())
-  bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
+  bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
   let cache = @cache.InMemoryCache(resources=CacheResources(messages=true))
   bot.attach_cache(cache)
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
@@ -1270,8 +1283,9 @@ async test "bot updates cache before typed event handlers" {
       cache.message(event.message.channel_id, event.message.id) is Some(_),
     )
   })
+  let bot_bot = bot.build()
   @async.with_task_group(group => {
-    let running = group.spawn(no_wait=true, () => bot.run())
+    let running = group.spawn(no_wait=true, () => bot_bot.run())
     transport.incoming.put(BOT_HELLO)
     guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected identify")
@@ -1300,8 +1314,9 @@ async test "message update handlers receive the cached previous revision" {
   bot.on(Events::message_update(), (_, event) => {
     observed.put(event.before.map(message => message.content).unwrap_or("none"))
   })
+  let bot_bot = bot.build()
   @async.with_task_group(group => {
-    let running = group.spawn(no_wait=true, () => bot.run())
+    let running = group.spawn(no_wait=true, () => bot_bot.run())
     transport.incoming.put(BOT_HELLO)
     guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected identify")
@@ -1335,8 +1350,9 @@ async test "message update handlers receive no before when messages are disabled
   bot.on(Events::message_update(), (_, event) => {
     observed.put(event.before is None)
   })
+  let bot_bot = bot.build()
   @async.with_task_group(group => {
-    let running = group.spawn(no_wait=true, () => bot.run())
+    let running = group.spawn(no_wait=true, () => bot_bot.run())
     transport.incoming.put(BOT_HELLO)
     guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected identify")
@@ -1353,8 +1369,8 @@ async test "message update handlers receive no before when messages are disabled
 ///|
 async test "bot run dispatches concurrently, survives handlers, and shuts down" {
   let empty_app = @app.AppBuilder()
-  try Bot(empty_app.build(), token="").run() catch {
-    @app.AppConfigError::EmptyToken => ()
+  try BotBuilder(empty_app.build(), token="").build() |> ignore catch {
+    BotConfigError::EmptyToken => ()
     error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected empty token error")
@@ -1392,14 +1408,14 @@ async test "bot run dispatches concurrently, survives handlers, and shuts down" 
   )
   let policy_calls : @aqueue.Queue[String] = Queue(kind=Unbounded)
   app.error_policy((failure, _) => policy_calls.put("\{Repr(failure.origin())}"))
-  let bot = Bot(
+  let bot = BotBuilder(
     app.build(),
     token="test-token",
     client=Client("test-token"),
     gateway_url="wss://gateway.example",
   )
-  bot.gateway_bot_info_.val = Some(manager_gateway_info())
-  bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
+  bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
   let event_calls : @aqueue.Queue[Int] = Queue(kind=Unbounded)
@@ -1413,13 +1429,14 @@ async test "bot run dispatches concurrently, survives handlers, and shuts down" 
   })
   // No raw event handler is registered, so the gateway filter can reject
   // unrelated events before decoding/queuing them.
-  let filter = bot.event_filter()
+  let filter = bot.core.event_filter()
   assert_true(filter(KReady))
   assert_true(filter(KInteractionCreate))
   assert_true(filter(KMessageDelete))
   assert_false(filter(KInviteDelete))
+  let bot_bot = bot.build()
   @async.with_task_group(group => {
-    let running = group.spawn(no_wait=true, () => bot.run())
+    let running = group.spawn(no_wait=true, () => bot_bot.run())
     transport.incoming.put(BOT_HELLO)
     guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected identify")
@@ -1454,9 +1471,9 @@ async test "bot run dispatches concurrently, survives handlers, and shuts down" 
 async test "bot reports gateway decode errors and preserves dispatch" {
   // Decode-error observers do not request any additional event kinds.
   let filter_app = @app.AppBuilder()
-  let filter_bot = Bot(filter_app.build(), token="test-token")
+  let filter_bot = BotBuilder(filter_app.build(), token="test-token")
   filter_bot.on_decode_error((_, _) => ())
-  let filter = filter_bot.event_filter()
+  let filter = filter_bot.core.event_filter()
   assert_true(filter(KReady))
   assert_true(filter(KInteractionCreate))
   assert_false(filter(KMessageDelete))
@@ -1466,15 +1483,15 @@ async test "bot reports gateway decode errors and preserves dispatch" {
   let app = @app.AppBuilder()
   let warnings : Array[String] = []
   app.on_warn(warning => warnings.push(warning.to_string()))
-  let bot = Bot(
+  let bot = BotBuilder(
     app.build(),
     token="test-token",
     intents=@model.Intents::guild_messages(),
     client=Client("test-token"),
     gateway_url="wss://gateway.example",
   )
-  bot.gateway_bot_info_.val = Some(manager_gateway_info())
-  bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
+  bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
   let decode_errors : Array[(String, Json)] = []
@@ -1504,8 +1521,9 @@ async test "bot reports gateway decode errors and preserves dispatch" {
   })
   let normal_events : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   bot.on(Events::message_delete(), (_, _) => normal_events.put(()))
+  let bot_bot = bot.build()
   @async.with_task_group(group => {
-    let running = group.spawn(no_wait=true, () => bot.run())
+    let running = group.spawn(no_wait=true, () => bot_bot.run())
     transport.incoming.put(BOT_HELLO)
     guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected identify")
@@ -1562,8 +1580,9 @@ async test "saturated event handlers never delay interaction routing" {
   })
   let service_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.service(name="capture-context", ctx => service_contexts.put(ctx))
+  let bot_bot = bot.build()
   @async.with_task_group(group => {
-    let running = group.spawn(no_wait=true, () => bot.run())
+    let running = group.spawn(no_wait=true, () => bot_bot.run())
     transport.incoming.put(BOT_HELLO)
     guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected identify")
@@ -1627,19 +1646,20 @@ async test "a deferred handler waiting at full capacity receives its button" {
     callbacks.put(request.route.path())
     { status: 204, headers: Map([]), body: Json::null(), }
   })
-  let bot = Bot(
+  let bot = BotBuilder(
     app.build(),
     token="test-token",
     intents=@model.Intents::guild_messages(),
     client~,
     gateway_url="wss://gateway.example",
   )
-  bot.gateway_bot_info_.val = Some(manager_gateway_info())
-  bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
+  bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
   let service_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.service(name="capture-context", ctx => service_contexts.put(ctx))
+  let bot_bot = bot.build()
   @async.with_task_group(group => {
-    let running = group.spawn(no_wait=true, () => bot.run())
+    let running = group.spawn(no_wait=true, () => bot_bot.run())
     transport.incoming.put(BOT_HELLO)
     guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected identify")

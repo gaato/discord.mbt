@@ -155,7 +155,7 @@ async fn run_signed_http(
     }
     let client = @dhttp.Client(token, base_url?=api_base_url)
     group.add_defer(() => client.close())
-    let endpoint = app.serve(group, client~, application_id~)
+    let endpoint = app.serve(group, access=Client(client), application_id~)
     responses.put(
       encode_js_response(
         endpoint.handle_signed_http(request, verifier, deadline_ms?),

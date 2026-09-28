@@ -206,7 +206,7 @@ async fn main {
       }),
     )
 
-    let bot = @discord.Bot(app.build(), token~, sync=command_scope())
+    let bot = @discord.BotBuilder(app.build(), token~, sync=command_scope())
     bot.on(@discord.Events::ready(), (_ctx, ready) => {
       println("[bot] ready as \{ready.user.username}")
     })
@@ -221,8 +221,10 @@ async fn main {
     println("[try] Apps → Quote on a message")
     println("[try] use both buttons on the /demo greet response")
     println("[try] DM the bot !ping")
-    try @async.with_timeout_opt(run_seconds() * 1000, () => bot.run()) catch {
-      @discord.AppConfigError::EmptyToken =>
+    try
+      @async.with_timeout_opt(run_seconds() * 1000, () => bot.build().run())
+    catch {
+      @discord.BotConfigError::EmptyToken =>
         println("[error] EmptyToken: set DISCORD_TOKEN to run the bot")
       error => raise error
     } noraise {

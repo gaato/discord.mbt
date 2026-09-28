@@ -97,11 +97,11 @@ async fn run_echo_bot(token : String) -> Unit {
   )
   let app = @discord.AppBuilder()
   app.command(echo)
-  let bot = @discord.Bot(app.build(), token~, sync=Global)
+  let bot = @discord.BotBuilder(app.build(), token~, sync=Global)
   bot.on(@discord.Events::ready(), (_ctx, ready) => {
     println("ready as \{ready.user.username}")
   })
-  bot.run()
+  bot.build().run()
 }
 ```
 
@@ -226,10 +226,11 @@ modals, autocomplete routes, middleware, and the error policy. `build()`
 validates it into an immutable `App`, which has no gateway dependency. Hand
 the App to an executor:
 
-- `Bot(app, token~)` connects to the gateway and routes `InteractionCreate`
-  events through the App.
-- `app.serve(group, token~)` creates an `InteractionEndpoint` for an HTTP
-  adapter.
+- `BotBuilder(app, token~)` collects gateway event handlers and services;
+  `build()` validates it into a `Bot`, whose `run()` connects to the gateway
+  and routes `InteractionCreate` events through the App.
+- `app.serve(group, access=Token(token))` creates an `InteractionEndpoint`
+  for an HTTP adapter.
 
 Both executors use the same handlers, so an application can move between a
 persistent gateway process and an HTTP or serverless deployment without
@@ -276,7 +277,7 @@ handlers, the cache, collectors, and telemetry observe every shard:
 
 ```mbt nocheck
 ///|
-let bot = @discord.Bot(app, token~, shards=Auto)
+let bot = @discord.BotBuilder(app, token~, shards=Auto)
 ```
 
 Identify calls honor the `max_concurrency` bucket rules from
@@ -355,7 +356,7 @@ async fn handle_http_interaction(
   token : String,
   body : Json,
 ) -> Json? {
-  app.serve(group, token~).handle(body)
+  app.serve(group, access=Token(token)).handle(body)
 }
 ```
 
@@ -372,7 +373,7 @@ Node.js and Bun, while the Vercel lifecycle adapter is tested with an injected
 deployment behavior. `workers_echo` is
 tested inside Cloudflare's local `workerd` runtime and supports streamed
 multipart callbacks for in-memory `FileUpload` values. On native,
-`@discord.serve_interactions(group, app, addr~, public_key~, token~)` is a
+`@discord.serve_interactions(group, app, access=Token(token), addr~, public_key~)` is a
 complete signed-interactions HTTP server. See the
 [HTTP interactions guide](src/guide/06-http-interactions.mbt.md) and the
 `interactions_http`, `workers_echo`, `deno_echo`, `bun_echo`, and `vercel_echo`
@@ -423,8 +424,8 @@ fn restored_bot(
   app : @discord.App,
   token : String,
   saved : Map[Int, @discord.BotSession],
-) -> @discord.Bot {
-  @discord.Bot(app, token~, resume=saved)
+) -> @discord.BotBuilder {
+  @discord.BotBuilder(app, token~, resume=saved)
 }
 
 ///|

@@ -18,9 +18,17 @@ import {
 // Values
 
 // Errors
+pub(all) suberror BotConfigError {
+  EmptyToken
+  CompressionUnavailable
+  InvalidShardConfig(message~ : String)
+  MismatchedSession(shard_id~ : Int)
+} derive(@debug.Debug)
+
 pub(all) suberror BotError {
   FatallyClosed(code~ : Int)
-  InvalidShardConfig(message~ : String)
+  AlreadyRunning
+  InvalidGatewayInfo(message~ : String)
   SessionStartLimitExceeded(required~ : Int, remaining~ : Int, reset_after_ms~ : Int64)
 } derive(@debug.Debug)
 pub fn BotError::to_string(Self) -> String
@@ -30,16 +38,21 @@ pub impl Show for BotError
 pub struct Bot {
   // private fields
 }
-pub fn Bot::Bot(@app.App, token~ : String, intents? : @model.Intents, capabilities? : @model.GatewayCapabilities, client? : @http.Client, gateway_url? : String, shards? : ShardConfig, compress? : Bool, identify_queue? : &@queue.IdentifyQueue, sync? : @app.CommandScope, sync_unowned? : @framework.UnownedCommands, resume? : Map[Int, BotSession]) -> Self
-pub fn Bot::attach_cache(Self, @cache.InMemoryCache) -> Unit
-pub fn Bot::middleware(Self, async (GatewayCtx, @model.Event, async (@model.Event) -> Unit) -> Unit) -> Unit
-pub fn[T] Bot::on(Self, EventType[T], async (GatewayCtx, T) -> Unit) -> Unit
-pub fn Bot::on_decode_error(Self, (String, Json) -> Unit) -> Unit
-pub fn Bot::on_event(Self, async (GatewayCtx, @model.Event) -> Unit) -> Unit
-pub fn Bot::on_telemetry(Self, (@telemetry.TelemetryEvent) -> Unit raise) -> Unit
 pub async fn Bot::run(Self) -> Unit
-pub fn Bot::service(Self, name~ : String, async (GatewayCtx) -> Unit) -> Unit
 pub fn Bot::sessions(Self) -> Map[Int, BotSession]
+
+pub struct BotBuilder {
+  // private fields
+}
+pub fn BotBuilder::BotBuilder(@app.App, token~ : String, intents? : @model.Intents, capabilities? : @model.GatewayCapabilities, client? : @http.Client, gateway_url? : String, shards? : ShardConfig, compress? : Bool, identify_queue? : &@queue.IdentifyQueue, sync? : @app.CommandScope, sync_unowned? : @framework.UnownedCommands, resume? : Map[Int, BotSession]) -> Self
+pub fn BotBuilder::attach_cache(Self, @cache.InMemoryCache) -> Unit
+pub fn BotBuilder::build(Self) -> Bot raise BotConfigError
+pub fn BotBuilder::middleware(Self, async (GatewayCtx, @model.Event, async (@model.Event) -> Unit) -> Unit) -> Unit
+pub fn[T] BotBuilder::on(Self, EventType[T], async (GatewayCtx, T) -> Unit) -> Unit
+pub fn BotBuilder::on_decode_error(Self, (String, Json) -> Unit) -> Unit
+pub fn BotBuilder::on_event(Self, async (GatewayCtx, @model.Event) -> Unit) -> Unit
+pub fn BotBuilder::on_telemetry(Self, (@telemetry.TelemetryEvent) -> Unit raise) -> Unit
+pub fn BotBuilder::service(Self, name~ : String, async (GatewayCtx) -> Unit) -> Unit
 
 pub(all) struct BotSession {
   gateway : @gateway.Session

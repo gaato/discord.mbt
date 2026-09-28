@@ -13,7 +13,7 @@ Registration returns `Unit`, so cascade syntax keeps related setup together:
 fn register_in_order(
   client : @dhttp.Client,
   app : @discord.AppBuilder,
-  bot : @discord.Bot,
+  bot : @discord.BotBuilder,
   http_a : @dhttp.HttpMiddleware,
   http_b : @dhttp.HttpMiddleware,
   interaction_a : @app.InteractionMiddleware,
@@ -36,7 +36,7 @@ order is `a-in`, `b-in`, `b-out`, `a-out`.
 |---|---|---|
 | `Client::middleware` | One logical REST call, including rate-limit acquisition, the wire exchange, and bounded 429 retries | Status-code mapping, typed response decoding, and the caller's code |
 | `App::middleware` | Checks, command cooldowns, and command, component, or modal handler dispatch, inside the `ErrorPolicy` boundary | Autocomplete, Gateway events, and services |
-| `Bot::middleware` | Typed and raw Gateway handler fan-out for one decoded event | Cache updates, decode-error observation, collectors, and interaction routing |
+| `BotBuilder::middleware` | Typed and raw Gateway handler fan-out for one decoded event | Cache updates, decode-error observation, collectors, and interaction routing |
 
 ## HTTP middleware
 
@@ -250,7 +250,7 @@ and followups.
 
 ## Gateway event middleware
 
-`Bot::middleware` receives the `GatewayCtx`, a decoded
+`BotBuilder::middleware` receives the `GatewayCtx`, a decoded
 `Event`, and `next(event)`. Not calling `next` drops the event from typed and
 raw handlers while leaving wire-level processing intact.
 
@@ -289,7 +289,7 @@ fn tag_message_content() -> @bot.EventMiddleware {
 }
 
 ///|
-fn install_event_filters(bot : @discord.Bot) -> Unit {
+fn install_event_filters(bot : @discord.BotBuilder) -> Unit {
   bot..middleware(ignore_bot_messages()).middleware(tag_message_content())
 }
 ```
@@ -451,7 +451,7 @@ shard-scoped events carry the shard id:
 
 ```mbt check
 ///|
-fn install_telemetry(bot : @discord.Bot) -> Unit {
+fn install_telemetry(bot : @discord.BotBuilder) -> Unit {
   bot.on_telemetry(event => {
     match event {
       HttpRequest(route_bucket~, status~, duration_ms~, retries~, ..) =>
@@ -475,7 +475,7 @@ record values promptly rather than perform blocking work, the same contract
 event middleware has. Unlike HTTP middleware, which returns once per logical
 call, HTTP telemetry reports per-attempt values such as `HttpRateLimited`.
 
-Telemetry is an additional channel: `App::on_warn` and `Bot::on_decode_error`
+Telemetry is an additional channel: `App::on_warn` and `BotBuilder::on_decode_error`
 retain their behavior, and a telemetry callback failure is reported through
 the warning hook instead of being silently discarded. Standalone clients
 install the same observer with `client.on_telemetry` and configure the

@@ -56,9 +56,9 @@ async fn main {
       let server = @endpoint_http.serve_interactions(
         group,
         app.build(),
+        access=Client(client),
         addr="0.0.0.0:\{port()}",
         public_key~,
-        client~,
         application_id~,
       )
       println("[http] listening on \{server.addr()}")

@@ -38,7 +38,7 @@ async fn main {
       let app = @discord.AppBuilder()
       let intents = @model.Intents::guilds() |
         @model.Intents::guild_voice_states()
-      let bot = @discord.Bot(app.build(), token~, intents~)
+      let bot = @discord.BotBuilder(app.build(), token~, intents~)
       bot.service(name="voice-recorder", ctx => {
         let connection = ctx.join_voice(guild_id, channel_id)
         errdefer @async.protect_from_cancel(() => {
@@ -77,7 +77,7 @@ async fn main {
         connection.disconnect()
         ctx.shutdown()
       })
-      bot.run()
+      bot.build().run()
     }) catch {
       error => {
         println("[voice] failed: \{Repr(error)}")

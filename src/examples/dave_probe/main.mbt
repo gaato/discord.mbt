@@ -506,7 +506,7 @@ async fn main {
   )
   let app = @discord.AppBuilder()
   let intents = @model.Intents::guilds() | @model.Intents::guild_voice_states()
-  let bot = @discord.Bot(app.build(), token~, intents~)
+  let bot = @discord.BotBuilder(app.build(), token~, intents~)
   let completed = Ref(false)
   let failure : Ref[String?] = Ref(None)
   bot.service(name="dave-probe", ctx => {
@@ -530,7 +530,7 @@ async fn main {
   })
   let run_result = match
     @async.handle_cancellation(() => {
-      @async.with_timeout_opt(90_000, () => bot.run())
+      @async.with_timeout_opt(90_000, () => bot.build().run())
     }) {
     None => Some(())
     Some(result) => result

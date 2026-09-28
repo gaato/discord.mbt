@@ -217,7 +217,7 @@ later `edit_followup` or `delete_followup` needs. When `edit_original` adds
 `keep_attachments` lists the ones to retain.
 
 Register every command with `app.command(command)`. To synchronize the
-declarations, pass a `CommandScope` to `Bot(sync=...)` or call
+declarations, pass a `CommandScope` to `BotBuilder(sync=...)` or call
 `app.sync_commands(client, application_id, scope~)` from a one-shot program.
 The call returns a sync report. Both paths default to deleting undeclared
 commands in the selected scope, while always preserving the Entry Point

@@ -158,8 +158,7 @@ pub async fn[X] serve_interactions(
   app : @app.App,
   addr~ : String,
   public_key~ : String,
-  client? : @dhttp.Client,
-  token? : String,
+  access~ : @app.RestAccess,
   application_id? : @model.ApplicationId,
   path? : String = "/",
   deadline_ms? : Int = 2500,
@@ -174,7 +173,7 @@ pub async fn[X] serve_interactions(
     let mut ready = false
     @async.with_task_group(inner => {
       runner.val = Some(inner)
-      let endpoint = app.serve(inner, client?, token?, application_id?)
+      let endpoint = app.serve(inner, access~, application_id?)
       inner.spawn_bg(() => {
         server.run_forever(allow_failure=true, (request, body_reader, conn) => {
           handle_request(

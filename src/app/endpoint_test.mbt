@@ -134,7 +134,7 @@ async test "timed-out interaction expires its gate" {
       .build()
       .serve(
         group,
-        client~,
+        access=Client(client),
         application_id=@model.Id::parse("400000000000000001"),
       )
     assert_true(
@@ -404,7 +404,7 @@ async test "interaction endpoint dispatches captured responses and completion ou
     ),
   )
   @async.with_task_group(group => {
-    try app.build().serve(group, token="") catch {
+    try app.build().serve(group, access=Token("")) catch {
       @app.AppConfigError::EmptyToken => ()
       error => fail("unexpected error: \{Repr(error)}")
     } noraise {
@@ -423,7 +423,7 @@ async test "interaction endpoint dispatches captured responses and completion ou
       .build()
       .serve(
         group,
-        client~,
+        access=Client(client),
         application_id=@model.Id::parse("400000000000000001"),
       )
     match app.handle_interaction(app_ping()) {
@@ -579,7 +579,7 @@ async test "interaction endpoint dispatches component and typed modal handlers" 
       .build()
       .serve(
         group,
-        client~,
+        access=Client(client),
         application_id=@model.Id::parse("400000000000000001"),
       )
     match
@@ -765,7 +765,7 @@ async test "typed autocomplete dispatches partial and nested focused options" {
       .build()
       .serve(
         group,
-        client~,
+        access=Client(client),
         application_id=@model.Id::parse("400000000000000001"),
       )
     match app.handle_interaction(nested) {
@@ -956,7 +956,7 @@ async test "context menu commands decode resolved targets" {
       .build()
       .serve(
         group,
-        client~,
+        access=Client(client),
         application_id=@model.Id::parse("400000000000000001"),
       )
     match app.handle_interaction(user_interaction) {
@@ -1085,7 +1085,7 @@ async test "slash groups emit nested specs and dispatch direct and grouped paths
       .build()
       .serve(
         group,
-        client~,
+        access=Client(client),
         application_id=@model.Id::parse("400000000000000001"),
       )
     for
@@ -1155,7 +1155,7 @@ async test "arg_int32 suggestions receive an Int and reject out-of-range input" 
       .build()
       .serve(
         group,
-        client~,
+        access=Client(client),
         application_id=@model.Id::parse("400000000000000001"),
       )
     match app.handle_interaction(focused("12")) {

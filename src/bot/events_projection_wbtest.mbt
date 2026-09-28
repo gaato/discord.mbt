@@ -40,9 +40,9 @@ test "raw event handlers trigger the explicit-intents warning" {
   let app = @app.AppBuilder()
   let warnings : Array[String] = []
   app.on_warn(warning => warnings.push(warning.to_string()))
-  let bot = Bot(app.build(), token="test-token")
+  let bot = BotBuilder(app.build(), token="test-token")
   bot.on_event((_, _) => ())
-  ignore(bot.resolved_intents())
+  ignore(bot.core.resolved_intents())
   assert_true(
     warnings.contains(
       "raw event handlers do not imply gateway intents; pass intents explicitly for the events they consume",

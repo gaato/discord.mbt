@@ -8,9 +8,10 @@ test "bot error messages render actionable diagnostics" {
     "\{BotError::FatallyClosed(code=4014)}",
     content="gateway fatally closed with code 4014; verify configured gateway intents and privileged-intent approval",
   )
+  inspect("\{BotError::AlreadyRunning}", content="the bot is already running")
   inspect(
-    "\{BotError::InvalidShardConfig(message="broken")}",
-    content="invalid shard configuration: broken",
+    "\{BotError::InvalidGatewayInfo(message="broken")}",
+    content="invalid gateway information: broken",
   )
   let limit = BotError::SessionStartLimitExceeded(
     required=2,
@@ -30,11 +31,12 @@ test "shard id validation rejects each invalid selection" {
     count : Int,
     expected_message : String,
   ) -> Unit raise {
-    try validate_shard_ids(ids, count) catch {
-      InvalidShardConfig(message~) => assert_eq(message, expected_message)
+    assert_eq(shard_layout_problem(ids, count), Some(expected_message))
+    try validate_gateway_layout(ids, count) catch {
+      InvalidGatewayInfo(message~) => assert_eq(message, expected_message)
       other => fail("unexpected error \{other}")
     } noraise {
-      _ => fail("expected invalid shard config: \{expected_message}")
+      _ => fail("expected invalid gateway info: \{expected_message}")
     }
   }
 
@@ -42,7 +44,8 @@ test "shard id validation rejects each invalid selection" {
   expect_invalid([], 2, "at least one shard id must be selected")
   expect_invalid([2], 2, "shard id 2 is outside 0..<2")
   expect_invalid([0, 0], 2, "duplicate shard id 0")
-  validate_shard_ids([0, 1], 2)
+  assert_eq(shard_layout_problem([0, 1], 2), None)
+  validate_gateway_layout([0, 1], 2)
 }
 
 ///|
@@ -91,19 +94,20 @@ async test "gateway context exposes raw handles, refs, and waiters" {
     }
     { status: 200, headers: Map([]), body, }
   })
-  let bot = Bot(
+  let bot = BotBuilder(
     app.build(),
     token="test-token",
     intents=@model.Intents::guild_messages(),
     client~,
     gateway_url="wss://gateway.example",
   )
-  bot.gateway_bot_info_.val = Some(manager_gateway_info())
-  bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
+  bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
+  let bot_bot = bot.build()
   @async.with_task_group(group => {
-    let running = group.spawn(no_wait=true, () => bot.run())
+    let running = group.spawn(no_wait=true, () => bot_bot.run())
     transport.incoming.put(BOT_HELLO)
     guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected identify")

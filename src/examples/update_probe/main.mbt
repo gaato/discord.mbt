@@ -82,7 +82,7 @@ async fn main {
   )
   let client = @dhttp.Client(token)
   let app = @discord.AppBuilder()
-  let bot = @discord.Bot(app.build(), token~, client~)
+  let bot = @discord.BotBuilder(app.build(), token~, client~)
   bot.attach_cache(InMemoryCache(resources=CacheResources(messages=true)))
   let updates : @aqueue.Queue[@model.MessageUpdateEvent] = Queue(kind=Unbounded)
   let decode_errors : Array[String] = []
@@ -160,7 +160,7 @@ async fn main {
   })
   ignore(
     @async.handle_cancellation(() => {
-      @async.with_timeout_opt(180_000, () => bot.run())
+      @async.with_timeout_opt(180_000, () => bot.build().run())
     }) catch {
       error => {
         println("[probe] run failed: \{Repr(error)}")

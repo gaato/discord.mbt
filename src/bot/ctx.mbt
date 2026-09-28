@@ -36,7 +36,7 @@ pub fn GatewayCtx::latency_ms(self : GatewayCtx) -> Int64? {
 }
 
 ///|
-/// The cache attached with `Bot::attach_cache`, or `None` when no cache is
+/// The cache attached with `BotBuilder::attach_cache`, or `None` when no cache is
 /// attached.
 pub fn GatewayCtx::cache(self : GatewayCtx) -> @cache.InMemoryCache? {
   self.cache_

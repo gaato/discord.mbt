@@ -7,7 +7,7 @@
 /// cannot be read is reported through the app's warning hook and the shard
 /// identifies anyway, because a REST outage must not stop a running bot.
 priv struct IdentifyGuard {
-  bot : Bot
+  bot : BotCore
   client : @dhttp.Client
   inner : &@queue.IdentifyQueue
   refusals : @aqueue.Queue[ManagedShardEvent]

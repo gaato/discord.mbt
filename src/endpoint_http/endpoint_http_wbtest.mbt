@@ -134,9 +134,9 @@ async test "interactions server authenticates and dispatches HTTP requests" {
     let server = serve_interactions(
       group,
       app.build(),
+      access=Client(discord_client),
       addr="127.0.0.1:0",
       public_key~,
-      client=discord_client,
       application_id=@model.Id::parse("400000000000000001"),
       path="/interactions",
     )
@@ -264,9 +264,9 @@ async test "native interactions server rejects invalid keys before startup" {
       serve_interactions(
         group,
         app.build(),
+        access=Token(""),
         addr="127.0.0.1:0",
         public_key="00",
-        token="",
       )
       |> ignore
     catch {
@@ -311,10 +311,16 @@ async test "interactions server answers 202, 504, and 500 and reports startup fa
     ),
   )
   @async.with_task_group(group => {
-    // Without a client or a token the app cannot serve, and the server
-    // reports that from startup instead of listening.
+    // With an empty token the app cannot serve, and the server reports that
+    // from startup instead of listening.
     try
-      serve_interactions(group, app.build(), addr="127.0.0.1:0", public_key~)
+      serve_interactions(
+        group,
+        app.build(),
+        addr="127.0.0.1:0",
+        public_key~,
+        access=Token(""),
+      )
       |> ignore
     catch {
       @app.AppConfigError::EmptyToken => ()
@@ -327,9 +333,9 @@ async test "interactions server answers 202, 504, and 500 and reports startup fa
     let server = serve_interactions(
       group,
       app.build(),
+      access=Token("test-token"),
       addr="127.0.0.1:0",
       public_key~,
-      token="test-token",
       application_id=@model.Id::parse("400000000000000001"),
       deadline_ms=20,
     )

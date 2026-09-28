@@ -79,9 +79,9 @@ uses that intent to deliver the bot's `VOICE_STATE_UPDATE`:
 
 ```mbt check
 ///|
-fn voice_bot(app : @discord.App, token : String) -> @discord.Bot {
+fn voice_bot(app : @discord.App, token : String) -> @discord.BotBuilder {
   let intents = @model.Intents::guilds() | @model.Intents::guild_voice_states()
-  Bot(app, token~, intents~)
+  @discord.BotBuilder(app, token~, intents~)
 }
 ```
 

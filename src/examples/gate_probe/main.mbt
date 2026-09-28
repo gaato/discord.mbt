@@ -384,7 +384,7 @@ async fn main {
     })
     // Keep the guild's other commands: the probe shares its bot with other
     // experiments and must not delete what it does not declare.
-    let bot = @discord.Bot(
+    let bot = @discord.BotBuilder(
       app.build(),
       token~,
       client~,
@@ -433,8 +433,10 @@ async fn main {
     println(
       "[try] /probe-unconfirmed-edit-fails → '[unconfirmed] failing the placeholder edit…'; the fallback followup replaces the loading message (Discord's deprecated followup-as-edit)",
     )
-    try @async.with_timeout_opt(run_seconds() * 1000, () => bot.run()) catch {
-      @discord.AppConfigError::EmptyToken =>
+    try
+      @async.with_timeout_opt(run_seconds() * 1000, () => bot.build().run())
+    catch {
+      @discord.BotConfigError::EmptyToken =>
         println("[error] EmptyToken: set DISCORD_TOKEN to run the probe")
       error => raise error
     } noraise {

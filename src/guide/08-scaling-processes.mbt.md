@@ -48,14 +48,14 @@ async fn run_worker(app : @discord.App, token : String) -> Unit {
   defer limiter.close()
   let client = @dhttp.Client(token, limiter=(limiter : &@runtime.RateLimiter))
   defer client.close()
-  let bot = @discord.Bot(
+  let bot = @discord.BotBuilder(
     app,
     token~,
     client~,
     shards=Range(ids=[0, 1], count=8),
     identify_queue=(identify : &@queue.IdentifyQueue),
   )
-  bot.run()
+  bot.build().run()
 }
 
 ///|

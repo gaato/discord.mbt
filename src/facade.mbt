@@ -38,6 +38,7 @@ pub using @app {
   type AppWarning,
   type AppCtx,
   type InteractionEndpoint,
+  type RestAccess,
   type InteractionOutcome,
   type InteractionHttpRequest,
   type InteractionHttpBody,

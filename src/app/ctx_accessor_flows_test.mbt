@@ -82,7 +82,7 @@ async test "command contexts expose their interaction and REST surfaces" {
       .build()
       .serve(
         group,
-        client~,
+        access=Client(client),
         application_id=@model.Id::parse("400000000000000001"),
       )
     match

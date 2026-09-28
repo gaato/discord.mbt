@@ -310,7 +310,7 @@ pub struct InMemoryCache {
 
 ///|
 /// Create an empty cache retaining the selected `resources` under the
-/// per-resource `limits`. Feed it gateway events via `Bot::attach_cache` (or
+/// per-resource `limits`. Feed it gateway events via `BotBuilder::attach_cache` (or
 /// call `update` manually). TTL deadlines are fixed at write time and expiry
 /// is enforced lazily without background timers.
 pub fn InMemoryCache::InMemoryCache(

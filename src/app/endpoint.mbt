@@ -25,12 +25,24 @@ priv enum InteractionRace {
 }
 
 ///|
+/// How an executor reaches Discord's REST API: with a bot token, from which it
+/// builds and owns a client, or through an existing client the caller owns.
+pub(all) enum RestAccess {
+  /// Build a client from this bot token. The executor closes it when done.
+  Token(String)
+  /// Use this client. The caller keeps ownership and closes it.
+  Client(@dhttp.Client)
+}
+
+///|
 /// Build a gateway-free dispatcher.
 ///
-/// When `client` is omitted, the endpoint owns a client created from `token`
-/// and closes it when `group` finishes. When `application_id` is omitted, this
-/// method resolves it through `GET /applications/@me`. Supplying both values
-/// avoids startup HTTP requests.
+/// With `access=Token(token)` the endpoint owns a client built from the token
+/// and closes it when `group` finishes; with `access=Client(client)` it uses
+/// the caller's client. When `application_id` is omitted, this method resolves
+/// it through `GET /applications/@me`. Supplying a client and the id avoids
+/// startup HTTP requests. Raises `AppConfigError::EmptyToken` for an empty
+/// token.
 ///
 /// Command registration is a deploy-time step. Call `app.sync_commands(...)`
 /// from a one-shot program (see `src/examples/workers_echo/register`), never
@@ -38,17 +50,14 @@ priv enum InteractionRace {
 pub async fn App::serve(
   self : App,
   group : @async.TaskGroup[Unit],
-  client? : @dhttp.Client,
-  token? : String,
+  access~ : RestAccess,
   application_id? : @model.ApplicationId,
 ) -> InteractionEndpoint {
-  let (client, owns_client) = match client {
-    Some(client) => (client, false)
-    None => {
-      guard token is Some(token) && !token.is_empty() else {
-        raise AppConfigError::EmptyToken
-      }
-      (Client(token), true)
+  let (client, owns_client) = match access {
+    Client(client) => (client, false)
+    Token(token) => {
+      guard !token.is_empty() else { raise AppConfigError::EmptyToken }
+      (@dhttp.Client(token), true)
     }
   }
   if owns_client {

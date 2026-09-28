@@ -16,7 +16,7 @@ async test "signed HTTP API verifies exact bytes before dispatch" {
       .build()
       .serve(
         group,
-        token="test-token",
+        access=Token("test-token"),
         application_id=@model.Id::parse("400000000000000001"),
       )
     let request : @app.InteractionHttpRequest = {
@@ -92,7 +92,7 @@ async test "signed HTTP API answers 202 without a reply and 504 past the deadlin
       .build()
       .serve(
         group,
-        token="test-token",
+        access=Token("test-token"),
         application_id=@model.Id::parse("400000000000000001"),
       )
     let silent = endpoint.handle_signed_http(signed("silent"), verifier)

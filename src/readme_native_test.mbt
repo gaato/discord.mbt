@@ -36,17 +36,17 @@ async fn run_echo_bot(token : String) -> Unit {
   )
   let app = @discord.AppBuilder()
   app.command(echo)
-  let bot = @discord.Bot(app.build(), token~, sync=Global)
+  let bot = @discord.BotBuilder(app.build(), token~, sync=Global)
   bot.on(@discord.Events::ready(), (_ctx, ready) => {
     println("ready as \{ready.user.username}")
   })
-  bot.run()
+  bot.build().run()
 }
 
 // README "Gateway executor"
 
 ///|
-fn subscribe_message_create(bot : @discord.Bot) -> Unit {
+fn subscribe_message_create(bot : @discord.BotBuilder) -> Unit {
   bot.on(@discord.Events::message_create(), (_ctx, event) => {
     let message = event.message
     println("\{message.author.username}: \{message.content}")
@@ -54,8 +54,8 @@ fn subscribe_message_create(bot : @discord.Bot) -> Unit {
 }
 
 ///|
-fn auto_sharded_bot(app : @discord.App, token : String) -> @discord.Bot {
-  Bot(app, token~, shards=Auto)
+fn auto_sharded_bot(app : @discord.App, token : String) -> @discord.BotBuilder {
+  @discord.BotBuilder(app, token~, shards=Auto)
 }
 
 // README "Cloudflare Workers gateway"
@@ -65,8 +65,8 @@ fn restored_bot(
   app : @discord.App,
   token : String,
   saved : Map[Int, @discord.BotSession],
-) -> @discord.Bot {
-  @discord.Bot(app, token~, resume=saved)
+) -> @discord.BotBuilder {
+  @discord.BotBuilder(app, token~, resume=saved)
 }
 
 ///|
@@ -83,7 +83,7 @@ async fn handle_http_interaction(
   token : String,
   body : Json,
 ) -> Json? {
-  app.serve(group, token~).handle(body)
+  app.serve(group, access=Token(token)).handle(body)
 }
 
 // README "Typed models"

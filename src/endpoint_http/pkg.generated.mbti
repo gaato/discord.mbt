@@ -3,13 +3,12 @@ package "gaato/discord/endpoint_http"
 
 import {
   "gaato/discord/app",
-  "gaato/discord/http",
   "gaato/discord/model",
   "moonbitlang/async",
 }
 
 // Values
-pub async fn[X] serve_interactions(@async.TaskGroup[X], @app.App, addr~ : String, public_key~ : String, client? : @http.Client, token? : String, application_id? : @model.Id[@model.ApplicationMarker], path? : String, deadline_ms? : Int) -> InteractionsServer
+pub async fn[X] serve_interactions(@async.TaskGroup[X], @app.App, addr~ : String, public_key~ : String, access~ : @app.RestAccess, application_id? : @model.Id[@model.ApplicationMarker], path? : String, deadline_ms? : Int) -> InteractionsServer
 
 // Errors
 

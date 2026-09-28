@@ -117,45 +117,49 @@ async fn[T] manager_get(queue : @aqueue.Queue[T], stage : String) -> T {
 async test "shard config resolves auto fixed and range selections" {
   let client = @dhttp.Client("test-token")
   let app = @app.AppBuilder()
-  let auto = Bot(app.build(), token="test-token", shards=Auto)
-  assert_false(auto.compress_)
-  auto.gateway_bot_info_.val = Some(manager_gateway_info(shards=3))
-  let auto_config = auto.resolve_shards(client)
+  let auto = BotBuilder(app.build(), token="test-token", shards=Auto)
+  assert_false(auto.core.compress_)
+  auto.core.gateway_bot_info_.val = Some(manager_gateway_info(shards=3))
+  let auto_config = auto.core.resolve_shards(client)
   debug_inspect(
     (auto_config.ids, auto_config.count, auto_config.max_concurrency),
     content="([0, 1, 2], 3, 1)",
   )
 
-  let fixed = Bot(app.build(), token="test-token", shards=Fixed(count=2))
-  fixed.gateway_bot_info_.val = Some(manager_gateway_info())
-  let fixed_config = fixed.resolve_shards(client)
+  let fixed = BotBuilder(app.build(), token="test-token", shards=Fixed(count=2))
+  fixed.core.gateway_bot_info_.val = Some(manager_gateway_info())
+  let fixed_config = fixed.core.resolve_shards(client)
   debug_inspect((fixed_config.ids, fixed_config.count), content="([0, 1], 2)")
 
-  let compressed = Bot(app.build(), token="test-token", compress=true)
-  assert_true(compressed.compress_)
+  let compressed = BotBuilder(app.build(), token="test-token", compress=true)
+  assert_true(compressed.core.compress_)
 
   let injected_queue = @queue.InMemoryQueue()
-  let coordinated = Bot(
+  let coordinated = BotBuilder(
     app.build(),
     token="test-token",
     identify_queue=(injected_queue : &@queue.IdentifyQueue),
   )
-  guard coordinated.identify_queue_ is Some(_) else {
+  guard coordinated.core.identify_queue_ is Some(_) else {
     fail("expected injected identify queue")
   }
 
-  let ranged = Bot(
+  let ranged = BotBuilder(
     app.build(),
     token="test-token",
     shards=Range(ids=[1, 3], count=4),
   )
-  ranged.gateway_bot_info_.val = Some(manager_gateway_info())
-  let range_config = ranged.resolve_shards(client)
+  ranged.core.gateway_bot_info_.val = Some(manager_gateway_info())
+  let range_config = ranged.core.resolve_shards(client)
   debug_inspect((range_config.ids, range_config.count), content="([1, 3], 4)")
 
-  let limited = Bot(app.build(), token="test-token", shards=Fixed(count=2))
-  limited.gateway_bot_info_.val = Some(manager_gateway_info(remaining=1))
-  try limited.resolve_shards(client) catch {
+  let limited = BotBuilder(
+    app.build(),
+    token="test-token",
+    shards=Fixed(count=2),
+  )
+  limited.core.gateway_bot_info_.val = Some(manager_gateway_info(remaining=1))
+  try limited.core.resolve_shards(client) catch {
     SessionStartLimitExceeded(required=2, remaining=1, reset_after_ms=60000L) =>
       ()
     error => fail("unexpected error: \{error}")
@@ -165,20 +169,26 @@ async test "shard config resolves auto fixed and range selections" {
 
   // A saved session RESUMEs instead of identifying, so it is not counted.
   let saved = manager_bot_session(0, 2)
-  let resumed = Bot(app.build(), token="test-token", shards=Fixed(count=2), resume={
-    0: saved,
-  })
-  resumed.gateway_bot_info_.val = Some(manager_gateway_info(remaining=1))
-  let resumed_config = resumed.resolve_shards(client)
+  let resumed = BotBuilder(
+    app.build(),
+    token="test-token",
+    shards=Fixed(count=2),
+    resume={ 0: saved },
+  )
+  resumed.core.gateway_bot_info_.val = Some(manager_gateway_info(remaining=1))
+  let resumed_config = resumed.core.resolve_shards(client)
   debug_inspect(
     (resumed_config.ids, resumed_config.count),
     content="([0, 1], 2)",
   )
-  let exhausted = Bot(app.build(), token="test-token", shards=Fixed(count=2), resume={
-    0: saved,
-  })
-  exhausted.gateway_bot_info_.val = Some(manager_gateway_info(remaining=0))
-  try exhausted.resolve_shards(client) catch {
+  let exhausted = BotBuilder(
+    app.build(),
+    token="test-token",
+    shards=Fixed(count=2),
+    resume={ 0: saved },
+  )
+  exhausted.core.gateway_bot_info_.val = Some(manager_gateway_info(remaining=0))
+  try exhausted.core.resolve_shards(client) catch {
     SessionStartLimitExceeded(required=1, remaining=0, reset_after_ms=60000L) =>
       ()
     error => fail("unexpected error: \{error}")
@@ -190,14 +200,14 @@ async test "shard config resolves auto fixed and range selections" {
   let foreign_app = @app.AppBuilder()
   let warnings : Array[String] = []
   foreign_app.on_warn(warning => warnings.push(warning.to_string()))
-  let foreign = Bot(
+  let foreign = BotBuilder(
     foreign_app.build(),
     token="test-token",
     shards=Fixed(count=2),
     resume={ 0: manager_bot_session(0, 3) },
   )
-  foreign.gateway_bot_info_.val = Some(manager_gateway_info(remaining=1))
-  try foreign.resolve_shards(client) catch {
+  foreign.core.gateway_bot_info_.val = Some(manager_gateway_info(remaining=1))
+  try foreign.core.resolve_shards(client) catch {
     SessionStartLimitExceeded(required=2, remaining=1, reset_after_ms=60000L) =>
       ()
     error => fail("unexpected error: \{error}")
@@ -236,16 +246,16 @@ async test "fixed shards share identify queue and dispatch path" {
   let second = ManagerFakeTransport()
   let pending : Array[ManagerFakeTransport] = [second, first]
   let app = @app.AppBuilder()
-  let bot = Bot(
+  let bot = BotBuilder(
     app.build(),
     token="test-token",
     intents=@model.Intents::guild_messages(),
     client=Client("test-token"),
     shards=Fixed(count=2),
   )
-  bot.gateway_bot_info_.val = Some(manager_gateway_info(max_concurrency=1))
-  bot.identify_spacing_ms_.val = 60
-  bot.connector_.val = Some(_ => {
+  bot.core.gateway_bot_info_.val = Some(manager_gateway_info(max_concurrency=1))
+  bot.core.identify_spacing_ms_.val = 60
+  bot.core.connector_.val = Some(_ => {
     match pending.pop() {
       Some(transport) => (transport : &@gateway.GatewayTransport)
       None => raise @gateway.TransportClosed(code=None, reason="no transport")
@@ -264,8 +274,11 @@ async test "fixed shards share identify queue and dispatch path" {
     }
   })
 
+  let bot_bot = bot.build()
   @async.with_task_group(group => {
-    let running = group.spawn(no_wait=true, allow_failure=true, () => bot.run())
+    let running = group.spawn(no_wait=true, allow_failure=true, () => {
+      bot_bot.run()
+    })
     first.incoming.put(MANAGER_HELLO)
     second.incoming.put(MANAGER_HELLO)
     let (first_at, first_identify) = manager_get(
@@ -321,15 +334,15 @@ async test "fatal close fails the manager and closes sibling shards" {
   let second = ManagerFakeTransport()
   let pending : Array[ManagerFakeTransport] = [second, first]
   let app = @app.AppBuilder()
-  let bot = Bot(
+  let bot = BotBuilder(
     app.build(),
     token="test-token",
     client=Client("test-token"),
     shards=Fixed(count=2),
   )
-  bot.gateway_bot_info_.val = Some(manager_gateway_info(max_concurrency=2))
-  bot.identify_spacing_ms_.val = 1
-  bot.connector_.val = Some(_ => {
+  bot.core.gateway_bot_info_.val = Some(manager_gateway_info(max_concurrency=2))
+  bot.core.identify_spacing_ms_.val = 1
+  bot.core.connector_.val = Some(_ => {
     match pending.pop() {
       Some(transport) => (transport : &@gateway.GatewayTransport)
       None => raise @gateway.TransportClosed(code=None, reason="no transport")
@@ -338,8 +351,11 @@ async test "fatal close fails the manager and closes sibling shards" {
   let ready : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (_, _) => ready.put(()))
 
+  let bot_bot = bot.build()
   @async.with_task_group(group => {
-    let running = group.spawn(no_wait=true, allow_failure=true, () => bot.run())
+    let running = group.spawn(no_wait=true, allow_failure=true, () => {
+      bot_bot.run()
+    })
     first.incoming.put(MANAGER_HELLO)
     second.incoming.put(MANAGER_HELLO)
     let (_, first_identify) = first.outgoing.get()

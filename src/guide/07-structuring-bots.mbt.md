@@ -18,10 +18,12 @@ belong to the feature. App middleware is global, so a feature-specific policy
 should inspect its routed target and call `next()` for unrelated interactions.
 See [Middleware](09-middleware.mbt.md) for a complete installer example.
 
-A `Bot` runs a built `App`, so declarations must be complete before the bot
-exists. A feature that also consumes Gateway events therefore exports two
-functions: an installer for its declarations and an attach function for its
-event handlers:
+A `BotBuilder` takes a built `App`, so declarations must be complete before
+the bot is configured. A feature that also consumes Gateway events therefore
+exports two functions: an installer that takes the `AppBuilder` for its
+declarations, and an attach function that takes the `BotBuilder` for its event
+handlers. Both builders freeze on `build()`, so every installer and attach
+call happens before the bot runs:
 
 ```mbt check
 ///|
@@ -33,7 +35,10 @@ pub fn install_starboard(
 }
 
 ///|
-pub fn attach_starboard(bot : @discord.Bot, config~ : StarboardConfig) -> Unit {
+pub fn attach_starboard(
+  bot : @discord.BotBuilder,
+  config~ : StarboardConfig,
+) -> Unit {
   bot.on(@discord.Events::message_reaction_add(), (ctx, event) => {
     handle_star(event, ctx.app().http(), config)
   })
@@ -53,14 +58,14 @@ fn compose(
   let app = @discord.AppBuilder()
   install_feedback(app, config=feedback_config)
   install_starboard(app, config=starboard_config)
-  let bot = @discord.Bot(app.build(), token~, sync=command_scope)
+  let bot = @discord.BotBuilder(app.build(), token~, sync=command_scope)
   attach_starboard(bot, config=starboard_config)
 }
 ```
 
 `sync=command_scope` uses the combined declarations from all installers.
 If another process owns commands in that scope, add `sync_unowned=Keep` to
-the Bot constructor to preserve them. The Entry Point command is preserved
+the `BotBuilder` to preserve them. The Entry Point command is preserved
 under either policy.
 
 ```mbt check

@@ -80,11 +80,11 @@ async fn getting_started_main() -> Unit {
     let token = @env.get_env_var("DISCORD_TOKEN").unwrap_or("")
     let app = @discord.AppBuilder()
     app.command(echo_command())
-    let bot = @discord.Bot(app.build(), token~, sync=Global)
+    let bot = @discord.BotBuilder(app.build(), token~, sync=Global)
     bot.on(@discord.Events::ready(), (_, ready) => {
       println("ready as \{ready.user.username}")
     })
-    bot.run()
+    bot.build().run()
   })
   |> ignore
   println("[bot] shutting down")
@@ -140,8 +140,8 @@ Create a bot application in the Discord developer portal, install it with the
 DISCORD_TOKEN=... moon run --target native src/main
 ```
 
-The token passed to `Bot(...)` and `Client(...)` is the raw bot token without a
-`Bot ` prefix.
+The token passed to `BotBuilder(...)` and `Client(...)` is the raw bot token
+without a `Bot ` prefix.
 
 ## Stop the bot
 

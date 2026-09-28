@@ -37,28 +37,41 @@ priv enum ManagedShardEvent {
 }
 
 ///|
-fn validate_shard_ids(ids : Array[Int], count : Int) -> Unit raise BotError {
+/// Why `ids` out of `count` shards is not a layout Discord accepts, or `None`.
+fn shard_layout_problem(ids : Array[Int], count : Int) -> String? {
   if count <= 0 {
-    raise InvalidShardConfig(message="shard count must be positive")
+    return Some("shard count must be positive")
   }
   if ids.is_empty() {
-    raise InvalidShardConfig(message="at least one shard id must be selected")
+    return Some("at least one shard id must be selected")
   }
   let seen : Map[Int, Bool] = Map([])
   for id in ids {
     if id < 0 || id >= count {
-      raise InvalidShardConfig(message="shard id \{id} is outside 0..<\{count}")
+      return Some("shard id \{id} is outside 0..<\{count}")
     }
     if seen.get(id) == Some(true) {
-      raise InvalidShardConfig(message="duplicate shard id \{id}")
+      return Some("duplicate shard id \{id}")
     }
     seen[id] = true
+  }
+  None
+}
+
+///|
+/// Check a layout Discord supplied at run time (`Auto` shard counts).
+fn validate_gateway_layout(
+  ids : Array[Int],
+  count : Int,
+) -> Unit raise BotError {
+  if shard_layout_problem(ids, count) is Some(message) {
+    raise InvalidGatewayInfo(message~)
   }
 }
 
 ///|
-async fn Bot::gateway_bot_info(
-  self : Bot,
+async fn BotCore::gateway_bot_info(
+  self : BotCore,
   client : @dhttp.Client,
 ) -> @model.GatewayBotInfo raise @dhttp.DiscordHttpError {
   match self.gateway_bot_info_.val {
@@ -68,8 +81,8 @@ async fn Bot::gateway_bot_info(
 }
 
 ///|
-fn[X] Bot::start_managed_shard(
-  self : Bot,
+fn[X] BotCore::start_managed_shard(
+  self : BotCore,
   group : @async.TaskGroup[X],
   token~ : String,
   intents~ : @model.Intents,
@@ -116,14 +129,14 @@ fn[X] Bot::start_managed_shard(
 }
 
 ///|
-async fn Bot::resolve_shards(
-  self : Bot,
+async fn BotCore::resolve_shards(
+  self : BotCore,
   client : @dhttp.Client,
 ) -> ResolvedShardConfig {
   match self.shards_ {
     Single(id~, count~) => {
       let ids = [id]
-      validate_shard_ids(ids, count)
+      validate_gateway_layout(ids, count)
       let gateway_url = match self.gateway_url_ {
         Some(url) => url
         None => client.get_gateway()
@@ -156,9 +169,9 @@ async fn Bot::resolve_shards(
         Range(ids~, count~) => (ids.copy(), count)
         Single(..) => abort("handled above")
       }
-      validate_shard_ids(ids, count)
+      validate_gateway_layout(ids, count)
       if info.session_start_limit.max_concurrency <= 0 {
-        raise BotError::InvalidShardConfig(
+        raise BotError::InvalidGatewayInfo(
           message="gateway max_concurrency must be positive",
         )
       }
@@ -188,8 +201,8 @@ async fn Bot::resolve_shards(
 /// The saved sessions usable for the selected shards. A RESUME keeps the
 /// guild assignment of the READY it was recorded under, so a snapshot from
 /// another shard layout is dropped with a warning and its shard identifies.
-fn Bot::sessions_for_layout(
-  self : Bot,
+fn BotCore::sessions_for_layout(
+  self : BotCore,
   ids : Array[Int],
   count : Int,
 ) -> Map[Int, BotSession] {

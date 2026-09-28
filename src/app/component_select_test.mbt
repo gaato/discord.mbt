@@ -99,7 +99,7 @@ async test "component selects expose values, resolved objects, and reply kinds" 
       .build()
       .serve(
         group,
-        client~,
+        access=Client(client),
         application_id=@model.Id::parse("400000000000000001"),
       )
     match
@@ -172,7 +172,7 @@ async test "dm_only checks pass for direct-message invocations" {
       .build()
       .serve(
         group,
-        client~,
+        access=Client(client),
         application_id=@model.Id::parse("400000000000000001"),
       )
     match

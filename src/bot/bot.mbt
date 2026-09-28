@@ -4,9 +4,10 @@ pub(all) suberror BotError {
   /// Close codes 4013 and 4014 indicate invalid or disallowed gateway
   /// intents. Check explicit intents and privileged-intent approval.
   FatallyClosed(code~ : Int)
-  /// A shard id/count selection cannot be represented by Discord's sharding
-  /// rules.
-  InvalidShardConfig(message~ : String)
+  /// `run` was called while this bot was already running.
+  AlreadyRunning
+  /// The shard layout or limits `GET /gateway/bot` returned cannot be used.
+  InvalidGatewayInfo(message~ : String)
   /// The identify session allowance returned by `GET /gateway/bot` cannot
   /// cover the next IDENTIFY. At startup `required` counts the selected
   /// shards without a saved session (a saved session sends RESUME first);
@@ -34,8 +35,9 @@ pub impl Show for BotError with fn output(self, logger) {
         )
       }
     }
-    InvalidShardConfig(message~) =>
-      logger.write_string("invalid shard configuration: \{message}")
+    AlreadyRunning => logger.write_string("the bot is already running")
+    InvalidGatewayInfo(message~) =>
+      logger.write_string("invalid gateway information: \{message}")
     SessionStartLimitExceeded(required~, remaining~, reset_after_ms~) =>
       logger.write_string(
         "gateway session start limit exceeded: need \{required}, have \{remaining}; resets in \{reset_after_ms}ms",
@@ -59,36 +61,38 @@ priv struct ServiceHandler {
 ///|
 /// Gateway executor for a gateway-free application core on native, JavaScript,
 /// and Wasm. Voice connections are native-only.
-pub struct Bot {
-  priv app_ : @app.App
-  priv token_ : String
-  priv intents_ : @model.Intents?
-  priv capabilities_ : @model.GatewayCapabilities
-  priv client_ : @dhttp.Client?
-  priv gateway_url_ : String?
-  priv shards_ : ShardConfig
-  priv compress_ : Bool
-  priv resume_ : Map[Int, BotSession]
-  priv starting_ : Ref[Bool]
-  priv running_shards_ : Ref[Array[ManagedShard]]
-  priv identify_queue_ : &@queue.IdentifyQueue?
-  priv sync_ : @app.CommandScope?
-  priv sync_unowned_ : @framework.UnownedCommands
-  priv typed_events_ : Array[TypedEventHandler]
-  priv raw_events_ : Array[async (GatewayCtx, @model.Event) -> Unit]
-  priv event_middleware_ : Array[EventMiddleware]
-  priv mut cache_ : @cache.InMemoryCache?
-  priv decode_errors_ : Array[(String, Json) -> Unit]
-  priv telemetry_ : Array[(@telemetry.TelemetryEvent) -> Unit raise]
-  priv services_ : Array[ServiceHandler]
-  priv collector_ : EventCollector
+priv struct BotCore {
+  app_ : @app.App
+  token_ : String
+  intents_ : @model.Intents?
+  capabilities_ : @model.GatewayCapabilities
+  client_ : @dhttp.Client?
+  gateway_url_ : String?
+  shards_ : ShardConfig
+  compress_ : Bool
+  resume_ : Map[Int, BotSession]
+  starting_ : Ref[Bool]
+  running_shards_ : Ref[Array[ManagedShard]]
+  identify_queue_ : &@queue.IdentifyQueue?
+  sync_ : @app.CommandScope?
+  sync_unowned_ : @framework.UnownedCommands
+  typed_events_ : Array[TypedEventHandler]
+  raw_events_ : Array[async (GatewayCtx, @model.Event) -> Unit]
+  event_middleware_ : Array[EventMiddleware]
+  mut cache_ : @cache.InMemoryCache?
+  decode_errors_ : Array[(String, Json) -> Unit]
+  telemetry_ : Array[(@telemetry.TelemetryEvent) -> Unit raise]
+  services_ : Array[ServiceHandler]
+  collector_ : EventCollector
   // Production uses Shard::start's WebSocket connector. Whitebox tests inject
   // the same in-memory GatewayTransport seam used by gateway_test.mbt.
-  priv connector_ : Ref[(async (String) -> &@gateway.GatewayTransport)?]
+  connector_ : Ref[(async (String) -> &@gateway.GatewayTransport)?]
   // Whitebox seams for `/gateway/bot` and Discord's five-second identify
   // interval. Production always uses the REST response and 5250ms margin.
-  priv gateway_bot_info_ : Ref[@model.GatewayBotInfo?]
-  priv identify_spacing_ms_ : Ref[Int]
+  gateway_bot_info_ : Ref[@model.GatewayBotInfo?]
+  identify_spacing_ms_ : Ref[Int]
+  // Intents resolved (and warned about) once by `BotBuilder::build`.
+  frozen_intents_ : @model.Intents?
 }
 
 ///|
@@ -115,7 +119,7 @@ pub struct Bot {
 /// of identifying (see `Bot::sessions`). It restores gateway identity, not
 /// optional cache contents or application-owned state. `run` rejects a saved
 /// session whose gateway id disagrees with its READY session id.
-pub fn Bot::Bot(
+fn BotCore::new(
   app : @app.App,
   token~ : String,
   intents? : @model.Intents,
@@ -128,7 +132,7 @@ pub fn Bot::Bot(
   sync? : @app.CommandScope,
   sync_unowned? : @framework.UnownedCommands = Delete,
   resume? : Map[Int, BotSession] = Map([]),
-) -> Bot {
+) -> BotCore {
   {
     app_: app,
     token_: token,
@@ -161,6 +165,7 @@ pub fn Bot::Bot(
     connector_: Ref(None),
     gateway_bot_info_: Ref(None),
     identify_spacing_ms_: Ref(5250),
+    frozen_intents_: None,
   }
 }
 
@@ -171,7 +176,7 @@ pub fn Bot::Bot(
 /// resolves the shard layout over REST; an unsaved shard appears after READY.
 /// Empty while the bot is not running. Returned values do not alias mutable
 /// runtime state.
-pub fn Bot::sessions(self : Bot) -> Map[Int, BotSession] {
+fn BotCore::sessions(self : BotCore) -> Map[Int, BotSession] {
   let sessions : Map[Int, BotSession] = Map([])
   if self.starting_.val {
     for shard_id, saved in self.resume_ {
@@ -192,15 +197,18 @@ pub fn Bot::sessions(self : Bot) -> Map[Int, BotSession] {
 ///|
 /// Observe structured gateway, dispatch, and REST telemetry aggregated by
 /// this bot. Hooks run synchronously and should return promptly.
-pub fn Bot::on_telemetry(
-  self : Bot,
+fn BotCore::on_telemetry(
+  self : BotCore,
   hook : (@telemetry.TelemetryEvent) -> Unit raise,
 ) -> Unit {
   self.telemetry_.push(hook)
 }
 
 ///|
-fn Bot::emit_telemetry(self : Bot, event : @telemetry.TelemetryEvent) -> Unit {
+fn BotCore::emit_telemetry(
+  self : BotCore,
+  event : @telemetry.TelemetryEvent,
+) -> Unit {
   for hook in self.telemetry_ {
     hook(event) catch {
       error =>
@@ -217,18 +225,18 @@ fn Bot::emit_telemetry(self : Bot, event : @telemetry.TelemetryEvent) -> Unit {
 ///|
 /// Feeds every decoded gateway event into an opt-in cache before dispatching
 /// typed and raw event handlers.
-pub fn Bot::attach_cache(self : Bot, cache : @cache.InMemoryCache) -> Unit {
+fn BotCore::attach_cache(self : BotCore, cache : @cache.InMemoryCache) -> Unit {
   self.cache_ = Some(cache)
 }
 
 ///|
 /// Subscribe a typed handler to one gateway event (see `Events` for the
 /// descriptors). The event's required intents join the inferred intent set
-/// when `Bot(...)` omits explicit `intents`. Handlers run through the event
+/// when `BotBuilder(...)` omits explicit `intents`. Handlers run through the event
 /// middleware chain; a raised error is reported via the app's failure policy
 /// without stopping the bot.
-pub fn[T] Bot::on(
-  self : Bot,
+fn[T] BotCore::on(
+  self : BotCore,
   event : EventType[T],
   handler : async (GatewayCtx, T) -> Unit,
 ) -> Unit {
@@ -246,9 +254,9 @@ pub fn[T] Bot::on(
 ///|
 /// Subscribe to the raw event stream: every decoded gateway dispatch,
 /// including `Resumed` and `Unknown`, without payload projection. Unlike
-/// `Bot::on`, this adds nothing to the inferred intent set.
-pub fn Bot::on_event(
-  self : Bot,
+/// `BotBuilder::on`, this adds nothing to the inferred intent set.
+fn BotCore::on_event(
+  self : BotCore,
   handler : async (GatewayCtx, @model.Event) -> Unit,
 ) -> Unit {
   self.raw_events_.push(handler)
@@ -262,8 +270,8 @@ pub fn Bot::on_event(
 /// event data. Handlers run synchronously in the dispatch loop and should
 /// return promptly. Registering a handler does not add gateway intents or
 /// widen the event filter.
-pub fn Bot::on_decode_error(
-  self : Bot,
+fn BotCore::on_decode_error(
+  self : BotCore,
   handler : (String, Json) -> Unit,
 ) -> Unit {
   self.decode_errors_.push(handler)
@@ -274,8 +282,8 @@ pub fn Bot::on_decode_error(
 /// the bot runs (e.g. a periodic status updater). `name` labels the service
 /// in failure reports. A raised error is reported via the app's failure
 /// policy and stops only that service, not the bot.
-pub fn Bot::service(
-  self : Bot,
+fn BotCore::service(
+  self : BotCore,
   name~ : String,
   handler : async (GatewayCtx) -> Unit,
 ) -> Unit {
@@ -283,7 +291,7 @@ pub fn Bot::service(
 }
 
 ///|
-fn Bot::observe_decode_error(self : Bot, event : @model.Event) -> Unit {
+fn BotCore::observe_decode_error(self : BotCore, event : @model.Event) -> Unit {
   match event {
     Unknown(t~, d~) if t.has_prefix("DECODE_ERROR:") => {
       // Never include `d`: payloads can contain user content and credentials.
@@ -315,7 +323,7 @@ fn privileged_intents() -> @model.Intents {
 /// when it intersects that union. Automatic mode follows the requested union
 /// literally, then removes privileged bits; enabling those always requires an
 /// explicit opt-in by the application.
-fn Bot::resolved_intents(self : Bot) -> @model.Intents {
+fn BotCore::resolved_intents(self : BotCore) -> @model.Intents {
   match self.intents_ {
     Some(explicit) => {
       for subscription in self.typed_events_ {
@@ -448,7 +456,7 @@ fn event_kind(event : @model.Event) -> @model.EventKind {
 }
 
 ///|
-fn Bot::event_filter(self : Bot) -> (@model.EventKind) -> Bool {
+fn BotCore::event_filter(self : BotCore) -> (@model.EventKind) -> Bool {
   if self.cache_ is Some(_) || !self.raw_events_.is_empty() {
     return _ => true
   }
@@ -469,8 +477,8 @@ fn Bot::event_filter(self : Bot) -> (@model.EventKind) -> Bool {
 }
 
 ///|
-fn Bot::spawn_services(
-  self : Bot,
+fn BotCore::spawn_services(
+  self : BotCore,
   group : @async.TaskGroup[Unit],
   gateway : GatewayCtx,
 ) -> Unit {
@@ -485,8 +493,8 @@ fn Bot::spawn_services(
 }
 
 ///|
-async fn Bot::spawn_event_handlers(
-  self : Bot,
+async fn BotCore::spawn_event_handlers(
+  self : BotCore,
   spawner : @app.Spawner,
   gateway : GatewayCtx,
   event : @model.Event,
@@ -520,8 +528,8 @@ async fn Bot::spawn_event_handlers(
 }
 
 ///|
-fn Bot::spawn_interaction(
-  self : Bot,
+fn BotCore::spawn_interaction(
+  self : BotCore,
   group : @async.TaskGroup[Unit],
   framework : @framework.Framework,
   interaction : @model.Interaction,
@@ -543,23 +551,10 @@ fn Bot::spawn_interaction(
 
 ///|
 /// Connect and process gateway events until graceful shutdown or a fatal close.
-pub async fn Bot::run(self : Bot) -> Unit {
-  if self.token_.is_empty() {
-    raise @app.AppConfigError::EmptyToken
-  }
-  if self.compress_ && !@gateway.zlib_stream_supported() {
-    raise BotError::InvalidShardConfig(
-      message="compress=true requires zlib-stream inflate, which this backend does not provide",
-    )
-  }
-  for shard_id, saved in self.resume_ {
-    if saved.gateway.id != saved.ready.session_id {
-      raise BotError::InvalidShardConfig(
-        message="saved session for shard \{shard_id} has mismatched gateway and READY session ids",
-      )
-    }
-  }
-  let intents = self.resolved_intents()
+async fn BotCore::run(self : BotCore) -> Unit {
+  let intents = self.frozen_intents_.unwrap_or_else(() => {
+    self.resolved_intents()
+  })
   let owns_client = self.client_ is None
   let client = self.client_.unwrap_or_else(() => Client(self.token_))
   defer (if owns_client { client.close() })

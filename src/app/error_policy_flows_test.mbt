@@ -47,7 +47,7 @@ async test "component and modal failures flow through the error policy" {
       .build()
       .serve(
         group,
-        client~,
+        access=Client(client),
         application_id=@model.Id::parse("400000000000000001"),
       )
     // A failing immediate component handler answers through the policy.

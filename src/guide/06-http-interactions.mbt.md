@@ -16,7 +16,7 @@ async fn dispatch_interaction(
   token : String,
   body : Json,
 ) -> Json? {
-  let endpoint = app.serve(group, token~)
+  let endpoint = app.serve(group, access=Token(token))
   endpoint.handle(body)
 }
 ```
@@ -32,7 +32,7 @@ async fn serve_with_existing_client(
   client : @dhttp.Client,
   application_id : @model.ApplicationId,
 ) -> @discord.InteractionEndpoint {
-  app.serve(group, client~, application_id~)
+  app.serve(group, access=Client(client), application_id~)
 }
 ```
 
@@ -200,9 +200,9 @@ async fn run_server(
     let server = @discord.serve_interactions(
       group,
       app.build(),
+      access=Token(token),
       addr="127.0.0.1:8080",
       public_key~,
-      token~,
     )
     println("listening on \{server.addr()}")
   })

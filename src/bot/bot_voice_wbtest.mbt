@@ -130,19 +130,20 @@ async test "join_voice reuses its per-guild connection and handles a failed serv
   let transport = BotFakeTransport()
   let client = @dhttp.Client("test-token")
   defer client.close()
-  let bot = Bot(
+  let bot = BotBuilder(
     @app.AppBuilder().build(),
     token="test-token",
     client~,
     intents=@model.Intents::guild_voice_states(),
     gateway_url="wss://gateway.example",
   )
-  bot.gateway_bot_info_.val = Some(manager_gateway_info())
-  bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
+  bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
   let ready : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready.put(ctx))
+  let bot_bot = bot.build()
   @async.with_task_group(group => {
-    let running = group.spawn(no_wait=true, () => bot.run())
+    let running = group.spawn(no_wait=true, () => bot_bot.run())
     transport.incoming.put(BOT_HELLO)
     transport.outgoing.get() |> ignore
     transport.incoming.put(bot_ready_frame())
@@ -210,19 +211,20 @@ async test "join_voice evicts closed connections and releases its gate after sen
   let transport = BotFakeTransport()
   let client = @dhttp.Client("test-token")
   defer client.close()
-  let bot = Bot(
+  let bot = BotBuilder(
     @app.AppBuilder().build(),
     token="test-token",
     client~,
     intents=@model.Intents::guild_voice_states(),
     gateway_url="wss://gateway.example",
   )
-  bot.gateway_bot_info_.val = Some(manager_gateway_info())
-  bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
+  bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
   let ready : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready.put(ctx))
+  let bot_bot = bot.build()
   @async.with_task_group(group => {
-    let running = group.spawn(no_wait=true, () => bot.run())
+    let running = group.spawn(no_wait=true, () => bot_bot.run())
     transport.incoming.put(BOT_HELLO)
     transport.outgoing.get() |> ignore
     transport.incoming.put(bot_ready_frame())
@@ -261,19 +263,19 @@ async test "voice server watcher unregisters after collector failure or a nonrea
     let transport = BotFakeTransport()
     let client = @dhttp.Client("test-token")
     defer client.close()
-    let bot = Bot(
+    let bot = BotBuilder(
       @app.AppBuilder().build(),
       token="test-token",
       client~,
       intents=@model.Intents::guild_voice_states(),
       gateway_url="wss://gateway.example",
     )
-    bot.gateway_bot_info_.val = Some(manager_gateway_info())
-    bot.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+    bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
+    bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
     let ready : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
     bot.on(Events::ready(), (ctx, _) => ready.put(ctx))
     @async.with_task_group(group => {
-      let running = group.spawn(no_wait=true, () => bot.run())
+      let running = group.spawn(no_wait=true, () => bot.build().run())
       transport.incoming.put(BOT_HELLO)
       transport.outgoing.get() |> ignore
       transport.incoming.put(bot_ready_frame())
@@ -326,8 +328,9 @@ async test "voice credentials register both collectors before opcode 4" {
   let bot = middleware_runtime_bot(app.build(), transport)
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
+  let bot_bot = bot.build()
   @async.with_task_group(group => {
-    let running = group.spawn(no_wait=true, () => bot.run())
+    let running = group.spawn(no_wait=true, () => bot_bot.run())
     transport.incoming.put(BOT_HELLO)
     guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected identify")
@@ -383,8 +386,9 @@ async test "join_voice fails before opcode 4 without guild voice states intent" 
   let bot = middleware_runtime_bot(app.build(), transport)
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
+  let bot_bot = bot.build()
   @async.with_task_group(group => {
-    let running = group.spawn(no_wait=true, () => bot.run())
+    let running = group.spawn(no_wait=true, () => bot_bot.run())
     transport.incoming.put(BOT_HELLO)
     guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected identify")

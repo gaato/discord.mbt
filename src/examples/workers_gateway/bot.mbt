@@ -4,8 +4,8 @@ pub fn build_bot(
   token : String,
   gateway_url : String,
   saved_sessions : Map[Int, @discord.BotSession],
-) -> @discord.Bot raise @discord.AppConfigError {
-  let bot = @discord.Bot(
+) -> @discord.Bot raise {
+  let bot = @discord.BotBuilder(
     worker_app(),
     token~,
     gateway_url~,
@@ -18,7 +18,7 @@ pub fn build_bot(
     println("[gateway] ready as \{ready.user.username}")
   })
   bot.on_telemetry(event => println("[gateway] \{Repr(event)}"))
-  bot
+  bot.build()
 }
 
 ///|

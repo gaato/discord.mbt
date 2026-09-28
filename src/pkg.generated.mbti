@@ -87,7 +87,7 @@ pub fn select_option(label~ : String, value~ : String, description? : String, em
 
 pub fn separator(divider? : Bool, spacing? : Int) -> @model.Component
 
-pub async fn[X] serve_interactions(@async.TaskGroup[X], @app.App, addr~ : String, public_key~ : String, client? : @http.Client, token? : String, application_id? : @model.Id[@model.ApplicationMarker], path? : String, deadline_ms? : Int) -> @endpoint_http.InteractionsServer
+pub async fn[X] serve_interactions(@async.TaskGroup[X], @app.App, addr~ : String, public_key~ : String, access~ : @app.RestAccess, application_id? : @model.Id[@model.ApplicationMarker], path? : String, deadline_ms? : Int) -> @endpoint_http.InteractionsServer
 
 pub fn[A] slash(name~ : String, description~ : String, args~ : @interaction.Args[A], handler~ : @app.InteractionHandler[A], default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType], name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @app.Command[A]
 
@@ -141,6 +141,10 @@ pub using @interaction {type Arg}
 pub using @interaction {type Args}
 
 pub using @bot {type Bot}
+
+pub using @bot {type BotBuilder}
+
+pub using @bot {type BotConfigError}
 
 pub using @bot {type BotError}
 
@@ -245,6 +249,8 @@ pub using @voice {type OggOpusError}
 pub using @voice {type OggOpusSource}
 
 pub using @voice {type OggOpusWriter}
+
+pub using @app {type RestAccess}
 
 pub using @bot {type ShardConfig}
 
