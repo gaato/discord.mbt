@@ -558,11 +558,10 @@ async fn BotCore::run(self : BotCore) -> Unit {
   let owns_client = self.client_ is None
   let client = self.client_.unwrap_or_else(() => Client(self.token_))
   defer (if owns_client { client.close() })
-  // A supplied client got its forwarding hook once, in `BotBuilder::build`;
-  // hooking it on every run would repeat each event after a restart.
-  if owns_client {
-    client.on_telemetry(event => self.emit_telemetry(event))
-  }
+  // Forward REST telemetry only while this run lasts: a caller-owned client
+  // outlives the bot and must neither keep it alive nor call it afterwards.
+  let detach = client.attach_telemetry(event => self.emit_telemetry(event))
+  defer detach()
   // Supplied snapshots stay visible through `sessions()` until the shards
   // exist, so a periodic persister never observes an empty map mid-startup.
   self.starting_.val = true

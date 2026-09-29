@@ -178,6 +178,26 @@ pub fn Client::on_telemetry(
 }
 
 ///|
+/// Observe telemetry until the returned function is called, which removes the
+/// hook. Executors use it to forward a caller-owned client's events only while
+/// they run. Hidden from the public interface.
+#doc(hidden)
+pub fn Client::attach_telemetry(
+  self : Client,
+  hook : (@telemetry.TelemetryEvent) -> Unit raise,
+) -> () -> Unit {
+  self.telemetry_.push(hook)
+  () => {
+    for index, attached in self.telemetry_ {
+      if physical_equal(attached, hook) {
+        self.telemetry_.remove(index) |> ignore
+        break
+      }
+    }
+  }
+}
+
+///|
 /// Set the warning sink used for telemetry-hook failures.
 pub fn Client::on_warn(self : Client, hook : (String) -> Unit) -> Unit {
   self.warn_.val = hook

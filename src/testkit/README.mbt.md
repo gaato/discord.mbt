@@ -125,9 +125,9 @@ path, or raise a `DiscordHttpError` directly. `FileUpload` exposes
 
 Handler errors go to the App's error policy, as in production. A test of
 the policy itself reads what it produced: the captured error reply for a
-known `HandlerError`, or the `AppWarning` through `App::on_warn` that the default
-policy emits for anything else. A test of the handler alone replaces the
-policy with one that records the original error:
+known `HandlerError`, or the `AppWarning` through `AppBuilder::on_warn` that
+the default policy emits for anything else. A test of the handler alone
+replaces the policy with one that records the original error:
 
 ```mbt check
 ///|

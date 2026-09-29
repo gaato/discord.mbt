@@ -76,7 +76,7 @@ async test "a bot runs once at a time and may run again after it stops" {
 }
 
 ///|
-async test "a supplied client's telemetry reaches the bot once, across restarts" {
+async test "a supplied client reports to the bot once per call, only while it runs" {
   let requests = Ref(0)
   let client = @dhttp.Client::offline(_ => {
     requests.val += 1
@@ -102,7 +102,11 @@ async test "a supplied client's telemetry reaches the bot once, across restarts"
   )
   builder.core.gateway_bot_info_.val = Some(manager_gateway_info())
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
-  builder.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
+  builder.on(Events::ready(), (ctx, _) => {
+    // One REST call per run, made through the caller's client.
+    ctx.app().http().get_current_user() |> ignore
+    ready_contexts.put(ctx)
+  })
   let http_events = Ref(0)
   builder.on_telemetry(event => {
     if event is HttpRequest(..) {
@@ -125,8 +129,10 @@ async test "a supplied client's telemetry reaches the bot once, across restarts"
       running.wait()
     })
   }
-  let before = requests.val
+  // Each run forwarded its own call once.
+  assert_eq(http_events.val, 2)
+  // Once the bot has stopped, the caller's client no longer reports to it.
   client.get_current_user() |> ignore
-  assert_eq(requests.val, before + 1)
-  assert_eq(http_events.val, before + 1)
+  assert_eq(requests.val, 3)
+  assert_eq(http_events.val, 2)
 }

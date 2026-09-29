@@ -35,8 +35,9 @@ breaking change is listed with a migration note.
 - Every message a library surface sends passes every field Discord accepts
   for that callback. `poll` is accepted by initial replies
   (`CommandReply::message`, `ComponentReply::message`,
-  `InitialResponse::message`, and the raw `respond` and `reply`), by
-  followups, and by `edit_original`. `keep_attachments` is accepted by
+  `ModalReply::message`, and the raw `respond` and `reply`), by followups,
+  and by `edit_original`; Discord accepts a poll in an edit only while
+  editing a deferred response, so `edit_followup` does not take one. `keep_attachments` is accepted by
   `edit_original`. Component updates accept `clear_content`, `files`,
   `keep_attachments`, and `poll`.
 - Modal submissions can update the message whose component opened the modal:
@@ -168,9 +169,14 @@ breaking change is listed with a migration note.
   `ModalReply` instead of `InitialResponse`, `Deferred` is renamed
   `DeferredMessage` (matching `ComponentHandler`), and
   `InitialResponse::message` is no longer public: every immediate reply is
-  built with its reply type's `message`. Migration:
-  `InitialResponse::message(...)` becomes `ModalReply::message(...)`, and
-  `Deferred(ephemeral~, ...)` becomes `DeferredMessage(ephemeral~, ...)`.
+  built with its reply type's `message`. Migration: replace
+  `InitialResponse::message(...)` with the reply type of the handler that
+  returns it — `CommandReply::message(...)` in a command handler,
+  `ComponentReply::message(...)` in a component handler, and
+  `ModalReply::message(...)` in a modal handler (a `Message(InitialResponse::
+  message(...))` wrapper becomes the bare `XReply::message(...)`) — and
+  `Deferred(ephemeral~, ...)` in a modal handler becomes
+  `DeferredMessage(ephemeral~, ...)`.
 - Breaking: `Modal::show` raises `ModalShowError` instead of an untyped
   error. `ModalPrefillError` is renamed `ModalShowError` and gains
   `InvalidCustomId(CustomIdError)` for state that does not encode or does not

@@ -294,7 +294,8 @@ telemetry.
 ## Opt-in cache
 
 `gaato/discord/cache` is a portable, gateway-driven in-memory cache. Attach
-it to a `Bot` to apply every decoded event before event handlers run:
+it with `BotBuilder::attach_cache` to apply every decoded event before event
+handlers run:
 
 ```mbt check
 ///|

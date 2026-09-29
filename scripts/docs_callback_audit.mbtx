@@ -2,15 +2,19 @@
 /// Audit the message fields each interaction message surface sends against
 /// Discord's documentation.
 ///
-/// Three surfaces, each a documented parameter table and the library functions
+/// Four surfaces, each a documented parameter table and the library functions
 /// that build its body:
 ///
 /// - `callback`: the "Messages" table of Interaction Callback Data, built by
 ///   `interaction_message_data` (initial replies and component/modal updates).
 /// - `followup`: the Execute Webhook JSON/Form params, built by
 ///   `Client::create_followup`.
-/// - `edit`: the Edit Webhook Message JSON/Form params, built by
-///   `Client::edit_original_response` and `Client::edit_followup`.
+/// - `edit-original` and `edit-followup`: the Edit Webhook Message JSON/Form
+///   params, built by `Client::edit_original_response` and
+///   `Client::edit_followup` respectively.
+///
+/// Each surface has exactly one operation-specific builder, so a field one
+/// operation drops cannot hide behind another operation that sends it.
 ///
 /// Every documented field must be sent by the surface or excused in
 /// `docs_callback_audit.allow` as `surface field # reason`. Every field a
@@ -77,7 +81,7 @@ fn surfaces() -> Array[Surface] {
       ],
     },
     {
-      name: "edit",
+      name: "edit-original",
       doc: "developers/resources/webhook.mdx",
       section: "## Edit Webhook Message",
       table: "###### JSON/Form Params",
@@ -87,6 +91,18 @@ fn surfaces() -> Array[Surface] {
       ],
       builders: [
         ("src/http/api_interaction.mbt", "Client::edit_original_response"),
+        ..shared_builders,
+      ],
+    },
+    {
+      name: "edit-followup",
+      doc: "developers/resources/webhook.mdx",
+      section: "## Edit Webhook Message",
+      table: "###### JSON/Form Params",
+      sends: [
+        "content", "embeds", "flags", "allowed_mentions", "components", "attachments",
+      ],
+      builders: [
         ("src/http/api_interaction.mbt", "Client::edit_followup"),
         ..shared_builders,
       ],
@@ -293,6 +309,19 @@ async fn main {
       new="\"pole\"",
     )
     must_fail(() => audit(docs, unbuilt, allow))
+    // Only `edit_original_response` sends a poll; dropping it there must fail
+    // even though other operations share the same documented table.
+    let original_without_poll = sources.copy()
+    let interaction_api = "src/http/api_interaction.mbt"
+    let edit_original = function_body(
+      sources[interaction_api],
+      "Client::edit_original_response",
+    )
+    original_without_poll[interaction_api] = sources[interaction_api].replace(
+      old=edit_original,
+      new=edit_original.replace_all(old="\"poll\"", new="\"pole\""),
+    )
+    must_fail(() => audit(docs, original_without_poll, allow))
     must_fail(() => audit(docs, sources, ""))
     must_fail(() => audit(docs, sources, allow + "\ncallback content # stale\n"))
     println("callback audit self-tests: OK")

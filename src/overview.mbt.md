@@ -303,7 +303,7 @@ the `dave_probe`, `voice_player`, and `voice_recorder` examples, and the accepte
 ### Synchronization and failures
 
 `CommandScope` selects global, guild, or multi-guild registration. Pass
-`sync=scope` to `Bot` to synchronize once after the first READY; when omitted,
+`sync=scope` to `BotBuilder` to synchronize once after the first READY; when omitted,
 the bot makes no command request. HTTP executors never synchronize commands.
 For those deployments, call `app.build().sync_commands(client, application_id,
 scope~)` from a one-shot registration program. It returns an `@app.SyncReport`

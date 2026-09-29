@@ -445,10 +445,10 @@ package pattern and why discord.mbt does not define a `Plugin` trait.
 
 ## Telemetry
 
-Middleware wraps work; telemetry observes it. `Client` and `Bot` expose
-dependency-free structured telemetry callbacks through `on_telemetry`. `Bot`
-aggregates its shard, dispatch, decode-error, and REST client events, and
-shard-scoped events carry the shard id:
+Middleware wraps work; telemetry observes it. `Client` and `BotBuilder`
+expose dependency-free structured telemetry callbacks through `on_telemetry`.
+A built `Bot` aggregates its shard, dispatch, decode-error, and REST client
+events while it runs, and shard-scoped events carry the shard id:
 
 ```mbt check
 ///|
@@ -476,8 +476,8 @@ record values promptly rather than perform blocking work, the same contract
 event middleware has. Unlike HTTP middleware, which returns once per logical
 call, HTTP telemetry reports per-attempt values such as `HttpRateLimited`.
 
-Telemetry is an additional channel: `App::on_warn` and `BotBuilder::on_decode_error`
-retain their behavior, and a telemetry callback failure is reported through
+Telemetry is an additional channel: `AppBuilder::on_warn` and
+`BotBuilder::on_decode_error` retain their behavior, and a telemetry callback failure is reported through
 the warning hook instead of being silently discarded. Standalone clients
 install the same observer with `client.on_telemetry` and configure the
 warning sink with `client.on_warn`.

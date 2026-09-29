@@ -212,11 +212,6 @@ pub fn BotBuilder::build(self : BotBuilder) -> Bot raise BotConfigError {
     collector_: EventCollector(),
     frozen_intents_: Some(core.resolved_intents()),
   }
-  // Forward the supplied client's REST telemetry once per built bot; a client
-  // the bot builds itself is hooked when each run creates it.
-  if built.client_ is Some(client) {
-    client.on_telemetry(event => built.emit_telemetry(event))
-  }
   { core: built, running_: Ref(false), }
 }
 
