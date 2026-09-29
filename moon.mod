@@ -23,7 +23,7 @@ warnings = "-implicit_impl_as_method"
 
 import {
   "gaato/http@0.1.0",
-  "gaato/http-async@0.1.1",
+  "gaato/http-async@0.1.2",
   "gaato/sdk-runtime@0.2.1",
   "moonbitlang/async@0.22.4",
   "hustcer/ed25519@0.6.0",

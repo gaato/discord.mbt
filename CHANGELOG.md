@@ -272,6 +272,11 @@ breaking change is listed with a migration note.
   message path. The check existed but no REST call passed the poll to it,
   so `create_message`, `create_followup`, `edit_original_response`, and
   `execute_webhook` sent bodies Discord rejects.
+- The REST client sends one `User-Agent` header. With `moonbitlang/async`
+  0.21.0 or later, the connection added its default `moonbit-http-client/1.1`
+  next to `DiscordBot (...)`; `gaato/http-async` 0.1.2 sets the request's
+  `User-Agent` when it opens the connection instead. Requires
+  `gaato/http-async` 0.1.2 (was 0.1.1).
 
 ## [0.6.0] - 2026-09-25
 
