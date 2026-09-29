@@ -149,7 +149,7 @@ async test "events beyond the backlog skip handlers with telemetry and one warni
     intents=@model.Intents::guild_messages(),
     client=Client("test-token"),
     gateway_url="wss://gateway.example",
-    event_backlog=1,
+    event_backlog=2,
   )
   builder.core.gateway_bot_info_.val = Some(manager_gateway_info())
   builder.core.connector_.val = Some(_ => {
@@ -160,14 +160,16 @@ async test "events beyond the backlog skip handlers with telemetry and one warni
   // Subscribing is what lets MESSAGE_CREATE through the gateway filter;
   // middleware alone never widens it.
   builder.on(Events::message_create(), (_, _) => ())
-  let blocked : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  let blocked : @aqueue.Queue[String] = Queue(kind=Unbounded)
   let release : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   let handled : Array[String] = []
   builder.middleware((_, event, next) => {
     if event is MessageCreate(created) {
-      handled.push(created.message.id.to_string())
-      if created.message.id.to_string() == "1" {
-        blocked.put(())
+      let id = created.message.id.to_string()
+      handled.push(id)
+      // Messages 1 and 2 each hold the only consumer until released.
+      if id == "1" || id == "2" {
+        blocked.put(id)
         release.get()
       }
     }
@@ -175,11 +177,21 @@ async test "events beyond the backlog skip handlers with telemetry and one warni
   })
   let dropped : Array[String] = []
   builder.on_telemetry(event => {
-    if event is EventDropped(kind~, backlog=1) {
+    if event is EventDropped(kind~, backlog=2) {
       dropped.push(kind)
     }
   })
   let bot = builder.build()
+  let send = (id : Int) => {
+    transport.incoming.put(message_create_frame(id + 2, id.to_string()))
+  }
+  async fn wait_dropped(count : Int) -> Unit {
+    @async.with_timeout(2000, () => {
+      while dropped.length() < count {
+        @async.sleep(5)
+      }
+    })
+  }
   @async.with_task_group(group => {
     let running = group.spawn(no_wait=true, () => bot.run())
     transport.incoming.put(BOT_HELLO)
@@ -188,28 +200,31 @@ async test "events beyond the backlog skip handlers with telemetry and one warni
     }
     transport.incoming.put(bot_ready_frame())
     let ctx = @async.with_timeout(2000, () => ready_contexts.get())
-    // The first message holds the only consumer; the second fills the
-    // backlog of one; the next two are dropped for handlers.
-    transport.incoming.put(message_create_frame(2, "1"))
-    @async.with_timeout(2000, () => blocked.get())
+    // 1 holds the consumer, 2 and 3 fill the backlog of two, 4 is dropped.
+    send(1)
+    assert_eq(@async.with_timeout(2000, () => blocked.get()), "1")
     for id in 2..<=4 {
-      transport.incoming.put(message_create_frame(id + 2, id.to_string()))
+      send(id)
     }
-    @async.with_timeout(2000, () => {
-      while dropped.length() < 2 {
-        @async.sleep(5)
-      }
-    })
+    wait_dropped(1)
+    // Releasing 1 lets the consumer take 2, which holds it again: one slot
+    // frees but the backlog never drains, so the next overflow must not warn
+    // a second time.
+    release.put(())
+    assert_eq(@async.with_timeout(2000, () => blocked.get()), "2")
+    send(5)
+    send(6)
+    wait_dropped(2)
     release.put(())
     @async.with_timeout(2000, () => {
-      while handled.length() < 2 {
+      while handled.length() < 4 {
         @async.sleep(5)
       }
     })
     ctx.shutdown()
     running.wait()
   })
-  assert_eq(handled, ["1", "2"])
+  assert_eq(handled, ["1", "2", "3", "5"])
   assert_eq(dropped, ["KMessageCreate", "KMessageCreate"])
   assert_eq(warnings.length(), 1)
   assert_true(warnings[0].contains("dropping KMessageCreate"))

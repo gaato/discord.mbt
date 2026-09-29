@@ -272,3 +272,22 @@ async test "a concurrent send observes the in-flight callback's outcome" {
   assert_eq(attempts.val, 2)
   assert_eq(gate.state(), Sent(ChannelMessageWithSource))
 }
+
+///|
+async test "the token lifetime is counted from when the gate was built" {
+  let interaction = @model.Interaction::{
+    ..@json.from_json(
+      @json.parse(
+        (
+          #|{"id":"500000000000000990","application_id":"400000000000000001","type":2,"token":"interaction-token","version":1,"data":{"id":"600000000000000100","name":"x","type":1}}
+        ),
+      ),
+    ),
+  }
+  let (gate, _) = @framework.ResponseGate::capture(interaction)
+  let fresh = gate.token_remaining_ms()
+  assert_true(fresh <= @framework.INTERACTION_TOKEN_LIFETIME_MS)
+  assert_true(fresh > @framework.INTERACTION_TOKEN_LIFETIME_MS - 1000)
+  @async.sleep(30)
+  assert_true(gate.token_remaining_ms() <= fresh - 30)
+}

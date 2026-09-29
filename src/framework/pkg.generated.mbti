@@ -11,6 +11,8 @@ import {
 // Values
 pub const DEFAULT_INTERACTION_DEADLINE_MS : Int = 2500
 
+pub const INTERACTION_TOKEN_LIFETIME_MS : Int = 900_000
+
 pub fn classify_rest_callback_failure(Error) -> DeliveryFailure
 
 pub fn plan_command_sync(Array[@interaction.CommandSpec], Array[Json], unowned~ : UnownedCommands, guild_id? : @model.Id[@model.GuildMarker]) -> (Json?, ScopeSyncReport)
@@ -42,6 +44,7 @@ pub(all) struct AutocompleteCtx {
 }
 pub fn AutocompleteCtx::remaining_ms(Self) -> Int?
 pub async fn AutocompleteCtx::suggest(Self, Array[@model.CommandOptionChoice]) -> Unit
+pub fn AutocompleteCtx::token_remaining_ms(Self) -> Int
 
 pub(all) struct CapturedResponse {
   response : @model.InteractionResponse
@@ -74,6 +77,7 @@ pub fn CommandCtx::scope(Self) -> InvocationScope
 pub async fn CommandCtx::show_modal(Self, custom_id~ : String, title~ : String, components~ : Array[@model.Component]) -> Unit
 pub fn CommandCtx::target_message(Self) -> @model.Message?
 pub fn CommandCtx::target_user(Self) -> TargetUser?
+pub fn CommandCtx::token_remaining_ms(Self) -> Int
 pub fn CommandCtx::user(Self) -> @model.User
 
 pub(all) struct ComponentCtx {
@@ -100,6 +104,7 @@ pub async fn ComponentCtx::respond(Self, content? : String, embeds? : Array[@mod
 pub fn ComponentCtx::response_state(Self) -> ResponseState
 pub fn ComponentCtx::scope(Self) -> InvocationScope
 pub async fn ComponentCtx::show_modal(Self, custom_id~ : String, title~ : String, components~ : Array[@model.Component]) -> Unit
+pub fn ComponentCtx::token_remaining_ms(Self) -> Int
 pub async fn ComponentCtx::update_message(Self, content? : String, clear_content? : Bool, embeds? : Array[@model.Embed], components? : Array[@model.Component], allowed_mentions? : @model.AllowedMentions, files? : Array[@http.FileUpload], keep_attachments? : Array[@model.AttachmentRequest], poll? : @model.PollCreateRequest) -> Unit
 pub fn ComponentCtx::user(Self) -> @model.User
 
@@ -162,6 +167,7 @@ pub async fn ModalCtx::respond(Self, content? : String, embeds? : Array[@model.E
 pub fn ModalCtx::response_state(Self) -> ResponseState
 pub fn ModalCtx::scope(Self) -> InvocationScope
 pub fn ModalCtx::text_value(Self, String) -> String?
+pub fn ModalCtx::token_remaining_ms(Self) -> Int
 pub async fn ModalCtx::update_message(Self, content? : String, clear_content? : Bool, embeds? : Array[@model.Embed], components? : Array[@model.Component], allowed_mentions? : @model.AllowedMentions, files? : Array[@http.FileUpload], keep_attachments? : Array[@model.AttachmentRequest], poll? : @model.PollCreateRequest) -> Unit
 pub fn ModalCtx::user(Self) -> @model.User
 
@@ -189,6 +195,7 @@ pub fn ResponseGate::remaining_ms(Self) -> Int?
 pub fn ResponseGate::rest(@http.Client, @model.Interaction, deadline_ms? : Int) -> Self
 pub async fn ResponseGate::send(Self, @model.InteractionResponse, files? : Array[@http.FileUpload]) -> Unit
 pub fn ResponseGate::state(Self) -> ResponseState
+pub fn ResponseGate::token_remaining_ms(Self) -> Int
 
 pub(all) enum ResponseState {
   Pending

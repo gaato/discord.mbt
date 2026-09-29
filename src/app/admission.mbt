@@ -20,6 +20,8 @@ const AUTO_DEFER_MARGIN_MS : Int = 1000
 /// interaction kind.
 priv struct AdmissionGate {
   remaining_ms : () -> Int?
+  /// Milliseconds before the interaction token expires, from receipt.
+  token_remaining_ms : () -> Int
   is_pending : () -> Bool
   defer_now : async (AckPlan) -> Unit
 }
@@ -28,6 +30,7 @@ priv struct AdmissionGate {
 fn command_admission(raw : @framework.CommandCtx) -> AdmissionGate {
   {
     remaining_ms: () => raw.remaining_ms(),
+    token_remaining_ms: () => raw.token_remaining_ms(),
     is_pending: () => raw.response_state() is Pending,
     defer_now: plan => {
       match plan {
@@ -42,6 +45,7 @@ fn command_admission(raw : @framework.CommandCtx) -> AdmissionGate {
 fn component_admission(raw : @framework.ComponentCtx) -> AdmissionGate {
   {
     remaining_ms: () => raw.remaining_ms(),
+    token_remaining_ms: () => raw.token_remaining_ms(),
     is_pending: () => raw.response_state() is Pending,
     defer_now: plan => {
       match plan {
@@ -57,6 +61,7 @@ fn component_admission(raw : @framework.ComponentCtx) -> AdmissionGate {
 fn modal_admission(raw : @framework.ModalCtx) -> AdmissionGate {
   {
     remaining_ms: () => raw.remaining_ms(),
+    token_remaining_ms: () => raw.token_remaining_ms(),
     is_pending: () => raw.response_state() is Pending,
     defer_now: plan => {
       match plan {
@@ -72,6 +77,7 @@ fn modal_admission(raw : @framework.ModalCtx) -> AdmissionGate {
 fn autocomplete_admission(raw : @framework.AutocompleteCtx) -> AdmissionGate {
   {
     remaining_ms: () => raw.remaining_ms(),
+    token_remaining_ms: () => raw.token_remaining_ms(),
     is_pending: () => false,
     defer_now: _ => (),
   }
@@ -88,18 +94,14 @@ async fn ensure_acknowledged(gate : AdmissionGate, plan : AckPlan) -> Unit {
 }
 
 ///|
-/// How long an interaction token stays usable. A deferred interaction still
-/// waiting for handler capacity after this can no longer be answered.
-const INTERACTION_TOKEN_LIFETIME_MS : Int = 900_000
-
-///|
 /// One executor attachment's handler budget: the permits for running
 /// handlers, and the deferred interactions waiting for one.
 priv struct Admission {
   limiter : @async.Semaphore
   mut pending : Int
   max_pending : Int
-  /// How long a deferred interaction may wait for a permit.
+  /// An upper bound on how long a deferred interaction may wait for a
+  /// permit, on top of its token's remaining lifetime.
   wait_limit_ms : Int
 }
 
@@ -149,7 +151,15 @@ async fn run_admitted(
       // Judge by the flag, as below: a permit handed over just as the timeout
       // fires is kept by `acquire`.
       let acquired = Ref(false)
-      @async.with_timeout_opt(admission.wait_limit_ms, () => {
+      // Past the token's lifetime (counted from receipt) the handler could not
+      // answer anyway.
+      let token_left = (gate.token_remaining_ms)()
+      let wait_ms = if token_left < admission.wait_limit_ms {
+        token_left
+      } else {
+        admission.wait_limit_ms
+      }
+      @async.with_timeout_opt(wait_ms, () => {
         limiter.acquire()
         acquired.val = true
       })

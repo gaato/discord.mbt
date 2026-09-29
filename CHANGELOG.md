@@ -26,6 +26,9 @@ breaking change is listed with a migration note.
   `AppBuilder::build` raises the new `AppConfigError::CommandOutsideLimits`
   for the first violation, so a declaration Discord would reject with 400 fails
   before any executor starts.
+- `token_remaining_ms()` on every raw interaction context and on
+  `ResponseGate`, with the `INTERACTION_TOKEN_LIFETIME_MS` constant (15
+  minutes): the time left for followups and edits, counted from receipt.
 - `remaining_ms()` on `ImmediateCtx`, `ComponentImmediateCtx`, and
   `ModalImmediateCtx`: the budget left to return the initial response.
 - `DeferredCtx`, `ComponentDeferredCtx`, and `ModalDeferredCtx` share one
@@ -75,11 +78,12 @@ breaking change is listed with a migration note.
   (`AppBuilder`, default 1024) wait for handler capacity; one more is
   refused before it is acknowledged with the new `HandlerError::Busy`, which
   the default policy answers with a try-again message, and one still waiting
-  when its interaction token expires (15 minutes) is dropped with
-  `AppWarning::DeferredInteractionExpired`. At most `event_backlog` decoded
+  when its interaction token expires (15 minutes after the executor received
+  it) is dropped with `AppWarning::DeferredInteractionExpired`. At most `event_backlog` decoded
   events (`BotBuilder`, default `DEFAULT_EVENT_BACKLOG` = 10000) wait for
   event handlers; later events skip the handlers, each with the new
-  `TelemetryEvent::EventDropped` and one warning per overload, while the
+  `TelemetryEvent::EventDropped`, with one warning per overload (until the
+  backlog drains), while the
   cache and interaction routing are unaffected. `build` rejects
   `max_pending` and `event_backlog` below 1 (`AppConfigError::InvalidMaxPending`,
   `BotConfigError::InvalidEventBacklog`).

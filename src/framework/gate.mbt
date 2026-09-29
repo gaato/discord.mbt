@@ -39,6 +39,8 @@ pub struct ResponseGate {
   priv sink : async (@model.InteractionResponse, Array[@dhttp.FileUpload]?) -> Unit
   priv classify : (Error) -> DeliveryFailure
   priv deadline_at : Int64?
+  // When the executor received the interaction: construction time.
+  priv received_at : Int64
   priv mut placeholder_open : Bool
   priv mut in_flight : Bool
   priv settled : @cond_var.Cond
@@ -66,6 +68,12 @@ pub struct ResponseCapture {
 pub const DEFAULT_INTERACTION_DEADLINE_MS : Int = 2500
 
 ///|
+/// How long an interaction token stays valid after Discord sends the
+/// interaction: every followup, original-response edit, and deletion must
+/// happen within it.
+pub const INTERACTION_TOKEN_LIFETIME_MS : Int = 900_000
+
+///|
 /// Construct a gate around an injected callback sink.
 ///
 /// `classify` decides how a failed delivery leaves the callback window; it
@@ -85,6 +93,7 @@ pub fn ResponseGate::ResponseGate(
     sink,
     classify,
     deadline_at: deadline_ms.map(ms => @clock.now_ms() + ms.to_int64()),
+    received_at: @clock.now_ms(),
     placeholder_open: false,
     in_flight: false,
     settled: @cond_var.Cond(),
@@ -266,6 +275,21 @@ pub fn ResponseGate::remaining_ms(self : ResponseGate) -> Int? {
       let left = deadline - @clock.now_ms()
       Some(if left <= 0L { 0 } else { left.to_int() })
     }
+  }
+}
+
+///|
+/// Milliseconds left before the interaction token expires, counted from this
+/// gate's construction (when the executor received the interaction). Zero once
+/// it has expired.
+pub fn ResponseGate::token_remaining_ms(self : ResponseGate) -> Int {
+  let left = self.received_at +
+    INTERACTION_TOKEN_LIFETIME_MS.to_int64() -
+    @clock.now_ms()
+  if left <= 0L {
+    0
+  } else {
+    left.to_int()
   }
 }
 

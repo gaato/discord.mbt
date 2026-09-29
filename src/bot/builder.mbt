@@ -178,8 +178,8 @@ pub fn BotBuilder::on_decode_error(
 ///|
 /// Validate the configuration and freeze the registrations into a `Bot`.
 /// Raises `BotConfigError` for an empty token, `compress=true` without
-/// zlib-stream support, a shard selection Discord cannot represent, or a saved
-/// session whose ids disagree. Intents are resolved here, so warnings about
+/// zlib-stream support, a shard selection Discord cannot represent, a saved
+/// session whose ids disagree, or an `event_backlog` below 1. Intents are resolved here, so warnings about
 /// subscriptions the intents cannot deliver appear once, at build time.
 pub fn BotBuilder::build(self : BotBuilder) -> Bot raise BotConfigError {
   let core = self.core

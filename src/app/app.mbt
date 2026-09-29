@@ -112,8 +112,8 @@ pub struct App {
 /// separate budget of the same size. `max_pending` caps the deferred
 /// interactions waiting for a handler permit; one more is refused with
 /// `HandlerError::Busy` before it is acknowledged, and a deferred interaction
-/// still waiting when its token expires (15 minutes) is dropped with a
-/// warning. Cooldowns use a fresh in-memory store unless a shared
+/// still waiting when its token expires (15 minutes after the executor
+/// received it) is dropped with a warning. Cooldowns use a fresh in-memory store unless a shared
 /// `cooldown_store` is supplied.
 pub fn AppBuilder::AppBuilder(
   max_in_flight? : Int = 64,
@@ -144,7 +144,7 @@ pub fn AppBuilder::build(self : AppBuilder) -> App raise AppConfigError {
   {
     max_in_flight_: self.max_in_flight_,
     max_pending_: self.max_pending_,
-    deferred_wait_ms_: INTERACTION_TOKEN_LIFETIME_MS,
+    deferred_wait_ms_: @framework.INTERACTION_TOKEN_LIFETIME_MS,
     commands_: self.commands_.copy(),
     components_: self.components_.copy(),
     modals_: self.modals_.copy(),

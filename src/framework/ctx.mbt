@@ -116,6 +116,13 @@ pub fn CommandCtx::remaining_ms(self : CommandCtx) -> Int? {
 }
 
 ///|
+/// Milliseconds left before this interaction's token expires (15 minutes after
+/// the executor received it). Followups and edits fail after that.
+pub fn CommandCtx::token_remaining_ms(self : CommandCtx) -> Int {
+  self.gate.token_remaining_ms()
+}
+
+///|
 /// The current state of this interaction's initial callback.
 pub fn CommandCtx::response_state(self : CommandCtx) -> ResponseState {
   self.gate.state()
@@ -370,6 +377,13 @@ pub fn ComponentCtx::scope(self : ComponentCtx) -> InvocationScope {
 /// when the executor set no deadline.
 pub fn ComponentCtx::remaining_ms(self : ComponentCtx) -> Int? {
   self.gate.remaining_ms()
+}
+
+///|
+/// Milliseconds left before this interaction's token expires (15 minutes after
+/// the executor received it). Followups and edits fail after that.
+pub fn ComponentCtx::token_remaining_ms(self : ComponentCtx) -> Int {
+  self.gate.token_remaining_ms()
 }
 
 ///|
@@ -630,6 +644,13 @@ pub fn ModalCtx::scope(self : ModalCtx) -> InvocationScope {
 /// when the executor set no deadline.
 pub fn ModalCtx::remaining_ms(self : ModalCtx) -> Int? {
   self.gate.remaining_ms()
+}
+
+///|
+/// Milliseconds left before this interaction's token expires (15 minutes after
+/// the executor received it). Followups and edits fail after that.
+pub fn ModalCtx::token_remaining_ms(self : ModalCtx) -> Int {
+  self.gate.token_remaining_ms()
 }
 
 ///|
@@ -913,6 +934,13 @@ pub(all) struct AutocompleteCtx {
 /// `None` when the executor set no deadline.
 pub fn AutocompleteCtx::remaining_ms(self : AutocompleteCtx) -> Int? {
   self.gate.remaining_ms()
+}
+
+///|
+/// Milliseconds left before this interaction's token expires (15 minutes after
+/// the executor received it). Followups and edits fail after that.
+pub fn AutocompleteCtx::token_remaining_ms(self : AutocompleteCtx) -> Int {
+  self.gate.token_remaining_ms()
 }
 
 ///|

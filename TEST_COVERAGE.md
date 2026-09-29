@@ -161,18 +161,18 @@ show-flows beyond the covered happy and failing paths):
 | src/app/app.mbt | 8 | Default warning sink (`println`), cancellation re-raise arms of the per-kind failure handlers, and the no-op busy handlers of autocomplete routes, which never defer and so are never refused. |
 | src/app/check.mbt | 2 | Permission-check arms needing resolved member permissions in a guild payload. |
 | src/app/command.mbt | 9 | Group/subcommand registration arms beyond the covered paths. |
-| src/app/admission.mbt | 11 | Acknowledgement-plan arms for kinds that never carry that plan, the autocomplete gate stubs, the cancellation re-raise, the pending-count cleanup that only runs when a waiting deferred route is cancelled, and the watchdog's failed-defer warning (the defer itself is covered). |
+| src/app/admission.mbt | 12 | Acknowledgement-plan arms for kinds that never carry that plan, the autocomplete gate stubs, the cancellation re-raise, the pending-count cleanup that only runs when a waiting deferred route is cancelled, and the watchdog's failed-defer warning (the defer itself is covered). |
 | src/app/component.mbt | 10 | Deferred-ctx accessor duplicates and waiter arms behind a live gateway. |
 | src/app/ctx.mbt | 4 | Waiter plumbing behind a live gateway. |
 | src/app/endpoint.mbt | 6 | Closing an owned client when the startup application lookup fails (needs a real token and network), the endpoint's cancellation re-raise and processing-failure warning, and outcome arms the covered flows do not reach. |
 | src/app/middleware.mbt | 4 | Component-scope middleware arms not reachable in the covered flows. |
 | src/app/modal.mbt | 16 | Show/prefill dispatch arms beyond the covered decode, validation, and error flows. |
 | src/app/policy.mbt | 2 | Member-without-user extraction and the policy cancellation re-raise. |
-| src/framework/ctx.mbt | 5 | Autocomplete response variants and nested-component lookup arms beyond the covered flows. |
+| src/framework/ctx.mbt | 6 | Autocomplete response variants and nested-component lookup arms beyond the covered flows. `AutocompleteCtx::token_remaining_ms` (autocomplete answers within the callback window; the accessor is covered on the other contexts). |
 | src/framework/responder.mbt | 3 | `reply`'s cancellation re-raise, the re-raise of an edit failure on a confirmed deferral, and the followup fallback after an unconfirmed deferral's edit fails (verified live with `gate_probe`, 2026-09-28). |
 | src/framework/sync.mbt | 1 | Option-comparison early exit not hit by the covered spec shapes (moved from `src/app/sync.mbt`). |
 | src/framework/framework.mbt | 9 | Dispatch fallbacks for unroutable interactions. |
-| src/framework/gate.mbt | 3 | The callback rule for an unknown interaction type, the cancellation re-raise during delivery, and a `send` that waits for an in-flight delivery to settle. |
+| src/framework/gate.mbt | 4 | The callback rule for an unknown interaction type, the cancellation re-raise during delivery, and a `send` that waits for an in-flight delivery to settle. The token-lifetime accessor's expired arm needs 15 minutes. |
 | src/interaction/args.mbt | 8 | Suggest-handler closures that only run inside a live autocomplete dispatch. |
 | src/interaction/options.mbt | 8 | Focused-option accessors for kinds not used by any covered command shape. |
 | src/cache/cache.mbt | 17 | Permission-overwrite computation arms needing full guild channel fixtures. |
