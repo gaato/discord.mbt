@@ -46,6 +46,11 @@ pub impl Show for BotError with fn output(self, logger) {
 }
 
 ///|
+/// Gateway events that may wait for event handlers before later ones are
+/// dropped for handlers.
+pub const DEFAULT_EVENT_BACKLOG : Int = 10000
+
+///|
 priv struct TypedEventHandler {
   kind : @model.EventKind
   required_intents : @model.Intents
@@ -76,6 +81,7 @@ priv struct BotCore {
   identify_queue_ : &@queue.IdentifyQueue?
   sync_ : @app.CommandScope?
   sync_unowned_ : @framework.UnownedCommands
+  event_backlog_ : Int
   typed_events_ : Array[TypedEventHandler]
   raw_events_ : Array[async (GatewayCtx, @model.Event) -> Unit]
   event_middleware_ : Array[EventMiddleware]
@@ -132,6 +138,7 @@ fn BotCore::new(
   sync? : @app.CommandScope,
   sync_unowned? : @framework.UnownedCommands = Delete,
   resume? : Map[Int, BotSession] = Map([]),
+  event_backlog? : Int = DEFAULT_EVENT_BACKLOG,
 ) -> BotCore {
   {
     app_: app,
@@ -154,6 +161,7 @@ fn BotCore::new(
     identify_queue_: identify_queue,
     sync_: sync,
     sync_unowned_: sync_unowned,
+    event_backlog_: event_backlog,
     typed_events_: [],
     raw_events_: [],
     event_middleware_: [],
@@ -619,7 +627,13 @@ async fn BotCore::run(self : BotCore) -> Unit {
     // Event middleware and handler fan-out run in their own task so the
     // dispatch loop never waits for event handler capacity; interactions,
     // including those that wake component waiters, are always read promptly.
-    let event_jobs : @aqueue.Queue[async () -> Unit] = Queue(kind=Unbounded)
+    // Bounded: when handlers fall behind for long, later events are dropped
+    // for handlers (not for the cache or interactions, which ran already)
+    // instead of queueing without limit.
+    let event_jobs : @aqueue.Queue[async () -> Unit] = Queue(
+      kind=Blocking(self.event_backlog_),
+    )
+    let dropping = Ref(false)
     group.spawn_bg(no_wait=true, () => {
       for ;; {
         let job = event_jobs.get()
@@ -627,8 +641,27 @@ async fn BotCore::run(self : BotCore) -> Unit {
       }
     })
     let dispatch_event = (ctx : GatewayCtx, event : @model.Event) => {
-      event_jobs.try_put(() => self.dispatch_event(spawner, ctx, event))
-      |> ignore
+      let queued = event_jobs.try_put(() => {
+        self.dispatch_event(spawner, ctx, event)
+      }) catch {
+        _ => false
+      }
+      if queued {
+        dropping.val = false
+      } else {
+        let kind = "\{Repr(event_kind(event))}"
+        self.emit_telemetry(EventDropped(kind~, backlog=self.event_backlog_))
+        // Warn once per overload, not once per dropped event.
+        if !dropping.val {
+          dropping.val = true
+          self.app_.warn(
+            @app.Executor(
+              source="gateway",
+              message="event handlers are \{self.event_backlog_} events behind; dropping \{kind} and later events until they catch up",
+            ),
+          )
+        }
+      }
     }
     let shutdown_requested = Ref(false)
     let mut app_ctx : @app.AppCtx? = None

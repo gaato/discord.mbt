@@ -9,6 +9,9 @@ pub(all) enum AppWarning {
   /// An immediate or raw route found no handler capacity before its response
   /// deadline, so the interaction was not answered.
   InteractionDropped(target~ : String)
+  /// A deferred interaction waited for handler capacity until its token
+  /// expired, so its handler never ran.
+  DeferredInteractionExpired(target~ : String)
   /// An error policy tried to respond to a failure that has no interaction
   /// (an event or a service). `summary` describes the discarded response.
   ErrorResponseWithoutInteraction(summary~ : String)
@@ -46,6 +49,10 @@ pub impl Show for AppWarning with fn output(self, logger) {
     InteractionDropped(target~) =>
       logger.write_string(
         "interaction dropped (\{target}): no handler capacity before the response deadline",
+      )
+    DeferredInteractionExpired(target~) =>
+      logger.write_string(
+        "deferred interaction expired (\{target}): no handler capacity within the interaction token's lifetime",
       )
     ErrorResponseWithoutInteraction(summary~) =>
       logger.write_string(

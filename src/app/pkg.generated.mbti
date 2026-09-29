@@ -61,6 +61,7 @@ pub(all) suberror AppConfigError {
   CommandOutsideLimits(command~ : String, violation~ : @model.LimitViolation)
   InvalidCooldown(command~ : String, seconds~ : Int)
   InvalidMaxInFlight(value~ : Int)
+  InvalidMaxPending(value~ : Int)
 } derive(@debug.Debug)
 
 pub(all) suberror CustomIdError {
@@ -78,6 +79,7 @@ pub(all) suberror HandlerError {
   InvalidInput(name~ : String?, message~ : String)
   Malformed(reason~ : String)
   UnsupportedResponse(reason~ : String)
+  Busy
 } derive(@debug.Debug)
 
 pub(all) suberror ModalShowError {
@@ -101,7 +103,7 @@ pub fn App::warn(Self, AppWarning) -> Unit
 pub struct AppBuilder {
   // private fields
 }
-pub fn AppBuilder::AppBuilder(max_in_flight? : Int, cooldown_store? : &@cooldown.CooldownStore) -> Self
+pub fn AppBuilder::AppBuilder(max_in_flight? : Int, max_pending? : Int, cooldown_store? : &@cooldown.CooldownStore) -> Self
 pub fn AppBuilder::autocomplete(Self, String, async (@framework.AutocompleteCtx) -> Unit) -> Unit
 pub fn AppBuilder::build(Self) -> App raise AppConfigError
 pub fn[A] AppBuilder::command(Self, Command[A]) -> Unit
@@ -125,6 +127,7 @@ pub fn AppCtx::latency_ms(Self) -> Int64?
 pub(all) enum AppWarning {
   AutoDeferFailed(target~ : String, error~ : Error)
   InteractionDropped(target~ : String)
+  DeferredInteractionExpired(target~ : String)
   ErrorResponseWithoutInteraction(summary~ : String)
   ErrorResponseExpired(summary~ : String)
   MalformedInteraction(origin~ : FailureOrigin, reason~ : String)

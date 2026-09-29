@@ -826,6 +826,12 @@ test "app validation rejects non-positive handler capacity" {
   } noraise {
     _ => fail("zero handler capacity unexpectedly validated")
   }
+  try AppBuilder(max_pending=0).validate() catch {
+    InvalidMaxPending(value~) => assert_eq(value, 0)
+    error => fail("unexpected validation error: \{Repr(error)}")
+  } noraise {
+    _ => fail("zero pending capacity unexpectedly validated")
+  }
 }
 
 ///|
@@ -875,4 +881,81 @@ test "build rejects commands outside Discord's documented limits" {
   } noraise {
     _ => fail("expected a choice-count violation")
   }
+}
+
+///|
+async test "a deferred interaction still waiting when its token expires is dropped" {
+  let builder = AppBuilder(max_in_flight=1)
+  let warnings : Array[String] = []
+  builder.on_warn(warning => warnings.push(warning.to_string()))
+  let release : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  let holding : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  let ran = Ref(false)
+  builder.command(
+    slash(
+      name="hold",
+      description="Hold the only permit",
+      args=@interaction.Args::unit(),
+      handler=Raw(_ => {
+        holding.put(())
+        release.get()
+      }),
+    ),
+  )
+  builder.command(
+    slash(
+      name="later",
+      description="Deferred work",
+      args=@interaction.Args::unit(),
+      handler=Deferred(ephemeral=false, (_, _) => ran.val = true),
+    ),
+  )
+  // Stand in for the 15-minute token lifetime.
+  let app = { ..builder.build(), deferred_wait_ms_: 100, }
+  let client = @dhttp.Client("test-token")
+  defer client.close()
+  @async.with_task_group(group => {
+    let endpoint = app.serve(
+      group,
+      access=Client(client),
+      application_id=@model.Id::parse("400000000000000001"),
+    )
+    group.spawn_bg(() => {
+      endpoint.handle_interaction(
+        wbtest_command("hold", "500000000000000973"),
+        deadline_ms=5000,
+      )
+      |> ignore
+    })
+    @async.with_timeout(2000, () => holding.get())
+    endpoint.handle_interaction(
+      wbtest_command("later", "500000000000000974"),
+      deadline_ms=50,
+    )
+    |> ignore
+    @async.with_timeout(2000, () => {
+      while warnings.is_empty() {
+        @async.sleep(5)
+      }
+    })
+    release.put(())
+    @async.sleep(20)
+  })
+  assert_false(ran.val)
+  assert_eq(warnings, [
+    "deferred interaction expired (command:later): no handler capacity within the interaction token's lifetime",
+  ])
+}
+
+///|
+fn wbtest_command(name : String, id : String) -> @model.Interaction raise {
+  @json.from_json(
+    @json.parse(
+      (
+        #|{"id":"INTERACTION_ID","application_id":"400000000000000001","type":2,"token":"interaction-token","version":1,"user":{"id":"200000000000000001","username":"nelly","discriminator":"0","global_name":null,"avatar":null},"data":{"id":"600000000000000100","name":"COMMAND_NAME","type":1}}
+      )
+      .replace(old="INTERACTION_ID", new=id)
+      .replace(old="COMMAND_NAME", new=name),
+    ),
+  )
 }

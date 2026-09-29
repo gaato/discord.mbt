@@ -116,7 +116,7 @@ run; the gateway/voice loops are additionally tested via injected sleepers):
 | src/http/handles_channel.mbt | 3 | `with_typing` refresh-failure arm sits behind the real 8-second cadence. |
 | src/bot/middleware.mbt | 1 | Middleware chain cancellation arm. |
 | src/bot/shard_manager.mbt | 4 | Live gateway discovery and default-connector startup (including saved-session projection), plus defensive shard-config arms; fake-connector startup and resume are tested. |
-| src/bot/bot.mbt | 15 | Gateway run-loop teardown/cancellation arms; startup, intents, telemetry, and event routing are covered. |
+| src/bot/bot.mbt | 16 | Gateway run-loop teardown/cancellation arms; startup, intents, telemetry, and event routing are covered. The event-backlog put fails only on a queue closed by shutdown. |
 | src/bot/builder.mbt | 2 | The compression check in `build` raises only on js/wasm, where zlib-stream is unavailable (covered by the JS run). |
 | src/bot/voice.mbt | 19 | Credential timeouts have no injectable timer; the endpoint fallback contradicts the collector predicate; disconnect/cancellation catches; and the new-join/rejoin closures cross `join_voice`'s unseamed live `VoiceConnection::start`. Cache, gate, collector, and failed-watcher-rejoin behaviour is tested. |
 
@@ -158,10 +158,10 @@ show-flows beyond the covered happy and failing paths):
 
 | File | Budget | Reason |
 | --- | --- | --- |
-| src/app/app.mbt | 6 | Default warning sink (`println`) and cancellation re-raise arms of the per-kind failure handlers. |
+| src/app/app.mbt | 8 | Default warning sink (`println`), cancellation re-raise arms of the per-kind failure handlers, and the no-op busy handlers of autocomplete routes, which never defer and so are never refused. |
 | src/app/check.mbt | 2 | Permission-check arms needing resolved member permissions in a guild payload. |
 | src/app/command.mbt | 9 | Group/subcommand registration arms beyond the covered paths. |
-| src/app/admission.mbt | 10 | Acknowledgement-plan arms for kinds that never carry that plan, the autocomplete gate stubs, the cancellation re-raise, and the watchdog's failed-defer warning (the defer itself is covered). |
+| src/app/admission.mbt | 11 | Acknowledgement-plan arms for kinds that never carry that plan, the autocomplete gate stubs, the cancellation re-raise, the pending-count cleanup that only runs when a waiting deferred route is cancelled, and the watchdog's failed-defer warning (the defer itself is covered). |
 | src/app/component.mbt | 10 | Deferred-ctx accessor duplicates and waiter arms behind a live gateway. |
 | src/app/ctx.mbt | 4 | Waiter plumbing behind a live gateway. |
 | src/app/endpoint.mbt | 6 | Closing an owned client when the startup application lookup fails (needs a real token and network), the endpoint's cancellation re-raise and processing-failure warning, and outcome arms the covered flows do not reach. |

@@ -221,3 +221,91 @@ async test "fast failures on a deferring route stay ephemeral initial responses"
     })
   })
 }
+
+///|
+async test "a deferred interaction beyond max_pending is refused before it is acknowledged" {
+  // The default policy answers `Busy` with a try-again message.
+  let app = @app.AppBuilder(max_in_flight=1, max_pending=1)
+  let release : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  let holding : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  let ran : Array[String] = []
+  app.command(
+    @app.slash(
+      name="hold",
+      description="Hold the only permit",
+      args=@interaction.Args::unit(),
+      handler=Raw(_ => {
+        holding.put(())
+        release.get()
+      }),
+    ),
+  )
+  app.command(
+    @app.slash(
+      name="later",
+      description="Deferred work",
+      args=@interaction.Args::unit(),
+      handler=Deferred(ephemeral=false, (ctx, _) => {
+        ran.push(ctx.interaction().id.to_string())
+      }),
+    ),
+  )
+  let client = @dhttp.Client("test-token")
+  defer client.close()
+  client.middleware((_, _) => {
+    status: 200,
+    headers: Map([]),
+    body: app_test_message().to_json(),
+  })
+  @async.with_task_group(group => {
+    let endpoint = app
+      .build()
+      .serve(
+        group,
+        access=Client(client),
+        application_id=@model.Id::parse("400000000000000001"),
+      )
+    group.spawn_bg(() => {
+      endpoint.handle_interaction(
+        app_command("hold", "500000000000000970"),
+        deadline_ms=5000,
+      )
+      |> ignore
+    })
+    @async.with_timeout(2000, () => holding.get())
+    // The first deferred interaction waits for the permit (and is deferred on
+    // time by the watchdog); it fills max_pending.
+    let first = group.spawn(() => {
+      endpoint.handle_interaction(
+        app_command("later", "500000000000000971"),
+        deadline_ms=1200,
+      )
+    })
+    @async.sleep(50)
+    let refused = endpoint.handle_interaction(
+      app_command("later", "500000000000000972"),
+      deadline_ms=1200,
+    )
+    guard refused is Reply(response~, ..) else {
+      fail("expected the busy reply, got \{Repr(refused)}")
+    }
+    json_inspect(response.to_json(), content={
+      "type": 4,
+      "data": {
+        "content": "The bot is busy right now. Please try again in a moment.",
+        "flags": 64,
+      },
+    })
+    guard first.wait() is Reply(response~, ..) else {
+      fail("expected the first interaction to be deferred")
+    }
+    assert_eq(response.typ, DeferredChannelMessageWithSource)
+    release.put(())
+    @async.with_timeout(2000, () => {
+      while ran.is_empty() {
+        @async.sleep(5)
+      }
+    })
+    assert_eq(ran, ["500000000000000971"])
+  })
+}

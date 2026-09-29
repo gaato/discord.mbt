@@ -23,5 +23,9 @@ pub(all) enum TelemetryEvent {
     retry_after_ms~ : Int64
   )
   EventDispatched(kind~ : String, handler_count~ : Int)
+  /// A gateway event was not handed to event handlers because `backlog`
+  /// events were already waiting (see `BotBuilder`'s `event_backlog`). Cache
+  /// updates and interaction routing had already run for it.
+  EventDropped(kind~ : String, backlog~ : Int)
   DecodeError(marker~ : String)
 } derive(Debug)

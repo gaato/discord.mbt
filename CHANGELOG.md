@@ -71,6 +71,18 @@ breaking change is listed with a migration note.
   dispatch loop also no longer waits for event-handler capacity: event
   middleware and handler fan-out run in their own task with a separate
   budget of the same size, so busy event handlers never delay interactions.
+  Both waits are bounded. At most `max_pending` deferred interactions
+  (`AppBuilder`, default 1024) wait for handler capacity; one more is
+  refused before it is acknowledged with the new `HandlerError::Busy`, which
+  the default policy answers with a try-again message, and one still waiting
+  when its interaction token expires (15 minutes) is dropped with
+  `AppWarning::DeferredInteractionExpired`. At most `event_backlog` decoded
+  events (`BotBuilder`, default `DEFAULT_EVENT_BACKLOG` = 10000) wait for
+  event handlers; later events skip the handlers, each with the new
+  `TelemetryEvent::EventDropped` and one warning per overload, while the
+  cache and interaction routing are unaffected. `build` rejects
+  `max_pending` and `event_backlog` below 1 (`AppConfigError::InvalidMaxPending`,
+  `BotConfigError::InvalidEventBacklog`).
 - **Initial-response deadlines are measured from receipt.**
   `InteractionEndpoint::handle_interaction`'s `deadline_ms` now includes
   time spent waiting for handler capacity. Gateway interactions get the same

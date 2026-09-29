@@ -33,6 +33,8 @@ pub(all) suberror AppConfigError {
   CommandOutsideLimits(command~ : String, violation~ : @model.LimitViolation)
   InvalidCooldown(command~ : String, seconds~ : Int)
   InvalidMaxInFlight(value~ : Int)
+  /// `max_pending` must allow at least one waiting deferred interaction.
+  InvalidMaxPending(value~ : Int)
 } derive(Debug)
 
 ///|
@@ -71,6 +73,7 @@ pub type Spawner = async (async () -> Unit) -> Unit
 /// them into an immutable `App`.
 pub struct AppBuilder {
   priv max_in_flight_ : Int
+  priv max_pending_ : Int
   priv commands_ : Array[RegisteredCommand]
   priv components_ : Array[RegisteredComponent]
   priv modals_ : Array[RegisteredModal]
@@ -87,6 +90,10 @@ pub struct AppBuilder {
 /// validation, so executors and `attach` never see an invalid declaration.
 pub struct App {
   priv max_in_flight_ : Int
+  priv max_pending_ : Int
+  // How long a deferred interaction may wait for a handler permit; the
+  // interaction token's lifetime in production, shortened by whitebox tests.
+  priv deferred_wait_ms_ : Int
   priv commands_ : Array[RegisteredCommand]
   priv components_ : Array[RegisteredComponent]
   priv modals_ : Array[RegisteredModal]
@@ -102,14 +109,20 @@ pub struct App {
 /// concurrently running interaction handlers; routing and component waiters
 /// are not counted, so a handler waiting for a component never blocks the
 /// interaction that wakes it. A gateway executor gives its event handlers a
-/// separate budget of the same size. Cooldowns use a fresh in-memory store
-/// unless a shared `cooldown_store` is supplied.
+/// separate budget of the same size. `max_pending` caps the deferred
+/// interactions waiting for a handler permit; one more is refused with
+/// `HandlerError::Busy` before it is acknowledged, and a deferred interaction
+/// still waiting when its token expires (15 minutes) is dropped with a
+/// warning. Cooldowns use a fresh in-memory store unless a shared
+/// `cooldown_store` is supplied.
 pub fn AppBuilder::AppBuilder(
   max_in_flight? : Int = 64,
+  max_pending? : Int = 1024,
   cooldown_store? : &@cooldown.CooldownStore,
 ) -> AppBuilder {
   {
     max_in_flight_: max_in_flight,
+    max_pending_: max_pending,
     commands_: [],
     components_: [],
     modals_: [],
@@ -130,6 +143,8 @@ pub fn AppBuilder::build(self : AppBuilder) -> App raise AppConfigError {
   self.validate()
   {
     max_in_flight_: self.max_in_flight_,
+    max_pending_: self.max_pending_,
+    deferred_wait_ms_: INTERACTION_TOKEN_LIFETIME_MS,
     commands_: self.commands_.copy(),
     components_: self.components_.copy(),
     modals_: self.modals_.copy(),
@@ -344,6 +359,9 @@ fn validate_command_options(
 fn AppBuilder::validate(self : AppBuilder) -> Unit raise AppConfigError {
   if self.max_in_flight_ <= 0 {
     raise InvalidMaxInFlight(value=self.max_in_flight_)
+  }
+  if self.max_pending_ <= 0 {
+    raise InvalidMaxPending(value=self.max_pending_)
   }
   let commands : Set[String] = Set([])
   for command in self.commands_ {
@@ -573,16 +591,33 @@ pub fn App::attach(
     application_id_: application_id,
     latency_ms_: latency_ms,
   }
-  let limiter = @async.Semaphore(self.max_in_flight_)
+  let admission : Admission = {
+    limiter: @async.Semaphore(self.max_in_flight_),
+    pending: 0,
+    max_pending: self.max_pending_,
+    wait_limit_ms: self.deferred_wait_ms_,
+  }
   let warn = self.warn_
+  // Refuse one more deferred interaction through the error policy while it is
+  // still unanswered.
+  let busy = (origin : FailureOrigin, raw : FailureRaw?) => {
+    async fn() {
+      invoke_error_policy(
+        self.current_policy(),
+        failure_context(origin, raw, self.warn_),
+        HandlerError::Busy,
+      )
+    }
+  }
   for command in self.commands_ {
     framework.command(command.definition, raw => {
       run_admitted(
-        limiter,
+        admission,
         command_admission(raw),
         (command.ack_)(raw),
         warn,
         "command:\{command.name_}",
+        busy(Command(name=command.name_), Some(RawCommand(raw))),
         () => self.run_registered_command(app_ctx, waiter, command, raw),
       )
     })
@@ -590,11 +625,13 @@ pub fn App::attach(
     if !command.suggest_routes_.is_empty() {
       framework.autocomplete(command.name_, raw => {
         run_admitted(
-          limiter,
+          admission,
           autocomplete_admission(raw),
           Respond,
           warn,
           "autocomplete:\{command.name_}",
+          // Autocomplete never defers, so it is never refused as busy.
+          () => (),
           () => self.run_registered_autocomplete(command, raw),
         )
       })
@@ -604,11 +641,12 @@ pub fn App::attach(
   for entry in self.components_ {
     let dispatch = raw => {
       run_admitted(
-        limiter,
+        admission,
         component_admission(raw),
         entry.ack,
         warn,
         "component:\{raw.data.custom_id}",
+        busy(Component(custom_id=raw.data.custom_id), Some(RawComponent(raw))),
         () => self.run_registered_component(app_ctx, waiter, entry, raw),
       )
     }
@@ -634,11 +672,12 @@ pub fn App::attach(
         }
       }
       run_admitted(
-        limiter,
+        admission,
         modal_admission(raw),
         (entry.ack)(raw),
         warn,
         "modal:\{raw.data.custom_id}",
+        busy(Modal(custom_id=raw.data.custom_id), Some(RawModal(raw))),
         () => self.run_registered_modal(app_ctx, waiter, entry, raw),
       )
     }
@@ -651,11 +690,12 @@ pub fn App::attach(
   for entry in self.autocompletes_ {
     framework.autocomplete(entry.name, raw => {
       run_admitted(
-        limiter,
+        admission,
         autocomplete_admission(raw),
         Respond,
         warn,
         "autocomplete:\{entry.name}",
+        () => (),
         () => (entry.dispatch)(raw),
       )
     })

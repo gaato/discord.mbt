@@ -43,6 +43,10 @@ pub(all) suberror HandlerError {
   /// It is an app bug, not a user error: `reason` is for logs, and the default
   /// policy tells the user only that something went wrong.
   UnsupportedResponse(reason~ : String)
+  /// Too many deferred interactions are already waiting for handler capacity
+  /// (`AppBuilder`'s `max_pending`). Raised before anything is acknowledged;
+  /// the default policy asks the user to try again.
+  Busy
 } derive(Debug)
 
 ///|
@@ -59,6 +63,7 @@ fn malformed_unless_handler_error(error : Error) -> HandlerError {
     InvalidInput(..) as error => error
     Malformed(..) as error => error
     UnsupportedResponse(..) as error => error
+    Busy => Busy
     error => Malformed(reason=Repr(error).to_string())
   }
 }

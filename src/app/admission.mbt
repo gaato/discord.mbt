@@ -88,24 +88,53 @@ async fn ensure_acknowledged(gate : AdmissionGate, plan : AckPlan) -> Unit {
 }
 
 ///|
+/// How long an interaction token stays usable. A deferred interaction still
+/// waiting for handler capacity after this can no longer be answered.
+const INTERACTION_TOKEN_LIFETIME_MS : Int = 900_000
+
+///|
+/// One executor attachment's handler budget: the permits for running
+/// handlers, and the deferred interactions waiting for one.
+priv struct Admission {
+  limiter : @async.Semaphore
+  mut pending : Int
+  max_pending : Int
+  /// How long a deferred interaction may wait for a permit.
+  wait_limit_ms : Int
+}
+
+///|
 /// Run one routed interaction handler under the executor's work budget.
 ///
 /// Routing and component waiters never hold a permit, so a handler waiting
 /// for a component cannot starve the interaction that would wake it. A
 /// deferring route starts a watchdog that acknowledges once the remaining
-/// budget drops to `AUTO_DEFER_MARGIN_MS`, then waits for a permit without a
-/// deadline. Other routes wait for a permit only while the callback window
-/// is open; when it closes first, the interaction is dropped with a warning.
+/// budget drops to `AUTO_DEFER_MARGIN_MS`, then waits for a permit for at
+/// most the interaction token's lifetime; at most `max_pending` such routes
+/// wait at once, and one more is refused through `busy` before anything is
+/// acknowledged. Other routes wait for a permit only while the callback
+/// window is open; when it closes first, the interaction is dropped with a
+/// warning.
 async fn run_admitted(
-  limiter : @async.Semaphore,
+  admission : Admission,
   gate : AdmissionGate,
   plan : AckPlan,
   warn : (AppWarning) -> Unit,
   label : String,
+  busy : async () -> Unit,
   body : async () -> Unit,
 ) -> Unit {
+  let limiter = admission.limiter
   @async.with_task_group(group => {
     if !(plan is Respond) {
+      if admission.pending >= admission.max_pending {
+        // Still pending: the error policy can answer with a message.
+        busy()
+        return
+      }
+      admission.pending += 1
+      let waiting = Ref(true)
+      defer (if waiting.val { admission.pending -= 1 })
       group.spawn_bg(no_wait=true, () => {
         if (gate.remaining_ms)() is Some(left) && left > AUTO_DEFER_MARGIN_MS {
           @async.sleep(left - AUTO_DEFER_MARGIN_MS)
@@ -117,7 +146,20 @@ async fn run_admitted(
           }
         }
       })
-      limiter.acquire()
+      // Judge by the flag, as below: a permit handed over just as the timeout
+      // fires is kept by `acquire`.
+      let acquired = Ref(false)
+      @async.with_timeout_opt(admission.wait_limit_ms, () => {
+        limiter.acquire()
+        acquired.val = true
+      })
+      |> ignore
+      waiting.val = false
+      admission.pending -= 1
+      if !acquired.val {
+        warn(DeferredInteractionExpired(target=label))
+        return
+      }
     } else {
       match (gate.remaining_ms)() {
         None => limiter.acquire()

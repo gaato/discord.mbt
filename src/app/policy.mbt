@@ -216,6 +216,10 @@ fn default_error_policy(warn : (AppWarning) -> Unit) -> ErrorPolicy {
         ctx.respond_error(content="Invalid value for \{name}: \{message}")
       HandlerError::InvalidInput(name=None, message~) =>
         ctx.respond_error(content="Invalid input: \{message}")
+      HandlerError::Busy =>
+        ctx.respond_error(
+          content="The bot is busy right now. Please try again in a moment.",
+        )
       HandlerError::Malformed(reason~) => {
         warn(MalformedInteraction(origin=ctx.origin(), reason~))
         respond_if_interactive(

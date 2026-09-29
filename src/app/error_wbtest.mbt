@@ -10,6 +10,7 @@ test "handler errors raised by user code keep their meaning through decoding" {
     InvalidInput(name=Some("n"), message="bad"),
     Malformed(reason="stale"),
     UnsupportedResponse(reason="no message to update"),
+    Busy,
   ]
   for error in kept {
     assert_eq(

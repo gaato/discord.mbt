@@ -136,3 +136,96 @@ async test "a supplied client reports to the bot once per call, only while it ru
   assert_eq(requests.val, 3)
   assert_eq(http_events.val, 2)
 }
+
+///|
+async test "events beyond the backlog skip handlers with telemetry and one warning" {
+  let transport = BotFakeTransport()
+  let warnings : Array[String] = []
+  let app = @app.AppBuilder()
+  app.on_warn(warning => warnings.push(warning.to_string()))
+  let builder = BotBuilder(
+    app.build(),
+    token="test-token",
+    intents=@model.Intents::guild_messages(),
+    client=Client("test-token"),
+    gateway_url="wss://gateway.example",
+    event_backlog=1,
+  )
+  builder.core.gateway_bot_info_.val = Some(manager_gateway_info())
+  builder.core.connector_.val = Some(_ => {
+    (transport : &@gateway.GatewayTransport)
+  })
+  let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
+  builder.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
+  // Subscribing is what lets MESSAGE_CREATE through the gateway filter;
+  // middleware alone never widens it.
+  builder.on(Events::message_create(), (_, _) => ())
+  let blocked : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  let release : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  let handled : Array[String] = []
+  builder.middleware((_, event, next) => {
+    if event is MessageCreate(created) {
+      handled.push(created.message.id.to_string())
+      if created.message.id.to_string() == "1" {
+        blocked.put(())
+        release.get()
+      }
+    }
+    next(event)
+  })
+  let dropped : Array[String] = []
+  builder.on_telemetry(event => {
+    if event is EventDropped(kind~, backlog=1) {
+      dropped.push(kind)
+    }
+  })
+  let bot = builder.build()
+  @async.with_task_group(group => {
+    let running = group.spawn(no_wait=true, () => bot.run())
+    transport.incoming.put(BOT_HELLO)
+    guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
+      fail("expected identify")
+    }
+    transport.incoming.put(bot_ready_frame())
+    let ctx = @async.with_timeout(2000, () => ready_contexts.get())
+    // The first message holds the only consumer; the second fills the
+    // backlog of one; the next two are dropped for handlers.
+    transport.incoming.put(message_create_frame(2, "1"))
+    @async.with_timeout(2000, () => blocked.get())
+    for id in 2..<=4 {
+      transport.incoming.put(message_create_frame(id + 2, id.to_string()))
+    }
+    @async.with_timeout(2000, () => {
+      while dropped.length() < 2 {
+        @async.sleep(5)
+      }
+    })
+    release.put(())
+    @async.with_timeout(2000, () => {
+      while handled.length() < 2 {
+        @async.sleep(5)
+      }
+    })
+    ctx.shutdown()
+    running.wait()
+  })
+  assert_eq(handled, ["1", "2"])
+  assert_eq(dropped, ["KMessageCreate", "KMessageCreate"])
+  assert_eq(warnings.length(), 1)
+  assert_true(warnings[0].contains("dropping KMessageCreate"))
+}
+
+///|
+test "build rejects an event backlog that holds nothing" {
+  let builder = BotBuilder(
+    @app.AppBuilder().build(),
+    token="t",
+    event_backlog=0,
+  )
+  try builder.build() |> ignore catch {
+    InvalidEventBacklog(value~) => assert_eq(value, 0)
+    error => fail("unexpected error: \{Repr(error)}")
+  } noraise {
+    _ => fail("expected InvalidEventBacklog")
+  }
+}

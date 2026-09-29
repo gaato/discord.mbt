@@ -12,6 +12,8 @@ pub(all) suberror BotConfigError {
   InvalidShardConfig(message~ : String)
   /// A saved session's gateway id disagrees with its READY session id.
   MismatchedSession(shard_id~ : Int)
+  /// `event_backlog` must allow at least one waiting event.
+  InvalidEventBacklog(value~ : Int)
 } derive(Debug)
 
 ///|
@@ -47,6 +49,12 @@ pub struct BotBuilder {
 /// `resume` seeds saved Bot sessions per shard id so those shards RESUME
 /// instead of identifying (see `Bot::sessions`). It restores gateway identity,
 /// not optional cache contents or application-owned state.
+///
+/// `event_backlog` caps the decoded events waiting for event middleware and
+/// handlers (default `DEFAULT_EVENT_BACKLOG`). When handlers fall that far
+/// behind, further events skip them — with an `EventDropped` telemetry event
+/// each and one warning per overload — until they catch up. The cache and
+/// interaction routing never wait in this backlog.
 pub fn BotBuilder::BotBuilder(
   app : @app.App,
   token~ : String,
@@ -60,6 +68,7 @@ pub fn BotBuilder::BotBuilder(
   sync? : @app.CommandScope,
   sync_unowned? : @framework.UnownedCommands = Delete,
   resume? : Map[Int, BotSession] = Map([]),
+  event_backlog? : Int = DEFAULT_EVENT_BACKLOG,
 ) -> BotBuilder {
   {
     core: BotCore::new(
@@ -75,6 +84,7 @@ pub fn BotBuilder::BotBuilder(
       sync?,
       sync_unowned~,
       resume~,
+      event_backlog~,
     ),
   }
 }
@@ -178,6 +188,9 @@ pub fn BotBuilder::build(self : BotBuilder) -> Bot raise BotConfigError {
   }
   if core.compress_ && !@gateway.zlib_stream_supported() {
     raise CompressionUnavailable
+  }
+  if core.event_backlog_ < 1 {
+    raise InvalidEventBacklog(value=core.event_backlog_)
   }
   let static_layout = match core.shards_ {
     Auto => None
