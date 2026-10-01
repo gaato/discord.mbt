@@ -55,7 +55,7 @@ pub struct Command[A] {
   priv nested_group_paths : Array[Array[String]]
   priv suggest_routes : Array[SuggestRoute]
   priv checks : Array[CommandCheck]
-  priv mut cooldown : CooldownConfig?
+  priv cooldown : CooldownConfig?
 }
 
 ///|
@@ -421,22 +421,22 @@ pub fn slash_group(
 /// Discord's three-second initial-response window. A `Deferred` command is
 /// acknowledged automatically when 1000 ms of that budget remain; immediate
 /// and raw commands are not, so keep their checks fast or cache the results.
-/// Returning false is equivalent to `HandlerError::CheckFailed`.
+/// Returning false is equivalent to `HandlerError::CheckFailed`. Returns a new
+/// command; `self` keeps its own checks.
 pub fn[A] Command::check(self : Command[A], check : CommandCheck) -> Command[A] {
-  self.checks.push(check)
-  self
+  { ..self, checks: [..self.checks, check], }
 }
 
 ///|
 /// Apply a fixed-window cooldown to this command. The window starts when all
-/// checks pass, before argument decoding and handler execution.
+/// checks pass, before argument decoding and handler execution. Returns a new
+/// command; `self` keeps its own cooldown.
 pub fn[A] Command::cooldown(
   self : Command[A],
   seconds~ : Int,
   bucket? : CooldownBucket = User,
 ) -> Command[A] {
-  self.cooldown = Some({ seconds, bucket, })
-  self
+  { ..self, cooldown: Some({ seconds, bucket, }), }
 }
 
 ///|
@@ -602,6 +602,60 @@ pub fn[A] Command::erase(self : Command[A]) -> RegisteredCommand {
     dispatch: (bot, waiter, warn, raw) => {
       self.dispatch_typed(bot, waiter, warn, raw)
     },
+  }
+}
+
+///|
+/// A copy that shares no mutable data with the command it came from: the
+/// registration spec's arrays and maps are public and may still be held by
+/// the caller, so a built `App` keeps its own.
+fn RegisteredCommand::snapshot(self : RegisteredCommand) -> RegisteredCommand {
+  {
+    ..self,
+    definition: copy_spec(self.definition),
+    checks_: self.checks_.copy(),
+  }
+}
+
+///|
+fn copy_spec(spec : @interaction.CommandSpec) -> @interaction.CommandSpec {
+  {
+    ..spec,
+    name_localizations: spec.name_localizations.map(Map::copy),
+    description_localizations: spec.description_localizations.map(Map::copy),
+    options: spec.options.map(copy_option),
+    integration_types: spec.integration_types.map(Array::copy),
+    contexts: spec.contexts.map(Array::copy),
+  }
+}
+
+///|
+fn copy_option(option : @model.CommandOption) -> @model.CommandOption {
+  {
+    ..option,
+    name_localizations: option.name_localizations.map(copy_nullable_map),
+    description_localizations: option.description_localizations.map(
+      copy_nullable_map,
+    ),
+    choices: option.choices.map(choices => {
+      choices.map(choice => {
+        ..choice,
+        name_localizations: choice.name_localizations.map(copy_nullable_map),
+      })
+    }),
+    options: option.options.map(options => options.map(copy_option)),
+    channel_types: option.channel_types.map(Array::copy),
+    file_types: option.file_types.map(Array::copy),
+  }
+}
+
+///|
+fn copy_nullable_map(
+  map : @model.Nullable[Map[String, String]],
+) -> @model.Nullable[Map[String, String]] {
+  match map {
+    Null => Null
+    Value(map) => Value(map.copy())
   }
 }
 

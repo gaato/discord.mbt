@@ -138,14 +138,18 @@ pub fn AppBuilder::AppBuilder(
 
 ///|
 /// Validate the declarations and freeze them into an `App`. Later changes to
-/// this builder do not affect the returned `App`.
+/// this builder, or to the commands and specs registered on it, do not affect
+/// the returned `App`.
 pub fn AppBuilder::build(self : AppBuilder) -> App raise AppConfigError {
-  self.validate()
+  // Validate the snapshot the App keeps, so nothing the caller still holds
+  // can change a declaration after it passed.
+  let commands = self.commands_.map(RegisteredCommand::snapshot)
+  { ..self, commands_: commands, }.validate()
   {
     max_in_flight_: self.max_in_flight_,
     max_pending_: self.max_pending_,
     deferred_wait_ms_: @framework.INTERACTION_TOKEN_LIFETIME_MS,
-    commands_: self.commands_.copy(),
+    commands_: commands,
     components_: self.components_.copy(),
     modals_: self.modals_.copy(),
     autocompletes_: self.autocompletes_.copy(),

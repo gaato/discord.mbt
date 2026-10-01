@@ -6,11 +6,12 @@
 pub(all) enum AppWarning {
   /// The watchdog tried to defer a slow deferring route and the defer failed.
   AutoDeferFailed(target~ : String, error~ : Error)
-  /// An immediate or raw route found no handler capacity before its response
-  /// deadline, so the interaction was not answered.
+  /// An immediate or raw route's response deadline passed before its handler
+  /// could start (usually while waiting for handler capacity), so the
+  /// interaction was not answered.
   InteractionDropped(target~ : String)
-  /// A deferred interaction waited for handler capacity until its token
-  /// expired, so its handler never ran.
+  /// A deferred interaction's token expired before its handler could start
+  /// (usually while waiting for handler capacity), so its handler never ran.
   DeferredInteractionExpired(target~ : String)
   /// An error policy tried to respond to a failure that has no interaction
   /// (an event or a service). `summary` describes the discarded response.
@@ -48,11 +49,11 @@ pub impl Show for AppWarning with fn output(self, logger) {
       logger.write_string("automatic defer failed (\{target}): \{Repr(error)}")
     InteractionDropped(target~) =>
       logger.write_string(
-        "interaction dropped (\{target}): no handler capacity before the response deadline",
+        "interaction dropped (\{target}): the response deadline passed before the handler could start",
       )
     DeferredInteractionExpired(target~) =>
       logger.write_string(
-        "deferred interaction expired (\{target}): no handler capacity within the interaction token's lifetime",
+        "deferred interaction expired (\{target}): the interaction token expired before the handler could start",
       )
     ErrorResponseWithoutInteraction(summary~) =>
       logger.write_string(

@@ -1,4 +1,12 @@
 ///|
+/// How one racing interaction ended, as the handler, the error policy, or the
+/// warning hook saw it.
+priv enum RaceEnd {
+  Gate(@framework.ResponseState)
+  Warned(@app.AppWarning)
+} derive(Debug)
+
+///|
 async test "deadline races preserve every accepted capture" {
   let client = @dhttp.Client("test-token")
   defer client.close()
@@ -6,11 +14,12 @@ async test "deadline races preserve every accepted capture" {
   for _attempt in 0..<4 {
     for (delay, deadline) in timings {
       let app = @app.AppBuilder()
-      let states : @aqueue.Queue[@framework.ResponseState] = Queue(
-        kind=Unbounded,
-      )
-      let warnings : Array[String] = []
-      app.on_warn(warning => warnings.push(warning.to_string()))
+      let ends : @aqueue.Queue[RaceEnd] = Queue(kind=Unbounded)
+      app.on_warn(warning => {
+        (ends.try_put(Warned(warning)) |> ignore) catch {
+          _ => ()
+        }
+      })
       app.command(
         @app.slash(
           name="racing",
@@ -19,13 +28,13 @@ async test "deadline races preserve every accepted capture" {
           handler=Raw(raw => {
             @async.sleep(delay)
             raw.respond(content="captured")
-            states.put(raw.response_state())
+            ends.put(Gate(raw.response_state()))
           }),
         ),
       )
       app.error_policy((ctx, error) => {
         assert_true(error is @framework.ResponseGateError::Expired)
-        states.put(ctx.response_state().unwrap())
+        ends.put(Gate(ctx.response_state().unwrap()))
       })
       @async.with_task_group(group => {
         let endpoint = app
@@ -41,8 +50,8 @@ async test "deadline races preserve every accepted capture" {
             deadline_ms=deadline,
           )
         })
-        match @async.with_timeout(1000, () => states.get()) {
-          Sent(ChannelMessageWithSource) => {
+        match @async.with_timeout(1000, () => ends.get()) {
+          Gate(Sent(ChannelMessageWithSource)) => {
             guard outcome is Reply(response~, ..) else {
               fail("accepted capture was lost: \{Repr(outcome)}")
             }
@@ -51,10 +60,13 @@ async test "deadline races preserve every accepted capture" {
               "data": { "content": "captured" },
             })
           }
-          Expired => assert_true(outcome is TimedOut)
-          state => fail("unexpected gate state: \{Repr(state)}")
+          Gate(Expired) => assert_true(outcome is TimedOut)
+          // The window closed before the handler could start.
+          Warned(InteractionDropped(target="command:racing")) =>
+            assert_true(outcome is TimedOut)
+          end => fail("unexpected end: \{Repr(end)}")
         }
-        assert_eq(warnings, [])
+        assert_true(ends.try_get() is None)
       })
     }
   }

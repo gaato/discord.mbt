@@ -109,7 +109,7 @@ async test "handler capacity waits count against the response deadline" {
     })
     assert_false(quick_ran.val)
     assert_eq(warnings, [
-      "interaction dropped (command:quick): no handler capacity before the response deadline",
+      "interaction dropped (command:quick): the response deadline passed before the handler could start",
     ])
   })
 }

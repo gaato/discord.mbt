@@ -106,6 +106,44 @@ priv struct Admission {
 }
 
 ///|
+/// Take a permit from `limiter`, waiting at most `wait_ms` (`None`: as long as
+/// it takes), while `open` holds. A permit that only arrives once the window
+/// has closed is handed back: the handler would do its work with no way to
+/// answer.
+async fn acquire_while_open(
+  limiter : @async.Semaphore,
+  wait_ms : Int?,
+  open : () -> Bool,
+) -> Bool {
+  guard wait_ms is Some(wait_ms) else {
+    limiter.acquire()
+    return true
+  }
+  if !open() {
+    return false
+  }
+  if !limiter.try_acquire() {
+    // Judge by the flag, not the timeout's result: when a release hands this
+    // waiter a permit just as the timeout fires, `acquire` keeps the permit
+    // and returns while `with_timeout_opt` still reports `None`.
+    let acquired = Ref(false)
+    @async.with_timeout_opt(wait_ms, () => {
+      limiter.acquire()
+      acquired.val = true
+    })
+    |> ignore
+    if !acquired.val {
+      return false
+    }
+  }
+  if !open() {
+    limiter.release()
+    return false
+  }
+  true
+}
+
+///|
 /// Run one routed interaction handler under the executor's work budget.
 ///
 /// Routing and component waiters never hold a permit, so a handler waiting
@@ -115,8 +153,10 @@ priv struct Admission {
 /// most the interaction token's lifetime; at most `max_pending` such routes
 /// wait at once, and one more is refused through `busy` before anything is
 /// acknowledged. Other routes wait for a permit only while the callback
-/// window is open; when it closes first, the interaction is dropped with a
-/// warning.
+/// window is open. Either way the window is checked again once the permit is
+/// taken, so a handler never starts after its token (deferring routes) or its
+/// callback window (other routes) has run out; such an interaction is dropped
+/// with a warning.
 async fn run_admitted(
   admission : Admission,
   gate : AdmissionGate,
@@ -148,9 +188,6 @@ async fn run_admitted(
           }
         }
       })
-      // Judge by the flag, as below: a permit handed over just as the timeout
-      // fires is kept by `acquire`.
-      let acquired = Ref(false)
       // Past the token's lifetime (counted from receipt) the handler could not
       // answer anyway.
       let token_left = (gate.token_remaining_ms)()
@@ -159,45 +196,20 @@ async fn run_admitted(
       } else {
         admission.wait_limit_ms
       }
-      @async.with_timeout_opt(wait_ms, () => {
-        limiter.acquire()
-        acquired.val = true
+      let acquired = acquire_while_open(limiter, Some(wait_ms), () => {
+        (gate.token_remaining_ms)() > 0
       })
-      |> ignore
       waiting.val = false
       admission.pending -= 1
-      if !acquired.val {
+      if !acquired {
         warn(DeferredInteractionExpired(target=label))
         return
       }
-    } else {
-      match (gate.remaining_ms)() {
-        None => limiter.acquire()
-        Some(_) if limiter.try_acquire() => ()
-        Some(left) => {
-          // Judge by the flag, not the timeout's result: when a release hands
-          // this waiter a permit just as the timeout fires, `acquire` keeps
-          // the permit and returns while `with_timeout_opt` still reports
-          // `None`.
-          let acquired = Ref(false)
-          @async.with_timeout_opt(left, () => {
-            limiter.acquire()
-            acquired.val = true
-          })
-          |> ignore
-          // A permit that only arrives as the deadline passes comes after the
-          // executor gave up the window: the handler would do its work with no
-          // way to answer.
-          if acquired.val && (gate.remaining_ms)() is Some(0) {
-            limiter.release()
-            acquired.val = false
-          }
-          if !acquired.val {
-            warn(InteractionDropped(target=label))
-            return
-          }
-        }
-      }
+    } else if !acquire_while_open(limiter, (gate.remaining_ms)(), () => {
+        !((gate.remaining_ms)() is Some(0))
+      }) {
+      warn(InteractionDropped(target=label))
+      return
     }
     defer limiter.release()
     body()

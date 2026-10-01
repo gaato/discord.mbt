@@ -140,7 +140,7 @@ async test "timed-out interaction expires its gate" {
     assert_true(
       endpoint.handle_interaction(
         app_command("late-response", "500000000000000810"),
-        deadline_ms=1,
+        deadline_ms=50,
       )
       is TimedOut,
     )
@@ -473,7 +473,9 @@ async test "interaction endpoint dispatches captured responses and completion ou
     match
       app.handle_interaction(
         app_command("slow", "500000000000000104"),
-        deadline_ms=10,
+        // Wide enough for the handler to start under load: it waits for
+        // `slow_release`, so it times out either way.
+        deadline_ms=100,
       ) {
       TimedOut => ()
       outcome => fail("expected TimedOut, got \{Repr(outcome)}")

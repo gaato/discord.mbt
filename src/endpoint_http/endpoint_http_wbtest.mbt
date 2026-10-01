@@ -287,6 +287,7 @@ async test "interactions server answers 202, 504, and 500 and reports startup fa
   let timestamp = "1720951200"
   let app = @app.AppBuilder()
   let warnings : @aqueue.Queue[String] = Queue(kind=Unbounded)
+  let slow_release : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   app.on_warn(warning => {
     ignore(warnings.try_put(warning.to_string()) catch { _ => false })
   })
@@ -307,7 +308,7 @@ async test "interactions server answers 202, 504, and 500 and reports startup fa
       args=@interaction.Args::of(
         @interaction.arg_string(name="text", description="Ignored"),
       ),
-      handler=Raw(_ => @async.sleep(50)),
+      handler=Raw(_ => slow_release.get()),
     ),
   )
   @async.with_task_group(group => {
@@ -337,7 +338,9 @@ async test "interactions server answers 202, 504, and 500 and reports startup fa
       addr="127.0.0.1:0",
       public_key~,
       application_id=@model.Id::parse("400000000000000001"),
-      deadline_ms=20,
+      // Wide enough for "silent" to start after signature verification under
+      // load; "slow" waits for `slow_release`, so it times out either way.
+      deadline_ms=200,
     )
     defer server.close()
     let silent = command_body("silent", "x", "500000000000000104")
@@ -362,6 +365,7 @@ async test "interactions server answers 202, 504, and 500 and reports startup fa
     assert_eq(slow_response.code, 504)
     assert_eq(slow_response.reason, "Gateway Timeout")
     assert_eq(slow_result, "initial response timed out")
+    slow_release.put(())
     // A body cut short of its Content-Length fails while being read.
     let headers = signed_headers(private_seed, timestamp, "{}")
     let socket = @socket.Tcp::connect(@socket.Addr::parse(server.addr()))

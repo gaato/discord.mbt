@@ -79,7 +79,11 @@ breaking change is listed with a migration note.
   refused before it is acknowledged with the new `HandlerError::Busy`, which
   the default policy answers with a try-again message, and one still waiting
   when its interaction token expires (15 minutes after the executor received
-  it) is dropped with `AppWarning::DeferredInteractionExpired`. At most `event_backlog` decoded
+  it) is dropped with `AppWarning::DeferredInteractionExpired`. A handler
+  never starts once its window has closed, even when a permit is free or
+  arrives at the last moment: a deferring route after its token expired, any
+  other route after its response deadline passed (`AppWarning::InteractionDropped`).
+  At most `event_backlog` decoded
   events (`BotBuilder`, default `DEFAULT_EVENT_BACKLOG` = 10000) wait for
   event handlers; later events skip the handlers, each with the new
   `TelemetryEvent::EventDropped`, with one warning per overload (until the
@@ -143,10 +147,16 @@ breaking change is listed with a migration note.
   `App::attach`, `App::start_signed_http`, `serve_interactions`, and
   `App::sync_commands` take an `App`, so an executor can no longer start from
   unvalidated declarations. A built `App` cannot change: registering more
-  handlers on its builder does not affect it. `App::validate` is gone.
+  handlers on its builder does not affect it, and neither does changing a
+  registered command's spec or the arrays and maps passed to its
+  constructor. `Command::check` and `Command::cooldown` return a new command
+  and leave the receiver unchanged, so one command can be the base of
+  several variants; a call whose result is discarded no longer has an
+  effect. `App::validate` is gone.
   Migration: construct `AppBuilder(...)` where you constructed `App(...)`,
   and pass `app.build()` to the executor after every declaration is
-  registered. A feature installer that also needs the gateway for events
+  registered. Chain `.check(...)` and `.cooldown(...)` into the value you
+  register (or bind their result) instead of calling them for their effect. A feature installer that also needs the gateway for events
   splits into one function that takes the `AppBuilder` and one that takes
   the `BotBuilder` (see the `BotBuilder` entry below); see
   [Structuring bots](src/guide/07-structuring-bots.mbt.md).

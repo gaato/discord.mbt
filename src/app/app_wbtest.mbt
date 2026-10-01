@@ -943,7 +943,7 @@ async test "a deferred interaction still waiting when its token expires is dropp
   })
   assert_false(ran.val)
   assert_eq(warnings, [
-    "deferred interaction expired (command:later): no handler capacity within the interaction token's lifetime",
+    "deferred interaction expired (command:later): the interaction token expired before the handler could start",
   ])
 }
 
@@ -958,4 +958,87 @@ fn wbtest_command(name : String, id : String) -> @model.Interaction raise {
       .replace(old="COMMAND_NAME", new=name),
     ),
   )
+}
+
+///|
+test "a built App keeps its own copy of every command" {
+  let names = Map([("fr", "instantane")])
+  let contexts : Array[@model.InteractionContextType] = [Guild]
+  let command = slash(
+    name="snapshot",
+    description="Snapshot",
+    args=@interaction.Args::of(
+      @interaction.arg_string(name="text", description="Text"),
+    ),
+    handler=Raw(_ => ()),
+    contexts~,
+    name_localizations=names,
+  )
+  let builder = AppBuilder()
+  builder.command(command)
+  let app = builder.build()
+  let before = app.commands_[0].definition.to_json()
+  // Everything the caller still holds: the constructor's arguments, the spec
+  // the command hands out, and the command itself.
+  names.set("de", "Momentaufnahme")
+  contexts.push(BotDm)
+  let spec = command.spec()
+  spec.options.clear()
+  let checked = command.check(_ => false).cooldown(seconds=5)
+  assert_eq(app.commands_[0].definition.to_json(), before)
+  assert_eq(app.commands_[0].checks_.length(), 0)
+  assert_true(app.commands_[0].cooldown_ is None)
+  assert_eq(command.checks.length(), 0)
+  assert_true(command.cooldown is None)
+  assert_eq(checked.checks.length(), 1)
+}
+
+///|
+test "a copied spec shares no nested option data" {
+  let leaf : @model.CommandOption = {
+    typ: String,
+    name: "kind",
+    name_localizations: Some(Value(Map([("fr", "genre")]))),
+    description: "Kind",
+    description_localizations: Some(Null),
+    required: None,
+    choices: Some([
+      {
+        name: "a",
+        name_localizations: Some(Value(Map([("fr", "a")]))),
+        value: "a",
+      },
+    ]),
+    options: None,
+    channel_types: Some([GuildText]),
+    min_value: None,
+    max_value: None,
+    min_length: None,
+    max_length: None,
+    autocomplete: None,
+    file_types: Some([]),
+  }
+  let sub : @model.CommandOption = {
+    ..leaf,
+    typ: SubCommand,
+    name: "pick",
+    choices: None,
+    options: Some([leaf]),
+    channel_types: None,
+    file_types: None,
+  }
+  let spec = @interaction.CommandSpec::slash("root", "Root", options=[sub])
+  let before = spec.to_json()
+  let copy = copy_spec(spec)
+  guard spec.options[0].options is Some([inner]) else { fail("no leaf") }
+  guard inner.name_localizations is Some(Value(names)) else { fail("no names") }
+  names.set("de", "Art")
+  guard inner.choices is Some([choice]) else { fail("no choice") }
+  guard choice.name_localizations is Some(Value(choice_names)) else {
+    fail("no choice names")
+  }
+  choice_names.set("de", "a")
+  inner.channel_types.unwrap().push(GuildVoice)
+  spec.options.clear()
+  assert_eq(copy.to_json(), before)
 }

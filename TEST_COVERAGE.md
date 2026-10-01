@@ -161,7 +161,7 @@ show-flows beyond the covered happy and failing paths):
 | src/app/app.mbt | 8 | Default warning sink (`println`), cancellation re-raise arms of the per-kind failure handlers, and the no-op busy handlers of autocomplete routes, which never defer and so are never refused. |
 | src/app/check.mbt | 2 | Permission-check arms needing resolved member permissions in a guild payload. |
 | src/app/command.mbt | 9 | Group/subcommand registration arms beyond the covered paths. |
-| src/app/admission.mbt | 14 | Acknowledgement-plan arms for kinds that never carry that plan, the autocomplete gate stubs, the cancellation re-raise, the pending-count cleanup that only runs when a waiting deferred route is cancelled, the watchdog's failed-defer warning (the defer itself is covered), and handing back a permit that arrived in the same tick as the response deadline (a scheduler race; `admission_test.mbt` hit it once on CI wasm, 2026-10-01). |
+| src/app/admission.mbt | 12 | Acknowledgement-plan arms for kinds that never carry that plan, the autocomplete gate stubs, the cancellation re-raise, the pending-count cleanup that only runs when a waiting deferred route is cancelled, and the watchdog's failed-defer warning (the defer itself is covered). |
 | src/app/component.mbt | 10 | Deferred-ctx accessor duplicates and waiter arms behind a live gateway. |
 | src/app/ctx.mbt | 4 | Waiter plumbing behind a live gateway. |
 | src/app/endpoint.mbt | 6 | Closing an owned client when the startup application lookup fails (needs a real token and network), the endpoint's cancellation re-raise and processing-failure warning, and outcome arms the covered flows do not reach. |

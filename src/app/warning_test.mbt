@@ -11,7 +11,7 @@ test "AppWarning renders stable operator messages" {
   inspect(
     @app.AppWarning::InteractionDropped(target="command:echo").to_string(),
     content=(
-      #|interaction dropped (command:echo): no handler capacity before the response deadline
+      #|interaction dropped (command:echo): the response deadline passed before the handler could start
     ),
   )
   inspect(
