@@ -7,6 +7,8 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-08
+
 ### Added
 
 - `CommandCtx::reply`, `ComponentCtx::reply`, and `ModalCtx::reply` send a
