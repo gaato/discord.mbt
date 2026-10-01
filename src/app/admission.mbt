@@ -173,6 +173,7 @@ async fn run_admitted(
     } else {
       match (gate.remaining_ms)() {
         None => limiter.acquire()
+        Some(_) if limiter.try_acquire() => ()
         Some(left) => {
           // Judge by the flag, not the timeout's result: when a release hands
           // this waiter a permit just as the timeout fires, `acquire` keeps
@@ -184,6 +185,13 @@ async fn run_admitted(
             acquired.val = true
           })
           |> ignore
+          // A permit that only arrives as the deadline passes comes after the
+          // executor gave up the window: the handler would do its work with no
+          // way to answer.
+          if acquired.val && (gate.remaining_ms)() is Some(0) {
+            limiter.release()
+            acquired.val = false
+          }
           if !acquired.val {
             warn(InteractionDropped(target=label))
             return

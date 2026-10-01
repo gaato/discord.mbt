@@ -364,4 +364,4 @@ jobs:
           set -e
           echo "$output"
           test "$status" -eq 1
-          grep -q 'AppConfigError.EmptyToken' <<<"$output"
+          grep -q 'BotConfigError.EmptyToken' <<<"$output"
