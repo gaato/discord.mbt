@@ -143,6 +143,7 @@ pub async fn Client::get_guild_audit_log(
 
 ///|
 /// List bans in a guild using before/after snowflake pagination.
+/// Requires the `BAN_MEMBERS` or `VIEW_AUDIT_LOG` permission.
 pub async fn Client::get_guild_bans(
   self : Client,
   guild_id : @model.GuildId,
@@ -575,7 +576,8 @@ pub async fn Client::get_guild_preview(
 }
 
 ///|
-/// Fetch one guild ban.
+/// Fetch one guild ban. Requires the `BAN_MEMBERS` or `VIEW_AUDIT_LOG`
+/// permission.
 pub async fn Client::get_guild_ban(
   self : Client,
   guild_id : @model.GuildId,

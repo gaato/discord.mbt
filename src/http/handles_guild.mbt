@@ -137,7 +137,8 @@ pub fn GuildRef::audit_log(
 }
 
 ///|
-/// Paginate bans in this guild.
+/// Paginate bans in this guild. Requires the `BAN_MEMBERS` or
+/// `VIEW_AUDIT_LOG` permission.
 pub fn GuildRef::bans(
   self : GuildRef,
   before? : @model.UserId,
@@ -149,6 +150,7 @@ pub fn GuildRef::bans(
 
 ///|
 /// Fetch ban information for a user; use `MemberRef::ban` to perform a ban.
+/// Requires the `BAN_MEMBERS` or `VIEW_AUDIT_LOG` permission.
 pub async fn GuildRef::fetch_ban(
   self : GuildRef,
   user_id : @model.UserId,

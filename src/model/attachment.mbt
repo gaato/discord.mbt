@@ -1,5 +1,9 @@
 ///|
 /// A file attached to a Discord message.
+///
+/// `proxy_url` serves images and videos (which carry `width` and `height`)
+/// and passes audio through unmodified; for any other file Discord's media
+/// proxy answers `415 Unsupported Media Type`, so fetch `url` instead.
 pub(all) struct Attachment {
   id : AttachmentId
   filename : String

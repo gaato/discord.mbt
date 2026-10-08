@@ -233,6 +233,7 @@ pub fn Client::paginate_guild_members(
 
 ///|
 /// Page through guild bans using either a before or after cursor.
+/// Requires the `BAN_MEMBERS` or `VIEW_AUDIT_LOG` permission.
 pub fn Client::paginate_guild_bans(
   self : Client,
   guild_id : @model.GuildId,
