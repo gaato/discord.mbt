@@ -17,6 +17,7 @@ fn policy_test_embed(title : String) -> @model.Embed {
     provider: None,
     author: None,
     fields: None,
+    components: None,
     flags: None,
   }
 }

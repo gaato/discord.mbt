@@ -100,6 +100,7 @@ test "embed decodes a rich fixture with every sub-object" {
       #|    },
       #|  ),
       #|  fields: Some([{ name: "Status", value: "Operational", inline: Some(true) }]),
+      #|  components: None,
       #|  flags: None,
       #|}
     ),
@@ -126,6 +127,7 @@ test "embed decodes an empty object" {
       #|  provider: None,
       #|  author: None,
       #|  fields: None,
+      #|  components: None,
       #|  flags: None,
       #|}
     ),
@@ -148,6 +150,7 @@ test "embed encode omits absent optional fields" {
     provider: None,
     author: None,
     fields: None,
+    components: None,
     flags: None,
   }
   inspect(
@@ -200,6 +203,37 @@ test "embed constructors expose only outgoing fields and copy field arrays" {
 }
 
 ///|
+test "embed decodes a component embed link preview" {
+  // A `components` embed as Discord documents it (2026-10-05): one Container
+  // built from the linked page's `discord:component-embed` payload.
+  let fixture =
+    #|{
+    #|  "type": "components",
+    #|  "url": "https://example.com/patch-notes",
+    #|  "components": [{
+    #|    "type": 17,
+    #|    "id": 1,
+    #|    "components": [{ "type": 10, "id": 2, "content": "# Patch Notes" }]
+    #|  }]
+    #|}
+  let embed : @model.Embed = @json.from_json(@json.parse(fixture))
+  assert_true(embed.typ == Some(Components))
+  guard embed.components is Some([Container(container)]) else {
+    fail("expected one Container")
+  }
+  guard container.components is [TextDisplay(text)] else {
+    fail("expected one Text Display")
+  }
+  inspect(text.content, content="# Patch Notes")
+  inspect(
+    embed.to_json().stringify(),
+    content=(
+      #|{"type":"components","url":"https://example.com/patch-notes","components":[{"id":1,"components":[{"id":2,"content":"# Patch Notes","type":10}],"type":17}]}
+    ),
+  )
+}
+
+///|
 test "embed type string enum preserves unknown values" {
   let known : @model.EmbedType = @json.from_json(Json::string("gifv"))
   debug_inspect(
@@ -223,4 +257,14 @@ test "embed type string enum preserves unknown values" {
   )
   let round_trip : @model.EmbedType = @json.from_json(unknown.to_json())
   assert_true(round_trip == unknown)
+  let components : @model.EmbedType = @json.from_json(
+    Json::string("components"),
+  )
+  debug_inspect(
+    components,
+    content=(
+      #|Components
+    ),
+  )
+  assert_eq(components.to_string(), "components")
 }

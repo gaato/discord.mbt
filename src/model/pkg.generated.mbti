@@ -1171,6 +1171,7 @@ pub(all) struct Embed {
   provider : EmbedProvider?
   author : EmbedAuthor?
   fields : Array[EmbedField]?
+  components : Array[Component]?
   flags : EmbedFlags?
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn Embed::Embed(title? : String, description? : String, url? : String, timestamp? : Timestamp, color? : Int, footer? : EmbedFooter, image? : EmbedImage, thumbnail? : EmbedThumbnail, author? : EmbedAuthor, fields? : Array[EmbedField]) -> Self
@@ -1243,6 +1244,7 @@ pub(all) enum EmbedType {
   Link
   AutoModerationMessage
   PollResult
+  Components
   Unknown(String)
 } derive(Eq, @debug.Debug)
 pub fn EmbedType::from_string(String) -> Self

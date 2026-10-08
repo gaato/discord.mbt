@@ -220,6 +220,7 @@ test "message decodes a full fixture with a string nonce and nested reference" {
       #|      provider: None,
       #|      author: None,
       #|      fields: None,
+      #|      components: None,
       #|      flags: None,
       #|    },
       #|  ],

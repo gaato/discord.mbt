@@ -272,6 +272,13 @@ breaking change is listed with a migration note.
 - `ComponentDeferredCtx::edit_original(files=...)` on a `DeferredUpdate`
   handler replaced the host message's attachments with no way to keep them;
   pass `keep_attachments` to retain the existing ones.
+- **Breaking:** Component embeds (Discord docs, 2026-10-05): `Embed` gains
+  `components : Array[Component]?`, the single Container of a link preview
+  that the linked page builds from Discord components, and `EmbedType` gains
+  `Components` for the `"components"` embed type, which decoded as
+  `Unknown("components")` before. Both are receive-only; `Embed(...)` is
+  unchanged. Migration: exhaustive matches on `EmbedType` need a new arm, and
+  `Embed` record literals need `components: None`.
 
 ### Fixed
 

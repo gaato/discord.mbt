@@ -48,8 +48,11 @@ pub(all) struct Embed {
   provider : EmbedProvider?
   author : EmbedAuthor?
   fields : Array[EmbedField]?
+  /// The single Container that makes up a `Components` embed: a link preview
+  /// that the linked page describes with a `discord:component-embed`
+  /// payload. Receive-only and display-only; absent on every other type.
+  components : Array[Component]?
   flags : EmbedFlags?
-  // Not modeled: embed components appear in OpenAPI but not in the public documentation.
 } derive (
   ToJson(fields(typ(rename="type"))),
   FromJson(fields(typ(rename="type"))),
@@ -86,6 +89,7 @@ pub fn Embed::Embed(
     provider: None,
     author,
     fields: fields.map(values => values.copy()),
+    components: None,
     flags: None,
   }
 }
@@ -144,6 +148,8 @@ pub(all) enum EmbedType {
   Link
   AutoModerationMessage
   PollResult
+  /// A link preview built from Discord components; see `Embed.components`.
+  Components
   Unknown(String)
 } derive(Eq, Debug)
 
@@ -158,6 +164,7 @@ pub fn EmbedType::to_string(self : EmbedType) -> String {
     Link => "link"
     AutoModerationMessage => "auto_moderation_message"
     PollResult => "poll_result"
+    Components => "components"
     Unknown(value) => value
   }
 }
@@ -173,6 +180,7 @@ pub fn EmbedType::from_string(value : String) -> EmbedType {
     "link" => Link
     "auto_moderation_message" => AutoModerationMessage
     "poll_result" => PollResult
+    "components" => Components
     value => Unknown(value)
   }
 }

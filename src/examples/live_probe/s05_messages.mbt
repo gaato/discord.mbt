@@ -36,6 +36,7 @@ async fn sec_messages(p : P) -> Unit {
       provider: None,
       author: None,
       fields: Some([{ name: "field", value: "value", inline: Some(true), }]),
+      components: None,
       flags: None,
     }
     let button = @model.Button::{
