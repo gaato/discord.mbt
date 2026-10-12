@@ -20,14 +20,14 @@ pub(all) enum InteractionHttpBody {
 ///|
 /// A host-independent HTTP response for a Discord interaction.
 pub(all) struct InteractionHttpResponse {
-  status : Int
+  status : Int32
   content_type : String?
   body : InteractionHttpBody
 }
 
 ///|
 fn interaction_text_response(
-  status : Int,
+  status : Int32,
   body : String,
 ) -> InteractionHttpResponse {
   {
@@ -46,7 +46,7 @@ pub async fn InteractionEndpoint::handle_signed_http(
   self : InteractionEndpoint,
   request : InteractionHttpRequest,
   verifier : @verify.InteractionVerifier,
-  deadline_ms? : Int = 2500,
+  deadline_ms~ : Int32 = 2500,
 ) -> InteractionHttpResponse {
   if request.http_method != "POST" {
     return interaction_text_response(405, "method not allowed")

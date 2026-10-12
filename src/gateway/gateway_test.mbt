@@ -9,7 +9,7 @@ struct FakeTransport {
   recv_in_flight : Ref[Bool]
   close_during_send : Ref[Bool]
   close_during_recv : Ref[Bool]
-  close_calls : Ref[Int]
+  close_calls : Ref[Int32]
   fail_close : Ref[Bool]
 }
 
@@ -30,7 +30,7 @@ fn FakeTransport::FakeTransport() -> FakeTransport {
 }
 
 ///|
-fn FakeTransport::server_close(self : FakeTransport, code : Int?) -> Unit {
+fn FakeTransport::server_close(self : FakeTransport, code : Int32?) -> Unit {
   self.incoming.close(
     error=@gateway.TransportClosed(code~, reason="server closed"),
   )
@@ -213,7 +213,7 @@ async test "shard connector failure reports telemetry and cancelled backoff stop
 ///|
 async test "shard backoff sleeper failure ends the retry loop" {
   let attempts = Ref(0)
-  let slept : @aqueue.Queue[Int] = Queue(kind=Unbounded)
+  let slept : @aqueue.Queue[Int32] = Queue(kind=Unbounded)
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
@@ -979,7 +979,7 @@ const HELLO_FAST : String =
 /// Gated sleeper: every requested delay is observed on `requests` and only
 /// completes when the test calls `release`.
 struct SleepGate {
-  requests : @aqueue.Queue[Int]
+  requests : @aqueue.Queue[Int32]
   releases : @aqueue.Queue[Unit]
 }
 
@@ -989,7 +989,7 @@ fn SleepGate::SleepGate() -> SleepGate {
 }
 
 ///|
-async fn SleepGate::sleep(self : SleepGate, ms : Int) -> Unit {
+async fn SleepGate::sleep(self : SleepGate, ms : Int32) -> Unit {
   self.requests.put(ms)
   self.releases.get()
 }

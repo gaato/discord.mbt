@@ -60,7 +60,7 @@ pub async fn MessageRef::forward(
 pub async fn MessageRef::edit(
   self : MessageRef,
   content? : String,
-  clear_content? : Bool = false,
+  clear_content~ : Bool = false,
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
   flags? : @model.MessageFlags,
@@ -189,7 +189,7 @@ pub async fn MessageRef::reactions(
   self : MessageRef,
   emoji : String,
   typ? : @model.ReactionType,
-  limit? : Int,
+  limit? : Int32,
   after? : @model.UserId,
 ) -> Array[@model.User] raise DiscordHttpError {
   self.client.get_reactions(
@@ -208,7 +208,7 @@ pub async fn MessageRef::start_thread(
   self : MessageRef,
   name : String,
   auto_archive_duration? : @model.ThreadAutoArchiveDuration,
-  rate_limit_per_user? : Int,
+  rate_limit_per_user? : Int32,
   reason? : String,
 ) -> @model.Channel raise DiscordHttpError {
   self.client.start_thread_from_message(
@@ -233,9 +233,9 @@ pub async fn MessageRef::expire_poll(
 /// Paginate users who selected one answer in this message's poll.
 pub fn MessageRef::poll_answer_voters(
   self : MessageRef,
-  answer_id : Int,
+  answer_id : Int32,
   after? : @model.UserId,
-  page_size? : Int = 100,
+  page_size~ : Int32 = 100,
 ) -> Paginator[@model.User] raise DiscordHttpError {
   self.client.paginate_poll_answer_voters(
     self.channel_id,

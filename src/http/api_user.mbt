@@ -12,10 +12,10 @@ pub async fn Client::get_current_user(
 /// `get_gateway_bot`); Discord requires it for apps using large bot sharding.
 pub async fn Client::get_current_user_guilds(
   self : Client,
-  limit? : Int,
+  limit? : Int32,
   before? : @model.GuildId,
   after? : @model.GuildId,
-  shard? : Int,
+  shard? : Int32,
   with_counts? : Bool,
 ) -> Array[@model.CurrentUserGuild] raise DiscordHttpError {
   validate_page_limit("current user guild", limit, 200)
@@ -59,9 +59,9 @@ pub async fn Client::modify_current_user(
   self : Client,
   username? : String,
   avatar? : String,
-  clear_avatar? : Bool = false,
+  clear_avatar~ : Bool = false,
   banner? : String,
-  clear_banner? : Bool = false,
+  clear_banner~ : Bool = false,
 ) -> @model.User raise DiscordHttpError {
   validate_length("username", username, min=2, max=32)
   let body = @model.ObjBuilder()

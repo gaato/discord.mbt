@@ -11,9 +11,9 @@ pub(all) suberror BotConfigError {
   /// rules.
   InvalidShardConfig(message~ : String)
   /// A saved session's gateway id disagrees with its READY session id.
-  MismatchedSession(shard_id~ : Int)
+  MismatchedSession(shard_id~ : Int32)
   /// `event_backlog` must allow at least one waiting event.
-  InvalidEventBacklog(value~ : Int)
+  InvalidEventBacklog(value~ : Int32)
 } derive(Debug)
 
 ///|
@@ -59,16 +59,16 @@ pub fn BotBuilder::BotBuilder(
   app : @app.App,
   token~ : String,
   intents? : @model.Intents,
-  capabilities? : @model.GatewayCapabilities = @model.GatewayCapabilities::none(),
+  capabilities~ : @model.GatewayCapabilities = @model.GatewayCapabilities::none(),
   client? : @dhttp.Client,
   gateway_url? : String,
-  shards? : ShardConfig = Single(id=0, count=1),
-  compress? : Bool = false,
+  shards~ : ShardConfig = Single(id=0, count=1),
+  compress~ : Bool = false,
   identify_queue? : &@queue.IdentifyQueue,
   sync? : @app.CommandScope,
-  sync_unowned? : @framework.UnownedCommands = Delete,
-  resume? : Map[Int, BotSession] = Map([]),
-  event_backlog? : Int = DEFAULT_EVENT_BACKLOG,
+  sync_unowned~ : @framework.UnownedCommands = Delete,
+  resume~ : Map[Int32, BotSession] = Map([]),
+  event_backlog~ : Int32 = DEFAULT_EVENT_BACKLOG,
 ) -> BotBuilder {
   {
     core: BotCore::new(
@@ -207,7 +207,7 @@ pub fn BotBuilder::build(self : BotBuilder) -> Bot raise BotConfigError {
       raise MismatchedSession(shard_id~)
     }
   }
-  let resume : Map[Int, BotSession] = Map([])
+  let resume : Map[Int32, BotSession] = Map([])
   for shard_id, saved in core.resume_ {
     resume[shard_id] = clone_bot_session(saved)
   }
@@ -261,6 +261,6 @@ pub async fn Bot::run(self : Bot) -> Unit {
 /// resolves the shard layout over REST; an unsaved shard appears after READY.
 /// Empty while the bot is not running. Returned values do not alias mutable
 /// runtime state.
-pub fn Bot::sessions(self : Bot) -> Map[Int, BotSession] {
+pub fn Bot::sessions(self : Bot) -> Map[Int32, BotSession] {
   self.core.sessions()
 }

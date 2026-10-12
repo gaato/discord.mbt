@@ -11,8 +11,8 @@ pub type Paginator[T] = @runtime.Paginator[T, DiscordHttpError]
 ///|
 fn validate_page_limit(
   resource : String,
-  limit : Int?,
-  maximum : Int,
+  limit : Int32?,
+  maximum : Int32,
 ) -> Unit raise DiscordHttpError {
   validate_range("\{resource} limit", limit, min=1, max=maximum)
 }
@@ -78,9 +78,9 @@ fn[T, C : Compare] maximum_present_cursor(
 /// The cursor stays inside the fetch, so any cursor type works and a fetch
 /// that raised is retried in place.
 fn[T, C] paginator_from_cursor(
-  page_size : Int,
+  page_size : Int32,
   initial_cursor : C?,
-  fetch : async (C?, Int) -> Array[T] raise DiscordHttpError,
+  fetch : async (C?, Int32) -> Array[T] raise DiscordHttpError,
   next_cursor : (Array[T]) -> C?,
 ) -> Paginator[T] {
   let cursor = Ref(initial_cursor)
@@ -147,7 +147,7 @@ pub fn Client::paginate_messages(
   before? : @model.MessageId,
   after? : @model.MessageId,
   around? : @model.MessageId,
-  page_size? : Int = 100,
+  page_size~ : Int32 = 100,
 ) -> Paginator[@model.Message] raise DiscordHttpError {
   validate_page_limit("message", Some(page_size), 100)
   let cursor_count = (if around is Some(_) { 1 } else { 0 }) +
@@ -216,7 +216,7 @@ pub fn Client::paginate_guild_members(
   self : Client,
   guild_id : @model.GuildId,
   after? : @model.UserId,
-  page_size? : Int = 1000,
+  page_size~ : Int32 = 1000,
 ) -> Paginator[@model.GuildMember] raise DiscordHttpError {
   validate_page_limit("guild member", Some(page_size), 1000)
   paginator_from_cursor(
@@ -239,7 +239,7 @@ pub fn Client::paginate_guild_bans(
   guild_id : @model.GuildId,
   before? : @model.UserId,
   after? : @model.UserId,
-  page_size? : Int = 1000,
+  page_size~ : Int32 = 1000,
 ) -> Paginator[@model.GuildBan] raise DiscordHttpError {
   validate_page_limit("guild ban", Some(page_size), 1000)
   validate_cursor_pair("guild ban", before, after)
@@ -270,7 +270,7 @@ pub fn Client::paginate_guild_audit_log(
   user_id? : @model.UserId,
   action_type? : @model.AuditLogEvent,
   before? : @model.AuditLogEntryId,
-  page_size? : Int = 100,
+  page_size~ : Int32 = 100,
 ) -> Paginator[@model.AuditLogEntry] raise DiscordHttpError {
   validate_page_limit("audit log", Some(page_size), 100)
   paginator_from_cursor(
@@ -299,7 +299,7 @@ pub fn Client::paginate_guild_scheduled_event_users(
   with_member? : Bool,
   before? : @model.UserId,
   after? : @model.UserId,
-  page_size? : Int = 100,
+  page_size~ : Int32 = 100,
 ) -> Paginator[@model.GuildScheduledEventUser] raise DiscordHttpError {
   validate_page_limit("scheduled event user", Some(page_size), 100)
   validate_cursor_pair("scheduled event user", before, after)
@@ -343,9 +343,9 @@ pub fn Client::paginate_poll_answer_voters(
   self : Client,
   channel_id : @model.ChannelId,
   message_id : @model.MessageId,
-  answer_id : Int,
+  answer_id : Int32,
   after? : @model.UserId,
-  page_size? : Int = 100,
+  page_size~ : Int32 = 100,
 ) -> Paginator[@model.User] raise DiscordHttpError {
   validate_page_limit("poll voter", Some(page_size), 100)
   paginator_from_cursor(
@@ -371,9 +371,9 @@ pub fn Client::paginate_current_user_guilds(
   self : Client,
   before? : @model.GuildId,
   after? : @model.GuildId,
-  shard? : Int,
+  shard? : Int32,
   with_counts? : Bool,
-  page_size? : Int = 200,
+  page_size~ : Int32 = 200,
 ) -> Paginator[@model.CurrentUserGuild] raise DiscordHttpError {
   validate_page_limit("current user guild", Some(page_size), 200)
   validate_cursor_pair("current user guild", before, after)

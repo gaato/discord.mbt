@@ -5,7 +5,7 @@ async fn sec_guild(p : P) -> Unit {
   let c = p.client
   let g = p.guild_id
   let gr = c.guild_ref(g)
-  let mut prune_count : Int? = None
+  let mut prune_count : Int32? = None
   p.probe("GuildRef::fetch (with_counts)", () => {
     let guild = gr.fetch(with_counts=true)
     p.s.original_features = guild.features

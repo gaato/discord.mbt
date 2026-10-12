@@ -36,8 +36,8 @@ pub fn string_option(
   description : String,
   required? : Bool,
   choices? : Array[@model.CommandOptionChoice],
-  min_length? : Int,
-  max_length? : Int,
+  min_length? : Int32,
+  max_length? : Int32,
   autocomplete? : Bool,
   name_localizations? : Map[String, String],
   description_localizations? : Map[String, String],
@@ -255,7 +255,7 @@ pub fn attachment_option(
 pub fn sub_command(
   name : String,
   description : String,
-  options? : Array[@model.CommandOption] = [],
+  options~ : Array[@model.CommandOption] = [],
   name_localizations? : Map[String, String],
   description_localizations? : Map[String, String],
 ) -> @model.CommandOption {
@@ -351,7 +351,7 @@ pub fn action_row(components : Array[@model.Component]) -> @model.Component {
 pub fn button(
   custom_id~ : String,
   label? : String,
-  style? : @model.ButtonStyle = Primary,
+  style~ : @model.ButtonStyle = Primary,
   emoji? : @model.Emoji,
   disabled? : Bool,
 ) -> @model.Component {
@@ -405,8 +405,8 @@ pub fn string_select(
   custom_id~ : String,
   options~ : Array[@model.SelectOption],
   placeholder? : String,
-  min_values? : Int,
-  max_values? : Int,
+  min_values? : Int32,
+  max_values? : Int32,
   disabled? : Bool,
 ) -> @model.Component {
   StringSelect({
@@ -429,8 +429,8 @@ pub fn string_select(
 /// the file count (0-10 / 1-10).
 pub fn file_upload(
   custom_id~ : String,
-  min_values? : Int,
-  max_values? : Int,
+  min_values? : Int32,
+  max_values? : Int32,
   required? : Bool,
   file_types? : Array[@model.FileTypeFilter],
 ) -> @model.Component {
@@ -447,11 +447,11 @@ pub fn file_upload(
 
 ///|
 fn auto_select(
-  typ : Int,
+  typ : Int32,
   custom_id : String,
   placeholder : String?,
-  min_values : Int?,
-  max_values : Int?,
+  min_values : Int32?,
+  max_values : Int32?,
   disabled : Bool?,
   channel_types : Array[@model.ChannelType]?,
 ) -> @model.Component {
@@ -481,8 +481,8 @@ fn auto_select(
 pub fn user_select(
   custom_id~ : String,
   placeholder? : String,
-  min_values? : Int,
-  max_values? : Int,
+  min_values? : Int32,
+  max_values? : Int32,
   disabled? : Bool,
 ) -> @model.Component {
   auto_select(5, custom_id, placeholder, min_values, max_values, disabled, None)
@@ -494,8 +494,8 @@ pub fn user_select(
 pub fn role_select(
   custom_id~ : String,
   placeholder? : String,
-  min_values? : Int,
-  max_values? : Int,
+  min_values? : Int32,
+  max_values? : Int32,
   disabled? : Bool,
 ) -> @model.Component {
   auto_select(6, custom_id, placeholder, min_values, max_values, disabled, None)
@@ -506,8 +506,8 @@ pub fn role_select(
 pub fn mentionable_select(
   custom_id~ : String,
   placeholder? : String,
-  min_values? : Int,
-  max_values? : Int,
+  min_values? : Int32,
+  max_values? : Int32,
   disabled? : Bool,
 ) -> @model.Component {
   auto_select(7, custom_id, placeholder, min_values, max_values, disabled, None)
@@ -520,8 +520,8 @@ pub fn mentionable_select(
 pub fn channel_select(
   custom_id~ : String,
   placeholder? : String,
-  min_values? : Int,
-  max_values? : Int,
+  min_values? : Int32,
+  max_values? : Int32,
   disabled? : Bool,
   channel_types? : Array[@model.ChannelType],
 ) -> @model.Component {
@@ -582,7 +582,7 @@ pub fn thumbnail(
 /// flag automatically.
 pub fn container(
   components~ : Array[@model.Component],
-  accent_color? : Int,
+  accent_color? : Int32,
   spoiler? : Bool,
 ) -> @model.Component {
   Container({
@@ -598,7 +598,7 @@ pub fn container(
 /// with an optional visible `divider` line and `spacing` size (1 = small,
 /// 2 = large). Reply and send layers set the required `IS_COMPONENTS_V2`
 /// message flag automatically.
-pub fn separator(divider? : Bool, spacing? : Int) -> @model.Component {
+pub fn separator(divider? : Bool, spacing? : Int32) -> @model.Component {
   Separator({ id: None, divider, spacing, })
 }
 
@@ -657,10 +657,10 @@ pub fn label(
 /// this).
 pub fn text_input(
   custom_id~ : String,
-  style? : @model.TextInputStyle = Short,
+  style~ : @model.TextInputStyle = Short,
   placeholder? : String,
-  min_length? : Int,
-  max_length? : Int,
+  min_length? : Int32,
+  max_length? : Int32,
   required? : Bool,
   value? : String,
 ) -> @model.Component {

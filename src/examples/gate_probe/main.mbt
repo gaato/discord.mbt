@@ -9,7 +9,7 @@
 ///   DISCORD_TOKEN=... GUILD_ID=... moon run --release src/examples/gate_probe
 ///
 /// Expected results are printed at startup and in each command's description.
-const DEFAULT_RUN_SECONDS : Int = 600
+const DEFAULT_RUN_SECONDS : Int32 = 600
 
 ///|
 priv suberror ProbeFailure {
@@ -210,7 +210,7 @@ fn update_fail_command() -> @discord.Command[Unit] {
 
 ///|
 /// A modal whose typed state is the ticket number it closes.
-fn close_modal(custom_id : String) -> @discord.Modal[Int, String?] {
+fn close_modal(custom_id : String) -> @discord.Modal[Int32, String?] {
   @discord.modal(
     custom_id~,
     title="Close ticket",
@@ -222,17 +222,17 @@ fn close_modal(custom_id : String) -> @discord.Modal[Int, String?] {
 }
 
 ///|
-fn close_immediate_modal() -> @discord.Modal[Int, String?] {
+fn close_immediate_modal() -> @discord.Modal[Int32, String?] {
   close_modal("probe-close-now")
 }
 
 ///|
-fn close_deferred_modal() -> @discord.Modal[Int, String?] {
+fn close_deferred_modal() -> @discord.Modal[Int32, String?] {
   close_modal("probe-close-later")
 }
 
 ///|
-fn open_close_route(id : String) -> @discord.ComponentRoute[Int] {
+fn open_close_route(id : String) -> @discord.ComponentRoute[Int32] {
   @discord.component_route(id~, state=@discord.CustomIdCodec::int())
 }
 
@@ -407,7 +407,7 @@ fn guild_scope() -> @discord.CommandScope? {
 }
 
 ///|
-fn run_seconds() -> Int {
+fn run_seconds() -> Int32 {
   match @env.get_env_var("RUN_SECONDS") {
     Some(value) => @string.parse_int(value) catch { _ => DEFAULT_RUN_SECONDS }
     None => DEFAULT_RUN_SECONDS

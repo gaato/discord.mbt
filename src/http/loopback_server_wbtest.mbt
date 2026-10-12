@@ -11,7 +11,7 @@ priv struct RecordedExchange {
 /// Serves canned JSON per path on a loopback socket and records every
 /// exchange, so tests can pin what `Client::perform` actually put on the wire.
 async fn with_recording_server(
-  respond : (String) -> (Int, String),
+  respond : (String) -> (Int32, String),
   run : async (Client, Array[RecordedExchange]) -> Unit,
 ) -> Unit {
   let exchanges : Array[RecordedExchange] = []
@@ -46,7 +46,7 @@ async fn with_recording_server(
 }
 
 ///|
-fn reason_of(status : Int) -> String {
+fn reason_of(status : Int32) -> String {
   match status {
     200 => "OK"
     502 => "Bad Gateway"

@@ -1,7 +1,7 @@
 ///|
 /// An outbound HTTP webhook event payload sent by Discord.
 pub(all) struct WebhookEventPayload {
-  version : Int
+  version : Int32
   application_id : ApplicationId
   typ : WebhookPayloadType
   event : WebhookEventBody?
@@ -16,11 +16,11 @@ pub(all) struct WebhookEventPayload {
 pub(all) enum WebhookPayloadType {
   Ping
   Event
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn WebhookPayloadType::to_int(self : WebhookPayloadType) -> Int {
+pub fn WebhookPayloadType::to_int(self : WebhookPayloadType) -> Int32 {
   match self {
     Ping => 0
     Event => 1
@@ -29,7 +29,7 @@ pub fn WebhookPayloadType::to_int(self : WebhookPayloadType) -> Int {
 }
 
 ///|
-pub fn WebhookPayloadType::from_int(value : Int) -> WebhookPayloadType {
+pub fn WebhookPayloadType::from_int(value : Int32) -> WebhookPayloadType {
   match value {
     0 => Ping
     1 => Event

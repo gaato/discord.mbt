@@ -8,8 +8,8 @@ pub(all) struct GuildPreview {
   discovery_splash : Nullable[ImageHash]
   emojis : Array[Emoji]
   features : Array[GuildFeature]
-  approximate_member_count : Int
-  approximate_presence_count : Int
+  approximate_member_count : Int32
+  approximate_presence_count : Int32
   description : Nullable[String]
   stickers : Array[Sticker]
 } derive(ToJson, FromJson, Debug)
@@ -25,12 +25,12 @@ pub(all) struct BulkBanResponse {
 /// The number of members pruned, or null when a begin-prune request did not
 /// compute the count.
 pub(all) struct GuildPruneResult {
-  pruned : Nullable[Int]
+  pruned : Nullable[Int32]
 } derive(ToJson, FromJson, Debug)
 
 ///|
 /// A guild's vanity invite code and its current use count.
 pub(all) struct GuildVanityUrl {
   code : Nullable[String]
-  uses : Int
+  uses : Int32
 } derive(ToJson, FromJson, Debug)

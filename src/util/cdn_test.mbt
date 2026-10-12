@@ -55,7 +55,7 @@ test "static CDN endpoints accept raster formats but never GIF or animated defau
 ///|
 test "animated CDN endpoint format and size matrix" {
   let builders : Array[
-    (@util.CdnImageFormat, Int) -> String raise @util.CdnUrlError,
+    (@util.CdnImageFormat, Int32) -> String raise @util.CdnUrlError,
   ] = [
     (format, size) => {
       @util.user_avatar_url(Id(1UL), ImageHash("a_hash"), format~, size~)

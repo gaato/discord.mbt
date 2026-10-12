@@ -20,7 +20,7 @@ priv enum RoutePattern {
 }
 
 ///|
-fn RoutePattern::rank(self : RoutePattern) -> Int {
+fn RoutePattern::rank(self : RoutePattern) -> Int32 {
   match self {
     Prefix(prefix) => prefix.length()
     Id(id) => id.length() + 1
@@ -191,7 +191,7 @@ pub fn Framework::command_specs(self : Framework) -> Json {
 /// Synchronize global commands, preserving entry points and reporting changes.
 pub async fn Framework::sync_global(
   self : Framework,
-  unowned? : UnownedCommands = Delete,
+  unowned~ : UnownedCommands = Delete,
 ) -> ScopeSyncReport {
   sync_command_scope(
     self.client,
@@ -206,7 +206,7 @@ pub async fn Framework::sync_global(
 pub async fn Framework::sync_guild(
   self : Framework,
   guild_id : @model.GuildId,
-  unowned? : UnownedCommands = Delete,
+  unowned~ : UnownedCommands = Delete,
 ) -> ScopeSyncReport {
   sync_command_scope(
     self.client,
@@ -241,7 +241,7 @@ async fn Framework::guard_errors(
 pub async fn Framework::process(
   self : Framework,
   interaction : @model.Interaction,
-  deadline_ms? : Int = DEFAULT_INTERACTION_DEADLINE_MS,
+  deadline_ms~ : Int32 = DEFAULT_INTERACTION_DEADLINE_MS,
 ) -> Bool {
   let gate = ResponseGate::rest(self.client, interaction, deadline_ms~)
   self.process_with(interaction, gate~)
@@ -364,7 +364,7 @@ pub async fn Framework::wait_for_component(
   self : Framework,
   custom_id~ : String,
   user? : @model.UserId,
-  timeout_ms? : Int,
+  timeout_ms? : Int32,
 ) -> ComponentCtx? {
   let waiter = ComponentWaiter::{
     custom_id,

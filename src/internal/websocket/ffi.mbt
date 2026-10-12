@@ -4,10 +4,10 @@ priv type WsHandle
 
 ///|
 priv struct WsEvent {
-  kind : Int
+  kind : Int32
   text : String
   data : Bytes
-  code : Int
+  code : Int32
   reason : String
 }
 
@@ -77,7 +77,7 @@ extern "js" fn ws_send_binary(handle : WsHandle, data : Bytes) -> String =
   #| (handle, data) => { try { handle.socket.send(data); return ''; } catch (e) { return String(e); } }
 
 ///|
-extern "js" fn ws_close(handle : WsHandle, code : Int, reason : String) =
+extern "js" fn ws_close(handle : WsHandle, code : Int32, reason : String) =
   #| (handle, code, reason) => {
   #|   const socket = handle.socket;
   #|   try {
@@ -89,7 +89,7 @@ extern "js" fn ws_close(handle : WsHandle, code : Int, reason : String) =
   #| }
 
 ///|
-extern "js" fn ws_ready_state(handle : WsHandle) -> Int =
+extern "js" fn ws_ready_state(handle : WsHandle) -> Int32 =
   #| (handle) => handle.socket.readyState
 
 ///|

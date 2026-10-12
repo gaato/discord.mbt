@@ -62,7 +62,7 @@ impl @voice.VoiceUdp for AudioTestUdp with fn close(_self) {
 ///|
 struct ThreeFrameSource {
   frames : Array[Bytes]
-  mut cursor : Int
+  mut cursor : Int32
 }
 
 ///|

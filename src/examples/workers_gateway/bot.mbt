@@ -3,7 +3,7 @@
 pub fn build_bot(
   token : String,
   gateway_url : String,
-  saved_sessions : Map[Int, @discord.BotSession],
+  saved_sessions : Map[Int32, @discord.BotSession],
 ) -> @discord.Bot raise {
   let bot = @discord.BotBuilder(
     worker_app(),
@@ -23,7 +23,7 @@ pub fn build_bot(
 
 ///|
 /// Encode Bot snapshots as an object keyed by decimal shard id.
-pub fn encode_sessions(sessions : Map[Int, @discord.BotSession]) -> String {
+pub fn encode_sessions(sessions : Map[Int32, @discord.BotSession]) -> String {
   let object : Map[String, Json] = Map([])
   for id, session in sessions {
     object[id.to_string()] = session.to_json()
@@ -33,11 +33,11 @@ pub fn encode_sessions(sessions : Map[Int, @discord.BotSession]) -> String {
 
 ///|
 /// Decode persisted Bot snapshots. An invalid object yields no snapshots.
-pub fn decode_sessions(text : String) -> Map[Int, @discord.BotSession] {
-  let empty : Map[Int, @discord.BotSession] = Map([])
+pub fn decode_sessions(text : String) -> Map[Int32, @discord.BotSession] {
+  let empty : Map[Int32, @discord.BotSession] = Map([])
   let parsed = @json.parse(text) catch { _ => return empty }
   guard parsed is Object(object) else { return empty }
-  let sessions : Map[Int, @discord.BotSession] = Map([])
+  let sessions : Map[Int32, @discord.BotSession] = Map([])
   for shard_id, value in object {
     let id = @string.parse_int(shard_id) catch { _ => return empty }
     if id < 0 {

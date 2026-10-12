@@ -6,7 +6,7 @@ pub(all) struct AvailableGuildCreateEvent {
   joined_at : Timestamp
   large : Bool
   unavailable : Bool?
-  member_count : Int
+  member_count : Int32
   voice_states : Array[VoiceState]
   members : Array[GuildMember]
   channels : Array[Channel]

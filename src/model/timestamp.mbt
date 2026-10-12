@@ -47,18 +47,18 @@ pub suberror TimestampError {
 pub fn Timestamp::unix_ms(self : Timestamp) -> Int64 raise TimestampError {
   let s = self.0
   let len = s.length()
-  fn digit(i : Int) -> Int raise TimestampError {
+  fn digit(i : Int32) -> Int32 raise TimestampError {
     guard i < len && s[i] >= '0' && s[i] <= '9' else {
       raise InvalidTimestamp(s)
     }
     s[i].to_int() - 48
   }
 
-  fn two(i : Int) -> Int raise TimestampError {
+  fn two(i : Int32) -> Int32 raise TimestampError {
     digit(i) * 10 + digit(i + 1)
   }
 
-  fn sep(i : Int, c : Char) -> Unit raise TimestampError {
+  fn sep(i : Int32, c : Char) -> Unit raise TimestampError {
     guard i < len && s[i].to_int() == c.to_int() else {
       raise InvalidTimestamp(s)
     }

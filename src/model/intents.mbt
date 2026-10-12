@@ -16,7 +16,7 @@
 ///   assert_true(intents.contains(@model.Intents::message_content()))
 /// }
 /// ```
-pub(all) struct Intents(UInt) derive(Eq)
+pub(all) struct Intents(UInt32) derive(Eq)
 
 ///|
 pub fn Intents::none() -> Intents {
@@ -24,12 +24,12 @@ pub fn Intents::none() -> Intents {
 }
 
 ///|
-pub fn Intents::from_bits(bits : UInt) -> Intents {
+pub fn Intents::from_bits(bits : UInt32) -> Intents {
   Intents(bits)
 }
 
 ///|
-pub fn Intents::bits(self : Intents) -> UInt {
+pub fn Intents::bits(self : Intents) -> UInt32 {
   self.0
 }
 

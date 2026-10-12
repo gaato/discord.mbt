@@ -16,14 +16,14 @@ async fn Responder::respond(
   self : Responder,
   typ : @model.InteractionResponseType,
   content? : String,
-  clear_content? : Bool = false,
+  clear_content~ : Bool = false,
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
   allowed_mentions? : @model.AllowedMentions,
   files? : Array[@dhttp.FileUpload],
   keep_attachments? : Array[@model.AttachmentRequest],
   poll? : @model.PollCreateRequest,
-  ephemeral? : Bool = false,
+  ephemeral~ : Bool = false,
 ) -> Unit {
   let data = @dhttp.interaction_message_data(
     content?,

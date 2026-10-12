@@ -10,8 +10,8 @@ pub(all) suberror DaveError {
 /// Side effects requested by the DAVE gateway/MLS orchestration state machine.
 pub(all) enum DaveAction {
   SendJson(Json)
-  SendBinary(op~ : Int, payload~ : Bytes)
-  SwitchMediaContext(protocol_version~ : Int)
+  SendBinary(op~ : Int32, payload~ : Bytes)
+  SwitchMediaContext(protocol_version~ : Int32)
 } derive(Debug, Eq)
 
 ///|
@@ -38,20 +38,20 @@ enum DaveWelcomeOutcome {
 /// wrapper. Keeping this package-private lets white-box tests model protocol
 /// outcomes without making an alternate crypto provider part of the API.
 trait DaveBackend {
-  fn protocol_version(Self) -> Int
-  fn reinitialize(Self, protocol_version~ : Int) -> Unit raise DaveError
+  fn protocol_version(Self) -> Int32
+  fn reinitialize(Self, protocol_version~ : Int32) -> Unit raise DaveError
   fn reset(Self) -> Unit raise DaveError
   fn set_external_sender(Self, Bytes) -> Unit raise DaveError
   fn key_package(Self) -> Bytes raise DaveError
   fn process_proposals(Self, Bytes, recognized_user_ids~ : Array[UInt64]) -> Bytes raise DaveError
   fn process_commit(Self, Bytes) -> DaveCommitOutcome raise DaveError
   fn process_welcome(Self, Bytes, recognized_user_ids~ : Array[UInt64]) -> DaveWelcomeOutcome raise DaveError
-  fn prepare_remote_ratchet(Self, user_id~ : UInt64, protocol_version~ : Int) -> Unit raise DaveError
+  fn prepare_remote_ratchet(Self, user_id~ : UInt64, protocol_version~ : Int32) -> Unit raise DaveError
   fn has_remote(Self, user_id~ : UInt64) -> Bool
   fn remove_remote(Self, user_id~ : UInt64) -> Unit
-  fn activate_self_ratchet(Self, protocol_version~ : Int) -> Unit raise DaveError
-  fn active_protocol_version(Self) -> Int
-  fn encrypt_opus(Self, ssrc~ : UInt, Bytes) -> Bytes raise DaveError
+  fn activate_self_ratchet(Self, protocol_version~ : Int32) -> Unit raise DaveError
+  fn active_protocol_version(Self) -> Int32
+  fn encrypt_opus(Self, ssrc~ : UInt32, Bytes) -> Bytes raise DaveError
   fn decrypt_opus(Self, user_id~ : UInt64, Bytes) -> Bytes raise DaveError
 }
 
@@ -62,7 +62,7 @@ priv struct LibdaveBackend {
   self_user_id : UInt64
   group_id : UInt64
   decryptors : Map[UInt64, @dave.Decryptor]
-  assigned_opus_ssrcs : Set[UInt]
+  assigned_opus_ssrcs : Set[UInt32]
 }
 
 ///|
@@ -83,7 +83,7 @@ fn[T] with_libdave(
 
 ///|
 fn checked_protocol_version(
-  protocol_version : Int,
+  protocol_version : Int32,
   allow_disabled~ : Bool,
 ) -> UInt16 raise DaveError {
   if protocol_version < 0 || protocol_version > 65535 {
@@ -99,7 +99,7 @@ fn checked_protocol_version(
 
 ///|
 fn LibdaveBackend::new(
-  protocol_version~ : Int,
+  protocol_version~ : Int32,
   self_user_id~ : UInt64,
   channel_id~ : UInt64,
 ) -> LibdaveBackend raise DaveError {
@@ -339,8 +339,8 @@ pub struct DaveMachine {
   priv self_user_id : UInt64
   priv connected_roster : Set[UInt64]
   priv mls_roster : Set[UInt64]
-  priv pending : Map[Int, Int]
-  priv mut latest_prepared_version : Int
+  priv pending : Map[Int32, Int32]
+  priv mut latest_prepared_version : Int32
 }
 
 ///|
@@ -363,10 +363,10 @@ fn parse_roster(roster : Array[String]) -> Set[UInt64] raise DaveError {
 /// Create the production DAVE state machine backed by the official libdave
 /// wrapper. `protocol_version` is the version selected by the voice gateway.
 pub fn DaveMachine::new(
-  protocol_version~ : Int,
+  protocol_version~ : Int32,
   self_user_id~ : String,
   channel_id~ : UInt64,
-  roster? : Array[String] = [],
+  roster~ : Array[String] = [],
 ) -> DaveMachine raise DaveError {
   let local_user = parse_snowflake(self_user_id, "self user ID")
   let connected_roster = parse_roster(roster)
@@ -403,7 +403,7 @@ fn DaveMachine::remove_nonmembers(self : DaveMachine) -> Unit {
 ///|
 fn DaveMachine::prepare_remote_members(
   self : DaveMachine,
-  protocol_version : Int,
+  protocol_version : Int32,
 ) -> Unit raise DaveError {
   for user_id in self.connected_roster {
     if self.mls_roster.contains(user_id) {
@@ -415,8 +415,8 @@ fn DaveMachine::prepare_remote_members(
 ///|
 fn DaveMachine::prepare_transition(
   self : DaveMachine,
-  transition_id : Int,
-  protocol_version : Int,
+  transition_id : Int32,
+  protocol_version : Int32,
 ) -> Array[DaveAction] raise DaveError {
   checked_protocol_version(protocol_version, allow_disabled=true) |> ignore
   self.prepare_remote_members(protocol_version)
@@ -437,7 +437,7 @@ fn DaveMachine::prepare_transition(
 ///|
 fn DaveMachine::recover_invalid_group(
   self : DaveMachine,
-  transition_id : Int,
+  transition_id : Int32,
 ) -> Array[DaveAction] raise DaveError {
   self.pending.remove(transition_id)
   let protocol_version = self.backend.protocol_version()
@@ -451,7 +451,7 @@ fn DaveMachine::recover_invalid_group(
 ///|
 fn DaveMachine::handle_commit(
   self : DaveMachine,
-  transition_id : Int,
+  transition_id : Int32,
   commit : Bytes,
 ) -> Array[DaveAction] raise DaveError {
   match self.backend.process_commit(commit) {
@@ -473,7 +473,7 @@ fn DaveMachine::handle_commit(
 ///|
 fn DaveMachine::handle_welcome(
   self : DaveMachine,
-  transition_id : Int,
+  transition_id : Int32,
   welcome : Bytes,
 ) -> Array[DaveAction] raise DaveError {
   match
@@ -578,7 +578,7 @@ pub fn DaveMachine::handle(
 
 ///|
 /// Return the protocol version currently selected for outbound media.
-pub fn DaveMachine::active_protocol_version(self : DaveMachine) -> Int {
+pub fn DaveMachine::active_protocol_version(self : DaveMachine) -> Int32 {
   self.backend.active_protocol_version()
 }
 
@@ -600,7 +600,7 @@ fn DaveMachine::has_remote_decryptor(
 /// the encryptor remains the sole owner of media-transition state.
 pub fn DaveMachine::encrypt_opus_frame(
   self : DaveMachine,
-  ssrc~ : UInt,
+  ssrc~ : UInt32,
   frame : Bytes,
 ) -> Bytes raise DaveError {
   self.backend.encrypt_opus(ssrc~, frame)

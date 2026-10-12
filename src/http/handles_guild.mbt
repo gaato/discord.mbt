@@ -47,31 +47,31 @@ pub async fn GuildRef::edit(
   default_message_notifications? : @model.DefaultMessageNotifications,
   explicit_content_filter? : @model.ExplicitContentFilter,
   afk_channel_id? : @model.ChannelId,
-  clear_afk_channel_id? : Bool = false,
-  afk_timeout? : Int,
+  clear_afk_channel_id~ : Bool = false,
+  afk_timeout? : Int32,
   icon? : String,
-  clear_icon? : Bool = false,
+  clear_icon~ : Bool = false,
   owner_id? : @model.UserId,
   splash? : String,
-  clear_splash? : Bool = false,
+  clear_splash~ : Bool = false,
   discovery_splash? : String,
-  clear_discovery_splash? : Bool = false,
+  clear_discovery_splash~ : Bool = false,
   banner? : String,
-  clear_banner? : Bool = false,
+  clear_banner~ : Bool = false,
   system_channel_id? : @model.ChannelId,
-  clear_system_channel_id? : Bool = false,
+  clear_system_channel_id~ : Bool = false,
   system_channel_flags? : @model.SystemChannelFlags,
   rules_channel_id? : @model.ChannelId,
-  clear_rules_channel_id? : Bool = false,
+  clear_rules_channel_id~ : Bool = false,
   public_updates_channel_id? : @model.ChannelId,
-  clear_public_updates_channel_id? : Bool = false,
+  clear_public_updates_channel_id~ : Bool = false,
   preferred_locale? : String,
   features? : Array[@model.GuildFeature],
   description? : String,
-  clear_description? : Bool = false,
+  clear_description~ : Bool = false,
   premium_progress_bar_enabled? : Bool,
   safety_alerts_channel_id? : @model.ChannelId,
-  clear_safety_alerts_channel_id? : Bool = false,
+  clear_safety_alerts_channel_id~ : Bool = false,
   reason? : String,
 ) -> @model.Guild raise DiscordHttpError {
   self.client.modify_guild(
@@ -125,7 +125,7 @@ pub fn GuildRef::audit_log(
   user_id? : @model.UserId,
   action_type? : @model.AuditLogEvent,
   before? : @model.AuditLogEntryId,
-  page_size? : Int = 100,
+  page_size~ : Int32 = 100,
 ) -> Paginator[@model.AuditLogEntry] raise DiscordHttpError {
   self.client.paginate_guild_audit_log(
     self.guild_id,
@@ -143,7 +143,7 @@ pub fn GuildRef::bans(
   self : GuildRef,
   before? : @model.UserId,
   after? : @model.UserId,
-  page_size? : Int = 1000,
+  page_size~ : Int32 = 1000,
 ) -> Paginator[@model.GuildBan] raise DiscordHttpError {
   self.client.paginate_guild_bans(self.guild_id, before?, after?, page_size~)
 }
@@ -163,7 +163,7 @@ pub async fn GuildRef::fetch_ban(
 pub async fn GuildRef::bulk_ban(
   self : GuildRef,
   user_ids : Array[@model.UserId],
-  delete_message_seconds? : Int,
+  delete_message_seconds? : Int32,
   reason? : String,
 ) -> @model.BulkBanResponse raise DiscordHttpError {
   self.client.bulk_guild_ban(
@@ -190,18 +190,18 @@ pub async fn GuildRef::create_channel(
   typ? : @model.ChannelType,
   topic? : String,
   parent_id? : @model.ChannelId,
-  position? : Int,
+  position? : Int32,
   permission_overwrites? : Array[@model.Overwrite],
   nsfw? : Bool,
-  bitrate? : Int,
-  user_limit? : Int,
-  rate_limit_per_user? : Int,
+  bitrate? : Int32,
+  user_limit? : Int32,
+  rate_limit_per_user? : Int32,
   rtc_region? : String,
   video_quality_mode? : @model.VideoQualityMode,
   default_auto_archive_duration? : @model.ThreadAutoArchiveDuration,
   available_tags? : Array[@model.ForumTagRequest],
   default_reaction_emoji? : @model.DefaultReaction,
-  default_thread_rate_limit_per_user? : Int,
+  default_thread_rate_limit_per_user? : Int32,
   default_sort_order? : @model.SortOrderType,
   default_forum_layout? : @model.ForumLayoutType,
   reason? : String,
@@ -249,7 +249,7 @@ pub async fn GuildRef::edit_channel_positions(
 pub fn GuildRef::members(
   self : GuildRef,
   after? : @model.UserId,
-  page_size? : Int = 1000,
+  page_size~ : Int32 = 1000,
 ) -> Paginator[@model.GuildMember] raise DiscordHttpError {
   self.client.paginate_guild_members(self.guild_id, after?, page_size~)
 }
@@ -259,7 +259,7 @@ pub fn GuildRef::members(
 pub async fn GuildRef::search_members(
   self : GuildRef,
   query : String,
-  limit? : Int,
+  limit? : Int32,
 ) -> Array[@model.GuildMember] raise DiscordHttpError {
   self.client.search_guild_members(self.guild_id, query, limit?)
 }
@@ -291,13 +291,13 @@ pub async fn GuildRef::add_member(
 pub async fn GuildRef::edit_current_member(
   self : GuildRef,
   nick? : String,
-  clear_nick? : Bool = false,
+  clear_nick~ : Bool = false,
   avatar? : String,
-  clear_avatar? : Bool = false,
+  clear_avatar~ : Bool = false,
   banner? : String,
-  clear_banner? : Bool = false,
+  clear_banner~ : Bool = false,
   bio? : String,
-  clear_bio? : Bool = false,
+  clear_bio~ : Bool = false,
   reason? : String,
 ) -> @model.GuildMember raise DiscordHttpError {
   self.client.modify_current_member(
@@ -328,7 +328,7 @@ pub async fn GuildRef::create_role(
   self : GuildRef,
   name? : String,
   permissions? : @model.Permissions,
-  color? : Int,
+  color? : Int32,
   colors? : @model.RoleColors,
   hoist? : Bool,
   icon? : String,
@@ -354,7 +354,7 @@ pub async fn GuildRef::create_role(
 /// Edit role positions in this guild.
 pub async fn GuildRef::edit_role_positions(
   self : GuildRef,
-  positions : Array[(@model.RoleId, Int?)],
+  positions : Array[(@model.RoleId, Int32?)],
   reason? : String,
 ) -> Array[@model.Role] raise DiscordHttpError {
   self.client.modify_guild_role_positions(
@@ -368,7 +368,7 @@ pub async fn GuildRef::edit_role_positions(
 /// Count members that a prune would remove from this guild.
 pub async fn GuildRef::prune_count(
   self : GuildRef,
-  days? : Int,
+  days? : Int32,
   include_roles? : Array[@model.RoleId],
 ) -> @model.GuildPruneResult raise DiscordHttpError {
   self.client.get_guild_prune_count(self.guild_id, days?, include_roles?)
@@ -378,7 +378,7 @@ pub async fn GuildRef::prune_count(
 /// Begin pruning inactive members from this guild.
 pub async fn GuildRef::begin_prune(
   self : GuildRef,
-  days? : Int,
+  days? : Int32,
   compute_prune_count? : Bool,
   include_roles? : Array[@model.RoleId],
   reason? : String,
@@ -460,7 +460,7 @@ pub async fn GuildRef::edit_widget(
   self : GuildRef,
   enabled? : Bool,
   channel_id? : @model.ChannelId,
-  clear_channel_id? : Bool = false,
+  clear_channel_id~ : Bool = false,
   reason? : String,
 ) -> @model.GuildWidgetSettings raise DiscordHttpError {
   self.client.modify_guild_widget(
@@ -499,11 +499,11 @@ pub async fn GuildRef::welcome_screen(
 pub async fn GuildRef::edit_welcome_screen(
   self : GuildRef,
   enabled? : Bool,
-  clear_enabled? : Bool = false,
+  clear_enabled~ : Bool = false,
   welcome_channels? : Array[@model.WelcomeScreenChannel],
-  clear_welcome_channels? : Bool = false,
+  clear_welcome_channels~ : Bool = false,
   description? : String,
-  clear_description? : Bool = false,
+  clear_description~ : Bool = false,
   reason? : String,
 ) -> @model.WelcomeScreen raise DiscordHttpError {
   self.client.modify_guild_welcome_screen(
@@ -551,9 +551,9 @@ pub async fn GuildRef::edit_onboarding(
 pub async fn GuildRef::edit_incident_actions(
   self : GuildRef,
   invites_disabled_until? : @model.Timestamp,
-  clear_invites_disabled_until? : Bool = false,
+  clear_invites_disabled_until~ : Bool = false,
   dms_disabled_until? : @model.Timestamp,
-  clear_dms_disabled_until? : Bool = false,
+  clear_dms_disabled_until~ : Bool = false,
 ) -> @model.IncidentsData raise DiscordHttpError {
   self.client.modify_guild_incident_actions(
     self.guild_id,
@@ -582,9 +582,9 @@ pub async fn GuildRef::active_threads(
 /// Search messages in this guild.
 pub async fn GuildRef::search_messages(
   self : GuildRef,
-  limit? : Int,
-  offset? : Int,
-  slop? : Int,
+  limit? : Int32,
+  offset? : Int32,
+  slop? : Int32,
   content? : String,
   mention_everyone? : Bool,
   pinned? : Bool,
@@ -651,7 +651,7 @@ pub async fn GuildRef::edit_my_voice_state(
   channel_id? : @model.ChannelId,
   suppress? : Bool,
   request_to_speak_timestamp? : @model.Timestamp,
-  clear_request_to_speak_timestamp? : Bool = false,
+  clear_request_to_speak_timestamp~ : Bool = false,
 ) -> Unit raise DiscordHttpError {
   self.client.modify_current_user_voice_state(
     self.guild_id,
@@ -691,13 +691,13 @@ pub async fn RoleRef::edit(
   self : RoleRef,
   name? : String,
   permissions? : @model.Permissions,
-  color? : Int,
+  color? : Int32,
   colors? : @model.RoleColors,
   hoist? : Bool,
   icon? : String,
-  clear_icon? : Bool = false,
+  clear_icon~ : Bool = false,
   unicode_emoji? : String,
-  clear_unicode_emoji? : Bool = false,
+  clear_unicode_emoji~ : Bool = false,
   mentionable? : Bool,
   reason? : String,
 ) -> @model.Role raise DiscordHttpError {

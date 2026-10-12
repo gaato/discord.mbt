@@ -22,13 +22,13 @@ pub(all) enum AutoModerationTriggerType {
   KeywordPreset
   MentionSpam
   MemberProfile
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
 pub fn AutoModerationTriggerType::to_int(
   self : AutoModerationTriggerType,
-) -> Int {
+) -> Int32 {
   match self {
     Keyword => 1
     Spam => 3
@@ -41,7 +41,7 @@ pub fn AutoModerationTriggerType::to_int(
 
 ///|
 pub fn AutoModerationTriggerType::from_int(
-  value : Int,
+  value : Int32,
 ) -> AutoModerationTriggerType {
   match value {
     1 => Keyword
@@ -81,7 +81,7 @@ pub(all) struct TriggerMetadata {
   presets : Array[AutoModerationKeywordPresetType]?
   allow_list : Array[String]?
   regex_patterns : Array[String]?
-  mention_total_limit : Int?
+  mention_total_limit : Int32?
   mention_raid_protection_enabled : Bool?
 } derive(ToJson, FromJson, Debug)
 
@@ -91,13 +91,13 @@ pub(all) enum AutoModerationKeywordPresetType {
   Profanity
   SexualContent
   Slurs
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
 pub fn AutoModerationKeywordPresetType::to_int(
   self : AutoModerationKeywordPresetType,
-) -> Int {
+) -> Int32 {
   match self {
     Profanity => 1
     SexualContent => 2
@@ -108,7 +108,7 @@ pub fn AutoModerationKeywordPresetType::to_int(
 
 ///|
 pub fn AutoModerationKeywordPresetType::from_int(
-  value : Int,
+  value : Int32,
 ) -> AutoModerationKeywordPresetType {
   match value {
     1 => Profanity
@@ -145,11 +145,11 @@ pub impl @json.FromJson for AutoModerationKeywordPresetType with fn from_json(
 pub(all) enum AutoModerationEventType {
   MessageSend
   MemberUpdate
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn AutoModerationEventType::to_int(self : AutoModerationEventType) -> Int {
+pub fn AutoModerationEventType::to_int(self : AutoModerationEventType) -> Int32 {
   match self {
     MessageSend => 1
     MemberUpdate => 2
@@ -159,7 +159,7 @@ pub fn AutoModerationEventType::to_int(self : AutoModerationEventType) -> Int {
 
 ///|
 pub fn AutoModerationEventType::from_int(
-  value : Int,
+  value : Int32,
 ) -> AutoModerationEventType {
   match value {
     1 => MessageSend
@@ -207,11 +207,13 @@ pub(all) enum AutoModerationActionType {
   SendAlertMessage
   Timeout
   BlockMemberInteraction
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn AutoModerationActionType::to_int(self : AutoModerationActionType) -> Int {
+pub fn AutoModerationActionType::to_int(
+  self : AutoModerationActionType,
+) -> Int32 {
   match self {
     BlockMessage => 1
     SendAlertMessage => 2
@@ -223,7 +225,7 @@ pub fn AutoModerationActionType::to_int(self : AutoModerationActionType) -> Int 
 
 ///|
 pub fn AutoModerationActionType::from_int(
-  value : Int,
+  value : Int32,
 ) -> AutoModerationActionType {
   match value {
     1 => BlockMessage
@@ -260,6 +262,6 @@ pub impl @json.FromJson for AutoModerationActionType with fn from_json(
 /// explicitly has no custom message, and sending it clears one.
 pub(all) struct ActionMetadata {
   channel_id : ChannelId?
-  duration_seconds : Int?
+  duration_seconds : Int32?
   custom_message : Nullable[String]?
 } derive(ToJson, FromJson, Debug)

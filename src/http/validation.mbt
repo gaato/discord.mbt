@@ -6,9 +6,9 @@
 fn validate_length(
   field : String,
   value : String?,
-  min? : Int = 0,
-  max~ : Int,
-  allow_empty? : Bool = false,
+  min~ : Int32 = 0,
+  max~ : Int32,
+  allow_empty~ : Bool = false,
 ) -> Unit raise DiscordHttpError {
   if allow_empty && value is Some("") {
     return
@@ -28,9 +28,9 @@ fn validate_length(
 /// Raises `Validation` when an optional integer falls outside `min..=max`.
 fn validate_range(
   field : String,
-  value : Int?,
-  min~ : Int,
-  max~ : Int,
+  value : Int32?,
+  min~ : Int32,
+  max~ : Int32,
 ) -> Unit raise DiscordHttpError {
   if value is Some(v) && (v < min || v > max) {
     raise Validation(message="\{field} must be between \{min} and \{max}")

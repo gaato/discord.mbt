@@ -65,8 +65,8 @@ fn LimitChecker::embed_text(
   self : LimitChecker,
   path : String,
   text : String?,
-  max~ : Int,
-) -> Int {
+  max~ : Int32,
+) -> Int32 {
   guard text is Some(text) else { return 0 }
   let trimmed = text.trim().to_owned()
   self.text(path, Some(trimmed), max~)

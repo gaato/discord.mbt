@@ -23,18 +23,18 @@ fn CdnImageFormat::extension(self : CdnImageFormat) -> String {
 ///|
 /// Invalid CDN URL parameters rejected before a request is made.
 pub(all) suberror CdnUrlError {
-  InvalidSize(Int)
-  UnsupportedStickerFormat(Int)
+  InvalidSize(Int32)
+  UnsupportedStickerFormat(Int32)
   UnsupportedFormat(endpoint~ : String, format~ : CdnImageFormat)
 } derive(Eq, Debug)
 
 ///|
-fn valid_size(size : Int) -> Bool {
+fn valid_size(size : Int32) -> Bool {
   size >= 16 && size <= 4096 && (size & (size - 1)) == 0
 }
 
 ///|
-fn append_size(url : String, size : Int?) -> String raise CdnUrlError {
+fn append_size(url : String, size : Int32?) -> String raise CdnUrlError {
   match size {
     None => url
     Some(size) => {
@@ -61,8 +61,8 @@ fn hashed_asset_url(
   directory : String,
   hash : @model.ImageHash,
   format : CdnImageFormat?,
-  size : Int?,
-  animated? : Bool = true,
+  size : Int32?,
+  animated~ : Bool = true,
 ) -> String raise CdnUrlError {
   let format = if animated {
     asset_format(hash, format)
@@ -105,7 +105,7 @@ pub fn user_avatar_url(
   user_id : @model.UserId,
   avatar : @model.ImageHash,
   format? : CdnImageFormat,
-  size? : Int,
+  size? : Int32,
 ) -> String raise CdnUrlError {
   hashed_asset_url("avatars/\{user_id}", avatar, format, size)
 }
@@ -131,7 +131,7 @@ pub fn default_user_avatar_url(user_id : @model.UserId) -> String {
 
 ///|
 /// Build a legacy discriminator-based default avatar URL.
-pub fn legacy_default_user_avatar_url(discriminator : Int) -> String {
+pub fn legacy_default_user_avatar_url(discriminator : Int32) -> String {
   "\{cdn_base}/embed/avatars/\{discriminator % 5}.png"
 }
 
@@ -141,7 +141,7 @@ pub fn user_banner_url(
   user_id : @model.UserId,
   banner : @model.ImageHash,
   format? : CdnImageFormat,
-  size? : Int,
+  size? : Int32,
 ) -> String raise CdnUrlError {
   hashed_asset_url("banners/\{user_id}", banner, format, size)
 }
@@ -155,7 +155,7 @@ pub fn guild_member_avatar_url(
   user_id : @model.UserId,
   avatar : @model.ImageHash,
   format? : CdnImageFormat,
-  size? : Int,
+  size? : Int32,
 ) -> String raise CdnUrlError {
   hashed_asset_url(
     "guilds/\{guild_id}/users/\{user_id}/avatars",
@@ -172,7 +172,7 @@ pub fn guild_member_banner_url(
   user_id : @model.UserId,
   banner : @model.ImageHash,
   format? : CdnImageFormat,
-  size? : Int,
+  size? : Int32,
 ) -> String raise CdnUrlError {
   hashed_asset_url(
     "guilds/\{guild_id}/users/\{user_id}/banners",
@@ -191,7 +191,7 @@ pub fn display_avatar_url(
   user : @model.User,
   guild_member? : (@model.GuildId, @model.GuildMember),
   format? : CdnImageFormat,
-  size? : Int,
+  size? : Int32,
 ) -> String raise CdnUrlError {
   if guild_member is Some((guild_id, profile)) &&
     @model.flatten(profile.avatar) is Some(avatar) {
@@ -219,7 +219,7 @@ pub fn display_avatar_url(
 /// Decorations are served as PNG only.
 pub fn avatar_decoration_url(
   asset : @model.ImageHash,
-  size? : Int,
+  size? : Int32,
 ) -> String raise CdnUrlError {
   append_size(
     "\{cdn_base}/avatar-decoration-presets/\{asset.to_string()}.png",
@@ -233,7 +233,7 @@ pub fn guild_icon_url(
   guild_id : @model.GuildId,
   icon : @model.ImageHash,
   format? : CdnImageFormat,
-  size? : Int,
+  size? : Int32,
 ) -> String raise CdnUrlError {
   hashed_asset_url("icons/\{guild_id}", icon, format, size)
 }
@@ -244,7 +244,7 @@ pub fn guild_banner_url(
   guild_id : @model.GuildId,
   banner : @model.ImageHash,
   format? : CdnImageFormat,
-  size? : Int,
+  size? : Int32,
 ) -> String raise CdnUrlError {
   hashed_asset_url("banners/\{guild_id}", banner, format, size)
 }
@@ -255,7 +255,7 @@ pub fn guild_splash_url(
   guild_id : @model.GuildId,
   splash : @model.ImageHash,
   format? : CdnImageFormat,
-  size? : Int,
+  size? : Int32,
 ) -> String raise CdnUrlError {
   hashed_asset_url("splashes/\{guild_id}", splash, format, size, animated=false)
 }
@@ -266,7 +266,7 @@ pub fn guild_discovery_splash_url(
   guild_id : @model.GuildId,
   discovery_splash : @model.ImageHash,
   format? : CdnImageFormat,
-  size? : Int,
+  size? : Int32,
 ) -> String raise CdnUrlError {
   hashed_asset_url(
     "discovery-splashes/\{guild_id}",
@@ -283,7 +283,7 @@ pub fn guild_tag_badge_url(
   guild_id : @model.GuildId,
   badge : @model.ImageHash,
   format? : CdnImageFormat,
-  size? : Int,
+  size? : Int32,
 ) -> String raise CdnUrlError {
   hashed_asset_url(
     "guild-tag-badges/\{guild_id}",
@@ -300,7 +300,7 @@ pub fn role_icon_url(
   role_id : @model.RoleId,
   icon : @model.ImageHash,
   format? : CdnImageFormat,
-  size? : Int,
+  size? : Int32,
 ) -> String raise CdnUrlError {
   hashed_asset_url("role-icons/\{role_id}", icon, format, size, animated=false)
 }
@@ -311,7 +311,7 @@ pub fn scheduled_event_cover_url(
   scheduled_event_id : @model.ScheduledEventId,
   image : @model.ImageHash,
   format? : CdnImageFormat,
-  size? : Int,
+  size? : Int32,
 ) -> String raise CdnUrlError {
   hashed_asset_url(
     "guild-events/\{scheduled_event_id}",
@@ -328,7 +328,7 @@ pub fn application_icon_url(
   application_id : @model.ApplicationId,
   icon : @model.ImageHash,
   format? : CdnImageFormat,
-  size? : Int,
+  size? : Int32,
 ) -> String raise CdnUrlError {
   hashed_asset_url(
     "app-icons/\{application_id}",
@@ -346,7 +346,7 @@ pub fn application_cover_url(
   application_id : @model.ApplicationId,
   cover_image : @model.ImageHash,
   format? : CdnImageFormat,
-  size? : Int,
+  size? : Int32,
 ) -> String raise CdnUrlError {
   hashed_asset_url(
     "app-icons/\{application_id}",
@@ -363,7 +363,7 @@ pub fn team_icon_url(
   team_id : @model.TeamId,
   icon : @model.ImageHash,
   format? : CdnImageFormat,
-  size? : Int,
+  size? : Int32,
 ) -> String raise CdnUrlError {
   hashed_asset_url("team-icons/\{team_id}", icon, format, size, animated=false)
 }
@@ -373,7 +373,7 @@ pub fn team_icon_url(
 pub fn emoji_url(
   emoji_id : @model.EmojiId,
   format? : CdnImageFormat,
-  size? : Int,
+  size? : Int32,
 ) -> String raise CdnUrlError {
   let format = format.unwrap_or(Png)
   append_size("\{cdn_base}/emojis/\{emoji_id}.\{format.extension()}", size)
@@ -407,7 +407,7 @@ pub fn sticker_url(
 pub fn sticker_pack_banner_url(
   banner_asset_id : @model.GenericId,
   format? : CdnImageFormat,
-  size? : Int,
+  size? : Int32,
 ) -> String raise CdnUrlError {
   let format = format.unwrap_or(Png)
   if format == Gif {

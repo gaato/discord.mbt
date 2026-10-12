@@ -22,26 +22,26 @@ pub async fn Client::modify_channel(
   name? : String,
   typ? : @model.ChannelType,
   topic? : String,
-  clear_topic? : Bool = false,
+  clear_topic~ : Bool = false,
   nsfw? : Bool,
   parent_id? : @model.ChannelId,
-  clear_parent_id? : Bool = false,
-  rate_limit_per_user? : Int,
-  position? : Int,
-  bitrate? : Int,
-  user_limit? : Int,
+  clear_parent_id~ : Bool = false,
+  rate_limit_per_user? : Int32,
+  position? : Int32,
+  bitrate? : Int32,
+  user_limit? : Int32,
   permission_overwrites? : Array[@model.Overwrite],
   rtc_region? : String,
-  clear_rtc_region? : Bool = false,
+  clear_rtc_region~ : Bool = false,
   video_quality_mode? : @model.VideoQualityMode,
-  clear_video_quality_mode? : Bool = false,
+  clear_video_quality_mode~ : Bool = false,
   default_auto_archive_duration? : @model.ThreadAutoArchiveDuration,
   available_tags? : Array[@model.ForumTagRequest],
   default_reaction_emoji? : @model.DefaultReaction,
-  clear_default_reaction_emoji? : Bool = false,
-  default_thread_rate_limit_per_user? : Int,
+  clear_default_reaction_emoji~ : Bool = false,
+  default_thread_rate_limit_per_user? : Int32,
   default_sort_order? : @model.SortOrderType,
-  clear_default_sort_order? : Bool = false,
+  clear_default_sort_order~ : Bool = false,
   default_forum_layout? : @model.ForumLayoutType,
   icon? : String,
   flags? : @model.ChannelFlags,
@@ -162,7 +162,7 @@ pub async fn Client::get_channel_pins(
   self : Client,
   channel_id : @model.ChannelId,
   before? : @model.Timestamp,
-  limit? : Int,
+  limit? : Int32,
 ) -> @model.ChannelPins raise DiscordHttpError {
   if limit is Some(value) && (value < 1 || value > 50) {
     raise DiscordHttpError::Validation(
@@ -240,8 +240,8 @@ pub async fn Client::get_channel_invites(
 pub async fn Client::create_channel_invite(
   self : Client,
   channel_id : @model.ChannelId,
-  max_age? : Int,
-  max_uses? : Int,
+  max_age? : Int32,
+  max_uses? : Int32,
   temporary? : Bool,
   unique? : Bool,
   target_type? : @model.InviteTargetType,
@@ -433,7 +433,7 @@ pub async fn Client::get_reactions(
   message_id : @model.MessageId,
   emoji : String,
   typ? : @model.ReactionType,
-  limit? : Int,
+  limit? : Int32,
   after? : @model.UserId,
 ) -> Array[@model.User] raise DiscordHttpError {
   validate_range("reaction limit", limit, min=1, max=100)
@@ -459,7 +459,7 @@ pub async fn Client::start_thread_from_message(
   message_id : @model.MessageId,
   name : String,
   auto_archive_duration? : @model.ThreadAutoArchiveDuration,
-  rate_limit_per_user? : Int,
+  rate_limit_per_user? : Int32,
   audit_reason? : String,
 ) -> @model.Channel raise DiscordHttpError {
   validate_length("thread name", Some(name), min=1, max=100)
@@ -490,7 +490,7 @@ pub async fn Client::start_thread_without_message(
   typ? : @model.ChannelType,
   auto_archive_duration? : @model.ThreadAutoArchiveDuration,
   invitable? : Bool,
-  rate_limit_per_user? : Int,
+  rate_limit_per_user? : Int32,
   audit_reason? : String,
 ) -> @model.Channel raise DiscordHttpError {
   validate_length("thread name", Some(name), min=1, max=100)
@@ -524,7 +524,7 @@ pub async fn Client::start_thread_in_forum_or_media_channel(
   flags? : @model.MessageFlags,
   allowed_mentions? : @model.AllowedMentions,
   auto_archive_duration? : @model.ThreadAutoArchiveDuration,
-  rate_limit_per_user? : Int,
+  rate_limit_per_user? : Int32,
   applied_tags? : Array[@model.GenericId],
   audit_reason? : String,
 ) -> @model.Channel raise DiscordHttpError {
@@ -597,7 +597,7 @@ pub async fn Client::leave_thread(
 fn thread_members_query(
   with_member : Bool?,
   after : @model.UserId?,
-  limit : Int?,
+  limit : Int32?,
 ) -> String {
   let params : Array[String] = []
   if with_member is Some(value) {
@@ -617,7 +617,7 @@ fn thread_members_query(
 }
 
 ///|
-fn archived_threads_query(before : String?, limit : Int?) -> String {
+fn archived_threads_query(before : String?, limit : Int32?) -> String {
   let params : Array[String] = []
   if before is Some(value) {
     // ISO8601 offsets contain `+`, which decodes to a space in query strings.
@@ -640,7 +640,7 @@ pub async fn Client::list_thread_members(
   channel_id : @model.ChannelId,
   with_member? : Bool,
   after? : @model.UserId,
-  limit? : Int,
+  limit? : Int32,
 ) -> Array[@model.ThreadMember] raise DiscordHttpError {
   validate_range("thread member limit", limit, min=1, max=100)
   let query = thread_members_query(with_member, after, limit)
@@ -685,7 +685,7 @@ pub async fn Client::list_public_archived_threads(
   self : Client,
   channel_id : @model.ChannelId,
   before? : @model.Timestamp,
-  limit? : Int,
+  limit? : Int32,
 ) -> @model.ArchivedThreads raise DiscordHttpError {
   let before_string = match before {
     Some(value) => Some(value.to_string())
@@ -701,7 +701,7 @@ pub async fn Client::list_private_archived_threads(
   self : Client,
   channel_id : @model.ChannelId,
   before? : @model.Timestamp,
-  limit? : Int,
+  limit? : Int32,
 ) -> @model.ArchivedThreads raise DiscordHttpError {
   let before_string = match before {
     Some(value) => Some(value.to_string())
@@ -717,7 +717,7 @@ pub async fn Client::list_joined_private_archived_threads(
   self : Client,
   channel_id : @model.ChannelId,
   before? : @model.ChannelId,
-  limit? : Int,
+  limit? : Int32,
 ) -> @model.ArchivedThreads raise DiscordHttpError {
   let before_string = match before {
     Some(value) => Some(value.to_string())

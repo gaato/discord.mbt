@@ -8,7 +8,7 @@ pub struct Client {
   priv base_url : String
   priv base_path : String
   priv default_allowed_mentions : @model.AllowedMentions
-  priv request_timeout_ms_ : Int
+  priv request_timeout_ms_ : Int32
   priv middleware_ : Array[HttpMiddleware]
   priv telemetry_ : Array[(@telemetry.TelemetryEvent) -> Unit raise]
   priv warn_ : Ref[(String) -> Unit]
@@ -50,13 +50,13 @@ pub const VERSION : String = "0.7.0"
 /// `InMemoryRateLimiter` with Discord's per-bucket and global accounting.
 pub fn Client::Client(
   token : String,
-  base_url? : String = "https://discord.com",
-  api_version? : Int = 10,
+  base_url~ : String = "https://discord.com",
+  api_version~ : Int32 = 10,
   limiter? : &@runtime.RateLimiter,
   transport? : &@ghttp.Transport,
-  max_connections? : Int = 4,
-  request_timeout_ms? : Int = 30000,
-  max_retries? : Int = 4,
+  max_connections~ : Int32 = 4,
+  request_timeout_ms~ : Int32 = 30000,
+  max_retries~ : Int32 = 4,
   default_allowed_mentions? : @model.AllowedMentions,
 ) -> Client {
   let limiter : &@runtime.RateLimiter = match limiter {
@@ -276,7 +276,7 @@ pub fn Client::close(self : Client) -> Unit {
 /// classifies as a transport failure that `DiscordRetry` never resends.
 priv struct TimeoutTransport {
   inner : &@ghttp.Transport
-  timeout_ms : Int
+  timeout_ms : Int32
 }
 
 ///|
@@ -292,7 +292,7 @@ impl @ghttp.Transport for TimeoutTransport with fn send_stream(self, request) {
 ///|
 /// Run one exchange under a deadline, keeping the transport's error type.
 async fn[X] within_deadline(
-  timeout_ms : Int,
+  timeout_ms : Int32,
   exchange : async () -> X raise @ghttp.HttpError,
 ) -> X raise @ghttp.HttpError {
   @async.with_timeout(

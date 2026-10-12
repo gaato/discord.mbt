@@ -166,7 +166,7 @@ pub(all) enum Route {
   GetPollAnswerVoters(
     channel_id~ : @model.ChannelId,
     message_id~ : @model.MessageId,
-    answer_id~ : Int,
+    answer_id~ : Int32,
     query~ : String
   )
   ExpirePoll(channel_id~ : @model.ChannelId, message_id~ : @model.MessageId)
@@ -518,8 +518,8 @@ pub fn Route::custom(
   request_method~ : @ahttp.RequestMethod,
   path~ : String,
   bucket? : String,
-  is_interaction? : Bool = false,
-  supports_reason? : Bool = false,
+  is_interaction~ : Bool = false,
+  supports_reason~ : Bool = false,
 ) -> Route raise CustomRouteError {
   guard path.has_prefix("/") && !path.has_prefix("//") && !path.contains("#") else {
     raise InvalidPath(path~)

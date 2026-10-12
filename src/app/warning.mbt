@@ -26,7 +26,11 @@ pub(all) enum AppWarning {
   ErrorPolicyFailed(error~ : Error)
   /// An autocomplete handler returned more than Discord's 25 choices; the
   /// first 25 were sent.
-  AutocompleteTruncated(command_path~ : String, option~ : String, count~ : Int)
+  AutocompleteTruncated(
+    command_path~ : String,
+    option~ : String,
+    count~ : Int32
+  )
   /// A handler registered directly on the framework raised.
   HandlerFailed(target~ : String, error~ : Error)
   /// `wait_for_component` ran on an executor without a gateway connection.

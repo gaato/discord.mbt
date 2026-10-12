@@ -4,15 +4,15 @@
 /// (which bypass this limiter), so user commands default to 115.
 pub struct CommandLimiter {
   priv timestamps : Array[Int64]
-  priv limit : Int
-  priv sleeper_ : async (Int) -> Unit
+  priv limit : Int32
+  priv sleeper_ : async (Int32) -> Unit
 }
 
 ///|
 /// Create a limiter allowing `limit` sends per 60-second sliding window.
 pub fn CommandLimiter::CommandLimiter(
-  limit? : Int = 115,
-  sleeper? : async (Int) -> Unit = ms => @async.sleep(ms),
+  limit~ : Int32 = 115,
+  sleeper~ : async (Int32) -> Unit = ms => @async.sleep(ms),
 ) -> CommandLimiter {
   { timestamps: [], limit, sleeper_: sleeper, }
 }

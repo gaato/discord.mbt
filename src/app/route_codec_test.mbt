@@ -163,7 +163,7 @@ test "quickcheck custom id int encode then decode is identity" {
     assert_eq(codec.decode(codec.encode(value)), value)
   }
   @qc.check(
-    (value : Int) => codec.decode(codec.encode(value)) == value,
+    (value : Int32) => codec.decode(codec.encode(value)) == value,
     count=256,
     max_size=255,
     seed=0xD15C2301UL,
@@ -188,7 +188,7 @@ test "quickcheck custom id snowflake encode then decode is identity" {
 test "quickcheck custom id zip int string encode then decode is identity" {
   let codec = @app.CustomIdCodec::int().zip(@app.CustomIdCodec::string())
   @qc.check(
-    (input : (Int, String)) => {
+    (input : (Int32, String)) => {
       let value = (
         input.0,
         String::from_iter(input.1.iter().take(30)) + ":tail",

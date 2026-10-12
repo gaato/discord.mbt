@@ -4,7 +4,7 @@ fn list_entitlements_query(
   sku_ids? : Array[@model.SkuId],
   before? : @model.EntitlementId,
   after? : @model.EntitlementId,
-  limit? : Int,
+  limit? : Int32,
   guild_id? : @model.GuildId,
   exclude_ended? : Bool,
   exclude_deleted? : Bool,
@@ -59,7 +59,7 @@ fn create_test_entitlement_body(
 fn list_sku_subscriptions_query(
   before? : @model.SubscriptionId,
   after? : @model.SubscriptionId,
-  limit? : Int,
+  limit? : Int32,
   user_id? : @model.UserId,
 ) -> String raise DiscordHttpError {
   validate_page_limit("SKU subscription", limit, 100)
@@ -94,7 +94,7 @@ pub async fn Client::list_entitlements(
   sku_ids? : Array[@model.SkuId],
   before? : @model.EntitlementId,
   after? : @model.EntitlementId,
-  limit? : Int,
+  limit? : Int32,
   guild_id? : @model.GuildId,
   exclude_ended? : Bool,
   exclude_deleted? : Bool,
@@ -186,7 +186,7 @@ pub async fn Client::list_sku_subscriptions(
   sku_id : @model.SkuId,
   before? : @model.SubscriptionId,
   after? : @model.SubscriptionId,
-  limit? : Int,
+  limit? : Int32,
   user_id? : @model.UserId,
 ) -> Array[@model.Subscription] raise DiscordHttpError {
   let query = list_sku_subscriptions_query(before?, after?, limit?, user_id?)

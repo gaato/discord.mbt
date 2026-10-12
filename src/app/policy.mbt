@@ -123,7 +123,7 @@ pub async fn FailureCtx::respond_error(
   components? : Array[@model.Component],
   files? : Array[@dhttp.FileUpload],
   allowed_mentions? : @model.AllowedMentions,
-  ephemeral? : Bool = true,
+  ephemeral~ : Bool = true,
 ) -> Unit {
   guard self.raw_ is Some(raw) else {
     (self.warn_)(

@@ -182,10 +182,10 @@ async test "events beyond the backlog skip handlers with telemetry and one warni
     }
   })
   let bot = builder.build()
-  let send = (id : Int) => {
+  let send = (id : Int32) => {
     transport.incoming.put(message_create_frame(id + 2, id.to_string()))
   }
-  async fn wait_dropped(count : Int) -> Unit {
+  async fn wait_dropped(count : Int32) -> Unit {
     @async.with_timeout(2000, () => {
       while dropped.length() < count {
         @async.sleep(5)

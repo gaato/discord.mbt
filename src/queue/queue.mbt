@@ -4,7 +4,7 @@
 /// deployments can substitute their own implementation.
 pub(open) trait IdentifyQueue {
   /// Block (asynchronously) until this shard may send Identify.
-  async fn wait_for_identify(Self, shard_id : Int) -> Unit
+  async fn wait_for_identify(Self, shard_id : Int32) -> Unit
 }
 
 ///|
@@ -18,7 +18,7 @@ priv struct IdentifyBucket {
 /// one Identify per bucket per `spacing_ms` (default 5 seconds plus margin).
 pub struct InMemoryQueue {
   priv buckets : Array[IdentifyBucket]
-  priv spacing_ms : Int
+  priv spacing_ms : Int32
 }
 
 ///|
@@ -26,8 +26,8 @@ pub struct InMemoryQueue {
 /// reports in `GET /gateway/bot`), spacing identifies within each bucket by
 /// `spacing_ms`.
 pub fn InMemoryQueue::InMemoryQueue(
-  max_concurrency? : Int = 1,
-  spacing_ms? : Int = 5250,
+  max_concurrency~ : Int32 = 1,
+  spacing_ms~ : Int32 = 5250,
 ) -> InMemoryQueue {
   let buckets = []
   for _ in 0..<max_concurrency {

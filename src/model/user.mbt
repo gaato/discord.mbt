@@ -10,7 +10,7 @@ pub(all) struct User {
   system : Bool?
   mfa_enabled : Bool?
   banner : Nullable[ImageHash]?
-  accent_color : Nullable[Int]?
+  accent_color : Nullable[Int32]?
   locale : String?
   verified : Bool?
   email : Nullable[String]?
@@ -230,11 +230,11 @@ pub(all) enum PremiumType {
   NitroClassic
   Nitro
   NitroBasic
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn PremiumType::to_int(self : PremiumType) -> Int {
+pub fn PremiumType::to_int(self : PremiumType) -> Int32 {
   match self {
     None => 0
     NitroClassic => 1
@@ -245,7 +245,7 @@ pub fn PremiumType::to_int(self : PremiumType) -> Int {
 }
 
 ///|
-pub fn PremiumType::from_int(value : Int) -> PremiumType {
+pub fn PremiumType::from_int(value : Int32) -> PremiumType {
   match value {
     0 => None
     1 => NitroClassic

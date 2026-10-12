@@ -40,7 +40,7 @@ pub(all) struct Embed {
   url : String?
   description : String?
   timestamp : Timestamp?
-  color : Int?
+  color : Int32?
   footer : EmbedFooter?
   image : EmbedImage?
   thumbnail : EmbedThumbnail?
@@ -68,7 +68,7 @@ pub fn Embed::Embed(
   description? : String,
   url? : String,
   timestamp? : Timestamp,
-  color? : Int,
+  color? : Int32,
   footer? : EmbedFooter,
   image? : EmbedImage,
   thumbnail? : EmbedThumbnail,
@@ -220,8 +220,8 @@ pub fn EmbedFooter::EmbedFooter(
 pub(all) struct EmbedImage {
   url : String
   proxy_url : String?
-  height : Int?
-  width : Int?
+  height : Int32?
+  width : Int32?
 } derive(ToJson, FromJson, Debug)
 
 ///|
@@ -235,8 +235,8 @@ pub fn EmbedImage::EmbedImage(url : String) -> EmbedImage {
 pub(all) struct EmbedThumbnail {
   url : String
   proxy_url : String?
-  height : Int?
-  width : Int?
+  height : Int32?
+  width : Int32?
 } derive(ToJson, FromJson, Debug)
 
 ///|
@@ -250,8 +250,8 @@ pub fn EmbedThumbnail::EmbedThumbnail(url : String) -> EmbedThumbnail {
 pub(all) struct EmbedVideo {
   url : String?
   proxy_url : String?
-  height : Int?
-  width : Int?
+  height : Int32?
+  width : Int32?
 } derive(ToJson, FromJson, Debug)
 
 ///|

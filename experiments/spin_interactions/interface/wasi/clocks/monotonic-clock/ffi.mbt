@@ -7,7 +7,7 @@ fn wasmImportNow() -> Int64 = "wasi:clocks/monotonic-clock@0.2.6" "now"
 fn wasmImportResolution() -> Int64 = "wasi:clocks/monotonic-clock@0.2.6" "resolution"
 
 ///|
-fn wasmImportSubscribeInstant(p0 : Int64) -> Int = "wasi:clocks/monotonic-clock@0.2.6" "subscribe-instant"
+fn wasmImportSubscribeInstant(p0 : Int64) -> Int32 = "wasi:clocks/monotonic-clock@0.2.6" "subscribe-instant"
 
 ///|
-fn wasmImportSubscribeDuration(p0 : Int64) -> Int = "wasi:clocks/monotonic-clock@0.2.6" "subscribe-duration"
+fn wasmImportSubscribeDuration(p0 : Int64) -> Int32 = "wasi:clocks/monotonic-clock@0.2.6" "subscribe-duration"

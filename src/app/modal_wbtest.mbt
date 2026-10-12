@@ -241,7 +241,7 @@ test "modal show appends state and emits modern label components" {
 /// The first limit violation `AppBuilder::build` reports for a one-field modal.
 fn[A] modal_limit_violation(
   field : ModalField[A],
-  title? : String = "Limits",
+  title~ : String = "Limits",
 ) -> String {
   let app = AppBuilder()
   app.on_modal(

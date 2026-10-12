@@ -10,7 +10,7 @@ pub async fn MemberRef::fetch(
 /// Ban this member from the guild.
 pub async fn MemberRef::ban(
   self : MemberRef,
-  delete_message_seconds? : Int,
+  delete_message_seconds? : Int32,
   reason? : String,
 ) -> Unit raise DiscordHttpError {
   self.client.create_guild_ban(
@@ -86,14 +86,14 @@ pub async fn MemberRef::timeout(
 pub async fn MemberRef::edit(
   self : MemberRef,
   nick? : String,
-  clear_nick? : Bool = false,
+  clear_nick~ : Bool = false,
   roles? : Array[@model.RoleId],
   mute? : Bool,
   deaf? : Bool,
   channel_id? : @model.ChannelId,
-  clear_channel_id? : Bool = false,
+  clear_channel_id~ : Bool = false,
   communication_disabled_until? : @model.Timestamp,
-  clear_communication_disabled_until? : Bool = false,
+  clear_communication_disabled_until~ : Bool = false,
   flags? : @model.GuildMemberFlags,
   reason? : String,
 ) -> @model.GuildMember raise DiscordHttpError {

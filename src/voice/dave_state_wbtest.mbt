@@ -13,12 +13,12 @@ struct FakeWelcomeCall {
 ///|
 struct FakePreparedRemote {
   user_id : UInt64
-  protocol_version : Int
+  protocol_version : Int32
 } derive(Debug, Eq)
 
 ///|
 struct FakeEncryptedOpus {
-  ssrc : UInt
+  ssrc : UInt32
   frame : Bytes
 } derive(Debug, Eq)
 
@@ -30,18 +30,18 @@ struct FakeDecryptedOpus {
 
 ///|
 struct FakeDaveBackend {
-  mut session_version : Int
-  mut active_version : Int
-  reinitialized : Array[Int]
-  mut reset_calls : Int
+  mut session_version : Int32
+  mut active_version : Int32
+  reinitialized : Array[Int32]
+  mut reset_calls : Int32
   external_senders : Array[Bytes]
-  mut key_package_calls : Int
+  mut key_package_calls : Int32
   proposal_calls : Array[FakeProposalCall]
   commits : Array[Bytes]
   welcome_calls : Array[FakeWelcomeCall]
   prepared_remotes : Array[FakePreparedRemote]
   removed_remotes : Array[UInt64]
-  activated_self : Array[Int]
+  activated_self : Array[Int32]
   encrypted_opus : Array[FakeEncryptedOpus]
   decrypted_opus : Array[FakeDecryptedOpus]
   remote_users : Set[UInt64]
@@ -205,7 +205,7 @@ impl DaveBackend for FakeDaveBackend with fn decrypt_opus(self, user_id~, frame)
 fn DaveMachine::new_with_backend(
   backend : &DaveBackend,
   self_user_id~ : UInt64,
-  roster? : Array[UInt64] = [],
+  roster~ : Array[UInt64] = [],
 ) -> DaveMachine {
   let connected_roster = Set(roster)
   connected_roster.remove(self_user_id)
@@ -222,7 +222,7 @@ fn DaveMachine::new_with_backend(
 ///|
 fn fake_machine(
   fake : FakeDaveBackend,
-  roster? : Array[UInt64] = [],
+  roster~ : Array[UInt64] = [],
 ) -> DaveMachine {
   DaveMachine::new_with_backend(
     (fake : &DaveBackend),
@@ -232,7 +232,7 @@ fn fake_machine(
 }
 
 ///|
-fn session_description(version : Int) -> VoiceMessage {
+fn session_description(version : Int32) -> VoiceMessage {
   SessionDescription(
     mode="aead_aes256_gcm_rtpsize",
     secret_key=Bytes::new(32),

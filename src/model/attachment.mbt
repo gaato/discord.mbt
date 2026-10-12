@@ -10,17 +10,17 @@ pub(all) struct Attachment {
   title : String?
   description : String?
   content_type : String?
-  size : Int
+  size : Int32
   url : String
   proxy_url : String
-  height : Nullable[Int]?
-  width : Nullable[Int]?
+  height : Nullable[Int32]?
+  width : Nullable[Int32]?
   ephemeral : Bool?
   duration_secs : Double?
   waveform : String?
   flags : AttachmentFlags?
   placeholder : String?
-  placeholder_version : Int?
+  placeholder_version : Int32?
   clip_participants : Array[User]?
   clip_created_at : Timestamp?
   application : Nullable[Application]?

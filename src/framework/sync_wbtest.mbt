@@ -96,8 +96,8 @@ fn fetched_command(fixture : String) -> Json raise {
 
 ///|
 fn fetched_ping(
-  name? : String = "ping",
-  description? : String = "Check latency",
+  name~ : String = "ping",
+  description~ : String = "Check latency",
 ) -> Json raise {
   fetched_command(
     (

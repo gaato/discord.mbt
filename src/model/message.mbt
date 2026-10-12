@@ -27,7 +27,7 @@ pub(all) struct Message {
   thread : Channel?
   components : Array[Component]?
   sticker_items : Array[StickerItem]?
-  position : Int?
+  position : Int32?
   role_subscription_data : RoleSubscriptionData?
   poll : Poll?
   call : MessageCall?
@@ -52,13 +52,13 @@ pub(all) struct Message {
 /// should retry after that many seconds.
 pub(all) struct GuildMessageSearchResults {
   doing_deep_historical_index : Bool?
-  documents_indexed : Int?
-  total_results : Int?
+  documents_indexed : Int32?
+  total_results : Int32?
   messages : Array[Array[Message]]?
   threads : Array[Channel]?
   members : Array[ThreadMember]?
-  retry_after : Int?
-  code : Int?
+  retry_after : Int32?
+  code : Int32?
   message : String?
 } derive(ToJson, FromJson, Debug)
 
@@ -113,8 +113,8 @@ pub(all) struct MessageSnapshotContent {
 /// Theme colors shared by an activity-card message.
 pub(all) struct SharedClientTheme {
   colors : Array[String]
-  gradient_angle : Int
-  base_mix : Int
+  gradient_angle : Int32
+  base_mix : Int32
   base_theme : Nullable[BaseTheme]?
 } derive(ToJson, FromJson, Debug)
 
@@ -126,11 +126,11 @@ pub(all) enum BaseTheme {
   Light
   Darker
   Midnight
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn BaseTheme::to_int(self : BaseTheme) -> Int {
+pub fn BaseTheme::to_int(self : BaseTheme) -> Int32 {
   match self {
     Unset => 0
     Dark => 1
@@ -156,7 +156,7 @@ pub(all) struct ChannelPins {
 } derive(ToJson, FromJson, Debug)
 
 ///|
-pub fn BaseTheme::from_int(value : Int) -> BaseTheme {
+pub fn BaseTheme::from_int(value : Int32) -> BaseTheme {
   match value {
     0 => Unset
     1 => Dark
@@ -232,7 +232,7 @@ pub(all) struct ChannelMention {
 ///|
 /// Aggregate reaction state for one emoji on a message.
 pub(all) struct Reaction {
-  count : Int
+  count : Int32
   count_details : ReactionCountDetails
   me : Bool
   me_burst : Bool
@@ -243,8 +243,8 @@ pub(all) struct Reaction {
 ///|
 /// Normal and burst reaction counts for a reaction.
 pub(all) struct ReactionCountDetails {
-  burst : Int
-  normal : Int
+  burst : Int32
+  normal : Int32
 } derive(ToJson, FromJson, Debug)
 
 ///|
@@ -253,11 +253,11 @@ pub(all) struct ReactionCountDetails {
 pub(all) enum ReactionType {
   Normal
   Burst
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn ReactionType::to_int(self : ReactionType) -> Int {
+pub fn ReactionType::to_int(self : ReactionType) -> Int32 {
   match self {
     Normal => 0
     Burst => 1
@@ -266,7 +266,7 @@ pub fn ReactionType::to_int(self : ReactionType) -> Int {
 }
 
 ///|
-pub fn ReactionType::from_int(value : Int) -> ReactionType {
+pub fn ReactionType::from_int(value : Int32) -> ReactionType {
   match value {
     0 => Normal
     1 => Burst
@@ -324,7 +324,7 @@ pub(all) struct MessageCall {
 pub(all) struct RoleSubscriptionData {
   role_subscription_listing_id : SkuId
   tier_name : String
-  total_months_subscribed : Int
+  total_months_subscribed : Int32
   is_renewal : Bool
 } derive(ToJson, FromJson, Debug)
 
@@ -369,11 +369,11 @@ pub(all) enum MessageType {
   GuildIncidentReportFalseAlarm
   PurchaseNotification
   PollResult
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn MessageType::to_int(self : MessageType) -> Int {
+pub fn MessageType::to_int(self : MessageType) -> Int32 {
   match self {
     Default => 0
     RecipientAdd => 1
@@ -418,7 +418,7 @@ pub fn MessageType::to_int(self : MessageType) -> Int {
 }
 
 ///|
-pub fn MessageType::from_int(value : Int) -> MessageType {
+pub fn MessageType::from_int(value : Int32) -> MessageType {
   match value {
     0 => Default
     1 => RecipientAdd
@@ -482,11 +482,11 @@ pub(all) enum MessageActivityType {
   Spectate
   Listen
   JoinRequest
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn MessageActivityType::to_int(self : MessageActivityType) -> Int {
+pub fn MessageActivityType::to_int(self : MessageActivityType) -> Int32 {
   match self {
     Join => 1
     Spectate => 2
@@ -497,7 +497,7 @@ pub fn MessageActivityType::to_int(self : MessageActivityType) -> Int {
 }
 
 ///|
-pub fn MessageActivityType::from_int(value : Int) -> MessageActivityType {
+pub fn MessageActivityType::from_int(value : Int32) -> MessageActivityType {
   match value {
     1 => Join
     2 => Spectate
@@ -525,11 +525,11 @@ pub impl @json.FromJson for MessageActivityType with fn from_json(json, path) {
 pub(all) enum MessageReferenceType {
   Default
   Forward
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn MessageReferenceType::to_int(self : MessageReferenceType) -> Int {
+pub fn MessageReferenceType::to_int(self : MessageReferenceType) -> Int32 {
   match self {
     Default => 0
     Forward => 1
@@ -538,7 +538,7 @@ pub fn MessageReferenceType::to_int(self : MessageReferenceType) -> Int {
 }
 
 ///|
-pub fn MessageReferenceType::from_int(value : Int) -> MessageReferenceType {
+pub fn MessageReferenceType::from_int(value : Int32) -> MessageReferenceType {
   match value {
     0 => Default
     1 => Forward

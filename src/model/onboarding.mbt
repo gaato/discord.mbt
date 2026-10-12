@@ -43,11 +43,11 @@ pub(all) struct OnboardingPromptOption {
 pub(all) enum OnboardingPromptType {
   MultipleChoice
   Dropdown
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn OnboardingPromptType::to_int(self : OnboardingPromptType) -> Int {
+pub fn OnboardingPromptType::to_int(self : OnboardingPromptType) -> Int32 {
   match self {
     MultipleChoice => 0
     Dropdown => 1
@@ -56,7 +56,7 @@ pub fn OnboardingPromptType::to_int(self : OnboardingPromptType) -> Int {
 }
 
 ///|
-pub fn OnboardingPromptType::from_int(value : Int) -> OnboardingPromptType {
+pub fn OnboardingPromptType::from_int(value : Int32) -> OnboardingPromptType {
   match value {
     0 => MultipleChoice
     1 => Dropdown
@@ -83,11 +83,11 @@ pub impl @json.FromJson for OnboardingPromptType with fn from_json(json, path) {
 pub(all) enum OnboardingMode {
   Default
   Advanced
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn OnboardingMode::to_int(self : OnboardingMode) -> Int {
+pub fn OnboardingMode::to_int(self : OnboardingMode) -> Int32 {
   match self {
     Default => 0
     Advanced => 1
@@ -96,7 +96,7 @@ pub fn OnboardingMode::to_int(self : OnboardingMode) -> Int {
 }
 
 ///|
-pub fn OnboardingMode::from_int(value : Int) -> OnboardingMode {
+pub fn OnboardingMode::from_int(value : Int32) -> OnboardingMode {
   match value {
     0 => Default
     1 => Advanced

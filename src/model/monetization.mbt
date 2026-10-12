@@ -29,11 +29,11 @@ pub(all) enum EntitlementType {
   UserGift
   PremiumPurchase
   ApplicationSubscription
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn EntitlementType::to_int(self : EntitlementType) -> Int {
+pub fn EntitlementType::to_int(self : EntitlementType) -> Int32 {
   match self {
     Purchase => 1
     PremiumSubscription => 2
@@ -48,7 +48,7 @@ pub fn EntitlementType::to_int(self : EntitlementType) -> Int {
 }
 
 ///|
-pub fn EntitlementType::from_int(value : Int) -> EntitlementType {
+pub fn EntitlementType::from_int(value : Int32) -> EntitlementType {
   match value {
     1 => Purchase
     2 => PremiumSubscription
@@ -83,11 +83,11 @@ pub impl @json.FromJson for EntitlementType with fn from_json(json, path) {
 pub(all) enum EntitlementOwnerType {
   Guild
   User
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn EntitlementOwnerType::to_int(self : EntitlementOwnerType) -> Int {
+pub fn EntitlementOwnerType::to_int(self : EntitlementOwnerType) -> Int32 {
   match self {
     Guild => 1
     User => 2
@@ -96,7 +96,7 @@ pub fn EntitlementOwnerType::to_int(self : EntitlementOwnerType) -> Int {
 }
 
 ///|
-pub fn EntitlementOwnerType::from_int(value : Int) -> EntitlementOwnerType {
+pub fn EntitlementOwnerType::from_int(value : Int32) -> EntitlementOwnerType {
   match value {
     1 => Guild
     2 => User
@@ -140,11 +140,11 @@ pub(all) enum SkuType {
   Consumable
   Subscription
   SubscriptionGroup
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn SkuType::to_int(self : SkuType) -> Int {
+pub fn SkuType::to_int(self : SkuType) -> Int32 {
   match self {
     Durable => 2
     Consumable => 3
@@ -155,7 +155,7 @@ pub fn SkuType::to_int(self : SkuType) -> Int {
 }
 
 ///|
-pub fn SkuType::from_int(value : Int) -> SkuType {
+pub fn SkuType::from_int(value : Int32) -> SkuType {
   match value {
     2 => Durable
     3 => Consumable
@@ -278,11 +278,11 @@ pub(all) enum SubscriptionStatus {
   Active
   Ending
   Inactive
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn SubscriptionStatus::to_int(self : SubscriptionStatus) -> Int {
+pub fn SubscriptionStatus::to_int(self : SubscriptionStatus) -> Int32 {
   match self {
     Active => 0
     Inactive => 1
@@ -292,7 +292,7 @@ pub fn SubscriptionStatus::to_int(self : SubscriptionStatus) -> Int {
 }
 
 ///|
-pub fn SubscriptionStatus::from_int(value : Int) -> SubscriptionStatus {
+pub fn SubscriptionStatus::from_int(value : Int32) -> SubscriptionStatus {
   match value {
     0 => Active
     1 => Inactive

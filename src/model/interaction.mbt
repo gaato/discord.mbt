@@ -12,7 +12,7 @@ pub(all) struct Interaction {
   guild_member : GuildMember?
   user : User?
   token : String
-  version : Int
+  version : Int32
   message : Message?
   app_permissions : Permissions?
   locale : String?
@@ -20,7 +20,7 @@ pub(all) struct Interaction {
   entitlements : Array[Entitlement]?
   authorizing_integration_owners : Map[String, String]?
   context : InteractionContextType?
-  attachment_size_limit : Int?
+  attachment_size_limit : Int32?
 } derive(Debug)
 
 ///|
@@ -31,11 +31,11 @@ pub(all) enum InteractionType {
   MessageComponent
   ApplicationCommandAutocomplete
   ModalSubmit
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn InteractionType::to_int(self : InteractionType) -> Int {
+pub fn InteractionType::to_int(self : InteractionType) -> Int32 {
   match self {
     Ping => 1
     ApplicationCommand => 2
@@ -47,7 +47,7 @@ pub fn InteractionType::to_int(self : InteractionType) -> Int {
 }
 
 ///|
-pub fn InteractionType::from_int(value : Int) -> InteractionType {
+pub fn InteractionType::from_int(value : Int32) -> InteractionType {
   match value {
     1 => Ping
     2 => ApplicationCommand
@@ -106,7 +106,7 @@ priv struct InteractionFields {
   guild_member : GuildMember?
   user : User?
   token : String
-  version : Int
+  version : Int32
   message : Message?
   app_permissions : Permissions?
   locale : String?
@@ -114,7 +114,7 @@ priv struct InteractionFields {
   entitlements : Array[Entitlement]?
   authorizing_integration_owners : Map[String, String]?
   context : InteractionContextType?
-  attachment_size_limit : Int?
+  attachment_size_limit : Int32?
 } derive (
   ToJson(fields(typ(rename="type"), guild_member(rename="member"))),
   FromJson(fields(typ(rename="type"), guild_member(rename="member"))),
@@ -243,7 +243,7 @@ pub(all) struct CommandDataOption {
 /// Component-specific data carried by a message component interaction.
 pub(all) struct ComponentData {
   custom_id : String
-  component_type : Int
+  component_type : Int32
   values : Array[String]?
   resolved : ResolvedData?
 } derive(ToJson, FromJson, Debug)
@@ -290,11 +290,11 @@ pub(all) enum InteractionResponseType {
   Modal
   PremiumRequired
   LaunchActivity
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn InteractionResponseType::to_int(self : InteractionResponseType) -> Int {
+pub fn InteractionResponseType::to_int(self : InteractionResponseType) -> Int32 {
   match self {
     Pong => 1
     ChannelMessageWithSource => 4
@@ -311,7 +311,7 @@ pub fn InteractionResponseType::to_int(self : InteractionResponseType) -> Int {
 
 ///|
 pub fn InteractionResponseType::from_int(
-  value : Int,
+  value : Int32,
 ) -> InteractionResponseType {
   match value {
     1 => Pong

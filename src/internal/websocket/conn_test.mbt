@@ -1,5 +1,5 @@
 ///|
-extern "js" fn start_echo_server() -> @js_async.Promise[Int] =
+extern "js" fn start_echo_server() -> @js_async.Promise[Int32] =
   #| () => new Promise((resolve, reject) => {
   #|   const http = require('node:http');
   #|   const crypto = require('node:crypto');
@@ -56,7 +56,7 @@ extern "js" fn start_echo_server() -> @js_async.Promise[Int] =
   #| })
 
 ///|
-extern "js" fn stop_echo_server(port : Int) =
+extern "js" fn stop_echo_server(port : Int32) =
   #| (port) => {
   #|   const state = globalThis.__moonbit_ws_echo_servers.get(port);
   #|   if (state) { for (const client of state.clients) client.destroy(); state.server.close(); globalThis.__moonbit_ws_echo_servers.delete(port); }

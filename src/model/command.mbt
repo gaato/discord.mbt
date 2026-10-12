@@ -30,13 +30,13 @@ pub(all) struct ApplicationCommand {
 pub(all) enum EntryPointCommandHandlerType {
   AppHandler
   DiscordLaunchActivity
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
 pub fn EntryPointCommandHandlerType::to_int(
   self : EntryPointCommandHandlerType,
-) -> Int {
+) -> Int32 {
   match self {
     AppHandler => 1
     DiscordLaunchActivity => 2
@@ -46,7 +46,7 @@ pub fn EntryPointCommandHandlerType::to_int(
 
 ///|
 pub fn EntryPointCommandHandlerType::from_int(
-  value : Int,
+  value : Int32,
 ) -> EntryPointCommandHandlerType {
   match value {
     1 => AppHandler
@@ -81,11 +81,11 @@ pub(all) enum ApplicationCommandType {
   User
   Message
   PrimaryEntryPoint
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn ApplicationCommandType::to_int(self : ApplicationCommandType) -> Int {
+pub fn ApplicationCommandType::to_int(self : ApplicationCommandType) -> Int32 {
   match self {
     ChatInput => 1
     User => 2
@@ -96,7 +96,9 @@ pub fn ApplicationCommandType::to_int(self : ApplicationCommandType) -> Int {
 }
 
 ///|
-pub fn ApplicationCommandType::from_int(value : Int) -> ApplicationCommandType {
+pub fn ApplicationCommandType::from_int(
+  value : Int32,
+) -> ApplicationCommandType {
   match value {
     1 => ChatInput
     2 => User
@@ -140,8 +142,8 @@ pub(all) struct CommandOption {
   min_value : Json?
   /// A numeric upper bound kept in its original integer or floating-point JSON form.
   max_value : Json?
-  min_length : Int?
-  max_length : Int?
+  min_length : Int32?
+  max_length : Int32?
   autocomplete : Bool?
   /// Upload filter for ATTACHMENT options (at most 10 entries).
   file_types : Array[FileTypeFilter]?
@@ -165,11 +167,11 @@ pub(all) enum CommandOptionType {
   Mentionable
   Number
   Attachment
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn CommandOptionType::to_int(self : CommandOptionType) -> Int {
+pub fn CommandOptionType::to_int(self : CommandOptionType) -> Int32 {
   match self {
     SubCommand => 1
     SubCommandGroup => 2
@@ -187,7 +189,7 @@ pub fn CommandOptionType::to_int(self : CommandOptionType) -> Int {
 }
 
 ///|
-pub fn CommandOptionType::from_int(value : Int) -> CommandOptionType {
+pub fn CommandOptionType::from_int(value : Int32) -> CommandOptionType {
   match value {
     1 => SubCommand
     2 => SubCommandGroup

@@ -4,7 +4,7 @@ pub(all) struct GuildTemplate {
   code : String
   name : String
   description : Nullable[String]
-  usage_count : Int
+  usage_count : Int32
   creator_id : UserId
   creator : User
   created_at : Timestamp
@@ -27,11 +27,11 @@ pub(all) struct GuildTemplateSource {
   default_message_notifications : DefaultMessageNotifications?
   explicit_content_filter : ExplicitContentFilter?
   preferred_locale : String?
-  afk_timeout : Int?
+  afk_timeout : Int32?
   roles : Array[GuildTemplateRole]?
   channels : Array[GuildTemplateChannel]?
-  afk_channel_id : Nullable[Int]?
-  system_channel_id : Nullable[Int]?
+  afk_channel_id : Nullable[Int32]?
+  system_channel_id : Nullable[Int32]?
   system_channel_flags : SystemChannelFlags?
   icon_hash : Nullable[ImageHash]?
 } derive(ToJson, FromJson, Debug)
@@ -39,10 +39,10 @@ pub(all) struct GuildTemplateSource {
 ///|
 /// A role in a template snapshot, using the snapshot's integer placeholder ID.
 pub(all) struct GuildTemplateRole {
-  id : Int
+  id : Int32
   name : String
   permissions : GuildTemplatePermissions
-  color : Int
+  color : Int32
   colors : Nullable[RoleColors]?
   hoist : Bool
   mentionable : Bool
@@ -53,16 +53,16 @@ pub(all) struct GuildTemplateRole {
 ///|
 /// A channel in a template snapshot, using integer placeholder IDs.
 pub(all) struct GuildTemplateChannel {
-  id : Int
+  id : Int32
   typ : ChannelType
   name : String
-  position : Int
+  position : Int32
   topic : Nullable[String]?
-  bitrate : Int?
-  user_limit : Int?
+  bitrate : Int32?
+  user_limit : Int32?
   nsfw : Bool?
-  rate_limit_per_user : Int?
-  parent_id : Nullable[Int]?
+  rate_limit_per_user : Int32?
+  parent_id : Nullable[Int32]?
   permission_overwrites : Array[GuildTemplatePermissionOverwrite]?
 } derive (
   ToJson(fields(typ(rename="type"))),
@@ -73,8 +73,8 @@ pub(all) struct GuildTemplateChannel {
 ///|
 /// A permission overwrite using a template placeholder ID.
 pub(all) struct GuildTemplatePermissionOverwrite {
-  id : Int
-  typ : Int
+  id : Int32
+  typ : Int32
   allow : GuildTemplatePermissions
   deny : GuildTemplatePermissions
 } derive (

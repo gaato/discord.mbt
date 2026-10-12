@@ -14,7 +14,7 @@ Combine arguments with `Args::map1` through `Args::map8`:
 ///|
 struct PaintArgs {
   color : String
-  coats : Int
+  coats : Int32
 } derive(Debug)
 
 ///|

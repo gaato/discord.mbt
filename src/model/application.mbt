@@ -12,8 +12,8 @@ pub(all) struct Application {
   /// Full application flag bitfield returned as `flags_new` when Discord uses
   /// bits above 30. Request payloads must continue to use `flags`.
   flags_new : ApplicationFlags?
-  approximate_guild_count : Int?
-  approximate_user_install_count : Int?
+  approximate_guild_count : Int32?
+  approximate_user_install_count : Int32?
   rpc_origins : Array[String]?
   bot_public : Bool?
   bot_require_code_grant : Bool?
@@ -26,7 +26,7 @@ pub(all) struct Application {
   primary_sku_id : SkuId?
   slug : String?
   cover_image : ImageHash?
-  approximate_user_authorization_count : Int?
+  approximate_user_authorization_count : Int32?
   redirect_uris : Array[String]?
   interactions_endpoint_url : Nullable[String]?
   role_connections_verification_url : Nullable[String]?
@@ -72,13 +72,13 @@ pub(all) enum ApplicationEventWebhookStatus {
   Disabled
   Enabled
   DisabledByDiscord
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
 pub fn ApplicationEventWebhookStatus::to_int(
   self : ApplicationEventWebhookStatus,
-) -> Int {
+) -> Int32 {
   match self {
     Disabled => 1
     Enabled => 2
@@ -89,7 +89,7 @@ pub fn ApplicationEventWebhookStatus::to_int(
 
 ///|
 pub fn ApplicationEventWebhookStatus::from_int(
-  value : Int,
+  value : Int32,
 ) -> ApplicationEventWebhookStatus {
   match value {
     1 => Disabled

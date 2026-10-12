@@ -1,5 +1,5 @@
 ///|
-extern "js" fn InteractionHttpJsResponse::status(self : Self) -> Int =
+extern "js" fn InteractionHttpJsResponse::status(self : Self) -> Int32 =
   #| (response) => response.status
 
 ///|

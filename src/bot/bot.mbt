@@ -3,7 +3,7 @@
 pub(all) suberror BotError {
   /// Close codes 4013 and 4014 indicate invalid or disallowed gateway
   /// intents. Check explicit intents and privileged-intent approval.
-  FatallyClosed(code~ : Int)
+  FatallyClosed(code~ : Int32)
   /// `run` was called while this bot was already running.
   AlreadyRunning
   /// The shard layout or limits `GET /gateway/bot` returned cannot be used.
@@ -13,8 +13,8 @@ pub(all) suberror BotError {
   /// shards without a saved session (a saved session sends RESUME first);
   /// later it is 1 for the shard that was about to identify.
   SessionStartLimitExceeded(
-    required~ : Int,
-    remaining~ : Int,
+    required~ : Int32,
+    remaining~ : Int32,
     reset_after_ms~ : Int64
   )
 } derive(Debug)
@@ -48,7 +48,7 @@ pub impl Show for BotError with fn output(self, logger) {
 ///|
 /// Gateway events that may wait for event handlers before later ones are
 /// dropped for handlers.
-pub const DEFAULT_EVENT_BACKLOG : Int = 10000
+pub const DEFAULT_EVENT_BACKLOG : Int32 = 10000
 
 ///|
 priv struct TypedEventHandler {
@@ -75,13 +75,13 @@ priv struct BotCore {
   gateway_url_ : String?
   shards_ : ShardConfig
   compress_ : Bool
-  resume_ : Map[Int, BotSession]
+  resume_ : Map[Int32, BotSession]
   starting_ : Ref[Bool]
   running_shards_ : Ref[Array[ManagedShard]]
   identify_queue_ : &@queue.IdentifyQueue?
   sync_ : @app.CommandScope?
   sync_unowned_ : @framework.UnownedCommands
-  event_backlog_ : Int
+  event_backlog_ : Int32
   typed_events_ : Array[TypedEventHandler]
   raw_events_ : Array[async (GatewayCtx, @model.Event) -> Unit]
   event_middleware_ : Array[EventMiddleware]
@@ -96,7 +96,7 @@ priv struct BotCore {
   // Whitebox seams for `/gateway/bot` and Discord's five-second identify
   // interval. Production always uses the REST response and 5250ms margin.
   gateway_bot_info_ : Ref[@model.GatewayBotInfo?]
-  identify_spacing_ms_ : Ref[Int]
+  identify_spacing_ms_ : Ref[Int32]
   // Intents resolved (and warned about) once by `BotBuilder::build`.
   frozen_intents_ : @model.Intents?
 }
@@ -129,16 +129,16 @@ fn BotCore::new(
   app : @app.App,
   token~ : String,
   intents? : @model.Intents,
-  capabilities? : @model.GatewayCapabilities = @model.GatewayCapabilities::none(),
+  capabilities~ : @model.GatewayCapabilities = @model.GatewayCapabilities::none(),
   client? : @dhttp.Client,
   gateway_url? : String,
-  shards? : ShardConfig = Single(id=0, count=1),
-  compress? : Bool = false,
+  shards~ : ShardConfig = Single(id=0, count=1),
+  compress~ : Bool = false,
   identify_queue? : &@queue.IdentifyQueue,
   sync? : @app.CommandScope,
-  sync_unowned? : @framework.UnownedCommands = Delete,
-  resume? : Map[Int, BotSession] = Map([]),
-  event_backlog? : Int = DEFAULT_EVENT_BACKLOG,
+  sync_unowned~ : @framework.UnownedCommands = Delete,
+  resume~ : Map[Int32, BotSession] = Map([]),
+  event_backlog~ : Int32 = DEFAULT_EVENT_BACKLOG,
 ) -> BotCore {
   {
     app_: app,
@@ -150,7 +150,7 @@ fn BotCore::new(
     shards_: shards,
     compress_: compress,
     resume_: {
-      let snapshots : Map[Int, BotSession] = Map([])
+      let snapshots : Map[Int32, BotSession] = Map([])
       for shard_id, snapshot in resume {
         snapshots[shard_id] = clone_bot_session(snapshot)
       }
@@ -184,8 +184,8 @@ fn BotCore::new(
 /// resolves the shard layout over REST; an unsaved shard appears after READY.
 /// Empty while the bot is not running. Returned values do not alias mutable
 /// runtime state.
-fn BotCore::sessions(self : BotCore) -> Map[Int, BotSession] {
-  let sessions : Map[Int, BotSession] = Map([])
+fn BotCore::sessions(self : BotCore) -> Map[Int32, BotSession] {
+  let sessions : Map[Int32, BotSession] = Map([])
   if self.starting_.val {
     for shard_id, saved in self.resume_ {
       sessions[shard_id] = clone_bot_session(saved)

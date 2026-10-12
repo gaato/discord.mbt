@@ -26,7 +26,7 @@ pub fn CommandReply::message(
   files? : Array[@dhttp.FileUpload],
   allowed_mentions? : @model.AllowedMentions,
   poll? : @model.PollCreateRequest,
-  ephemeral? : Bool = false,
+  ephemeral~ : Bool = false,
 ) -> CommandReply {
   Message(
     InitialResponse::message(
@@ -51,7 +51,7 @@ fn InitialResponse::message(
   files? : Array[@dhttp.FileUpload],
   allowed_mentions? : @model.AllowedMentions,
   poll? : @model.PollCreateRequest,
-  ephemeral? : Bool = false,
+  ephemeral~ : Bool = false,
 ) -> InitialResponse {
   {
     content_: content,
@@ -130,7 +130,7 @@ pub struct MessageUpdate {
 /// `keep_attachments` removes every existing attachment.
 pub fn MessageUpdate::MessageUpdate(
   content? : String,
-  clear_content? : Bool = false,
+  clear_content~ : Bool = false,
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
   allowed_mentions? : @model.AllowedMentions,

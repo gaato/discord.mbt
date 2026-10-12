@@ -56,7 +56,7 @@ pub fn requires_components_v2(components : Array[Component]) -> Bool {
 }
 
 ///|
-fn component_payload(payload : Json, typ : Int) -> Json {
+fn component_payload(payload : Json, typ : Int32) -> Json {
   match payload {
     Object(fields) => {
       fields["type"] = Json::number(typ.to_double())
@@ -130,14 +130,14 @@ pub impl @json.FromJson for Component with fn from_json(json, path) {
 ///|
 /// A layout row containing nested interactive components.
 pub(all) struct ActionRow {
-  id : Int?
+  id : Int32?
   components : Array[Component]
 } derive(ToJson, FromJson, Debug)
 
 ///|
 /// A clickable button component.
 pub(all) struct Button {
-  id : Int?
+  id : Int32?
   style : ButtonStyle
   label : String?
   emoji : Emoji?
@@ -156,11 +156,11 @@ pub(all) enum ButtonStyle {
   Danger
   Link
   Premium
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn ButtonStyle::to_int(self : ButtonStyle) -> Int {
+pub fn ButtonStyle::to_int(self : ButtonStyle) -> Int32 {
   match self {
     Primary => 1
     Secondary => 2
@@ -173,7 +173,7 @@ pub fn ButtonStyle::to_int(self : ButtonStyle) -> Int {
 }
 
 ///|
-pub fn ButtonStyle::from_int(value : Int) -> ButtonStyle {
+pub fn ButtonStyle::from_int(value : Int32) -> ButtonStyle {
   match value {
     1 => Primary
     2 => Secondary
@@ -201,11 +201,11 @@ pub impl @json.FromJson for ButtonStyle with fn from_json(json, path) {
 ///|
 /// A text or auto-populated select menu component.
 pub(all) struct SelectMenu {
-  id : Int?
+  id : Int32?
   custom_id : String
   placeholder : String?
-  min_values : Int?
-  max_values : Int?
+  min_values : Int32?
+  max_values : Int32?
   disabled : Bool?
   options : Array[SelectOption]?
   channel_types : Array[ChannelType]?
@@ -237,7 +237,7 @@ pub(all) struct SelectDefaultValue {
 ///|
 /// A section containing text components and a button or thumbnail accessory.
 pub(all) struct Section {
-  id : Int?
+  id : Int32?
   components : Array[Component]
   accessory : Component
 } derive(ToJson, FromJson, Debug)
@@ -245,14 +245,14 @@ pub(all) struct Section {
 ///|
 /// A markdown text block displayed in a Components v2 layout.
 pub(all) struct TextDisplay {
-  id : Int?
+  id : Int32?
   content : String
 } derive(ToJson, FromJson, Debug)
 
 ///|
 /// A thumbnail accessory rendered from an unfurled media item.
 pub(all) struct Thumbnail {
-  id : Int?
+  id : Int32?
   media : UnfurledMediaItem
   description : Nullable[String]?
   spoiler : Bool?
@@ -261,7 +261,7 @@ pub(all) struct Thumbnail {
 ///|
 /// A gallery containing one to ten media items.
 pub(all) struct MediaGallery {
-  id : Int?
+  id : Int32?
   items : Array[MediaGalleryItem]
 } derive(ToJson, FromJson, Debug)
 
@@ -276,34 +276,34 @@ pub(all) struct MediaGalleryItem {
 ///|
 /// A file attachment rendered as a Components v2 file component.
 pub(all) struct FileComponent {
-  id : Int?
+  id : Int32?
   file : UnfurledMediaItem
   spoiler : Bool?
   name : String?
-  size : Int?
+  size : Int32?
 } derive(ToJson, FromJson, Debug)
 
 ///|
 /// A visual separator between Components v2 content blocks.
 pub(all) struct Separator {
-  id : Int?
+  id : Int32?
   divider : Bool?
-  spacing : Int?
+  spacing : Int32?
 } derive(ToJson, FromJson, Debug)
 
 ///|
 /// A Components v2 container with an optional accent color.
 pub(all) struct Container {
-  id : Int?
+  id : Int32?
   components : Array[Component]
-  accent_color : Nullable[Int]?
+  accent_color : Nullable[Int32]?
   spoiler : Bool?
 } derive(ToJson, FromJson, Debug)
 
 ///|
 /// A modal label wrapping one interactive component.
 pub(all) struct Label {
-  id : Int?
+  id : Int32?
   // Required when sending a modal; omitted in modal-submit payloads.
   label : String?
   description : String?
@@ -313,10 +313,10 @@ pub(all) struct Label {
 ///|
 /// A modal file upload component.
 pub(all) struct FileUpload {
-  id : Int?
+  id : Int32?
   custom_id : String
-  min_values : Int?
-  max_values : Int?
+  min_values : Int32?
+  max_values : Int32?
   required : Bool?
   values : Array[String]?
   file_types : Array[FileTypeFilter]?
@@ -325,7 +325,7 @@ pub(all) struct FileUpload {
 ///|
 /// A modal radio group accepting one option.
 pub(all) struct RadioGroup {
-  id : Int?
+  id : Int32?
   custom_id : String
   options : Array[RadioOption]
   required : Bool?
@@ -344,11 +344,11 @@ pub(all) struct RadioOption {
 ///|
 /// A modal checkbox group accepting zero or more options.
 pub(all) struct CheckboxGroup {
-  id : Int?
+  id : Int32?
   custom_id : String
   options : Array[RadioOption]
-  min_values : Int?
-  max_values : Int?
+  min_values : Int32?
+  max_values : Int32?
   required : Bool?
   values : Array[String]?
 } derive(ToJson, FromJson, Debug)
@@ -356,7 +356,7 @@ pub(all) struct CheckboxGroup {
 ///|
 /// A single modal checkbox.
 pub(all) struct Checkbox {
-  id : Int?
+  id : Int32?
   custom_id : String
   default : Bool?
   value : Bool?
@@ -367,25 +367,25 @@ pub(all) struct Checkbox {
 pub(all) struct UnfurledMediaItem {
   url : String
   proxy_url : String?
-  height : Nullable[Int]?
-  width : Nullable[Int]?
+  height : Nullable[Int32]?
+  width : Nullable[Int32]?
   placeholder : String?
-  placeholder_version : Int?
+  placeholder_version : Int32?
   content_type : String?
-  flags : Int?
+  flags : Int32?
   attachment_id : String?
 } derive(ToJson, FromJson, Debug)
 
 ///|
 /// A free-form text input component used in a modal.
 pub(all) struct TextInput {
-  id : Int?
+  id : Int32?
   custom_id : String
   // Required when sending a modal; omitted in modal-submit payloads.
   style : TextInputStyle?
   label : String?
-  min_length : Int?
-  max_length : Int?
+  min_length : Int32?
+  max_length : Int32?
   required : Bool?
   value : String?
   placeholder : String?
@@ -396,11 +396,11 @@ pub(all) struct TextInput {
 pub(all) enum TextInputStyle {
   Short
   Paragraph
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn TextInputStyle::to_int(self : TextInputStyle) -> Int {
+pub fn TextInputStyle::to_int(self : TextInputStyle) -> Int32 {
   match self {
     Short => 1
     Paragraph => 2
@@ -409,7 +409,7 @@ pub fn TextInputStyle::to_int(self : TextInputStyle) -> Int {
 }
 
 ///|
-pub fn TextInputStyle::from_int(value : Int) -> TextInputStyle {
+pub fn TextInputStyle::from_int(value : Int32) -> TextInputStyle {
   match value {
     1 => Short
     2 => Paragraph

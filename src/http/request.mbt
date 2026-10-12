@@ -48,7 +48,7 @@ fn method_name(wire : String) -> String {
 /// otherwise failed attempt is never resent because it may already have
 /// reached Discord; a status error is final.
 priv struct DiscordRetry {
-  max_retries : Int
+  max_retries : Int32
 }
 
 ///|
@@ -150,7 +150,7 @@ priv struct WireRequest {
 /// The logical response for one wire response, before status-code-to-error
 /// mapping: lowercase header names and a JSON body.
 fn decode_response(
-  status : Int,
+  status : Int32,
   headers : @ghttp.Headers,
   body : Bytes,
 ) -> HttpResponse {

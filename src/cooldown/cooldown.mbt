@@ -35,7 +35,7 @@ pub struct InMemoryCooldownStore {
 /// }
 /// ```
 pub fn InMemoryCooldownStore::InMemoryCooldownStore(
-  now? : () -> Int64 = @clock.now_ms,
+  now~ : () -> Int64 = @clock.now_ms,
 ) -> InMemoryCooldownStore {
   { now_: now, cooldowns_: Map([]), cooldown_cleanup_after_: 0L, }
 }

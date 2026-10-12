@@ -300,7 +300,7 @@ async test "cooldown is shared across remote clients" {
 
 ///|
 async fn with_silent_coordinator(
-  run : async (String, Ref[Int]) -> Unit,
+  run : async (String, Ref[Int32]) -> Unit,
 ) -> Unit {
   @async.with_task_group(group => {
     let server = @socket.TcpServer(@socket.Addr::parse("127.0.0.1:0"))

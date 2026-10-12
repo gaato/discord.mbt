@@ -10,7 +10,7 @@ pub(all) struct Connection {
   friend_sync : Bool
   show_activity : Bool
   two_way_link : Bool
-  visibility : Int
+  visibility : Int32
 } derive (
   ToJson(fields(typ(rename="type"))),
   FromJson(fields(typ(rename="type"))),

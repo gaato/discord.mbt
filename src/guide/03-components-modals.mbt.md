@@ -40,19 +40,19 @@ Components are placed inside action rows:
 
 ```mbt check
 ///|
-let close_ticket : @discord.ComponentRoute[Int] = @discord.component_route(
+let close_ticket : @discord.ComponentRoute[Int32] = @discord.component_route(
   id="ticket-close",
   state=@discord.CustomIdCodec::int(),
 )
 
 ///|
-let ticket_priority : @discord.ComponentRoute[Int] = @discord.component_route(
+let ticket_priority : @discord.ComponentRoute[Int32] = @discord.component_route(
   id="ticket-priority",
   state=@discord.CustomIdCodec::int(),
 )
 
 ///|
-fn ticket_controls(ticket : Int) -> Array[@model.Component] raise {
+fn ticket_controls(ticket : Int32) -> Array[@model.Component] raise {
   [
     @discord.action_row([
       @discord.button(
@@ -191,7 +191,7 @@ struct Feedback {
 } derive(Debug)
 
 ///|
-let feedback : @discord.Modal[Int, Feedback] = @discord.modal(
+let feedback : @discord.Modal[Int32, Feedback] = @discord.modal(
   custom_id="feedback",
   title="Feedback",
   state=@discord.CustomIdCodec::int(),
@@ -207,13 +207,13 @@ let feedback : @discord.Modal[Int, Feedback] = @discord.modal(
 )
 
 ///|
-let open_feedback : @discord.ComponentRoute[Int] = @discord.component_route(
+let open_feedback : @discord.ComponentRoute[Int32] = @discord.component_route(
   id="open-feedback",
   state=@discord.CustomIdCodec::int(),
 )
 
 ///|
-fn feedback_button(ticket : Int) -> @model.Component raise {
+fn feedback_button(ticket : Int32) -> @model.Component raise {
   @discord.button(custom_id=open_feedback.custom_id(ticket), label="Feedback")
 }
 

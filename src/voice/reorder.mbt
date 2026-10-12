@@ -2,12 +2,12 @@
 /// Values produced while restoring RTP sequence order.
 pub(all) enum ReorderOutput[T] {
   Deliver(T)
-  Lost(count~ : Int)
+  Lost(count~ : Int32)
 } derive(Debug, Eq)
 
 ///|
 priv struct ReorderEntry[T] {
-  sequence : Int
+  sequence : Int32
   arrival_ms : Int64
   packet : T
 }
@@ -18,29 +18,29 @@ priv struct ReorderEntry[T] {
 /// buffered.
 pub struct ReorderBuffer[T] {
   priv entries : Array[ReorderEntry[T]]
-  priv mut expected : Int?
+  priv mut expected : Int32?
   priv hold_ms : Int64
 }
 
 ///|
 /// Create an empty window that holds packets behind a sequence gap for up to
 /// `hold_ms` milliseconds.
-pub fn[T] ReorderBuffer::new(hold_ms? : Int = 60) -> ReorderBuffer[T] {
+pub fn[T] ReorderBuffer::new(hold_ms~ : Int32 = 60) -> ReorderBuffer[T] {
   { entries: [], expected: None, hold_ms: hold_ms.to_int64(), }
 }
 
 ///|
-fn normalize_sequence(sequence : Int) -> Int {
+fn normalize_sequence(sequence : Int32) -> Int32 {
   sequence & 0xffff
 }
 
 ///|
-fn sequence_distance(a : Int, b : Int) -> Int {
+fn sequence_distance(a : Int32, b : Int32) -> Int32 {
   (a - b) & 0xffff
 }
 
 ///|
-fn sequence_is_after(a : Int, b : Int) -> Bool {
+fn sequence_is_after(a : Int32, b : Int32) -> Bool {
   let distance = sequence_distance(a, b)
   distance != 0 && distance < 0x8000
 }
@@ -48,8 +48,8 @@ fn sequence_is_after(a : Int, b : Int) -> Bool {
 ///|
 fn[T] ReorderBuffer::find_sequence(
   self : ReorderBuffer[T],
-  sequence : Int,
-) -> Int? {
+  sequence : Int32,
+) -> Int32? {
   for index, entry in self.entries {
     if entry.sequence == sequence {
       return Some(index)
@@ -61,7 +61,7 @@ fn[T] ReorderBuffer::find_sequence(
 ///|
 fn[T] ReorderBuffer::take_nearest(
   self : ReorderBuffer[T],
-  expected : Int,
+  expected : Int32,
 ) -> ReorderEntry[T] {
   let mut nearest_index = 0
   let mut nearest_distance = sequence_distance(
@@ -97,7 +97,7 @@ fn[T] ReorderBuffer::drain_contiguous(
 /// behavior is deterministic in tests.
 pub fn[T] ReorderBuffer::push(
   self : ReorderBuffer[T],
-  seq~ : Int,
+  seq~ : Int32,
   arrival_ms~ : Int64,
   packet : T,
 ) -> Array[ReorderOutput[T]] {

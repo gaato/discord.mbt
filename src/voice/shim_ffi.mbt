@@ -1,11 +1,11 @@
 ///|
-extern "c" fn voice_shim_status() -> Int = "discord_voice_shim_status"
+extern "c" fn voice_shim_status() -> Int32 = "discord_voice_shim_status"
 
 ///|
 extern "c" fn voice_shim_unavailable_reason_bytes() -> Bytes = "discord_voice_shim_unavailable_reason"
 
 ///|
-extern "c" fn voice_shim_last_status() -> Int = "discord_voice_shim_last_status"
+extern "c" fn voice_shim_last_status() -> Int32 = "discord_voice_shim_last_status"
 
 ///|
 extern "c" fn voice_shim_last_error_bytes() -> Bytes = "discord_voice_shim_last_error"
@@ -13,7 +13,7 @@ extern "c" fn voice_shim_last_error_bytes() -> Bytes = "discord_voice_shim_last_
 ///|
 #borrow(key, nonce, aad, plaintext)
 extern "c" fn voice_shim_aead_seal(
-  mode : Int,
+  mode : Int32,
   key : Bytes,
   nonce : Bytes,
   aad : Bytes,
@@ -23,7 +23,7 @@ extern "c" fn voice_shim_aead_seal(
 ///|
 #borrow(key, nonce, aad, ciphertext)
 extern "c" fn voice_shim_aead_open(
-  mode : Int,
+  mode : Int32,
   key : Bytes,
   nonce : Bytes,
   aad : Bytes,

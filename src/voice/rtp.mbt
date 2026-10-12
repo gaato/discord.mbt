@@ -2,9 +2,9 @@
 /// A parsed RTP packet with the `rtpsize` cleartext header separated.
 pub(all) struct RtpPacket {
   sequence : UInt16
-  timestamp : UInt
-  ssrc : UInt
-  header_len : Int
+  timestamp : UInt32
+  ssrc : UInt32
+  header_len : Int32
   header : Bytes
   payload : Bytes
 } derive(Debug, Eq)
@@ -19,8 +19,8 @@ pub(all) suberror RtpError {
 /// Build Discord's RTP header for a 20 ms Opus frame.
 pub fn build_rtp_header(
   sequence~ : UInt16,
-  timestamp~ : UInt,
-  ssrc~ : UInt,
+  timestamp~ : UInt32,
+  ssrc~ : UInt32,
 ) -> Bytes {
   Bytes::from_array([
     0x80,
@@ -40,7 +40,7 @@ pub fn build_rtp_header(
 
 ///|
 /// Return the cleartext RTP header length used as AEAD associated data.
-pub fn rtpsize_header_len(bytes : Bytes) -> Int {
+pub fn rtpsize_header_len(bytes : Bytes) -> Int32 {
   if bytes.length() < 12 {
     return 0
   }

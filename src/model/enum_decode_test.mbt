@@ -73,7 +73,7 @@ test "channel rare enum variants and unknown values round-trip" {
 
 ///|
 test "all channel type variants used by rare Discord channels round-trip" {
-  let cases : Array[(Int, String)] = [
+  let cases : Array[(Int32, String)] = [
     (2, "GuildVoice"),
     (10, "AnnouncementThread"),
     (12, "PrivateThread"),

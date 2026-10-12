@@ -1,5 +1,5 @@
 ///|
-fn gate_interaction(kind : Int) -> @model.Interaction raise {
+fn gate_interaction(kind : Int32) -> @model.Interaction raise {
   @json.from_json(
     @json.parse(
       (

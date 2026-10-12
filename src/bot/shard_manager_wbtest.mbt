@@ -17,7 +17,7 @@ fn ManagerFakeTransport::ManagerFakeTransport() -> ManagerFakeTransport {
 ///|
 fn ManagerFakeTransport::server_close(
   self : ManagerFakeTransport,
-  code : Int,
+  code : Int32,
 ) -> Unit {
   self.incoming.close(
     error=@gateway.TransportClosed(code=Some(code), reason="server closed"),
@@ -50,7 +50,7 @@ const MANAGER_HELLO : String =
   #|{"op":10,"d":{"heartbeat_interval":60000}}
 
 ///|
-fn manager_ready_frame(shard_id : Int, shard_count : Int) -> String {
+fn manager_ready_frame(shard_id : Int32, shard_count : Int32) -> String {
   (
     #|{"op":0,"s":1,"t":"READY","d":{"v":10,"user":{"id":"1","username":"bot","discriminator":"0","global_name":null,"avatar":null},"guilds":[],"session_id":"SESSION_ID","resume_gateway_url":"wss://resume.example","application":{"id":"42"},"shard":[SHARD_ID,SHARD_COUNT]}}
   )
@@ -68,9 +68,9 @@ fn manager_message_delete_frame(id : String) -> String {
 
 ///|
 fn manager_gateway_info(
-  shards? : Int = 2,
-  remaining? : Int = 100,
-  max_concurrency? : Int = 1,
+  shards~ : Int32 = 2,
+  remaining~ : Int32 = 100,
+  max_concurrency~ : Int32 = 1,
 ) -> @model.GatewayBotInfo {
   {
     url: "wss://gateway.example",
@@ -85,7 +85,7 @@ fn manager_gateway_info(
 }
 
 ///|
-fn identify_shard(payload : Json) -> (Int, Int) raise {
+fn identify_shard(payload : Json) -> (Int32, Int32) raise {
   guard payload
     is {
       "op": Number(2, ..),
@@ -98,7 +98,7 @@ fn identify_shard(payload : Json) -> (Int, Int) raise {
 }
 
 ///|
-fn ready_shard(ready : @model.Ready) -> Int raise {
+fn ready_shard(ready : @model.Ready) -> Int32 raise {
   guard ready.shard is Some([id, ..]) else {
     fail("expected READY shard tuple")
   }
@@ -224,7 +224,10 @@ async test "shard config resolves auto fixed and range selections" {
 }
 
 ///|
-fn manager_bot_session(shard_id : Int, shard_count : Int) -> BotSession raise {
+fn manager_bot_session(
+  shard_id : Int32,
+  shard_count : Int32,
+) -> BotSession raise {
   guard @json.parse(manager_ready_frame(shard_id, shard_count))
     is { "d": ready_json, .. } else {
     fail("expected READY payload")
@@ -263,11 +266,11 @@ async test "fixed shards share identify queue and dispatch path" {
   })
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
-  let deleted : @aqueue.Queue[(String, Int)] = Queue(kind=Unbounded)
+  let deleted : @aqueue.Queue[(String, Int32)] = Queue(kind=Unbounded)
   bot.on(Events::message_delete(), (ctx, event) => {
     deleted.put((event.id.to_string(), ready_shard(ctx.ready())))
   })
-  let identified : Array[Int] = []
+  let identified : Array[Int32] = []
   bot.on_telemetry(event => {
     if event is ShardIdentified(shard_id~) {
       identified.push(shard_id)

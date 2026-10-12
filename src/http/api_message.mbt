@@ -130,7 +130,7 @@ pub async fn Client::edit_message(
   channel_id : @model.ChannelId,
   message_id : @model.MessageId,
   content? : String,
-  clear_content? : Bool = false,
+  clear_content~ : Bool = false,
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
   flags? : @model.MessageFlags,
@@ -214,7 +214,7 @@ pub async fn Client::crosspost_message(
 pub async fn Client::get_channel_messages(
   self : Client,
   channel_id : @model.ChannelId,
-  limit? : Int,
+  limit? : Int32,
   around? : @model.MessageId,
   before? : @model.MessageId,
   after? : @model.MessageId,
@@ -248,8 +248,8 @@ pub async fn Client::get_channel_messages(
 ///|
 fn validate_search_array_count(
   name : String,
-  values_length : Int,
-  maximum : Int,
+  values_length : Int32,
+  maximum : Int32,
 ) -> Unit raise DiscordHttpError {
   if values_length > maximum {
     raise Validation(message="\{name} exceeds \{maximum} entries")
@@ -258,9 +258,9 @@ fn validate_search_array_count(
 
 ///|
 fn search_guild_messages_query(
-  limit? : Int,
-  offset? : Int,
-  slop? : Int,
+  limit? : Int32,
+  offset? : Int32,
+  slop? : Int32,
   content? : String,
   mention_everyone? : Bool,
   pinned? : Bool,
@@ -430,9 +430,9 @@ fn search_guild_messages_query(
 pub async fn Client::search_guild_messages(
   self : Client,
   guild_id : @model.GuildId,
-  limit? : Int,
-  offset? : Int,
-  slop? : Int,
+  limit? : Int32,
+  offset? : Int32,
+  slop? : Int32,
   content? : String,
   mention_everyone? : Bool,
   pinned? : Bool,

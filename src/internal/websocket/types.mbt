@@ -20,7 +20,7 @@ pub(all) enum CloseCode {
 } derive(Debug, Eq)
 
 ///|
-fn CloseCode::from_int(code : Int) -> CloseCode {
+fn CloseCode::from_int(code : Int32) -> CloseCode {
   match code {
     1000 => Normal
     1001 => GoingAway
@@ -37,7 +37,7 @@ fn CloseCode::from_int(code : Int) -> CloseCode {
 }
 
 ///|
-fn CloseCode::to_int(self : CloseCode) -> Int {
+fn CloseCode::to_int(self : CloseCode) -> Int32 {
   match self {
     Normal => 1000
     GoingAway => 1001

@@ -1,7 +1,7 @@
 ///|
 /// Errors raised while constructing a reusable Discord interaction verifier.
 pub(all) suberror InteractionVerifierError {
-  InvalidPublicKeyLength(got~ : Int)
+  InvalidPublicKeyLength(got~ : Int32)
   InvalidPublicKeyHex
   InvalidPublicKeyEncoding
 } derive(Eq, Debug)

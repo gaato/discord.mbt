@@ -140,7 +140,7 @@ async fn route_outcome(
   endpoint : @discord.InteractionEndpoint,
   interaction : @model.Interaction,
   send_callback : (@model.InteractionResponse, Array[@dhttp.FileUpload]?) -> Unit,
-  send_status : (Int) -> Unit,
+  send_status : (Int32) -> Unit,
 ) -> Unit {
   let outcome = endpoint.handle_interaction(interaction, deadline_ms=2500)
   match outcome {

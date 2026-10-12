@@ -95,8 +95,8 @@ impl @ghttp.Transport for FakeWire with fn send_stream(_self, _request) {
 fn wire_test_client(
   answer : async (String, Map[String, String], Json?) -> HttpResponse,
   limiter? : &@runtime.RateLimiter,
-  max_retries? : Int = 4,
-  request_timeout_ms? : Int = 30000,
+  max_retries~ : Int32 = 4,
+  request_timeout_ms~ : Int32 = 30000,
 ) -> Client {
   Client(
     "test-token",

@@ -10,11 +10,11 @@ pub(all) struct Integration {
   role_id : RoleId?
   enable_emoticons : Bool?
   expire_behavior : IntegrationExpireBehavior?
-  expire_grace_period : Int?
+  expire_grace_period : Int32?
   user : User?
   account : IntegrationAccount?
   synced_at : Timestamp?
-  subscriber_count : Int?
+  subscriber_count : Int32?
   revoked : Bool?
   application : IntegrationApplication?
   application_id : ApplicationId?
@@ -47,13 +47,13 @@ pub(all) struct IntegrationApplication {
 pub(all) enum IntegrationExpireBehavior {
   RemoveRole
   Kick
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
 pub fn IntegrationExpireBehavior::to_int(
   self : IntegrationExpireBehavior,
-) -> Int {
+) -> Int32 {
   match self {
     RemoveRole => 0
     Kick => 1
@@ -63,7 +63,7 @@ pub fn IntegrationExpireBehavior::to_int(
 
 ///|
 pub fn IntegrationExpireBehavior::from_int(
-  value : Int,
+  value : Int32,
 ) -> IntegrationExpireBehavior {
   match value {
     0 => RemoveRole

@@ -15,16 +15,16 @@ pub(all) struct ApplicationIdentityPrimaryProfileData {
   featured_played_character : String?
   featured_played_character_image : ApplicationIdentityProfileMedia?
   playtime_hours : Double?
-  total_wins : Int?
-  current_period_wins : Int?
-  total_games : Int?
-  current_period_games : Int?
-  total_kills : Int?
-  current_period_kills : Int?
-  total_assists : Int?
-  current_period_assists : Int?
-  total_deaths : Int?
-  current_period_deaths : Int?
+  total_wins : Int32?
+  current_period_wins : Int32?
+  total_games : Int32?
+  current_period_games : Int32?
+  total_kills : Int32?
+  current_period_kills : Int32?
+  total_assists : Int32?
+  current_period_assists : Int32?
+  total_deaths : Int32?
+  current_period_deaths : Int32?
 } derive(ToJson, FromJson, Debug)
 
 ///|
@@ -62,7 +62,7 @@ pub(all) enum ApplicationIdentityDynamicField {
 ///|
 fn application_identity_dynamic_field_payload(
   payload : Json,
-  typ : Int,
+  typ : Int32,
 ) -> Json {
   match payload {
     Object(fields) => {

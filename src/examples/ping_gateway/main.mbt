@@ -6,7 +6,7 @@
 /// Without DISCORD_TOKEN it still exercises the stack live: the gateway
 /// rejects the empty identify with close code 4004, which the shard
 /// classifies as fatal. RUN_SECONDS overrides the default 60s window.
-const DEFAULT_RUN_SECONDS : Int = 60
+const DEFAULT_RUN_SECONDS : Int32 = 60
 
 ///|
 async fn main {

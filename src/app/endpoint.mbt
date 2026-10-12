@@ -86,7 +86,7 @@ pub async fn App::serve(
 pub async fn InteractionEndpoint::handle_interaction(
   self : InteractionEndpoint,
   interaction : @model.Interaction,
-  deadline_ms? : Int = 2500,
+  deadline_ms~ : Int32 = 2500,
 ) -> InteractionOutcome {
   if interaction.typ == Ping {
     return Reply(response={ typ: Pong, data: None, }, files=None)
@@ -145,7 +145,7 @@ pub async fn InteractionEndpoint::handle_interaction(
 pub async fn InteractionEndpoint::handle(
   self : InteractionEndpoint,
   body : Json,
-  deadline_ms? : Int = 2500,
+  deadline_ms~ : Int32 = 2500,
 ) -> Json? {
   let interaction : @model.Interaction = @json.from_json(body)
   match self.handle_interaction(interaction, deadline_ms~) {

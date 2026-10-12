@@ -613,7 +613,7 @@ test "guild message search HTTP 202 JSON round trip" {
 ///|
 /// Pins the documented reaction type table (NORMAL=0, BURST=1).
 test "reaction type matches the documented values" {
-  let table : Array[(@model.ReactionType, Int)] = [(Normal, 0), (Burst, 1)]
+  let table : Array[(@model.ReactionType, Int32)] = [(Normal, 0), (Burst, 1)]
   for pair in table {
     let (typ, value) = pair
     assert_eq(typ.to_int(), value)

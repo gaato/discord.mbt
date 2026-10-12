@@ -41,7 +41,7 @@ pub fn message_flags_with_components_v2(
   embeds : Array[@model.Embed]?,
   components : Array[@model.Component]?,
   sticker_ids? : Array[@model.StickerId],
-  has_poll? : Bool = false,
+  has_poll~ : Bool = false,
 ) -> @model.MessageFlags? raise DiscordHttpError {
   validate_message_limits(embeds, components)
   guard components is Some(values) && @model.requires_components_v2(values) else {

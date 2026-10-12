@@ -1,6 +1,6 @@
 ///|
 test "event intent table covers every intent group" {
-  let cases : Array[(@model.EventKind, UInt)] = [
+  let cases : Array[(@model.EventKind, UInt32)] = [
     (KGuildCreate, @model.Intents::guilds().bits()),
     (KGuildMemberAdd, @model.Intents::guild_members().bits()),
     (KGuildBanAdd, @model.Intents::guild_moderation().bits()),

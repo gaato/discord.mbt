@@ -7,7 +7,7 @@
 ///   DISCORD_TOKEN=... GUILD_ID=... moon run --release src/examples/kitchen_sink
 /// With GUILD_ID commands sync to that guild immediately; without it they sync
 /// globally. RUN_SECONDS overrides the default two-minute window.
-const DEFAULT_RUN_SECONDS : Int = 120
+const DEFAULT_RUN_SECONDS : Int32 = 120
 
 ///|
 struct GreetArgs {
@@ -152,7 +152,7 @@ fn command_scope() -> @discord.CommandScope raise {
 }
 
 ///|
-fn run_seconds() -> Int {
+fn run_seconds() -> Int32 {
   match @env.get_env_var("RUN_SECONDS") {
     Some(value) => @string.parse_int(value) catch { _ => DEFAULT_RUN_SECONDS }
     None => DEFAULT_RUN_SECONDS

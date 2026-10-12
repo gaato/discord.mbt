@@ -1,5 +1,5 @@
 ///|
-fn ticket_modal() -> @app.Modal[Int, String] {
+fn ticket_modal() -> @app.Modal[Int32, String] {
   @app.modal(
     custom_id="ticket-note",
     title="Ticket note",
@@ -17,7 +17,7 @@ fn from_component(interaction : @model.Interaction) -> @model.Interaction raise 
 /// Submit `interaction` to an app with one `ticket_modal` route and return
 /// the captured initial callback plus the errors the policy saw.
 async fn submit_ticket(
-  handler : @app.ModalSubmitHandler[Int, String],
+  handler : @app.ModalSubmitHandler[Int32, String],
   interaction : @model.Interaction,
 ) -> (@framework.CapturedResponse, Array[String]) {
   let client = @dhttp.Client("test-token")
@@ -42,7 +42,7 @@ async fn submit_ticket(
 
 ///|
 async test "immediate modal reply updates the message whose component opened it" {
-  let seen : Array[(Int, String)] = []
+  let seen : Array[(Int32, String)] = []
   let (captured, errors) = submit_ticket(
     Immediate((_, ticket, note) => {
       seen.push((ticket, note))
@@ -62,7 +62,7 @@ async test "immediate modal reply updates the message whose component opened it"
 
 ///|
 async test "deferred modal update acknowledges without changing the message" {
-  let seen : Array[Int] = []
+  let seen : Array[Int32] = []
   let (captured, errors) = submit_ticket(
     DeferredUpdate((ctx, ticket, _) => {
       seen.push(ticket)

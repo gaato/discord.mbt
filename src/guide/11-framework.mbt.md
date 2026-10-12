@@ -297,7 +297,7 @@ and get a typed struct from `ctx.model()` in the handler:
 ///|
 struct Echo {
   text : String
-  times : Int
+  times : Int32
 }
 
 ///|

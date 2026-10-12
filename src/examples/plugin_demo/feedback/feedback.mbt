@@ -2,13 +2,13 @@
 /// Settings supplied by the application that installs the feedback feature.
 pub(all) struct FeedbackConfig {
   destination_channel : @model.ChannelId
-  cooldown_seconds : Int
+  cooldown_seconds : Int32
 }
 
 ///|
 pub fn FeedbackConfig::FeedbackConfig(
   destination_channel~ : @model.ChannelId,
-  cooldown_seconds? : Int = 30,
+  cooldown_seconds~ : Int32 = 30,
 ) -> FeedbackConfig {
   { destination_channel, cooldown_seconds, }
 }
@@ -24,7 +24,7 @@ priv struct FeedbackForm {
 /// handler. Discord models remain plain data.
 pub struct FeedbackFeature {
   priv config_ : FeedbackConfig
-  priv mut stored_ : Int
+  priv mut stored_ : Int32
 }
 
 ///|
@@ -36,7 +36,7 @@ pub fn FeedbackFeature::FeedbackFeature(
 
 ///|
 /// Number of submissions stored since this feature instance was installed.
-pub fn FeedbackFeature::stored_count(self : FeedbackFeature) -> Int {
+pub fn FeedbackFeature::stored_count(self : FeedbackFeature) -> Int32 {
   self.stored_
 }
 

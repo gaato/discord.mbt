@@ -1,6 +1,6 @@
 ///|
 /// A gate whose response deadline and token lifetime the test sets directly.
-fn scripted_gate(remaining : Ref[Int?], token : Ref[Int]) -> AdmissionGate {
+fn scripted_gate(remaining : Ref[Int32?], token : Ref[Int32]) -> AdmissionGate {
   {
     remaining_ms: () => remaining.val,
     token_remaining_ms: () => token.val,
@@ -10,7 +10,7 @@ fn scripted_gate(remaining : Ref[Int?], token : Ref[Int]) -> AdmissionGate {
 }
 
 ///|
-fn scripted_admission(permits : Int) -> Admission {
+fn scripted_admission(permits : Int32) -> Admission {
   {
     limiter: @async.Semaphore(permits),
     pending: 0,

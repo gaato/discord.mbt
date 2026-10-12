@@ -83,7 +83,7 @@ pub fn InteractionCtx::guild_id(self : InteractionCtx) -> @model.GuildId? {
 pub async fn InteractionCtx::respond(
   self : InteractionCtx,
   message : String,
-  ephemeral? : Bool = true,
+  ephemeral~ : Bool = true,
 ) -> Unit {
   match self.raw_ {
     RawCommand(ctx) => ctx.reply(content=message, ephemeral~)
@@ -103,7 +103,7 @@ pub type InteractionMiddleware = async (InteractionCtx, async () -> Unit) -> Uni
 async fn App::run_middleware(
   self : App,
   ctx : InteractionCtx,
-  index : Int,
+  index : Int32,
   terminal : async () -> Unit,
 ) -> Unit {
   if index < self.middleware_.length() {

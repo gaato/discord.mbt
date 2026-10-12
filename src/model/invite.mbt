@@ -9,16 +9,16 @@ pub(all) struct Invite {
   target_type : InviteTargetType?
   target_user : User?
   target_application : Application?
-  approximate_presence_count : Int?
-  approximate_member_count : Int?
+  approximate_presence_count : Int32?
+  approximate_member_count : Int32?
   expires_at : Nullable[Timestamp]?
   // Not modeled: invite stage_instance is deprecated by Discord.
   guild_scheduled_event : GuildScheduledEvent?
   flags : InviteFlags?
   roles : Array[PartialRole]?
-  uses : Int?
-  max_uses : Int?
-  max_age : Int?
+  uses : Int32?
+  max_uses : Int32?
+  max_age : Int32?
   temporary : Bool?
   created_at : Timestamp?
 } derive (
@@ -76,11 +76,11 @@ pub(all) enum InviteType {
   Guild
   GroupDm
   Friend
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn InviteType::to_int(self : InviteType) -> Int {
+pub fn InviteType::to_int(self : InviteType) -> Int32 {
   match self {
     Guild => 0
     GroupDm => 1
@@ -90,7 +90,7 @@ pub fn InviteType::to_int(self : InviteType) -> Int {
 }
 
 ///|
-pub fn InviteType::from_int(value : Int) -> InviteType {
+pub fn InviteType::from_int(value : Int32) -> InviteType {
   match value {
     0 => Guild
     1 => GroupDm
@@ -120,11 +120,11 @@ pub impl @json.FromJson for InviteType with fn from_json(json, path) {
 pub(all) enum InviteTargetType {
   Stream
   EmbeddedApplication
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn InviteTargetType::to_int(self : InviteTargetType) -> Int {
+pub fn InviteTargetType::to_int(self : InviteTargetType) -> Int32 {
   match self {
     Stream => 1
     EmbeddedApplication => 2
@@ -133,7 +133,7 @@ pub fn InviteTargetType::to_int(self : InviteTargetType) -> Int {
 }
 
 ///|
-pub fn InviteTargetType::from_int(value : Int) -> InviteTargetType {
+pub fn InviteTargetType::from_int(value : Int32) -> InviteTargetType {
   match value {
     1 => Stream
     2 => EmbeddedApplication
@@ -163,8 +163,8 @@ pub impl @json.FromJson for InviteTargetType with fn from_json(json, path) {
 /// Progress and outcome of an invite target-user CSV update.
 pub(all) struct TargetUsersJobStatus {
   status : TargetUsersJobStatusCode
-  total_users : Int
-  processed_users : Int
+  total_users : Int32
+  processed_users : Int32
   created_at : Timestamp
   completed_at : Nullable[Timestamp]
   error_message : String?
@@ -177,11 +177,13 @@ pub(all) enum TargetUsersJobStatusCode {
   Processing
   Completed
   Failed
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn TargetUsersJobStatusCode::to_int(self : TargetUsersJobStatusCode) -> Int {
+pub fn TargetUsersJobStatusCode::to_int(
+  self : TargetUsersJobStatusCode,
+) -> Int32 {
   match self {
     Unspecified => 0
     Processing => 1
@@ -193,7 +195,7 @@ pub fn TargetUsersJobStatusCode::to_int(self : TargetUsersJobStatusCode) -> Int 
 
 ///|
 pub fn TargetUsersJobStatusCode::from_int(
-  value : Int,
+  value : Int32,
 ) -> TargetUsersJobStatusCode {
   match value {
     0 => Unspecified

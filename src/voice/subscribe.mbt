@@ -6,7 +6,7 @@ pub struct VoiceReceiveStream {
   priv connection : VoiceConnection
   priv user_id : String
   priv queue : @aqueue.Queue[Bytes]
-  priv end_after_silence_ms : Int?
+  priv end_after_silence_ms : Int32?
   priv mut started : Bool
   priv mut closed : Bool
 }
@@ -66,7 +66,7 @@ fn VoiceConnection::close_subscriptions(self : VoiceConnection) -> Unit {
 pub fn VoiceConnection::subscribe(
   self : VoiceConnection,
   user_id~ : String,
-  end_after_silence_ms? : Int? = None,
+  end_after_silence_ms~ : Int32? = None,
 ) -> VoiceReceiveStream {
   let stream = VoiceReceiveStream::{
     connection: self,

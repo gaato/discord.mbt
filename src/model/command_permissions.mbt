@@ -16,13 +16,13 @@ pub(all) enum ApplicationCommandPermissionType {
   Role
   User
   Channel
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
 pub fn ApplicationCommandPermissionType::to_int(
   self : ApplicationCommandPermissionType,
-) -> Int {
+) -> Int32 {
   match self {
     Role => 1
     User => 2
@@ -33,7 +33,7 @@ pub fn ApplicationCommandPermissionType::to_int(
 
 ///|
 pub fn ApplicationCommandPermissionType::from_int(
-  value : Int,
+  value : Int32,
 ) -> ApplicationCommandPermissionType {
   match value {
     1 => Role

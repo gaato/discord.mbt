@@ -1,5 +1,5 @@
 ///|
-fn test_ogg_crc(bytes : Array[Byte]) -> UInt {
+fn test_ogg_crc(bytes : Array[Byte]) -> UInt32 {
   let mut crc = 0U
   for byte in bytes {
     crc = crc ^ (byte.to_uint() << 24)
@@ -15,7 +15,7 @@ fn test_ogg_crc(bytes : Array[Byte]) -> UInt {
 }
 
 ///|
-fn push_test_u32_le(bytes : Array[Byte], value : UInt) -> Unit {
+fn push_test_u32_le(bytes : Array[Byte], value : UInt32) -> Unit {
   bytes.push(value.to_byte())
   bytes.push((value >> 8).to_byte())
   bytes.push((value >> 16).to_byte())
@@ -25,7 +25,7 @@ fn push_test_u32_le(bytes : Array[Byte], value : UInt) -> Unit {
 ///|
 fn test_ogg_page(
   header_type : Byte,
-  page_sequence : UInt,
+  page_sequence : UInt32,
   laces : Array[Byte],
   body : Bytes,
 ) -> Bytes {
@@ -144,8 +144,8 @@ async fn collect_ogg_source(source : @voice.OggOpusSource) -> Array[Bytes] {
 ///|
 async fn read_pipe_fixture(
   fixture : Bytes,
-  chunk_size : Int,
-) -> (Int, Int, Array[Bytes]) {
+  chunk_size : Int32,
+) -> (Int32, Int32, Array[Bytes]) {
   @async.with_task_group(group => {
     let (read_end, write_end) = @pipe.pipe()
     defer read_end.close()

@@ -24,13 +24,13 @@ pub(all) enum ApplicationRoleConnectionMetadataType {
   DatetimeGreaterThanOrEqual
   BooleanEqual
   BooleanNotEqual
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
 pub fn ApplicationRoleConnectionMetadataType::to_int(
   self : ApplicationRoleConnectionMetadataType,
-) -> Int {
+) -> Int32 {
   match self {
     IntegerLessThanOrEqual => 1
     IntegerGreaterThanOrEqual => 2
@@ -46,7 +46,7 @@ pub fn ApplicationRoleConnectionMetadataType::to_int(
 
 ///|
 pub fn ApplicationRoleConnectionMetadataType::from_int(
-  value : Int,
+  value : Int32,
 ) -> ApplicationRoleConnectionMetadataType {
   match value {
     1 => IntegerLessThanOrEqual

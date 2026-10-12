@@ -5,14 +5,14 @@ pub(all) enum VoiceGatewayEvent {
   SessionEstablished(
     mode~ : String,
     secret_key~ : Bytes,
-    dave_protocol_version~ : Int
+    dave_protocol_version~ : Int32
   )
   Message(VoiceMessage)
   Connected(resumed~ : Bool)
-  Disconnected(code~ : Int?, resuming~ : Bool)
+  Disconnected(code~ : Int32?, resuming~ : Bool)
   ConnectFailed(reason~ : String)
-  NeedsRejoin(code~ : Int?)
-  FatallyClosed(code~ : Int)
+  NeedsRejoin(code~ : Int32?)
+  FatallyClosed(code~ : Int32)
 } derive(Debug, Eq)
 
 ///|
@@ -26,7 +26,7 @@ pub struct VoiceGateway {
   priv mut latency : Int64?
   priv mut closing : Bool
   priv mut has_session : Bool
-  priv mut last_seq : Int
+  priv mut last_seq : Int32
   priv mut runner : @async.Task[Unit]?
   priv telemetry_ : (VoiceGatewayEvent) -> Unit
 }
@@ -68,7 +68,7 @@ pub async fn VoiceGateway::send_json(
 /// Send a client-to-server DAVE binary envelope.
 pub async fn VoiceGateway::send_binary(
   self : VoiceGateway,
-  op~ : Int,
+  op~ : Int32,
   payload : Bytes,
 ) -> Unit {
   guard self.transport is Some(transport) else {
@@ -124,7 +124,7 @@ async fn VoiceGateway::stop_runner(self : VoiceGateway) -> Unit noraise {
 async fn VoiceGateway::finish_transport(
   self : VoiceGateway,
   transport : &VoiceTransport,
-  code~ : Int,
+  code~ : Int32,
 ) -> Unit noraise {
   self.send_gate.acquire()
   defer self.send_gate.release()
@@ -149,17 +149,17 @@ pub fn[X] VoiceGateway::start(
   session_id~ : String,
   token~ : String,
   endpoint~ : String,
-  max_dave_protocol_version? : UInt16 = 0,
-  select_protocol~ : async (UInt, String, Int, Array[String]) -> (
+  max_dave_protocol_version~ : UInt16 = 0,
+  select_protocol~ : async (UInt32, String, Int32, Array[String]) -> (
     String,
-    Int,
+    Int32,
     String,
   ),
-  connector? : async (String) -> &VoiceTransport = connect_voice_websocket,
-  queue_capacity? : Int = 256,
-  telemetry? : (VoiceGatewayEvent) -> Unit = _ => (),
-  sleeper? : async (Int) -> Unit = ms => @async.sleep(ms),
-  rand? : @random.Rand = @random.Rand::new(),
+  connector~ : async (String) -> &VoiceTransport = connect_voice_websocket,
+  queue_capacity~ : Int32 = 256,
+  telemetry~ : (VoiceGatewayEvent) -> Unit = _ => (),
+  sleeper~ : async (Int32) -> Unit = ms => @async.sleep(ms),
+  rand~ : @random.Rand = @random.Rand(),
 ) -> VoiceGateway {
   let gateway = VoiceGateway::{
     events: Queue(kind=Blocking(queue_capacity)),
@@ -193,7 +193,7 @@ pub fn[X] VoiceGateway::start(
 
 ///|
 priv suberror VoiceConnectionEnded {
-  VoiceConnectionEnded(code~ : Int?, reason~ : String)
+  VoiceConnectionEnded(code~ : Int32?, reason~ : String)
 } derive(Debug)
 
 ///|
@@ -236,13 +236,13 @@ async fn VoiceGateway::run(
   token~ : String,
   endpoint~ : String,
   max_dave_protocol_version~ : UInt16,
-  select_protocol~ : async (UInt, String, Int, Array[String]) -> (
+  select_protocol~ : async (UInt32, String, Int32, Array[String]) -> (
     String,
-    Int,
+    Int32,
     String,
   ),
   connector~ : async (String) -> &VoiceTransport,
-  sleeper~ : async (Int) -> Unit,
+  sleeper~ : async (Int32) -> Unit,
   rand~ : @random.Rand,
 ) -> Unit noraise {
   let mut attempts = 0
@@ -342,12 +342,12 @@ async fn VoiceGateway::run_connection(
   session_id~ : String,
   token~ : String,
   max_dave_protocol_version~ : UInt16,
-  select_protocol~ : async (UInt, String, Int, Array[String]) -> (
+  select_protocol~ : async (UInt32, String, Int32, Array[String]) -> (
     String,
-    Int,
+    Int32,
     String,
   ),
-  sleeper~ : async (Int) -> Unit,
+  sleeper~ : async (Int32) -> Unit,
 ) -> Unit {
   let (hello, hello_seq) = recv_voice_message(transport)
   if hello_seq is Some(seq) {
@@ -454,7 +454,7 @@ async fn VoiceGateway::run_connection(
 ///|
 async fn recv_voice_message(
   transport : &VoiceTransport,
-) -> (VoiceMessage, Int?) {
+) -> (VoiceMessage, Int32?) {
   match transport.recv() {
     Text(text) => parse_text_frame(text)
     Binary(bytes) => parse_binary_frame(bytes)

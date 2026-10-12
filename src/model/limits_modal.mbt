@@ -17,7 +17,7 @@ pub fn modal_limit_violations(
 ///|
 /// Discord's upper bound for a text input's `min_length`, `max_length`, and
 /// `value`, in UTF-16 units.
-pub let text_input_max_length : Int = 4000
+pub let text_input_max_length : Int32 = 4000
 
 ///|
 fn LimitChecker::modal_component(

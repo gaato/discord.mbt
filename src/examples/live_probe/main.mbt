@@ -133,7 +133,7 @@ async fn P::probe(self : P, name : String, f : async () -> String) -> Unit {
 async fn P::probe_err(
   self : P,
   name : String,
-  expect~ : Array[Int],
+  expect~ : Array[Int32],
   f : async () -> Unit,
 ) -> Unit {
   try {
@@ -249,7 +249,7 @@ fn attach_payload_log(p : P) -> Unit {
 }
 
 ///|
-fn pad(n : Int64, width : Int) -> String {
+fn pad(n : Int64, width : Int32) -> String {
   let s = n.to_string()
   let mut out = s
   while out.length() < width {
@@ -288,7 +288,7 @@ fn now_ms() -> Int64 {
 
 ///|
 fn print_summary(p : P) -> Unit {
-  let counts : Map[String, Int] = Map([])
+  let counts : Map[String, Int32] = Map([])
   for e in p.report {
     let key = e.outcome.label()
     counts[key] = counts.get(key).unwrap_or(0) + 1

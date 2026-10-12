@@ -6,7 +6,7 @@ pub(all) suberror OggOpusError {
 } derive(Debug, Eq)
 
 ///|
-fn ogg_crc_table() -> FixedArray[UInt] {
+fn ogg_crc_table() -> FixedArray[UInt32] {
   FixedArray::makei(256, index => {
     let mut value = index.reinterpret_as_uint() << 24
     for _ in 0..<8 {
@@ -21,7 +21,7 @@ fn ogg_crc_table() -> FixedArray[UInt] {
 }
 
 ///|
-fn ogg_page_crc(page : ArrayView[Byte]) -> UInt {
+fn ogg_page_crc(page : ArrayView[Byte]) -> UInt32 {
   let table = ogg_crc_table()
   let mut crc = 0U
   for index, byte in page {
@@ -33,7 +33,7 @@ fn ogg_page_crc(page : ArrayView[Byte]) -> UInt {
 }
 
 ///|
-fn read_array_u32_le(bytes : Array[Byte], offset : Int) -> UInt {
+fn read_array_u32_le(bytes : Array[Byte], offset : Int32) -> UInt32 {
   bytes[offset].to_uint() |
   (bytes[offset + 1].to_uint() << 8) |
   (bytes[offset + 2].to_uint() << 16) |
@@ -45,12 +45,12 @@ fn read_array_u32_le(bytes : Array[Byte], offset : Int) -> UInt {
 /// pull complete packets with `next_packet`.
 pub struct OggPacketReader {
   priv buffer : Array[Byte]
-  priv mut cursor : Int
+  priv mut cursor : Int32
   priv partial_packet : Array[Byte]
   priv ready_packets : Array[Bytes]
-  priv mut ready_cursor : Int
-  priv mut stream_serial : UInt?
-  priv mut expected_page_sequence : UInt?
+  priv mut ready_cursor : Int32
+  priv mut stream_serial : UInt32?
+  priv mut expected_page_sequence : UInt32?
 }
 
 ///|
@@ -201,15 +201,15 @@ fn has_magic(bytes : Bytes, magic : Bytes) -> Bool {
 pub struct OggOpusSource {
   priv reader : OggPacketReader
   priv input : &@io.Reader?
-  priv channels_ : Int
-  priv pre_skip_ : Int
+  priv channels_ : Int32
+  priv pre_skip_ : Int32
 }
 
 ///|
 fn validate_opus_headers(
   head : Bytes?,
   tags : Bytes?,
-) -> (Int, Int) raise OggOpusError {
+) -> (Int32, Int32) raise OggOpusError {
   guard head is Some(head) else {
     raise InvalidOpusStream(reason="missing OpusHead packet")
   }
@@ -291,13 +291,13 @@ pub async fn OggOpusSource::from_reader(input : &@io.Reader) -> OggOpusSource {
 
 ///|
 /// The channel count declared by the stream's `OpusHead` header.
-pub fn OggOpusSource::channels(self : OggOpusSource) -> Int {
+pub fn OggOpusSource::channels(self : OggOpusSource) -> Int32 {
   self.channels_
 }
 
 ///|
 /// Samples (at 48 kHz) to drop before playback, from the `OpusHead` header.
-pub fn OggOpusSource::pre_skip(self : OggOpusSource) -> Int {
+pub fn OggOpusSource::pre_skip(self : OggOpusSource) -> Int32 {
   self.pre_skip_
 }
 
@@ -326,13 +326,13 @@ pub impl AudioSource for OggOpusSource with fn next_frame(self) {
 }
 
 ///|
-fn push_u16_le(output : Array[Byte], value : Int) -> Unit {
+fn push_u16_le(output : Array[Byte], value : Int32) -> Unit {
   output.push(value.to_byte())
   output.push((value >> 8).to_byte())
 }
 
 ///|
-fn push_u32_le(output : Array[Byte], value : UInt) -> Unit {
+fn push_u32_le(output : Array[Byte], value : UInt32) -> Unit {
   output.push(value.to_byte())
   output.push((value >> 8).to_byte())
   output.push((value >> 16).to_byte())
@@ -347,7 +347,7 @@ fn push_u64_le(output : Array[Byte], value : UInt64) -> Unit {
 }
 
 ///|
-fn opus_packet_segment_count(packet : Bytes) -> Int {
+fn opus_packet_segment_count(packet : Bytes) -> Int32 {
   packet.length() / 255 + 1
 }
 
@@ -366,12 +366,12 @@ fn append_opus_packet_lacing(laces : Array[Byte], packet : Bytes) -> Unit {
 /// `take_output`; audio pages become available as packet or lacing limits are
 /// reached, and `finish` emits the final EOS page.
 pub struct OggOpusWriter {
-  priv serial : UInt
-  priv max_packets_per_page : Int
-  priv mut page_sequence : UInt
+  priv serial : UInt32
+  priv max_packets_per_page : Int32
+  priv mut page_sequence : UInt32
   priv mut granule : UInt64
   priv audio_packets : Array[Bytes]
-  priv mut audio_segments : Int
+  priv mut audio_segments : Int32
   priv output : Array[Byte]
   priv mut finished : Bool
 }
@@ -450,10 +450,10 @@ fn OggOpusWriter::flush_audio_page(self : OggOpusWriter, eos~ : Bool) -> Unit {
 /// Panics if `channels` or `pre_skip` cannot be represented in an Opus header,
 /// or if `max_packets_per_page` is not positive.
 pub fn OggOpusWriter::new(
-  channels? : Int = 2,
-  pre_skip? : Int = 0,
-  serial? : UInt = 0U,
-  max_packets_per_page? : Int = 50,
+  channels~ : Int32 = 2,
+  pre_skip~ : Int32 = 0,
+  serial~ : UInt32 = 0U,
+  max_packets_per_page~ : Int32 = 50,
 ) -> OggOpusWriter {
   if channels <= 0 || channels > 255 {
     abort("OggOpusWriter channels must be between 1 and 255")
@@ -501,7 +501,7 @@ pub fn OggOpusWriter::new(
 pub fn OggOpusWriter::write_frame(
   self : OggOpusWriter,
   opus : Bytes,
-  samples? : Int = 960,
+  samples~ : Int32 = 960,
 ) -> Unit raise OggOpusError {
   if self.finished {
     raise InvalidOpusStream(reason="cannot write an Opus frame after finish")

@@ -10,7 +10,7 @@ test "gateway capabilities preserve unknown bits through bit operations and JSON
   assert_false(known.contains(unknown))
   assert_eq(combined & known, known)
   assert_eq(known & unknown, @model.GatewayCapabilities::none())
-  let bits : UInt = @json.from_json(combined.to_json())
+  let bits : UInt32 = @json.from_json(combined.to_json())
   assert_eq(@model.GatewayCapabilities::from_bits(bits), combined)
   debug_inspect(combined, content="2147516416")
 }

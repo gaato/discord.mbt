@@ -106,8 +106,8 @@ async fn CoordinatorClient::request_once(
 async fn CoordinatorClient::request(
   self : CoordinatorClient,
   request : Json,
-  max_retry? : Int = 5,
-  timeout_ms? : Int,
+  max_retry~ : Int32 = 5,
+  timeout_ms? : Int32,
 ) -> Json {
   match timeout_ms {
     Some(timeout_ms) =>
@@ -122,7 +122,7 @@ async fn CoordinatorClient::request(
 async fn CoordinatorClient::request_with_retry(
   self : CoordinatorClient,
   request : Json,
-  max_retry : Int,
+  max_retry : Int32,
 ) -> Json {
   self.gate.acquire()
   defer self.gate.release()
@@ -200,7 +200,7 @@ pub impl @queue.IdentifyQueue for RemoteIdentifyQueue with fn wait_for_identify(
 pub struct RemoteRateLimiter {
   priv acquire_client : CoordinatorClient
   priv release_client : CoordinatorClient
-  priv leases : Map[String, Int]
+  priv leases : Map[String, Int32]
 }
 
 ///|
@@ -290,7 +290,7 @@ pub impl @runtime.RateLimiter for RemoteRateLimiter with fn release(
 }
 
 ///|
-fn coordinator_nonnegative_int(value : Json) -> Int? {
+fn coordinator_nonnegative_int(value : Json) -> Int32? {
   guard value is Number(number, ..) else { return None }
   let integer = number.to_int()
   if integer >= 0 && integer.to_double() == number {
@@ -315,7 +315,7 @@ pub(all) enum UnreachablePolicy {
 /// Discord's 429 bans is a correctness concern. Cancellation always propagates.
 pub struct RemoteCooldownStore {
   priv client : CoordinatorClient
-  priv timeout_ms : Int
+  priv timeout_ms : Int32
   priv policy : UnreachablePolicy
   priv on_error : (Error) -> Unit
 }
@@ -330,8 +330,8 @@ pub struct RemoteCooldownStore {
 /// acquisitions attempt to reconnect within the same deadline.
 pub async fn RemoteCooldownStore::connect(
   addr : String,
-  timeout_ms? : Int = 1000,
-  when_unreachable? : UnreachablePolicy = FailOpen,
+  timeout_ms~ : Int32 = 1000,
+  when_unreachable~ : UnreachablePolicy = FailOpen,
   on_error? : (Error) -> Unit,
 ) -> RemoteCooldownStore {
   if timeout_ms <= 0 {

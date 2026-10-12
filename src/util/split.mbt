@@ -24,7 +24,7 @@
 ///   assert_eq(chunks.join(""), content)
 /// }
 /// ```
-pub fn split_content(content : String, limit? : Int = 2000) -> Array[String] {
+pub fn split_content(content : String, limit~ : Int32 = 2000) -> Array[String] {
   if content.is_empty() {
     return []
   }

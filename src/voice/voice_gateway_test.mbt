@@ -11,7 +11,7 @@ struct FakeVoiceTransport {
   recv_in_flight : Ref[Bool]
   close_during_send : Ref[Bool]
   close_during_recv : Ref[Bool]
-  close_calls : Ref[Int]
+  close_calls : Ref[Int32]
   fail_close : Ref[Bool]
 }
 
@@ -36,7 +36,7 @@ fn FakeVoiceTransport::FakeVoiceTransport() -> FakeVoiceTransport {
 ///|
 fn FakeVoiceTransport::server_close(
   self : FakeVoiceTransport,
-  code : Int?,
+  code : Int32?,
 ) -> Unit {
   self.incoming.close(
     error=@voice.VoiceTransportClosed(code~, reason="server closed"),
@@ -347,7 +347,7 @@ async test "voice gateway cancellation interrupts reconnect backoff" {
 
 ///|
 async test "voice gateway backoff sleeper failure ends the retry loop" {
-  let slept : @aqueue.Queue[Int] = Queue(kind=Unbounded)
+  let slept : @aqueue.Queue[Int32] = Queue(kind=Unbounded)
   let attempts = Ref(0)
   @async.with_task_group(group => {
     let gateway = @voice.VoiceGateway::start(
@@ -400,7 +400,7 @@ async test "cancelling a voice gateway closes its transport exactly once" {
 }
 
 ///|
-fn hello_frame(interval : Int) -> @voice.VoiceFrame {
+fn hello_frame(interval : Int32) -> @voice.VoiceFrame {
   Text("{\"op\":8,\"d\":{\"heartbeat_interval\":\{interval}}}")
 }
 
@@ -445,14 +445,14 @@ async test "voice gateway advertises the configured DAVE protocol limit" {
 }
 
 ///|
-fn ready_frame(seq : Int) -> @voice.VoiceFrame {
+fn ready_frame(seq : Int32) -> @voice.VoiceFrame {
   Text(
     "{\"op\":2,\"seq\":\{seq},\"d\":{\"ssrc\":42,\"ip\":\"198.51.100.1\",\"port\":5000,\"modes\":[\"aead_aes256_gcm_rtpsize\",\"aead_xchacha20_poly1305_rtpsize\"]}}",
   )
 }
 
 ///|
-fn session_description_frame(seq : Int) -> @voice.VoiceFrame {
+fn session_description_frame(seq : Int32) -> @voice.VoiceFrame {
   Text(
     "{\"op\":4,\"seq\":\{seq},\"d\":{\"mode\":\"aead_aes256_gcm_rtpsize\",\"secret_key\":[1,2,3,4],\"dave_protocol_version\":1}}",
   )
@@ -462,7 +462,7 @@ fn session_description_frame(seq : Int) -> @voice.VoiceFrame {
 async fn finish_handshake(
   gateway : @voice.VoiceGateway,
   transport : FakeVoiceTransport,
-  heartbeat_interval? : Int = 60000,
+  heartbeat_interval~ : Int32 = 60000,
 ) -> Unit {
   transport.incoming.put(hello_frame(heartbeat_interval))
   guard! transport.outgoing_text.get()
@@ -1006,7 +1006,7 @@ async test "4014 is fatal" {
 /// Gated sleeper shared by the voice timing tests: each requested delay is
 /// observed on `requests` and only completes when the test calls `release`.
 struct SleepGate {
-  requests : @aqueue.Queue[Int]
+  requests : @aqueue.Queue[Int32]
   releases : @aqueue.Queue[Unit]
 }
 
@@ -1016,7 +1016,7 @@ fn SleepGate::SleepGate() -> SleepGate {
 }
 
 ///|
-async fn SleepGate::sleep(self : SleepGate, ms : Int) -> Unit {
+async fn SleepGate::sleep(self : SleepGate, ms : Int32) -> Unit {
   self.requests.put(ms)
   self.releases.get()
 }

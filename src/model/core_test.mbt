@@ -219,9 +219,9 @@ test "image hash animated detection" {
 
 ///|
 test "nullable helpers" {
-  let v : @model.Nullable[Int] = Value(1)
+  let v : @model.Nullable[Int32] = Value(1)
   assert_true(v.to_option() == Some(1))
-  let n : @model.Nullable[Int] = Null
+  let n : @model.Nullable[Int32] = Null
   assert_true(n.to_option() is None)
   assert_true(@model.Nullable::from_option(Some(2)) == Value(2))
 }

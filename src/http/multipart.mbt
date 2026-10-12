@@ -69,7 +69,7 @@ pub impl Debug for FileUpload with fn to_repr(self) {
 pub fn FileUpload::FileUpload(
   filename : String,
   content : Bytes,
-  content_type? : String = "application/octet-stream",
+  content_type~ : String = "application/octet-stream",
   description? : String,
   title? : String,
   duration_secs? : Double,
@@ -266,7 +266,7 @@ fn[T] encode_with_fresh_boundary(
 /// the caller's, so nothing is copied until the segments are joined.
 fn encode_parts(
   parts : Array[@multipart.Part],
-  random? : () -> Double = boundary_random,
+  random~ : () -> Double = boundary_random,
 ) -> (String, Array[Bytes]) raise DiscordHttpError {
   encode_with_fresh_boundary(parts, @multipart.encode_segments, random)
 }

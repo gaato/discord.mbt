@@ -16,7 +16,7 @@ pub(all) struct HttpRequest {
 /// before status-code-to-error mapping. An offline handler produces it
 /// directly.
 pub(all) struct HttpResponse {
-  status : Int
+  status : Int32
   headers : Map[String, String]
   body : Json
 }
@@ -34,7 +34,7 @@ pub type HttpMiddleware = async (
 ///|
 async fn Client::run_middleware(
   self : Client,
-  index : Int,
+  index : Int32,
   request : HttpRequest,
 ) -> HttpResponse {
   if index < self.middleware_.length() {

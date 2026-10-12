@@ -433,8 +433,8 @@ pub fn[A] Command::check(self : Command[A], check : CommandCheck) -> Command[A] 
 /// command; `self` keeps its own cooldown.
 pub fn[A] Command::cooldown(
   self : Command[A],
-  seconds~ : Int,
-  bucket? : CooldownBucket = User,
+  seconds~ : Int32,
+  bucket~ : CooldownBucket = User,
 ) -> Command[A] {
   { ..self, cooldown: Some({ seconds, bucket, }), }
 }

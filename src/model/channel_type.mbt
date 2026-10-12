@@ -20,11 +20,11 @@ pub(all) enum ChannelType {
   GuildDirectory
   GuildForum
   GuildMedia
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn ChannelType::to_int(self : ChannelType) -> Int {
+pub fn ChannelType::to_int(self : ChannelType) -> Int32 {
   match self {
     GuildText => 0
     Dm => 1
@@ -44,7 +44,7 @@ pub fn ChannelType::to_int(self : ChannelType) -> Int {
 }
 
 ///|
-pub fn ChannelType::from_int(value : Int) -> ChannelType {
+pub fn ChannelType::from_int(value : Int32) -> ChannelType {
   match value {
     0 => GuildText
     1 => Dm

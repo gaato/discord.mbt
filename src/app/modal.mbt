@@ -49,7 +49,7 @@ pub(all) suberror ModalShowError {
   UnknownCustomId(custom_id~ : String)
   NonTextInput(custom_id~ : String)
   /// The value exceeds Discord's 4000 UTF-16 unit limit for a text input.
-  ValueTooLong(custom_id~ : String, length~ : Int)
+  ValueTooLong(custom_id~ : String, length~ : Int32)
 } derive(Debug)
 
 ///|
@@ -188,11 +188,11 @@ fn prefill_modal_components(
 pub fn text_field(
   custom_id~ : String,
   label~ : String,
-  style? : @model.TextInputStyle = Short,
+  style~ : @model.TextInputStyle = Short,
   description? : String,
   placeholder? : String,
-  min_length? : Int,
-  max_length? : Int,
+  min_length? : Int32,
+  max_length? : Int32,
   value? : String,
 ) -> ModalField[String] {
   let input = @interaction.text_input(
@@ -227,8 +227,8 @@ pub fn select_field(
   options~ : Array[@model.SelectOption],
   description? : String,
   placeholder? : String,
-  min_values? : Int,
-  max_values? : Int,
+  min_values? : Int32,
+  max_values? : Int32,
 ) -> ModalField[Array[String]] {
   let select = @interaction.string_select(
     custom_id~,
@@ -261,8 +261,8 @@ pub fn file_field(
   custom_id~ : String,
   label~ : String,
   description? : String,
-  min_values? : Int,
-  max_values? : Int,
+  min_values? : Int32,
+  max_values? : Int32,
   file_types? : Array[@model.FileTypeFilter],
 ) -> ModalField[Array[@model.Attachment]] {
   let upload = @interaction.file_upload(
@@ -577,7 +577,7 @@ pub fn ModalReply::message(
   files? : Array[@dhttp.FileUpload],
   allowed_mentions? : @model.AllowedMentions,
   poll? : @model.PollCreateRequest,
-  ephemeral? : Bool = false,
+  ephemeral~ : Bool = false,
 ) -> ModalReply {
   Message(
     InitialResponse::message(
@@ -597,7 +597,7 @@ pub fn ModalReply::message(
 /// fields keep their current value (see `MessageUpdate`).
 pub fn ModalReply::update_message(
   content? : String,
-  clear_content? : Bool = false,
+  clear_content~ : Bool = false,
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
   allowed_mentions? : @model.AllowedMentions,
@@ -744,7 +744,7 @@ pub fn ModalImmediateCtx::guild_id(self : ModalImmediateCtx) -> @model.GuildId? 
 ///|
 /// Milliseconds left to return the initial response, or `None` when the
 /// executor set no deadline.
-pub fn ModalImmediateCtx::remaining_ms(self : ModalImmediateCtx) -> Int? {
+pub fn ModalImmediateCtx::remaining_ms(self : ModalImmediateCtx) -> Int32? {
   self.raw_.remaining_ms()
 }
 
@@ -837,7 +837,7 @@ pub async fn ModalDeferredCtx::original(
 pub async fn ModalDeferredCtx::edit_original(
   self : ModalDeferredCtx,
   content? : String,
-  clear_content? : Bool = false,
+  clear_content~ : Bool = false,
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
   allowed_mentions? : @model.AllowedMentions,
@@ -873,7 +873,7 @@ pub async fn ModalDeferredCtx::followup(
   files? : Array[@dhttp.FileUpload],
   allowed_mentions? : @model.AllowedMentions,
   poll? : @model.PollCreateRequest,
-  ephemeral? : Bool = false,
+  ephemeral~ : Bool = false,
 ) -> @model.Message {
   self.raw_.followup(
     content?,
@@ -902,7 +902,7 @@ pub async fn ModalDeferredCtx::edit_followup(
   self : ModalDeferredCtx,
   message_id : @model.MessageId,
   content? : String,
-  clear_content? : Bool = false,
+  clear_content~ : Bool = false,
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
   allowed_mentions? : @model.AllowedMentions,
@@ -961,8 +961,8 @@ pub async fn[A] ModalDeferredCtx::wait_for_component(
   self : ModalDeferredCtx,
   route : ComponentRoute[A],
   state : A,
-  from? : WaitFrom = Invoker,
-  timeout_ms? : Int,
+  from~ : WaitFrom = Invoker,
+  timeout_ms? : Int32,
 ) -> @framework.ComponentCtx? {
   wait_for_route(
     self.waiter_,

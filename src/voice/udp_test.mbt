@@ -30,7 +30,7 @@ impl @voice.VoiceUdp for FakeVoiceUdp with fn close(self) {
 }
 
 ///|
-fn discovery_response(ssrc : UInt, address : String, port : Int) -> Bytes {
+fn discovery_response(ssrc : UInt32, address : String, port : Int32) -> Bytes {
   let bytes : Array[Byte] = [
     0,
     2,

@@ -11,20 +11,20 @@ priv struct CoordinatorState {
   limiter : @ratelimit.InMemoryRateLimiter
   cooldown : @cooldown.InMemoryCooldownStore
   owners : Map[String, BucketOwner]
-  next_connection_id : Ref[Int]
-  next_lease_id : Ref[Int]
+  next_connection_id : Ref[Int32]
+  next_lease_id : Ref[Int32]
 }
 
 ///|
 priv struct ConnectionState {
-  id : Int
-  held_buckets : Ref[Map[String, Int]]
+  id : Int32
+  held_buckets : Ref[Map[String, Int32]]
 }
 
 ///|
 priv struct BucketOwner {
   connection : ConnectionState
-  lease : Int
+  lease : Int32
 }
 
 ///|
@@ -35,9 +35,9 @@ priv struct BucketOwner {
 pub async fn[X] Coordinator::serve(
   group : @async.TaskGroup[X],
   addr~ : String,
-  max_concurrency? : Int = 1,
-  identify_spacing_ms? : Int = 5250,
-  global_limit? : Int = 50,
+  max_concurrency~ : Int32 = 1,
+  identify_spacing_ms~ : Int32 = 5250,
+  global_limit~ : Int32 = 50,
 ) -> Coordinator {
   if max_concurrency <= 0 {
     raise CoordinatorError::InvalidConfig(

@@ -144,7 +144,7 @@ test "entitlement owner type round-trips known and unknown values" {
 /// Pins the documented table (ACTIVE=0, INACTIVE=1, ENDING=2); the first
 /// transcription had 1 and 2 reversed and no test to catch it.
 test "subscription status matches the documented values" {
-  let table : Array[(@model.SubscriptionStatus, Int)] = [
+  let table : Array[(@model.SubscriptionStatus, Int32)] = [
     (Active, 0),
     (Inactive, 1),
     (Ending, 2),

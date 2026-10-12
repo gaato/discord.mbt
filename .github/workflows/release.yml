@@ -19,14 +19,14 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  MOONBIT_INSTALL_VERSION: "0.10.14+7d59c7ec9"
+  MOONBIT_INSTALL_VERSION: "0.10.15+943464bfa"
 
 jobs:
   publish:
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
-    container: ghcr.io/gaato/moonbit:0.10.14-7d59c7ec9
+    container: ghcr.io/gaato/moonbit:0.10.15-943464bfa
     environment: mooncakes
     steps:
       - name: Check out the commit CI validated

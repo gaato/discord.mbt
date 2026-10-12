@@ -602,7 +602,11 @@ async test "rejected Bot resume uses the next actual READY" {
 }
 
 ///|
-fn command_frame(sequence : Int, id : String, name? : String = "raw") -> String {
+fn command_frame(
+  sequence : Int32,
+  id : String,
+  name~ : String = "raw",
+) -> String {
   (
     #|{"op":0,"s":SEQUENCE_PLACEHOLDER,"t":"INTERACTION_CREATE","d":{"id":"ID_PLACEHOLDER","application_id":"42","type":2,"token":"interaction-token","version":1,"user":{"id":"200000000000000001","username":"nelly","discriminator":"0","global_name":"Nelly","avatar":null},"data":{"id":"600000000000000001","name":"NAME_PLACEHOLDER","type":1}}}
   )
@@ -612,14 +616,14 @@ fn command_frame(sequence : Int, id : String, name? : String = "raw") -> String 
 }
 
 ///|
-fn malformed_interaction_frame(sequence : Int) -> String {
+fn malformed_interaction_frame(sequence : Int32) -> String {
   (
     #|{"op":0,"s":SEQUENCE_PLACEHOLDER,"t":"INTERACTION_CREATE","d":{"id":"500000000000000099","application_id":"42","type":"not-a-number","token":"payload-must-stay-private","version":1}}
   ).replace(old="SEQUENCE_PLACEHOLDER", new=sequence.to_string())
 }
 
 ///|
-fn message_delete_frame(sequence : Int, id : String) -> String {
+fn message_delete_frame(sequence : Int32, id : String) -> String {
   (
     #|{"op":0,"s":SEQUENCE_PLACEHOLDER,"t":"MESSAGE_DELETE","d":{"id":"ID_PLACEHOLDER","channel_id":"6"}}
   )
@@ -628,7 +632,7 @@ fn message_delete_frame(sequence : Int, id : String) -> String {
 }
 
 ///|
-fn message_create_frame(sequence : Int, id : String) -> String {
+fn message_create_frame(sequence : Int32, id : String) -> String {
   (
     #|{"op":0,"s":SEQUENCE_PLACEHOLDER,"t":"MESSAGE_CREATE","d":{"id":"ID_PLACEHOLDER","channel_id":"6","author":{"id":"200","username":"nelly","discriminator":"0","avatar":null},"content":"cached","timestamp":"2025-06-01T10:00:00Z","edited_timestamp":null,"tts":false,"mention_everyone":false,"mentions":[],"mention_roles":[],"attachments":[],"embeds":[],"pinned":false,"type":0}}
   )
@@ -637,7 +641,7 @@ fn message_create_frame(sequence : Int, id : String) -> String {
 }
 
 ///|
-fn message_update_frame(sequence : Int, id : String) -> String {
+fn message_update_frame(sequence : Int32, id : String) -> String {
   (
     #|{"op":0,"s":SEQUENCE_PLACEHOLDER,"t":"MESSAGE_UPDATE","d":{"id":"ID_PLACEHOLDER","channel_id":"6","author":{"id":"200","username":"nelly","discriminator":"0","avatar":null},"content":"edited","timestamp":"2025-06-01T10:00:00Z","edited_timestamp":"2025-06-01T10:05:00Z","tts":false,"mention_everyone":false,"mentions":[],"mention_roles":[],"attachments":[],"embeds":[],"pinned":false,"type":0}}
   )
@@ -646,7 +650,7 @@ fn message_update_frame(sequence : Int, id : String) -> String {
 }
 
 ///|
-fn channel_create_frame(sequence : Int, id : String) -> String {
+fn channel_create_frame(sequence : Int32, id : String) -> String {
   (
     #|{"op":0,"s":SEQUENCE_PLACEHOLDER,"t":"CHANNEL_CREATE","d":{"id":"ID_PLACEHOLDER","type":11,"guild_id":"100","name":"cached-thread"}}
   )
@@ -1418,7 +1422,7 @@ async test "bot run dispatches concurrently, survives handlers, and shuts down" 
   bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
-  let event_calls : @aqueue.Queue[Int] = Queue(kind=Unbounded)
+  let event_calls : @aqueue.Queue[Int32] = Queue(kind=Unbounded)
   let event_count = Ref(0)
   bot.on(Events::message_delete(), (_, _) => {
     event_count.val += 1
@@ -1608,7 +1612,7 @@ async test "saturated event handlers never delay interaction routing" {
 }
 
 ///|
-fn component_frame(sequence : Int, id : String, custom_id : String) -> String {
+fn component_frame(sequence : Int32, id : String, custom_id : String) -> String {
   (
     #|{"op":0,"s":SEQUENCE_PLACEHOLDER,"t":"INTERACTION_CREATE","d":{"id":"ID_PLACEHOLDER","application_id":"42","type":3,"token":"component-token","version":1,"user":{"id":"200000000000000001","username":"nelly","discriminator":"0","global_name":"Nelly","avatar":null},"message":{"id":"700000000000000001","channel_id":"6","author":{"id":"42","username":"bot","discriminator":"0","avatar":null},"content":"confirm?","timestamp":"2025-06-01T10:00:00Z","edited_timestamp":null,"tts":false,"mention_everyone":false,"mentions":[],"mention_roles":[],"attachments":[],"embeds":[],"pinned":false,"type":0},"data":{"custom_id":"CUSTOM_ID_PLACEHOLDER","component_type":2}}}
   )

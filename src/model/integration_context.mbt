@@ -3,13 +3,13 @@
 pub(all) enum ApplicationIntegrationType {
   GuildInstall
   UserInstall
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
 pub fn ApplicationIntegrationType::to_int(
   self : ApplicationIntegrationType,
-) -> Int {
+) -> Int32 {
   match self {
     GuildInstall => 0
     UserInstall => 1
@@ -19,7 +19,7 @@ pub fn ApplicationIntegrationType::to_int(
 
 ///|
 pub fn ApplicationIntegrationType::from_int(
-  value : Int,
+  value : Int32,
 ) -> ApplicationIntegrationType {
   match value {
     0 => GuildInstall
@@ -53,11 +53,11 @@ pub(all) enum InteractionContextType {
   Guild
   BotDm
   PrivateChannel
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn InteractionContextType::to_int(self : InteractionContextType) -> Int {
+pub fn InteractionContextType::to_int(self : InteractionContextType) -> Int32 {
   match self {
     Guild => 0
     BotDm => 1
@@ -67,7 +67,9 @@ pub fn InteractionContextType::to_int(self : InteractionContextType) -> Int {
 }
 
 ///|
-pub fn InteractionContextType::from_int(value : Int) -> InteractionContextType {
+pub fn InteractionContextType::from_int(
+  value : Int32,
+) -> InteractionContextType {
   match value {
     0 => Guild
     1 => BotDm

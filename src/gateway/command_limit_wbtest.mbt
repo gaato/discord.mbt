@@ -1,6 +1,6 @@
 ///|
 async test "command limiter waits out the sliding window when full" {
-  let waits : Array[Int] = []
+  let waits : Array[Int32] = []
   let holder : Ref[CommandLimiter?] = Ref(None)
   let limiter = CommandLimiter(limit=1, sleeper=ms => {
     waits.push(ms)

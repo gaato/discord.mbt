@@ -7,7 +7,7 @@ pub(all) suberror VoiceError {
   JoinTimeout
   ShimUnavailable(reason~ : String)
   NoCompatibleMode(offered~ : Array[String])
-  GatewayClosed(code~ : Int?)
+  GatewayClosed(code~ : Int32?)
   IpDiscoveryFailed(reason~ : String)
   Disconnected
 } derive(Debug)
@@ -19,7 +19,7 @@ pub(all) enum VoiceConnectionState {
   Ready
   Reconnecting
   Rejoining
-  Closed(code~ : Int?)
+  Closed(code~ : Int32?)
 } derive(Debug, Eq)
 
 ///|
@@ -33,7 +33,7 @@ pub(all) struct VoiceCredentials {
 
 ///|
 priv struct PlaybackRequest {
-  generation : Int
+  generation : Int32
   source : &AudioSource
 }
 
@@ -49,9 +49,9 @@ pub struct VoiceConnection {
   priv leave_ : async () -> Unit
   priv rejoin_ : async () -> VoiceCredentials
   priv connector_ : async (String) -> &VoiceTransport
-  priv udp_opener_ : async (String, Int) -> &VoiceUdp
+  priv udp_opener_ : async (String, Int32) -> &VoiceUdp
   priv telemetry_ : (VoiceTelemetry) -> Unit
-  priv sleeper_ : async (Int) -> Unit
+  priv sleeper_ : async (Int32) -> Unit
   priv rand_ : @random.Rand
   priv receiver : ReceivePipeline
   priv roster : Set[String]
@@ -60,13 +60,13 @@ pub struct VoiceConnection {
   priv mut cipher : TransportCipher?
   priv mut dave : DaveMachine?
   priv mut pending_dave_external_sender : Bytes?
-  priv mut ssrc : UInt?
+  priv mut ssrc : UInt32?
   priv mut state_ : VoiceConnectionState
   priv mut failure : VoiceError?
   priv mut closing : Bool
   priv mut disconnecting : Bool
-  priv mut session_generation : Int
-  priv mut playback_generation : Int
+  priv mut session_generation : Int32
+  priv mut playback_generation : Int32
   priv mut playback_stop : Ref[Bool]?
 }
 
@@ -82,7 +82,7 @@ fn EncryptionMode::wire_name(self : EncryptionMode) -> String {
 fn VoiceConnection::set_failure(
   self : VoiceConnection,
   error : VoiceError,
-  code~ : Int?,
+  code~ : Int32?,
 ) -> Unit {
   if self.failure is None {
     self.failure = Some(error)
@@ -152,11 +152,11 @@ async fn VoiceConnection::terminal_teardown(
 ///|
 async fn VoiceConnection::select_protocol(
   self : VoiceConnection,
-  ssrc : UInt,
+  ssrc : UInt32,
   ip : String,
-  port : Int,
+  port : Int32,
   modes : Array[String],
-) -> (String, Int, String) {
+) -> (String, Int32, String) {
   let mode = EncryptionMode::negotiate(modes) catch {
     NoCompatibleMode(modes~) => {
       self.set_failure(NoCompatibleMode(offered=modes), code=None)
@@ -241,7 +241,7 @@ async fn VoiceConnection::establish_session(
   self : VoiceConnection,
   mode_name : String,
   secret_key : Bytes,
-  dave_protocol_version : Int,
+  dave_protocol_version : Int32,
 ) -> Unit {
   let mode = EncryptionMode::negotiate([mode_name]) catch {
     NoCompatibleMode(modes~) => {
@@ -562,12 +562,12 @@ pub fn[X] VoiceConnection::start(
   channel_id~ : UInt64,
   leave~ : async () -> Unit,
   rejoin~ : async () -> VoiceCredentials,
-  connector? : async (String) -> &VoiceTransport = connect_voice_websocket,
-  udp_opener? : async (String, Int) -> &VoiceUdp = open_voice_udp,
-  receive? : Bool = true,
-  telemetry? : (VoiceTelemetry) -> Unit = _ => (),
-  sleeper? : async (Int) -> Unit = ms => @async.sleep(ms),
-  rand? : @random.Rand = @random.Rand::new(),
+  connector~ : async (String) -> &VoiceTransport = connect_voice_websocket,
+  udp_opener~ : async (String, Int32) -> &VoiceUdp = open_voice_udp,
+  receive~ : Bool = true,
+  telemetry~ : (VoiceTelemetry) -> Unit = _ => (),
+  sleeper~ : async (Int32) -> Unit = ms => @async.sleep(ms),
+  rand~ : @random.Rand = @random.Rand(),
 ) -> VoiceConnection {
   let receiver = ReceivePipeline::new(telemetry)
   let connection = VoiceConnection::{
@@ -613,7 +613,7 @@ pub fn[X] VoiceConnection::start(
 /// Wait until the current connection handshake reaches `Ready`.
 pub async fn VoiceConnection::wait_ready(
   self : VoiceConnection,
-  timeout_ms? : Int = 10000,
+  timeout_ms~ : Int32 = 10000,
 ) -> Unit raise VoiceError {
   @async.with_timeout(
     timeout_ms,
@@ -677,7 +677,7 @@ pub async fn VoiceConnection::stop(self : VoiceConnection) -> Unit {
 /// speaking indicators.
 pub async fn VoiceConnection::set_speaking(
   self : VoiceConnection,
-  flags : Int,
+  flags : Int32,
 ) -> Unit {
   guard self.gateway is Some(gateway) && self.ssrc is Some(ssrc) else {
     raise VoiceError::Disconnected

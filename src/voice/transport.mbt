@@ -12,13 +12,13 @@ pub(open) trait VoiceTransport {
   async fn recv(Self) -> VoiceFrame
   async fn send_text(Self, String) -> Unit
   async fn send_binary(Self, Bytes) -> Unit
-  async fn close(Self, code~ : Int) -> Unit
+  async fn close(Self, code~ : Int32) -> Unit
 }
 
 ///|
 /// Raised when a voice transport is closed or cannot continue.
 pub(all) suberror VoiceTransportClosed {
-  VoiceTransportClosed(code~ : Int?, reason~ : String)
+  VoiceTransportClosed(code~ : Int32?, reason~ : String)
 } derive(Debug)
 
 ///|
@@ -82,7 +82,7 @@ impl VoiceTransport for VoiceWsTransport with fn close(self, code~) {
 }
 
 ///|
-fn voice_close_code_to_int(code : @websocket.CloseCode) -> Int {
+fn voice_close_code_to_int(code : @websocket.CloseCode) -> Int32 {
   match code {
     Normal => 1000
     GoingAway => 1001

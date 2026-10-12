@@ -102,7 +102,7 @@ pub(all) enum CooldownBucket {
 
 ///|
 priv struct CooldownConfig {
-  seconds : Int
+  seconds : Int32
   bucket : CooldownBucket
 }
 

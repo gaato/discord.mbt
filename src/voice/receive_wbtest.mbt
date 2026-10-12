@@ -3,7 +3,7 @@ struct ReceiveTestDave {
   decrypted_users : Array[UInt64]
   decrypted_frames : Array[Bytes]
   remote_users : Set[UInt64]
-  mut active_version : Int
+  mut active_version : Int32
   reject_unmarked_frames : Bool
 }
 
@@ -114,9 +114,9 @@ impl DaveBackend for ReceiveTestDave with fn decrypt_opus(self, user_id~, frame)
 
 ///|
 fn ReceiveTestDave::new(
-  active_version~ : Int,
-  remote_users? : Array[UInt64] = [],
-  reject_unmarked_frames? : Bool = false,
+  active_version~ : Int32,
+  remote_users~ : Array[UInt64] = [],
+  reject_unmarked_frames~ : Bool = false,
 ) -> ReceiveTestDave {
   {
     decrypted_users: [],

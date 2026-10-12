@@ -73,7 +73,7 @@ fn LimitChecker::command_name(
   for char in name {
     if char.is_whitespace() ||
       char.is_ascii_uppercase() ||
-      (char.to_int() < 0x80 && !(char is ('a'..='z' | '0'..='9' | '-' | '_'))) {
+      (char.to_int() < 0x80 && !(char is ('a'..<='z' | '0'..<='9' | '-' | '_'))) {
       self.report(
         path,
         "\{repr_char(char)} is not allowed (lowercase letters, digits, `-`, and `_`)",
@@ -179,7 +179,7 @@ fn LimitChecker::command_options(
 ///|
 /// A field's contribution to the 8000-unit command total: the longest of
 /// the default value and its localizations.
-fn longest_localized(value : String, localized : Map[String, String]?) -> Int {
+fn longest_localized(value : String, localized : Map[String, String]?) -> Int32 {
   let mut longest = value.length()
   if localized is Some(localized) {
     for _, text in localized {
@@ -192,7 +192,7 @@ fn longest_localized(value : String, localized : Map[String, String]?) -> Int {
 }
 
 ///|
-fn option_text_units(option : CommandOption) -> Int {
+fn option_text_units(option : CommandOption) -> Int32 {
   let mut total = longest_localized(
       option.name,
       nullable_map(option.name_localizations),

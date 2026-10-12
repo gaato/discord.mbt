@@ -1,26 +1,26 @@
 ///|
 /// A decoded voice gateway v8 message.
 pub(all) enum VoiceMessage {
-  Ready(ssrc~ : UInt, ip~ : String, port~ : Int, modes~ : Array[String])
-  Hello(heartbeat_interval~ : Int)
+  Ready(ssrc~ : UInt32, ip~ : String, port~ : Int32, modes~ : Array[String])
+  Hello(heartbeat_interval~ : Int32)
   SessionDescription(
     mode~ : String,
     secret_key~ : Bytes,
-    dave_protocol_version~ : Int
+    dave_protocol_version~ : Int32
   )
   HeartbeatAck(nonce~ : Int64)
-  Speaking(ssrc~ : UInt, user_id~ : String, flags~ : Int)
+  Speaking(ssrc~ : UInt32, user_id~ : String, flags~ : Int32)
   ClientsConnect(user_ids~ : Array[String])
   ClientDisconnect(user_id~ : String)
   Resumed
-  DavePrepareTransition(transition_id~ : Int, protocol_version~ : Int)
-  DaveExecuteTransition(transition_id~ : Int)
-  DavePrepareEpoch(epoch~ : Int, protocol_version~ : Int)
+  DavePrepareTransition(transition_id~ : Int32, protocol_version~ : Int32)
+  DaveExecuteTransition(transition_id~ : Int32)
+  DavePrepareEpoch(epoch~ : Int32, protocol_version~ : Int32)
   DaveMlsExternalSender(payload~ : Bytes)
   DaveMlsProposals(payload~ : Bytes)
-  DaveMlsAnnounceCommitTransition(transition_id~ : Int, commit~ : Bytes)
-  DaveMlsWelcome(transition_id~ : Int, welcome~ : Bytes)
-  Unknown(op~ : Int)
+  DaveMlsAnnounceCommitTransition(transition_id~ : Int32, commit~ : Bytes)
+  DaveMlsWelcome(transition_id~ : Int32, welcome~ : Bytes)
+  Unknown(op~ : Int32)
 } derive(Debug, Eq)
 
 ///|
@@ -36,7 +36,7 @@ fn invalid_text(reason : String) -> VoiceEnvelopeError {
 }
 
 ///|
-fn int_field(value : Json, field : String) -> Int raise VoiceEnvelopeError {
+fn int_field(value : Json, field : String) -> Int32 raise VoiceEnvelopeError {
   guard value is Number(number, ..) else {
     raise invalid_text("expected numeric field \{field}")
   }
@@ -48,7 +48,7 @@ fn int_field(value : Json, field : String) -> Int raise VoiceEnvelopeError {
 }
 
 ///|
-fn uint_field(value : Json, field : String) -> UInt raise VoiceEnvelopeError {
+fn uint_field(value : Json, field : String) -> UInt32 raise VoiceEnvelopeError {
   guard value is Number(number, ..) && number >= 0.0 else {
     raise invalid_text("expected unsigned field \{field}")
   }
@@ -110,7 +110,7 @@ fn byte_array(value : Json, field : String) -> Bytes raise VoiceEnvelopeError {
 /// buffered-resume sequence number.
 pub fn parse_text_frame(
   text : String,
-) -> (VoiceMessage, Int?) raise VoiceEnvelopeError {
+) -> (VoiceMessage, Int32?) raise VoiceEnvelopeError {
   let root = @json.parse(text) catch {
     error => raise invalid_text("invalid JSON: \{error}")
   }
@@ -228,7 +228,7 @@ pub fn parse_text_frame(
 /// big-endian v8 sequence number and the third byte is the opcode.
 pub fn parse_binary_frame(
   bytes : Bytes,
-) -> (VoiceMessage, Int?) raise VoiceEnvelopeError {
+) -> (VoiceMessage, Int32?) raise VoiceEnvelopeError {
   if bytes.length() < 3 {
     raise InvalidBinaryFrame(reason="frame is shorter than sequence and opcode")
   }
@@ -267,7 +267,7 @@ pub fn encode_identify(
   user_id~ : String,
   session_id~ : String,
   token~ : String,
-  max_dave_protocol_version? : UInt16 = 0,
+  max_dave_protocol_version~ : UInt16 = 0,
 ) -> Json {
   {
     "op": 0,
@@ -284,7 +284,7 @@ pub fn encode_identify(
 ///|
 /// Voice gateway Heartbeat (opcode 3) payload carrying the nonce and
 /// last acknowledged server sequence.
-pub fn encode_heartbeat(t~ : Int64, seq_ack~ : Int) -> Json {
+pub fn encode_heartbeat(t~ : Int64, seq_ack~ : Int32) -> Json {
   {
     "op": 3,
     "d": {
@@ -299,7 +299,7 @@ pub fn encode_heartbeat(t~ : Int64, seq_ack~ : Int) -> Json {
 /// discovered UDP address and chosen encryption mode.
 pub fn encode_select_protocol(
   address~ : String,
-  port~ : Int,
+  port~ : Int32,
   mode~ : String,
 ) -> Json {
   {
@@ -317,7 +317,11 @@ pub fn encode_select_protocol(
 
 ///|
 /// Voice gateway Speaking (opcode 5) payload for the sender's SSRC.
-pub fn encode_speaking(ssrc~ : UInt, flags~ : Int, delay? : Int = 0) -> Json {
+pub fn encode_speaking(
+  ssrc~ : UInt32,
+  flags~ : Int32,
+  delay~ : Int32 = 0,
+) -> Json {
   {
     "op": 5,
     "d": {
@@ -335,7 +339,7 @@ pub fn encode_resume(
   server_id~ : String,
   session_id~ : String,
   token~ : String,
-  seq_ack~ : Int,
+  seq_ack~ : Int32,
 ) -> Json {
   {
     "op": 7,
@@ -351,20 +355,20 @@ pub fn encode_resume(
 ///|
 /// DAVE Transition Ready (opcode 23) payload acknowledging an announced
 /// protocol transition.
-pub fn encode_transition_ready(transition_id~ : Int) -> Json {
+pub fn encode_transition_ready(transition_id~ : Int32) -> Json {
   { "op": 23, "d": { "transition_id": transition_id } }
 }
 
 ///|
 /// DAVE Invalid Commit/Welcome (opcode 31) payload asking the server to
 /// reset the group after a rejected MLS message.
-pub fn encode_invalid_commit_welcome(transition_id~ : Int) -> Json {
+pub fn encode_invalid_commit_welcome(transition_id~ : Int32) -> Json {
   { "op": 31, "d": { "transition_id": transition_id } }
 }
 
 ///|
 /// Prefix a client-to-server binary DAVE payload with its one-byte opcode.
-pub fn encode_binary_client_frame(op : Int, payload : Bytes) -> Bytes {
+pub fn encode_binary_client_frame(op : Int32, payload : Bytes) -> Bytes {
   let bytes : Array[Byte] = [op.to_byte()]
   for byte in payload {
     bytes.push(byte)

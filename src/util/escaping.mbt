@@ -6,7 +6,7 @@ fn is_ascii_digit(c : Char) -> Bool {
 ///|
 fn chars_have_prefix(
   chars : Array[Char],
-  start : Int,
+  start : Int32,
   expected : String,
 ) -> Bool {
   let pattern = expected.to_array()
@@ -66,7 +66,7 @@ pub fn escape_mentions(text : String) -> String {
 }
 
 ///|
-fn is_url_start(chars : Array[Char], index : Int) -> Bool {
+fn is_url_start(chars : Array[Char], index : Int32) -> Bool {
   chars_have_prefix(chars, index, "http://") ||
   chars_have_prefix(chars, index, "https://") ||
   chars_have_prefix(chars, index, "steam://")

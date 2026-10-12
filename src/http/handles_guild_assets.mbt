@@ -259,11 +259,11 @@ pub async fn GuildRef::create_scheduled_event(
   scheduled_start_time : @model.Timestamp,
   entity_type : @model.GuildScheduledEventEntityType,
   channel_id? : @model.ChannelId,
-  clear_channel_id? : Bool = false,
+  clear_channel_id~ : Bool = false,
   entity_metadata? : @model.EntityMetadata,
-  clear_entity_metadata? : Bool = false,
+  clear_entity_metadata~ : Bool = false,
   scheduled_end_time? : @model.Timestamp,
-  clear_scheduled_end_time? : Bool = false,
+  clear_scheduled_end_time~ : Bool = false,
   description? : String,
   image? : String,
   recurrence_rule? : @model.GuildScheduledEventRecurrenceRule,
@@ -394,7 +394,7 @@ pub async fn StickerRef::edit(
   self : StickerRef,
   name? : String,
   description? : String,
-  clear_description? : Bool = false,
+  clear_description~ : Bool = false,
   tags? : String,
   reason? : String,
 ) -> @model.Sticker raise DiscordHttpError {
@@ -437,9 +437,9 @@ pub async fn SoundboardSoundRef::edit(
   name? : String,
   volume? : Double,
   emoji_id? : @model.EmojiId,
-  clear_emoji_id? : Bool = false,
+  clear_emoji_id~ : Bool = false,
   emoji_name? : String,
-  clear_emoji_name? : Bool = false,
+  clear_emoji_name~ : Bool = false,
   reason? : String,
 ) -> @model.SoundboardSound raise DiscordHttpError {
   self.client.modify_guild_soundboard_sound(
@@ -486,22 +486,22 @@ pub async fn ScheduledEventRef::fetch(
 pub async fn ScheduledEventRef::edit(
   self : ScheduledEventRef,
   channel_id? : @model.ChannelId,
-  clear_channel_id? : Bool = false,
+  clear_channel_id~ : Bool = false,
   entity_metadata? : @model.EntityMetadata,
-  clear_entity_metadata? : Bool = false,
+  clear_entity_metadata~ : Bool = false,
   name? : String,
   privacy_level? : @model.GuildScheduledEventPrivacyLevel,
   scheduled_start_time? : @model.Timestamp,
   scheduled_end_time? : @model.Timestamp,
-  clear_scheduled_end_time? : Bool = false,
+  clear_scheduled_end_time~ : Bool = false,
   description? : String,
-  clear_description? : Bool = false,
+  clear_description~ : Bool = false,
   entity_type? : @model.GuildScheduledEventEntityType,
   status? : @model.GuildScheduledEventStatus,
   image? : String,
-  clear_image? : Bool = false,
+  clear_image~ : Bool = false,
   recurrence_rule? : @model.GuildScheduledEventRecurrenceRule,
-  clear_recurrence_rule? : Bool = false,
+  clear_recurrence_rule~ : Bool = false,
   reason? : String,
 ) -> @model.GuildScheduledEvent raise DiscordHttpError {
   self.client.modify_guild_scheduled_event(
@@ -548,7 +548,7 @@ pub fn ScheduledEventRef::users(
   with_member? : Bool,
   before? : @model.UserId,
   after? : @model.UserId,
-  page_size? : Int = 100,
+  page_size~ : Int32 = 100,
 ) -> Paginator[@model.GuildScheduledEventUser] raise DiscordHttpError {
   self.client.paginate_guild_scheduled_event_users(
     self.guild_id,
@@ -642,7 +642,7 @@ pub async fn TemplateRef::edit(
   self : TemplateRef,
   name? : String,
   description? : String,
-  clear_description? : Bool = false,
+  clear_description~ : Bool = false,
 ) -> @model.GuildTemplate raise DiscordHttpError {
   self.client.modify_guild_template(
     self.guild_id,

@@ -3,13 +3,13 @@
 pub(all) enum VoiceEvent {
   OpusReceived(
     user_id~ : String?,
-    ssrc~ : UInt,
-    sequence~ : Int,
-    timestamp~ : UInt,
+    ssrc~ : UInt32,
+    sequence~ : Int32,
+    timestamp~ : UInt32,
     opus~ : Bytes
   )
-  PacketsLost(user_id~ : String?, ssrc~ : UInt, count~ : Int)
-  SpeakingChanged(user_id~ : String, ssrc~ : UInt, flags~ : Int)
+  PacketsLost(user_id~ : String?, ssrc~ : UInt32, count~ : Int32)
+  SpeakingChanged(user_id~ : String, ssrc~ : UInt32, flags~ : Int32)
   UserConnected(user_id~ : String)
   UserDisconnected(user_id~ : String)
   ConnectionReady
@@ -23,16 +23,16 @@ pub(all) enum VoiceTelemetry {
   /// A DAVE media context became active after its local key ratchet was
   /// installed successfully. Version zero denotes passthrough; positive
   /// versions encrypt outbound Opus frames through libdave.
-  DaveMediaContextActivated(protocol_version~ : Int)
+  DaveMediaContextActivated(protocol_version~ : Int32)
   /// A binary DAVE control message was accepted by the voice transport.
   /// `payload_bytes` excludes the one-byte opcode prefix.
-  DaveBinaryControlSent(opcode~ : Int, payload_bytes~ : Int)
+  DaveBinaryControlSent(opcode~ : Int32, payload_bytes~ : Int32)
   PacketDropped(reason~ : String)
   DaveEncryptDropped(reason~ : String)
   DaveDecryptDropped(
     user_id~ : String?,
-    ssrc~ : UInt,
-    count~ : Int,
+    ssrc~ : UInt32,
+    count~ : Int32,
     reason~ : String
   )
 } derive(Debug, Eq)
@@ -40,17 +40,17 @@ pub(all) enum VoiceTelemetry {
 ///|
 priv struct ReceivedOpus {
   user_id : String?
-  ssrc : UInt
-  sequence : Int
-  timestamp : UInt
+  ssrc : UInt32
+  sequence : Int32
+  timestamp : UInt32
   opus : Bytes
 }
 
 ///|
 priv struct ReceivePipeline {
-  users_by_ssrc : Map[UInt, String]
-  reorder_by_ssrc : Map[UInt, ReorderBuffer[ReceivedOpus]]
-  mut dave_drop_count : Int
+  users_by_ssrc : Map[UInt32, String]
+  reorder_by_ssrc : Map[UInt32, ReorderBuffer[ReceivedOpus]]
+  mut dave_drop_count : Int32
   telemetry : (VoiceTelemetry) -> Unit
 }
 
@@ -86,7 +86,7 @@ fn ReceivePipeline::handle_gateway_message(
     ClientsConnect(user_ids~) =>
       user_ids.map(user_id => UserConnected(user_id~))
     ClientDisconnect(user_id~) => {
-      let removed : Array[UInt] = []
+      let removed : Array[UInt32] = []
       for ssrc, mapped_user_id in self.users_by_ssrc {
         if mapped_user_id == user_id {
           removed.push(ssrc)
@@ -144,7 +144,7 @@ fn ReceivePipeline::drop_packet(
 fn ReceivePipeline::drop_dave_packet(
   self : ReceivePipeline,
   user_id : String?,
-  ssrc : UInt,
+  ssrc : UInt32,
   reason : String,
 ) -> Array[VoiceEvent] {
   self.dave_drop_count += 1

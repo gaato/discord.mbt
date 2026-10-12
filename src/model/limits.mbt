@@ -47,8 +47,8 @@ fn LimitChecker::text(
   self : LimitChecker,
   path : String,
   text : String?,
-  min? : Int = 0,
-  max~ : Int,
+  min~ : Int32 = 0,
+  max~ : Int32,
   custom_id? : String,
 ) -> Unit {
   guard text is Some(text) else { return }
@@ -64,9 +64,9 @@ fn LimitChecker::text(
 fn LimitChecker::count(
   self : LimitChecker,
   path : String,
-  count : Int?,
-  min~ : Int,
-  max~ : Int,
+  count : Int32?,
+  min~ : Int32,
+  max~ : Int32,
   custom_id? : String,
 ) -> Unit {
   if count is Some(count) && (count < min || count > max) {
@@ -79,8 +79,8 @@ fn LimitChecker::count(
 fn LimitChecker::ordered(
   self : LimitChecker,
   path : String,
-  min : Int?,
-  max : Int?,
+  min : Int32?,
+  max : Int32?,
   custom_id? : String,
 ) -> Unit {
   if min is Some(min) && max is Some(max) && min > max {

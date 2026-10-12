@@ -16,7 +16,7 @@ pub(all) enum StreamError {
 /// available, which could even be zero. To wait for data to be available,
 /// use the `subscribe` function to obtain a `pollable` which can be polled
 /// for using `wasi:io/poll`.
-pub(all) struct InputStream(Int)
+pub(all) struct InputStream(Int32)
 
 ///|
 /// Drops a resource handle.
@@ -38,7 +38,7 @@ pub fn InputStream::drop(self : InputStream) -> Unit {
 /// Dropping an `output-stream` while there's still an active write in
 /// progress may result in the data being lost. Before dropping the stream,
 /// be sure to fully flush your writes.
-pub(all) struct OutputStream(Int)
+pub(all) struct OutputStream(Int32)
 
 ///|
 /// Drops a resource handle.
@@ -240,7 +240,7 @@ pub fn InputStream::blocking_skip(
 /// all derived `pollable`s created with this function are dropped.
 pub fn InputStream::subscribe(self : InputStream) -> @poll.Pollable {
   let InputStream(handle) = self
-  let result : Int = wasmImportMethodInputStreamSubscribe(handle)
+  let result : Int32 = wasmImportMethodInputStreamSubscribe(handle)
   let ret = @poll.Pollable::Pollable(result)
   return ret
 }
@@ -474,7 +474,7 @@ pub fn OutputStream::blocking_flush(
 /// all derived `pollable`s created with this function are dropped.
 pub fn OutputStream::subscribe(self : OutputStream) -> @poll.Pollable {
   let OutputStream(handle) = self
-  let result : Int = wasmImportMethodOutputStreamSubscribe(handle)
+  let result : Int32 = wasmImportMethodOutputStreamSubscribe(handle)
   let ret = @poll.Pollable::Pollable(result)
   return ret
 }

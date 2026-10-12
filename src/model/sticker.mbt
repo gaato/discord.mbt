@@ -13,7 +13,7 @@ pub(all) struct Sticker {
   available : Bool?
   guild_id : GuildId?
   user : User?
-  sort_value : Int?
+  sort_value : Int32?
 } derive (
   ToJson(fields(typ(rename="type"))),
   FromJson(fields(typ(rename="type"))),
@@ -25,11 +25,11 @@ pub(all) struct Sticker {
 pub(all) enum StickerType {
   Standard
   Guild
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn StickerType::to_int(self : StickerType) -> Int {
+pub fn StickerType::to_int(self : StickerType) -> Int32 {
   match self {
     Standard => 1
     Guild => 2
@@ -38,7 +38,7 @@ pub fn StickerType::to_int(self : StickerType) -> Int {
 }
 
 ///|
-pub fn StickerType::from_int(value : Int) -> StickerType {
+pub fn StickerType::from_int(value : Int32) -> StickerType {
   match value {
     1 => Standard
     2 => Guild
@@ -66,11 +66,11 @@ pub(all) enum StickerFormatType {
   Apng
   Lottie
   Gif
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn StickerFormatType::to_int(self : StickerFormatType) -> Int {
+pub fn StickerFormatType::to_int(self : StickerFormatType) -> Int32 {
   match self {
     Png => 1
     Apng => 2
@@ -81,7 +81,7 @@ pub fn StickerFormatType::to_int(self : StickerFormatType) -> Int {
 }
 
 ///|
-pub fn StickerFormatType::from_int(value : Int) -> StickerFormatType {
+pub fn StickerFormatType::from_int(value : Int32) -> StickerFormatType {
   match value {
     1 => Png
     2 => Apng

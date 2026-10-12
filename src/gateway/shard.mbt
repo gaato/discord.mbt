@@ -3,8 +3,8 @@
 pub(all) enum ShardEvent {
   Dispatch(@model.Event)
   Connected(resumed~ : Bool)
-  Disconnected(code~ : Int?, resuming~ : Bool)
-  FatallyClosed(code~ : Int)
+  Disconnected(code~ : Int32?, resuming~ : Bool)
+  FatallyClosed(code~ : Int32)
 } derive(Debug)
 
 ///|
@@ -21,7 +21,7 @@ pub struct Shard {
   priv mut latency : Int64?
   priv mut closing : Bool
   priv mut runner : @async.Task[Unit]?
-  priv shard_id : Int
+  priv shard_id : Int32
   priv telemetry_ : (@telemetry.TelemetryEvent) -> Unit
 }
 
@@ -119,7 +119,7 @@ async fn Shard::stop_runner(self : Shard) -> Unit noraise {
 async fn Shard::finish_transport(
   self : Shard,
   transport : &GatewayTransport,
-  code~ : Int,
+  code~ : Int32,
 ) -> Unit noraise {
   self.send_gate.acquire()
   defer self.send_gate.release()
@@ -139,19 +139,19 @@ pub fn[X] Shard::start(
   group : @async.TaskGroup[X],
   token~ : String,
   intents~ : @model.Intents,
-  capabilities? : @model.GatewayCapabilities = @model.GatewayCapabilities::none(),
-  gateway_url? : String = "wss://gateway.discord.gg",
-  shard_id? : Int = 0,
-  shard_count? : Int = 1,
+  capabilities~ : @model.GatewayCapabilities = @model.GatewayCapabilities::none(),
+  gateway_url~ : String = "wss://gateway.discord.gg",
+  shard_id~ : Int32 = 0,
+  shard_count~ : Int32 = 1,
   identify_queue? : &@queue.IdentifyQueue,
-  event_filter? : (@model.EventKind) -> Bool = _ => true,
-  connector? : async (String) -> &GatewayTransport = connect_websocket,
-  compress? : Bool = false,
-  inflater_factory? : () -> &Inflater raise = new_zlib_stream_inflater,
-  queue_capacity? : Int = 256,
-  telemetry? : (@telemetry.TelemetryEvent) -> Unit = _ => (),
-  sleeper? : async (Int) -> Unit = ms => @async.sleep(ms),
-  rand? : @random.Rand = @random.Rand::new(),
+  event_filter~ : (@model.EventKind) -> Bool = _ => true,
+  connector~ : async (String) -> &GatewayTransport = connect_websocket,
+  compress~ : Bool = false,
+  inflater_factory~ : () -> &Inflater raise = new_zlib_stream_inflater,
+  queue_capacity~ : Int32 = 256,
+  telemetry~ : (@telemetry.TelemetryEvent) -> Unit = _ => (),
+  sleeper~ : async (Int32) -> Unit = ms => @async.sleep(ms),
+  rand~ : @random.Rand = @random.Rand(),
   resume? : Session,
 ) -> Shard {
   let shard = Shard::{
@@ -202,7 +202,7 @@ fn Shard::emit_telemetry(
 
 ///|
 priv suberror ConnectionEnded {
-  ConnectionEnded(code~ : Int?, reason~ : String)
+  ConnectionEnded(code~ : Int32?, reason~ : String)
 } derive(Debug)
 
 ///|
@@ -214,14 +214,14 @@ async fn Shard::run(
   intents~ : @model.Intents,
   capabilities~ : @model.GatewayCapabilities,
   gateway_url~ : String,
-  shard_id~ : Int,
-  shard_count~ : Int,
+  shard_id~ : Int32,
+  shard_count~ : Int32,
   identify_queue? : &@queue.IdentifyQueue,
   event_filter~ : (@model.EventKind) -> Bool,
   connector~ : async (String) -> &GatewayTransport,
   compress~ : Bool,
   inflater_factory~ : () -> &Inflater raise,
-  sleeper~ : async (Int) -> Unit,
+  sleeper~ : async (Int32) -> Unit,
   rand~ : @random.Rand,
 ) -> Unit noraise {
   let mut attempts = 0
@@ -366,11 +366,11 @@ async fn Shard::run_connection(
   token~ : String,
   intents~ : @model.Intents,
   capabilities~ : @model.GatewayCapabilities,
-  shard_id~ : Int,
-  shard_count~ : Int,
+  shard_id~ : Int32,
+  shard_count~ : Int32,
   identify_queue? : &@queue.IdentifyQueue,
   event_filter~ : (@model.EventKind) -> Bool,
-  sleeper~ : async (Int) -> Unit,
+  sleeper~ : async (Int32) -> Unit,
   rand~ : @random.Rand,
 ) -> Unit {
   // --- Hello ---

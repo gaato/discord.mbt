@@ -2,7 +2,7 @@
 /// A custom id that exceeds Discord's limit or cannot round-trip its segments.
 pub(all) suberror CustomIdError {
   /// The encoded state or complete custom id exceeds 100 UTF-16 units.
-  TooLong(custom_id~ : String, length~ : Int)
+  TooLong(custom_id~ : String, length~ : Int32)
   /// A non-final zip segment contains `:` and would not round-trip.
   SeparatorInSegment(segment~ : String)
 } derive(Debug)
@@ -42,7 +42,7 @@ pub fn CustomIdCodec::string() -> CustomIdCodec[String] {
 
 ///|
 /// Encode and decode a decimal integer.
-pub fn CustomIdCodec::int() -> CustomIdCodec[Int] {
+pub fn CustomIdCodec::int() -> CustomIdCodec[Int32] {
   CustomIdCodec::custom(encode=value => value.to_string(), decode=text => {
     @string.parse_int(text)
   })

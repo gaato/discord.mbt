@@ -5,26 +5,26 @@ pub(all) enum ShardConfig {
   Auto
   /// Run one shard from a larger logical shard set. This is the default and
   /// preserves the pre-manager single-shard executor behavior.
-  Single(id~ : Int, count~ : Int)
+  Single(id~ : Int32, count~ : Int32)
   /// Run shard ids `0..<count` in this process.
-  Fixed(count~ : Int)
+  Fixed(count~ : Int32)
   /// Run only `ids` while identifying them with the shared logical `count`.
-  Range(ids~ : Array[Int], count~ : Int)
+  Range(ids~ : Array[Int32], count~ : Int32)
 } derive(Debug)
 
 ///|
 priv struct ResolvedShardConfig {
-  ids : Array[Int]
-  count : Int
+  ids : Array[Int32]
+  count : Int32
   gateway_url : String
-  max_concurrency : Int
+  max_concurrency : Int32
   /// Saved sessions that fit this layout, keyed by shard id.
-  resume : Map[Int, BotSession]
+  resume : Map[Int32, BotSession]
 }
 
 ///|
 priv struct ManagedShard {
-  id : Int
+  id : Int32
   shard : @gateway.Shard
   mut context : GatewayCtx?
 }
@@ -38,14 +38,14 @@ priv enum ManagedShardEvent {
 
 ///|
 /// Why `ids` out of `count` shards is not a layout Discord accepts, or `None`.
-fn shard_layout_problem(ids : Array[Int], count : Int) -> String? {
+fn shard_layout_problem(ids : Array[Int32], count : Int32) -> String? {
   if count <= 0 {
     return Some("shard count must be positive")
   }
   if ids.is_empty() {
     return Some("at least one shard id must be selected")
   }
-  let seen : Map[Int, Bool] = Map([])
+  let seen : Map[Int32, Bool] = Map([])
   for id in ids {
     if id < 0 || id >= count {
       return Some("shard id \{id} is outside 0..<\{count}")
@@ -61,8 +61,8 @@ fn shard_layout_problem(ids : Array[Int], count : Int) -> String? {
 ///|
 /// Check a layout Discord supplied at run time (`Auto` shard counts).
 fn validate_gateway_layout(
-  ids : Array[Int],
-  count : Int,
+  ids : Array[Int32],
+  count : Int32,
 ) -> Unit raise BotError {
   if shard_layout_problem(ids, count) is Some(message) {
     raise InvalidGatewayInfo(message~)
@@ -87,8 +87,8 @@ fn[X] BotCore::start_managed_shard(
   token~ : String,
   intents~ : @model.Intents,
   gateway_url~ : String,
-  shard_id~ : Int,
-  shard_count~ : Int,
+  shard_id~ : Int32,
+  shard_count~ : Int32,
   identify_queue~ : &@queue.IdentifyQueue,
   event_filter~ : (@model.EventKind) -> Bool,
   resume? : @gateway.Session,
@@ -203,10 +203,10 @@ async fn BotCore::resolve_shards(
 /// another shard layout is dropped with a warning and its shard identifies.
 fn BotCore::sessions_for_layout(
   self : BotCore,
-  ids : Array[Int],
-  count : Int,
-) -> Map[Int, BotSession] {
-  let usable : Map[Int, BotSession] = Map([])
+  ids : Array[Int32],
+  count : Int32,
+) -> Map[Int32, BotSession] {
+  let usable : Map[Int32, BotSession] = Map([])
   for id in ids {
     guard self.resume_.get(id) is Some(saved) else { continue }
     let recorded = saved.ready.shard.unwrap_or([0, 1])

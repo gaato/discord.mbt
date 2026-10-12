@@ -291,7 +291,7 @@ pub async fn sync_command_scope(
   client : @dhttp.Client,
   application_id : @model.ApplicationId,
   declared : Array[@interaction.CommandSpec],
-  unowned? : UnownedCommands = Delete,
+  unowned~ : UnownedCommands = Delete,
   guild_id? : @model.GuildId,
 ) -> ScopeSyncReport {
   let fetched = match guild_id {

@@ -22,8 +22,8 @@ async fn send_opus_packet(
   udp : &VoiceUdp,
   dave : DaveMachine?,
   sequence : UInt16,
-  timestamp : UInt,
-  ssrc : UInt,
+  timestamp : UInt32,
+  ssrc : UInt32,
   frame : Bytes,
   on_dave_error : (String) -> Unit,
 ) -> Bool {
@@ -54,7 +54,7 @@ async fn send_opus_packet(
 ///|
 priv struct SendLoopState {
   mut sequence : UInt16
-  mut timestamp : UInt
+  mut timestamp : UInt32
   mut deadline : Int64
 }
 
@@ -65,13 +65,13 @@ pub async fn run_send_loop(
   cipher : TransportCipher,
   udp : &VoiceUdp,
   gateway : VoiceGateway,
-  ssrc~ : UInt,
-  initial_sequence? : UInt16 = 0,
-  initial_timestamp? : UInt = 0,
+  ssrc~ : UInt32,
+  initial_sequence~ : UInt16 = 0,
+  initial_timestamp~ : UInt32 = 0,
   stop? : Ref[Bool],
-  frame_duration_ms? : Int = 20,
+  frame_duration_ms~ : Int32 = 20,
   dave? : DaveMachine,
-  on_dave_error? : (String) -> Unit = _ => (),
+  on_dave_error~ : (String) -> Unit = _ => (),
 ) -> Unit {
   let state = SendLoopState::{
     sequence: initial_sequence,

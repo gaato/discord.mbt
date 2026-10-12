@@ -80,7 +80,7 @@ pub async fn WebhookRef::edit(
   self : WebhookRef,
   name? : String,
   avatar? : String,
-  clear_avatar? : Bool = false,
+  clear_avatar~ : Bool = false,
   channel_id? : @model.ChannelId,
   reason? : String,
 ) -> @model.Webhook raise DiscordHttpError {
@@ -117,7 +117,7 @@ pub async fn WebhookTokenRef::edit(
   self : WebhookTokenRef,
   name? : String,
   avatar? : String,
-  clear_avatar? : Bool = false,
+  clear_avatar~ : Bool = false,
 ) -> @model.Webhook raise DiscordHttpError {
   self.client.modify_webhook_with_token(
     self.webhook_id,
@@ -230,7 +230,7 @@ pub async fn WebhookMessageRef::fetch(
 pub async fn WebhookMessageRef::edit(
   self : WebhookMessageRef,
   content? : String,
-  clear_content? : Bool = false,
+  clear_content~ : Bool = false,
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
   flags? : @model.MessageFlags,

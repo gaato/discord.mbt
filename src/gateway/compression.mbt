@@ -6,7 +6,7 @@ extern "C" fn zlib_new() -> ZlibHandle = "discord_gateway_zlib_new"
 
 ///|
 #borrow(handle)
-extern "C" fn zlib_status(handle : ZlibHandle) -> Int = "discord_gateway_zlib_status"
+extern "C" fn zlib_status(handle : ZlibHandle) -> Int32 = "discord_gateway_zlib_status"
 
 ///|
 #borrow(handle, input)

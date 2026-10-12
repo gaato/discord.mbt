@@ -36,7 +36,7 @@ pub fn CommandSpec::limit_violations(
 pub fn CommandSpec::slash(
   name : String,
   description : String,
-  options? : Array[@model.CommandOption] = [],
+  options~ : Array[@model.CommandOption] = [],
   default_member_permissions? : @model.Permissions,
   nsfw? : Bool,
   integration_types? : Array[@model.ApplicationIntegrationType],

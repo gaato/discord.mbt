@@ -13,11 +13,11 @@ pub(all) enum GatewayOpcode {
   Hello
   HeartbeatAck
   RequestSoundboardSounds
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn GatewayOpcode::to_int(self : GatewayOpcode) -> Int {
+pub fn GatewayOpcode::to_int(self : GatewayOpcode) -> Int32 {
   match self {
     Dispatch => 0
     Heartbeat => 1
@@ -36,7 +36,7 @@ pub fn GatewayOpcode::to_int(self : GatewayOpcode) -> Int {
 }
 
 ///|
-pub fn GatewayOpcode::from_int(value : Int) -> GatewayOpcode {
+pub fn GatewayOpcode::from_int(value : Int32) -> GatewayOpcode {
   match value {
     0 => Dispatch
     1 => Heartbeat
@@ -57,7 +57,7 @@ pub fn GatewayOpcode::from_int(value : Int) -> GatewayOpcode {
 ///|
 /// Payload of opcode 10 (Hello).
 pub(all) struct Hello {
-  heartbeat_interval : Int
+  heartbeat_interval : Int32
 } derive(ToJson, FromJson, Debug)
 
 ///|
@@ -70,11 +70,11 @@ pub(all) struct ReadyApplication {
 ///|
 /// Payload of the READY dispatch.
 pub(all) struct Ready {
-  v : Int
+  v : Int32
   user : User
   guilds : Array[UnavailableGuild]
   session_id : String
   resume_gateway_url : String
-  shard : Array[Int]?
+  shard : Array[Int32]?
   application : ReadyApplication
 } derive(ToJson, FromJson, Debug)

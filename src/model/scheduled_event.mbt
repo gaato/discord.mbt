@@ -15,7 +15,7 @@ pub(all) struct GuildScheduledEvent {
   entity_id : Nullable[GenericId]
   entity_metadata : Nullable[EntityMetadata]
   creator : User?
-  user_count : Int?
+  user_count : Int32?
   image : Nullable[ImageHash]?
   recurrence_rule : Nullable[GuildScheduledEventRecurrenceRule]
 } derive(ToJson, FromJson, Debug)
@@ -38,19 +38,19 @@ pub(all) struct GuildScheduledEventRecurrenceRule {
   start : Timestamp
   end : Nullable[Timestamp]?
   frequency : GuildScheduledEventRecurrenceRuleFrequency
-  interval : Int
+  interval : Int32
   by_weekday : Nullable[Array[GuildScheduledEventRecurrenceRuleWeekday]]?
   by_n_weekday : Nullable[Array[GuildScheduledEventRecurrenceRuleNWeekday]]?
   by_month : Nullable[Array[GuildScheduledEventRecurrenceRuleMonth]]?
-  by_month_day : Nullable[Array[Int]]?
-  by_year_day : Array[Int]?
-  count : Int?
+  by_month_day : Nullable[Array[Int32]]?
+  by_year_day : Array[Int32]?
+  count : Int32?
 } derive(ToJson, FromJson, Debug)
 
 ///|
 /// An ordinal weekday constraint such as the first Monday of a month.
 pub(all) struct GuildScheduledEventRecurrenceRuleNWeekday {
-  n : Int
+  n : Int32
   day : GuildScheduledEventRecurrenceRuleWeekday
 } derive(ToJson, FromJson, Debug)
 
@@ -61,13 +61,13 @@ pub(all) enum GuildScheduledEventRecurrenceRuleFrequency {
   Monthly
   Weekly
   Daily
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
 pub fn GuildScheduledEventRecurrenceRuleFrequency::to_int(
   self : GuildScheduledEventRecurrenceRuleFrequency,
-) -> Int {
+) -> Int32 {
   match self {
     Yearly => 0
     Monthly => 1
@@ -79,7 +79,7 @@ pub fn GuildScheduledEventRecurrenceRuleFrequency::to_int(
 
 ///|
 pub fn GuildScheduledEventRecurrenceRuleFrequency::from_int(
-  value : Int,
+  value : Int32,
 ) -> GuildScheduledEventRecurrenceRuleFrequency {
   match value {
     0 => Yearly
@@ -122,13 +122,13 @@ pub(all) enum GuildScheduledEventRecurrenceRuleWeekday {
   Friday
   Saturday
   Sunday
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
 pub fn GuildScheduledEventRecurrenceRuleWeekday::to_int(
   self : GuildScheduledEventRecurrenceRuleWeekday,
-) -> Int {
+) -> Int32 {
   match self {
     Monday => 0
     Tuesday => 1
@@ -143,7 +143,7 @@ pub fn GuildScheduledEventRecurrenceRuleWeekday::to_int(
 
 ///|
 pub fn GuildScheduledEventRecurrenceRuleWeekday::from_int(
-  value : Int,
+  value : Int32,
 ) -> GuildScheduledEventRecurrenceRuleWeekday {
   match value {
     0 => Monday
@@ -194,13 +194,13 @@ pub(all) enum GuildScheduledEventRecurrenceRuleMonth {
   October
   November
   December
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
 pub fn GuildScheduledEventRecurrenceRuleMonth::to_int(
   self : GuildScheduledEventRecurrenceRuleMonth,
-) -> Int {
+) -> Int32 {
   match self {
     January => 1
     February => 2
@@ -220,7 +220,7 @@ pub fn GuildScheduledEventRecurrenceRuleMonth::to_int(
 
 ///|
 pub fn GuildScheduledEventRecurrenceRuleMonth::from_int(
-  value : Int,
+  value : Int32,
 ) -> GuildScheduledEventRecurrenceRuleMonth {
   match value {
     1 => January
@@ -263,13 +263,13 @@ pub impl @json.FromJson for GuildScheduledEventRecurrenceRuleMonth with fn from_
 /// The audience allowed to access a scheduled event.
 pub(all) enum GuildScheduledEventPrivacyLevel {
   GuildOnly
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
 pub fn GuildScheduledEventPrivacyLevel::to_int(
   self : GuildScheduledEventPrivacyLevel,
-) -> Int {
+) -> Int32 {
   match self {
     GuildOnly => 2
     Unknown(value) => value
@@ -278,7 +278,7 @@ pub fn GuildScheduledEventPrivacyLevel::to_int(
 
 ///|
 pub fn GuildScheduledEventPrivacyLevel::from_int(
-  value : Int,
+  value : Int32,
 ) -> GuildScheduledEventPrivacyLevel {
   match value {
     2 => GuildOnly
@@ -315,13 +315,13 @@ pub(all) enum GuildScheduledEventStatus {
   Active
   Completed
   Canceled
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
 pub fn GuildScheduledEventStatus::to_int(
   self : GuildScheduledEventStatus,
-) -> Int {
+) -> Int32 {
   match self {
     Scheduled => 1
     Active => 2
@@ -333,7 +333,7 @@ pub fn GuildScheduledEventStatus::to_int(
 
 ///|
 pub fn GuildScheduledEventStatus::from_int(
-  value : Int,
+  value : Int32,
 ) -> GuildScheduledEventStatus {
   match value {
     1 => Scheduled
@@ -369,13 +369,13 @@ pub(all) enum GuildScheduledEventEntityType {
   StageInstance
   Voice
   External
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
 pub fn GuildScheduledEventEntityType::to_int(
   self : GuildScheduledEventEntityType,
-) -> Int {
+) -> Int32 {
   match self {
     StageInstance => 1
     Voice => 2
@@ -386,7 +386,7 @@ pub fn GuildScheduledEventEntityType::to_int(
 
 ///|
 pub fn GuildScheduledEventEntityType::from_int(
-  value : Int,
+  value : Int32,
 ) -> GuildScheduledEventEntityType {
   match value {
     1 => StageInstance

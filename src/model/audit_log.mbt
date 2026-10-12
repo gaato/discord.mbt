@@ -103,11 +103,11 @@ pub(all) enum AuditLogEvent {
   HomeSettingsUpdate
   VoiceChannelStatusCreate
   VoiceChannelStatusDelete
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn AuditLogEvent::to_int(self : AuditLogEvent) -> Int {
+pub fn AuditLogEvent::to_int(self : AuditLogEvent) -> Int32 {
   match self {
     GuildUpdate => 1
     ChannelCreate => 10
@@ -183,7 +183,7 @@ pub fn AuditLogEvent::to_int(self : AuditLogEvent) -> Int {
 }
 
 ///|
-pub fn AuditLogEvent::from_int(value : Int) -> AuditLogEvent {
+pub fn AuditLogEvent::from_int(value : Int32) -> AuditLogEvent {
   match value {
     1 => GuildUpdate
     10 => ChannelCreate

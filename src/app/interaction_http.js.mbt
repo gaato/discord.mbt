@@ -28,12 +28,12 @@ pub extern "js" fn InteractionHttpDispatch::background(
 pub type InteractionHttpJsResponse
 
 ///|
-extern "js" fn js_empty_response(status : Int) -> InteractionHttpJsResponse =
+extern "js" fn js_empty_response(status : Int32) -> InteractionHttpJsResponse =
   #| (status) => ({ status, contentType: null, body: null })
 
 ///|
 extern "js" fn js_bytes_response(
-  status : Int,
+  status : Int32,
   content_type : String,
   body : Bytes,
 ) -> InteractionHttpJsResponse =
@@ -45,7 +45,7 @@ extern "js" fn js_bytes_response(
 
 ///|
 extern "js" fn js_stream_response(
-  status : Int,
+  status : Int32,
   content_type : String,
   chunks : FixedArray[Bytes],
 ) -> InteractionHttpJsResponse =
@@ -127,7 +127,7 @@ async fn run_signed_http(
   application_id : @model.ApplicationId,
   public_key : String,
   api_base_url : String?,
-  deadline_ms : Int?,
+  deadline_ms : Int32?,
 ) -> Unit {
   let mut response_sent = false
   errdefer @async.protect_from_cancel(() => {
@@ -190,7 +190,7 @@ pub fn App::start_signed_http(
   application_id~ : @model.ApplicationId,
   public_key~ : String,
   api_base_url? : String,
-  deadline_ms? : Int,
+  deadline_ms? : Int32,
   abort_signal? : @js_async.AbortSignal,
 ) -> InteractionHttpDispatch {
   let responses : @aqueue.Queue[InteractionHttpJsResponse] = Queue(

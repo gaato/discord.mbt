@@ -64,7 +64,7 @@ fn WaitFrom::user_filter(
 /// Executor-provided lookup behind `wait_for_component`: resolves the next
 /// component interaction matching a custom id and optional user filter, with
 /// an optional timeout in milliseconds.
-pub type ComponentWaiter = async (String, @model.UserId?, Int?) -> @framework.ComponentCtx?
+pub type ComponentWaiter = async (String, @model.UserId?, Int32?) -> @framework.ComponentCtx?
 
 ///|
 fn require_guild(
@@ -127,7 +127,7 @@ pub fn ImmediateCtx::guild_id(self : ImmediateCtx) -> @model.GuildId? {
 ///|
 /// Milliseconds left to return the initial response, or `None` when the
 /// executor set no deadline.
-pub fn ImmediateCtx::remaining_ms(self : ImmediateCtx) -> Int? {
+pub fn ImmediateCtx::remaining_ms(self : ImmediateCtx) -> Int32? {
   self.raw_.remaining_ms()
 }
 
@@ -214,7 +214,7 @@ pub async fn DeferredCtx::original(self : DeferredCtx) -> @model.Message {
 pub async fn DeferredCtx::edit_original(
   self : DeferredCtx,
   content? : String,
-  clear_content? : Bool = false,
+  clear_content~ : Bool = false,
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
   allowed_mentions? : @model.AllowedMentions,
@@ -250,7 +250,7 @@ pub async fn DeferredCtx::followup(
   files? : Array[@dhttp.FileUpload],
   allowed_mentions? : @model.AllowedMentions,
   poll? : @model.PollCreateRequest,
-  ephemeral? : Bool = false,
+  ephemeral~ : Bool = false,
 ) -> @model.Message {
   self.raw_.followup(
     content?,
@@ -279,7 +279,7 @@ pub async fn DeferredCtx::edit_followup(
   self : DeferredCtx,
   message_id : @model.MessageId,
   content? : String,
-  clear_content? : Bool = false,
+  clear_content~ : Bool = false,
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
   allowed_mentions? : @model.AllowedMentions,
@@ -322,8 +322,8 @@ pub async fn[A] DeferredCtx::wait_for_component(
   self : DeferredCtx,
   route : ComponentRoute[A],
   state : A,
-  from? : WaitFrom = Invoker,
-  timeout_ms? : Int,
+  from~ : WaitFrom = Invoker,
+  timeout_ms? : Int32,
 ) -> @framework.ComponentCtx? {
   wait_for_route(
     self.waiter_,
@@ -344,7 +344,7 @@ async fn[A] wait_for_route(
   route : ComponentRoute[A],
   state : A,
   user : @model.UserId?,
-  timeout_ms : Int?,
+  timeout_ms : Int32?,
 ) -> @framework.ComponentCtx? {
   let custom_id = route.custom_id(state)
   match waiter {

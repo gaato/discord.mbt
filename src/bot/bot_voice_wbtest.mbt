@@ -3,7 +3,7 @@ priv struct PendingBotVoiceTransport {
   incoming : @aqueue.Queue[@voice.VoiceFrame]
   outgoing : @aqueue.Queue[Json]
   recv_started : @aqueue.Queue[Unit]
-  close_calls : Ref[Int]
+  close_calls : Ref[Int32]
 }
 
 ///|
@@ -63,7 +63,7 @@ fn bot_voice_test_credentials() -> @voice.VoiceCredentials {
 fn[X] pending_bot_voice_connection(
   group : @async.TaskGroup[X],
   transport : PendingBotVoiceTransport,
-  leave_calls : Ref[Int],
+  leave_calls : Ref[Int32],
 ) -> @voice.VoiceConnection {
   @voice.VoiceConnection::start(
     group,
@@ -435,7 +435,7 @@ test "voice state command encodes a disconnect as a null channel" {
 }
 
 ///|
-fn voice_state_frame(sequence : Int, endpoint_session : String) -> String {
+fn voice_state_frame(sequence : Int32, endpoint_session : String) -> String {
   (
     #|{"op":0,"s":SEQUENCE_PLACEHOLDER,"t":"VOICE_STATE_UPDATE","d":{"guild_id":"100","channel_id":"200","user_id":"1","session_id":"SESSION_PLACEHOLDER","deaf":false,"mute":false,"self_deaf":false,"self_mute":false,"suppress":false,"request_to_speak_timestamp":null}}
   )
@@ -445,7 +445,7 @@ fn voice_state_frame(sequence : Int, endpoint_session : String) -> String {
 
 ///|
 fn voice_server_frame(
-  sequence : Int,
+  sequence : Int32,
   endpoint : String?,
   token : String,
 ) -> String {

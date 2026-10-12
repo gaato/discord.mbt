@@ -13,15 +13,15 @@ priv enum AckPlan {
 /// Budget left in the initial-response window when a deferring route's
 /// watchdog acknowledges on the handler's behalf. With the default 2500 ms
 /// deadline this fires 1500 ms after receipt.
-const AUTO_DEFER_MARGIN_MS : Int = 1000
+const AUTO_DEFER_MARGIN_MS : Int32 = 1000
 
 ///|
 /// The response-gate operations admission needs, independent of the
 /// interaction kind.
 priv struct AdmissionGate {
-  remaining_ms : () -> Int?
+  remaining_ms : () -> Int32?
   /// Milliseconds before the interaction token expires, from receipt.
-  token_remaining_ms : () -> Int
+  token_remaining_ms : () -> Int32
   is_pending : () -> Bool
   defer_now : async (AckPlan) -> Unit
 }
@@ -98,11 +98,11 @@ async fn ensure_acknowledged(gate : AdmissionGate, plan : AckPlan) -> Unit {
 /// handlers, and the deferred interactions waiting for one.
 priv struct Admission {
   limiter : @async.Semaphore
-  mut pending : Int
-  max_pending : Int
+  mut pending : Int32
+  max_pending : Int32
   /// An upper bound on how long a deferred interaction may wait for a
   /// permit, on top of its token's remaining lifetime.
-  wait_limit_ms : Int
+  wait_limit_ms : Int32
 }
 
 ///|
@@ -112,7 +112,7 @@ priv struct Admission {
 /// answer.
 async fn acquire_while_open(
   limiter : @async.Semaphore,
-  wait_ms : Int?,
+  wait_ms : Int32?,
   open : () -> Bool,
 ) -> Bool {
   guard wait_ms is Some(wait_ms) else {

@@ -63,8 +63,8 @@ pub fn arg_string(
   name~ : String,
   description~ : String,
   choices? : Array[@model.CommandOptionChoice],
-  min_length? : Int,
-  max_length? : Int,
+  min_length? : Int32,
+  max_length? : Int32,
   suggest? : async (SuggestCtx, String) -> Array[@model.CommandOptionChoice],
   name_localizations? : Map[String, String],
   description_localizations? : Map[String, String],
@@ -130,9 +130,9 @@ pub fn arg_int(
 fn int32_in_range(
   value : Int64,
   name : String,
-  min : Int,
-  max : Int,
-) -> Int raise ArgsDecodeError {
+  min : Int32,
+  max : Int32,
+) -> Int32 raise ArgsDecodeError {
   if value < min.to_int64() || value > max.to_int64() {
     raise ArgsDecodeError::Validation(
       name~,
@@ -155,17 +155,17 @@ fn int32_in_range(
 pub fn arg_int32(
   name~ : String,
   description~ : String,
-  min? : Int,
-  max? : Int,
+  min? : Int32,
+  max? : Int32,
   choices? : Array[@model.CommandOptionChoice],
-  suggest? : async (SuggestCtx, Int) -> Array[@model.CommandOptionChoice],
+  suggest? : async (SuggestCtx, Int32) -> Array[@model.CommandOptionChoice],
   name_localizations? : Map[String, String],
   description_localizations? : Map[String, String],
-) -> Arg[Int] {
+) -> Arg[Int32] {
   let low = min.unwrap_or(-2147483648)
   let high = max.unwrap_or(2147483647)
   let (min_value, max_value) = if choices is Some(_) {
-    (min.map(Int::to_int64), max.map(Int::to_int64))
+    (min.map(Int32::to_int64), max.map(Int32::to_int64))
   } else {
     (Some(low.to_int64()), Some(high.to_int64()))
   }

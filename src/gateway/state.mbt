@@ -1,12 +1,12 @@
 ///|
 /// Shard lifecycle state.
 pub(all) enum ShardState {
-  Disconnected(reconnect_attempts~ : Int)
+  Disconnected(reconnect_attempts~ : Int32)
   Connecting
   Identifying
   Resuming
   Active
-  FatallyClosed(code~ : Int)
+  FatallyClosed(code~ : Int32)
 } derive(Eq, Debug)
 
 ///|
@@ -37,7 +37,7 @@ pub(all) struct Session {
 /// - re-identify: the session is gone (invalid seq, session timeout);
 /// - resume: everything else (transient errors, unclean closes), provided a
 ///   session exists.
-pub fn on_close(code : Int?, has_session : Bool) -> ReconnectPolicy {
+pub fn on_close(code : Int32?, has_session : Bool) -> ReconnectPolicy {
   let policy = match code {
     Some(4004)
     | Some(4010)

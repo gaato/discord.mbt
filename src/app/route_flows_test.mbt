@@ -97,7 +97,7 @@ async test "component state decode failure reaches the policy as Malformed" {
   for
     codec in [
       @app.CustomIdCodec::int(),
-      @app.CustomIdCodec::custom(encode=(value : Int) => value.to_string(), decode=_ => {
+      @app.CustomIdCodec::custom(encode=(value : Int32) => value.to_string(), decode=_ => {
         fail("undecodable state")
       }),
     ] {
@@ -111,7 +111,7 @@ async test "component state decode failure reaches the policy as Malformed" {
         pending.val = ctx.response_state() is Some(Pending)
       })
       let route = @app.component_route(id="number", state=codec)
-      let handler : @app.ComponentHandler[Int] = match mode {
+      let handler : @app.ComponentHandler[Int32] = match mode {
         0 =>
           Immediate((_, _) => {
             called.val = true

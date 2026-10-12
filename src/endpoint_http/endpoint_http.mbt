@@ -5,7 +5,7 @@ priv enum ServerStartup {
 }
 
 ///|
-fn text_response(status : Int, body : String) -> @app.InteractionHttpResponse {
+fn text_response(status : Int32, body : String) -> @app.InteractionHttpResponse {
   {
     status,
     content_type: Some("text/plain; charset=utf-8"),
@@ -21,7 +21,7 @@ async fn route_request(
   endpoint : @app.InteractionEndpoint,
   verifier : @verify.InteractionVerifier,
   path : String,
-  deadline_ms : Int,
+  deadline_ms : Int32,
 ) -> @app.InteractionHttpResponse {
   if request.meth != Post {
     conn.skip_request_body()
@@ -90,7 +90,7 @@ async fn handle_request(
   endpoint : @app.InteractionEndpoint,
   verifier : @verify.InteractionVerifier,
   path : String,
-  deadline_ms : Int,
+  deadline_ms : Int32,
   warn : (@app.AppWarning) -> Unit,
 ) -> Unit {
   let response = try
@@ -160,8 +160,8 @@ pub async fn[X] serve_interactions(
   public_key~ : String,
   access~ : @app.RestAccess,
   application_id? : @model.ApplicationId,
-  path? : String = "/",
-  deadline_ms? : Int = 2500,
+  path~ : String = "/",
+  deadline_ms~ : Int32 = 2500,
 ) -> InteractionsServer {
   let verifier = @verify.InteractionVerifier::new(public_key)
   let server = @ahttp.Server(@socket.Addr::parse(addr))

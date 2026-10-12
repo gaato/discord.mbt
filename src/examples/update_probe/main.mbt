@@ -23,7 +23,7 @@ fn describe_update(event : @model.MessageUpdateEvent) -> String {
 async fn next_update(
   updates : @aqueue.Queue[@model.MessageUpdateEvent],
   label : String,
-  timeout_ms : Int,
+  timeout_ms : Int32,
 ) -> @model.MessageUpdateEvent? {
   let result = @async.with_timeout_opt(timeout_ms, () => updates.get())
   match result {

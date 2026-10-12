@@ -1,5 +1,5 @@
 ///|
-fn paginator_message_page(ids : Array[Int]) -> Json raise {
+fn paginator_message_page(ids : Array[Int32]) -> Json raise {
   Json::array(
     ids.map(id => {
       @json.parse(
@@ -88,7 +88,7 @@ async test "message paginator around performs one fixed-cursor page" {
 }
 
 ///|
-fn round2_user_json(id : Int) -> Json raise {
+fn round2_user_json(id : Int32) -> Json raise {
   @json.parse(
     "{\"id\":\"\{id}\",\"username\":\"user-\{id}\",\"discriminator\":\"0\",\"global_name\":null,\"avatar\":null}",
   )
@@ -217,7 +217,7 @@ async test "scheduled users poll voters and current guild paginators advance" {
   let (client, perform) = offline_test_client()
   defer client.close()
   let paths : Array[String] = []
-  let counts : Map[String, Int] = Map([])
+  let counts : Map[String, Int32] = Map([])
   perform.val = Some((_route, path, _headers, _body, _files) => {
     paths.push(path)
     let key = if path.contains("scheduled-events") {

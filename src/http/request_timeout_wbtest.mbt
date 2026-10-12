@@ -1,8 +1,8 @@
 ///|
 priv struct TimeoutTestLimiter {
   acquire_ : async () -> Unit
-  mut acquires : Int
-  releases : Array[(String, Int, Map[String, String])]
+  mut acquires : Int32
+  releases : Array[(String, Int32, Map[String, String])]
 }
 
 ///|

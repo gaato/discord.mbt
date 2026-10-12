@@ -70,11 +70,11 @@ pub(all) enum ActivityType {
   Watching
   Custom
   Competing
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn ActivityType::to_int(self : ActivityType) -> Int {
+pub fn ActivityType::to_int(self : ActivityType) -> Int32 {
   match self {
     Playing => 0
     Streaming => 1
@@ -87,7 +87,7 @@ pub fn ActivityType::to_int(self : ActivityType) -> Int {
 }
 
 ///|
-pub fn ActivityType::from_int(value : Int) -> ActivityType {
+pub fn ActivityType::from_int(value : Int32) -> ActivityType {
   match value {
     0 => Playing
     1 => Streaming
@@ -121,7 +121,7 @@ pub(all) struct Activity {
   created_at : Int64
   timestamps : ActivityTimestamps?
   application_id : ApplicationId?
-  status_display_type : Nullable[Int]?
+  status_display_type : Nullable[Int32]?
   details : Nullable[String]?
   details_url : Nullable[String]?
   state : Nullable[String]?
@@ -143,7 +143,7 @@ struct ActivityWire {
   created_at : Double
   timestamps : ActivityTimestamps?
   application_id : ApplicationId?
-  status_display_type : Nullable[Int]?
+  status_display_type : Nullable[Int32]?
   details : Nullable[String]?
   details_url : Nullable[String]?
   state : Nullable[String]?
@@ -228,7 +228,7 @@ pub(all) struct ActivityEmoji {
 /// The rich-presence party, with `size` as `[current, max]` when present.
 pub(all) struct ActivityParty {
   id : String?
-  size : Array[Int]?
+  size : Array[Int32]?
 } derive(ToJson, FromJson, Debug)
 
 ///|

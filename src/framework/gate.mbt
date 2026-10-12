@@ -65,13 +65,13 @@ pub struct ResponseCapture {
 /// moment an executor receives an interaction. Discord invalidates the
 /// interaction token three seconds after sending it; the remaining 500 ms
 /// absorb delivery latency.
-pub const DEFAULT_INTERACTION_DEADLINE_MS : Int = 2500
+pub const DEFAULT_INTERACTION_DEADLINE_MS : Int32 = 2500
 
 ///|
 /// How long an interaction token stays valid after Discord sends the
 /// interaction: every followup, original-response edit, and deletion must
 /// happen within it.
-pub const INTERACTION_TOKEN_LIFETIME_MS : Int = 900_000
+pub const INTERACTION_TOKEN_LIFETIME_MS : Int32 = 900_000
 
 ///|
 /// Construct a gate around an injected callback sink.
@@ -84,8 +84,8 @@ pub const INTERACTION_TOKEN_LIFETIME_MS : Int = 900_000
 pub fn ResponseGate::ResponseGate(
   kind : @model.InteractionType,
   sink : async (@model.InteractionResponse, Array[@dhttp.FileUpload]?) -> Unit,
-  classify? : (Error) -> DeliveryFailure = _ => Uncertain,
-  deadline_ms? : Int,
+  classify~ : (Error) -> DeliveryFailure = _ => Uncertain,
+  deadline_ms? : Int32,
 ) -> ResponseGate {
   {
     kind,
@@ -132,7 +132,7 @@ pub fn classify_rest_callback_failure(error : Error) -> DeliveryFailure {
 pub fn ResponseGate::rest(
   client : @dhttp.Client,
   interaction : @model.Interaction,
-  deadline_ms? : Int = DEFAULT_INTERACTION_DEADLINE_MS,
+  deadline_ms~ : Int32 = DEFAULT_INTERACTION_DEADLINE_MS,
 ) -> ResponseGate {
   ResponseGate(
     interaction.typ,
@@ -154,7 +154,7 @@ pub fn ResponseGate::rest(
 /// The deadline is measured from this call.
 pub fn ResponseGate::capture(
   interaction : @model.Interaction,
-  deadline_ms? : Int = DEFAULT_INTERACTION_DEADLINE_MS,
+  deadline_ms~ : Int32 = DEFAULT_INTERACTION_DEADLINE_MS,
 ) -> (ResponseGate, ResponseCapture) {
   let queue : @aqueue.Queue[CapturedResponse] = Queue(kind=Blocking(1))
   let capture = ResponseCapture::{ queue, }
@@ -268,7 +268,7 @@ async fn ResponseGate::wait_settled(self : ResponseGate) -> Unit {
 ///|
 /// Milliseconds left before the callback window closes, clamped at zero, or
 /// `None` when this gate has no deadline.
-pub fn ResponseGate::remaining_ms(self : ResponseGate) -> Int? {
+pub fn ResponseGate::remaining_ms(self : ResponseGate) -> Int32? {
   match self.deadline_at {
     None => None
     Some(deadline) => {
@@ -282,7 +282,7 @@ pub fn ResponseGate::remaining_ms(self : ResponseGate) -> Int? {
 /// Milliseconds left before the interaction token expires, counted from this
 /// gate's construction (when the executor received the interaction). Zero once
 /// it has expired.
-pub fn ResponseGate::token_remaining_ms(self : ResponseGate) -> Int {
+pub fn ResponseGate::token_remaining_ms(self : ResponseGate) -> Int32 {
   let left = self.received_at +
     INTERACTION_TOKEN_LIFETIME_MS.to_int64() -
     @clock.now_ms()

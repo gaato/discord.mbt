@@ -152,7 +152,7 @@ pub async fn[A] GatewayCtx::wait_for_component(
   route : @app.ComponentRoute[A],
   state : A,
   user? : @model.UserId,
-  timeout_ms? : Int,
+  timeout_ms? : Int32,
 ) -> @framework.ComponentCtx? {
   self.framework_.wait_for_component(
     custom_id=route.custom_id(state),
@@ -170,7 +170,7 @@ pub async fn[T] GatewayCtx::wait_for(
   self : GatewayCtx,
   event_type : EventType[T],
   predicate : (T) -> Bool,
-  timeout_ms? : Int,
+  timeout_ms? : Int32,
 ) -> T? {
   self.collector_.wait_for(event_type, predicate, timeout_ms?)
 }

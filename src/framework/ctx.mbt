@@ -111,14 +111,14 @@ pub fn CommandCtx::scope(self : CommandCtx) -> InvocationScope {
 ///|
 /// Milliseconds left before the initial-response window closes, or `None`
 /// when the executor set no deadline.
-pub fn CommandCtx::remaining_ms(self : CommandCtx) -> Int? {
+pub fn CommandCtx::remaining_ms(self : CommandCtx) -> Int32? {
   self.gate.remaining_ms()
 }
 
 ///|
 /// Milliseconds left before this interaction's token expires (15 minutes after
 /// the executor received it). Followups and edits fail after that.
-pub fn CommandCtx::token_remaining_ms(self : CommandCtx) -> Int {
+pub fn CommandCtx::token_remaining_ms(self : CommandCtx) -> Int32 {
   self.gate.token_remaining_ms()
 }
 
@@ -209,7 +209,7 @@ pub async fn CommandCtx::reply(
   files? : Array[@dhttp.FileUpload],
   allowed_mentions? : @model.AllowedMentions,
   poll? : @model.PollCreateRequest,
-  ephemeral? : Bool = false,
+  ephemeral~ : Bool = false,
 ) -> Unit {
   self
   .responder()
@@ -226,7 +226,7 @@ pub async fn CommandCtx::respond(
   files? : Array[@dhttp.FileUpload],
   allowed_mentions? : @model.AllowedMentions,
   poll? : @model.PollCreateRequest,
-  ephemeral? : Bool = false,
+  ephemeral~ : Bool = false,
 ) -> Unit {
   self
   .responder()
@@ -257,7 +257,7 @@ pub async fn CommandCtx::show_modal(
 /// Acknowledge now and reply later via `edit_response` / `followup`.
 pub async fn CommandCtx::defer_response(
   self : CommandCtx,
-  ephemeral? : Bool = false,
+  ephemeral~ : Bool = false,
 ) -> Unit {
   self.responder().defer_message(ephemeral)
 }
@@ -280,7 +280,7 @@ pub async fn CommandCtx::delete_response(self : CommandCtx) -> Unit {
 pub async fn CommandCtx::edit_response(
   self : CommandCtx,
   content? : String,
-  clear_content? : Bool = false,
+  clear_content~ : Bool = false,
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
   allowed_mentions? : @model.AllowedMentions,
@@ -306,7 +306,7 @@ pub async fn CommandCtx::followup(
   files? : Array[@dhttp.FileUpload],
   allowed_mentions? : @model.AllowedMentions,
   poll? : @model.PollCreateRequest,
-  ephemeral? : Bool = false,
+  ephemeral~ : Bool = false,
 ) -> @model.Message {
   self
   .responder()
@@ -330,7 +330,7 @@ pub async fn CommandCtx::edit_followup(
   self : CommandCtx,
   message_id : @model.MessageId,
   content? : String,
-  clear_content? : Bool = false,
+  clear_content~ : Bool = false,
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
   allowed_mentions? : @model.AllowedMentions,
@@ -375,14 +375,14 @@ pub fn ComponentCtx::scope(self : ComponentCtx) -> InvocationScope {
 ///|
 /// Milliseconds left before the initial-response window closes, or `None`
 /// when the executor set no deadline.
-pub fn ComponentCtx::remaining_ms(self : ComponentCtx) -> Int? {
+pub fn ComponentCtx::remaining_ms(self : ComponentCtx) -> Int32? {
   self.gate.remaining_ms()
 }
 
 ///|
 /// Milliseconds left before this interaction's token expires (15 minutes after
 /// the executor received it). Followups and edits fail after that.
-pub fn ComponentCtx::token_remaining_ms(self : ComponentCtx) -> Int {
+pub fn ComponentCtx::token_remaining_ms(self : ComponentCtx) -> Int32 {
   self.gate.token_remaining_ms()
 }
 
@@ -440,7 +440,7 @@ pub async fn ComponentCtx::reply(
   files? : Array[@dhttp.FileUpload],
   allowed_mentions? : @model.AllowedMentions,
   poll? : @model.PollCreateRequest,
-  ephemeral? : Bool = false,
+  ephemeral~ : Bool = false,
 ) -> Unit {
   self
   .responder()
@@ -457,7 +457,7 @@ pub async fn ComponentCtx::respond(
   files? : Array[@dhttp.FileUpload],
   allowed_mentions? : @model.AllowedMentions,
   poll? : @model.PollCreateRequest,
-  ephemeral? : Bool = false,
+  ephemeral~ : Bool = false,
 ) -> Unit {
   self
   .responder()
@@ -478,7 +478,7 @@ pub async fn ComponentCtx::respond(
 pub async fn ComponentCtx::update_message(
   self : ComponentCtx,
   content? : String,
-  clear_content? : Bool = false,
+  clear_content~ : Bool = false,
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
   allowed_mentions? : @model.AllowedMentions,
@@ -516,7 +516,7 @@ pub async fn ComponentCtx::show_modal(
 /// Acknowledge now and send a message later through webhook methods.
 pub async fn ComponentCtx::defer_response(
   self : ComponentCtx,
-  ephemeral? : Bool = false,
+  ephemeral~ : Bool = false,
 ) -> Unit {
   self.responder().defer_message(ephemeral)
 }
@@ -547,7 +547,7 @@ pub async fn ComponentCtx::delete_response(self : ComponentCtx) -> Unit {
 pub async fn ComponentCtx::edit_response(
   self : ComponentCtx,
   content? : String,
-  clear_content? : Bool = false,
+  clear_content~ : Bool = false,
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
   allowed_mentions? : @model.AllowedMentions,
@@ -573,7 +573,7 @@ pub async fn ComponentCtx::followup(
   files? : Array[@dhttp.FileUpload],
   allowed_mentions? : @model.AllowedMentions,
   poll? : @model.PollCreateRequest,
-  ephemeral? : Bool = false,
+  ephemeral~ : Bool = false,
 ) -> @model.Message {
   self
   .responder()
@@ -597,7 +597,7 @@ pub async fn ComponentCtx::edit_followup(
   self : ComponentCtx,
   message_id : @model.MessageId,
   content? : String,
-  clear_content? : Bool = false,
+  clear_content~ : Bool = false,
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
   allowed_mentions? : @model.AllowedMentions,
@@ -642,14 +642,14 @@ pub fn ModalCtx::scope(self : ModalCtx) -> InvocationScope {
 ///|
 /// Milliseconds left before the initial-response window closes, or `None`
 /// when the executor set no deadline.
-pub fn ModalCtx::remaining_ms(self : ModalCtx) -> Int? {
+pub fn ModalCtx::remaining_ms(self : ModalCtx) -> Int32? {
   self.gate.remaining_ms()
 }
 
 ///|
 /// Milliseconds left before this interaction's token expires (15 minutes after
 /// the executor received it). Followups and edits fail after that.
-pub fn ModalCtx::token_remaining_ms(self : ModalCtx) -> Int {
+pub fn ModalCtx::token_remaining_ms(self : ModalCtx) -> Int32 {
   self.gate.token_remaining_ms()
 }
 
@@ -734,7 +734,7 @@ pub async fn ModalCtx::reply(
   files? : Array[@dhttp.FileUpload],
   allowed_mentions? : @model.AllowedMentions,
   poll? : @model.PollCreateRequest,
-  ephemeral? : Bool = false,
+  ephemeral~ : Bool = false,
 ) -> Unit {
   self
   .responder()
@@ -751,7 +751,7 @@ pub async fn ModalCtx::respond(
   files? : Array[@dhttp.FileUpload],
   allowed_mentions? : @model.AllowedMentions,
   poll? : @model.PollCreateRequest,
-  ephemeral? : Bool = false,
+  ephemeral~ : Bool = false,
 ) -> Unit {
   self
   .responder()
@@ -774,7 +774,7 @@ pub async fn ModalCtx::respond(
 pub async fn ModalCtx::update_message(
   self : ModalCtx,
   content? : String,
-  clear_content? : Bool = false,
+  clear_content~ : Bool = false,
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
   allowed_mentions? : @model.AllowedMentions,
@@ -807,7 +807,7 @@ pub async fn ModalCtx::update_message(
 /// Acknowledge now and reply later via a followup.
 pub async fn ModalCtx::defer_response(
   self : ModalCtx,
-  ephemeral? : Bool = false,
+  ephemeral~ : Bool = false,
 ) -> Unit {
   self.responder().defer_message(ephemeral)
 }
@@ -844,7 +844,7 @@ pub async fn ModalCtx::delete_response(self : ModalCtx) -> Unit {
 pub async fn ModalCtx::edit_response(
   self : ModalCtx,
   content? : String,
-  clear_content? : Bool = false,
+  clear_content~ : Bool = false,
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
   allowed_mentions? : @model.AllowedMentions,
@@ -870,7 +870,7 @@ pub async fn ModalCtx::followup(
   files? : Array[@dhttp.FileUpload],
   allowed_mentions? : @model.AllowedMentions,
   poll? : @model.PollCreateRequest,
-  ephemeral? : Bool = false,
+  ephemeral~ : Bool = false,
 ) -> @model.Message {
   self
   .responder()
@@ -894,7 +894,7 @@ pub async fn ModalCtx::edit_followup(
   self : ModalCtx,
   message_id : @model.MessageId,
   content? : String,
-  clear_content? : Bool = false,
+  clear_content~ : Bool = false,
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
   allowed_mentions? : @model.AllowedMentions,
@@ -932,14 +932,14 @@ pub(all) struct AutocompleteCtx {
 ///|
 /// Milliseconds left before the autocomplete response window closes, or
 /// `None` when the executor set no deadline.
-pub fn AutocompleteCtx::remaining_ms(self : AutocompleteCtx) -> Int? {
+pub fn AutocompleteCtx::remaining_ms(self : AutocompleteCtx) -> Int32? {
   self.gate.remaining_ms()
 }
 
 ///|
 /// Milliseconds left before this interaction's token expires (15 minutes after
 /// the executor received it). Followups and edits fail after that.
-pub fn AutocompleteCtx::token_remaining_ms(self : AutocompleteCtx) -> Int {
+pub fn AutocompleteCtx::token_remaining_ms(self : AutocompleteCtx) -> Int32 {
   self.gate.token_remaining_ms()
 }
 

@@ -40,7 +40,7 @@ async fn GatewayCtx::request_voice_credentials(
   channel_id : @model.Id[@model.ChannelMarker],
   self_mute : Bool,
   self_deaf : Bool,
-  timeout_ms : Int,
+  timeout_ms : Int32,
 ) -> @voice.VoiceCredentials {
   let user_id = self.ready_.user.id
   let state = self.collector_.register(Events::voice_state_update(), update => {
@@ -83,7 +83,7 @@ async fn GatewayCtx::watch_voice_server_updates(
   channel_id : @model.Id[@model.ChannelMarker],
   self_mute : Bool,
   self_deaf : Bool,
-  timeout_ms : Int,
+  timeout_ms : Int32,
   connection : @voice.VoiceConnection,
   rejoin_in_progress : Ref[Bool],
 ) -> Unit noraise {
@@ -110,7 +110,7 @@ async fn GatewayCtx::watch_voice_server_updates(
 ///|
 async fn wait_ready_or_disconnect(
   connection : @voice.VoiceConnection,
-  timeout_ms : Int,
+  timeout_ms : Int32,
 ) -> Unit {
   errdefer @async.protect_from_cancel(() => {
     connection.disconnect() catch {
@@ -143,10 +143,10 @@ pub async fn GatewayCtx::join_voice(
   self : GatewayCtx,
   guild_id : @model.Id[@model.GuildMarker],
   channel_id : @model.Id[@model.ChannelMarker],
-  self_mute? : Bool = false,
-  self_deaf? : Bool = false,
-  timeout_ms? : Int = 10000,
-  telemetry? : (@voice.VoiceTelemetry) -> Unit = _ => (),
+  self_mute~ : Bool = false,
+  self_deaf~ : Bool = false,
+  timeout_ms~ : Int32 = 10000,
+  telemetry~ : (@voice.VoiceTelemetry) -> Unit = _ => (),
 ) -> @voice.VoiceConnection {
   let required_intents = Events::voice_state_update().required_intents()
   if !self.intents_.contains(required_intents) {

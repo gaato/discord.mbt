@@ -65,8 +65,8 @@ pub(all) struct GuildBanEvent {
 pub(all) struct GuildMembersChunkEvent {
   guild_id : GuildId
   members : Array[GuildMember]
-  chunk_index : Int
-  chunk_count : Int
+  chunk_index : Int32
+  chunk_count : Int32
   not_found : Array[Json]?
   presences : Array[PresenceUpdateEvent]?
   nonce : String?
@@ -159,14 +159,14 @@ pub(all) struct InviteCreateEvent {
   created_at : Timestamp
   guild_id : GuildId?
   inviter : User?
-  max_age : Int
-  max_uses : Int
+  max_age : Int32
+  max_uses : Int32
   target_type : InviteTargetType?
   target_user : User?
   // Partial applications are deferred to the complete application domain.
   target_application : Json?
   temporary : Bool
-  uses : Int
+  uses : Int32
   expires_at : Nullable[Timestamp]
   role_ids : Array[RoleId]?
 } derive(ToJson, FromJson, Debug)
@@ -207,7 +207,7 @@ pub(all) struct MessageReactionAddEvent {
   message_author_id : UserId?
   burst : Bool
   burst_colors : Array[String]?
-  typ : Int
+  typ : Int32
 } derive (
   ToJson(fields(typ(rename="type"), guild_member(rename="member"))),
   FromJson(fields(typ(rename="type"), guild_member(rename="member"))),
@@ -223,7 +223,7 @@ pub(all) struct MessageReactionRemoveEvent {
   guild_id : GuildId?
   emoji : Emoji
   burst : Bool
-  typ : Int
+  typ : Int32
 } derive (
   ToJson(fields(typ(rename="type"))),
   FromJson(fields(typ(rename="type"))),
@@ -254,7 +254,7 @@ pub(all) struct MessagePollVoteEvent {
   channel_id : ChannelId
   message_id : MessageId
   guild_id : GuildId?
-  answer_id : Int
+  answer_id : Int32
 } derive(ToJson, FromJson, Debug)
 
 ///|
@@ -347,7 +347,7 @@ pub(all) struct ThreadListSyncEvent {
 pub(all) struct ThreadMembersUpdateEvent {
   id : ChannelId
   guild_id : GuildId
-  member_count : Int
+  member_count : Int32
   added_members : Array[ThreadMember]?
   removed_member_ids : Array[UserId]?
 } derive(ToJson, FromJson, Debug)
@@ -410,8 +410,8 @@ pub(all) struct VoiceChannelEffectSendEvent {
   guild_id : GuildId
   user_id : UserId
   emoji : Nullable[Emoji]?
-  animation_type : Nullable[Int]?
-  animation_id : Int?
+  animation_type : Nullable[Int32]?
+  animation_id : Int32?
   // Discord sends either a snowflake string or a numeric built-in sound id.
   sound_id : Json?
   sound_volume : Double?
@@ -475,7 +475,7 @@ pub impl @json.FromJson for GuildAuditLogEntryCreateEvent with fn from_json(
 ///|
 /// A gateway request was rate limited.
 pub(all) struct GatewayRateLimitedEvent {
-  opcode : Int
+  opcode : Int32
   retry_after : Double
   meta : Json
 } derive(ToJson, FromJson, Debug)

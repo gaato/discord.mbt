@@ -13,7 +13,7 @@ pub(all) struct GuildWidget {
   instant_invite : Nullable[String]
   channels : Array[GuildWidgetChannel]
   members : Array[GuildWidgetMember]
-  presence_count : Int
+  presence_count : Int32
 } derive(ToJson, FromJson, Debug)
 
 ///|
@@ -21,7 +21,7 @@ pub(all) struct GuildWidget {
 pub(all) struct GuildWidgetChannel {
   id : ChannelId
   name : String
-  position : Int
+  position : Int32
 } derive(ToJson, FromJson, Debug)
 
 ///|

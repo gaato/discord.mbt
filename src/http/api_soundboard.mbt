@@ -94,9 +94,9 @@ pub async fn Client::modify_guild_soundboard_sound(
   name? : String,
   volume? : Double,
   emoji_id? : @model.EmojiId,
-  clear_emoji_id? : Bool = false,
+  clear_emoji_id~ : Bool = false,
   emoji_name? : String,
-  clear_emoji_name? : Bool = false,
+  clear_emoji_name~ : Bool = false,
   audit_reason? : String,
 ) -> @model.SoundboardSound raise DiscordHttpError {
   validate_soundboard_fields(name, volume)

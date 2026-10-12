@@ -33,7 +33,7 @@ pub async fn Message::read_all(self : Message) -> &@io.Data {
 /// `InvalidHandshake`.
 pub async fn connect(
   url : String,
-  headers? : Map[@http.CaseInsensitiveString, String] = Map([]),
+  headers~ : Map[@http.CaseInsensitiveString, String] = Map([]),
 ) -> Conn {
   if !headers.is_empty() {
     raise WebSocketError::InvalidHandshake("custom headers are unsupported")

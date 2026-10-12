@@ -27,8 +27,8 @@ test "bot error messages render actionable diagnostics" {
 ///|
 test "shard id validation rejects each invalid selection" {
   fn expect_invalid(
-    ids : Array[Int],
-    count : Int,
+    ids : Array[Int32],
+    count : Int32,
     expected_message : String,
   ) -> Unit raise {
     assert_eq(shard_layout_problem(ids, count), Some(expected_message))

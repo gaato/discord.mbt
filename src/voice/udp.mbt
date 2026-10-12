@@ -1,7 +1,7 @@
 ///|
 /// UDP seam used by voice discovery and media transport.
 pub(open) trait VoiceUdp {
-  async fn recv(Self, FixedArray[Byte]) -> Int
+  async fn recv(Self, FixedArray[Byte]) -> Int32
   async fn send(Self, Bytes) -> Unit
   async fn close(Self) -> Unit
 }
@@ -10,7 +10,7 @@ pub(open) trait VoiceUdp {
 /// Errors raised by voice UDP setup and IP discovery.
 pub(all) suberror VoiceUdpError {
   InvalidDiscoveryPacket(reason~ : String)
-  IpDiscoveryFailed(attempts~ : Int, reason~ : String)
+  IpDiscoveryFailed(attempts~ : Int32, reason~ : String)
 } derive(Debug, Eq)
 
 ///|
@@ -40,7 +40,7 @@ impl VoiceUdp for SocketVoiceUdp with fn close(self) {
 
 ///|
 /// Open a connected UDP socket for a Discord voice server.
-pub async fn open_voice_udp(ip : String, port : Int) -> &VoiceUdp {
+pub async fn open_voice_udp(ip : String, port : Int32) -> &VoiceUdp {
   let address = @socket.Addr::resolve(ip, port~)
   let client = @socket.UdpClient(address)
   SocketVoiceUdp::{ client, }
@@ -48,7 +48,7 @@ pub async fn open_voice_udp(ip : String, port : Int) -> &VoiceUdp {
 
 ///|
 /// Build Discord's 74-byte voice IP discovery request.
-pub fn build_ip_discovery_request(ssrc : UInt) -> Bytes {
+pub fn build_ip_discovery_request(ssrc : UInt32) -> Bytes {
   let bytes : Array[Byte] = [0, 1, 0, 70]
   bytes.push((ssrc >> 24).to_byte())
   bytes.push((ssrc >> 16).to_byte())
@@ -61,7 +61,7 @@ pub fn build_ip_discovery_request(ssrc : UInt) -> Bytes {
 }
 
 ///|
-fn read_u32_be(bytes : Bytes, offset : Int) -> UInt {
+fn read_u32_be(bytes : Bytes, offset : Int32) -> UInt32 {
   (bytes[offset].to_uint() << 24) |
   (bytes[offset + 1].to_uint() << 16) |
   (bytes[offset + 2].to_uint() << 8) |
@@ -72,8 +72,8 @@ fn read_u32_be(bytes : Bytes, offset : Int) -> UInt {
 /// Parse Discord's 74-byte voice IP discovery response.
 pub fn parse_ip_discovery_response(
   bytes : Bytes,
-  expected_ssrc~ : UInt,
-) -> (String, Int) raise VoiceUdpError {
+  expected_ssrc~ : UInt32,
+) -> (String, Int32) raise VoiceUdpError {
   if bytes.length() != 74 {
     raise InvalidDiscoveryPacket(reason="response must contain 74 bytes")
   }
@@ -113,10 +113,10 @@ pub fn parse_ip_discovery_response(
 /// Run voice IP discovery, retrying only receive timeouts.
 pub async fn discover_external_address(
   udp : &VoiceUdp,
-  ssrc : UInt,
-  retries? : Int = 3,
-  timeout_ms? : Int = 1000,
-) -> (String, Int) {
+  ssrc : UInt32,
+  retries~ : Int32 = 3,
+  timeout_ms~ : Int32 = 1000,
+) -> (String, Int32) {
   if retries <= 0 || timeout_ms <= 0 {
     raise VoiceUdpError::IpDiscoveryFailed(
       attempts=0,

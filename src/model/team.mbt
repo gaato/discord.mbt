@@ -22,11 +22,11 @@ pub(all) struct TeamMember {
 pub(all) enum TeamMembershipState {
   Invited
   Accepted
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn TeamMembershipState::to_int(self : TeamMembershipState) -> Int {
+pub fn TeamMembershipState::to_int(self : TeamMembershipState) -> Int32 {
   match self {
     Invited => 1
     Accepted => 2
@@ -35,7 +35,7 @@ pub fn TeamMembershipState::to_int(self : TeamMembershipState) -> Int {
 }
 
 ///|
-pub fn TeamMembershipState::from_int(value : Int) -> TeamMembershipState {
+pub fn TeamMembershipState::from_int(value : Int32) -> TeamMembershipState {
   match value {
     1 => Invited
     2 => Accepted

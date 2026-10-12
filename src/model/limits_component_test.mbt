@@ -26,12 +26,12 @@ fn limit_with(base : Json, field : String, value : Json) -> Json {
 }
 
 ///|
-fn limit_text(length : Int) -> Json {
+fn limit_text(length : Int32) -> Json {
   Json::string("x".repeat(length))
 }
 
 ///|
-fn limit_array(length : Int, item : Json) -> Json {
+fn limit_array(length : Int32, item : Json) -> Json {
   Json::array(Array::make(length, item))
 }
 
@@ -54,7 +54,7 @@ fn limit_check(
 fn limit_field_cases(
   base : Json,
   cases : Array[(String, Json, Json)],
-  modal? : Bool = false,
+  modal~ : Bool = false,
 ) -> String raise {
   let messages : Array[String] = []
   for (field, valid, invalid) in cases {

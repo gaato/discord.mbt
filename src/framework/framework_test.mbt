@@ -91,7 +91,7 @@ fn autocomplete_interaction() -> @model.Interaction raise {
 ///|
 fn named_command_interaction(
   name : String,
-  typ : Int,
+  typ : Int32,
 ) -> @model.Interaction raise {
   let interaction : @model.Interaction = @json.from_json(
     @json.parse(

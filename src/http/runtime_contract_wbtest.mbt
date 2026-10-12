@@ -106,7 +106,7 @@ priv suberror ReleaseRejected derive(Debug)
 ///|
 /// A limiter whose release fails, as a coordinator does for an unknown lease.
 priv struct RejectingLimiter {
-  mut released : Int
+  mut released : Int32
 }
 
 ///|

@@ -27,7 +27,7 @@ fn command_scope() -> @app.CommandScope raise {
 }
 
 ///|
-fn port() -> Int {
+fn port() -> Int32 {
   match @env.get_env_var("PORT") {
     Some(value) => @string.parse_int(value) catch { _ => 8080 }
     None => 8080

@@ -21,7 +21,7 @@ priv struct Bucket {
   /// buckets, so cross-channel/guild parallelism is preserved).
   gate : @async.Semaphore
   mut known : Bool
-  mut remaining : Int
+  mut remaining : Int32
   mut reset_at_ms : Int64
 }
 
@@ -30,9 +30,9 @@ priv struct Bucket {
 /// headers plus a global sliding-window limit (default 50 requests/second).
 pub struct InMemoryRateLimiter {
   priv buckets : Map[String, Bucket]
-  global_limit : Int
+  global_limit : Int32
   mut global_window_start : Int64
-  mut global_count : Int
+  mut global_count : Int32
   mut global_blocked_until : Int64
 }
 
@@ -40,7 +40,7 @@ pub struct InMemoryRateLimiter {
 /// Create a limiter with empty bucket accounting and a global window of
 /// `global_limit` requests per second.
 pub fn InMemoryRateLimiter::InMemoryRateLimiter(
-  global_limit? : Int = 50,
+  global_limit~ : Int32 = 50,
 ) -> InMemoryRateLimiter {
   {
     buckets: Map([]),

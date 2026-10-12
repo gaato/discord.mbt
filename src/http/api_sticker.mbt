@@ -120,7 +120,7 @@ pub async fn Client::modify_guild_sticker(
   sticker_id : @model.StickerId,
   name? : String,
   description? : String,
-  clear_description? : Bool = false,
+  clear_description~ : Bool = false,
   tags? : String,
   audit_reason? : String,
 ) -> @model.Sticker raise DiscordHttpError {

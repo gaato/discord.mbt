@@ -47,7 +47,7 @@ pub struct ComponentDeferredCtx {
 /// `files` (see `MessageUpdate`).
 pub fn ComponentReply::update_message(
   content? : String,
-  clear_content? : Bool = false,
+  clear_content~ : Bool = false,
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
   allowed_mentions? : @model.AllowedMentions,
@@ -79,7 +79,7 @@ pub fn ComponentReply::message(
   files? : Array[@dhttp.FileUpload],
   allowed_mentions? : @model.AllowedMentions,
   poll? : @model.PollCreateRequest,
-  ephemeral? : Bool = false,
+  ephemeral~ : Bool = false,
 ) -> ComponentReply {
   Message(
     InitialResponse::message(
@@ -268,7 +268,7 @@ pub fn ComponentImmediateCtx::message(
 /// executor set no deadline.
 pub fn ComponentImmediateCtx::remaining_ms(
   self : ComponentImmediateCtx,
-) -> Int? {
+) -> Int32? {
   self.raw_.remaining_ms()
 }
 
@@ -403,7 +403,7 @@ pub async fn ComponentDeferredCtx::original(
 pub async fn ComponentDeferredCtx::edit_original(
   self : ComponentDeferredCtx,
   content? : String,
-  clear_content? : Bool = false,
+  clear_content~ : Bool = false,
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
   allowed_mentions? : @model.AllowedMentions,
@@ -441,7 +441,7 @@ pub async fn ComponentDeferredCtx::followup(
   files? : Array[@dhttp.FileUpload],
   allowed_mentions? : @model.AllowedMentions,
   poll? : @model.PollCreateRequest,
-  ephemeral? : Bool = false,
+  ephemeral~ : Bool = false,
 ) -> @model.Message {
   self.raw_.followup(
     content?,
@@ -470,7 +470,7 @@ pub async fn ComponentDeferredCtx::edit_followup(
   self : ComponentDeferredCtx,
   message_id : @model.MessageId,
   content? : String,
-  clear_content? : Bool = false,
+  clear_content~ : Bool = false,
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
   allowed_mentions? : @model.AllowedMentions,
@@ -513,8 +513,8 @@ pub async fn[A] ComponentDeferredCtx::wait_for_component(
   self : ComponentDeferredCtx,
   route : ComponentRoute[A],
   state : A,
-  from? : WaitFrom = Invoker,
-  timeout_ms? : Int,
+  from~ : WaitFrom = Invoker,
+  timeout_ms? : Int32,
 ) -> @framework.ComponentCtx? {
   wait_for_route(
     self.waiter_,

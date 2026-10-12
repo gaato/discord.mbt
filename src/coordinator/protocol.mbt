@@ -45,7 +45,7 @@ fn decode_headers(fields : Map[String, Json]) -> @http.Headers raise {
 }
 
 ///|
-fn json_nonnegative_int(value : Json) -> Int? {
+fn json_nonnegative_int(value : Json) -> Int32? {
   guard value is Number(number, ..) else { return None }
   let integer = number.to_int()
   if integer >= 0 && integer.to_double() == number {

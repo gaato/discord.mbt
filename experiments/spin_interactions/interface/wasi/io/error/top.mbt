@@ -18,7 +18,7 @@
 ///
 /// The set of functions which can "downcast" an `error` into a more
 /// concrete type is open.
-pub(all) struct Error_(Int)
+pub(all) struct Error_(Int32)
 
 ///|
 /// Drops a resource handle.

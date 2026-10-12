@@ -23,31 +23,31 @@ pub async fn Client::modify_guild(
   default_message_notifications? : @model.DefaultMessageNotifications,
   explicit_content_filter? : @model.ExplicitContentFilter,
   afk_channel_id? : @model.ChannelId,
-  clear_afk_channel_id? : Bool = false,
-  afk_timeout? : Int,
+  clear_afk_channel_id~ : Bool = false,
+  afk_timeout? : Int32,
   icon? : String,
-  clear_icon? : Bool = false,
+  clear_icon~ : Bool = false,
   owner_id? : @model.UserId,
   splash? : String,
-  clear_splash? : Bool = false,
+  clear_splash~ : Bool = false,
   discovery_splash? : String,
-  clear_discovery_splash? : Bool = false,
+  clear_discovery_splash~ : Bool = false,
   banner? : String,
-  clear_banner? : Bool = false,
+  clear_banner~ : Bool = false,
   system_channel_id? : @model.ChannelId,
-  clear_system_channel_id? : Bool = false,
+  clear_system_channel_id~ : Bool = false,
   system_channel_flags? : @model.SystemChannelFlags,
   rules_channel_id? : @model.ChannelId,
-  clear_rules_channel_id? : Bool = false,
+  clear_rules_channel_id~ : Bool = false,
   public_updates_channel_id? : @model.ChannelId,
-  clear_public_updates_channel_id? : Bool = false,
+  clear_public_updates_channel_id~ : Bool = false,
   preferred_locale? : String,
   features? : Array[@model.GuildFeature],
   description? : String,
-  clear_description? : Bool = false,
+  clear_description~ : Bool = false,
   premium_progress_bar_enabled? : Bool,
   safety_alerts_channel_id? : @model.ChannelId,
-  clear_safety_alerts_channel_id? : Bool = false,
+  clear_safety_alerts_channel_id~ : Bool = false,
   audit_reason? : String,
 ) -> @model.Guild raise DiscordHttpError {
   validate_length("guild name", name, min=2, max=100)
@@ -117,7 +117,7 @@ pub async fn Client::get_guild_audit_log(
   action_type? : @model.AuditLogEvent,
   before? : @model.AuditLogEntryId,
   after? : @model.AuditLogEntryId,
-  limit? : Int,
+  limit? : Int32,
 ) -> @model.AuditLog raise DiscordHttpError {
   validate_cursor_pair("audit log", before, after)
   validate_range("audit log limit", limit, min=1, max=100)
@@ -147,7 +147,7 @@ pub async fn Client::get_guild_audit_log(
 pub async fn Client::get_guild_bans(
   self : Client,
   guild_id : @model.GuildId,
-  limit? : Int,
+  limit? : Int32,
   before? : @model.UserId,
   after? : @model.UserId,
 ) -> Array[@model.GuildBan] raise DiscordHttpError {
@@ -187,18 +187,18 @@ pub async fn Client::create_guild_channel(
   typ? : @model.ChannelType,
   topic? : String,
   parent_id? : @model.ChannelId,
-  position? : Int,
+  position? : Int32,
   permission_overwrites? : Array[@model.Overwrite],
   nsfw? : Bool,
-  bitrate? : Int,
-  user_limit? : Int,
-  rate_limit_per_user? : Int,
+  bitrate? : Int32,
+  user_limit? : Int32,
+  rate_limit_per_user? : Int32,
   rtc_region? : String,
   video_quality_mode? : @model.VideoQualityMode,
   default_auto_archive_duration? : @model.ThreadAutoArchiveDuration,
   available_tags? : Array[@model.ForumTagRequest],
   default_reaction_emoji? : @model.DefaultReaction,
-  default_thread_rate_limit_per_user? : Int,
+  default_thread_rate_limit_per_user? : Int32,
   default_sort_order? : @model.SortOrderType,
   default_forum_layout? : @model.ForumLayoutType,
   audit_reason? : String,
@@ -237,7 +237,7 @@ pub async fn Client::create_guild_channel(
 /// sends a JSON null that moves the channel out of its category.
 pub struct GuildChannelPosition {
   priv id : @model.ChannelId
-  priv position : Int?
+  priv position : Int32?
   priv lock_permissions : Bool?
   priv parent_id : @model.Undefinable[@model.ChannelId]
 }
@@ -246,10 +246,10 @@ pub struct GuildChannelPosition {
 /// Construct one channel-position entry.
 pub fn GuildChannelPosition::GuildChannelPosition(
   id : @model.ChannelId,
-  position? : Int,
+  position? : Int32,
   lock_permissions? : Bool,
   parent_id? : @model.ChannelId,
-  clear_parent_id? : Bool = false,
+  clear_parent_id~ : Bool = false,
 ) -> GuildChannelPosition raise DiscordHttpError {
   {
     id,
@@ -304,7 +304,7 @@ pub async fn Client::get_guild_member(
 pub async fn Client::list_guild_members(
   self : Client,
   guild_id : @model.GuildId,
-  limit? : Int,
+  limit? : Int32,
   after? : @model.UserId,
 ) -> Array[@model.GuildMember] raise DiscordHttpError {
   validate_range("member limit", limit, min=1, max=1000)
@@ -325,7 +325,7 @@ pub async fn Client::search_guild_members(
   self : Client,
   guild_id : @model.GuildId,
   query : String,
-  limit? : Int,
+  limit? : Int32,
 ) -> Array[@model.GuildMember] raise DiscordHttpError {
   if query.length() == 0 {
     raise Validation(message="member query must not be empty")
@@ -346,14 +346,14 @@ pub async fn Client::modify_guild_member(
   guild_id : @model.GuildId,
   user_id : @model.UserId,
   nick? : String,
-  clear_nick? : Bool = false,
+  clear_nick~ : Bool = false,
   roles? : Array[@model.RoleId],
   mute? : Bool,
   deaf? : Bool,
   channel_id? : @model.ChannelId,
-  clear_channel_id? : Bool = false,
+  clear_channel_id~ : Bool = false,
   communication_disabled_until? : @model.Timestamp,
-  clear_communication_disabled_until? : Bool = false,
+  clear_communication_disabled_until~ : Bool = false,
   flags? : @model.GuildMemberFlags,
   audit_reason? : String,
 ) -> @model.GuildMember raise DiscordHttpError {
@@ -385,13 +385,13 @@ pub async fn Client::modify_current_member(
   self : Client,
   guild_id : @model.GuildId,
   nick? : String,
-  clear_nick? : Bool = false,
+  clear_nick~ : Bool = false,
   avatar? : String,
-  clear_avatar? : Bool = false,
+  clear_avatar~ : Bool = false,
   banner? : String,
-  clear_banner? : Bool = false,
+  clear_banner~ : Bool = false,
   bio? : String,
-  clear_bio? : Bool = false,
+  clear_bio~ : Bool = false,
   audit_reason? : String,
 ) -> @model.GuildMember raise DiscordHttpError {
   let body = @model.ObjBuilder()
@@ -449,7 +449,7 @@ pub async fn Client::create_guild_ban(
   self : Client,
   guild_id : @model.GuildId,
   user_id : @model.UserId,
-  delete_message_seconds? : Int,
+  delete_message_seconds? : Int32,
   audit_reason? : String,
 ) -> Unit raise DiscordHttpError {
   validate_range(
@@ -494,7 +494,7 @@ pub async fn Client::create_guild_role(
   guild_id : @model.GuildId,
   name? : String,
   permissions? : @model.Permissions,
-  color? : Int,
+  color? : Int32,
   colors? : @model.RoleColors,
   hoist? : Bool,
   icon? : String,
@@ -526,13 +526,13 @@ pub async fn Client::modify_guild_role(
   role_id : @model.RoleId,
   name? : String,
   permissions? : @model.Permissions,
-  color? : Int,
+  color? : Int32,
   colors? : @model.RoleColors,
   hoist? : Bool,
   icon? : String,
-  clear_icon? : Bool = false,
+  clear_icon~ : Bool = false,
   unicode_emoji? : String,
-  clear_unicode_emoji? : Bool = false,
+  clear_unicode_emoji~ : Bool = false,
   mentionable? : Bool,
   audit_reason? : String,
 ) -> @model.Role raise DiscordHttpError {
@@ -589,7 +589,7 @@ pub async fn Client::get_guild_ban(
 ///|
 fn bulk_guild_ban_body(
   user_ids : Array[@model.UserId],
-  delete_message_seconds : Int?,
+  delete_message_seconds : Int32?,
 ) -> Json raise DiscordHttpError {
   if user_ids.length() > 200 {
     raise Validation(message="bulk guild ban exceeds 200 users")
@@ -612,7 +612,7 @@ pub async fn Client::bulk_guild_ban(
   self : Client,
   guild_id : @model.GuildId,
   user_ids : Array[@model.UserId],
-  delete_message_seconds? : Int,
+  delete_message_seconds? : Int32,
   audit_reason? : String,
 ) -> @model.BulkBanResponse raise DiscordHttpError {
   let body = bulk_guild_ban_body(user_ids, delete_message_seconds)
@@ -621,7 +621,7 @@ pub async fn Client::bulk_guild_ban(
 
 ///|
 fn guild_prune_query(
-  days : Int?,
+  days : Int32?,
   include_roles : Array[@model.RoleId]?,
 ) -> String raise DiscordHttpError {
   validate_range("prune days", days, min=1, max=30)
@@ -646,7 +646,7 @@ fn guild_prune_query(
 pub async fn Client::get_guild_prune_count(
   self : Client,
   guild_id : @model.GuildId,
-  days? : Int,
+  days? : Int32,
   include_roles? : Array[@model.RoleId],
 ) -> @model.GuildPruneResult raise DiscordHttpError {
   let query = guild_prune_query(days, include_roles)
@@ -655,7 +655,7 @@ pub async fn Client::get_guild_prune_count(
 
 ///|
 fn begin_guild_prune_body(
-  days : Int?,
+  days : Int32?,
   compute_prune_count : Bool?,
   include_roles : Array[@model.RoleId]?,
 ) -> Json raise DiscordHttpError {
@@ -672,7 +672,7 @@ fn begin_guild_prune_body(
 pub async fn Client::begin_guild_prune(
   self : Client,
   guild_id : @model.GuildId,
-  days? : Int,
+  days? : Int32,
   compute_prune_count? : Bool,
   include_roles? : Array[@model.RoleId],
   audit_reason? : String,
@@ -760,7 +760,7 @@ pub async fn Client::modify_guild_widget(
   guild_id : @model.GuildId,
   enabled? : Bool,
   channel_id? : @model.ChannelId,
-  clear_channel_id? : Bool = false,
+  clear_channel_id~ : Bool = false,
   audit_reason? : String,
 ) -> @model.GuildWidgetSettings raise DiscordHttpError {
   let body = modify_guild_widget_body(enabled, channel_id, clear_channel_id)
@@ -830,11 +830,11 @@ pub async fn Client::modify_guild_welcome_screen(
   self : Client,
   guild_id : @model.GuildId,
   enabled? : Bool,
-  clear_enabled? : Bool = false,
+  clear_enabled~ : Bool = false,
   welcome_channels? : Array[@model.WelcomeScreenChannel],
-  clear_welcome_channels? : Bool = false,
+  clear_welcome_channels~ : Bool = false,
   description? : String,
-  clear_description? : Bool = false,
+  clear_description~ : Bool = false,
   audit_reason? : String,
 ) -> @model.WelcomeScreen raise DiscordHttpError {
   let body = modify_guild_welcome_screen_body(
@@ -917,9 +917,9 @@ pub async fn Client::modify_guild_incident_actions(
   self : Client,
   guild_id : @model.GuildId,
   invites_disabled_until? : @model.Timestamp,
-  clear_invites_disabled_until? : Bool = false,
+  clear_invites_disabled_until~ : Bool = false,
   dms_disabled_until? : @model.Timestamp,
-  clear_dms_disabled_until? : Bool = false,
+  clear_dms_disabled_until~ : Bool = false,
 ) -> @model.IncidentsData raise DiscordHttpError {
   let body = modify_guild_incident_actions_body(
     invites_disabled_until, clear_invites_disabled_until, dms_disabled_until, clear_dms_disabled_until,
@@ -939,7 +939,7 @@ pub async fn Client::get_guild_role(
 
 ///|
 fn modify_guild_role_positions_body(
-  positions : Array[(@model.RoleId, Int?)],
+  positions : Array[(@model.RoleId, Int32?)],
 ) -> Json {
   Json::array(
     positions.map(position => {
@@ -958,7 +958,7 @@ fn modify_guild_role_positions_body(
 pub async fn Client::modify_guild_role_positions(
   self : Client,
   guild_id : @model.GuildId,
-  positions : Array[(@model.RoleId, Int?)],
+  positions : Array[(@model.RoleId, Int32?)],
   audit_reason? : String,
 ) -> Array[@model.Role] raise DiscordHttpError {
   let body = modify_guild_role_positions_body(positions)

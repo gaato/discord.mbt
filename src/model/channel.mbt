@@ -4,15 +4,15 @@ pub(all) struct Channel {
   id : ChannelId
   typ : ChannelType
   guild_id : GuildId?
-  position : Int?
+  position : Int32?
   permission_overwrites : Array[Overwrite]?
   name : Nullable[String]?
   topic : Nullable[String]?
   nsfw : Bool?
   last_message_id : Nullable[MessageId]?
-  bitrate : Int?
-  user_limit : Int?
-  rate_limit_per_user : Int?
+  bitrate : Int32?
+  user_limit : Int32?
+  rate_limit_per_user : Int32?
   recipients : Array[User]?
   icon : Nullable[ImageHash]?
   owner_id : UserId?
@@ -22,19 +22,19 @@ pub(all) struct Channel {
   last_pin_timestamp : Nullable[Timestamp]?
   rtc_region : Nullable[String]?
   video_quality_mode : VideoQualityMode?
-  message_count : Int?
-  member_count : Int?
+  message_count : Int32?
+  member_count : Int32?
   thread_metadata : ThreadMetadata?
   thread_member : ThreadMember?
   default_auto_archive_duration : ThreadAutoArchiveDuration?
   permissions : Permissions?
   app_permissions : Permissions?
   flags : ChannelFlags?
-  total_message_sent : Int?
+  total_message_sent : Int32?
   available_tags : Array[ForumTag]?
   applied_tags : Array[GenericId]?
   default_reaction_emoji : Nullable[DefaultReaction]?
-  default_thread_rate_limit_per_user : Int?
+  default_thread_rate_limit_per_user : Int32?
   default_sort_order : Nullable[SortOrderType]?
   default_forum_layout : ForumLayoutType?
 } derive (
@@ -61,11 +61,11 @@ pub(all) struct Overwrite {
 pub(all) enum OverwriteType {
   Role
   Member
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn OverwriteType::to_int(self : OverwriteType) -> Int {
+pub fn OverwriteType::to_int(self : OverwriteType) -> Int32 {
   match self {
     Role => 0
     Member => 1
@@ -74,7 +74,7 @@ pub fn OverwriteType::to_int(self : OverwriteType) -> Int {
 }
 
 ///|
-pub fn OverwriteType::from_int(value : Int) -> OverwriteType {
+pub fn OverwriteType::from_int(value : Int32) -> OverwriteType {
   match value {
     0 => Role
     1 => Member
@@ -100,11 +100,11 @@ pub impl @json.FromJson for OverwriteType with fn from_json(json, path) {
 pub(all) enum VideoQualityMode {
   Auto
   Full
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn VideoQualityMode::to_int(self : VideoQualityMode) -> Int {
+pub fn VideoQualityMode::to_int(self : VideoQualityMode) -> Int32 {
   match self {
     Auto => 1
     Full => 2
@@ -113,7 +113,7 @@ pub fn VideoQualityMode::to_int(self : VideoQualityMode) -> Int {
 }
 
 ///|
-pub fn VideoQualityMode::from_int(value : Int) -> VideoQualityMode {
+pub fn VideoQualityMode::from_int(value : Int32) -> VideoQualityMode {
   match value {
     1 => Auto
     2 => Full
@@ -139,11 +139,11 @@ pub impl @json.FromJson for VideoQualityMode with fn from_json(json, path) {
 pub(all) enum SortOrderType {
   LatestActivity
   CreationDate
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn SortOrderType::to_int(self : SortOrderType) -> Int {
+pub fn SortOrderType::to_int(self : SortOrderType) -> Int32 {
   match self {
     LatestActivity => 0
     CreationDate => 1
@@ -152,7 +152,7 @@ pub fn SortOrderType::to_int(self : SortOrderType) -> Int {
 }
 
 ///|
-pub fn SortOrderType::from_int(value : Int) -> SortOrderType {
+pub fn SortOrderType::from_int(value : Int32) -> SortOrderType {
   match value {
     0 => LatestActivity
     1 => CreationDate
@@ -179,11 +179,11 @@ pub(all) enum ForumLayoutType {
   NotSet
   ListView
   GalleryView
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn ForumLayoutType::to_int(self : ForumLayoutType) -> Int {
+pub fn ForumLayoutType::to_int(self : ForumLayoutType) -> Int32 {
   match self {
     NotSet => 0
     ListView => 1
@@ -193,7 +193,7 @@ pub fn ForumLayoutType::to_int(self : ForumLayoutType) -> Int {
 }
 
 ///|
-pub fn ForumLayoutType::from_int(value : Int) -> ForumLayoutType {
+pub fn ForumLayoutType::from_int(value : Int32) -> ForumLayoutType {
   match value {
     0 => NotSet
     1 => ListView
@@ -222,13 +222,13 @@ pub(all) enum ThreadAutoArchiveDuration {
   OneDay
   ThreeDays
   OneWeek
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
 pub fn ThreadAutoArchiveDuration::to_int(
   self : ThreadAutoArchiveDuration,
-) -> Int {
+) -> Int32 {
   match self {
     OneHour => 60
     OneDay => 1440
@@ -240,7 +240,7 @@ pub fn ThreadAutoArchiveDuration::to_int(
 
 ///|
 pub fn ThreadAutoArchiveDuration::from_int(
-  value : Int,
+  value : Int32,
 ) -> ThreadAutoArchiveDuration {
   match value {
     60 => OneHour
@@ -287,7 +287,7 @@ pub(all) struct ThreadMember {
   id : ChannelId?
   user_id : UserId?
   join_timestamp : Timestamp
-  flags : Int
+  flags : Int32
   guild_member : GuildMember?
 } derive (
   ToJson(fields(guild_member(rename="member"))),

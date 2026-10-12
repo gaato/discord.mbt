@@ -2,7 +2,7 @@
 
 ///|
 #doc(hidden)
-pub fn wasmExportHandle(p0 : Int, p1 : Int) -> Unit {
+pub fn wasmExportHandle(p0 : Int32, p1 : Int32) -> Unit {
   let _ = handle(
     @types.IncomingRequest::IncomingRequest(p0),
     @types.ResponseOutparam::ResponseOutparam(p1),

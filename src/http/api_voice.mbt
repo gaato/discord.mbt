@@ -62,7 +62,7 @@ pub async fn Client::modify_current_user_voice_state(
   channel_id? : @model.ChannelId,
   suppress? : Bool,
   request_to_speak_timestamp? : @model.Timestamp,
-  clear_request_to_speak_timestamp? : Bool = false,
+  clear_request_to_speak_timestamp~ : Bool = false,
 ) -> Unit raise DiscordHttpError {
   let body = modify_current_user_voice_state_body(
     channel_id, suppress, request_to_speak_timestamp, clear_request_to_speak_timestamp,

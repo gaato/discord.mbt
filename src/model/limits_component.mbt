@@ -27,7 +27,7 @@ fn LimitChecker::message_component(
   self : LimitChecker,
   path : String,
   component : Component,
-) -> Int {
+) -> Int32 {
   let mut total = 1
   match component {
     Unknown(_) => return 0

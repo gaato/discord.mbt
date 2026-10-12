@@ -4,9 +4,9 @@ pub async fn Client::get_poll_answer_voters(
   self : Client,
   channel_id : @model.ChannelId,
   message_id : @model.MessageId,
-  answer_id : Int,
+  answer_id : Int32,
   after? : @model.UserId,
-  limit? : Int,
+  limit? : Int32,
 ) -> @model.PollAnswerVoters raise DiscordHttpError {
   validate_range("poll voter limit", limit, min=1, max=100)
   let params : Array[String] = []

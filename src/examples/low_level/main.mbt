@@ -7,13 +7,13 @@
 /// With GUILD_ID the command syncs to that guild (instant); without it the
 /// command syncs globally (may take up to an hour to appear).
 /// RUN_SECONDS overrides the default 120s window.
-const DEFAULT_RUN_SECONDS : Int = 120
+const DEFAULT_RUN_SECONDS : Int32 = 120
 
 ///|
 /// The typed view of one /echo invocation.
 struct Echo {
   text : String
-  times : Int
+  times : Int32
 } derive(Debug)
 
 ///|

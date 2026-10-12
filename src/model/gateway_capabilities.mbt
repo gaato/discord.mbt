@@ -9,7 +9,7 @@
 ///   inspect(capabilities.bits(), content="32768")
 /// }
 /// ```
-pub(all) struct GatewayCapabilities(UInt) derive(Eq)
+pub(all) struct GatewayCapabilities(UInt32) derive(Eq)
 
 ///|
 pub fn GatewayCapabilities::none() -> GatewayCapabilities {
@@ -17,12 +17,12 @@ pub fn GatewayCapabilities::none() -> GatewayCapabilities {
 }
 
 ///|
-pub fn GatewayCapabilities::from_bits(bits : UInt) -> GatewayCapabilities {
+pub fn GatewayCapabilities::from_bits(bits : UInt32) -> GatewayCapabilities {
   GatewayCapabilities(bits)
 }
 
 ///|
-pub fn GatewayCapabilities::bits(self : GatewayCapabilities) -> UInt {
+pub fn GatewayCapabilities::bits(self : GatewayCapabilities) -> UInt32 {
   self.0
 }
 

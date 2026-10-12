@@ -14,11 +14,11 @@ pub(all) struct StageInstance {
 pub(all) enum StagePrivacyLevel {
   Public
   GuildOnly
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn StagePrivacyLevel::to_int(self : StagePrivacyLevel) -> Int {
+pub fn StagePrivacyLevel::to_int(self : StagePrivacyLevel) -> Int32 {
   match self {
     Public => 1
     GuildOnly => 2
@@ -27,7 +27,7 @@ pub fn StagePrivacyLevel::to_int(self : StagePrivacyLevel) -> Int {
 }
 
 ///|
-pub fn StagePrivacyLevel::from_int(value : Int) -> StagePrivacyLevel {
+pub fn StagePrivacyLevel::from_int(value : Int32) -> StagePrivacyLevel {
   match value {
     1 => Public
     2 => GuildOnly

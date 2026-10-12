@@ -17,7 +17,7 @@ fn ConnectionTestTransport::new() -> ConnectionTestTransport {
 ///|
 fn ConnectionTestTransport::server_close(
   self : ConnectionTestTransport,
-  code : Int,
+  code : Int32,
 ) -> Unit {
   self.incoming.close(
     error=@voice.VoiceTransportClosed(code=Some(code), reason="server close"),
@@ -59,7 +59,7 @@ impl @voice.VoiceTransport for ConnectionTestTransport with fn close(
 struct ConnectionTestUdp {
   incoming : @aqueue.Queue[Bytes]
   outgoing : @aqueue.Queue[Bytes]
-  close_calls : Ref[Int]
+  close_calls : Ref[Int32]
   fail_close : Ref[Bool]
   recv_started : @aqueue.Queue[Unit]
   fail_recv : Ref[Bool]
@@ -595,7 +595,7 @@ async test "voice receiver discards empty datagrams and stops after UDP close" {
 ///|
 async test "voice connection keepalive sleeper failure leaves the connection lifecycle intact" {
   let transport = ConnectionTestTransport::new()
-  let slept : @aqueue.Queue[Int] = Queue(kind=Unbounded)
+  let slept : @aqueue.Queue[Int32] = Queue(kind=Unbounded)
   @async.with_task_group(group => {
     let connection = @voice.VoiceConnection::start(
       group,
@@ -623,7 +623,7 @@ async test "voice connection keepalive sleeper failure leaves the connection lif
 struct CancelledDiscoveryUdp {
   outgoing : @aqueue.Queue[Bytes]
   recv_started : @aqueue.Queue[Unit]
-  close_calls : Ref[Int]
+  close_calls : Ref[Int32]
 }
 
 ///|
@@ -669,14 +669,14 @@ impl @voice.AudioSource for OneConnectionFrame with fn next_frame(self) {
 
 ///|
 fn connection_credentials(
-  session_id? : String = "session",
-  endpoint? : String = "voice.example",
+  session_id~ : String = "session",
+  endpoint~ : String = "voice.example",
 ) -> @voice.VoiceCredentials {
   { server_id: "guild", session_id, token: "token", endpoint, }
 }
 
 ///|
-fn connection_discovery_response(ssrc : UInt) -> Bytes {
+fn connection_discovery_response(ssrc : UInt32) -> Bytes {
   let bytes : Array[Byte] = [
     0,
     2,
@@ -705,7 +705,7 @@ fn connection_hello() -> @voice.VoiceFrame {
 }
 
 ///|
-fn connection_ready(sequence : Int) -> @voice.VoiceFrame {
+fn connection_ready(sequence : Int32) -> @voice.VoiceFrame {
   Text(
     "{\"op\":2,\"seq\":\{sequence},\"d\":{\"ssrc\":42,\"ip\":\"198.51.100.1\",\"port\":5000,\"modes\":[\"aead_aes256_gcm_rtpsize\"]}}",
   )
@@ -713,8 +713,8 @@ fn connection_ready(sequence : Int) -> @voice.VoiceFrame {
 
 ///|
 fn connection_session_description(
-  sequence : Int,
-  dave_protocol_version? : Int = 0,
+  sequence : Int32,
+  dave_protocol_version~ : Int32 = 0,
 ) -> @voice.VoiceFrame {
   Text(
     "{\"op\":4,\"seq\":\{sequence},\"d\":{\"mode\":\"aead_aes256_gcm_rtpsize\",\"secret_key\":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],\"dave_protocol_version\":\{dave_protocol_version}}}",
@@ -1057,7 +1057,7 @@ async test "voice connection reports reordered packet loss" {
       AeadAes256GcmRtpsize,
       Bytes::new(32),
     )
-    let packet = (sequence : Int, timestamp : UInt) => {
+    let packet = (sequence : Int32, timestamp : UInt32) => {
       let header = @voice.build_rtp_header(
         sequence=sequence.to_uint16(),
         timestamp~,
@@ -1319,8 +1319,8 @@ async fn map_connection_speaker(
   connection : @voice.VoiceConnection,
   transport : ConnectionTestTransport,
   user_id : String,
-  ssrc : UInt,
-  sequence : Int,
+  ssrc : UInt32,
+  sequence : Int32,
 ) -> Unit {
   transport.incoming.put(
     Text(
@@ -1332,8 +1332,8 @@ async fn map_connection_speaker(
 
 ///|
 fn connection_opus_datagram(
-  ssrc : UInt,
-  sequence : Int,
+  ssrc : UInt32,
+  sequence : Int32,
   opus : Bytes,
 ) -> Bytes raise {
   let sender = @voice.TransportCipher::new(AeadAes256GcmRtpsize, Bytes::new(32))

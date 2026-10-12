@@ -9,7 +9,7 @@
 ///|
 struct QuickstartEchoArgs {
   text : String
-  times : Int
+  times : Int32
 }
 
 ///|
@@ -64,13 +64,13 @@ fn auto_sharded_bot(app : @discord.App, token : String) -> @discord.BotBuilder {
 fn restored_bot(
   app : @discord.App,
   token : String,
-  saved : Map[Int, @discord.BotSession],
+  saved : Map[Int32, @discord.BotSession],
 ) -> @discord.BotBuilder {
   @discord.BotBuilder(app, token~, resume=saved)
 }
 
 ///|
-fn current_bot_sessions(bot : @discord.Bot) -> Map[Int, @discord.BotSession] {
+fn current_bot_sessions(bot : @discord.Bot) -> Map[Int32, @discord.BotSession] {
   bot.sessions()
 }
 

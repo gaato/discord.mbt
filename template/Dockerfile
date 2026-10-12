@@ -3,7 +3,7 @@
 # executable on a distroless base. The executable links only libc and libm.
 # Runtime images: gcr.io/distroless/base-debian13 matches the Debian trixie
 # builder; a `-bookworm` builder tag pairs with base-debian12.
-ARG MOONBIT_IMAGE=ghcr.io/gaato/moonbit:0.10.14-7d59c7ec9
+ARG MOONBIT_IMAGE=ghcr.io/gaato/moonbit:0.10.15-943464bfa
 
 FROM ${MOONBIT_IMAGE} AS build
 # The image carries Node.js for Moon's prebuild hooks; the Gateway package

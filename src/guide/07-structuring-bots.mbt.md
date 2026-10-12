@@ -93,7 +93,7 @@ compiling:
 ```mbt check
 ///|
 pub(all) struct StarboardConfig {
-  threshold : Int
+  threshold : Int32
 }
 
 ///|
@@ -120,7 +120,7 @@ fn feedback_modal() -> @discord.Modal[Unit, String] {
 ///|
 fn feedback_command(
   modal : @discord.Modal[Unit, String],
-  cooldown_seconds : Int,
+  cooldown_seconds : Int32,
 ) -> @discord.Command[Unit] {
   ignore(cooldown_seconds)
   @discord.slash(
@@ -196,7 +196,7 @@ the struct value:
 ///|
 pub struct FeedbackFeature {
   priv config_ : FeedbackConfig
-  priv mut stored_ : Int
+  priv mut stored_ : Int32
 }
 
 ///|
@@ -228,7 +228,7 @@ Keep the feature value when another part of the bot needs to query its state:
 
 ```mbt check
 ///|
-pub fn FeedbackFeature::stored(self : FeedbackFeature) -> Int {
+pub fn FeedbackFeature::stored(self : FeedbackFeature) -> Int32 {
   self.stored_
 }
 
@@ -255,7 +255,7 @@ point. Pass typed values to the feature:
 ///|
 pub(all) struct FeedbackConfig {
   destination_channel : @model.ChannelId
-  cooldown_seconds : Int
+  cooldown_seconds : Int32
 }
 
 ///|
@@ -289,7 +289,7 @@ pub(all) struct GuildDestination {
 ///|
 pub(all) struct MultiGuildFeedbackConfig {
   destinations : Array[GuildDestination]
-  cooldown_seconds : Int
+  cooldown_seconds : Int32
 }
 
 ///|

@@ -10,10 +10,10 @@ pub(all) enum EncryptionMode {
 pub(all) suberror VoiceCryptoError {
   NoCompatibleMode(modes~ : Array[String])
   ShimUnavailable(reason~ : String)
-  InvalidSecretKey(length~ : Int)
+  InvalidSecretKey(length~ : Int32)
   InvalidEncryptedPacket(reason~ : String)
   AuthenticationFailed(reason~ : String)
-  AeadFailed(status~ : Int, reason~ : String)
+  AeadFailed(status~ : Int32, reason~ : String)
 } derive(Debug, Eq)
 
 ///|
@@ -31,7 +31,7 @@ pub fn EncryptionMode::negotiate(
 }
 
 ///|
-fn EncryptionMode::code(self : EncryptionMode) -> Int {
+fn EncryptionMode::code(self : EncryptionMode) -> Int32 {
   match self {
     AeadAes256GcmRtpsize => 0
     AeadXChaCha20Poly1305Rtpsize => 1
@@ -39,7 +39,7 @@ fn EncryptionMode::code(self : EncryptionMode) -> Int {
 }
 
 ///|
-fn EncryptionMode::nonce_length(self : EncryptionMode) -> Int {
+fn EncryptionMode::nonce_length(self : EncryptionMode) -> Int32 {
   match self {
     AeadAes256GcmRtpsize => 12
     AeadXChaCha20Poly1305Rtpsize => 24
@@ -47,7 +47,7 @@ fn EncryptionMode::nonce_length(self : EncryptionMode) -> Int {
 }
 
 ///|
-fn raise_voice_shim_status(status : Int) -> Unit raise VoiceCryptoError {
+fn raise_voice_shim_status(status : Int32) -> Unit raise VoiceCryptoError {
   let reason = voice_shim_error_message()
   match status {
     -100 | -101 | -102 => raise ShimUnavailable(reason~)
@@ -89,7 +89,7 @@ fn aead_open_raw(
 }
 
 ///|
-fn nonce_suffix(counter : UInt) -> Bytes {
+fn nonce_suffix(counter : UInt32) -> Bytes {
   Bytes::from_array([
     (counter >> 24).to_byte(),
     (counter >> 16).to_byte(),
@@ -116,7 +116,7 @@ fn make_nonce(mode : EncryptionMode, suffix : Bytes) -> Bytes {
 pub struct TransportCipher {
   priv mode : EncryptionMode
   priv secret_key : Bytes
-  priv mut counter : UInt
+  priv mut counter : UInt32
 }
 
 ///|
@@ -162,7 +162,7 @@ pub fn TransportCipher::seal(
 pub fn TransportCipher::open(
   self : TransportCipher,
   packet : Bytes,
-  header_len~ : Int,
+  header_len~ : Int32,
 ) -> Bytes raise VoiceCryptoError {
   if header_len < 0 || header_len > packet.length() {
     raise InvalidEncryptedPacket(reason="invalid RTP header length")

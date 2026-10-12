@@ -251,7 +251,7 @@ test "missing options are malformed; failed validations are user input" {
 fn guard_dm_interaction(
   name : String,
   id : String,
-  user_id? : String = "200000000000000001",
+  user_id~ : String = "200000000000000001",
 ) -> @model.Interaction raise {
   @json.from_json(
     @json.parse(
@@ -269,8 +269,8 @@ fn guard_dm_interaction(
 fn guard_guild_interaction(
   name : String,
   id : String,
-  permissions? : String = "2048",
-  user_id? : String = "200000000000000001",
+  permissions~ : String = "2048",
+  user_id~ : String = "200000000000000001",
 ) -> @model.Interaction raise {
   @json.from_json(
     @json.parse(

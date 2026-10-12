@@ -45,7 +45,7 @@ pub fn slash_command_mention(
 pub fn custom_emoji_mention(
   name~ : String,
   emoji_id~ : @model.EmojiId,
-  animated? : Bool = false,
+  animated~ : Bool = false,
 ) -> String {
   if animated {
     "<a:\{name}:\{emoji_id}>"

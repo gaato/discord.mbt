@@ -12,8 +12,8 @@ pub fn default_application_id() -> @model.ApplicationId {
 ///|
 pub fn user(
   id? : @model.UserId,
-  username? : String = "test-user",
-  bot? : Bool = false,
+  username~ : String = "test-user",
+  bot~ : Bool = false,
 ) -> @model.User {
   try! @json.from_json({
     "id": id.unwrap_or(@model.Id(200000000000000001UL)).to_json(),
@@ -26,8 +26,8 @@ pub fn user(
 
 ///|
 pub fn guild_member(
-  user? : @model.User = user(),
-  roles? : Array[@model.RoleId] = [],
+  user~ : @model.User = user(),
+  roles~ : Array[@model.RoleId] = [],
   permissions? : @model.Permissions,
 ) -> @model.GuildMember {
   let fields : Map[String, Json] = {
@@ -46,7 +46,7 @@ pub fn guild_member(
 ///|
 pub fn role(
   id? : @model.RoleId,
-  name? : String = "test-role",
+  name~ : String = "test-role",
   permissions? : @model.Permissions,
 ) -> @model.Role {
   try! @json.from_json({
@@ -65,8 +65,8 @@ pub fn role(
 pub fn message(
   id? : @model.MessageId,
   channel_id? : @model.ChannelId,
-  author? : @model.User = user(),
-  content? : String = "test message",
+  author~ : @model.User = user(),
+  content~ : String = "test message",
   components? : Array[@model.Component],
 ) -> @model.Message {
   let fields : Map[String, Json] = {
@@ -141,7 +141,7 @@ pub fn interaction(
 ///|
 pub fn slash(
   name : String,
-  options? : Array[@model.CommandDataOption] = [],
+  options~ : Array[@model.CommandDataOption] = [],
   resolved? : @model.ResolvedData,
   base? : @model.Interaction,
 ) -> @model.Interaction {
@@ -232,7 +232,7 @@ pub(all) enum SelectKind {
 } derive(Eq, Debug)
 
 ///|
-fn SelectKind::component_type(self : SelectKind) -> Int {
+fn SelectKind::component_type(self : SelectKind) -> Int32 {
   match self {
     StringSelect => 3
     UserSelect => 5
@@ -247,7 +247,7 @@ fn SelectKind::component_type(self : SelectKind) -> Int {
 /// `values` for a button, so the fixture does not either.
 pub fn button(
   custom_id : String,
-  message? : @model.Message = message(),
+  message~ : @model.Message = message(),
   base? : @model.Interaction,
 ) -> @model.Interaction raise FixtureError {
   component_raw(custom_id, typ=2, message~, base?)
@@ -260,9 +260,9 @@ pub fn button(
 pub fn select(
   custom_id : String,
   values~ : Array[String],
-  kind? : SelectKind = StringSelect,
+  kind~ : SelectKind = StringSelect,
   resolved? : @model.ResolvedData,
-  message? : @model.Message = message(),
+  message~ : @model.Message = message(),
   base? : @model.Interaction,
 ) -> @model.Interaction raise FixtureError {
   component_raw(
@@ -281,10 +281,10 @@ pub fn select(
 /// ones. `values` is sent only when given.
 pub fn component_raw(
   custom_id : String,
-  typ~ : Int,
+  typ~ : Int32,
   values? : Array[String],
   resolved? : @model.ResolvedData,
-  message? : @model.Message = message(),
+  message~ : @model.Message = message(),
   base? : @model.Interaction,
 ) -> @model.Interaction raise FixtureError {
   let base = base.unwrap_or_else(() => {
@@ -317,7 +317,7 @@ pub fn component_raw(
 ///|
 pub fn modal(
   custom_id : String,
-  components? : Array[@model.Component] = [],
+  components~ : Array[@model.Component] = [],
   resolved? : @model.ResolvedData,
   message? : @model.Message,
   base? : @model.Interaction,

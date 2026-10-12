@@ -19,7 +19,7 @@ pub(all) struct PollMedia {
 ///|
 /// A selectable answer in a poll.
 pub(all) struct PollAnswer {
-  answer_id : Int
+  answer_id : Int32
   poll_media : PollMedia
 } derive(ToJson, FromJson, Debug)
 
@@ -33,8 +33,8 @@ pub(all) struct PollResults {
 ///|
 /// Vote count and current-user state for one poll answer.
 pub(all) struct PollAnswerCount {
-  id : Int
-  count : Int
+  id : Int32
+  count : Int32
   me_voted : Bool
 } derive(ToJson, FromJson, Debug)
 
@@ -52,7 +52,7 @@ pub(all) struct PollAnswerVoters {
 pub(all) struct PollCreateRequest {
   question : PollMedia
   answers : Array[PollMedia]
-  duration : Int?
+  duration : Int32?
   allow_multiselect : Bool?
   layout_type : PollLayoutType?
 } derive(Debug)
@@ -83,11 +83,11 @@ pub impl ToJson for PollCreateRequest with fn to_json(self) {
 /// The presentation layout used by a poll.
 pub(all) enum PollLayoutType {
   Default
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn PollLayoutType::to_int(self : PollLayoutType) -> Int {
+pub fn PollLayoutType::to_int(self : PollLayoutType) -> Int32 {
   match self {
     Default => 1
     Unknown(value) => value
@@ -95,7 +95,7 @@ pub fn PollLayoutType::to_int(self : PollLayoutType) -> Int {
 }
 
 ///|
-pub fn PollLayoutType::from_int(value : Int) -> PollLayoutType {
+pub fn PollLayoutType::from_int(value : Int32) -> PollLayoutType {
   match value {
     1 => Default
     value => Unknown(value)

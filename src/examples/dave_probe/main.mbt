@@ -17,8 +17,8 @@
 ///   moon run --target native --release src/examples/dave_probe
 suberror DaveProbeError {
   MissingEnvironmentVariable(String)
-  DavePeerRequired(negotiated_version~ : Int)
-  DaveActivationTimeout(negotiated_version~ : Int)
+  DavePeerRequired(negotiated_version~ : Int32)
+  DaveActivationTimeout(negotiated_version~ : Int32)
   DaveMediaFailure(String)
   DaveReceiveTimeout
   ProbeDidNotComplete
@@ -34,7 +34,7 @@ fn required_env(name : String) -> String raise DaveProbeError {
 
 ///|
 struct SilenceProbeSource {
-  mut remaining : Int
+  mut remaining : Int32
   done : @aqueue.Queue[Unit]
   mut finished : Bool
 }
@@ -57,8 +57,8 @@ impl @discord.AudioSource for SilenceProbeSource with fn next_frame(self) {
 struct AudibleProbeSource {
   source : @discord.OggOpusSource
   done : @aqueue.Queue[Unit]
-  frames : Ref[Int]
-  mut remaining : Int
+  frames : Ref[Int32]
+  mut remaining : Int32
   mut finished : Bool
 }
 
@@ -95,20 +95,20 @@ impl @discord.AudioSource for AudibleProbeSource with fn next_frame(self) {
 struct BufferedProbeSource {
   frames : Array[Bytes]
   done : @aqueue.Queue[Unit]
-  mut cursor : Int
+  mut cursor : Int32
   mut finished : Bool
 }
 
 ///|
 struct UnmappedDropSample {
-  ssrc : UInt
+  ssrc : UInt32
   at_ms : Int64
 }
 
 ///|
 struct DropCorrelation {
-  matching : Int
-  other : Int
+  matching : Int32
+  other : Int32
   first_lead_ms : Int64
   last_lead_ms : Int64
 }
@@ -171,7 +171,7 @@ fn is_transient_unmapped_sender(reason : String) -> Bool {
 ///|
 fn correlate_unmapped_drops(
   samples : Array[UnmappedDropSample],
-  peer_ssrc~ : UInt,
+  peer_ssrc~ : UInt32,
   speaking_at_ms~ : Int64,
 ) -> DropCorrelation {
   let mut matching = 0
@@ -200,7 +200,7 @@ fn correlate_unmapped_drops(
 ///|
 fn report_drop_correlation(
   samples : Array[UnmappedDropSample],
-  peer_ssrc~ : UInt,
+  peer_ssrc~ : UInt32,
   speaking_at_ms~ : Int64,
 ) -> Unit {
   let correlation = correlate_unmapped_drops(
@@ -221,7 +221,7 @@ fn report_drop_correlation(
 ///|
 async fn receive_peer_probe(
   connection : @discord.VoiceConnection,
-  required_frames : Int,
+  required_frames : Int32,
   unmapped_drops : Array[UnmappedDropSample],
 ) -> Array[Bytes] {
   println("[dave] receive probe waiting for peer speaking (20 second timeout)")
@@ -263,7 +263,7 @@ async fn receive_peer_probe(
 }
 
 ///|
-fn opus_frame_size_stats(frames : Array[Bytes]) -> (Int, Int, Int) {
+fn opus_frame_size_stats(frames : Array[Bytes]) -> (Int32, Int32, Int32) {
   guard frames.get(0) is Some(first) else { return (0, 0, 0) }
   let mut minimum = first.length()
   let mut maximum = minimum
@@ -278,7 +278,7 @@ fn opus_frame_size_stats(frames : Array[Bytes]) -> (Int, Int, Int) {
 }
 
 ///|
-async fn play_silence_probe(connection : @discord.VoiceConnection) -> Int {
+async fn play_silence_probe(connection : @discord.VoiceConnection) -> Int32 {
   let done : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   let source = SilenceProbeSource::{ remaining: 50, done, finished: false, }
   connection.play((source : &@discord.AudioSource))
@@ -292,7 +292,7 @@ async fn play_silence_probe(connection : @discord.VoiceConnection) -> Int {
 async fn play_audible_probe(
   connection : @discord.VoiceConnection,
   audio_path : String,
-) -> Int {
+) -> Int32 {
   let audio = @fs.read_file(audio_path).binary()
   let ogg = @discord.OggOpusSource::from_bytes(audio)
   let done : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
@@ -321,7 +321,7 @@ async fn play_audible_probe(
 async fn play_echo_probe(
   connection : @discord.VoiceConnection,
   frames : Array[Bytes],
-) -> Int {
+) -> Int32 {
   let done : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   let source = BufferedProbeSource::{
     frames,
@@ -359,7 +359,7 @@ async fn run_probe(
 ) -> Unit {
   let negotiated_version = Ref(-1)
   let peer_seen = Ref(false)
-  let activations : @aqueue.Queue[Int] = Queue(kind=Unbounded)
+  let activations : @aqueue.Queue[Int32] = Queue(kind=Unbounded)
   let dave_failures : Array[String] = []
   let unmapped_sender_drops : Array[UnmappedDropSample] = []
   let connection = ctx.join_voice(guild_id, channel_id, timeout_ms=20_000, telemetry=event => {

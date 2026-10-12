@@ -1,13 +1,13 @@
 ///|
 /// Voice gateway lifecycle state.
 pub(all) enum VoiceGatewayState {
-  Disconnected(reconnect_attempts~ : Int)
+  Disconnected(reconnect_attempts~ : Int32)
   Connecting
   Identifying
   SelectingProtocol
   Active
   Resuming
-  FatallyClosed(code~ : Int)
+  FatallyClosed(code~ : Int32)
 } derive(Debug, Eq)
 
 ///|
@@ -22,7 +22,10 @@ pub(all) enum VoiceReconnectPolicy {
 ///|
 /// Classify a voice WebSocket close code. A resumable transport failure still
 /// requires a fresh join when no established voice session exists.
-pub fn voice_on_close(code : Int?, has_session : Bool) -> VoiceReconnectPolicy {
+pub fn voice_on_close(
+  code : Int32?,
+  has_session : Bool,
+) -> VoiceReconnectPolicy {
   let policy = match code {
     // Unknown opcode: the client and server cannot speak the same protocol.
     Some(4001)

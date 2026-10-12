@@ -127,7 +127,7 @@ receive path maps SSRC values to users when Discord has announced the mapping.
 ///|
 async fn receive_opus(
   connection : @discord.VoiceConnection,
-  consume_opus : (String?, UInt, Int, UInt, Bytes) -> Unit,
+  consume_opus : (String?, UInt32, Int32, UInt32, Bytes) -> Unit,
 ) -> Unit {
   for ;; {
     match connection.next_event() {

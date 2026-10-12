@@ -2,7 +2,7 @@
 /// Response of `GET /gateway/bot`.
 pub(all) struct GatewayBotInfo {
   url : String
-  shards : Int
+  shards : Int32
   session_start_limit : SessionStartLimit
 } derive(ToJson, FromJson, Debug)
 
@@ -10,18 +10,18 @@ pub(all) struct GatewayBotInfo {
 /// Identify session allowance: how many session starts remain in the current
 /// window and how many shards may identify concurrently.
 pub(all) struct SessionStartLimit {
-  total : Int
-  remaining : Int
+  total : Int32
+  remaining : Int32
   reset_after : Int64
-  max_concurrency : Int
+  max_concurrency : Int32
 } derive(ToJson, Debug)
 
 ///|
 struct SessionStartLimitWire {
-  total : Int
-  remaining : Int
+  total : Int32
+  remaining : Int32
   reset_after : Double
-  max_concurrency : Int
+  max_concurrency : Int32
 } derive(FromJson)
 
 ///|

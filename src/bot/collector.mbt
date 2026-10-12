@@ -95,7 +95,7 @@ fn[T] EventRegistration::cancel(self : EventRegistration[T]) -> Unit {
 ///|
 async fn[T] EventRegistration::wait(
   self : EventRegistration[T],
-  timeout_ms? : Int,
+  timeout_ms? : Int32,
 ) -> T? {
   defer self.cancel()
   let raw = match timeout_ms {
@@ -110,7 +110,7 @@ async fn[T] EventCollector::wait_for(
   self : EventCollector,
   event_type : EventType[T],
   predicate : (T) -> Bool,
-  timeout_ms? : Int,
+  timeout_ms? : Int32,
 ) -> T? {
   self.register(event_type, predicate).wait(timeout_ms?)
 }

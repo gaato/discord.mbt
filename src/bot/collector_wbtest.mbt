@@ -11,7 +11,7 @@ fn message_delete_event(id : String) -> @model.Event raise {
 async fn wait_until_registered(
   collector : EventCollector,
   kind : @model.EventKind,
-  count : Int,
+  count : Int32,
 ) -> Unit {
   for _ in 0..<50 {
     let mut found = 0

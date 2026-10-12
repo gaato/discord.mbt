@@ -12,7 +12,7 @@ fn example_session(id : String, sequence : Int64) -> @discord.BotSession raise {
 
 ///|
 test "BotSession persistence round trips two shards" {
-  let sessions : Map[Int, @discord.BotSession] = {
+  let sessions : Map[Int32, @discord.BotSession] = {
     0: example_session("first", 41L),
     1: example_session("second", 99L),
   }

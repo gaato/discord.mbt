@@ -53,7 +53,7 @@ fn read_body(request : @types.IncomingRequest) -> Bytes? {
 ///|
 fn reply(
   response_out : @types.ResponseOutparam,
-  status : Int,
+  status : Int32,
   text : String,
   content_type : String,
 ) -> Unit {
@@ -80,7 +80,7 @@ fn reply(
 }
 
 ///|
-fn interaction_response(body : Bytes) -> (Int, String, String) {
+fn interaction_response(body : Bytes) -> (Int32, String, String) {
   let text = @utf8.decode(body) catch {
     _ => return (400, "Invalid UTF-8", "text/plain; charset=utf-8")
   }

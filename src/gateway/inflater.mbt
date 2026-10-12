@@ -1,7 +1,7 @@
 ///|
 /// Raised when a compressed Gateway stream cannot be initialized or decoded.
 pub(all) suberror InflateError {
-  InflateError(status~ : Int)
+  InflateError(status~ : Int32)
   InvalidUtf8
   /// This backend has no zlib-stream inflater (JavaScript and Wasm).
   Unsupported

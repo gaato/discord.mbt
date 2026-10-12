@@ -11,7 +11,7 @@ pub(all) struct Guild {
   owner_id : UserId
   permissions : Permissions?
   afk_channel_id : Nullable[ChannelId]
-  afk_timeout : Int
+  afk_timeout : Int32
   widget_enabled : Bool?
   widget_channel_id : Nullable[ChannelId]?
   verification_level : VerificationLevel
@@ -25,19 +25,19 @@ pub(all) struct Guild {
   system_channel_id : Nullable[ChannelId]
   system_channel_flags : SystemChannelFlags
   rules_channel_id : Nullable[ChannelId]
-  max_presences : Nullable[Int]?
-  max_members : Int?
+  max_presences : Nullable[Int32]?
+  max_members : Int32?
   vanity_url_code : Nullable[String]
   description : Nullable[String]
   banner : Nullable[ImageHash]
   premium_tier : PremiumTier
-  premium_subscription_count : Int?
+  premium_subscription_count : Int32?
   preferred_locale : String
   public_updates_channel_id : Nullable[ChannelId]
-  max_video_channel_users : Int?
-  max_stage_video_channel_users : Int?
-  approximate_member_count : Int?
-  approximate_presence_count : Int?
+  max_video_channel_users : Int32?
+  max_stage_video_channel_users : Int32?
+  approximate_member_count : Int32?
+  approximate_presence_count : Int32?
   welcome_screen : WelcomeScreen?
   nsfw_level : NsfwLevel?
   stickers : Array[Sticker]?
@@ -65,8 +65,8 @@ pub(all) struct CurrentUserGuild {
   owner : Bool
   permissions : Permissions
   features : Array[GuildFeature]
-  approximate_member_count : Int?
-  approximate_presence_count : Int?
+  approximate_member_count : Int32?
+  approximate_presence_count : Int32?
 } derive(ToJson, FromJson, Debug)
 
 ///|
@@ -77,11 +77,11 @@ pub(all) enum VerificationLevel {
   Medium
   High
   VeryHigh
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn VerificationLevel::to_int(self : VerificationLevel) -> Int {
+pub fn VerificationLevel::to_int(self : VerificationLevel) -> Int32 {
   match self {
     None => 0
     Low => 1
@@ -93,7 +93,7 @@ pub fn VerificationLevel::to_int(self : VerificationLevel) -> Int {
 }
 
 ///|
-pub fn VerificationLevel::from_int(value : Int) -> VerificationLevel {
+pub fn VerificationLevel::from_int(value : Int32) -> VerificationLevel {
   match value {
     0 => None
     1 => Low
@@ -125,13 +125,13 @@ pub impl @json.FromJson for VerificationLevel with fn from_json(json, path) {
 pub(all) enum DefaultMessageNotifications {
   AllMessages
   OnlyMentions
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
 pub fn DefaultMessageNotifications::to_int(
   self : DefaultMessageNotifications,
-) -> Int {
+) -> Int32 {
   match self {
     AllMessages => 0
     OnlyMentions => 1
@@ -141,7 +141,7 @@ pub fn DefaultMessageNotifications::to_int(
 
 ///|
 pub fn DefaultMessageNotifications::from_int(
-  value : Int,
+  value : Int32,
 ) -> DefaultMessageNotifications {
   match value {
     0 => AllMessages
@@ -175,11 +175,11 @@ pub(all) enum ExplicitContentFilter {
   Disabled
   MembersWithoutRoles
   AllMembers
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn ExplicitContentFilter::to_int(self : ExplicitContentFilter) -> Int {
+pub fn ExplicitContentFilter::to_int(self : ExplicitContentFilter) -> Int32 {
   match self {
     Disabled => 0
     MembersWithoutRoles => 1
@@ -189,7 +189,7 @@ pub fn ExplicitContentFilter::to_int(self : ExplicitContentFilter) -> Int {
 }
 
 ///|
-pub fn ExplicitContentFilter::from_int(value : Int) -> ExplicitContentFilter {
+pub fn ExplicitContentFilter::from_int(value : Int32) -> ExplicitContentFilter {
   match value {
     0 => Disabled
     1 => MembersWithoutRoles
@@ -219,11 +219,11 @@ pub impl @json.FromJson for ExplicitContentFilter with fn from_json(json, path) 
 pub(all) enum MfaLevel {
   None
   Elevated
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn MfaLevel::to_int(self : MfaLevel) -> Int {
+pub fn MfaLevel::to_int(self : MfaLevel) -> Int32 {
   match self {
     None => 0
     Elevated => 1
@@ -232,7 +232,7 @@ pub fn MfaLevel::to_int(self : MfaLevel) -> Int {
 }
 
 ///|
-pub fn MfaLevel::from_int(value : Int) -> MfaLevel {
+pub fn MfaLevel::from_int(value : Int32) -> MfaLevel {
   match value {
     0 => None
     1 => Elevated
@@ -260,11 +260,11 @@ pub(all) enum PremiumTier {
   Tier1
   Tier2
   Tier3
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn PremiumTier::to_int(self : PremiumTier) -> Int {
+pub fn PremiumTier::to_int(self : PremiumTier) -> Int32 {
   match self {
     None => 0
     Tier1 => 1
@@ -275,7 +275,7 @@ pub fn PremiumTier::to_int(self : PremiumTier) -> Int {
 }
 
 ///|
-pub fn PremiumTier::from_int(value : Int) -> PremiumTier {
+pub fn PremiumTier::from_int(value : Int32) -> PremiumTier {
   match value {
     0 => None
     1 => Tier1
@@ -305,11 +305,11 @@ pub(all) enum NsfwLevel {
   Explicit
   Safe
   AgeRestricted
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn NsfwLevel::to_int(self : NsfwLevel) -> Int {
+pub fn NsfwLevel::to_int(self : NsfwLevel) -> Int32 {
   match self {
     Default => 0
     Explicit => 1
@@ -320,7 +320,7 @@ pub fn NsfwLevel::to_int(self : NsfwLevel) -> Int {
 }
 
 ///|
-pub fn NsfwLevel::from_int(value : Int) -> NsfwLevel {
+pub fn NsfwLevel::from_int(value : Int32) -> NsfwLevel {
   match value {
     0 => Default
     1 => Explicit

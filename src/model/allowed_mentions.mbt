@@ -21,8 +21,8 @@ pub impl ToJson for AllowedMentionType with fn to_json(self) {
 /// An invalid allowed-mentions configuration rejected during construction.
 pub(all) suberror AllowedMentionsError {
   ParseAndExplicit(typ~ : AllowedMentionType)
-  TooManyRoles(count~ : Int)
-  TooManyUsers(count~ : Int)
+  TooManyRoles(count~ : Int32)
+  TooManyUsers(count~ : Int32)
 } derive(Eq, Debug)
 
 ///|

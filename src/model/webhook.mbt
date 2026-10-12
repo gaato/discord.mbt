@@ -25,11 +25,11 @@ pub(all) enum WebhookType {
   Incoming
   ChannelFollower
   Application
-  Unknown(Int)
+  Unknown(Int32)
 } derive(Eq, Debug)
 
 ///|
-pub fn WebhookType::to_int(self : WebhookType) -> Int {
+pub fn WebhookType::to_int(self : WebhookType) -> Int32 {
   match self {
     Incoming => 1
     ChannelFollower => 2
@@ -39,7 +39,7 @@ pub fn WebhookType::to_int(self : WebhookType) -> Int {
 }
 
 ///|
-pub fn WebhookType::from_int(value : Int) -> WebhookType {
+pub fn WebhookType::from_int(value : Int32) -> WebhookType {
   match value {
     1 => Incoming
     2 => ChannelFollower

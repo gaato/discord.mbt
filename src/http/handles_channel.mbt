@@ -51,7 +51,7 @@ pub fn ChannelRef::messages(
   before? : @model.MessageId,
   after? : @model.MessageId,
   around? : @model.MessageId,
-  page_size? : Int = 100,
+  page_size~ : Int32 = 100,
 ) -> Paginator[@model.Message] raise DiscordHttpError {
   self.client.paginate_messages(
     self.channel_id,
@@ -120,26 +120,26 @@ pub async fn ChannelRef::edit(
   name? : String,
   typ? : @model.ChannelType,
   topic? : String,
-  clear_topic? : Bool = false,
+  clear_topic~ : Bool = false,
   nsfw? : Bool,
   parent_id? : @model.ChannelId,
-  clear_parent_id? : Bool = false,
-  rate_limit_per_user? : Int,
-  position? : Int,
-  bitrate? : Int,
-  user_limit? : Int,
+  clear_parent_id~ : Bool = false,
+  rate_limit_per_user? : Int32,
+  position? : Int32,
+  bitrate? : Int32,
+  user_limit? : Int32,
   permission_overwrites? : Array[@model.Overwrite],
   rtc_region? : String,
-  clear_rtc_region? : Bool = false,
+  clear_rtc_region~ : Bool = false,
   video_quality_mode? : @model.VideoQualityMode,
-  clear_video_quality_mode? : Bool = false,
+  clear_video_quality_mode~ : Bool = false,
   default_auto_archive_duration? : @model.ThreadAutoArchiveDuration,
   available_tags? : Array[@model.ForumTagRequest],
   default_reaction_emoji? : @model.DefaultReaction,
-  clear_default_reaction_emoji? : Bool = false,
-  default_thread_rate_limit_per_user? : Int,
+  clear_default_reaction_emoji~ : Bool = false,
+  default_thread_rate_limit_per_user? : Int32,
   default_sort_order? : @model.SortOrderType,
-  clear_default_sort_order? : Bool = false,
+  clear_default_sort_order~ : Bool = false,
   default_forum_layout? : @model.ForumLayoutType,
   icon? : String,
   flags? : @model.ChannelFlags,
@@ -209,7 +209,7 @@ pub async fn ChannelRef::pins(
 pub async fn ChannelRef::pins_page(
   self : ChannelRef,
   before? : @model.Timestamp,
-  limit? : Int,
+  limit? : Int32,
 ) -> @model.ChannelPins raise DiscordHttpError {
   self.client.get_channel_pins(self.channel_id, before?, limit?)
 }
@@ -250,8 +250,8 @@ pub async fn ChannelRef::webhooks(
 /// Create an invite for this channel.
 pub async fn ChannelRef::create_invite(
   self : ChannelRef,
-  max_age? : Int,
-  max_uses? : Int,
+  max_age? : Int32,
+  max_uses? : Int32,
   temporary? : Bool,
   unique? : Bool,
   target_type? : @model.InviteTargetType,
@@ -416,7 +416,7 @@ pub async fn ChannelRef::thread_members(
   self : ChannelRef,
   with_member? : Bool,
   after? : @model.UserId,
-  limit? : Int,
+  limit? : Int32,
 ) -> Array[@model.ThreadMember] raise DiscordHttpError {
   self.client.list_thread_members(self.channel_id, with_member?, after?, limit?)
 }
@@ -426,7 +426,7 @@ pub async fn ChannelRef::thread_members(
 pub async fn ChannelRef::public_archived_threads(
   self : ChannelRef,
   before? : @model.Timestamp,
-  limit? : Int,
+  limit? : Int32,
 ) -> @model.ArchivedThreads raise DiscordHttpError {
   self.client.list_public_archived_threads(self.channel_id, before?, limit?)
 }
@@ -436,7 +436,7 @@ pub async fn ChannelRef::public_archived_threads(
 pub async fn ChannelRef::private_archived_threads(
   self : ChannelRef,
   before? : @model.Timestamp,
-  limit? : Int,
+  limit? : Int32,
 ) -> @model.ArchivedThreads raise DiscordHttpError {
   self.client.list_private_archived_threads(self.channel_id, before?, limit?)
 }
@@ -446,7 +446,7 @@ pub async fn ChannelRef::private_archived_threads(
 pub async fn ChannelRef::joined_private_archived_threads(
   self : ChannelRef,
   before? : @model.ChannelId,
-  limit? : Int,
+  limit? : Int32,
 ) -> @model.ArchivedThreads raise DiscordHttpError {
   self.client.list_joined_private_archived_threads(
     self.channel_id,
@@ -463,7 +463,7 @@ pub async fn ChannelRef::start_thread(
   typ? : @model.ChannelType,
   auto_archive_duration? : @model.ThreadAutoArchiveDuration,
   invitable? : Bool,
-  rate_limit_per_user? : Int,
+  rate_limit_per_user? : Int32,
   reason? : String,
 ) -> @model.Channel raise DiscordHttpError {
   self.client.start_thread_without_message(
@@ -490,7 +490,7 @@ pub async fn ChannelRef::start_forum_thread(
   flags? : @model.MessageFlags,
   allowed_mentions? : @model.AllowedMentions,
   auto_archive_duration? : @model.ThreadAutoArchiveDuration,
-  rate_limit_per_user? : Int,
+  rate_limit_per_user? : Int32,
   applied_tags? : Array[@model.GenericId],
   reason? : String,
 ) -> @model.Channel raise DiscordHttpError {

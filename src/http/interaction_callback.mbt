@@ -13,14 +13,14 @@
 #doc(hidden)
 pub fn interaction_message_data(
   content? : String,
-  clear_content? : Bool = false,
+  clear_content~ : Bool = false,
   embeds? : Array[@model.Embed],
   components? : Array[@model.Component],
   allowed_mentions? : @model.AllowedMentions,
   files? : Array[FileUpload],
   keep_attachments? : Array[@model.AttachmentRequest],
   poll? : @model.PollCreateRequest,
-  ephemeral? : Bool = false,
+  ephemeral~ : Bool = false,
 ) -> Json raise DiscordHttpError {
   let flags = if ephemeral {
     Some(@model.MessageFlags::ephemeral())

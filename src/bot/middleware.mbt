@@ -26,7 +26,7 @@ async fn BotCore::run_event_middleware(
   self : BotCore,
   spawner : @app.Spawner,
   ctx : GatewayCtx,
-  index : Int,
+  index : Int32,
   event : @model.Event,
 ) -> Unit {
   if index < self.event_middleware_.length() {

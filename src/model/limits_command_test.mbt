@@ -12,10 +12,10 @@ fn string_option(name : String) -> @model.CommandOption raise {
 
 ///|
 fn slash_violations(
-  name? : String = "echo",
-  description? : String = "Echo text",
+  name~ : String = "echo",
+  description~ : String = "Echo text",
   name_localizations? : Map[String, String],
-  options? : Array[@model.CommandOption] = [],
+  options~ : Array[@model.CommandOption] = [],
 ) -> Array[String] {
   @model.command_limit_violations(
     typ=ChatInput,
@@ -137,7 +137,7 @@ test "options, choices, and lengths stay within their documented limits" {
 
 ///|
 test "a command totals at most 8000 units, counting its longest localization" {
-  let wide = (index : Int) => {
+  let wide = (index : Int32) => {
     command_option({
       "type": 1,
       "name": "s\{index}",

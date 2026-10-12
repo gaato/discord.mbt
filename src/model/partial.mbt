@@ -14,7 +14,7 @@ pub(all) struct PartialGuild {
   verification_level : VerificationLevel?
   vanity_url_code : Nullable[String]?
   nsfw_level : NsfwLevel?
-  premium_subscription_count : Int?
+  premium_subscription_count : Int32?
   locale : String?
 } derive(ToJson, FromJson, Debug)
 
@@ -37,8 +37,8 @@ pub(all) struct PartialChannel {
 pub(all) struct PartialRole {
   id : RoleId
   name : String
-  position : Int
-  color : Int
+  position : Int32
+  color : Int32
   colors : RoleColors?
   icon : Nullable[ImageHash]?
   unicode_emoji : Nullable[String]?

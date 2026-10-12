@@ -19,14 +19,14 @@ pub struct CacheResources {
 /// Select the retained resources individually; unspecified flags keep
 /// their defaults (all on except presences and messages).
 pub fn CacheResources::CacheResources(
-  guilds? : Bool = true,
-  channels? : Bool = true,
-  roles? : Bool = true,
-  members? : Bool = true,
-  users? : Bool = true,
-  voice_states? : Bool = true,
-  presences? : Bool = false,
-  messages? : Bool = false,
+  guilds~ : Bool = true,
+  channels~ : Bool = true,
+  roles~ : Bool = true,
+  members~ : Bool = true,
+  users~ : Bool = true,
+  voice_states~ : Bool = true,
+  presences~ : Bool = false,
+  messages~ : Bool = false,
 ) -> CacheResources {
   {
     guilds_: guilds,
@@ -74,14 +74,14 @@ pub fn CacheResources::default() -> CacheResources {
 /// are fixed when an entry is written and are never extended by reads; expiry
 /// is enforced lazily without background timers.
 pub struct CacheLimit {
-  priv max_entries_ : Int?
+  priv max_entries_ : Int32?
   priv ttl_ms_ : Int64?
 }
 
 ///|
 /// Create an optional entry-count and TTL limit for one resource.
 pub fn CacheLimit::CacheLimit(
-  max_entries? : Int,
+  max_entries? : Int32,
   ttl_ms? : Int64,
 ) -> CacheLimit {
   {
@@ -114,14 +114,14 @@ pub struct CacheLimits {
 /// Configure limits for each resource. Messages retain at most 100 entries
 /// per channel by default; other resources are unbounded by default.
 pub fn CacheLimits::CacheLimits(
-  guilds? : CacheLimit = CacheLimit(),
-  channels? : CacheLimit = CacheLimit(),
-  users? : CacheLimit = CacheLimit(),
-  roles? : CacheLimit = CacheLimit(),
-  members? : CacheLimit = CacheLimit(),
-  voice_states? : CacheLimit = CacheLimit(),
-  presences? : CacheLimit = CacheLimit(),
-  messages? : CacheLimit = CacheLimit(max_entries=100),
+  guilds~ : CacheLimit = CacheLimit(),
+  channels~ : CacheLimit = CacheLimit(),
+  users~ : CacheLimit = CacheLimit(),
+  roles~ : CacheLimit = CacheLimit(),
+  members~ : CacheLimit = CacheLimit(),
+  voice_states~ : CacheLimit = CacheLimit(),
+  presences~ : CacheLimit = CacheLimit(),
+  messages~ : CacheLimit = CacheLimit(max_entries=100),
 ) -> CacheLimits {
   {
     guilds_: guilds,
@@ -315,8 +315,8 @@ pub struct InMemoryCache {
 /// is enforced lazily without background timers.
 pub fn InMemoryCache::InMemoryCache(
   resources~ : CacheResources,
-  limits? : CacheLimits = CacheLimits(),
-  now? : () -> Int64 = @clock.now_ms,
+  limits~ : CacheLimits = CacheLimits(),
+  now~ : () -> Int64 = @clock.now_ms,
 ) -> InMemoryCache {
   {
     resources_: resources,

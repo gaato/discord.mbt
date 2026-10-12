@@ -134,7 +134,7 @@ test "component fixtures match the shapes Discord sends" {
   }
   assert_eq(button.component_type, 2)
   assert_true(button.values is None)
-  let kinds : Array[(@testkit.SelectKind, Int)] = [
+  let kinds : Array[(@testkit.SelectKind, Int32)] = [
     (StringSelect, 3),
     (UserSelect, 5),
     (RoleSelect, 6),

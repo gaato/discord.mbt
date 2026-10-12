@@ -1,6 +1,6 @@
 ///|
 async test "paginator advances a before cursor and stops on a short page" {
-  let seen : Array[Int?] = []
+  let seen : Array[Int32?] = []
   let calls = Ref(0)
   let paginator = paginator_from_cursor(
     2,
@@ -30,7 +30,7 @@ async test "paginator empty page is terminal" {
   let paginator = paginator_from_cursor(
     100,
     None,
-    (_cursor : Int?, _limit) => {
+    (_cursor : Int32?, _limit) => {
       calls.val += 1
       []
     },
@@ -43,7 +43,7 @@ async test "paginator empty page is terminal" {
 
 ///|
 async test "paginator after cursor uses the maximum id" {
-  let seen : Array[Int?] = []
+  let seen : Array[Int32?] = []
   let paginator = paginator_from_cursor(
     3,
     Some(1),
@@ -67,7 +67,7 @@ async test "paginator collect truncates without fetching another page" {
   let paginator = paginator_from_cursor(
     3,
     None,
-    (_cursor : Int?, _limit) => {
+    (_cursor : Int32?, _limit) => {
       calls.val += 1
       match calls.val {
         1 => [6, 5, 4]
@@ -86,7 +86,7 @@ async test "paginator collect truncates without fetching another page" {
   let untouched = paginator_from_cursor(
     1,
     None,
-    (_cursor : Int?, _limit) => {
+    (_cursor : Int32?, _limit) => {
       untouched_calls.val += 1
       [1]
     },
@@ -99,11 +99,11 @@ async test "paginator collect truncates without fetching another page" {
 ///|
 async test "paginator each visits every remaining item" {
   let calls = Ref(0)
-  let visited : Array[Int] = []
+  let visited : Array[Int32] = []
   let paginator = paginator_from_cursor(
     2,
     None,
-    (_cursor : Int?, _limit) => {
+    (_cursor : Int32?, _limit) => {
       calls.val += 1
       match calls.val {
         1 => [4, 3]

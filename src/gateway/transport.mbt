@@ -11,7 +11,7 @@ pub(all) enum GatewayFrame {
 pub(open) trait GatewayTransport {
   async fn recv(Self) -> GatewayFrame
   async fn send(Self, String) -> Unit
-  async fn close(Self, code~ : Int) -> Unit
+  async fn close(Self, code~ : Int32) -> Unit
 }
 
 ///|
@@ -19,7 +19,7 @@ pub(open) trait GatewayTransport {
 /// WebSocket close code (Discord uses 4xxx application codes), `None` for
 /// abnormal/transport-level termination.
 pub(all) suberror TransportClosed {
-  TransportClosed(code~ : Int?, reason~ : String)
+  TransportClosed(code~ : Int32?, reason~ : String)
 } derive(Debug)
 
 ///|
@@ -78,7 +78,7 @@ impl GatewayTransport for WsTransport with fn close(self, code~) {
 }
 
 ///|
-fn close_code_to_int(code : @websocket.CloseCode) -> Int {
+fn close_code_to_int(code : @websocket.CloseCode) -> Int32 {
   match code {
     Normal => 1000
     GoingAway => 1001

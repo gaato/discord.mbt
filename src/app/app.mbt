@@ -20,7 +20,7 @@ pub(all) suberror AppConfigError {
   EmptyComponentRoute
   EmptyModalRoute
   InvalidRouteId(custom_id~ : String, reason~ : String)
-  InvalidModalFieldCount(custom_id~ : String, count~ : Int)
+  InvalidModalFieldCount(custom_id~ : String, count~ : Int32)
   DuplicateModalTextInput(custom_id~ : String, field~ : String)
   /// A modal title or field outside a limit Discord documents, such as a text
   /// input `max_length` over 4000 or a label over 45 units.
@@ -31,16 +31,16 @@ pub(all) suberror AppConfigError {
   /// A command name, description, option, or choice outside a limit Discord
   /// documents, such as a 26th option or an uppercase slash command name.
   CommandOutsideLimits(command~ : String, violation~ : @model.LimitViolation)
-  InvalidCooldown(command~ : String, seconds~ : Int)
-  InvalidMaxInFlight(value~ : Int)
+  InvalidCooldown(command~ : String, seconds~ : Int32)
+  InvalidMaxInFlight(value~ : Int32)
   /// `max_pending` must allow at least one waiting deferred interaction.
-  InvalidMaxPending(value~ : Int)
+  InvalidMaxPending(value~ : Int32)
 } derive(Debug)
 
 ///|
 priv struct RegisteredModal {
   pattern : AppRoutePattern
-  field_count : Int?
+  field_count : Int32?
   text_input_ids : Array[String]?
   file_type_filters : Array[(String, Array[@model.FileTypeFilter])]
   limit_violations : Array[@model.LimitViolation]
@@ -72,8 +72,8 @@ pub type Spawner = async (async () -> Unit) -> Unit
 /// autocomplete handlers, middleware, and failure hooks. `build` validates
 /// them into an immutable `App`.
 pub struct AppBuilder {
-  priv max_in_flight_ : Int
-  priv max_pending_ : Int
+  priv max_in_flight_ : Int32
+  priv max_pending_ : Int32
   priv commands_ : Array[RegisteredCommand]
   priv components_ : Array[RegisteredComponent]
   priv modals_ : Array[RegisteredModal]
@@ -89,11 +89,11 @@ pub struct AppBuilder {
 /// executors. Build one with `AppBuilder::build`; every `App` has passed
 /// validation, so executors and `attach` never see an invalid declaration.
 pub struct App {
-  priv max_in_flight_ : Int
-  priv max_pending_ : Int
+  priv max_in_flight_ : Int32
+  priv max_pending_ : Int32
   // How long a deferred interaction may wait for a handler permit; the
   // interaction token's lifetime in production, shortened by whitebox tests.
-  priv deferred_wait_ms_ : Int
+  priv deferred_wait_ms_ : Int32
   priv commands_ : Array[RegisteredCommand]
   priv components_ : Array[RegisteredComponent]
   priv modals_ : Array[RegisteredModal]
@@ -116,8 +116,8 @@ pub struct App {
 /// received it) is dropped with a warning. Cooldowns use a fresh in-memory store unless a shared
 /// `cooldown_store` is supplied.
 pub fn AppBuilder::AppBuilder(
-  max_in_flight? : Int = 64,
-  max_pending? : Int = 1024,
+  max_in_flight~ : Int32 = 64,
+  max_pending~ : Int32 = 1024,
   cooldown_store? : &@cooldown.CooldownStore,
 ) -> AppBuilder {
   {
@@ -729,7 +729,7 @@ pub async fn App::sync_commands(
   client : @dhttp.Client,
   application_id : @model.ApplicationId,
   scope~ : CommandScope,
-  unowned? : @framework.UnownedCommands = Delete,
+  unowned~ : @framework.UnownedCommands = Delete,
 ) -> SyncReport {
   let specs = self.commands_.map(command => command.definition)
   let scopes = []

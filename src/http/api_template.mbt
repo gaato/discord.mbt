@@ -125,7 +125,7 @@ pub async fn Client::modify_guild_template(
   template_code : String,
   name? : String,
   description? : String,
-  clear_description? : Bool = false,
+  clear_description~ : Bool = false,
 ) -> @model.GuildTemplate raise DiscordHttpError {
   let body = modify_guild_template_body(name, description, clear_description)
   decode(self.request(ModifyGuildTemplate(guild_id~, template_code~), body~))
