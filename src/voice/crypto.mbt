@@ -14,6 +14,9 @@ pub(all) suberror VoiceCryptoError {
   InvalidEncryptedPacket(reason~ : String)
   AuthenticationFailed(reason~ : String)
   AeadFailed(status~ : Int32, reason~ : String)
+  /// The session key has sealed 2^32 packets; reusing a nonce suffix would
+  /// break the AEAD. A new session (reconnect or rejoin) issues a new key.
+  NonceExhausted
 } derive(Debug, Eq)
 
 ///|
@@ -111,12 +114,13 @@ fn make_nonce(mode : EncryptionMode, suffix : Bytes) -> Bytes {
 }
 
 ///|
-/// Stateful voice transport cipher. The sender counter wraps modulo 2^32;
-/// receivers reconstruct nonces from the packet suffix and need no counter.
+/// Stateful voice transport cipher. The sender counter never wraps: after
+/// 2^32 packets `seal` raises `NonceExhausted` instead of reusing a nonce.
+/// Receivers reconstruct nonces from the packet suffix and need no counter.
 pub struct TransportCipher {
   priv mode : EncryptionMode
   priv secret_key : Bytes
-  priv mut counter : UInt32
+  priv mut counter : UInt64
 }
 
 ///|
@@ -144,7 +148,10 @@ pub fn TransportCipher::seal(
   header~ : Bytes,
   plaintext : Bytes,
 ) -> Bytes raise VoiceCryptoError {
-  let suffix = nonce_suffix(self.counter)
+  if self.counter > 0xFFFFFFFFUL {
+    raise NonceExhausted
+  }
+  let suffix = nonce_suffix(self.counter.to_uint())
   let nonce = make_nonce(self.mode, suffix)
   let encrypted = aead_seal_raw(
     self.mode,

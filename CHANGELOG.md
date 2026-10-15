@@ -9,6 +9,9 @@ breaking change is listed with a migration note.
 
 ### Changed
 
+- `TransportCipher::seal` raises the new `VoiceCryptoError::NonceExhausted`
+  after 2^32 packets instead of wrapping its nonce counter and reusing a
+  nonce under the same key. A new voice session issues a new key.
 - The Gateway and voice gateway reset their reconnect backoff after a
   connection reaches READY or RESUMED (voice: an active session), so a
   single drop after a long healthy run waits the first backoff step instead

@@ -79,6 +79,7 @@ pub(all) suberror VoiceCryptoError {
   InvalidEncryptedPacket(reason~ : String)
   AuthenticationFailed(reason~ : String)
   AeadFailed(status~ : Int, reason~ : String)
+  NonceExhausted
 } derive(Eq, @debug.Debug)
 
 pub(all) suberror VoiceEnvelopeError {

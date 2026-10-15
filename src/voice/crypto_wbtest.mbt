@@ -58,3 +58,28 @@ test "transport cipher round-trips, increments suffix, and rejects tampering" {
     }
   }
 }
+
+///|
+test "transport cipher refuses to reuse a nonce after 2^32 packets" {
+  if !shim_available() {
+    return
+  }
+  let cipher = TransportCipher::new(AeadAes256GcmRtpsize, Bytes::new(32))
+  cipher.counter = 0xFFFFFFFEUL
+  let header = build_rtp_header(sequence=1, timestamp=960U, ssrc=42U)
+  let last_but_one = cipher.seal(header~, b"a")
+  let last = cipher.seal(header~, b"b")
+  assert_eq(
+    last_but_one[last_but_one.length() - 4:].to_owned(),
+    b"\xff\xff\xff\xfe",
+  )
+  assert_eq(last[last.length() - 4:].to_owned(), b"\xff\xff\xff\xff")
+  for _ in 0..<2 {
+    try cipher.seal(header~, b"c") catch {
+      NonceExhausted => ()
+      error => fail("unexpected crypto error: \{Repr(error)}")
+    } noraise {
+      _ => fail("expected the nonce space to be exhausted")
+    }
+  }
+}
