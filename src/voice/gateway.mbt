@@ -307,6 +307,11 @@ async fn VoiceGateway::run(
     self.transport = None
     self.latency = None
     guard ended is VoiceConnectionEnded(code~, ..)
+    // A connection that got as far as READY/RESUMED starts the backoff over;
+    // only consecutive failures should push the delay toward its cap.
+    if self.state_ is Active {
+      attempts = 0
+    }
     if self.closing {
       self.state_ = Disconnected(reconnect_attempts=0)
       self.emit(Disconnected(code~, resuming=false)) catch {

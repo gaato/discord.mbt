@@ -7,6 +7,13 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+### Changed
+
+- The Gateway and voice gateway reset their reconnect backoff after a
+  connection reaches READY or RESUMED (voice: an active session), so a
+  single drop after a long healthy run waits the first backoff step instead
+  of the cap reached by earlier failures.
+
 ### Fixed
 
 - A shard closes its WebSocket with code 4000 when it is about to resume (op

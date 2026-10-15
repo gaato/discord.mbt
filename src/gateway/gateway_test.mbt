@@ -1083,6 +1083,50 @@ async test "shard backoff, resume url switch, and op9 delay run through the slee
 }
 
 ///|
+async test "connections that reach READY or RESUMED reset the reconnect backoff" {
+  let transports = Array::makei(6, _ => FakeTransport())
+  let pending = transports.copy()
+  pending.rev_in_place()
+  let gate = SleepGate()
+  @async.with_task_group(group => {
+    let shard = @gateway.Shard::start(
+      group,
+      token="tok",
+      intents=@model.Intents::none(),
+      connector=_ => (pending.pop().unwrap() : &@gateway.GatewayTransport),
+      sleeper=ms => {
+        if ms <= 1 {
+          @async.sleep(3_600_000)
+        } else {
+          gate.sleep(ms)
+        }
+      },
+    )
+    transports[0].incoming.put(HELLO_FAST)
+    transports[0].outgoing.get() |> ignore
+    transports[0].incoming.put(ready_frame())
+    guard! shard.next() is Connected(resumed=false)
+    guard! shard.next() is Dispatch(Ready(_))
+    for i in 0..<5 {
+      transports[i].server_close(Some(4000))
+      guard! shard.next() is Disconnected(code=Some(4000), resuming=true)
+      // every drop follows a healthy connection, so the backoff stays at
+      // its first step (2000ms jitter plus the 250ms floor)
+      let backoff = gate.requests.get()
+      assert_true(backoff >= 250 && backoff < 2250)
+      gate.release()
+      let next = transports[i + 1]
+      next.incoming.put(HELLO_FAST)
+      guard! next.outgoing.get() is { "op": Number(6, ..), .. }
+      next.incoming.put("{\"op\":0,\"t\":\"RESUMED\",\"s\":2,\"d\":{}}")
+      guard! shard.next() is Connected(resumed=true)
+      guard! shard.next() is Dispatch(_)
+    }
+    shard.close()
+  })
+}
+
+///|
 async test "shard heartbeat loop beats, tracks acks, and zombie-closes" {
   let first = FakeTransport()
   let second = FakeTransport()

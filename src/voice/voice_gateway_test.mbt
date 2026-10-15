@@ -1083,3 +1083,48 @@ async test "voice reconnect backoff runs through the injected sleeper" {
     gateway.close()
   })
 }
+
+///|
+async test "voice connections that reach Active reset the reconnect backoff" {
+  let transports = Array::makei(6, _ => FakeVoiceTransport())
+  let pending = transports.copy()
+  pending.rev_in_place()
+  let gate = SleepGate()
+  @async.with_task_group(group => {
+    let gateway = @voice.VoiceGateway::start(
+      group,
+      server_id="guild",
+      user_id="user",
+      session_id="session",
+      token="token",
+      endpoint="voice.example",
+      max_dave_protocol_version=1,
+      select_protocol=(_, _, _, _) => {
+        ("203.0.113.8", 62000, "aead_aes256_gcm_rtpsize")
+      },
+      connector=_ => (pending.pop().unwrap() : &@voice.VoiceTransport),
+      sleeper=ms => {
+        if ms <= 1 {
+          @async.sleep(3_600_000)
+        } else {
+          gate.sleep(ms)
+        }
+      },
+    )
+    finish_handshake(gateway, transports[0], heartbeat_interval=1)
+    for i in 0..<5 {
+      transports[i].server_close(Some(4015))
+      guard! gateway.next() is Disconnected(code=Some(4015), resuming=true)
+      // each drop follows a healthy connection: first backoff step only
+      let backoff = gate.requests.get()
+      assert_true(backoff >= 250 && backoff < 2250)
+      gate.release()
+      let next = transports[i + 1]
+      next.incoming.put(hello_frame(1))
+      guard! next.outgoing_text.get() is { "op": Number(7, ..), .. }
+      next.incoming.put(Text("{\"op\":9,\"seq\":3,\"d\":null}"))
+      guard! gateway.next() is Connected(resumed=true)
+    }
+    gateway.close()
+  })
+}
