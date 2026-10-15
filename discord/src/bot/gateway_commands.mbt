@@ -96,7 +96,17 @@ pub async fn GatewayCtx::fetch_guild_members(
   let limited = self.expect_event(Events::rate_limited(), event => {
     event.opcode == 8 &&
     (match event.meta {
-      { "nonce": String(value), .. } => value == nonce
+      { "guild_id": value, .. } => {
+        let matched = (@json.from_json(value) : @model.GuildId) catch {
+          _ => return false
+        }
+        matched == guild_id &&
+        (match event.meta {
+          { "nonce": String(value), .. } => value == nonce
+          { "nonce": _, .. } => false
+          _ => true
+        })
+      }
       _ => false
     })
   })

@@ -13,7 +13,8 @@ breaking change is listed with a migration note.
 
 - Typed Gateway presence, member, soundboard, and channel-info commands, with
   `BotActivity`, `MemberSelect`, `ChannelInfoField`, `PresenceStatus::Invisible`,
-  and validated member selection/UTF-8 nonces (`GatewayCommandError`).
+  and validated member selection/UTF-8 nonces (`GatewayCommandError`), with
+  guild-scoped member rate limits and five-per-20-second presence pacing.
 - `BotBuilder::presence` configures initial presence on every local shard;
   `Shard::update_presence` retains the latest sent value for later Identify.
 - `GatewayCtx` broadcasts presence and routes guild commands to their shards.

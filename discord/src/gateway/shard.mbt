@@ -15,6 +15,7 @@ pub(all) enum ShardEvent {
 pub struct Shard {
   priv events : @aqueue.Queue[ShardEvent]
   priv command_limiter : CommandLimiter
+  priv presence_limiter : CommandLimiter
   priv send_gate : @async.Semaphore
   priv mut transport : &GatewayTransport?
   priv mut state : ShardState
@@ -81,10 +82,12 @@ pub async fn Shard::update_voice_state(
 
 ///|
 /// Send opcode 3 and retain the last successfully sent presence for Identify.
+/// Waits as needed to pace updates at five per 20-second sliding window.
 pub async fn Shard::update_presence(
   self : Shard,
   presence : @model.UpdatePresence,
 ) -> Unit {
+  self.presence_limiter.acquire()
   self.send({ "op": 3, "d": presence.to_json() })
   self.presence = Some(presence)
 }
@@ -214,6 +217,7 @@ pub fn[X] Shard::start(
     presence,
     events: Queue(kind=Blocking(queue_capacity)),
     command_limiter: CommandLimiter(sleeper~),
+    presence_limiter: CommandLimiter(limit=5, window_ms=20000, sleeper~),
     send_gate: Semaphore(1),
     transport: None,
     state: Disconnected(reconnect_attempts=0),

@@ -72,6 +72,7 @@ above.
 Configure initial presence before building the bot. Later updates reach every
 shard managed by this process; shards in other processes must be updated there.
 The last successfully sent presence is used again if a shard must Identify.
+Presence updates wait as needed to stay within five updates per 20 seconds per shard; Identify presence does not count.
 
 ```mbt check
 ///|

@@ -224,19 +224,32 @@ async test "fetch watches matching rate limits and times out with no leaked expe
         "d": {
           "opcode": 8,
           "retry_after": 0.0011,
-          "meta": { "nonce": "other" },
+          "meta": { "guild_id": "1", "nonce": "other" },
         },
       }
       transports[0].incoming.put(foreign.stringify())
+      // Both a foreign nonce and another guild's nonce-less response are ignored.
+      let other_guild : Json = {
+        "op": 0,
+        "s": 3,
+        "t": "RATE_LIMITED",
+        "d": { "opcode": 8, "retry_after": 0.0011, "meta": { "guild_id": "2" } },
+      }
+      transports[0].incoming.put(other_guild.stringify())
+      transports[0].incoming.put(chunk_frame(nonce.to_string(), 0, count=1))
+      assert_eq(fetching.wait().members.length(), 1)
+    })
+    @async.with_task_group(group => {
+      let fetching = group.spawn(no_wait=true, allow_failure=true, () => {
+        ctx.fetch_guild_members(Id(1UL), All, timeout_ms=500)
+      })
+      manager_get(transports[0].outgoing, "nonce-less rate limited request")
+      |> ignore
       let matching : Json = {
         "op": 0,
         "s": 3,
         "t": "RATE_LIMITED",
-        "d": {
-          "opcode": 8,
-          "retry_after": 0.0011,
-          "meta": { "nonce": Json(nonce) },
-        },
+        "d": { "opcode": 8, "retry_after": 0.0011, "meta": { "guild_id": "1" } },
       }
       transports[0].incoming.put(matching.stringify())
       try fetching.wait() catch {
