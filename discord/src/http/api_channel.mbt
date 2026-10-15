@@ -174,7 +174,7 @@ pub async fn Client::get_channel_pins(
   }
   let params : Array[String] = []
   if before is Some(value) {
-    params.push("before=\{percent_encode(value.to_string())}")
+    params.push("before=\{@ghttp.percent_encode(value.to_string())}")
   }
   if limit is Some(value) {
     params.push("limit=\{value}")

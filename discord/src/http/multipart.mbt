@@ -223,52 +223,17 @@ fn form_parts(
 }
 
 ///|
-let boundary_state : Ref[UInt64] = Ref(0UL)
-
-///|
-/// Boundary candidates from a small xorshift generator seeded from the clock.
-/// Uniqueness does not rest on it: `encode_parts` retries a candidate that
-/// occurs in a part.
-fn boundary_random() -> Double {
-  if boundary_state.val == 0UL {
-    boundary_state.val = @clock.now_ms().reinterpret_as_uint64() |
-      0x9E3779B97F4A7C15UL
-  }
-  let mut x = boundary_state.val
-  x = x ^ (x << 13)
-  x = x ^ (x >> 7)
-  x = x ^ (x << 17)
-  boundary_state.val = x
-  (x >> 11).to_double() / 9007199254740992.0
-}
-
-///|
-/// Encode the parts with a boundary that occurs in none of them. A candidate
-/// that collides with a part is drawn again.
-fn[T] encode_with_fresh_boundary(
-  parts : Array[@multipart.Part],
-  encoder : (Array[@multipart.Part], String) -> T raise @multipart.MultipartError,
-  random : () -> Double,
-) -> T raise DiscordHttpError {
-  for _ in 0..<16 {
-    let boundary = @multipart.make_boundary(random)
-    let encoded = encoder(parts, boundary) catch {
-      @multipart.BoundaryCollision => continue
-      error => raise Validation(message=@debug.to_string(error))
-    }
-    return encoded
-  }
-  raise Transport(message="could not choose a multipart boundary")
-}
-
-///|
 /// The body as ordered segments, for a wire request. Each part's bytes stay
 /// the caller's, so nothing is copied until the segments are joined.
 fn encode_parts(
   parts : Array[@multipart.Part],
-  random~ : () -> Double = boundary_random,
+  random~ : () -> Double = @runtime.default_random,
 ) -> (String, Array[Bytes]) raise DiscordHttpError {
-  encode_with_fresh_boundary(parts, @multipart.encode_segments, random)
+  @multipart.encode_segments_fresh(parts, random~) catch {
+    @multipart.BoundaryCollision =>
+      raise Transport(message="could not choose a multipart boundary")
+    error => raise Validation(message=@debug.to_string(error))
+  }
 }
 
 ///|
@@ -281,18 +246,7 @@ fn multipart_request(
 ) -> WireRequest raise DiscordHttpError {
   let (content_type, segments) = encode_parts(parts)
   request.headers.set("content-type", content_type)
-  { head: request, body: Some(() => join_segments(segments)), }
-}
-
-///|
-/// The segments as one buffer, in order.
-fn join_segments(segments : Array[Bytes]) -> Bytes {
-  let size = segments.fold(init=0, (size, segment) => size + segment.length())
-  let buffer = Buffer(size_hint=size)
-  for segment in segments {
-    buffer.write_bytes(segment)
-  }
-  buffer.to_bytes()
+  { head: request, body: Some(() => @multipart.join_segments(segments)), }
 }
 
 ///|
@@ -328,9 +282,5 @@ pub fn encode_multipart_body(
   files : Array[FileUpload],
 ) -> (String, Array[Bytes]) raise DiscordHttpError {
   validate_files(files)
-  encode_with_fresh_boundary(
-    upload_parts(payload_json, files),
-    @multipart.encode_segments,
-    boundary_random,
-  )
+  encode_parts(upload_parts(payload_json, files))
 }

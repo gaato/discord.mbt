@@ -17,7 +17,7 @@ fn base_headers(
     headers["authorization"] = "Bot \{token}"
   }
   if audit_reason is Some(reason) {
-    headers["x-audit-log-reason"] = percent_encode(reason)
+    headers["x-audit-log-reason"] = @ghttp.percent_encode(reason)
   }
   headers
 }
