@@ -89,7 +89,8 @@ pub async fn Shard::update_voice_state(
 ///|
 /// Send opcode 3 and retain a snapshot of the last successfully sent presence
 /// for Identify. Serializes presence updates and waits for the general command
-/// limit before pacing updates at five per 20-second sliding window.
+/// limit before pacing updates at five per 20-second sliding window. The
+/// presence window records successful writes only, after they complete.
 pub async fn Shard::update_presence(
   self : Shard,
   presence : @model.UpdatePresence,
@@ -97,8 +98,9 @@ pub async fn Shard::update_presence(
   self.presence_gate.acquire()
   defer self.presence_gate.release()
   self.command_limiter.acquire()
-  self.presence_limiter.acquire()
+  self.presence_limiter.wait_for_slot()
   self.send_after_limit({ "op": 3, "d": presence.to_json() })
+  self.presence_limiter.record()
   self.presence = Some({ ..presence, activities: presence.activities.copy(), })
 }
 
@@ -203,6 +205,7 @@ async fn Shard::finish_transport(
 ///|
 /// Spawn a shard into `group` and return its handle. `resume` seeds the
 /// session so the first connection attempts RESUME at its `resume_url`.
+/// The initial presence is retained with a copy of its activities array.
 pub fn[X] Shard::start(
   group : @async.TaskGroup[X],
   token~ : String,
@@ -224,7 +227,7 @@ pub fn[X] Shard::start(
   presence? : @model.UpdatePresence,
 ) -> Shard {
   let shard = Shard::{
-    presence,
+    presence: presence.map(p => { ..p, activities: p.activities.copy(), }),
     events: Queue(kind=Blocking(queue_capacity)),
     command_limiter: CommandLimiter(sleeper~),
     presence_limiter: CommandLimiter(limit=5, window_ms=20000, sleeper~),

@@ -22,6 +22,7 @@ async test "command limiter waits out the sliding window when full" {
 ///|
 struct PresenceTestTransport {
   sent : Array[String]
+  before_send : () -> Unit raise
 }
 
 ///|
@@ -32,7 +33,61 @@ impl GatewayTransport for PresenceTestTransport with fn recv(_self) {
 
 ///|
 impl GatewayTransport for PresenceTestTransport with fn send(self, text) {
+  (self.before_send)()
   self.sent.push(text)
+}
+
+///|
+async test "presence records only after a successful write" {
+  @async.with_task_group(group => {
+    let shard = Shard::start(
+      group,
+      token="test-token",
+      intents=@model.Intents::none(),
+      connector=_ => {
+        @async.sleep(3600000)
+        raise TransportClosed(code=None, reason="test ended")
+      },
+    )
+    let fail_write = Ref(false)
+    let written_at = Ref(0L)
+    let transport = PresenceTestTransport::{
+      sent: [],
+      before_send: () => {
+        assert_eq(shard.presence_limiter.timestamps.length(), 0)
+        if fail_write.val {
+          raise TransportClosed(code=Some(4000), reason="write failed")
+        }
+        written_at.val = @clock.now_ms()
+      },
+    }
+    shard.transport = Some(transport)
+    // Hold the writer gate so a presence waiting to write cannot record a slot.
+    shard.send_gate.acquire()
+    let update = group.spawn(no_wait=true, () => {
+      shard.update_presence(@model.UpdatePresence(status=Online))
+    })
+    @async.sleep(1)
+    assert_eq(shard.presence_limiter.timestamps.length(), 0)
+    shard.send_gate.release()
+    update.wait()
+    assert_eq(transport.sent.length(), 1)
+    assert_eq(shard.presence_limiter.timestamps.length(), 1)
+    assert_true(shard.presence_limiter.timestamps[0] >= written_at.val)
+    shard.presence_limiter.timestamps.clear()
+    fail_write.val = true
+    try shard.update_presence(@model.UpdatePresence(status=Idle)) catch {
+      TransportClosed(code=Some(4000), reason="write failed") => ()
+      error => fail("unexpected error: \{error}")
+    } noraise {
+      _ => fail("expected write failure")
+    }
+    assert_eq(shard.presence_limiter.timestamps.length(), 0)
+    assert_eq(transport.sent.length(), 1)
+    // General command slots are still consumed even for failed writes.
+    assert_eq(shard.command_limiter.timestamps.length(), 2)
+    shard.close()
+  })
 }
 
 ///|
@@ -63,7 +118,7 @@ async test "presence allows five updates and waits on the sixth" {
       },
     )
     holder.val = Some(shard)
-    let transport = PresenceTestTransport::{ sent: [], }
+    let transport = PresenceTestTransport::{ sent: [], before_send: () => (), }
     shard.transport = Some(transport)
     for _ in 0..<5 {
       shard.update_presence(@model.UpdatePresence(status=Online))
@@ -115,7 +170,7 @@ async test "concurrent presence updates wait for general slots before presence s
       },
     )
     holder.val = Some(shard)
-    let transport = PresenceTestTransport::{ sent: [], }
+    let transport = PresenceTestTransport::{ sent: [], before_send: () => (), }
     shard.transport = Some(transport)
     for _ in 0..<115 {
       shard.command_limiter.acquire()

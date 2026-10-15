@@ -99,6 +99,24 @@ async test "typed gateway context broadcasts presence and routes guild commands"
 }
 
 ///|
+async test "presence broadcast continues after the first shard fails" {
+  with_command_context(Fixed(count=2), (ctx, transports) => {
+    ctx.shards_[0].close()
+    try ctx.update_presence(@model.UpdatePresence(status=Invisible)) catch {
+      @gateway.TransportClosed(code=None, reason="shard is not connected") => ()
+      error => fail("unexpected error: \{error}")
+    } noraise {
+      _ => fail("expected first shard error")
+    }
+    let (_, frame) = manager_get(transports[1].outgoing, "later shard presence")
+    guard frame
+      is { "op": Number(3, ..), "d": { "status": "invisible", .. }, .. } else {
+      fail("missing later shard presence")
+    }
+  })
+}
+
+///|
 async test "unmanaged guild commands fail before sending any soundboard group" {
   with_command_context(Single(id=0, count=2), (ctx, transports) => {
     try

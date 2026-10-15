@@ -8,13 +8,19 @@ pub(all) struct FetchedMembers {
 
 ///|
 /// Broadcast presence to all locally managed shards. Shards in other processes
-/// are not reached.
+/// are not reached. Attempts every local shard, then raises the first error.
 pub async fn GatewayCtx::update_presence(
   self : GatewayCtx,
   presence : @model.UpdatePresence,
 ) -> Unit {
+  let mut first_error : Error? = None
   for shard in self.shards_ {
-    shard.update_presence(presence)
+    shard.update_presence(presence) catch {
+      error => if first_error is None { first_error = Some(error) }
+    }
+  }
+  if first_error is Some(error) {
+    raise error
   }
 }
 

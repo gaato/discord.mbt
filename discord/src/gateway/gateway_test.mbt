@@ -92,7 +92,10 @@ async test "typed commands and latest presence survive re-identify" {
   let first = FakeTransport()
   let second = FakeTransport()
   let pending = [second, first]
-  let initial = @model.UpdatePresence(status=Idle)
+  let initial = @model.UpdatePresence(status=Idle, activities=[
+    @model.BotActivity::custom("initial"),
+  ])
+  let initial_json = initial.to_json()
   let latest = @model.UpdatePresence(status=Invisible, activities=[
     @model.BotActivity::custom("busy"),
   ])
@@ -118,12 +121,14 @@ async test "typed commands and latest presence survive re-identify" {
           }
         },
       )
+      initial.activities.clear()
+      initial.activities.push(@model.BotActivity::custom("changed after start"))
       first.incoming.put(HELLO)
       // Ignore the heartbeat if jitter schedules it ahead of Identify.
       for ;; {
         if first.outgoing.get()
           is { "op": Number(2, ..), "d": { "presence": presence, .. }, .. } {
-          assert_eq(presence, initial.to_json())
+          assert_eq(presence, initial_json)
           break
         }
       }
