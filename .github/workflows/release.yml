@@ -8,6 +8,9 @@ name: Release
 # registry, as consumers do: a module that needs a new version of another must
 # name it in its moon.mod, and that version must be published first. A manual
 # run publishes all three: gaato/dave, gaato/discord, then gaato/discord_voice.
+# Each release is tagged `<directory>-v<version>` (discord-v0.8.0,
+# discord_voice-v0.1.0, dave-v0.1.2); earlier gaato/discord releases are
+# tagged `v<version>`.
 
 on:
   workflow_run:
@@ -33,6 +36,9 @@ jobs:
     timeout-minutes: 20
     container: ghcr.io/gaato/moonbit:0.10.15-943464bfa
     environment: mooncakes
+    permissions:
+      # scripts/release.sh tags each module release it publishes.
+      contents: write
     steps:
       - name: Check out the commit CI validated
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -49,6 +55,8 @@ jobs:
         env:
           MOONCAKES_TOKEN: ${{ secrets.MOONCAKES_TOKEN }}
           MOONCAKES_USERNAME: ${{ secrets.MOONCAKES_USERNAME }}
+          GITHUB_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
           MODULES: >-
             ${{ github.event_name == 'workflow_dispatch' && 'dave discord discord_voice'
               || github.event.workflow_run.name == 'Dave' && 'dave'

@@ -18,6 +18,8 @@ source = "src"
 
 preferred_target = "native"
 
+supported_targets = "native"
+
 // Same promotion policy as gaato/discord: dot-callable trait methods are
 // declared with `pub extend` (scripts/gen_extends.py).
 
