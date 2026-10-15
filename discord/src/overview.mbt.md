@@ -127,13 +127,11 @@ async fn run_echo_bot(token : String) -> Unit {
 moonbitlang/async, so generic WASI runtimes, browsers, and wasm-gc are not
 targets. See [Wasm runtime and permissions](#wasm-runtime-and-permissions).
 
-² Voice exports exist only on native. The HTTP-server exports exist on native
-and Wasm. Gateway zlib-stream compression is native-only; check
-`zlib_stream_supported()` before enabling it. As on JS, the root retains DAVE in its dependency
-graph, but `gaato/dave.available()` is false on Wasm and its safe constructors
-raise `LibraryUnavailable`. This does not enable DAVE or Voice. Packages that
-are empty on a backend do not provide that feature, even if Moon accepts them
-as dependencies.
+² The HTTP-server exports exist on native and Wasm. Gateway zlib-stream
+compression is native-only; check `zlib_stream_supported()` before enabling
+it. Packages that are empty on a backend do not provide that feature, even if
+Moon accepts them as dependencies. Voice (`gaato/discord_voice`) is
+native-only.
 
 ### Wasm runtime and permissions
 

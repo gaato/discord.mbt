@@ -67,6 +67,7 @@ jobs:
           MOON_WORK=off moon -C discord check --target native --deny-warn
 
       - name: Check published module contents
+        shell: bash
         run: |
           # Each module ships its own LICENSE copy, which must match the
           # repository's, and none of the repository-only files.
