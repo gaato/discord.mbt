@@ -66,6 +66,7 @@ pub(all) struct Hello {
 pub(all) struct ReadyApplication {
   id : ApplicationId
   flags : ApplicationFlags?
+  flags_new : ApplicationFlags?
 } derive(ToJson, FromJson, Debug)
 
 ///|

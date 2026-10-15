@@ -105,7 +105,16 @@ pub fn ActivityEmoji::to_json(Self) -> Json
 
 pub(all) struct ActivityFlags(UInt64) derive(Eq)
 pub fn ActivityFlags::bits(Self) -> UInt64
+pub fn ActivityFlags::embedded() -> Self
 pub fn ActivityFlags::from_bits(UInt64) -> Self
+pub fn ActivityFlags::instance() -> Self
+pub fn ActivityFlags::join() -> Self
+pub fn ActivityFlags::join_request() -> Self
+pub fn ActivityFlags::party_privacy_friends() -> Self
+pub fn ActivityFlags::party_privacy_voice_channel() -> Self
+pub fn ActivityFlags::play() -> Self
+pub fn ActivityFlags::spectate() -> Self
+pub fn ActivityFlags::sync() -> Self
 pub fn ActivityFlags::to_json(Self) -> Json
 pub impl ToJson for ActivityFlags
 pub impl @debug.Debug for ActivityFlags
@@ -972,6 +981,7 @@ pub(all) struct ClientStatus {
   desktop : PresenceStatus?
   mobile : PresenceStatus?
   web : PresenceStatus?
+  vr : PresenceStatus?
 } derive(ToJson, @debug.Debug)
 pub fn ClientStatus::to_json(Self) -> Json
 pub impl @json.FromJson for ClientStatus
@@ -1238,6 +1248,11 @@ pub(all) struct EmbedImage {
   proxy_url : String?
   height : Int?
   width : Int?
+  content_type : String?
+  placeholder : String?
+  placeholder_version : Int?
+  description : String?
+  flags : Int?
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn EmbedImage::EmbedImage(String) -> Self
 pub fn EmbedImage::to_json(Self) -> Json
@@ -1281,6 +1296,11 @@ pub(all) struct EmbedVideo {
   proxy_url : String?
   height : Int?
   width : Int?
+  content_type : String?
+  placeholder : String?
+  placeholder_version : Int?
+  description : String?
+  flags : Int?
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn EmbedVideo::to_json(Self) -> Json
 
@@ -1814,6 +1834,7 @@ pub(all) enum GuildFeature {
   EnhancedRoleColors
   GuestsEnabled
   PinPermissionMigrationComplete
+  PruneRequiresAdmin
   Unknown(String)
 } derive(Eq, @debug.Debug)
 pub fn GuildFeature::from_string(String) -> Self
@@ -1890,6 +1911,8 @@ pub(all) struct GuildMemberUpdateEvent {
   user : User
   nick : Nullable[String]?
   avatar : Nullable[ImageHash]
+  banner : Nullable[ImageHash]?
+  collectibles : Nullable[Collectibles]?
   joined_at : Nullable[Timestamp]
   premium_since : Nullable[Timestamp]?
   deaf : Bool?
@@ -2684,6 +2707,7 @@ pub(all) enum MessageActivityType {
   Spectate
   Listen
   JoinRequest
+  StreamRequest
   Unknown(Int)
 } derive(Eq, @debug.Debug)
 pub fn MessageActivityType::from_int(Int) -> Self
@@ -3323,6 +3347,7 @@ pub fn Ready::to_json(Self) -> Json
 pub(all) struct ReadyApplication {
   id : Id[ApplicationMarker]
   flags : ApplicationFlags?
+  flags_new : ApplicationFlags?
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn ReadyApplication::to_json(Self) -> Json
 
@@ -3419,6 +3444,7 @@ pub(all) struct SelectMenu {
   min_values : Int?
   max_values : Int?
   disabled : Bool?
+  required : Bool?
   options : Array[SelectOption]?
   channel_types : Array[ChannelType]?
   default_values : Array[SelectDefaultValue]?

@@ -223,12 +223,28 @@ pub(all) struct EmbedImage {
   proxy_url : String?
   height : Int32?
   width : Int32?
+  content_type : String?
+  placeholder : String?
+  placeholder_version : Int32?
+  description : String?
+  /// Embed media flags; IS_ANIMATED is bit 5.
+  flags : Int32?
 } derive(ToJson, FromJson, Debug)
 
 ///|
 /// Construct image media for an outgoing embed.
 pub fn EmbedImage::EmbedImage(url : String) -> EmbedImage {
-  { url, proxy_url: None, height: None, width: None, }
+  {
+    url,
+    proxy_url: None,
+    height: None,
+    width: None,
+    content_type: None,
+    placeholder: None,
+    placeholder_version: None,
+    description: None,
+    flags: None,
+  }
 }
 
 ///|
@@ -253,6 +269,12 @@ pub(all) struct EmbedVideo {
   proxy_url : String?
   height : Int32?
   width : Int32?
+  content_type : String?
+  placeholder : String?
+  placeholder_version : Int32?
+  description : String?
+  /// Embed media flags; IS_ANIMATED is bit 5.
+  flags : Int32?
 } derive(ToJson, FromJson, Debug)
 
 ///|

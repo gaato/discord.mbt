@@ -11,6 +11,12 @@ breaking change is listed with a migration note.
 
 ### Added
 
+- Select-menu `required`, READY application `flags_new`, client status `vr`,
+  member-update `banner`/`collectibles`, and embed image/video media metadata.
+- Guild channel creation and position updates accept channel `flags`; position
+  updates also accept `clear_flags=true` for the documented nullable field.
+- `MessageActivityType::StreamRequest`, `GuildFeature::PruneRequiresAdmin`, and
+  named constants for all nine documented `ActivityFlags` bits.
 - `GatewayCtx::expect_event(event_type, predicate)` registers an expected
   gateway event at once and returns a `PendingEvent` to `wait` on (or
   `cancel`), so it can be installed before sending the command that makes
@@ -26,6 +32,9 @@ breaking change is listed with a migration note.
 
 ### Changed
 
+- **New fields on `pub(all)` structs break existing struct literals.** Migration:
+  use the existing constructor or add `required`, `flags_new`, `vr`,
+  `banner`/`collectibles`, or the five new embed media fields (default `None`).
 - **`@ratelimit.InMemoryRateLimiter` is replaced by
   `@ratelimit.rate_limiter()`**, which returns sdk-runtime's `WindowLimiter`
   configured for Discord and accepts an injected `clock`. Migration:
@@ -104,6 +113,8 @@ breaking change is listed with a migration note.
 
 ### Fixed
 
+- Guild descriptions now accept up to 300 characters and auto-moderation
+  rules accept one through five actions, matching Discord's OpenAPI limits.
 - A shard closes its WebSocket with code 4000 when it is about to resume (op
   7 Reconnect, op 9, a missed heartbeat ACK, or a read failure). It sent 1000
   for every close, and Discord invalidates the session on a 1000 or 1001

@@ -142,3 +142,49 @@ test "dispatch decodes stage and voice channel update payloads" {
   )
   assert_true(status is VoiceChannelStatusUpdate(_))
 }
+
+///|
+test "READY, presence and member update decode newly documented fields" {
+  let ready : @model.Ready = @json.from_json({
+    "v": 10,
+    "user": {
+      "id": "1",
+      "username": "bot",
+      "discriminator": "0",
+      "global_name": null,
+      "avatar": null,
+    },
+    "guilds": [],
+    "session_id": "session",
+    "resume_gateway_url": "wss://gateway.example",
+    "application": { "id": "2", "flags_new": 2147483648 },
+  })
+  assert_eq(ready.application.flags_new.unwrap().bits(), 2147483648UL)
+  let presence : @model.PresenceUpdateEvent = @json.from_json({
+    "client_status": { "vr": "online" },
+  })
+  assert_true(presence.client_status.unwrap().vr is Some(Online))
+  let malformed : @model.ClientStatus = @json.from_json({
+    "vr": 1,
+    "web": "idle",
+  })
+  assert_true(malformed.vr is None)
+  assert_true(malformed.web is Some(Idle))
+  let update : @model.GuildMemberUpdateEvent = @json.from_json({
+    "guild_id": "3",
+    "roles": [],
+    "user": {
+      "id": "1",
+      "username": "bot",
+      "discriminator": "0",
+      "global_name": null,
+      "avatar": null,
+    },
+    "avatar": null,
+    "joined_at": null,
+    "banner": "banner_hash",
+    "collectibles": {},
+  })
+  assert_true(update.banner is Some(Value(_)))
+  assert_true(update.collectibles is Some(Value(_)))
+}

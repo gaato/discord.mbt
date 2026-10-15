@@ -408,6 +408,7 @@ pub fn string_select(
   min_values? : Int32,
   max_values? : Int32,
   disabled? : Bool,
+  required? : Bool,
 ) -> @model.Component {
   StringSelect({
     id: None,
@@ -416,6 +417,7 @@ pub fn string_select(
     min_values,
     max_values,
     disabled,
+    required,
     options: Some(options),
     channel_types: None,
     default_values: None,
@@ -453,6 +455,7 @@ fn auto_select(
   min_values : Int32?,
   max_values : Int32?,
   disabled : Bool?,
+  required : Bool?,
   channel_types : Array[@model.ChannelType]?,
 ) -> @model.Component {
   let menu = @model.SelectMenu::{
@@ -462,6 +465,7 @@ fn auto_select(
     min_values,
     max_values,
     disabled,
+    required,
     options: None,
     channel_types,
     default_values: None,
@@ -484,8 +488,18 @@ pub fn user_select(
   min_values? : Int32,
   max_values? : Int32,
   disabled? : Bool,
+  required? : Bool,
 ) -> @model.Component {
-  auto_select(5, custom_id, placeholder, min_values, max_values, disabled, None)
+  auto_select(
+    5,
+    custom_id,
+    placeholder,
+    min_values,
+    max_values,
+    disabled,
+    required,
+    None,
+  )
 }
 
 ///|
@@ -497,8 +511,18 @@ pub fn role_select(
   min_values? : Int32,
   max_values? : Int32,
   disabled? : Bool,
+  required? : Bool,
 ) -> @model.Component {
-  auto_select(6, custom_id, placeholder, min_values, max_values, disabled, None)
+  auto_select(
+    6,
+    custom_id,
+    placeholder,
+    min_values,
+    max_values,
+    disabled,
+    required,
+    None,
+  )
 }
 
 ///|
@@ -509,8 +533,18 @@ pub fn mentionable_select(
   min_values? : Int32,
   max_values? : Int32,
   disabled? : Bool,
+  required? : Bool,
 ) -> @model.Component {
-  auto_select(7, custom_id, placeholder, min_values, max_values, disabled, None)
+  auto_select(
+    7,
+    custom_id,
+    placeholder,
+    min_values,
+    max_values,
+    disabled,
+    required,
+    None,
+  )
 }
 
 ///|
@@ -523,10 +557,11 @@ pub fn channel_select(
   min_values? : Int32,
   max_values? : Int32,
   disabled? : Bool,
+  required? : Bool,
   channel_types? : Array[@model.ChannelType],
 ) -> @model.Component {
   auto_select(
-    8, custom_id, placeholder, min_values, max_values, disabled, channel_types,
+    8, custom_id, placeholder, min_values, max_values, disabled, required, channel_types,
   )
 }
 

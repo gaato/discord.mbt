@@ -168,3 +168,34 @@ test "component builders emit Discord wire payloads" {
     },
   )
 }
+
+///|
+test "select builders round trip modal required and omit it when absent" {
+  let menus = [
+    @interaction.string_select(custom_id="select", options=[], required=false),
+    @interaction.user_select(custom_id="select", required=false),
+    @interaction.role_select(custom_id="select", required=false),
+    @interaction.mentionable_select(custom_id="select", required=false),
+    @interaction.channel_select(custom_id="select", required=false),
+  ]
+  for menu in menus {
+    let decoded : @model.Component = @json.from_json(menu.to_json())
+    match decoded {
+      StringSelect(select)
+      | UserSelect(select)
+      | RoleSelect(select)
+      | MentionableSelect(select)
+      | ChannelSelect(select) => assert_eq(select.required, Some(false))
+      _ => fail("expected select")
+    }
+    assert_eq(menu.to_json(), decoded.to_json())
+    assert_eq(
+      @model.modal_limit_violations(title="Modal", components=[menu]).length(),
+      0,
+    )
+  }
+  json_inspect(@interaction.user_select(custom_id="optional"), content={
+    "custom_id": "optional",
+    "type": 5,
+  })
+}

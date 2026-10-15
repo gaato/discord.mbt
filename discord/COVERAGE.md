@@ -1,7 +1,7 @@
 # REST endpoint coverage
 
 Typed `Route` / `Client` coverage of the Discord REST API, diffed against the
-official OpenAPI spec ([discord/discord-api-spec], `main`, fetched 2026-07-16).
+official OpenAPI spec ([discord/discord-api-spec], commit `ed014089`, 2026-10-14).
 
 - **Status: complete.** Every endpoint in the official developer docs has a
   typed wrapper (checked items below), including two documented endpoints the
@@ -63,9 +63,9 @@ The mechanical diff needs manual review afterwards:
   produces false positives: the residual `reactions/{emoji}/@me` and
   `reactions/{emoji}/{user}` lines are covered by `Client::create_reaction`,
   `Client::delete_own_reaction`, and `Client::delete_user_reaction`.
-- **Pins moved.** The spec lists `/channels/{id}/messages/pins`; the library
-  implements the equivalent legacy `/channels/{id}/pins` routes
-  (`GET`/`PUT`/`DELETE`), so those three are covered, not missing.
+- **Pins moved.** The library uses `/channels/{id}/messages/pins[/{id}]`
+  plus the legacy `GET /channels/{id}/pins`. The spec's leftover `PUT`/`DELETE`
+  `/channels/*/pins/*` lines are legacy routes, covered for that reason.
 - **The spec is a lower bound.** Discord's OpenAPI spec omits some documented
   endpoints (e.g. `GET /applications/{id}/skus`, List SKUs), so also compare
   against the developer docs when closing a category.

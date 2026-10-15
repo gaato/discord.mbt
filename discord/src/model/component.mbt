@@ -209,6 +209,7 @@ pub(all) struct SelectMenu {
   min_values : Int32?
   max_values : Int32?
   disabled : Bool?
+  required : Bool?
   options : Array[SelectOption]?
   channel_types : Array[ChannelType]?
   default_values : Array[SelectDefaultValue]?

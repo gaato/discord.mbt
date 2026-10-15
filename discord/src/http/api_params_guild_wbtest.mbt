@@ -115,3 +115,30 @@ async test "auto moderation create omits trigger metadata when absent" {
     "actions": [{ "type": 1 }],
   })
 }
+
+///|
+async test "modify guild accepts 300 description characters and rejects 301" {
+  let (client, perform) = offline_test_client()
+  defer client.close()
+  let calls = Ref(0)
+  perform.val = Some((_route, _path, _headers, body, _files) => {
+    calls.val += 1
+    assert_true(body is Some(_))
+    { status: 200, headers: Map([]), body: Json::null(), }
+  })
+  let guild_id : @model.GuildId = Id(1UL)
+  try client.modify_guild(guild_id, description=String::make(300, 'x')) catch {
+    Deserialize(_) => ()
+    error => fail("unexpected error: \{Repr(error)}")
+  } noraise {
+    _ => fail("expected fake response decoding failure")
+  }
+  assert_eq(calls.val, 1)
+  try client.modify_guild(guild_id, description=String::make(301, 'x')) catch {
+    Validation(_) => ()
+    error => fail("unexpected error: \{Repr(error)}")
+  } noraise {
+    _ => fail("expected description validation")
+  }
+  assert_eq(calls.val, 1)
+}

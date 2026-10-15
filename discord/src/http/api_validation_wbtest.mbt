@@ -219,11 +219,31 @@ test "bulk guild ban validates user count and delete window" {
 
 ///|
 test "auto moderation validates action and exemption caps" {
+  let action : @model.AutoModerationAction = @json.from_json({
+    "type": 1,
+    "metadata": {},
+  })
+  validate_auto_moderation_rule(None, Some(Array::make(5, action)), None, None)
+  expect_json_validation(
+    () => {
+      auto_moderation_rule_body(
+        None,
+        None,
+        None,
+        None,
+        Some(Array::make(6, action)),
+        None,
+        None,
+        None,
+      )
+    },
+    "auto moderation actions must contain 1 through 5 entries",
+  )
   try validate_auto_moderation_rule(None, Some([]), None, None) catch {
     Validation(message~) =>
       inspect(
         message,
-        content="auto moderation actions must contain 1 through 3 entries",
+        content="auto moderation actions must contain 1 through 5 entries",
       )
     error => fail("unexpected error: \{Repr(error)}")
   } noraise {

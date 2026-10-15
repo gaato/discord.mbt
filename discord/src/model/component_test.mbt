@@ -73,6 +73,7 @@ test "component decodes an action row with a button and string select" {
       #|          min_values: Some(1),
       #|          max_values: Some(1),
       #|          disabled: Some(false),
+      #|          required: None,
       #|          options: Some(
       #|            [
       #|              {
