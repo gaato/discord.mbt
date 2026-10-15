@@ -11,6 +11,7 @@ const {
   cacheRootFor,
   ensureLibrary,
   httpsDownloadUrl,
+  invokedByMoon,
   validateContentLength,
 } = require("../build.js");
 const {
@@ -38,6 +39,13 @@ test("release manifest covers every published host", () => {
   }
   assert.ok(Object.isFrozen(release));
   assert.ok(Object.isFrozen(release.assets["linux:x64"]));
+});
+
+test("a Moon prebuild run is recognised by MOON_BACKEND alone", () => {
+  assert.equal(invokedByMoon({ MOON_BACKEND: "native" }), true);
+  assert.equal(invokedByMoon({ MOON_BACKEND: "" }), true);
+  assert.equal(invokedByMoon({}), false);
+  assert.equal(invokedByMoon({ MOON_BUILD_DIR: "/tmp/out" }), false);
 });
 
 test("platform and architecture aliases select the same asset", () => {

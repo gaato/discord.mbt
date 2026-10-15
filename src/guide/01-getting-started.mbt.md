@@ -7,11 +7,12 @@ This guide creates a native Gateway bot with one `/echo` command.
 On a clean machine, install `git` and run `moon update` first; Moon clones its
 package registry with `git` when resolving dependencies.
 
-Node.js must be on `PATH` for every build, even for a bot that never uses
-voice. `gaato/discord` and its `gaato/dave` dependency declare prebuild hooks
-that Moon runs with `node`; they do nothing unless voice is opted into (see
-[Voice](10-voice.mbt.md)), but `moon build` fails when `node` is missing.
-`moon check` does not run the hooks.
+Node.js must be on `PATH` for every native build, even for a bot that never
+uses voice. `gaato/discord` and its `gaato/dave` dependency declare prebuild
+hooks that Moon runs with `node`; they do nothing unless voice is opted into
+(see [Voice](10-voice.mbt.md)), but a native `moon build` fails when `node` is
+missing. Moon does not run the hooks for JavaScript or Wasm builds, or for
+`moon check`.
 
 All native builds compile the Gateway package's `zlib_stream.c`, which always
 includes `<zlib.h>`, regardless of whether Gateway compression is enabled.

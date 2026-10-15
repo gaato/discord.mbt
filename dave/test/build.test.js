@@ -8,10 +8,18 @@ const test = require("node:test");
 const {
   ExactSizeTransform,
   httpsDownloadUrl,
+  invokedByMoon,
   validateContentLength,
 } = require("../build.js");
 
 const TEST_URL = "https://example.invalid/libdave.zip";
+
+test("a Moon prebuild run is recognised by MOON_BACKEND alone", () => {
+  assert.equal(invokedByMoon({ MOON_BACKEND: "native" }), true);
+  assert.equal(invokedByMoon({ MOON_BACKEND: "" }), true);
+  assert.equal(invokedByMoon({}), false);
+  assert.equal(invokedByMoon({ MOON_BUILD_DIR: "/tmp/out" }), false);
+});
 
 test("Content-Length accepts the pinned size and optional omission", () => {
   assert.doesNotThrow(() => validateContentLength(undefined, 4, TEST_URL));

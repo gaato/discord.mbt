@@ -1,5 +1,8 @@
 "use strict";
 
+// The prebuild protocol handling here and in dave/build.js is the same; change
+// both together.
+
 const crypto = require("node:crypto");
 const fs = require("node:fs");
 const https = require("node:https");
@@ -16,16 +19,15 @@ const MAX_REDIRECTS = 8;
 const REQUEST_TIMEOUT_MS = 30_000;
 
 async function main() {
-  const input = await readPrebuildInput();
-  const environment = mergeEnvironment(input.env);
-  const invokedByMoon = Object.prototype.hasOwnProperty.call(input, "paths");
+  const environment = process.env;
   if (
-    invokedByMoon &&
+    invokedByMoon(environment) &&
     !environmentFlag(environment.DISCORD_VOICE_REQUIRE_SHIM)
   ) {
-    // Moon's prebuild input does not identify the selected backend. Require a
-    // native voice opt-in so JS and REST-only consumers do not download a host
-    // runtime. Direct invocation remains an explicit bootstrap command.
+    // Moon runs prebuild scripts only for native builds, but most native
+    // consumers never join a voice call. Require the voice opt-in before
+    // downloading a host runtime. Direct invocation remains an explicit
+    // bootstrap command.
     process.stdout.write("{}");
     return;
   }
@@ -37,38 +39,11 @@ async function main() {
   process.stdout.write("{}");
 }
 
-async function readPrebuildInput() {
-  let source = "";
-  process.stdin.setEncoding("utf8");
-  for await (const chunk of process.stdin) {
-    source += chunk;
-  }
-  if (source.trim() === "") {
-    return {};
-  }
-  const parsed = JSON.parse(source);
-  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new Error("Moon prebuild input must be a JSON object");
-  }
-  return parsed;
-}
-
-function mergeEnvironment(prebuildEnvironment) {
-  const merged = { ...process.env };
-  if (
-    prebuildEnvironment !== undefined &&
-    (prebuildEnvironment === null ||
-      typeof prebuildEnvironment !== "object" ||
-      Array.isArray(prebuildEnvironment))
-  ) {
-    throw new Error("Moon prebuild input field 'env' must be a JSON object");
-  }
-  for (const [name, value] of Object.entries(prebuildEnvironment || {})) {
-    if (value !== undefined && value !== null) {
-      merged[name] = String(value);
-    }
-  }
-  return merged;
+// Moon passes prebuild inputs as environment variables and sets MOON_BACKEND
+// for every run. Its JSON copy on stdin is a legacy transport that Moon plans
+// to remove, so it is not read.
+function invokedByMoon(environment) {
+  return environment.MOON_BACKEND !== undefined;
 }
 
 async function ensureLibrary(environment, asset) {
@@ -527,5 +502,6 @@ module.exports = {
   cacheRootFor,
   ensureLibrary,
   httpsDownloadUrl,
+  invokedByMoon,
   validateContentLength,
 };

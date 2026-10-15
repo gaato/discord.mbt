@@ -65,6 +65,14 @@ breaking change is listed with a migration note.
   chunk and no longer queues a scheduler tick for a coroutine that has already
   finished, so the JS example hosts' `whenIdle()` no longer yields an extra
   macrotask to let that tick run.
+- The native prebuild hook recognises a Moon run by `MOON_BACKEND`, which Moon
+  sets for prebuild scripts since toolchain 0.10.14, instead of by the JSON
+  payload on stdin, which Moon is going to stop sending. Without that change a
+  Moon release that drops stdin would have made the hook download the voice
+  runtime for every native build. Run directly (`node build.js`), the hook no
+  longer waits for end of input. The documentation now says that Node.js is
+  needed for native builds only: Moon does not run the hook for JavaScript or
+  Wasm builds.
 
 ### Fixed
 

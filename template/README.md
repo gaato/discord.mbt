@@ -18,10 +18,10 @@ moon update
 ```
 
 Install `git` before running `moon update`; Moon uses it to clone the package
-registry. Node.js must be on `PATH` for every build, including container
-builder stages: `gaato/discord` and its `gaato/dave` dependency declare
-prebuild hooks that Moon runs with `node`. They do nothing unless voice is
-opted into, but `moon build` fails when `node` is missing. Node.js is not
+registry. Node.js must be on `PATH` for every native build, including
+container builder stages: `gaato/discord` and its `gaato/dave` dependency
+declare prebuild hooks that Moon runs with `node`. They do nothing unless voice
+is opted into, but `moon build` fails when `node` is missing. Node.js is not
 needed to run the built executable.
 
 Native builds also require the zlib development headers because the
