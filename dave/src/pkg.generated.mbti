@@ -42,6 +42,7 @@ pub(all) enum CommitResult {
   Failed(failure~ : MlsFailure)
 } derive(Eq, @debug.Debug)
 
+#non_exhaustive
 pub(all) enum DecryptFailure {
   DecryptionFailure
   MissingKeyRatchet
@@ -58,6 +59,7 @@ pub fn Decryptor::new() -> Self raise DaveError
 pub fn Decryptor::transition_to_key_ratchet(Self, KeyRatchet) -> Unit raise DaveError
 pub fn Decryptor::transition_to_passthrough_mode(Self, enabled~ : Bool) -> Unit raise DaveError
 
+#non_exhaustive
 pub(all) enum EncryptFailure {
   EncryptionFailure
   MissingKeyRatchet

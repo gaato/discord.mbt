@@ -19,6 +19,7 @@ pub(all) struct TeamMember {
 
 ///|
 /// A user's invitation state within a developer team.
+#non_exhaustive
 pub(all) enum TeamMembershipState {
   Invited
   Accepted

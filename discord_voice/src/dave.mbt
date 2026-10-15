@@ -8,6 +8,7 @@ pub(all) suberror DaveError {
 
 ///|
 /// Side effects requested by the DAVE gateway/MLS orchestration state machine.
+#non_exhaustive
 pub(all) enum DaveAction {
   SendJson(Json)
   SendBinary(op~ : Int32, payload~ : Bytes)

@@ -66,6 +66,7 @@ pub fn[X] Shard::start(@async.TaskGroup[X], token~ : String, intents~ : @model.I
 pub fn Shard::state(Self) -> ShardState
 pub async fn Shard::update_voice_state(Self, @model.UpdateVoiceState) -> Unit
 
+#non_exhaustive
 pub(all) enum ShardEvent {
   Dispatch(@model.Event)
   Connected(resumed~ : Bool)

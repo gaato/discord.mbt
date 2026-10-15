@@ -23,6 +23,7 @@ pub(all) enum WelcomeResult {
 
 ///|
 /// Why media-frame encryption failed.
+#non_exhaustive
 pub(all) enum EncryptFailure {
   EncryptionFailure
   MissingKeyRatchet
@@ -33,6 +34,7 @@ pub(all) enum EncryptFailure {
 
 ///|
 /// Why media-frame decryption failed.
+#non_exhaustive
 pub(all) enum DecryptFailure {
   DecryptionFailure
   MissingKeyRatchet

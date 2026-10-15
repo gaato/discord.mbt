@@ -1,5 +1,6 @@
 ///|
 /// A decoded voice gateway v8 message.
+#non_exhaustive
 pub(all) enum VoiceMessage {
   Ready(ssrc~ : UInt32, ip~ : String, port~ : Int32, modes~ : Array[String])
   Hello(heartbeat_interval~ : Int32)

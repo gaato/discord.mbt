@@ -72,6 +72,7 @@ pub fn InviteFlags::is_guest_invite() -> InviteFlags {
 
 ///|
 /// The destination category of a Discord invite.
+#non_exhaustive
 pub(all) enum InviteType {
   Guild
   GroupDm
@@ -117,6 +118,7 @@ pub impl @json.FromJson for InviteType with fn from_json(json, path) {
 
 ///|
 /// The special target carried by a voice channel invite.
+#non_exhaustive
 pub(all) enum InviteTargetType {
   Stream
   EmbeddedApplication
@@ -172,6 +174,7 @@ pub(all) struct TargetUsersJobStatus {
 
 ///|
 /// State of an invite target-user CSV update job.
+#non_exhaustive
 pub(all) enum TargetUsersJobStatusCode {
   Unspecified
   Processing

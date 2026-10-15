@@ -139,6 +139,7 @@ pub fn EmbedFlags::is_content_inventory_entry() -> EmbedFlags {
 
 ///|
 /// The string discriminator describing an embed's rendering category.
+#non_exhaustive
 pub(all) enum EmbedType {
   Rich
   Image

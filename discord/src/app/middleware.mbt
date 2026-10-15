@@ -1,6 +1,7 @@
 ///|
 /// The routed target of an interaction entering the middleware chain.
 /// Autocomplete, gateway events, and services never pass through it.
+#non_exhaustive
 pub(all) enum InteractionTarget {
   Command(name~ : String)
   Component(custom_id~ : String)

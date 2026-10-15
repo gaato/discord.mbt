@@ -392,6 +392,8 @@ pub fn sticker_url(
     Lottie => "json"
     Gif => "gif"
     Unknown(value) => raise UnsupportedStickerFormat(value)
+    @model.StickerFormatType::.. =>
+      raise UnsupportedStickerFormat(format.to_int())
   }
   let base = if format == Gif {
     "https://media.discordapp.net"

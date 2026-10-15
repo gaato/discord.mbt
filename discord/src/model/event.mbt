@@ -3,6 +3,7 @@
 ///
 /// Unknown event names retain both the name and payload for forward
 /// compatibility.
+#non_exhaustive
 pub(all) enum Event {
   ApplicationCommandPermissionsUpdate(GuildApplicationCommandPermissions)
   AutoModerationActionExecution(AutoModerationActionExecutionEvent)
@@ -88,6 +89,7 @@ pub(all) enum Event {
 
 ///|
 /// A dispatch event category without its payload.
+#non_exhaustive
 pub(all) enum EventKind {
   KApplicationCommandPermissionsUpdate
   KAutoModerationActionExecution

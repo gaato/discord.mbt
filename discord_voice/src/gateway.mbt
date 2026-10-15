@@ -1,5 +1,6 @@
 ///|
 /// Events surfaced by `VoiceGateway::next`.
+#non_exhaustive
 pub(all) enum VoiceGatewayEvent {
   ReadyReceived
   SessionEstablished(

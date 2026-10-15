@@ -2,6 +2,7 @@
 /// Structured, dependency-free operational events emitted by discord.mbt.
 ///
 /// Callbacks receive these values synchronously and should return promptly.
+#non_exhaustive
 pub(all) enum TelemetryEvent {
   ShardConnecting(shard_id~ : Int32)
   ShardCompressionEnabled(shard_id~ : Int32)

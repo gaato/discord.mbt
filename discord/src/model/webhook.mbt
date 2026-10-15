@@ -21,6 +21,7 @@ pub(all) struct Webhook {
 
 ///|
 /// The behavior category of a Discord webhook.
+#non_exhaustive
 pub(all) enum WebhookType {
   Incoming
   ChannelFollower

@@ -115,6 +115,7 @@ pub(all) suberror VoiceUdpError {
 } derive(Eq, @debug.Debug)
 
 // Types and methods
+#non_exhaustive
 pub(all) enum DaveAction {
   SendJson(Json)
   SendBinary(op~ : Int, payload~ : Bytes)
@@ -135,6 +136,7 @@ type DaveRosterChange derive(Eq, @debug.Debug)
 
 type DaveWelcomeOutcome derive(Eq, @debug.Debug)
 
+#non_exhaustive
 pub(all) enum EncryptionMode {
   AeadAes256GcmRtpsize
   AeadXChaCha20Poly1305Rtpsize
@@ -242,6 +244,7 @@ pub(all) struct VoiceCredentials {
   endpoint : String
 } derive(Eq, @debug.Debug)
 
+#non_exhaustive
 pub(all) enum VoiceEvent {
   SpeakingChanged(user_id~ : String, ssrc~ : UInt, flags~ : Int)
   UserConnected(user_id~ : String)
@@ -266,6 +269,7 @@ pub async fn VoiceGateway::send_json(Self, Json) -> Unit
 pub fn[X] VoiceGateway::start(@async.TaskGroup[X], server_id~ : String, user_id~ : String, session_id~ : String, token~ : String, endpoint~ : String, max_dave_protocol_version? : UInt16, select_protocol~ : async (UInt, String, Int, Array[String]) -> (String, Int, String), connector? : async (String) -> &VoiceTransport, queue_capacity? : Int, telemetry? : (VoiceGatewayEvent) -> Unit, sleeper? : async (Int) -> Unit, rand? : @random.Rand) -> Self
 pub fn VoiceGateway::state(Self) -> VoiceGatewayState
 
+#non_exhaustive
 pub(all) enum VoiceGatewayEvent {
   ReadyReceived
   SessionEstablished(mode~ : String, secret_key~ : Bytes, dave_protocol_version~ : Int)
@@ -296,6 +300,7 @@ pub(all) enum VoiceGatewayState {
   FatallyClosed(code~ : Int)
 } derive(Eq, @debug.Debug)
 
+#non_exhaustive
 pub(all) enum VoiceMessage {
   Ready(ssrc~ : UInt, ip~ : String, port~ : Int, modes~ : Array[String])
   Hello(heartbeat_interval~ : Int)
@@ -329,6 +334,7 @@ pub(all) enum VoiceReconnectPolicy {
   Fatal
 } derive(Eq, @debug.Debug)
 
+#non_exhaustive
 pub(all) enum VoiceTelemetry {
   GatewayEvent(VoiceGatewayEvent)
   DaveMediaContextActivated(protocol_version~ : Int)

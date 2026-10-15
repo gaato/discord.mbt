@@ -1,5 +1,6 @@
 ///|
 /// Gateway opcodes (send and receive).
+#non_exhaustive
 pub(all) enum GatewayOpcode {
   Dispatch
   Heartbeat

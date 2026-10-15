@@ -10,6 +10,7 @@ pub(all) struct PresenceUser {
 
 ///|
 /// A user's overall presence state.
+#non_exhaustive
 pub(all) enum PresenceStatus {
   Idle
   Dnd
@@ -63,6 +64,7 @@ pub(all) struct ClientStatus {
 
 ///|
 /// An activity category reported in a presence update.
+#non_exhaustive
 pub(all) enum ActivityType {
   Playing
   Streaming

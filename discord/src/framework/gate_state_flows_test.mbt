@@ -74,6 +74,7 @@ async test "REST gate classifies callback failures three ways" {
       Rejected => Pending
       Expired => Expired
       Uncertain => Unconfirmed(ChannelMessageWithSource)
+      @framework.DeliveryFailure::.. => fail("unexpected delivery failure")
     }
     assert_eq(gate.state(), state)
     assert_eq(gate.is_pending(), expected == Rejected)

@@ -3,6 +3,7 @@
 /// know about. Delivered to `AppBuilder::on_warn`; without a hook the App
 /// prints it. `Show` renders a one-line message for every variant, so a hook
 /// that only logs can call `to_string()`.
+#non_exhaustive
 pub(all) enum AppWarning {
   /// The watchdog tried to defer a slow deferring route and the defer failed.
   AutoDeferFailed(target~ : String, error~ : Error)

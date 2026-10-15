@@ -19,6 +19,7 @@ pub(all) struct Connection {
 
 ///|
 /// An external service linked to a Discord user account.
+#non_exhaustive
 pub(all) enum ConnectionService {
   AmazonMusic
   BattleNet

@@ -42,6 +42,14 @@ The entries below are relative to that package in `gaato/discord` 0.7.0.
 
 ### Changed
 
+- **`VoiceMessage`, `EncryptionMode`, `VoiceEvent`, `VoiceTelemetry`,
+  `VoiceGatewayEvent` and `DaveAction` are `#non_exhaustive`**, so a later
+  release can add a voice opcode, encryption mode or event without breaking
+  matches in your code.
+  - Migration: a `match` outside this module that lists every constructor of
+    one of these enums needs a last arm `Type::..`, for example
+    `@voice.VoiceEvent::.. => ()`. A `match` that already ends with `_` or a
+    binding needs no change.
 - **Received voice audio is delivered only through `subscribe`, and every
   voice queue is bounded.** Before, each received packet was queued for
   `next_event` with no limit, also when the caller only subscribed or never

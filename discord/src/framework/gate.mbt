@@ -22,6 +22,7 @@ pub(all) enum ResponseState {
 
 ///|
 /// How a failed callback delivery left the interaction's callback window.
+#non_exhaustive
 pub(all) enum DeliveryFailure {
   /// Discord definitively refused the callback; the window is still unused.
   Rejected
@@ -191,7 +192,7 @@ fn callback_allowed(
       typ == DeferredChannelMessageWithSource ||
       typ == DeferredUpdateMessage ||
       typ == UpdateMessage
-    Unknown(_) => true
+    Unknown(_) | @model.InteractionType::.. => true
   }
 }
 

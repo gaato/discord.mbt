@@ -52,6 +52,7 @@ pub(all) struct ApplicationIdentityDynamicMediaField {
 /// A custom game statistic dispatched by its numeric wire discriminator.
 /// Unknown variants retain their complete JSON object for forward-compatible
 /// round trips.
+#non_exhaustive
 pub(all) enum ApplicationIdentityDynamicField {
   StringField(ApplicationIdentityDynamicStringField)
   NumberField(ApplicationIdentityDynamicNumberField)

@@ -27,6 +27,7 @@ pub(all) struct ApplicationCommand {
 
 ///|
 /// The handler used for a primary entry-point command.
+#non_exhaustive
 pub(all) enum EntryPointCommandHandlerType {
   AppHandler
   DiscordLaunchActivity
@@ -76,6 +77,7 @@ pub impl @json.FromJson for EntryPointCommandHandlerType with fn from_json(
 
 ///|
 /// The invocation category of an application command.
+#non_exhaustive
 pub(all) enum ApplicationCommandType {
   ChatInput
   User
@@ -155,6 +157,7 @@ pub(all) struct CommandOption {
 
 ///|
 /// The value category accepted by a command option.
+#non_exhaustive
 pub(all) enum CommandOptionType {
   SubCommand
   SubCommandGroup

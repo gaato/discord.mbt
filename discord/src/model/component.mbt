@@ -1,5 +1,6 @@
 ///|
 /// A Discord message component dispatched by its numeric wire discriminator.
+#non_exhaustive
 pub(all) enum Component {
   ActionRow(ActionRow)
   Button(Button)
@@ -149,6 +150,7 @@ pub(all) struct Button {
 
 ///|
 /// The visual and behavioral style of a button.
+#non_exhaustive
 pub(all) enum ButtonStyle {
   Primary
   Secondary
@@ -393,6 +395,7 @@ pub(all) struct TextInput {
 
 ///|
 /// The single-line or multi-line style of a text input.
+#non_exhaustive
 pub(all) enum TextInputStyle {
   Short
   Paragraph

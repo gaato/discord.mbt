@@ -148,12 +148,14 @@ async fn route_outcome(
     NoRoute => send_status(404)
     NoResponse => send_status(202)
     TimedOut => send_status(504)
+    @discord.InteractionOutcome::.. => send_status(500)
   }
 }
 ```
 
 `TimedOut` means the initial response was not available before the deadline;
-the handler remains attached to the task group. `NoResponse` is for a handler
+the handler remains attached to the task group. `InteractionOutcome` is
+`#non_exhaustive`: the last arm handles outcomes a later release may add. `NoResponse` is for a handler
 that already sent the callback through Discord REST. Slow handlers should
 instead use a deferred handler mode so the endpoint returns an initial ACK.
 

@@ -120,6 +120,7 @@ pub(all) struct SharedClientTheme {
 
 ///|
 /// The base client theme a `SharedClientTheme` gradient is mixed against.
+#non_exhaustive
 pub(all) enum BaseTheme {
   Unset
   Dark
@@ -250,6 +251,7 @@ pub(all) struct ReactionCountDetails {
 ///|
 /// Whether a reaction is a normal or a burst (super) reaction, as selected
 /// by the `type` query parameter of the reaction endpoints.
+#non_exhaustive
 pub(all) enum ReactionType {
   Normal
   Burst
@@ -330,6 +332,7 @@ pub(all) struct RoleSubscriptionData {
 
 ///|
 /// The system or user event category represented by a message.
+#non_exhaustive
 pub(all) enum MessageType {
   Default
   RecipientAdd
@@ -477,6 +480,7 @@ pub impl @json.FromJson for MessageType with fn from_json(json, path) {
 
 ///|
 /// The Rich Presence action represented by a message activity.
+#non_exhaustive
 pub(all) enum MessageActivityType {
   Join
   Spectate
@@ -522,6 +526,7 @@ pub impl @json.FromJson for MessageActivityType with fn from_json(json, path) {
 
 ///|
 /// The reference mode used for a reply or forwarded message.
+#non_exhaustive
 pub(all) enum MessageReferenceType {
   Default
   Forward

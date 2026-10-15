@@ -6,6 +6,7 @@
 /// on values Discord adds later, plus total `to_int`/`from_int` conversions
 /// and hand-written JSON impls (the derived enum representation is not
 /// Discord's scalar encoding).
+#non_exhaustive
 pub(all) enum ChannelType {
   GuildText
   Dm

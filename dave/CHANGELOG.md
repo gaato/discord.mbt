@@ -8,6 +8,13 @@ file were made from [gaato/dave.mbt](https://github.com/gaato/dave.mbt).
 
 ### Changed
 
+- **`EncryptFailure` and `DecryptFailure` are `#non_exhaustive`**, so a later
+  release can name a libdave failure code that arrives as `Unknown(code~)`
+  today without breaking matches in your code.
+  - Migration: a `match` outside this module that lists every constructor of
+    either enum needs a last arm `Type::..`, for example
+    `@dave.DecryptFailure::.. => ...`. A `match` that already ends with `_` or
+    a binding needs no change.
 - The module moved into the `dave/` directory of
   [gaato/discord.mbt](https://github.com/gaato/discord.mbt). Its CI is the
   `Dave` workflow there, and `repository` in `moon.mod` points to it.

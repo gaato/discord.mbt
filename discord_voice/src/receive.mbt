@@ -2,6 +2,7 @@
 /// Membership and lifecycle events of a live voice connection. Received audio
 /// is not an event: it is delivered per user through
 /// `VoiceConnection::subscribe`.
+#non_exhaustive
 pub(all) enum VoiceEvent {
   SpeakingChanged(user_id~ : String, ssrc~ : UInt32, flags~ : Int32)
   UserConnected(user_id~ : String)
@@ -22,6 +23,7 @@ pub(all) enum ReceivedAudio {
 
 ///|
 /// Non-fatal diagnostics from the connection's gateway and media paths.
+#non_exhaustive
 pub(all) enum VoiceTelemetry {
   GatewayEvent(VoiceGatewayEvent)
   /// A DAVE media context became active after its local key ratchet was

@@ -22,6 +22,7 @@ pub(all) struct Sticker {
 
 ///|
 /// The origin category of a sticker.
+#non_exhaustive
 pub(all) enum StickerType {
   Standard
   Guild
@@ -61,6 +62,7 @@ pub impl @json.FromJson for StickerType with fn from_json(json, path) {
 
 ///|
 /// The media format used by a sticker asset.
+#non_exhaustive
 pub(all) enum StickerFormatType {
   Png
   Apng
