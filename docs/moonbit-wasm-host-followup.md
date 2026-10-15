@@ -5,13 +5,13 @@ not been posted.
 
 ## Reproduction
 
-`moon build --target wasm --release src/examples/interactions_http` succeeds,
+`moon build --target wasm --release examples/interactions_http` succeeds,
 but the resulting core module imports 118 functions from `moonbitlang/async`,
 eight from `__moonbit_fs_unstable`, and one from `__moonbit_time_unstable`.
 It therefore cannot run as a generic WASIp2 HTTP component under Spin.
 
 ```fish
-wasm-tools print _build/wasm/release/build/examples/interactions_http/interactions_http.wasm | rg '^  \(import '
+wasm-tools print _build/wasm/release/build/local/discord_examples/interactions_http/interactions_http.wasm | rg '^  \(import '
 ```
 
 The separate [Spin Component experiment](../experiments/spin_interactions/README.md)

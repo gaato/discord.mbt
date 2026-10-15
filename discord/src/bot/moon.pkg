@@ -1,0 +1,35 @@
+import {
+  "gaato/discord/model",
+  "gaato/discord/telemetry",
+  "gaato/discord/cache",
+  "gaato/discord/http" @dhttp,
+  "gaato/discord/gateway",
+  "gaato/discord/queue",
+  "gaato/discord/framework",
+  "gaato/discord/app",
+  "moonbitlang/core/json",
+  "moonbitlang/async",
+  "moonbitlang/async/aqueue",
+}
+
+import {
+  "moonbitlang/core/json",
+  "gaato/discord/telemetry",
+  "gaato/discord/model",
+  "gaato/discord/http" @dhttp,
+} for "test"
+
+import {
+  "gaato/discord/interaction",
+  "gaato/discord/internal/clock",
+  "moonbitlang/core/json",
+  "moonbitlang/async/aqueue",
+} for "wbtest"
+
+// The gateway executor runs on native, JavaScript, and moonrun Wasm.
+
+// `resume` is the public API label and is reserved by the current compiler.
+
+warnings = "-29-35"
+
+supported_targets = "js + native + wasm"

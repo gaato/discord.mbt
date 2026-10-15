@@ -1,0 +1,17 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "local/discord_examples/interactions_js"
+
+import {
+  "gaato/discord/app",
+}
+
+// Values
+pub fn interaction_app() -> @app.App raise @app.AppConfigError
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits

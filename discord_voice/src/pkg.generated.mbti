@@ -1,0 +1,363 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "gaato/discord_voice"
+
+import {
+  "gaato/discord/bot",
+  "gaato/discord/model",
+  "moonbitlang/async",
+  "moonbitlang/async/io",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/random",
+  "moonbitlang/core/ref",
+}
+
+// Values
+pub const DEFAULT_RECEIVE_BACKLOG : Int = 250
+
+pub const DEFAULT_VOICE_EVENT_BACKLOG : Int = 256
+
+pub const SILENCE_FRAME : Bytes = b"\xF8\xFF\xFE"
+
+pub fn build_ip_discovery_request(UInt) -> Bytes
+
+pub fn build_rtp_header(sequence~ : UInt16, timestamp~ : UInt, ssrc~ : UInt) -> Bytes
+
+pub async fn connect_voice_websocket(String) -> &VoiceTransport
+
+pub async fn discover_external_address(&VoiceUdp, UInt, retries? : Int, timeout_ms? : Int) -> (String, Int)
+
+pub fn encode_binary_client_frame(Int, Bytes) -> Bytes
+
+pub fn encode_heartbeat(t~ : Int64, seq_ack~ : Int) -> Json
+
+pub fn encode_identify(server_id~ : String, user_id~ : String, session_id~ : String, token~ : String, max_dave_protocol_version? : UInt16) -> Json
+
+pub fn encode_invalid_commit_welcome(transition_id~ : Int) -> Json
+
+pub fn encode_resume(server_id~ : String, session_id~ : String, token~ : String, seq_ack~ : Int) -> Json
+
+pub fn encode_select_protocol(address~ : String, port~ : Int, mode~ : String) -> Json
+
+pub fn encode_speaking(ssrc~ : UInt, flags~ : Int, delay? : Int) -> Json
+
+pub fn encode_transition_ready(transition_id~ : Int) -> Json
+
+pub async fn open_voice_udp(String, Int) -> &VoiceUdp
+
+pub fn parse_binary_frame(Bytes) -> (VoiceMessage, Int?) raise VoiceEnvelopeError
+
+pub fn parse_ip_discovery_response(Bytes, expected_ssrc~ : UInt) -> (String, Int) raise VoiceUdpError
+
+pub fn parse_rtp_packet(Bytes) -> RtpPacket raise RtpError
+
+pub fn parse_text_frame(String) -> (VoiceMessage, Int?) raise VoiceEnvelopeError
+
+pub fn rtpsize_header_len(Bytes) -> Int
+
+pub async fn run_send_loop(&AudioSource, TransportCipher, &VoiceUdp, VoiceGateway, ssrc~ : UInt, initial_sequence? : UInt16, initial_timestamp? : UInt, stop? : @ref.Ref[Bool], frame_duration_ms? : Int, dave? : DaveMachine, on_dave_error? : (String) -> Unit) -> Unit
+
+pub fn shim_available() -> Bool
+
+pub fn shim_unavailable_reason() -> String?
+
+pub fn voice_on_close(Int?, Bool) -> VoiceReconnectPolicy
+
+// Errors
+pub(all) suberror DaveError {
+  DaveInvalid(reason~ : String)
+  DaveUnavailable(reason~ : String)
+  DaveInternal(reason~ : String)
+} derive(Eq, @debug.Debug)
+
+pub(all) suberror OggOpusError {
+  InvalidOggPage(reason~ : String)
+  InvalidOpusStream(reason~ : String)
+} derive(Eq, @debug.Debug)
+
+pub(all) suberror RtpError {
+  InvalidRtpPacket(reason~ : String)
+} derive(Eq, @debug.Debug)
+
+pub(all) suberror VoiceCryptoError {
+  NoCompatibleMode(modes~ : Array[String])
+  ShimUnavailable(reason~ : String)
+  InvalidSecretKey(length~ : Int)
+  InvalidEncryptedPacket(reason~ : String)
+  AuthenticationFailed(reason~ : String)
+  AeadFailed(status~ : Int, reason~ : String)
+  NonceExhausted
+} derive(Eq, @debug.Debug)
+
+pub(all) suberror VoiceEnvelopeError {
+  InvalidTextFrame(reason~ : String)
+  InvalidBinaryFrame(reason~ : String)
+} derive(Eq, @debug.Debug)
+
+pub(all) suberror VoiceError {
+  MissingIntent(intent~ : String)
+  JoinTimeout
+  ShimUnavailable(reason~ : String)
+  NoCompatibleMode(offered~ : Array[String])
+  GatewayClosed(code~ : Int?)
+  IpDiscoveryFailed(reason~ : String)
+  Disconnected
+  InvalidBacklog(value~ : Int)
+  ClientNotRunning
+} derive(@debug.Debug)
+
+pub(all) suberror VoiceTransportClosed {
+  VoiceTransportClosed(code~ : Int?, reason~ : String)
+} derive(@debug.Debug)
+
+pub(all) suberror VoiceUdpError {
+  InvalidDiscoveryPacket(reason~ : String)
+  IpDiscoveryFailed(attempts~ : Int, reason~ : String)
+} derive(Eq, @debug.Debug)
+
+// Types and methods
+pub(all) enum DaveAction {
+  SendJson(Json)
+  SendBinary(op~ : Int, payload~ : Bytes)
+  SwitchMediaContext(protocol_version~ : Int)
+} derive(Eq, @debug.Debug)
+
+type DaveCommitOutcome derive(Eq, @debug.Debug)
+
+pub struct DaveMachine {
+  // private fields
+}
+pub fn DaveMachine::active_protocol_version(Self) -> Int
+pub fn DaveMachine::encrypt_opus_frame(Self, ssrc~ : UInt, Bytes) -> Bytes raise DaveError
+pub fn DaveMachine::handle(Self, VoiceMessage) -> Array[DaveAction] raise DaveError
+pub fn DaveMachine::new(protocol_version~ : Int, self_user_id~ : String, channel_id~ : UInt64, roster? : Array[String]) -> Self raise DaveError
+
+type DaveRosterChange derive(Eq, @debug.Debug)
+
+type DaveWelcomeOutcome derive(Eq, @debug.Debug)
+
+pub(all) enum EncryptionMode {
+  AeadAes256GcmRtpsize
+  AeadXChaCha20Poly1305Rtpsize
+} derive(Eq, @debug.Debug)
+pub fn EncryptionMode::negotiate(Array[String]) -> Self raise VoiceCryptoError
+
+pub struct OggOpusSource {
+  // private fields
+}
+pub fn OggOpusSource::channels(Self) -> Int
+pub fn OggOpusSource::from_bytes(Bytes) -> Self raise OggOpusError
+pub async fn OggOpusSource::from_reader(&@io.Reader) -> Self
+pub async fn OggOpusSource::next_frame(Self) -> Bytes?
+pub fn OggOpusSource::pre_skip(Self) -> Int
+pub impl AudioSource for OggOpusSource
+
+pub struct OggOpusWriter {
+  // private fields
+}
+pub fn OggOpusWriter::finish(Self) -> Unit
+pub fn OggOpusWriter::new(channels? : Int, pre_skip? : Int, serial? : UInt, max_packets_per_page? : Int) -> Self
+pub fn OggOpusWriter::take_output(Self) -> Bytes
+pub fn OggOpusWriter::write_frame(Self, Bytes, samples? : Int) -> Unit raise OggOpusError
+
+pub struct OggPacketReader {
+  // private fields
+}
+pub fn OggPacketReader::new() -> Self
+pub fn OggPacketReader::next_packet(Self) -> Bytes? raise OggOpusError
+pub fn OggPacketReader::push(Self, Bytes) -> Unit
+
+pub(all) struct PendingVoiceEvent[T] {
+  wait : async (Int?) -> T?
+  cancel : () -> Unit
+}
+
+pub(all) enum ReceivedAudio {
+  Opus(sequence~ : Int, timestamp~ : UInt, opus~ : Bytes)
+  Lost(count~ : Int)
+} derive(Eq, @debug.Debug)
+
+pub struct ReorderBuffer[T] {
+  // private fields
+}
+pub fn[T] ReorderBuffer::new(hold_ms? : Int) -> Self[T]
+pub fn[T] ReorderBuffer::push(Self[T], seq~ : Int, arrival_ms~ : Int64, T) -> Array[ReorderOutput[T]]
+
+pub(all) enum ReorderOutput[T] {
+  Deliver(T)
+  Lost(count~ : Int)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct RtpPacket {
+  sequence : UInt16
+  timestamp : UInt
+  ssrc : UInt
+  header_len : Int
+  header : Bytes
+  payload : Bytes
+} derive(Eq, @debug.Debug)
+
+pub struct TransportCipher {
+  // private fields
+}
+pub fn TransportCipher::new(EncryptionMode, Bytes) -> Self raise VoiceCryptoError
+pub fn TransportCipher::open(Self, Bytes, header_len~ : Int) -> Bytes raise VoiceCryptoError
+pub fn TransportCipher::seal(Self, header~ : Bytes, Bytes) -> Bytes raise VoiceCryptoError
+
+pub struct VoiceClient {
+  // private fields
+}
+pub fn VoiceClient::VoiceClient() -> Self
+pub fn VoiceClient::attach(Self, @bot.BotBuilder) -> Unit
+pub fn VoiceClient::connection(Self, @model.Id[@model.GuildMarker]) -> VoiceConnection?
+pub async fn VoiceClient::join(Self, @bot.GatewayCtx, @model.Id[@model.GuildMarker], @model.Id[@model.ChannelMarker], self_mute? : Bool, self_deaf? : Bool, timeout_ms? : Int, telemetry? : (VoiceTelemetry) -> Unit) -> VoiceConnection
+pub async fn VoiceClient::join_via(Self, VoiceGatewayPort, @model.Id[@model.GuildMarker], @model.Id[@model.ChannelMarker], self_mute? : Bool, self_deaf? : Bool, timeout_ms? : Int, telemetry? : (VoiceTelemetry) -> Unit) -> VoiceConnection
+pub async fn VoiceClient::run(Self) -> Unit
+
+pub struct VoiceConnection {
+  // private fields
+}
+pub async fn VoiceConnection::disconnect(Self) -> Unit
+pub fn VoiceConnection::latency_ms(Self) -> Int64?
+pub async fn VoiceConnection::next_event(Self) -> VoiceEvent
+pub async fn VoiceConnection::play(Self, &AudioSource) -> Unit
+pub async fn VoiceConnection::set_speaking(Self, Int) -> Unit
+pub fn[X] VoiceConnection::start(@async.TaskGroup[X], VoiceCredentials, user_id~ : String, channel_id~ : UInt64, leave~ : async () -> Unit, rejoin~ : async () -> VoiceCredentials, connector? : async (String) -> &VoiceTransport, udp_opener? : async (String, Int) -> &VoiceUdp, receive? : Bool, event_backlog? : Int, telemetry? : (VoiceTelemetry) -> Unit, sleeper? : async (Int) -> Unit, rand? : @random.Rand) -> Self raise VoiceError
+pub fn VoiceConnection::state(Self) -> VoiceConnectionState
+pub async fn VoiceConnection::stop(Self) -> Unit
+pub fn VoiceConnection::subscribe(Self, user_id~ : String, end_after_silence_ms? : Int?, backlog? : Int) -> VoiceReceiveStream raise VoiceError
+pub async fn VoiceConnection::wait_ready(Self, timeout_ms? : Int) -> Unit raise VoiceError
+
+pub(all) enum VoiceConnectionState {
+  Connecting
+  Ready
+  Reconnecting
+  Rejoining
+  Closed(code~ : Int?)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct VoiceCredentials {
+  server_id : String
+  session_id : String
+  token : String
+  endpoint : String
+} derive(Eq, @debug.Debug)
+
+pub(all) enum VoiceEvent {
+  SpeakingChanged(user_id~ : String, ssrc~ : UInt, flags~ : Int)
+  UserConnected(user_id~ : String)
+  UserDisconnected(user_id~ : String)
+  ConnectionReady
+  ConnectionResumed
+} derive(Eq, @debug.Debug)
+
+pub(all) enum VoiceFrame {
+  Text(String)
+  Binary(Bytes)
+} derive(Eq, @debug.Debug)
+
+pub struct VoiceGateway {
+  // private fields
+}
+pub async fn VoiceGateway::close(Self) -> Unit noraise
+pub fn VoiceGateway::latency_ms(Self) -> Int64?
+pub async fn VoiceGateway::next(Self) -> VoiceGatewayEvent
+pub async fn VoiceGateway::send_binary(Self, op~ : Int, Bytes) -> Unit
+pub async fn VoiceGateway::send_json(Self, Json) -> Unit
+pub fn[X] VoiceGateway::start(@async.TaskGroup[X], server_id~ : String, user_id~ : String, session_id~ : String, token~ : String, endpoint~ : String, max_dave_protocol_version? : UInt16, select_protocol~ : async (UInt, String, Int, Array[String]) -> (String, Int, String), connector? : async (String) -> &VoiceTransport, queue_capacity? : Int, telemetry? : (VoiceGatewayEvent) -> Unit, sleeper? : async (Int) -> Unit, rand? : @random.Rand) -> Self
+pub fn VoiceGateway::state(Self) -> VoiceGatewayState
+
+pub(all) enum VoiceGatewayEvent {
+  ReadyReceived
+  SessionEstablished(mode~ : String, secret_key~ : Bytes, dave_protocol_version~ : Int)
+  Message(VoiceMessage)
+  Connected(resumed~ : Bool)
+  Disconnected(code~ : Int?, resuming~ : Bool)
+  ConnectFailed(reason~ : String)
+  NeedsRejoin(code~ : Int?)
+  FatallyClosed(code~ : Int)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct VoiceGatewayPort {
+  user_id : @model.Id[@model.UserMarker]
+  intents : @model.Intents
+  expect_voice_state : ((@model.VoiceState) -> Bool) -> PendingVoiceEvent[@model.VoiceState]
+  expect_voice_server : ((@model.VoiceServerUpdateEvent) -> Bool) -> PendingVoiceEvent[@model.VoiceServerUpdateEvent]
+  update_voice_state : async (@model.UpdateVoiceState) -> Unit
+}
+pub fn VoiceGatewayPort::from_gateway(@bot.GatewayCtx) -> Self
+
+pub(all) enum VoiceGatewayState {
+  Disconnected(reconnect_attempts~ : Int)
+  Connecting
+  Identifying
+  SelectingProtocol
+  Active
+  Resuming
+  FatallyClosed(code~ : Int)
+} derive(Eq, @debug.Debug)
+
+pub(all) enum VoiceMessage {
+  Ready(ssrc~ : UInt, ip~ : String, port~ : Int, modes~ : Array[String])
+  Hello(heartbeat_interval~ : Int)
+  SessionDescription(mode~ : String, secret_key~ : Bytes, dave_protocol_version~ : Int)
+  HeartbeatAck(nonce~ : Int64)
+  Speaking(ssrc~ : UInt, user_id~ : String, flags~ : Int)
+  ClientsConnect(user_ids~ : Array[String])
+  ClientDisconnect(user_id~ : String)
+  Resumed
+  DavePrepareTransition(transition_id~ : Int, protocol_version~ : Int)
+  DaveExecuteTransition(transition_id~ : Int)
+  DavePrepareEpoch(epoch~ : Int, protocol_version~ : Int)
+  DaveMlsExternalSender(payload~ : Bytes)
+  DaveMlsProposals(payload~ : Bytes)
+  DaveMlsAnnounceCommitTransition(transition_id~ : Int, commit~ : Bytes)
+  DaveMlsWelcome(transition_id~ : Int, welcome~ : Bytes)
+  Unknown(op~ : Int)
+} derive(Eq, @debug.Debug)
+
+pub struct VoiceReceiveStream {
+  // private fields
+}
+pub fn VoiceReceiveStream::close(Self) -> Unit
+pub async fn VoiceReceiveStream::next_frame(Self) -> Bytes?
+pub async fn VoiceReceiveStream::next_packet(Self) -> ReceivedAudio?
+pub impl AudioSource for VoiceReceiveStream
+
+pub(all) enum VoiceReconnectPolicy {
+  Resume
+  Rejoin
+  Fatal
+} derive(Eq, @debug.Debug)
+
+pub(all) enum VoiceTelemetry {
+  GatewayEvent(VoiceGatewayEvent)
+  DaveMediaContextActivated(protocol_version~ : Int)
+  DaveBinaryControlSent(opcode~ : Int, payload_bytes~ : Int)
+  PacketDropped(reason~ : String)
+  DaveEncryptDropped(reason~ : String)
+  DaveDecryptDropped(user_id~ : String?, ssrc~ : UInt, count~ : Int, reason~ : String)
+  EventDropped(backlog~ : Int)
+  ReceiveDropped(user_id~ : String, backlog~ : Int)
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits
+pub(open) trait AudioSource {
+  async fn next_frame(Self) -> Bytes?
+}
+
+trait DaveBackend
+
+pub(open) trait VoiceTransport {
+  async fn recv(Self) -> VoiceFrame
+  async fn send_text(Self, String) -> Unit
+  async fn send_binary(Self, Bytes) -> Unit
+  async fn close(Self, code~ : Int) -> Unit
+}
+
+pub(open) trait VoiceUdp {
+  async fn recv(Self, FixedArray[Byte]) -> Int
+  async fn send(Self, Bytes) -> Unit
+  async fn close(Self) -> Unit
+}

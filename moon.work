@@ -1,0 +1,8 @@
+members = [
+  "./discord",
+  "./discord_voice",
+  "./dave",
+  "./examples",
+  "./guide",
+  "./template",
+]

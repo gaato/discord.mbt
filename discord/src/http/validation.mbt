@@ -1,0 +1,47 @@
+///|
+/// Raises `Validation` when an optional string's `@model.text_length` falls
+/// outside
+/// `min..=max`. Pass `Some(value)` to validate a required string. Set
+/// `allow_empty` for fields Discord documents as "empty or min-max
+/// characters".
+fn validate_length(
+  field : String,
+  value : String?,
+  min~ : Int32 = 0,
+  max~ : Int32,
+  allow_empty~ : Bool = false,
+) -> Unit raise DiscordHttpError {
+  if allow_empty && value is Some("") {
+    return
+  }
+  if value is Some(v) &&
+    (@model.text_length(v) < min || @model.text_length(v) > max) {
+    if min > 0 {
+      raise Validation(
+        message="\{field} must be between \{min} and \{max} characters",
+      )
+    } else {
+      raise Validation(message="\{field} exceeds \{max} characters")
+    }
+  }
+}
+
+///|
+/// Raises `Validation` when an optional integer falls outside `min..=max`.
+fn validate_range(
+  field : String,
+  value : Int32?,
+  min~ : Int32,
+  max~ : Int32,
+) -> Unit raise DiscordHttpError {
+  if value is Some(v) && (v < min || v > max) {
+    raise Validation(message="\{field} must be between \{min} and \{max}")
+  }
+}
+
+///|
+/// Bots may send at most 2000 characters of message content;
+/// the 4000-character limit only applies to Nitro users.
+fn validate_content(content : String?) -> Unit raise DiscordHttpError {
+  validate_length("content", content, max=2000)
+}

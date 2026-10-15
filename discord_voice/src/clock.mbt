@@ -1,0 +1,6 @@
+///|
+/// Current wall-clock time in milliseconds since the Unix epoch, as a signed
+/// integer so deadline arithmetic can go negative without wrapping.
+fn now_ms() -> Int64 {
+  @env.now().reinterpret_as_int64()
+}

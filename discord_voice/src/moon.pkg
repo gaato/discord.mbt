@@ -1,0 +1,43 @@
+// Experimental: API may change in minor releases until declared stable.
+
+import {
+  "gaato/dave",
+  "gaato/discord/bot",
+  "gaato/discord/model",
+  "moonbitlang/async",
+  "moonbitlang/async/aqueue",
+  "moonbitlang/async/cond_var",
+  "moonbitlang/async/io",
+  "moonbitlang/async/websocket",
+  "moonbitlang/async/socket",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/random",
+  "moonbitlang/core/string",
+}
+
+import {
+  "gaato/discord_voice" @voice,
+  "moonbitlang/async",
+  "moonbitlang/async/aqueue",
+  "moonbitlang/async/pipe",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+} for "test"
+
+import {
+  "gaato/discord/app",
+  "moonbitlang/core/encoding/hex",
+} for "wbtest"
+
+// Voice networking runs only on the native async runtime.
+
+warnings = "-29"
+
+supported_targets = "native"
+
+options(
+  "native-stub": [ "shim_stub.c" ],
+)

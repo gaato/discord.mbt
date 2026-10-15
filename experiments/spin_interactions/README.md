@@ -3,7 +3,7 @@
 This MoonBit component exports `wasi:http/incoming-handler@0.2.6`. It imports
 Spin's `fermyon:spin/variables@2.0.0` to read the Discord public key and uses
 the library's `verify` and `model` packages. It accepts signed PING and one
-immediate `echo` command. The separate [Deno example](../../src/examples/deno_echo/README.md)
+immediate `echo` command. The separate [Deno example](../../examples/deno_echo/README.md)
 exercises the full shared `App`, including deferred Discord REST.
 
 The `wit/` definitions come from

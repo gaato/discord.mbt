@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Audit receive-side model shapes against the official Discord docs tables.
 
-For every `pub(all) struct` in src/model, find the docs field table (a table
+For every `pub(all) struct` in discord/src/model, find the docs field table (a table
 whose first header is "Field") whose field set matches best, then report fields whose optionality or
 nullability is stricter in the model than in the docs:
 
@@ -75,7 +75,7 @@ FIELD_RE = re.compile(r"^\s{2}([a-z_][a-z0-9_]*)\s*:\s*(.+?)\s*$")
 
 def model_structs():
     structs = {}
-    for path in sorted((ROOT / "src/model").glob("*.mbt")):
+    for path in sorted((ROOT / "discord/src/model").glob("*.mbt")):
         if path.name.endswith(("_test.mbt", "_wbtest.mbt")):
             continue
         text = path.read_text()

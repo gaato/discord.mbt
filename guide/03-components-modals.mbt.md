@@ -1,0 +1,413 @@
+# Components and modals
+
+Define a `component_route` once and use it both to produce a button or select's
+`custom_id` and to register its handler. The route owns an id and a
+`CustomIdCodec[A]`; the handler receives decoded state of type `A`:
+
+```text
+ticket-close:42
+^^^^^^^^^^^^ route id
+             ^^ encoded state
+```
+
+`route.custom_id(state)` enforces Discord's 100-character limit, counted in
+code points as Discord counts it. Treat decoded state as untrusted input and
+authorize the user again in the handler.
+
+`route.decode(custom_id)` is the inverse: it reads the state back from an id
+the route produced, and raises `HandlerError::Malformed` for an id that
+belongs to another route or whose state does not decode. Typed handlers
+receive the state already decoded, so reach for it where an id arrives
+undecoded — the `ComponentCtx` returned by `wait_for_component`, or a test
+that pins your id format:
+
+```mbt check
+///|
+test "a route reads back the ids it produces" {
+  let close_ticket = @discord.component_route(
+    id="ticket-close",
+    state=@discord.CustomIdCodec::int(),
+  )
+  let id = close_ticket.custom_id(42)
+  assert_eq(id, "ticket-close:42")
+  assert_eq(close_ticket.decode(id), 42)
+}
+```
+
+## Buttons and selects
+
+Components are placed inside action rows:
+
+```mbt check
+///|
+let close_ticket : @discord.ComponentRoute[Int32] = @discord.component_route(
+  id="ticket-close",
+  state=@discord.CustomIdCodec::int(),
+)
+
+///|
+let ticket_priority : @discord.ComponentRoute[Int32] = @discord.component_route(
+  id="ticket-priority",
+  state=@discord.CustomIdCodec::int(),
+)
+
+///|
+fn ticket_controls(ticket : Int32) -> Array[@model.Component] raise {
+  [
+    @discord.action_row([
+      @discord.button(
+        custom_id=close_ticket.custom_id(ticket),
+        label="Close",
+        style=Danger,
+      ),
+      @discord.string_select(
+        custom_id=ticket_priority.custom_id(ticket),
+        placeholder="Priority",
+        options=[
+          @discord.select_option(label="Low", value="low"),
+          @discord.select_option(label="High", value="high"),
+        ],
+      ),
+    ]),
+  ]
+}
+```
+
+Register the same route values. `values()` returns string-select values;
+the second handler argument is the ticket carried in the custom id.
+
+```mbt check
+///|
+fn register_ticket_handlers(app : @discord.AppBuilder) -> Unit {
+  app.on_component(
+    close_ticket,
+    Immediate((_, ticket) => {
+      @discord.ComponentReply::update_message(
+        content="Closed ticket \{ticket}",
+        components=[],
+      )
+    }),
+  )
+  app.on_component(
+    ticket_priority,
+    Immediate((ctx, ticket) => {
+      let priority = ctx.values().get(0).unwrap_or("none")
+      @discord.ComponentReply::message(
+        content="Ticket \{ticket} priority: \{priority}",
+        ephemeral=true,
+      )
+    }),
+  )
+}
+```
+
+Component interaction contexts expose a non-optional `message()`, plus
+`scope()` and `user()` for the invoker.
+
+`CustomIdCodec::unit()` produces the bare route id; `string()`, `int()`, and
+`id()` carry strings, integers, and typed snowflakes. `zip` joins two codecs
+with `:` and splits at the first separator; only the final segment may contain
+`:`. `imap` and `custom` support application types. Encoding ambiguous segments
+raises `CustomIdError::SeparatorInSegment`; oversized ids raise `TooLong`.
+A `custom` or `imap` decoder may raise any error. A `HandlerError` it raises
+keeps its meaning; any other decode failure reaches the error policy as
+`HandlerError::Malformed`. The app produced the state, so state that does not
+decode is stale or tampered with, not input the user can correct. The default
+policy logs the reason and tells the user the interaction is out of date.
+
+Typed routes match the exact id or that id followed by `:` and state, so
+`ticket-closeish` does not match `ticket-close`. Route ids must be nonempty
+and fit within 100 characters. An id may contain `:` — a bot that adopts
+typed routes can keep ids already attached to posted messages, such as
+`bot:rolemenu` — but two typed ids may not nest at a `:` boundary: `ticket`
+beside `ticket:close` is rejected, because state encoded for `ticket` could
+reach the `ticket:close` handler. `AppBuilder::build` also rejects
+duplicate effective prefixes: typed `ticket-close` collides with raw
+`ticket-close:`. `on_component_raw(prefix~, handler)` and `on_modal_raw`
+retain literal-prefix routing for advanced handlers. Strict prefix overlaps
+are legal; the longest effective prefix wins, with registration order breaking
+ties in the low-level Framework.
+
+## Components V2
+
+Components V2 lets components provide the message's layout and content instead
+of using the legacy `content` and `embeds` fields. When a top-level V2
+component is present, discord.mbt sets `IS_COMPONENTS_V2` automatically on
+initial replies, followups, ordinary sends, and edits.
+
+```mbt check
+///|
+let components_v2 : Array[@model.Component] = [
+  @discord.container(
+    components=[
+      @discord.text_display("## Deployment ready\nChoose the next action."),
+      @discord.separator(divider=true, spacing=1),
+      @discord.action_row([
+        @discord.button(
+          custom_id="deploy:approve",
+          label="Approve",
+          style=Success,
+        ),
+        @discord.button(custom_id="deploy:cancel", label="Cancel", style=Danger),
+      ]),
+    ],
+    accent_color=0x5865F2,
+  ),
+]
+```
+
+Do not pass `content` or non-empty `embeds` with these components; the library
+raises `DiscordHttpError::Validation` before sending the request. Discord also
+does not allow a message that has been sent as Components V2 to return to a V1
+layout.
+
+Deferring first is supported. The edit path detects the V2 layout and adds the
+flag to the original-response PATCH:
+
+```mbt check
+///|
+async fn edit_to_components_v2(ctx : @framework.CommandCtx) -> Unit {
+  ctx.defer_response()
+  ctx.edit_response(components=components_v2) |> ignore
+}
+
+///|
+test "Components V2 declarations compile" {
+  ignore(components_v2)
+  ignore(edit_to_components_v2)
+}
+```
+
+## Typed modals
+
+Define a modal once — its state codec and fields — then use the same
+`Modal[S, A]` for display and for typed decoding of the submission:
+
+```mbt check
+///|
+struct Feedback {
+  topic : String
+  details : String?
+} derive(Debug)
+
+///|
+let feedback : @discord.Modal[Int32, Feedback] = @discord.modal(
+  custom_id="feedback",
+  title="Feedback",
+  state=@discord.CustomIdCodec::int(),
+  fields=@discord.ModalFields::map2(
+    @discord.text_field(
+      custom_id="topic",
+      label="Topic",
+      value="General feedback",
+    ),
+    @discord.text_field(custom_id="details", label="Details", style=Paragraph).optional(),
+    (topic, details) => { topic, details, },
+  ),
+)
+
+///|
+let open_feedback : @discord.ComponentRoute[Int32] = @discord.component_route(
+  id="open-feedback",
+  state=@discord.CustomIdCodec::int(),
+)
+
+///|
+fn feedback_button(ticket : Int32) -> @model.Component raise {
+  @discord.button(custom_id=open_feedback.custom_id(ticket), label="Feedback")
+}
+
+///|
+fn register_feedback(app : @discord.AppBuilder) -> Unit {
+  app.on_component(
+    open_feedback,
+    Immediate((_, ticket) => {
+      ShowModal(feedback.show(ticket, values={ "topic": "Follow-up" }))
+    }),
+  )
+  app.on_modal(
+    feedback,
+    Immediate((_, ticket, form) => {
+      // The button that opened this modal sits on a message, so the submit
+      // can replace that message instead of posting a new one.
+      @discord.ModalReply::update_message(
+        content="ticket=\{ticket}; topic=\{form.topic}",
+        components=[],
+      )
+    }),
+  )
+}
+```
+
+`text_field(value=...)` sets the reusable static default.
+`Modal::show(values=...)` overrides selected text inputs for one response and
+does not mutate the modal definition, so later calls return to the static
+default. Override keys are text-input `custom_id` values. An unknown key or a
+key naming a non-text field raises `ModalShowError` instead of being
+silently ignored, and so does a value longer than the input's `max_length`
+(4000 when unset). This one check counts UTF-16 units, so an emoji is two:
+Discord itself accepts the value, but the official clients count the field in
+UTF-16 units and will not submit the modal until the user deletes text. Check
+the length with `String::length` before calling `show` when the prefill comes
+from longer content such as an embed description (4096 characters).
+
+Discord documents hard limits for everything in this chapter — 45 units for a
+modal title or label, 4000 for a text input, 80 for a button label, 25 select
+options, 40 components in a Components V2 message — and rejects the whole
+request with 400 Invalid Form Body when one is exceeded. The library checks
+them locally: typed send helpers raise `DiscordHttpError::Validation` naming the
+offending path (such as `components[0].components[2].label`), and
+`AppBuilder::build` applies the modal limits to registered modals, so a bad
+declaration fails before any executor starts. The same checks are
+available as `@model.message_component_limit_violations`,
+`@model.modal_limit_violations`, and `@model.embed_limit_violations`.
+
+Raw `Client::request` and raw interaction callback JSON remain escape hatches;
+they do not promise complete outgoing model validation.
+
+A `Modal[S, A]` is a route like `component_route`: `state` is the codec for
+the value `show` carries in the custom id, and handlers receive the decoded
+state next to the decoded form — `(ctx, state, form)`. Use
+`CustomIdCodec::unit()` for a modal without state. State that does not decode
+is `HandlerError::Malformed`, exactly as for components. `show` checks the
+complete custom id against the 100-unit limit and raises
+`ModalShowError::InvalidCustomId` if the state does not fit.
+
+A submission can answer with a new message (`ModalReply::message`,
+`DeferredMessage`) or, when a component opened the modal, by editing that
+component's message (`ModalReply::update_message`, `DeferredUpdate`).
+`ctx.origin()` tells the two apart. A modal opened by a command has no message
+to edit, so an update reply fails with `HandlerError::UnsupportedResponse`
+before anything is sent, and the error policy answers instead.
+
+### File uploads
+
+`file_field` adds a file upload input and decodes to the uploaded files'
+`Attachment` objects, which Discord resolves alongside the submission.
+`file_types` narrows the client's file picker to preset groups (`Image`,
+`Video`, `Audio`) or dot-prefixed extensions; the same filter is available on
+slash commands through `arg_attachment(file_types=...)`:
+
+```mbt check
+///|
+let upload_report : @discord.Modal[Unit, Array[@model.Attachment]] = @discord.modal(
+  custom_id="upload-report",
+  title="Report",
+  state=@discord.CustomIdCodec::unit(),
+  fields=@discord.ModalFields::of(
+    @discord.file_field(
+      custom_id="proof",
+      label="Screenshots or a PDF",
+      max_values=3,
+      file_types=[Image, Extension(".pdf")],
+    ),
+  ),
+)
+```
+
+Filters match file extensions only, so validate the attachment contents
+before trusting them. `AppBuilder::build` rejects a filter with more than 10
+entries or an extension without its leading dot.
+
+## Waiting for one component
+
+A deferred handler — command, component, or modal — can wait for one click.
+Name the button with a route and a state value, then wait for the same route
+and value: the two cannot drift apart, and the state keeps concurrent waits
+from colliding. By default, only the user who invoked the handler may satisfy
+the wait. Waiters take precedence over registered component handlers.
+
+```mbt check
+///|
+let confirm_command : @discord.Command[Unit] = @discord.slash(
+  name="confirm",
+  description="Ask for confirmation",
+  args=@discord.Args::unit(),
+  handler=Deferred(ephemeral=false, (ctx, _) => {
+    let confirm = @discord.component_route(
+      id="confirm",
+      state=@discord.CustomIdCodec::id(),
+    )
+    let waited = ctx.interaction().id
+    ctx.edit_original(content="Continue?", components=[
+      @discord.action_row([
+        @discord.button(
+          custom_id=confirm.custom_id(waited),
+          label="Confirm",
+          style=Success,
+        ),
+      ]),
+    ])
+    |> ignore
+    match ctx.wait_for_component(confirm, waited, timeout_ms=30_000) {
+      Some(click) => click.update_message(content="Confirmed", components=[])
+      None => ctx.edit_original(content="Timed out", components=[]) |> ignore
+    }
+  }),
+)
+
+///|
+test "component and modal declarations compile" {
+  let app = @discord.AppBuilder()
+  register_ticket_handlers(app)
+  register_feedback(app)
+  app.build() |> ignore
+  assert_eq(ticket_controls(42).length(), 1)
+  guard feedback_button(42) is Button(button) else { fail("expected button") }
+  assert_eq(button.custom_id, Some("open-feedback:42"))
+  ignore(upload_report)
+  ignore(confirm_command)
+}
+```
+
+For a public poll, opt out of the user filter explicitly with
+`ctx.wait_for_component(route, state, from=Anyone, timeout_ms=30_000)`. Keep
+an interaction-specific value in the state when concurrent waits are possible;
+the unique value prevents two waits from colliding, while the default
+`Invoker` filter provides user safety.
+
+The waited click comes back as the lower-level `ComponentCtx`, unanswered.
+It does not pass through the App's admission or automatic defer, so answer it
+yourself — `update_message`, `defer_update`, or `respond` — within Discord's
+three seconds. A gateway event handler can wait too, through
+`GatewayCtx::wait_for_component(route, state, user?)`; an event has no
+invoking user, so that wait accepts anyone unless `user` is given.
+
+```mbt check
+///|
+fn component_wait_guide_interaction(
+  user_id : String,
+) -> @model.Interaction raise {
+  let payload =
+    #|{"id":"500000000000000050","application_id":"400000000000000001","type":3,"token":"interaction-token","version":1,"user":{"id":"USER_ID","username":"nelly","discriminator":"0","global_name":"Nelly","avatar":null},"message":{"id":"700000000000000001","channel_id":"800000000000000001","author":{"id":"200000000000000099","username":"bot","discriminator":"0","global_name":null,"avatar":null},"content":"confirm","timestamp":"2025-06-01T10:00:00.000000+00:00","edited_timestamp":null,"tts":false,"mention_everyone":false,"mentions":[],"mention_roles":[],"attachments":[],"embeds":[],"pinned":false,"type":0},"data":{"custom_id":"confirm:guide","component_type":2}}
+  @json.from_json(@json.parse(payload.replace(old="USER_ID", new=user_id)))
+}
+
+///|
+async test "another user's click does not satisfy a component wait" {
+  let client = @dhttp.Client("test-token")
+  defer client.close()
+  let fw = @framework.Framework(client, @model.Id::parse("400000000000000001"))
+  let invoker : @model.UserId = @model.Id::parse("200000000000000001")
+  @async.with_task_group((group : @async.TaskGroup[Unit]) => {
+    let pending = group.spawn(no_wait=true, () => {
+      fw.wait_for_component(
+        custom_id="confirm:guide",
+        user=invoker,
+        timeout_ms=1000,
+      )
+    })
+    @async.sleep(20)
+    assert_false(
+      fw.process(component_wait_guide_interaction("200000000000000002")),
+    )
+    assert_true(
+      fw.process(component_wait_guide_interaction("200000000000000001")),
+    )
+    guard pending.wait() is Some(click) else {
+      fail("expected the invoking user's click")
+    }
+    assert_true(click.user().id == invoker)
+  })
+}
+```

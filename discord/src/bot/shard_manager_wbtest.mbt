@@ -1,0 +1,511 @@
+///|
+/// Like `BotFakeTransport`, keeps heartbeats (op 1) out of `outgoing`: a
+/// jittered first heartbeat can come before an identify that waits for the
+/// identify queue.
+struct ManagerFakeTransport {
+  incoming : @aqueue.Queue[String]
+  outgoing : @aqueue.Queue[(Int64, Json)]
+  heartbeats : @aqueue.Queue[Json]
+  closed : Ref[Bool]
+}
+
+///|
+fn ManagerFakeTransport::ManagerFakeTransport() -> ManagerFakeTransport {
+  {
+    incoming: Queue(kind=Unbounded),
+    outgoing: Queue(kind=Unbounded),
+    heartbeats: Queue(kind=Unbounded),
+    closed: Ref(false),
+  }
+}
+
+///|
+fn ManagerFakeTransport::server_close(
+  self : ManagerFakeTransport,
+  code : Int32,
+) -> Unit {
+  self.incoming.close(
+    error=@gateway.TransportClosed(code=Some(code), reason="server closed"),
+  )
+}
+
+///|
+impl @gateway.GatewayTransport for ManagerFakeTransport with fn recv(self) {
+  Text(self.incoming.get())
+}
+
+///|
+impl @gateway.GatewayTransport for ManagerFakeTransport with fn send(self, text) {
+  let frame = @json.parse(text)
+  if frame is { "op": Number(1, ..), .. } {
+    self.heartbeats.put(frame)
+  } else {
+    self.outgoing.put((@clock.now_ms(), frame))
+  }
+}
+
+///|
+impl @gateway.GatewayTransport for ManagerFakeTransport with fn close(
+  self,
+  code~,
+) {
+  self.closed.val = true
+  self.incoming.close(
+    error=@gateway.TransportClosed(code=Some(code), reason="client closed"),
+  )
+}
+
+///|
+const MANAGER_HELLO : String =
+  #|{"op":10,"d":{"heartbeat_interval":60000}}
+
+///|
+fn manager_ready_frame(shard_id : Int32, shard_count : Int32) -> String {
+  (
+    #|{"op":0,"s":1,"t":"READY","d":{"v":10,"user":{"id":"1","username":"bot","discriminator":"0","global_name":null,"avatar":null},"guilds":[],"session_id":"SESSION_ID","resume_gateway_url":"wss://resume.example","application":{"id":"42"},"shard":[SHARD_ID,SHARD_COUNT]}}
+  )
+  .replace(old="SESSION_ID", new="sess-\{shard_id}")
+  .replace(old="SHARD_ID", new=shard_id.to_string())
+  .replace(old="SHARD_COUNT", new=shard_count.to_string())
+}
+
+///|
+fn manager_message_delete_frame(id : String) -> String {
+  (
+    #|{"op":0,"s":2,"t":"MESSAGE_DELETE","d":{"id":"MESSAGE_ID","channel_id":"6"}}
+  ).replace(old="MESSAGE_ID", new=id)
+}
+
+///|
+fn manager_gateway_info(
+  shards~ : Int32 = 2,
+  remaining~ : Int32 = 100,
+  max_concurrency~ : Int32 = 1,
+) -> @model.GatewayBotInfo {
+  {
+    url: "wss://gateway.example",
+    shards,
+    session_start_limit: {
+      total: 1000,
+      remaining,
+      reset_after: 60000L,
+      max_concurrency,
+    },
+  }
+}
+
+///|
+fn identify_shard(payload : Json) -> (Int32, Int32) raise {
+  guard payload
+    is {
+      "op": Number(2, ..),
+      "d": { "shard": [Number(id, ..), Number(count, ..)], .. },
+      ..
+    } else {
+    fail("expected identify, got \{payload.stringify()}")
+  }
+  (id.to_int(), count.to_int())
+}
+
+///|
+fn ready_shard(ready : @model.Ready) -> Int32 raise {
+  guard ready.shard is Some([id, ..]) else {
+    fail("expected READY shard tuple")
+  }
+  id
+}
+
+///|
+async fn[T] manager_get(queue : @aqueue.Queue[T], stage : String) -> T {
+  match @async.with_timeout_opt(1000, () => queue.get()) {
+    Some(value) => value
+    None => fail("timed out waiting for \{stage}")
+  }
+}
+
+///|
+async test "shard config resolves auto fixed and range selections" {
+  let client = @dhttp.Client("test-token")
+  let app = @app.AppBuilder()
+  let auto = BotBuilder(app.build(), token="test-token", shards=Auto)
+  assert_false(auto.core.compress_)
+  auto.core.gateway_bot_info_.val = Some(manager_gateway_info(shards=3))
+  let auto_config = auto.core.resolve_shards(client)
+  debug_inspect(
+    (auto_config.ids, auto_config.count, auto_config.max_concurrency),
+    content="([0, 1, 2], 3, 1)",
+  )
+
+  let fixed = BotBuilder(app.build(), token="test-token", shards=Fixed(count=2))
+  fixed.core.gateway_bot_info_.val = Some(manager_gateway_info())
+  let fixed_config = fixed.core.resolve_shards(client)
+  debug_inspect((fixed_config.ids, fixed_config.count), content="([0, 1], 2)")
+
+  let compressed = BotBuilder(app.build(), token="test-token", compress=true)
+  assert_true(compressed.core.compress_)
+
+  let injected_queue = @queue.InMemoryQueue()
+  let coordinated = BotBuilder(
+    app.build(),
+    token="test-token",
+    identify_queue=(injected_queue : &@queue.IdentifyQueue),
+  )
+  guard coordinated.core.identify_queue_ is Some(_) else {
+    fail("expected injected identify queue")
+  }
+
+  let ranged = BotBuilder(
+    app.build(),
+    token="test-token",
+    shards=Range(ids=[1, 3], count=4),
+  )
+  ranged.core.gateway_bot_info_.val = Some(manager_gateway_info())
+  let range_config = ranged.core.resolve_shards(client)
+  debug_inspect((range_config.ids, range_config.count), content="([1, 3], 4)")
+
+  let limited = BotBuilder(
+    app.build(),
+    token="test-token",
+    shards=Fixed(count=2),
+  )
+  limited.core.gateway_bot_info_.val = Some(manager_gateway_info(remaining=1))
+  try limited.core.resolve_shards(client) catch {
+    SessionStartLimitExceeded(required=2, remaining=1, reset_after_ms=60000L) =>
+      ()
+    error => fail("unexpected error: \{error}")
+  } noraise {
+    _ => fail("expected session start limit failure")
+  }
+
+  // A saved session RESUMEs instead of identifying, so it is not counted.
+  let saved = manager_bot_session(0, 2)
+  let resumed = BotBuilder(
+    app.build(),
+    token="test-token",
+    shards=Fixed(count=2),
+    resume={ 0: saved },
+  )
+  resumed.core.gateway_bot_info_.val = Some(manager_gateway_info(remaining=1))
+  let resumed_config = resumed.core.resolve_shards(client)
+  debug_inspect(
+    (resumed_config.ids, resumed_config.count),
+    content="([0, 1], 2)",
+  )
+  let exhausted = BotBuilder(
+    app.build(),
+    token="test-token",
+    shards=Fixed(count=2),
+    resume={ 0: saved },
+  )
+  exhausted.core.gateway_bot_info_.val = Some(manager_gateway_info(remaining=0))
+  try exhausted.core.resolve_shards(client) catch {
+    SessionStartLimitExceeded(required=1, remaining=0, reset_after_ms=60000L) =>
+      ()
+    error => fail("unexpected error: \{error}")
+  } noraise {
+    _ => fail("expected session start limit failure for the unsaved shard")
+  }
+
+  // A snapshot recorded under another shard count cannot RESUME this layout.
+  let foreign_app = @app.AppBuilder()
+  let warnings : Array[String] = []
+  foreign_app.on_warn(warning => warnings.push(warning.to_string()))
+  let foreign = BotBuilder(
+    foreign_app.build(),
+    token="test-token",
+    shards=Fixed(count=2),
+    resume={ 0: manager_bot_session(0, 3) },
+  )
+  foreign.core.gateway_bot_info_.val = Some(manager_gateway_info(remaining=1))
+  try foreign.core.resolve_shards(client) catch {
+    SessionStartLimitExceeded(required=2, remaining=1, reset_after_ms=60000L) =>
+      ()
+    error => fail("unexpected error: \{error}")
+  } noraise {
+    _ => fail("expected the foreign snapshot to count as an identify")
+  }
+  inspect(
+    warnings.join("\n"),
+    content=(
+      #|ignoring saved session for shard 0: its READY was recorded for shard [0, 3] but the bot resolved shard [0, 2], so the shard identifies instead
+    ),
+  )
+  client.close()
+}
+
+///|
+fn manager_bot_session(
+  shard_id : Int32,
+  shard_count : Int32,
+) -> BotSession raise {
+  guard @json.parse(manager_ready_frame(shard_id, shard_count))
+    is { "d": ready_json, .. } else {
+    fail("expected READY payload")
+  }
+  let ready : @model.Ready = @json.from_json(ready_json)
+  {
+    gateway: {
+      id: ready.session_id,
+      resume_url: ready.resume_gateway_url,
+      sequence: 1L,
+    },
+    ready,
+  }
+}
+
+///|
+async test "fixed shards share identify queue and dispatch path" {
+  let first = ManagerFakeTransport()
+  let second = ManagerFakeTransport()
+  let pending : Array[ManagerFakeTransport] = [second, first]
+  let app = @app.AppBuilder()
+  let bot = BotBuilder(
+    app.build(),
+    token="test-token",
+    intents=@model.Intents::guild_messages(),
+    client=Client("test-token"),
+    shards=Fixed(count=2),
+  )
+  bot.core.gateway_bot_info_.val = Some(manager_gateway_info(max_concurrency=1))
+  bot.core.identify_spacing_ms_.val = 60
+  bot.core.connector_.val = Some(_ => {
+    match pending.pop() {
+      Some(transport) => (transport : &@gateway.GatewayTransport)
+      None => raise @gateway.TransportClosed(code=None, reason="no transport")
+    }
+  })
+  let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
+  bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
+  let deleted : @aqueue.Queue[(String, Int32)] = Queue(kind=Unbounded)
+  bot.on(Events::message_delete(), (ctx, event) => {
+    deleted.put((event.id.to_string(), ready_shard(ctx.ready())))
+  })
+  let identified : Array[Int32] = []
+  bot.on_telemetry(event => {
+    if event is ShardIdentified(shard_id~) {
+      identified.push(shard_id)
+    }
+  })
+
+  let bot_bot = bot.build()
+  @async.with_task_group(group => {
+    let running = group.spawn(no_wait=true, allow_failure=true, () => {
+      bot_bot.run()
+    })
+    first.incoming.put(MANAGER_HELLO)
+    second.incoming.put(MANAGER_HELLO)
+    let (first_at, first_identify) = manager_get(
+      first.outgoing,
+      "first identify",
+    )
+    let (second_at, second_identify) = manager_get(
+      second.outgoing,
+      "second identify",
+    )
+    let (first_id, first_count) = identify_shard(first_identify)
+    let (second_id, second_count) = identify_shard(second_identify)
+    assert_eq(first_count, 2)
+    assert_eq(second_count, 2)
+    assert_true(first_id != second_id)
+    let identify_gap = if first_at > second_at {
+      first_at - second_at
+    } else {
+      second_at - first_at
+    }
+    assert_true(identify_gap >= 50L)
+
+    first.incoming.put(manager_ready_frame(first_id, 2))
+    second.incoming.put(manager_ready_frame(second_id, 2))
+    let first_ctx = manager_get(ready_contexts, "first READY handler")
+    let second_ctx = manager_get(ready_contexts, "second READY handler")
+    assert_true(
+      ready_shard(first_ctx.ready()) != ready_shard(second_ctx.ready()),
+    )
+
+    first.incoming.put(manager_message_delete_frame("700"))
+    second.incoming.put(manager_message_delete_frame("701"))
+    let first_delete = manager_get(deleted, "first message handler")
+    let second_delete = manager_get(deleted, "second message handler")
+    assert_true(first_delete.0 != second_delete.0)
+    assert_true(first_delete.1 != second_delete.1)
+    assert_eq(identified.length(), 2)
+    assert_true(identified.contains(0))
+    assert_true(identified.contains(1))
+
+    first_ctx.shutdown()
+    guard @async.with_timeout_opt(1000, () => running.wait()) is Some(_) else {
+      fail("timed out stopping shards")
+    }
+  })
+  assert_true(first.closed.val)
+  assert_true(second.closed.val)
+}
+
+///|
+async test "fatal close fails the manager and closes sibling shards" {
+  let first = ManagerFakeTransport()
+  let second = ManagerFakeTransport()
+  let pending : Array[ManagerFakeTransport] = [second, first]
+  let app = @app.AppBuilder()
+  let bot = BotBuilder(
+    app.build(),
+    token="test-token",
+    client=Client("test-token"),
+    shards=Fixed(count=2),
+  )
+  bot.core.gateway_bot_info_.val = Some(manager_gateway_info(max_concurrency=2))
+  bot.core.identify_spacing_ms_.val = 1
+  bot.core.connector_.val = Some(_ => {
+    match pending.pop() {
+      Some(transport) => (transport : &@gateway.GatewayTransport)
+      None => raise @gateway.TransportClosed(code=None, reason="no transport")
+    }
+  })
+  let ready : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  bot.on(Events::ready(), (_, _) => ready.put(()))
+
+  let bot_bot = bot.build()
+  @async.with_task_group(group => {
+    let running = group.spawn(no_wait=true, allow_failure=true, () => {
+      bot_bot.run()
+    })
+    first.incoming.put(MANAGER_HELLO)
+    second.incoming.put(MANAGER_HELLO)
+    let (_, first_identify) = first.outgoing.get()
+    let (_, second_identify) = second.outgoing.get()
+    let (first_id, _) = identify_shard(first_identify)
+    let (second_id, _) = identify_shard(second_identify)
+    first.incoming.put(manager_ready_frame(first_id, 2))
+    second.incoming.put(manager_ready_frame(second_id, 2))
+    ready.get()
+    ready.get()
+
+    first.server_close(4014)
+    try running.wait() catch {
+      BotError::FatallyClosed(code=4014) => ()
+      error => fail("unexpected error: \{error}")
+    } noraise {
+      _ => fail("expected fatal close")
+    }
+  })
+  assert_true(second.closed.val)
+}
+
+///|
+async test "voice state updates go to the shard that owns the guild" {
+  let first = ManagerFakeTransport()
+  let second = ManagerFakeTransport()
+  let pending : Array[ManagerFakeTransport] = [second, first]
+  let app = @app.AppBuilder()
+  let bot = BotBuilder(
+    app.build(),
+    token="test-token",
+    client=Client("test-token"),
+    shards=Fixed(count=2),
+  )
+  bot.core.gateway_bot_info_.val = Some(manager_gateway_info(max_concurrency=2))
+  bot.core.identify_spacing_ms_.val = 1
+  bot.core.connector_.val = Some(_ => {
+    match pending.pop() {
+      Some(transport) => (transport : &@gateway.GatewayTransport)
+      None => raise @gateway.TransportClosed(code=None, reason="no transport")
+    }
+  })
+  let ready : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
+  bot.on(Events::ready(), (ctx, _) => ready.put(ctx))
+  let bot_bot = bot.build()
+  @async.with_task_group(group => {
+    let running = group.spawn(no_wait=true, allow_failure=true, () => {
+      bot_bot.run()
+    })
+    first.incoming.put(MANAGER_HELLO)
+    second.incoming.put(MANAGER_HELLO)
+    let (_, first_identify) = manager_get(first.outgoing, "first identify")
+    let (_, second_identify) = manager_get(second.outgoing, "second identify")
+    let (first_id, _) = identify_shard(first_identify)
+    let (second_id, _) = identify_shard(second_identify)
+    first.incoming.put(manager_ready_frame(first_id, 2))
+    second.incoming.put(manager_ready_frame(second_id, 2))
+    let ctx = manager_get(ready, "first READY handler")
+    manager_get(ready, "second READY handler") |> ignore
+    // (guild_id >> 22) % 2: 1 << 22 is on shard 1 and 2 << 22 on shard 0,
+    // whichever shard's context sends the command.
+    let on_shard_one : @model.Id[@model.GuildMarker] = Id(4194304UL)
+    let on_shard_zero : @model.Id[@model.GuildMarker] = Id(8388608UL)
+    ctx.update_voice_state({
+      guild_id: on_shard_one,
+      channel_id: Some(Id(7UL)),
+      self_mute: false,
+      self_deaf: false,
+    })
+    ctx.update_voice_state({
+      guild_id: on_shard_zero,
+      channel_id: None,
+      self_mute: false,
+      self_deaf: false,
+    })
+    let (one, zero) = if first_id == 1 {
+      (first, second)
+    } else {
+      (second, first)
+    }
+    let (_, sent_one) = manager_get(one.outgoing, "shard 1 voice state")
+    let (_, sent_zero) = manager_get(zero.outgoing, "shard 0 voice state")
+    guard sent_one
+      is { "op": Number(4, ..), "d": { "guild_id": "4194304", .. }, .. } else {
+      fail("shard 1 got \{sent_one.stringify()}")
+    }
+    guard sent_zero
+      is { "op": Number(4, ..), "d": { "guild_id": "8388608", .. }, .. } else {
+      fail("shard 0 got \{sent_zero.stringify()}")
+    }
+    ctx.shutdown()
+    guard @async.with_timeout_opt(1000, () => running.wait()) is Some(_) else {
+      fail("timed out stopping shards")
+    }
+  })
+}
+
+///|
+async test "a voice state update for a shard run elsewhere raises" {
+  let transport = ManagerFakeTransport()
+  let app = @app.AppBuilder()
+  let bot = BotBuilder(
+    app.build(),
+    token="test-token",
+    client=Client("test-token"),
+    shards=Single(id=0, count=2),
+  )
+  bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
+  bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  let ready : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
+  bot.on(Events::ready(), (ctx, _) => ready.put(ctx))
+  let bot_bot = bot.build()
+  @async.with_task_group(group => {
+    let running = group.spawn(no_wait=true, allow_failure=true, () => {
+      bot_bot.run()
+    })
+    transport.incoming.put(MANAGER_HELLO)
+    manager_get(transport.outgoing, "identify") |> ignore
+    transport.incoming.put(manager_ready_frame(0, 2))
+    let ctx = manager_get(ready, "READY handler")
+    try
+      ctx.update_voice_state({
+        guild_id: Id(4194304UL),
+        channel_id: None,
+        self_mute: false,
+        self_deaf: false,
+      })
+    catch {
+      BotError::ShardNotManaged(shard_id=1) as error =>
+        assert_eq(error.to_string(), "shard 1 is not run by this process")
+      error => fail("unexpected error: \{error}")
+    } noraise {
+      _ => fail("expected ShardNotManaged")
+    }
+    ctx.shutdown()
+    guard @async.with_timeout_opt(1000, () => running.wait()) is Some(_) else {
+      fail("timed out stopping the shard")
+    }
+  })
+}

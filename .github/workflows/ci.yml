@@ -58,16 +58,30 @@ jobs:
           moon coverage report -f summary
 
       - name: Format check
-        run: |
-          moon fmt --check
-          moon -C template fmt --check
+        run: moon fmt --check
 
-      - name: Check nested modules
+      - name: Check gaato/discord against published dependencies
         run: |
-          workdir="$(mktemp -d)"
-          cd "$workdir"
-          moon work init "$GITHUB_WORKSPACE" "$GITHUB_WORKSPACE/template"
-          moon check "$GITHUB_WORKSPACE/template/src/main" --target native --deny-warn
+          # The workspace resolves every member to its directory here; a
+          # consumer gets every dependency from the registry.
+          MOON_WORK=off moon -C discord check --target native --deny-warn
+
+      - name: Check published module contents
+        shell: bash
+        run: |
+          # Each module ships its own LICENSE copy, which must match the
+          # repository's, and none of the repository-only files.
+          for module in discord discord_voice dave; do
+            cmp LICENSE "$module/LICENSE"
+            list="$(moon -C "$module" package --list 2>&1)" || {
+              echo "$list" >&2
+              exit 1
+            }
+            if grep -E '^(test|shim|examples|guide|src/examples|src/guide)/' <<<"$list"; then
+              echo "$module packages repository-only files" >&2
+              exit 1
+            fi
+          done
 
       - name: Public API drift check
         run: |
@@ -131,23 +145,23 @@ jobs:
         run: moon check --target js --deny-warn
 
       - name: Test native prebuild
-        run: node --test test/*.test.js
+        run: node --test discord/test/*.test.js discord_voice/test/*.test.js
 
       - name: Test
         run: moon test --target js
 
       - name: Install Workers test dependencies
-        working-directory: src/examples/workers_echo
+        working-directory: examples/workers_echo
         run: npm ci
 
       - name: Test Cloudflare Worker
-        working-directory: src/examples/workers_echo
+        working-directory: examples/workers_echo
         env:
           WRANGLER_SEND_METRICS: "false"
         run: npm test
 
       - name: Check Cloudflare Worker bundle
-        working-directory: src/examples/workers_echo
+        working-directory: examples/workers_echo
         env:
           WRANGLER_SEND_METRICS: "false"
         run: npm run bundle:check -- --outdir "$RUNNER_TEMP/workers-echo"
@@ -163,15 +177,15 @@ jobs:
 
       - name: Test Deno interaction adapter
         run: |
-          moon build src/examples/interactions_js --target js --release --deny-warn
-          deno test --allow-net src/examples/deno_echo/entry.test.js
+          moon build examples/interactions_js --target js --release --deny-warn
+          deno test --allow-net examples/deno_echo/entry.test.js
 
       - name: Test shared interactions on Node.js
         run: |
-          node src/examples/interactions_js/runtime.test.mjs
-          node --test src/examples/vercel_echo/adapter.test.mjs
-          node --test src/examples/fastly_echo/adapter.test.mjs
-          node --test src/examples/lambda_url_echo/adapter.test.mjs
+          node examples/interactions_js/runtime.test.mjs
+          node --test examples/vercel_echo/adapter.test.mjs
+          node --test examples/fastly_echo/adapter.test.mjs
+          node --test examples/lambda_url_echo/adapter.test.mjs
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
@@ -180,21 +194,21 @@ jobs:
 
       - name: Test shared interactions on Bun
         run: |
-          bun src/examples/interactions_js/runtime.test.mjs
-          bun test src/examples/bun_echo/entry.test.js
+          bun examples/interactions_js/runtime.test.mjs
+          bun test examples/bun_echo/entry.test.js
 
       - name: Install Workers gateway test dependencies
-        working-directory: src/examples/workers_gateway
+        working-directory: examples/workers_gateway
         run: npm ci
 
       - name: Test Cloudflare Workers gateway
-        working-directory: src/examples/workers_gateway
+        working-directory: examples/workers_gateway
         env:
           WRANGLER_SEND_METRICS: "false"
         run: npm test
 
       - name: Check Cloudflare Workers gateway bundle
-        working-directory: src/examples/workers_gateway
+        working-directory: examples/workers_gateway
         env:
           WRANGLER_SEND_METRICS: "false"
         run: npm run bundle:check -- --outdir "$RUNNER_TEMP/workers-gateway"
@@ -223,13 +237,13 @@ jobs:
         run: |
           moon check --target wasm --deny-warn
           # Explicit roots must not silently disappear through target filtering.
-          moon check src src/coordinator src/endpoint_http src/testkit --target wasm --deny-warn
+          moon check discord/src discord/src/coordinator discord/src/endpoint_http discord/src/testkit --target wasm --deny-warn
 
       - name: Test Wasm including HTTP and TCP loopback
         run: moon test --target wasm --release --verbose
 
       - name: Build HTTP interactions example
-        run: moon build src/examples/interactions_http --target wasm --release --deny-warn
+        run: moon build examples/interactions_http --target wasm --release --deny-warn
 
   spin-component:
     runs-on: ubuntu-24.04
@@ -277,7 +291,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
-      DISCORD_VOICE_SHIM_PATH: ${{ github.workspace }}/voice-shim/target/release/libdiscord_voice_shim.so
+      DISCORD_VOICE_SHIM_PATH: ${{ github.workspace }}/discord_voice/shim/target/release/libdiscord_voice_shim.so
       DISCORD_VOICE_REQUIRE_SHIM: "1"
       MBT_DAVE_REQUIRE_NATIVE: "1"
 
@@ -299,18 +313,18 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            voice-shim/target
-          key: voice-shim-ci-${{ runner.os }}-${{ hashFiles('voice-shim/Cargo.toml', 'voice-shim/Cargo.lock') }}
+            discord_voice/shim/target
+          key: voice-shim-ci-${{ runner.os }}-${{ hashFiles('discord_voice/shim/Cargo.toml', 'discord_voice/shim/Cargo.lock') }}
 
       - name: Check transport-only voice shim
-        working-directory: voice-shim
+        working-directory: discord_voice/shim
         run: |
           cargo fmt -- --check
           cargo clippy --all-targets --locked -- -D warnings
           cargo test --locked
 
       - name: Build voice shim
-        working-directory: voice-shim
+        working-directory: discord_voice/shim
         run: cargo build --release --locked
 
       - name: Install MoonBit
@@ -331,6 +345,7 @@ jobs:
         run: moon update
 
       - name: Test with transport shim and official libdave
+        # The workspace builds voice against the in-tree gaato/dave.
         run: moon test --target native --release --deny-warn
 
   template-image:
@@ -350,7 +365,7 @@ jobs:
           stage="$RUNNER_TEMP/template-image"
           cp -r template "$stage"
           mkdir "$stage/discord"
-          git archive HEAD | tar -x -C "$stage/discord"
+          git archive HEAD discord | tar -x -C "$stage"
           printf 'members = [\n  ".",\n  "discord",\n]\n' > "$stage/moon.work"
           docker build --tag discord-bot-template "$stage"
 

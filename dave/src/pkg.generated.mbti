@@ -1,0 +1,124 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "gaato/dave"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn available() -> Bool
+
+pub fn max_supported_protocol_version() -> UInt16
+
+pub fn pairwise_verification_code(Bytes) -> String raise DaveError
+
+pub fn unavailable_reason() -> String?
+
+// Errors
+pub(all) suberror DaveError {
+  LibraryUnavailable(reason~ : String)
+  InvalidArgument(operation~ : String, reason~ : String)
+  InvalidState(operation~ : String, reason~ : String)
+  MlsOperationFailed(operation~ : String, failure~ : MlsFailure)
+  FingerprintFailed(user_id~ : UInt64, reason~ : String)
+  EncryptFailed(reason~ : EncryptFailure)
+  DecryptFailed(reason~ : DecryptFailure)
+  NativeFailure(operation~ : String, reason~ : String)
+} derive(Eq, @debug.Debug)
+
+// Types and methods
+pub(all) enum Codec {
+  Opus
+  Vp8
+  Vp9
+  H264
+  H265
+  Av1
+} derive(Eq, @debug.Debug)
+
+pub(all) enum CommitResult {
+  Applied(changes~ : Array[RosterChange])
+  Ignored
+  Failed(failure~ : MlsFailure)
+} derive(Eq, @debug.Debug)
+
+pub(all) enum DecryptFailure {
+  DecryptionFailure
+  MissingKeyRatchet
+  InvalidNonce
+  MissingCryptor
+  Unknown(code~ : Int)
+} derive(Eq, @debug.Debug)
+
+pub struct Decryptor {
+  // private fields
+}
+pub fn Decryptor::decrypt(Self, media_type~ : MediaType, Bytes) -> Bytes raise DaveError
+pub fn Decryptor::new() -> Self raise DaveError
+pub fn Decryptor::transition_to_key_ratchet(Self, KeyRatchet) -> Unit raise DaveError
+pub fn Decryptor::transition_to_passthrough_mode(Self, enabled~ : Bool) -> Unit raise DaveError
+
+pub(all) enum EncryptFailure {
+  EncryptionFailure
+  MissingKeyRatchet
+  MissingCryptor
+  TooManyAttempts
+  Unknown(code~ : Int)
+} derive(Eq, @debug.Debug)
+
+pub struct Encryptor {
+  // private fields
+}
+pub fn Encryptor::assign_ssrc_to_codec(Self, ssrc~ : UInt, codec~ : Codec) -> Unit raise DaveError
+pub fn Encryptor::encrypt(Self, media_type~ : MediaType, ssrc~ : UInt, Bytes) -> Bytes raise DaveError
+pub fn Encryptor::has_key_ratchet(Self) -> Bool
+pub fn Encryptor::is_passthrough_mode(Self) -> Bool
+pub fn Encryptor::new() -> Self raise DaveError
+pub fn Encryptor::protocol_version(Self) -> UInt16
+pub fn Encryptor::set_key_ratchet(Self, KeyRatchet) -> Unit raise DaveError
+pub fn Encryptor::set_passthrough_mode(Self, enabled~ : Bool) -> Unit raise DaveError
+
+pub struct KeyRatchet {
+  // private fields
+}
+
+pub(all) enum MediaType {
+  Audio
+  Video
+} derive(Eq, @debug.Debug)
+
+pub(all) struct MlsFailure {
+  source : String
+  reason : String
+} derive(Eq, @debug.Debug)
+
+pub(all) enum RosterChange {
+  Upsert(user_id~ : UInt64, signature_key~ : Bytes)
+  Remove(user_id~ : UInt64)
+} derive(Eq, @debug.Debug)
+
+pub struct Session {
+  // private fields
+}
+pub fn Session::current_group_pairwise_fingerprint_blocking(Self, user_id~ : UInt64) -> Bytes raise DaveError
+pub fn Session::key_package(Self) -> Bytes raise DaveError
+pub fn Session::key_ratchet(Self, user_id~ : UInt64) -> KeyRatchet? raise DaveError
+pub fn Session::last_epoch_authenticator(Self) -> Bytes? raise DaveError
+pub fn Session::new(protocol_version~ : UInt16, group_id~ : UInt64, self_user_id~ : UInt64) -> Self raise DaveError
+pub fn Session::process_commit(Self, Bytes) -> CommitResult raise DaveError
+pub fn Session::process_proposals(Self, Bytes, recognized_user_ids~ : ArrayView[UInt64]) -> Bytes raise DaveError
+pub fn Session::process_welcome(Self, Bytes, recognized_user_ids~ : ArrayView[UInt64]) -> WelcomeResult raise DaveError
+pub fn Session::protocol_version(Self) -> UInt16
+pub fn Session::reinitialize(Self, protocol_version~ : UInt16, group_id~ : UInt64, self_user_id~ : UInt64) -> Unit raise DaveError
+pub fn Session::reset(Self) -> Unit raise DaveError
+pub fn Session::set_external_sender(Self, Bytes) -> Unit raise DaveError
+pub fn Session::set_protocol_version(Self, protocol_version~ : UInt16) -> Unit raise DaveError
+
+pub(all) enum WelcomeResult {
+  Applied(changes~ : Array[RosterChange])
+  Failed(failure~ : MlsFailure)
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits

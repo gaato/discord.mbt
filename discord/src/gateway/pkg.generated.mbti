@@ -1,0 +1,96 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "gaato/discord/gateway"
+
+import {
+  "gaato/discord/model",
+  "gaato/discord/queue",
+  "gaato/discord/telemetry",
+  "moonbitlang/async",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "moonbitlang/core/random",
+}
+
+// Values
+pub async fn connect_websocket(String) -> &GatewayTransport
+
+pub fn on_close(Int?, Bool) -> ReconnectPolicy
+
+pub fn zlib_stream_supported() -> Bool
+
+// Errors
+pub(all) suberror InflateError {
+  InflateError(status~ : Int)
+  InvalidUtf8
+  Unsupported
+} derive(@debug.Debug)
+
+pub(all) suberror TransportClosed {
+  TransportClosed(code~ : Int?, reason~ : String)
+} derive(@debug.Debug)
+
+// Types and methods
+pub struct CommandLimiter {
+  // private fields
+}
+pub fn CommandLimiter::CommandLimiter(limit? : Int, sleeper? : async (Int) -> Unit) -> Self
+pub async fn CommandLimiter::acquire(Self) -> Unit
+
+pub(all) enum GatewayFrame {
+  Text(String)
+  Binary(Bytes)
+} derive(@debug.Debug)
+
+pub(all) enum ReconnectPolicy {
+  Resume
+  Reidentify
+  Fatal
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Session {
+  id : String
+  resume_url : String
+  mut sequence : Int64
+} derive(ToJson, @debug.Debug, @json.FromJson)
+pub fn Session::to_json(Self) -> Json
+
+pub struct Shard {
+  // private fields
+}
+pub async fn Shard::close(Self) -> Unit noraise
+pub fn Shard::latency_ms(Self) -> Int64?
+pub async fn Shard::next(Self) -> ShardEvent
+pub async fn Shard::send(Self, Json) -> Unit
+pub fn Shard::session(Self) -> Session?
+pub fn[X] Shard::start(@async.TaskGroup[X], token~ : String, intents~ : @model.Intents, capabilities? : @model.GatewayCapabilities, gateway_url? : String, shard_id? : Int, shard_count? : Int, identify_queue? : &@queue.IdentifyQueue, event_filter? : (@model.EventKind) -> Bool, connector? : async (String) -> &GatewayTransport, compress? : Bool, inflater_factory? : () -> &Inflater raise, queue_capacity? : Int, telemetry? : (@telemetry.TelemetryEvent) -> Unit, sleeper? : async (Int) -> Unit, rand? : @random.Rand, resume? : Session) -> Self
+pub fn Shard::state(Self) -> ShardState
+pub async fn Shard::update_voice_state(Self, @model.UpdateVoiceState) -> Unit
+
+pub(all) enum ShardEvent {
+  Dispatch(@model.Event)
+  Connected(resumed~ : Bool)
+  Disconnected(code~ : Int?, resuming~ : Bool)
+  FatallyClosed(code~ : Int)
+} derive(@debug.Debug)
+
+pub(all) enum ShardState {
+  Disconnected(reconnect_attempts~ : Int)
+  Connecting
+  Identifying
+  Resuming
+  Active
+  FatallyClosed(code~ : Int)
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits
+pub(open) trait GatewayTransport {
+  async fn recv(Self) -> GatewayFrame
+  async fn send(Self, String) -> Unit
+  async fn close(Self, code~ : Int) -> Unit
+}
+
+pub(open) trait Inflater {
+  fn push(Self, Bytes) -> String? raise
+}

@@ -2,7 +2,7 @@
 /// Audit the public API surface recorded in the generated interfaces.
 ///
 /// 1. Facade closure: every type that a facade-exported type or function
-///    mentions is itself exported by the facade (`src/pkg.generated.mbti`),
+///    mentions is itself exported by the facade (`discord/src/pkg.generated.mbti`),
 ///    so a program that imports only `@discord` (plus the `@model` data
 ///    package) can name everything the golden path hands it.
 /// 2. Positional arguments: no public function takes two consecutive
@@ -18,13 +18,27 @@ import {
 }
 
 ///|
-/// Library packages whose types the facade is expected to close over.
-/// `@model` is excluded on purpose: it is the data package every program
-/// imports next to the facade.
-let tracked : Array[String] = [
-  "app", "bot", "cache", "cooldown", "coordinator", "endpoint_http", "framework",
-  "gateway", "http", "interaction", "queue", "ratelimit", "telemetry", "verify",
-  "voice",
+/// Library packages, by alias and directory, whose public functions are
+/// checked and whose types the facade is expected to close over. `@model` is
+/// excluded on purpose: it is the data package every program imports next to
+/// the facade. `@voice` is gaato/discord_voice, which the facade does not
+/// re-export; only its functions are checked.
+let tracked : Array[(String, String)] = [
+  ("app", "discord/src/app"),
+  ("bot", "discord/src/bot"),
+  ("cache", "discord/src/cache"),
+  ("cooldown", "discord/src/cooldown"),
+  ("coordinator", "discord/src/coordinator"),
+  ("endpoint_http", "discord/src/endpoint_http"),
+  ("framework", "discord/src/framework"),
+  ("gateway", "discord/src/gateway"),
+  ("http", "discord/src/http"),
+  ("interaction", "discord/src/interaction"),
+  ("queue", "discord/src/queue"),
+  ("ratelimit", "discord/src/ratelimit"),
+  ("telemetry", "discord/src/telemetry"),
+  ("verify", "discord/src/verify"),
+  ("voice", "discord_voice/src"),
 ]
 
 ///|
@@ -248,7 +262,9 @@ fn closure_gaps(
   let gaps : Map[String, String] = Map([])
   let record = (pkg : String, name : String, via : String) => {
     let key = "@\{pkg}.\{name}"
-    if tracked.contains(pkg) && !exported.contains(key) && !gaps.contains(key) {
+    if tracked.iter().any(entry => entry.0 == pkg) &&
+      !exported.contains(key) &&
+      !gaps.contains(key) {
       gaps[key] = via
     }
   }
@@ -402,10 +418,11 @@ async fn main {
   if args.length() > 2 || (args.length() == 2 && !self_test) {
     fail("usage: moon run scripts/api_surface_audit.mbtx [--self-test]")
   }
-  let facade = @fs.read_file("src/pkg.generated.mbti").text()
+  let facade = @fs.read_file("discord/src/pkg.generated.mbti").text()
   let package_texts : Map[String, String] = Map([])
-  for pkg in tracked {
-    package_texts[pkg] = @fs.read_file("src/\{pkg}/pkg.generated.mbti").text()
+  for entry in tracked {
+    let (pkg, dir) = entry
+    package_texts[pkg] = @fs.read_file("\{dir}/pkg.generated.mbti").text()
   }
   let allow = @fs.read_file("scripts/api_surface_audit.allow").text()
   audit(facade, package_texts, allow)

@@ -1,0 +1,29 @@
+// Tested long-form guides: each chapter's `mbt check` blocks compile and run
+// under `moon test --target native`. The whole package is native-only because
+// moon ignores per-file `targets` gating for .mbt.md doctests; portable
+// chapters trade js compile coverage for a single simple gate.
+
+import {
+  "gaato/discord",
+  "gaato/discord_voice" @voice,
+  "gaato/discord/model",
+  "gaato/discord/http" @dhttp,
+  "gaato/discord/interaction",
+  "gaato/discord/framework",
+  "gaato/discord/app",
+  "gaato/discord/bot",
+  "gaato/discord/coordinator",
+  "gaato/discord/cooldown",
+  "gaato/sdk-runtime" @runtime,
+  "gaato/discord/queue",
+  "gaato/discord/cache",
+  "gaato/discord/util",
+  "moonbitlang/async",
+  "moonbitlang/async/signal",
+  "moonbitlang/async/fs",
+  "moonbitlang/core/json",
+  "moonbitlang/core/env",
+  "moonbitlang/core/encoding/utf8",
+} for "test"
+
+supported_targets = "native"

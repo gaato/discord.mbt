@@ -6,8 +6,8 @@
 ARG MOONBIT_IMAGE=ghcr.io/gaato/moonbit:0.10.15-943464bfa
 
 FROM ${MOONBIT_IMAGE} AS build
-# The image carries Node.js for Moon's prebuild hooks; the Gateway package
-# also compiles a C source that includes <zlib.h>.
+# The Gateway package compiles a C source that includes <zlib.h>. (The image
+# also carries Node.js, which the prebuild hooks of gaato/discord_voice need.)
 RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends zlib1g-dev; \

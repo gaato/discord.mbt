@@ -31,7 +31,7 @@ method, signature headers, and raw body bytes to the shared handler.
 
 ## What the current code establishes
 
-`src/examples/interactions_js/handler.js` reads the request body as bytes and
+`examples/interactions_js/handler.js` reads the request body as bytes and
 verifies its Ed25519 signature before UTF-8 decoding or JSON parsing. The
 native `endpoint_http` implementation follows the same order. The two are
 separate implementations today. The JavaScript example now has
@@ -48,7 +48,7 @@ Cloudflare `env` includes service capabilities, while the other hosts expose
 configuration differently.
 
 An immediate response cannot be restricted to one byte array without changing
-existing behavior. `src/examples/interactions_js/worker.mbt` exposes a
+existing behavior. `examples/interactions_js/worker.mbt` exposes a
 `ReadableStream` for multipart attachments, and native `endpoint_http` writes
 multipart chunks. A future common result needs to retain this body shape, or
 explicitly document a buffering limit.

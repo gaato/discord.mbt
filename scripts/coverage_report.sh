@@ -3,7 +3,7 @@
 #
 # Runs `moon coverage analyze` in Coveralls-JSON mode (the `summary` format
 # silently omits fully covered files, which skews package totals), restricts
-# the result to library packages (src/ minus src/examples/), prints a
+# the result to library packages (LIBRARY below), prints a
 # per-package table, and checks every remaining uncovered file against the
 # TEST_COVERAGE.md ledger: a file with uncovered lines must have a ledger row
 # whose budget covers them.
@@ -17,6 +17,10 @@
 # gaps or over-budget files, 2 = setup/run failure.
 
 set -euo pipefail
+
+# The measured library sources, as workspace-relative paths: that is how
+# `moon coverage analyze` names files at the workspace root.
+LIBRARY='^(discord|discord_voice)/src/'
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 ledger="$repo_root/TEST_COVERAGE.md"
@@ -34,14 +38,14 @@ else
   fi
   export MBT_DAVE_REQUIRE_NATIVE=1
   export DISCORD_VOICE_REQUIRE_SHIM=1
-  (cd "$repo_root/voice-shim" && cargo build --release --locked) >/dev/null || {
+  (cd "$repo_root/discord_voice/shim" && cargo build --release --locked) >/dev/null || {
     echo "error: release transport shim build failed" >&2
     exit 2
   }
   case "$(uname -s)" in
-    Linux*) shim="$repo_root/voice-shim/target/release/libdiscord_voice_shim.so" ;;
-    Darwin*) shim="$repo_root/voice-shim/target/release/libdiscord_voice_shim.dylib" ;;
-    MINGW*|MSYS*|CYGWIN*) shim="$repo_root/voice-shim/target/release/discord_voice_shim.dll" ;;
+    Linux*) shim="$repo_root/discord_voice/shim/target/release/libdiscord_voice_shim.so" ;;
+    Darwin*) shim="$repo_root/discord_voice/shim/target/release/libdiscord_voice_shim.dylib" ;;
+    MINGW*|MSYS*|CYGWIN*) shim="$repo_root/discord_voice/shim/target/release/discord_voice_shim.dll" ;;
     *)
       echo "error: unsupported coverage host: $(uname -s)" >&2
       exit 2
@@ -57,18 +61,21 @@ else
   # then fails closed if that verified library cannot be loaded at runtime.
   (cd "$repo_root" &&
     MOON_CC="${MOON_CC:-cc}" moon build --target native --release --deny-warn \
-      src/voice) >/dev/null || {
+      discord_voice/src) >/dev/null || {
       echo "error: pinned libdave bootstrap/native voice build failed" >&2
       exit 2
     }
   # moon_cove_report merges every counter/trace file it finds under the
-  # working directory, so counters left by earlier runs and trace maps from
-  # the release profile silently corrupt the numbers (the analyze run itself
-  # builds the debug profile). Do not delete debug .trace.source files — the
-  # incremental build will not regenerate them.
+  # working directory, so counters left by earlier runs, trace maps from the
+  # release profile, and trace maps of packages that have since moved or been
+  # removed corrupt the numbers or crash the report (the analyze run itself
+  # builds the debug profile). The incremental build does not regenerate a
+  # deleted .trace.source on its own, so drop the whole debug test build and
+  # let the analyze run rebuild it.
   find "$repo_root/_build" -name 'moonbit_coverage_*' -delete 2>/dev/null || true
   find "$repo_root/_build/native/release" "$repo_root/_build/js" \
     -name '*.trace.source' -delete 2>/dev/null || true
+  rm -rf "$repo_root/_build/native/debug/test"
   # moon's bundled tcc cannot link on some hosts (openSUSE); use the system cc.
   (cd "$repo_root" &&
     MOON_CC="${MOON_CC:-cc}" moon coverage analyze -- -f coveralls -o "$json_file") \
@@ -79,21 +86,21 @@ else
 fi
 
 # One "file<TAB>covered<TAB>total" line per library source file.
-jq -r '
+jq -r --arg lib "$LIBRARY" '
   .source_files[]
-  | select(.name | startswith("src/"))
-  | select(.name | startswith("src/examples/") | not)
+  | select(.name | test($lib))
   | [ .name,
       ([.coverage[] | select(. != null and . > 0)] | length),
       ([.coverage[] | select(. != null)] | length) ]
   | @tsv
-' "$json_file" | awk -F '\t' -v ledger="$ledger" '
-  # ---- ledger: rows like "| src/foo/bar.mbt | 12 | reason |" -------------
+' "$json_file" | awk -F '\t' -v ledger="$ledger" -v lib="$LIBRARY" '
+  # ---- ledger: rows like "| discord/src/foo/bar.mbt | 12 | reason |" -----
   BEGIN {
     while ((getline line < ledger) > 0) {
-      if (line !~ /^\| *src\//) continue
+      if (line !~ /^\|/) continue
       split(line, cell, /\|/)
       file = cell[2]; gsub(/^ +| +$/, "", file)
+      if (file !~ lib) continue
       budget_str = cell[3]; gsub(/^ +| +$/, "", budget_str)
       if (budget_str + 0 == budget_str) budget[file] = budget_str + 0
     }
