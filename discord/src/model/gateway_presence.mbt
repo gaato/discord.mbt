@@ -16,6 +16,7 @@ pub(all) enum PresenceStatus {
   Dnd
   Online
   Offline
+  Invisible
   Unknown(String)
 } derive(Eq, Debug)
 
@@ -26,6 +27,7 @@ pub fn PresenceStatus::to_string(self : PresenceStatus) -> String {
     Dnd => "dnd"
     Online => "online"
     Offline => "offline"
+    Invisible => "invisible"
     Unknown(value) => value
   }
 }
@@ -37,6 +39,7 @@ pub fn PresenceStatus::from_string(value : String) -> PresenceStatus {
     "dnd" => Dnd
     "online" => Online
     "offline" => Offline
+    "invisible" => Invisible
     value => Unknown(value)
   }
 }

@@ -38,6 +38,8 @@
 @gateway.Session  # shard transport primitives
 @gateway.Shard    # shard transport primitives
 
+@bot.FetchedMembers  # Gateway member fetch results live in gaato/discord/bot
+
 # raw option builders, CommandSpec, and option decoding live in gaato/discord/interaction
 @interaction.CommandOptions  # raw option builders, CommandSpec, and option decoding
 @interaction.CommandSpec     # raw option builders, CommandSpec, and option decoding

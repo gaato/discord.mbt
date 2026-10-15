@@ -67,6 +67,63 @@ fn observe_shard_latency(bot : @discord.BotBuilder) -> Unit {
 the event, while `AppCtx::latency_ms()` is the application-wide mean described
 above.
 
+## Sending Gateway commands
+
+Configure initial presence before building the bot. Later updates reach every
+shard managed by this process; shards in other processes must be updated there.
+The last successfully sent presence is used again if a shard must Identify.
+
+```mbt check
+///|
+fn configure_presence(bot : @discord.BotBuilder) -> Unit {
+  bot.presence(
+    @model.UpdatePresence(activities=[
+      @model.BotActivity::playing("helping out"),
+    ]),
+  )
+}
+
+///|
+async fn update_bot_presence(ctx : @discord.GatewayCtx) -> Unit {
+  ctx.update_presence(
+    @model.UpdatePresence(
+      status=Idle,
+      activities=[@model.BotActivity::custom("Back soon")],
+      afk=true,
+    ),
+  )
+}
+
+///|
+async fn fetch_matching_members(
+  ctx : @discord.GatewayCtx,
+  guild_id : @model.GuildId,
+) -> Unit {
+  let found = ctx.fetch_guild_members(
+    guild_id,
+    Prefix("alice", limit=100),
+    timeout_ms=10000,
+  )
+  println("found \{found.members.length()} members")
+}
+
+///|
+test "typed gateway command examples compile" {
+  ignore(configure_presence)
+  ignore(update_bot_presence)
+  ignore(fetch_matching_members)
+}
+```
+
+`fetch_guild_members` registers collectors before sending and assembles all
+matching chunks in chunk-index order. It raises `BotError::GatewayRateLimited`
+with a retry delay in milliseconds or `GatewayRequestTimeout` on timeout.
+`All` needs the GUILD_MEMBERS intent; `presences=true` needs GUILD_PRESENCES.
+The typed `request_guild_members`, `request_soundboard_sounds`, and
+`request_channel_info` methods route to each guild's shard and raise
+`ShardNotManaged` for guilds assigned to another process. Use `shard_raw().send`
+for raw commands.
+
 ## Message updates and edits
 
 Discord sends `MESSAGE_UPDATE` for more than user edits, including link

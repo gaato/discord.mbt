@@ -22,6 +22,7 @@ pub struct Shard {
   priv mut latency : Int64?
   priv mut closing : Bool
   priv mut runner : @async.Task[Unit]?
+  priv mut presence : @model.UpdatePresence?
   priv shard_id : Int32
   priv telemetry_ : (@telemetry.TelemetryEvent) -> Unit
 }
@@ -76,6 +77,44 @@ pub async fn Shard::update_voice_state(
   state : @model.UpdateVoiceState,
 ) -> Unit {
   self.send({ "op": 4, "d": state.to_json() })
+}
+
+///|
+/// Send opcode 3 and retain the last successfully sent presence for Identify.
+pub async fn Shard::update_presence(
+  self : Shard,
+  presence : @model.UpdatePresence,
+) -> Unit {
+  self.send({ "op": 3, "d": presence.to_json() })
+  self.presence = Some(presence)
+}
+
+///|
+/// Validate and send opcode 8 on the shard that owns the request's guild.
+pub async fn Shard::request_guild_members(
+  self : Shard,
+  request : @model.RequestGuildMembers,
+) -> Unit {
+  request.validate()
+  self.send({ "op": 8, "d": request.to_json() })
+}
+
+///|
+/// Send opcode 31 for guilds owned by this shard.
+pub async fn Shard::request_soundboard_sounds(
+  self : Shard,
+  request : @model.RequestSoundboardSounds,
+) -> Unit {
+  self.send({ "op": 31, "d": request.to_json() })
+}
+
+///|
+/// Send opcode 43 on the shard that owns the request's guild.
+pub async fn Shard::request_channel_info(
+  self : Shard,
+  request : @model.RequestChannelInfo,
+) -> Unit {
+  self.send({ "op": 43, "d": request.to_json() })
 }
 
 ///|
@@ -169,8 +208,10 @@ pub fn[X] Shard::start(
   sleeper~ : async (Int32) -> Unit = ms => @async.sleep(ms),
   rand~ : @random.Rand = @random.Rand(),
   resume? : Session,
+  presence? : @model.UpdatePresence,
 ) -> Shard {
   let shard = Shard::{
+    presence,
     events: Queue(kind=Blocking(queue_capacity)),
     command_limiter: CommandLimiter(sleeper~),
     send_gate: Semaphore(1),
@@ -467,6 +508,9 @@ async fn Shard::run_connection(
         }
         if capabilities != @model.GatewayCapabilities::none() {
           data["capabilities"] = capabilities.to_json()
+        }
+        if self.presence is Some(presence) {
+          data["presence"] = presence.to_json()
         }
         self.raw_send(transport, { "op": 2, "d": Json::object(data) })
       }

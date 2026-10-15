@@ -88,6 +88,89 @@ suberror GatewayTestFailure {
 }
 
 ///|
+async test "typed commands and latest presence survive re-identify" {
+  let first = FakeTransport()
+  let second = FakeTransport()
+  let pending = [second, first]
+  let initial = @model.UpdatePresence(status=Idle)
+  let latest = @model.UpdatePresence(status=Invisible, activities=[
+    @model.BotActivity::custom("busy"),
+  ])
+  @async.with_timeout(5000, () => {
+    @async.with_task_group(group => {
+      let shard = @gateway.Shard::start(
+        group,
+        token="tok",
+        intents=@model.Intents::none(),
+        presence=initial,
+        connector=_ => {
+          match pending.pop() {
+            Some(t) => (t : &@gateway.GatewayTransport)
+            None =>
+              raise @gateway.TransportClosed(code=None, reason="no transport")
+          }
+        },
+        sleeper=ms => {
+          if ms >= 60000 {
+            @async.sleep(ms)
+          } else {
+            @async.sleep(1)
+          }
+        },
+      )
+      first.incoming.put(HELLO)
+      // Ignore the heartbeat if jitter schedules it ahead of Identify.
+      for ;; {
+        if first.outgoing.get()
+          is { "op": Number(2, ..), "d": { "presence": presence, .. }, .. } {
+          assert_eq(presence, initial.to_json())
+          break
+        }
+      }
+      first.incoming.put(ready_frame())
+      guard! shard.next() is Connected(resumed=false)
+      guard! shard.next() is Dispatch(Ready(_))
+      shard.update_presence(latest)
+      shard.request_guild_members({
+        guild_id: Id(1UL),
+        select: All,
+        presences: false,
+        nonce: None,
+      })
+      shard.request_soundboard_sounds({ guild_ids: [Id(1UL)], })
+      shard.request_channel_info({
+        guild_id: Id(1UL),
+        fields: [Status, VoiceStartTime],
+      })
+      for opcode in [3, 8, 31, 43] {
+        for ;; {
+          let frame = first.outgoing.get()
+          if frame is { "op": Number(1, ..), .. } {
+            continue
+          }
+          guard frame is { "op": Number(op, ..), .. } else {
+            fail("missing opcode")
+          }
+          assert_eq(op.to_int(), opcode)
+          break
+        }
+      }
+      first.incoming.put("{\"op\":9,\"d\":false}")
+      guard! shard.next() is Disconnected(..)
+      second.incoming.put(HELLO)
+      for ;; {
+        if second.outgoing.get()
+          is { "op": Number(2, ..), "d": { "presence": presence, .. }, .. } {
+          assert_eq(presence, latest.to_json())
+          break
+        }
+      }
+      shard.close()
+    })
+  })
+}
+
+///|
 async test "inflater factory failure is fatal before connecting" {
   let calls = Ref(0)
   let telemetry : Array[@telemetry.TelemetryEvent] = []

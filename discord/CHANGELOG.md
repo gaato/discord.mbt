@@ -11,6 +11,14 @@ breaking change is listed with a migration note.
 
 ### Added
 
+- Typed Gateway presence, member, soundboard, and channel-info commands, with
+  `BotActivity`, `MemberSelect`, `ChannelInfoField`, `PresenceStatus::Invisible`,
+  and validated member selection/UTF-8 nonces (`GatewayCommandError`).
+- `BotBuilder::presence` configures initial presence on every local shard;
+  `Shard::update_presence` retains the latest sent value for later Identify.
+- `GatewayCtx` broadcasts presence and routes guild commands to their shards.
+  `fetch_guild_members` assembles nonce-correlated chunks into `FetchedMembers`,
+  with `BotError::GatewayRateLimited` and `GatewayRequestTimeout` failures.
 - Select-menu `required`, READY application `flags_new`, client status `vr`,
   member-update `banner`/`collectibles`, and embed image/video media metadata.
 - Guild channel creation and position updates accept channel `flags`; position

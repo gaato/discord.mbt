@@ -6,6 +6,7 @@ priv struct EventWaiter {
   kind : @model.EventKind
   matches : (@model.Event) -> Bool
   queue : @aqueue.Queue[@model.Event]
+  persistent : Bool
 }
 
 ///|
@@ -59,7 +60,9 @@ async fn EventCollector::dispatch(
     }
   }
   for waiter in matched {
-    self.remove(waiter)
+    if !waiter.persistent {
+      self.remove(waiter)
+    }
     waiter.queue.put(event)
   }
 }
@@ -77,11 +80,13 @@ fn[T] EventCollector::register(
   self : EventCollector,
   event_type : EventType[T],
   predicate : (T) -> Bool,
+  persistent~ : Bool = false,
 ) -> PendingEvent[T] {
   let waiter = EventWaiter::{
     kind: event_type.kind(),
     matches: event => event_type.project(event).map(predicate).unwrap_or(false),
     queue: Queue(kind=Unbounded),
+    persistent,
   }
   self.waiters.push(waiter)
   { collector: self, waiter, event_type, }
