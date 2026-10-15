@@ -94,6 +94,15 @@ test "Ogg Opus source rejects each malformed header stream" {
     test_ogg_page(
       b'\x02',
       0U,
+      [18],
+      b"OpusHead\x01\x02\x38\x01\x80\xBB\x00\x00\x00\x00",
+    ),
+    "invalid OpusHead packet",
+  )
+  expect_stream_error(
+    test_ogg_page(
+      b'\x02',
+      0U,
       [19],
       b"OpusHead\x02\x02\x38\x01\x80\xBB\x00\x00\x00\x00\x00",
     ),

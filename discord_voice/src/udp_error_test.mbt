@@ -51,6 +51,28 @@ test "IP discovery parsing rejects each malformed response" {
     discovery_response(7U, "", 62000),
     "response address is empty",
   )
+  expect_discovery_error(
+    discovery_response(7U, "203.0.113.9", 62000) + b"\x00",
+    "response must contain 74 bytes",
+  )
+  let wrong_length = discovery_response(7U, "203.0.113.9", 62000).to_array()
+  wrong_length[3] = 69
+  expect_discovery_error(
+    Bytes::from_array(wrong_length),
+    "expected discovery response type 2 with length 70",
+  )
+  expect_discovery_error(
+    discovery_response(8U, "203.0.113.9", 62000),
+    "response SSRC does not match request",
+  )
+  let unterminated = discovery_response(7U, "203.0.113.9", 62000).to_array()
+  for index in 8..<72 {
+    unterminated[index] = b'x'
+  }
+  expect_discovery_error(
+    Bytes::from_array(unterminated),
+    "response address is not NUL terminated",
+  )
 }
 
 ///|
