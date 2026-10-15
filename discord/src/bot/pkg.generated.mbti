@@ -10,7 +10,6 @@ import {
   "gaato/discord/model",
   "gaato/discord/queue",
   "gaato/discord/telemetry",
-  "gaato/discord/voice",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
@@ -161,7 +160,6 @@ pub fn[T] GatewayCtx::expect_event(Self, EventType[T], (T) -> Bool) -> PendingEv
 pub fn GatewayCtx::framework_raw(Self) -> @framework.Framework
 pub fn GatewayCtx::guild_ref(Self, @model.Id[@model.GuildMarker]) -> @http.GuildRef
 pub fn GatewayCtx::intents(Self) -> @model.Intents
-pub async fn GatewayCtx::join_voice(Self, @model.Id[@model.GuildMarker], @model.Id[@model.ChannelMarker], self_mute? : Bool, self_deaf? : Bool, timeout_ms? : Int, telemetry? : (@voice.VoiceTelemetry) -> Unit) -> @voice.VoiceConnection
 pub fn GatewayCtx::latency_ms(Self) -> Int64?
 pub fn GatewayCtx::member_ref(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker]) -> @http.MemberRef
 pub fn GatewayCtx::message_ref(Self, @model.MessageCreateEvent) -> @http.MessageRef

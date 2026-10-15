@@ -1,7 +1,6 @@
 import {
   "gaato/discord/model",
   "gaato/discord/http" @dhttp,
-  "gaato/discord/voice",
   "gaato/discord/interaction",
   "gaato/discord/app",
   "gaato/discord/bot",
@@ -21,7 +20,7 @@ import {
   "moonbitlang/async/http" @ahttp,
 } for "test"
 
-// Native-only facade imports are unused when facade_native.mbt is excluded.
+// Target-specific facade imports are unused on the other targets.
 
 // The public Bot `resume` label is reserved by this compiler version; the
 // compiled README example exercises it so documentation stays in sync.
@@ -33,7 +32,6 @@ supported_targets = "js + native + wasm"
 options(
   targets: {
     "overview.mbt.md": [ "native" ],
-    "facade_native.mbt": [ "native" ],
     "facade_gateway.mbt": [ "native", "js", "wasm" ],
     "facade_interactions_js.mbt": [ "js" ],
     "facade_server.mbt": [ "native", "wasm" ],

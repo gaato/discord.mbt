@@ -733,8 +733,6 @@ async fn BotCore::run(self : BotCore) -> Unit {
             cache_: self.cache_,
             framework_: router,
             collector_: self.collector_,
-            group_: group,
-            voice_: VoiceSessions::new(),
             shutdown_requested_: shutdown_requested,
           }
           owner.context = Some(created)

@@ -19,50 +19,33 @@ breaking change is listed with a migration note.
   the guild. `BotError::ShardNotManaged(shard_id~)` reports a guild whose
   shard runs in another process.
 - `GatewayCtx::intents` returns the intents the bot identified with.
-- `VoiceReceiveStream::next_packet` yields `ReceivedAudio` values in RTP
-  sequence order: `Opus(sequence~, timestamp~, opus~)` for a frame and
-  `Lost(count~)` for frames that never arrived or that the stream dropped.
-  `ReceivedAudio` is re-exported from the facade.
-- `VoiceConnection::subscribe` takes `backlog~` (default
-  `DEFAULT_RECEIVE_BACKLOG` = 250 frames, five seconds) and
-  `VoiceConnection::start` takes `event_backlog~` (default
-  `DEFAULT_VOICE_EVENT_BACKLOG` = 256). Values below 1 raise the new
-  `VoiceError::InvalidBacklog`.
-- `VoiceTelemetry::ReceiveDropped(user_id~, backlog~)` and
-  `VoiceTelemetry::EventDropped(backlog~)` report each item a full backlog
-  discards.
 - `@model.text_length` returns the length Discord applies its text limits
   to: Unicode code points.
 
 ### Changed
 
+- **Voice moved to its own module, `gaato/discord_voice`.** The
+  `gaato/discord/voice` package, `GatewayCtx::join_voice`, and the native
+  facade re-exports (`VoiceConnection`, `VoiceEvent`, `VoiceError`,
+  `VoiceConnectionState`, `VoiceTelemetry`, `AudioSource`, `OggOpusSource`,
+  `OggOpusWriter`, `OggOpusError`, `VoiceReceiveStream`, `ReceivedAudio`,
+  `SILENCE_FRAME`) are gone from this module. `gaato/discord` no longer
+  depends on `gaato/dave` and has no prebuild hook, so its native builds no
+  longer need Node.js; the `DISCORD_VOICE_*` variables now belong to
+  `gaato/discord_voice`.
+  - Migration: add `gaato/discord_voice` to `moon.mod` and
+    `"gaato/discord_voice" @voice` to `moon.pkg`. Create one
+    `@voice.VoiceClient()` per bot and `attach` it to the `BotBuilder`, then
+    replace `ctx.join_voice(guild_id, channel_id, ...)` with
+    `voice.join(ctx, guild_id, channel_id, ...)` (same labels) and
+    `@discord.Voice*` and the other names above with `@voice.*`.
+- The examples and the guide are no longer packages of this module; they are
+  unpublished modules in the repository's `examples/` and `guide/`.
 - `BotError` gains `ShardNotManaged(shard_id~)`.
   - Migration: add an arm (or a wildcard) to exhaustive `BotError` matches.
-- **Received voice audio is delivered only through `subscribe`, and every
-  voice queue is bounded.** Before, each received packet was queued for
-  `next_event` with no limit, also when the caller only subscribed or never
-  read events at all (`GatewayCtx::join_voice` receives by default), so a
-  connection with someone speaking grew without bound. Now `next_event`
-  carries membership, speaking, and lifecycle events only, and drops its
-  oldest event past `event_backlog`. Packets from users without a live
-  subscription are discarded before decryption, so receiving costs nothing
-  until something subscribes. A subscription drops new frames past its
-  backlog and reports them in the stream as one `Lost`, so the reader always
-  sees where audio is missing.
-  - Migration: remove `OpusReceived` and `PacketsLost` arms from
-    `next_event` loops. Subscribe to the user instead, typically on
-    `SpeakingChanged`, and read `next_packet()`: `Opus(sequence~,
-    timestamp~, opus~)` replaces `OpusReceived`, and `Lost(count~)` replaces
-    `PacketsLost`. Packets from an SSRC Discord never mapped to a user are no
-    longer surfaced. `subscribe` and `VoiceConnection::start` now raise
-    `VoiceError`.
-- `TransportCipher::seal` raises the new `VoiceCryptoError::NonceExhausted`
-  after 2^32 packets instead of wrapping its nonce counter and reusing a
-  nonce under the same key. A new voice session issues a new key.
-- The Gateway and voice gateway reset their reconnect backoff after a
-  connection reaches READY or RESUMED (voice: an active session), so a
-  single drop after a long healthy run waits the first backoff step instead
-  of the cap reached by earlier failures.
+- The Gateway resets its reconnect backoff after a connection reaches READY
+  or RESUMED, so a single drop after a long healthy run waits the first
+  backoff step instead of the cap reached by earlier failures.
 - A modal text input's prefilled `value` must fit the input's own
   `max_length` (4000 when unset), counted in UTF-16 units. Discord accepts a
   prefill up to 4000 code points, but the official clients (checked on
@@ -77,21 +60,9 @@ breaking change is listed with a migration note.
   chunk and no longer queues a scheduler tick for a coroutine that has already
   finished, so the JS example hosts' `whenIdle()` no longer yields an extra
   macrotask to let that tick run.
-- The native prebuild hook recognises a Moon run by `MOON_BACKEND`, which Moon
-  sets for prebuild scripts since toolchain 0.10.14, instead of by the JSON
-  payload on stdin, which Moon is going to stop sending. Without that change a
-  Moon release that drops stdin would have made the hook download the voice
-  runtime for every native build. Run directly (`node build.js`), the hook no
-  longer waits for end of input. The documentation now says that Node.js is
-  needed for native builds only: Moon does not run the hook for JavaScript or
-  Wasm builds.
 
 ### Fixed
 
-- `GatewayCtx::join_voice` sends opcode 4 on the shard that owns the guild.
-  It used the calling context's shard, so a join started from a service (which
-  gets the context of whichever shard was ready first) for a guild on another
-  shard went out on the wrong connection and timed out.
 - A shard closes its WebSocket with code 4000 when it is about to resume (op
   7 Reconnect, op 9, a missed heartbeat ACK, or a read failure). It sent 1000
   for every close, and Discord invalidates the session on a 1000 or 1001

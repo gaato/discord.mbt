@@ -1,0 +1,9 @@
+# Packaging rules for gaato/discord_voice. This file replaces .gitignore for
+# this directory; the repository root's .gitignore still applies.
+_build/
+.mooncakes/
+# The Rust transport library is released as prebuilt archives
+# (release/voice-shim-*.js); its sources are not part of the module.
+shim/
+# Repository-only Node tests of the prebuild hook.
+test/

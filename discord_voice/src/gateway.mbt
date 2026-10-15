@@ -385,7 +385,7 @@ async fn VoiceGateway::run_connection(
             reason="heartbeat ACK timed out",
           )
         }
-        let nonce = @clock.now_ms()
+        let nonce = now_ms()
         heartbeat_nonce.val = nonce
         heartbeat_sent_at.val = nonce
         heartbeat_acked.val = false
@@ -458,7 +458,7 @@ async fn VoiceGateway::run_connection(
         HeartbeatAck(nonce~) =>
           if nonce == heartbeat_nonce.val {
             heartbeat_acked.val = true
-            self.latency = Some(@clock.now_ms() - heartbeat_sent_at.val)
+            self.latency = Some(now_ms() - heartbeat_sent_at.val)
           }
         other => self.emit(Message(other))
       }

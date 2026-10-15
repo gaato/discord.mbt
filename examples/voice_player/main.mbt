@@ -22,7 +22,7 @@ fn required_env(name : String) -> String raise VoicePlayerError {
 
 ///|
 struct TrackedOggSource {
-  source : @discord.OggOpusSource
+  source : @voice.OggOpusSource
   done : @aqueue.Queue[Unit]
   mut finished : Bool
 }
@@ -31,10 +31,10 @@ struct TrackedOggSource {
 async fn[X] load_audio_source(
   group : @async.TaskGroup[X],
   audio_path : String,
-) -> (@discord.OggOpusSource, () -> Unit) {
+) -> (@voice.OggOpusSource, () -> Unit) {
   if audio_path.has_suffix(".ogg") {
     let audio = @fs.read_file(audio_path).binary()
-    (@discord.OggOpusSource::from_bytes(audio), () => ())
+    (@voice.OggOpusSource::from_bytes(audio), () => ())
   } else {
     let (stdout, process_stdout) = @process.read_from_process()
     errdefer stdout.close()
@@ -49,13 +49,13 @@ async fn[X] load_audio_source(
       no_wait=true,
     )
     |> ignore
-    let source = @discord.OggOpusSource::from_reader(stdout)
+    let source = @voice.OggOpusSource::from_reader(stdout)
     (source, () => stdout.close())
   }
 }
 
 ///|
-impl @discord.AudioSource for TrackedOggSource with fn next_frame(self) {
+impl @voice.AudioSource for TrackedOggSource with fn next_frame(self) {
   match self.source.next_frame() {
     Some(frame) => Some(frame)
     None => {
@@ -90,15 +90,17 @@ async fn main {
         let intents = @model.Intents::guilds() |
           @model.Intents::guild_voice_states()
         let bot = @discord.BotBuilder(app.build(), token~, intents~)
+        let voice = @voice.VoiceClient()
+        voice.attach(bot)
         bot.service(name="voice-player", ctx => {
-          let connection = ctx.join_voice(guild_id, channel_id)
+          let connection = voice.join(ctx, guild_id, channel_id)
           errdefer @async.protect_from_cancel(() => {
             connection.disconnect() catch {
               _ => ()
             }
           })
           println("[voice] connected; playing \{audio_path}")
-          connection.play((tracked : &@discord.AudioSource))
+          connection.play((tracked : &@voice.AudioSource))
           done.get()
           connection.stop()
           println("[voice] playback complete")

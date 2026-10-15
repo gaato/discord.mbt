@@ -1,16 +1,31 @@
 # Voice
 
-Voice support is native-only and experimental. It implements voice gateway
-v8, Discord's DAVE end-to-end encryption, Opus playback, and per-user raw
-Opus receive. DAVE MLS and media crypto come from the native-only `gaato/dave`
-binding to Discord's official `libdave`; the repository's Rust shim handles
-RTP transport AEAD only. The accepted design and its milestones are
-documented in [`src/voice/DESIGN.md`](https://github.com/gaato/discord.mbt/blob/main/discord/src/voice/DESIGN.md).
+Voice is a separate module, `gaato/discord_voice`, for bots built with
+`gaato/discord`. It is native-only and experimental. It implements voice
+gateway v8, Discord's DAVE end-to-end encryption, Opus playback, and per-user
+raw Opus receive. DAVE MLS and media crypto come from the native-only
+`gaato/dave` binding to Discord's official `libdave`; the module's Rust shim
+handles RTP transport AEAD only. The accepted design and its milestones are
+documented in [`DESIGN.md`](https://github.com/gaato/discord.mbt/blob/main/discord_voice/DESIGN.md).
+
+Add the module next to `gaato/discord` and import it as `@voice`:
+
+```fish
+moon add gaato/discord_voice
+```
+
+```mbt nocheck
+///|
+import {
+  "gaato/discord",
+  "gaato/discord_voice" @voice,
+}
+```
 
 ## Install the native dependencies
 
-`gaato/discord` pins transport shim release `voice-shim-v0.1.0` and depends on
-`gaato/dave`, which pins official `libdave` `v1.2.0/cpp`. Bootstrap both
+`gaato/discord_voice` pins transport shim release `voice-shim-v0.1.0` and
+depends on `gaato/dave`, which pins official `libdave` `v1.2.0/cpp`. Bootstrap both
 verified native runtimes from a native build:
 
 ```fish
@@ -41,7 +56,7 @@ override their cache bases and must be absolute paths. Set
 `DISCORD_VOICE_SHIM_PATH` or `MBT_DAVE_NATIVE_LIB` to the absolute path of an
 ABI-compatible self-built library when a published binary cannot run on the
 host. See
-[`gaato/dave`'s native runtime guide](https://github.com/gaato/dave.mbt/blob/main/docs/native-runtime.md)
+[`gaato/dave`'s native runtime guide](https://github.com/gaato/discord.mbt/blob/main/dave/docs/native-runtime.md)
 for the cache layout and all overrides.
 
 Media E2EE is supported, but pairwise identity verification is intentionally
@@ -53,7 +68,7 @@ To develop the transport component itself or support another host, build it
 with Cargo:
 
 ```fish
-cd voice-shim
+cd discord_voice/shim
 cargo build --release
 ```
 
@@ -72,35 +87,49 @@ runtime.
 
 ## Join and play
 
-Call `join_voice` from a READY handler or a bot service. `GatewayCtx` sends
-main Gateway Opcode 4 and waits for the matching state and server updates.
+A `VoiceClient` holds a bot's voice connections, one per guild. Create one
+per bot and `attach` it to the builder, which runs it as the bot service
+`"voice"`; its connections live as long as that service. Then call `join`
+from a READY handler or a bot service. It sends main Gateway Opcode 4 on the
+shard that owns the guild and waits for the matching state and server updates.
 The main Gateway session must include `GUILD_VOICE_STATES`, because Discord
 uses that intent to deliver the bot's `VOICE_STATE_UPDATE`:
 
 ```mbt check
 ///|
-fn voice_bot(app : @discord.App, token : String) -> @discord.BotBuilder {
+fn voice_bot(
+  app : @discord.App,
+  token : String,
+) -> (@discord.BotBuilder, @voice.VoiceClient) {
   let intents = @model.Intents::guilds() | @model.Intents::guild_voice_states()
-  @discord.BotBuilder(app, token~, intents~)
+  let bot = @discord.BotBuilder(app, token~, intents~)
+  let voice = @voice.VoiceClient()
+  voice.attach(bot)
+  (bot, voice)
 }
 ```
 
-`join_voice` raises `VoiceError::MissingIntent(intent="GUILD_VOICE_STATES")`
+`join` raises `VoiceError::MissingIntent(intent="GUILD_VOICE_STATES")`
 before sending Opcode 4 when the effective intent set omits it.
 
 ```mbt check
 ///|
 async fn join_and_play(
+  voice : @voice.VoiceClient,
   ctx : @discord.GatewayCtx,
   guild_id : @model.GuildId,
   channel_id : @model.ChannelId,
 ) -> Unit {
-  let connection = ctx.join_voice(guild_id, channel_id, timeout_ms=10_000)
+  let connection = voice.join(ctx, guild_id, channel_id, timeout_ms=10_000)
   let bytes = @fs.read_file("audio.ogg").binary()
-  let source = @discord.OggOpusSource::from_bytes(bytes)
-  connection.play((source : &@discord.AudioSource))
+  let source = @voice.OggOpusSource::from_bytes(bytes)
+  connection.play((source : &@voice.AudioSource))
 }
 ```
+
+`join` takes the gateway through `ctx`. `join_via` takes a `VoiceGatewayPort`
+instead, a record of the few gateway values and functions joining needs, so a
+test can drive a join with its own port.
 
 `OggOpusSource` passes encoded Opus packets through without decoding. Create a
 48 kHz, stereo stream with one 20 ms packet per Ogg packet:
@@ -114,7 +143,7 @@ five silence frames. Call `disconnect` when the bot no longer needs the
 channel.
 
 A full channel may produce neither of the main Gateway response events when
-the bot lacks `MOVE_MEMBERS`. `join_voice` then raises
+the bot lacks `MOVE_MEMBERS`. `join` then raises
 `VoiceError::JoinTimeout`. A second join for the same guild returns the
 registered connection and does not move it to another channel.
 
@@ -129,7 +158,7 @@ speaking:
 ```mbt check
 ///|
 async fn receive_opus(
-  connection : @discord.VoiceConnection,
+  connection : @voice.VoiceConnection,
   consume_opus : (Int32, UInt32, Bytes) -> Unit,
 ) -> Unit {
   let user_id = for ;; {
@@ -169,11 +198,12 @@ with `OggOpusWriter`. Unread events are bounded the same way: past
 ## Region changes and reconnects
 
 `VoiceConnection` resumes its voice WebSocket when possible and requests new
-credentials when Discord requires a fresh session. `GatewayCtx` also watches
-for a guild `VOICE_SERVER_UPDATE`. The current public voice API cannot inject
-new credentials into an active connection, so the watcher disconnects and
-joins the same channel again; callers holding the old handle should fetch the
-guild connection by calling `join_voice` again after a region move.
+credentials when Discord requires a fresh session. The `VoiceClient` also
+watches for a guild `VOICE_SERVER_UPDATE`. The current public voice API cannot
+inject new credentials into an active connection, so the watcher disconnects
+and joins the same channel again; callers holding the old handle should fetch
+the guild connection again with `VoiceClient::connection` after a region
+move.
 
 See `examples/voice_player` for an executable that reads configuration
 from `DISCORD_TOKEN`, `GUILD_ID`, `CHANNEL_ID`, and `AUDIO_FILE`.

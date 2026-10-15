@@ -1,7 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "gaato/discord/voice"
+package "gaato/discord_voice"
 
 import {
+  "gaato/discord/bot",
+  "gaato/discord/model",
   "moonbitlang/async",
   "moonbitlang/async/io",
   "moonbitlang/core/debug",
@@ -100,6 +102,7 @@ pub(all) suberror VoiceError {
   IpDiscoveryFailed(reason~ : String)
   Disconnected
   InvalidBacklog(value~ : Int)
+  ClientNotRunning
 } derive(@debug.Debug)
 
 pub(all) suberror VoiceTransportClosed {
@@ -163,6 +166,11 @@ pub fn OggPacketReader::new() -> Self
 pub fn OggPacketReader::next_packet(Self) -> Bytes? raise OggOpusError
 pub fn OggPacketReader::push(Self, Bytes) -> Unit
 
+pub(all) struct PendingVoiceEvent[T] {
+  wait : async (Int?) -> T?
+  cancel : () -> Unit
+}
+
 pub(all) enum ReceivedAudio {
   Opus(sequence~ : Int, timestamp~ : UInt, opus~ : Bytes)
   Lost(count~ : Int)
@@ -194,6 +202,16 @@ pub struct TransportCipher {
 pub fn TransportCipher::new(EncryptionMode, Bytes) -> Self raise VoiceCryptoError
 pub fn TransportCipher::open(Self, Bytes, header_len~ : Int) -> Bytes raise VoiceCryptoError
 pub fn TransportCipher::seal(Self, header~ : Bytes, Bytes) -> Bytes raise VoiceCryptoError
+
+pub struct VoiceClient {
+  // private fields
+}
+pub fn VoiceClient::VoiceClient() -> Self
+pub fn VoiceClient::attach(Self, @bot.BotBuilder) -> Unit
+pub fn VoiceClient::connection(Self, @model.Id[@model.GuildMarker]) -> VoiceConnection?
+pub async fn VoiceClient::join(Self, @bot.GatewayCtx, @model.Id[@model.GuildMarker], @model.Id[@model.ChannelMarker], self_mute? : Bool, self_deaf? : Bool, timeout_ms? : Int, telemetry? : (VoiceTelemetry) -> Unit) -> VoiceConnection
+pub async fn VoiceClient::join_via(Self, VoiceGatewayPort, @model.Id[@model.GuildMarker], @model.Id[@model.ChannelMarker], self_mute? : Bool, self_deaf? : Bool, timeout_ms? : Int, telemetry? : (VoiceTelemetry) -> Unit) -> VoiceConnection
+pub async fn VoiceClient::run(Self) -> Unit
 
 pub struct VoiceConnection {
   // private fields
@@ -258,6 +276,15 @@ pub(all) enum VoiceGatewayEvent {
   NeedsRejoin(code~ : Int?)
   FatallyClosed(code~ : Int)
 } derive(Eq, @debug.Debug)
+
+pub(all) struct VoiceGatewayPort {
+  user_id : @model.Id[@model.UserMarker]
+  intents : @model.Intents
+  expect_voice_state : ((@model.VoiceState) -> Bool) -> PendingVoiceEvent[@model.VoiceState]
+  expect_voice_server : ((@model.VoiceServerUpdateEvent) -> Bool) -> PendingVoiceEvent[@model.VoiceServerUpdateEvent]
+  update_voice_state : async (@model.UpdateVoiceState) -> Unit
+}
+pub fn VoiceGatewayPort::from_gateway(@bot.GatewayCtx) -> Self
 
 pub(all) enum VoiceGatewayState {
   Disconnected(reconnect_attempts~ : Int)

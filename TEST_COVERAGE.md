@@ -1,6 +1,6 @@
 # Test coverage ledger
 
-Line coverage of the library packages (`discord/src/`), measured
+Line coverage of the library packages (`discord/src/` and `discord_voice/src/`), measured
 with `moon coverage analyze` in Coveralls-JSON mode. Companion to
 [COVERAGE.md](discord/COVERAGE.md), which tracks REST *endpoint* coverage; this file
 tracks *test* coverage and applies the same closed-ledger rule:
@@ -75,10 +75,10 @@ Live socket, websocket, and FFI adapters (live-verified; no unit seam):
 | --- | --- | --- |
 | discord/src/gateway/transport.mbt | 37 | Real websocket adapter behind the GatewayTransport trait; every consumer is tested against FakeTransport. |
 | discord/src/internal/websocket/native.mbt | 1 | Native/Wasm connect wrapper delegates to the upstream live WebSocket client; the JS implementation has separate loopback tests. |
-| discord/src/voice/transport.mbt | 38 | Real voice websocket adapter behind the VoiceTransport trait. |
-| discord/src/voice/udp.mbt | 4 | SocketVoiceUdp impls and `open_voice_udp` over a real UDP socket; parse and retry logic is covered via fakes. |
-| discord/src/voice/shim_ffi.mbt | 3 | Extern-C glue whose arms depend on host library state. |
-| discord/src/voice/crypto.mbt | 5 | Shim error-status translation paths; round-trips and geometry checks are covered with the shim loaded. |
+| discord_voice/src/transport.mbt | 38 | Real voice websocket adapter behind the VoiceTransport trait. |
+| discord_voice/src/udp.mbt | 4 | SocketVoiceUdp impls and `open_voice_udp` over a real UDP socket; parse and retry logic is covered via fakes. |
+| discord_voice/src/shim_ffi.mbt | 3 | Extern-C glue whose arms depend on host library state. |
+| discord_voice/src/crypto.mbt | 5 | Shim error-status translation paths; round-trips and geometry checks are covered with the shim loaded. |
 | discord/src/http/client.mbt | 3 | Default warning sinks (`println`) of the online and offline constructors, and the catch-all arm the per-attempt deadline needs because `with_timeout` is typed to raise any error. |
 | discord/src/http/request.mbt | 4 | Pre-IO rejections of sticker and invite upload shapes the typed wrappers never build, and the `Api` re-raise for middleware that raises it itself; the send loop, its retry rule, and every error mapping are covered by the fake-wire contract tests. |
 | discord/src/endpoint_http/endpoint_http.mbt | 7 | Arms that need a broken connection or a cancellation mid-failure: a response write that fails because the peer is gone, cancellation of a failed request or write, and a server that stops after startup. Startup failure, 202/504 replies, and a request whose body fails mid-read are tested. |
@@ -94,15 +94,16 @@ ledgered):
 
 | File | Budget | Reason |
 | --- | --- | --- |
-| discord/src/voice/connection.mbt | 16 | Impossible alternate negotiation errors, shim-loader failure while the shim is required, opener/discovery cancellation catches, event-pump and receiver queue teardown, an unemitted `ConnectFailed` case, and unreachable session-state/typed-error fallbacks. Negotiation, discovery, session, DAVE-control, source-replacement, receiver, and lifecycle-recovery failures are tested through the UDP/voice/DAVE seams. |
-| discord/src/voice/gateway.mbt | 13 | Protected-shutdown and event-queue teardown catches, stale-transport and non-returning-loop fallbacks, and read-loop cancellation propagation. Disconnected sends, malformed Hello/frames, the Hello sequence, send failures, and protected connector cleanup are tested; backoff and heartbeat cadence use the injected sleeper. |
-| discord/src/voice/dave.mbt | 52 | DAVE/MLS transitions that need a second member and real libdave group state. |
-| discord/src/voice/audio.mbt | 6 | Real-time pacing loop (deadline sleeps) and DAVE encrypt-drop telemetry arms. |
-| discord/src/voice/subscribe.mbt | 3 | Silence-timeout stream end arms. |
-| discord/src/voice/receive.mbt | 6 | Decrypt arms needing real DAVE frames from a second member. |
-| discord/src/voice/reorder.mbt | 3 | Arrival-time flush arms. |
-| discord/src/voice/rtp.mbt | 3 | Header arms only produced by real senders (CSRC counts). |
-| discord/src/voice/ogg_opus.mbt | 4 | Constructor `abort`s (unreachable by construction) and one reader break arm. |
+| discord_voice/src/connection.mbt | 16 | Impossible alternate negotiation errors, shim-loader failure while the shim is required, opener/discovery cancellation catches, event-pump and receiver queue teardown, an unemitted `ConnectFailed` case, and unreachable session-state/typed-error fallbacks. Negotiation, discovery, session, DAVE-control, source-replacement, receiver, and lifecycle-recovery failures are tested through the UDP/voice/DAVE seams. |
+| discord_voice/src/gateway.mbt | 13 | Protected-shutdown and event-queue teardown catches, stale-transport and non-returning-loop fallbacks, and read-loop cancellation propagation. Disconnected sends, malformed Hello/frames, the Hello sequence, send failures, and protected connector cleanup are tested; backoff and heartbeat cadence use the injected sleeper. |
+| discord_voice/src/dave.mbt | 52 | DAVE/MLS transitions that need a second member and real libdave group state. |
+| discord_voice/src/audio.mbt | 6 | Real-time pacing loop (deadline sleeps) and DAVE encrypt-drop telemetry arms. |
+| discord_voice/src/subscribe.mbt | 3 | Silence-timeout stream end arms. |
+| discord_voice/src/client.mbt | 31 | `from_gateway`, `pending_voice_event`, and `join` adapt a `GatewayCtx`, which only a running bot creates, and the service `attach` registers runs only in one; the new-join/rejoin closures and the ready path cross a live `VoiceConnection::start`; the endpoint fallback contradicts the server predicate; disconnect and cancellation catches. Joins, reuse, eviction, gates, expectations before opcode 4, timeouts, a client that never runs, and the watcher's rejoin are tested through a fake `VoiceGatewayPort`. |
+| discord_voice/src/receive.mbt | 6 | Decrypt arms needing real DAVE frames from a second member. |
+| discord_voice/src/reorder.mbt | 3 | Arrival-time flush arms. |
+| discord_voice/src/rtp.mbt | 3 | Header arms only produced by real senders (CSRC counts). |
+| discord_voice/src/ogg_opus.mbt | 4 | Constructor `abort`s (unreachable by construction) and one reader break arm. |
 
 Reconnect/backoff and timed-wait loops (exercised in every live gateway
 run; the gateway/voice loops are additionally tested via injected sleepers):
@@ -118,7 +119,6 @@ run; the gateway/voice loops are additionally tested via injected sleepers):
 | discord/src/bot/shard_manager.mbt | 4 | Live gateway discovery and default-connector startup (including saved-session projection), plus defensive shard-config arms; fake-connector startup and resume are tested. |
 | discord/src/bot/bot.mbt | 16 | Gateway run-loop teardown/cancellation arms; startup, intents, telemetry, and event routing are covered. The event-backlog put fails only on a queue closed by shutdown. |
 | discord/src/bot/builder.mbt | 2 | The compression check in `build` raises only on js/wasm, where zlib-stream is unavailable (covered by the JS run). |
-| discord/src/bot/voice.mbt | 19 | Credential timeouts have no injectable timer; the endpoint fallback contradicts the collector predicate; disconnect/cancellation catches; and the new-join/rejoin closures cross `join_voice`'s unseamed live `VoiceConnection::start`. Cache, gate, collector, and failed-watcher-rejoin behaviour is tested. |
 
 Defensive arms unreachable by construction:
 

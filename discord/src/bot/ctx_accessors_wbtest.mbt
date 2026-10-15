@@ -117,6 +117,7 @@ async test "gateway context exposes raw handles, refs, and waiters" {
 
     // Raw handles agree with the ctx-level views built on top of them.
     assert_true(ctx.shard_raw().latency_ms() == ctx.latency_ms())
+    assert_eq(ctx.intents(), @model.Intents::guild_messages())
     inspect(ctx.framework_raw().command_specs().stringify(), content="[]")
 
     // Each ref accessor binds the ids it was given.

@@ -30,13 +30,6 @@ relevant symbols — look anything up with `moon ide doc` (see
 On a clean machine, install `git` and run `moon update` before resolving the
 module dependencies. Moon uses `git` to clone the package registry.
 
-Node.js must be on `PATH` for every native `moon build`, `moon test`, and
-`moon run`, whether or not the bot uses voice. `gaato/discord` and its
-`gaato/dave` dependency declare prebuild hooks that Moon runs with `node`;
-without the voice opt-in variables they exit without downloading anything, but
-the build still fails when `node` is missing. Moon does not run the hooks for
-JavaScript or Wasm builds, or for `moon check`.
-
 Every native build compiles the Gateway package's `zlib_stream.c`, which
 always includes `<zlib.h>` even when `compress=false`. The zlib development
 headers are therefore required for all native builds: install `zlib1g-dev` on
@@ -116,7 +109,6 @@ async fn run_echo_bot(token : String) -> Unit {
 | `gaato/discord/telemetry` | Structured REST, gateway, and dispatch observability values | Yes | Yes | Yes |
 | `gaato/discord/http` | REST `Client`, routes, rate limiting, multipart uploads | Yes | Yes | Yes |
 | `gaato/discord/gateway` | `Shard`: connection state machine, heartbeat, resume | Yes | Yes | Yes |
-| `gaato/discord/voice` | Experimental native voice gateway v8, DAVE, RTP, and Opus send/receive | Yes | No | No |
 | `gaato/discord/interaction` | Command/component builders, typed args and autocomplete data | Yes | Yes | Yes |
 | `gaato/discord/framework` | Interaction routing, response gates, low-level response contexts | Yes | Yes | Yes |
 | `gaato/discord/app` | Gateway-free typed commands/components/modals, HTTP endpoint, sync and policy | Yes | Yes | Yes |
@@ -148,9 +140,8 @@ as dependencies.
 Use `--target wasm` with the pinned MoonBit toolchain and its matching `moonrun`.
 This backend uses MoonBit host APIs for sockets, TLS, timers, and environment
 variables; it is not a browser, generic WASI, or wasm-gc application target.
-Wasm builds do not link the voice/DAVE native libraries, and Gateway
-zlib-stream compression is unavailable (leave `compress` off). Node is still
-required for the build-time prebuild hooks described above.
+Gateway zlib-stream compression is unavailable on Wasm (leave `compress`
+off).
 
 The `interactions_http` example also builds for Wasm:
 
@@ -292,18 +283,13 @@ limits through the bundled TCP coordinator. See the
 
 ### Voice (experimental)
 
-Native builds can join voice gateway v8 calls, play 20 ms Opus frames, and
-receive per-user Opus streams. Discord requires DAVE encryption, so voice
-applications use the native-only
-[`gaato/dave`](https://github.com/gaato/discord.mbt/blob/main/dave/README.mbt.md) binding to Discord's
-official `libdave` for MLS and media encryption. The separate Rust library in
-`voice-shim/` handles RTP transport AEAD only. `gaato/dave` currently pins
-upstream `v1.2.0/cpp`; `gaato/discord` pins transport component release
-`voice-shim-v0.1.0`. A native voice build can bootstrap and verify both
-prebuilt runtimes without installing Cargo. See the
-[voice guide](https://github.com/gaato/discord.mbt/blob/main/guide/10-voice.mbt.md) for installation and runtime limits,
-the `dave_probe`, `voice_player`, and `voice_recorder` examples, and the accepted design in
-[`src/voice/DESIGN.md`](src/voice/DESIGN.md).
+Voice is a separate module,
+[`gaato/discord_voice`](https://github.com/gaato/discord.mbt/blob/main/discord_voice/README.md), for native
+bots built with this one. It joins voice gateway v8 calls, plays 20 ms Opus
+frames, and receives per-user Opus streams with Discord's DAVE encryption. See
+the [voice guide](https://github.com/gaato/discord.mbt/blob/main/guide/10-voice.mbt.md) for installation
+and runtime limits, and the `dave_probe`, `voice_player`, and `voice_recorder`
+examples.
 
 ### Synchronization and failures
 
@@ -517,9 +503,11 @@ interaction and model fixtures. Import the testkit only in your package's
 `for "test"` block.
 
 The repository is a MoonBit workspace: this module is in `discord/`, next to
-`gaato/dave` in `dave/` and the bot template in `template/`. Run these from
-the repository root; they cover every member, and build this module against
-the in-tree `gaato/dave`:
+`gaato/discord_voice`, `gaato/dave`, the examples, the guide, and the bot
+template. Run these from the repository root; they cover every member and
+build each against the in-tree versions of the others. A native build in the
+workspace runs every member's prebuild hook, so working in the repository
+needs Node.js on `PATH`:
 
 ```fish
 moon check --target native --deny-warn
@@ -533,8 +521,8 @@ moon info --target native             # regenerate pkg.generated.mbti (API revie
 scripts/gen_extends.py                # regenerate extends.mbt after adding or removing a ToJson type
 ```
 
-To build this module alone against the published `gaato/dave`, as a consumer
-does, run `MOON_WORK=off moon -C discord check --target native`.
+To build this module alone against its published dependencies, as a
+consumer does, run `MOON_WORK=off moon -C discord check --target native`.
 
 Look up any package, type, or symbol — including its docstring examples —
 from the terminal:

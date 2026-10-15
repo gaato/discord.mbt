@@ -11,14 +11,11 @@ import {
   "gaato/discord/interaction",
   "gaato/discord/model",
   "gaato/discord/verify",
-  "gaato/discord/voice",
   "moonbitlang/async",
 }
 
 // Values
 pub const API_VERSION : Int = 10
-
-pub const SILENCE_FRAME : Bytes = b"\xF8\xFF\xFE"
 
 pub fn action_row(Array[@model.Component]) -> @model.Component
 
@@ -279,15 +276,7 @@ pub using @app {type ModalShowError}
 
 pub using @app {type ModalSubmitHandler}
 
-pub using @voice {type OggOpusError}
-
-pub using @voice {type OggOpusSource}
-
-pub using @voice {type OggOpusWriter}
-
 pub using @bot {type PendingEvent}
-
-pub using @voice {type ReceivedAudio}
 
 pub using @framework {type ResponseState}
 
@@ -305,20 +294,6 @@ pub using @framework {type TargetUser}
 
 pub using @http {type UserRef}
 
-pub using @voice {type VoiceConnection}
-
-pub using @voice {type VoiceConnectionState}
-
-pub using @voice {type VoiceError}
-
-pub using @voice {type VoiceEvent}
-
-pub using @voice {type VoiceReceiveStream}
-
-pub using @voice {type VoiceTelemetry}
-
 pub using @app {type WaitFrom}
-
-pub using @voice {trait AudioSource}
 
 // Traits

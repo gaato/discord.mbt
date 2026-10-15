@@ -2,8 +2,9 @@
 
 Status: **implemented (M1-M4).**
 
-discord.mbt implements native voice gateway v8, UDP transport encryption,
-DAVE end-to-end encryption, Opus send/receive, and `GatewayCtx::join_voice`.
+`gaato/discord_voice` implements native voice gateway v8, UDP transport
+encryption, DAVE end-to-end encryption, Opus send/receive, and
+`VoiceClient::join` for `gaato/discord` bots.
 The public API remains experimental while it gains production use.
 
 ## Protocol requirements
@@ -23,9 +24,10 @@ and the official https://github.com/discord/libdave implementation.
 
 ## Connection flow
 
-1. `GatewayCtx::join_voice` registers `VOICE_STATE_UPDATE` and
-   `VOICE_SERVER_UPDATE` collectors before sending main Gateway Opcode 4. It
-   ignores a server update with a null endpoint and keeps waiting.
+1. `VoiceClient::join` expects `VOICE_STATE_UPDATE` and
+   `VOICE_SERVER_UPDATE` (through `GatewayCtx::expect_event`) before sending
+   main Gateway Opcode 4 on the guild's shard. It ignores a server update with
+   a null endpoint and keeps waiting.
 2. The client connects to `wss://<endpoint>?v=8` and sends Voice Opcode 0
    Identify with `max_dave_protocol_version`.
 3. Voice Opcode 2 supplies the SSRC, UDP address, and transport modes. Opcode
@@ -58,7 +60,9 @@ This can be revisited once upstream exposes an identity-handle API.
 
 ## Implementation layout
 
-The native-only `src/voice/` package owns the public connection and audio API.
+The native-only root package in `src/` owns the public connection and audio
+API. `client.mbt` joins through a `VoiceGatewayPort`, the few main-gateway
+values and functions a join needs.
 
 | Layer | Implementation |
 |---|---|
@@ -83,7 +87,7 @@ The native boundary is split by responsibility:
   session, key-ratchet, encryptor, and decryptor handles. The voice package
   remains responsible for Gateway opcodes, connected-member bookkeeping,
   transition timing, recovery policy, and assigning actual RTP SSRCs.
-- `voice-shim/` is a small Rust `cdylib` for transport AEAD only. It exposes
+- `shim/` is a small Rust `cdylib` for transport AEAD only. It exposes
   AES-256-GCM and XChaCha20-Poly1305 seal/open operations and contains no MLS
   or DAVE session implementation.
 

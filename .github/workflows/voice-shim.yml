@@ -4,22 +4,22 @@ on:
   push:
     branches: [main]
     paths:
-      - "voice-shim/**"
-      - "discord/build.js"
-      - "discord/release/voice-shim-v0.1.0.js"
-      - "discord/moon.mod"
-      - "discord/src/voice/shim_stub.c"
-      - "discord/test/prebuild.test.js"
+      - "discord_voice/shim/**"
+      - "discord_voice/build.js"
+      - "discord_voice/release/voice-shim-v0.1.0.js"
+      - "discord_voice/moon.mod"
+      - "discord_voice/src/shim_stub.c"
+      - "discord_voice/test/prebuild.test.js"
       - ".github/workflows/voice-shim.yml"
   pull_request:
     branches: [main]
     paths:
-      - "voice-shim/**"
-      - "discord/build.js"
-      - "discord/release/voice-shim-v0.1.0.js"
-      - "discord/moon.mod"
-      - "discord/src/voice/shim_stub.c"
-      - "discord/test/prebuild.test.js"
+      - "discord_voice/shim/**"
+      - "discord_voice/build.js"
+      - "discord_voice/release/voice-shim-v0.1.0.js"
+      - "discord_voice/moon.mod"
+      - "discord_voice/src/shim_stub.c"
+      - "discord_voice/test/prebuild.test.js"
       - ".github/workflows/voice-shim.yml"
   workflow_dispatch:
   release:
@@ -47,35 +47,35 @@ jobs:
             artifact: discord-voice-shim-v0.1.0-linux-x86_64.tar.gz
             archive_format: tar
             moonbit_smoke: true
-            runtime_path: voice-shim/target/x86_64-unknown-linux-gnu/release/libdiscord_voice_shim.so
+            runtime_path: discord_voice/shim/target/x86_64-unknown-linux-gnu/release/libdiscord_voice_shim.so
           - runner: ubuntu-22.04-arm
             target: aarch64-unknown-linux-gnu
             built_library: libdiscord_voice_shim.so
             artifact: discord-voice-shim-v0.1.0-linux-aarch64.tar.gz
             archive_format: tar
             moonbit_smoke: true
-            runtime_path: voice-shim/target/aarch64-unknown-linux-gnu/release/libdiscord_voice_shim.so
+            runtime_path: discord_voice/shim/target/aarch64-unknown-linux-gnu/release/libdiscord_voice_shim.so
           - runner: macos-15-intel
             target: x86_64-apple-darwin
             built_library: libdiscord_voice_shim.dylib
             artifact: discord-voice-shim-v0.1.0-macos-x86_64.tar.gz
             archive_format: tar
             moonbit_smoke: false
-            runtime_path: voice-shim/target/x86_64-apple-darwin/release/libdiscord_voice_shim.dylib
+            runtime_path: discord_voice/shim/target/x86_64-apple-darwin/release/libdiscord_voice_shim.dylib
           - runner: macos-15
             target: aarch64-apple-darwin
             built_library: libdiscord_voice_shim.dylib
             artifact: discord-voice-shim-v0.1.0-macos-aarch64.tar.gz
             archive_format: tar
             moonbit_smoke: true
-            runtime_path: voice-shim/target/aarch64-apple-darwin/release/libdiscord_voice_shim.dylib
+            runtime_path: discord_voice/shim/target/aarch64-apple-darwin/release/libdiscord_voice_shim.dylib
           - runner: windows-2025
             target: x86_64-pc-windows-msvc
             built_library: discord_voice_shim.dll
             artifact: discord-voice-shim-v0.1.0-windows-x86_64.zip
             archive_format: zip
             moonbit_smoke: true
-            runtime_path: voice-shim/target/x86_64-pc-windows-msvc/release/discord_voice_shim.dll
+            runtime_path: discord_voice/shim/target/x86_64-pc-windows-msvc/release/discord_voice_shim.dll
 
     steps:
       - name: Check out repository
@@ -96,25 +96,25 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            voice-shim/target
-          key: voice-shim-${{ runner.os }}-${{ matrix.target }}-${{ hashFiles('voice-shim/Cargo.toml', 'voice-shim/Cargo.lock') }}
+            discord_voice/shim/target
+          key: voice-shim-${{ runner.os }}-${{ matrix.target }}-${{ hashFiles('discord_voice/shim/Cargo.toml', 'discord_voice/shim/Cargo.lock') }}
 
       - name: Check source
-        working-directory: voice-shim
+        working-directory: discord_voice/shim
         run: |
           cargo fmt -- --check
           cargo clippy --all-targets --locked -- -D warnings
           cargo test --locked
 
       - name: Build release library
-        working-directory: voice-shim
+        working-directory: discord_voice/shim
         run: cargo build --release --locked --target "${{ matrix.target }}"
 
       - name: Smoke-test the dynamic ABI
         if: runner.os != 'Windows'
         env:
           RUNTIME_PATH: ${{ github.workspace }}/${{ matrix.runtime_path }}
-        run: python voice-shim/dynamic_smoke.py "$RUNTIME_PATH"
+        run: python discord_voice/shim/dynamic_smoke.py "$RUNTIME_PATH"
 
       - name: Smoke-test the dynamic ABI (Windows)
         if: runner.os == 'Windows'
@@ -127,12 +127,12 @@ jobs:
           Unblock-File -LiteralPath $runtimePath -ErrorAction SilentlyContinue
           Get-Item -LiteralPath $runtimePath | Format-List FullName,Length
           Get-FileHash -Algorithm SHA256 -LiteralPath $runtimePath
-          python voice-shim/dynamic_smoke.py $runtimePath
+          python discord_voice/shim/dynamic_smoke.py $runtimePath
 
       - name: Bootstrap the released component
         env:
           DISCORD_VOICE_SHIM_CACHE_DIR: ${{ runner.temp }}/discord-voice-shim-cache
-        run: node discord/build.js
+        run: node discord_voice/build.js
 
       - name: Install MoonBit (Linux and macOS)
         if: matrix.moonbit_smoke && runner.os != 'Windows'
@@ -167,7 +167,7 @@ jobs:
           DISCORD_VOICE_SHIM_CACHE_DIR: ${{ runner.temp }}/discord-voice-shim-cache
         run: |
           moon update
-          moon test discord/src/voice/crypto_test.mbt --target native --release --deny-warn
+          moon test discord_voice/src/crypto_test.mbt --target native --release --deny-warn
 
       - name: Stage component contents
         shell: bash
@@ -176,10 +176,10 @@ jobs:
           BUILT_LIBRARY: ${{ matrix.built_library }}
         run: |
           mkdir -p dist/package
-          cp "voice-shim/target/$TARGET/release/$BUILT_LIBRARY" "dist/package/$BUILT_LIBRARY"
+          cp "discord_voice/shim/target/$TARGET/release/$BUILT_LIBRARY" "dist/package/$BUILT_LIBRARY"
           cp LICENSE dist/package/LICENSE
-          cp voice-shim/THIRD_PARTY.md dist/package/THIRD_PARTY.md
-          node voice-shim/package-licenses.js dist/package/THIRD_PARTY_LICENSES
+          cp discord_voice/shim/THIRD_PARTY.md dist/package/THIRD_PARTY.md
+          node discord_voice/shim/package-licenses.js dist/package/THIRD_PARTY_LICENSES
 
       - name: Create tar archive
         if: matrix.archive_format == 'tar'

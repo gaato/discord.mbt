@@ -12,8 +12,6 @@ pub struct GatewayCtx {
   priv cache_ : @cache.InMemoryCache?
   priv framework_ : @framework.Framework
   priv collector_ : EventCollector
-  priv group_ : @async.TaskGroup[Unit]
-  priv voice_ : VoiceSessions
   priv shutdown_requested_ : Ref[Bool]
 }
 

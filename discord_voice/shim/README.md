@@ -1,18 +1,18 @@
 # discord.mbt voice transport shim
 
 This crate builds the native transport AEAD shim used by
-`gaato/discord/voice`. It implements AES-256-GCM and XChaCha20-Poly1305 behind
+`gaato/discord_voice`. It implements AES-256-GCM and XChaCha20-Poly1305 behind
 a small C ABI. DAVE MLS and media encryption are provided separately by the
 `gaato/dave` MoonBit module and official libdave.
 
-Native `gaato/discord` consumers can provision the pinned component together
-with official libdave:
+Native `gaato/discord_voice` consumers can provision the pinned component
+together with official libdave:
 
 ```fish
 env DISCORD_VOICE_REQUIRE_SHIM=1 MBT_DAVE_REQUIRE_NATIVE=1 moon build --target native --release
 ```
 
-The root prebuild hook downloads the matching `voice-shim-v0.1.0` archive,
+The module's prebuild hook (`../build.js`) downloads the matching `voice-shim-v0.1.0` archive,
 checks its pinned size and SHA-256 digest, verifies the extracted library, and
 caches it outside the Mooncake. It supports Linux x86-64/ARM64, macOS
 x86-64/ARM64, and Windows x86-64. Node.js and either `tar` (Linux/macOS) or

@@ -10,7 +10,7 @@ pub const SILENCE_FRAME : Bytes = b"\xF8\xFF\xFE"
 
 ///|
 async fn pace_until(deadline : Int64) -> Unit {
-  let remaining = deadline - @clock.now_ms()
+  let remaining = deadline - now_ms()
   if remaining > 0L {
     @async.sleep(remaining.to_int())
   }
@@ -76,7 +76,7 @@ pub async fn run_send_loop(
   let state = SendLoopState::{
     sequence: initial_sequence,
     timestamp: initial_timestamp,
-    deadline: @clock.now_ms(),
+    deadline: now_ms(),
   }
   gateway.send_json(encode_speaking(ssrc~, flags=1))
   for ;; {

@@ -40,10 +40,10 @@ struct SilenceProbeSource {
 }
 
 ///|
-impl @discord.AudioSource for SilenceProbeSource with fn next_frame(self) {
+impl @voice.AudioSource for SilenceProbeSource with fn next_frame(self) {
   if self.remaining > 0 {
     self.remaining -= 1
-    Some(@discord.SILENCE_FRAME)
+    Some(@voice.SILENCE_FRAME)
   } else {
     if !self.finished {
       self.finished = true
@@ -55,7 +55,7 @@ impl @discord.AudioSource for SilenceProbeSource with fn next_frame(self) {
 
 ///|
 struct AudibleProbeSource {
-  source : @discord.OggOpusSource
+  source : @voice.OggOpusSource
   done : @aqueue.Queue[Unit]
   frames : Ref[Int32]
   mut remaining : Int32
@@ -73,7 +73,7 @@ fn AudibleProbeSource::finish(self : AudibleProbeSource) -> Unit {
 }
 
 ///|
-impl @discord.AudioSource for AudibleProbeSource with fn next_frame(self) {
+impl @voice.AudioSource for AudibleProbeSource with fn next_frame(self) {
   if self.remaining == 0 {
     self.finish()
     return None
@@ -110,7 +110,7 @@ fn BufferedProbeSource::finish(self : BufferedProbeSource) -> Unit {
 }
 
 ///|
-impl @discord.AudioSource for BufferedProbeSource with fn next_frame(self) {
+impl @voice.AudioSource for BufferedProbeSource with fn next_frame(self) {
   match self.frames.get(self.cursor) {
     Some(frame) => {
       self.cursor += 1
@@ -151,7 +151,7 @@ fn record_probe_path() -> String? {
 
 ///|
 async fn receive_peer_probe(
-  connection : @discord.VoiceConnection,
+  connection : @voice.VoiceConnection,
   required_frames : Int32,
 ) -> Array[Bytes] {
   println("[dave] receive probe waiting for peer speaking (20 second timeout)")
@@ -198,10 +198,10 @@ fn opus_frame_size_stats(frames : Array[Bytes]) -> (Int32, Int32, Int32) {
 }
 
 ///|
-async fn play_silence_probe(connection : @discord.VoiceConnection) -> Int32 {
+async fn play_silence_probe(connection : @voice.VoiceConnection) -> Int32 {
   let done : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   let source = SilenceProbeSource::{ remaining: 50, done, finished: false, }
-  connection.play((source : &@discord.AudioSource))
+  connection.play((source : &@voice.AudioSource))
   guard @async.with_timeout_opt(5_000, () => done.get()) is Some(_) else {
     raise DaveMediaFailure("timed out while sending silent Opus")
   }
@@ -210,11 +210,11 @@ async fn play_silence_probe(connection : @discord.VoiceConnection) -> Int32 {
 
 ///|
 async fn play_audible_probe(
-  connection : @discord.VoiceConnection,
+  connection : @voice.VoiceConnection,
   audio_path : String,
 ) -> Int32 {
   let audio = @fs.read_file(audio_path).binary()
-  let ogg = @discord.OggOpusSource::from_bytes(audio)
+  let ogg = @voice.OggOpusSource::from_bytes(audio)
   let done : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   let frames = Ref(0)
   let source = AudibleProbeSource::{
@@ -227,7 +227,7 @@ async fn play_audible_probe(
   println(
     "[dave] audible peer-decryption probe started (maximum three seconds)",
   )
-  connection.play((source : &@discord.AudioSource))
+  connection.play((source : &@voice.AudioSource))
   guard @async.with_timeout_opt(10_000, () => done.get()) is Some(_) else {
     raise DaveMediaFailure("timed out while sending audible Opus")
   }
@@ -239,7 +239,7 @@ async fn play_audible_probe(
 
 ///|
 async fn play_echo_probe(
-  connection : @discord.VoiceConnection,
+  connection : @voice.VoiceConnection,
   frames : Array[Bytes],
 ) -> Int32 {
   let done : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
@@ -250,7 +250,7 @@ async fn play_echo_probe(
     finished: false,
   }
   println("[dave] echoing decrypted peer Opus once (memory only)")
-  connection.play((source : &@discord.AudioSource))
+  connection.play((source : &@voice.AudioSource))
   guard @async.with_timeout_opt(5_000, () => done.get()) is Some(_) else {
     raise DaveMediaFailure("timed out while echoing peer Opus")
   }
@@ -260,7 +260,7 @@ async fn play_echo_probe(
 
 ///|
 async fn write_probe_recording(frames : Array[Bytes], path : String) -> Unit {
-  let writer = @discord.OggOpusWriter::new(channels=2)
+  let writer = @voice.OggOpusWriter::new(channels=2)
   for frame in frames {
     writer.write_frame(frame)
   }
@@ -274,6 +274,7 @@ async fn write_probe_recording(frames : Array[Bytes], path : String) -> Unit {
 ///|
 async fn run_probe(
   ctx : @discord.GatewayCtx,
+  voice : @voice.VoiceClient,
   guild_id : @model.GuildId,
   channel_id : @model.ChannelId,
 ) -> Unit {
@@ -281,7 +282,7 @@ async fn run_probe(
   let peer_seen = Ref(false)
   let activations : @aqueue.Queue[Int32] = Queue(kind=Unbounded)
   let dave_failures : Array[String] = []
-  let connection = ctx.join_voice(guild_id, channel_id, timeout_ms=20_000, telemetry=event => {
+  let connection = voice.join(ctx, guild_id, channel_id, timeout_ms=20_000, telemetry=event => {
     match event {
       GatewayEvent(SessionEstablished(dave_protocol_version~, ..)) => {
         negotiated_version.val = dave_protocol_version
@@ -414,11 +415,13 @@ async fn main {
   let app = @discord.AppBuilder()
   let intents = @model.Intents::guilds() | @model.Intents::guild_voice_states()
   let bot = @discord.BotBuilder(app.build(), token~, intents~)
+  let voice = @voice.VoiceClient()
+  voice.attach(bot)
   let completed = Ref(false)
   let failure : Ref[String?] = Ref(None)
   bot.service(name="dave-probe", ctx => {
     try {
-      run_probe(ctx, guild_id, channel_id)
+      run_probe(ctx, voice, guild_id, channel_id)
       completed.val = true
     } catch {
       error => {

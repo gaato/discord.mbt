@@ -1,7 +1,7 @@
 ///|
 /// Golden-path names that a typical bot uses directly: application
 /// declarations and handler contexts, typed arguments and components, common
-/// models, the REST client, executors, verification, and voice. Every type
+/// models, the REST client, executors, and verification. Every type
 /// these names mention is exported here too, unless it belongs to one of the
 /// focused packages below; `scripts/api_surface_audit.mbtx` keeps it so.
 ///

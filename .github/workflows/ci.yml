@@ -128,7 +128,7 @@ jobs:
         run: moon check --target js --deny-warn
 
       - name: Test native prebuild
-        run: node --test discord/test/*.test.js
+        run: node --test discord/test/*.test.js discord_voice/test/*.test.js
 
       - name: Test
         run: moon test --target js
@@ -274,7 +274,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
-      DISCORD_VOICE_SHIM_PATH: ${{ github.workspace }}/voice-shim/target/release/libdiscord_voice_shim.so
+      DISCORD_VOICE_SHIM_PATH: ${{ github.workspace }}/discord_voice/shim/target/release/libdiscord_voice_shim.so
       DISCORD_VOICE_REQUIRE_SHIM: "1"
       MBT_DAVE_REQUIRE_NATIVE: "1"
 
@@ -296,18 +296,18 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            voice-shim/target
-          key: voice-shim-ci-${{ runner.os }}-${{ hashFiles('voice-shim/Cargo.toml', 'voice-shim/Cargo.lock') }}
+            discord_voice/shim/target
+          key: voice-shim-ci-${{ runner.os }}-${{ hashFiles('discord_voice/shim/Cargo.toml', 'discord_voice/shim/Cargo.lock') }}
 
       - name: Check transport-only voice shim
-        working-directory: voice-shim
+        working-directory: discord_voice/shim
         run: |
           cargo fmt -- --check
           cargo clippy --all-targets --locked -- -D warnings
           cargo test --locked
 
       - name: Build voice shim
-        working-directory: voice-shim
+        working-directory: discord_voice/shim
         run: cargo build --release --locked
 
       - name: Install MoonBit

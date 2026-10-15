@@ -5,6 +5,7 @@
 
 import {
   "gaato/discord",
+  "gaato/discord_voice" @voice,
   "gaato/discord/model",
   "gaato/discord/http" @dhttp,
   "gaato/discord/interaction",

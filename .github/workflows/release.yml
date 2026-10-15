@@ -1,11 +1,13 @@
 name: Release
 
 # Publishes to mooncakes.io after a module's CI is green on main: gaato/discord
-# after CI, gaato/dave (dave/) after Dave. Idempotent: when the version in a
-# moon.mod is already in the registry index nothing happens, so only a version
-# bump releases (scripts/release.sh). Bump gaato/dave and publish it before a
-# gaato/discord commit imports the new version: CI resolves dependencies from
-# the registry, as consumers do. A manual run publishes both, gaato/dave first.
+# and then gaato/discord_voice after CI, gaato/dave after Dave. Idempotent:
+# when the version in a moon.mod is already in the registry index nothing
+# happens, so only a version bump releases (scripts/release.sh). Modules are
+# published in dependency order and resolve their dependencies from the
+# registry, as consumers do: a module that needs a new version of another must
+# name it in its moon.mod, and that version must be published first. A manual
+# run publishes all three: gaato/dave, gaato/discord, then gaato/discord_voice.
 
 on:
   workflow_run:
@@ -48,9 +50,9 @@ jobs:
           MOONCAKES_TOKEN: ${{ secrets.MOONCAKES_TOKEN }}
           MOONCAKES_USERNAME: ${{ secrets.MOONCAKES_USERNAME }}
           MODULES: >-
-            ${{ github.event_name == 'workflow_dispatch' && 'dave discord'
+            ${{ github.event_name == 'workflow_dispatch' && 'dave discord discord_voice'
               || github.event.workflow_run.name == 'Dave' && 'dave'
-              || 'discord' }}
+              || 'discord discord_voice' }}
         run: |
           if [ -z "$MOONCAKES_TOKEN" ]; then
             echo "MOONCAKES_TOKEN is not set; nothing published" >&2

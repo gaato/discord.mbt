@@ -8,9 +8,9 @@ repository = "https://github.com/gaato/discord.mbt"
 
 license = "Apache-2.0"
 
-keywords = [ "discord", "bot", "gateway", "api", "voice", "interactions" ]
+keywords = [ "discord", "bot", "gateway", "api", "interactions" ]
 
-description = "An experimental Discord library for MoonBit: native/JS/Wasm REST, interactions, and gateway bots; native voice with DAVE E2EE."
+description = "An experimental Discord library for MoonBit: native/JS/Wasm REST, interactions, and gateway bots. Voice is in gaato/discord_voice."
 
 source = "src"
 
@@ -27,9 +27,4 @@ import {
   "gaato/sdk-runtime@0.2.1",
   "moonbitlang/async@0.22.5",
   "hustcer/ed25519@0.6.0",
-  "gaato/dave@0.1.1",
 }
-
-options(
-  "--moonbit-unstable-prebuild": "build.js",
-)

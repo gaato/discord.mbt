@@ -1314,7 +1314,7 @@ pub fn Events::voice_channel_status_update() -> EventType[
 ///|
 /// Typed descriptor for `VOICE_SERVER_UPDATE` — voice server credentials
 /// for a pending voice connection (consumed internally by
-/// `BotCtx::join_voice`). Not gated by a gateway intent.
+/// gaato/discord_voice's `VoiceClient::join`). Not gated by a gateway intent.
 pub fn Events::voice_server_update() -> EventType[@model.VoiceServerUpdateEvent] {
   {
     kind_: KVoiceServerUpdate,

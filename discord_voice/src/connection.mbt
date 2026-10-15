@@ -12,6 +12,9 @@ pub(all) suberror VoiceError {
   Disconnected
   /// A receive or event backlog below 1 was requested.
   InvalidBacklog(value~ : Int32)
+  /// `VoiceClient::join` ran while the client's `run` (the service `attach`
+  /// registers) was not running.
+  ClientNotRunning
 } derive(Debug)
 
 ///|
@@ -500,7 +503,7 @@ async fn VoiceConnection::run_receiver(self : VoiceConnection) -> Unit noraise {
       datagram,
       cipher,
       self.dave,
-      arrival_ms=@clock.now_ms(),
+      arrival_ms=now_ms(),
       wants=user_id => self.is_subscribed(user_id),
     )
     for item in delivered {

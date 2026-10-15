@@ -20,7 +20,7 @@ set -euo pipefail
 
 # The measured library sources, as workspace-relative paths: that is how
 # `moon coverage analyze` names files at the workspace root.
-LIBRARY='^discord/src/'
+LIBRARY='^(discord|discord_voice)/src/'
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 ledger="$repo_root/TEST_COVERAGE.md"
@@ -38,14 +38,14 @@ else
   fi
   export MBT_DAVE_REQUIRE_NATIVE=1
   export DISCORD_VOICE_REQUIRE_SHIM=1
-  (cd "$repo_root/voice-shim" && cargo build --release --locked) >/dev/null || {
+  (cd "$repo_root/discord_voice/shim" && cargo build --release --locked) >/dev/null || {
     echo "error: release transport shim build failed" >&2
     exit 2
   }
   case "$(uname -s)" in
-    Linux*) shim="$repo_root/voice-shim/target/release/libdiscord_voice_shim.so" ;;
-    Darwin*) shim="$repo_root/voice-shim/target/release/libdiscord_voice_shim.dylib" ;;
-    MINGW*|MSYS*|CYGWIN*) shim="$repo_root/voice-shim/target/release/discord_voice_shim.dll" ;;
+    Linux*) shim="$repo_root/discord_voice/shim/target/release/libdiscord_voice_shim.so" ;;
+    Darwin*) shim="$repo_root/discord_voice/shim/target/release/libdiscord_voice_shim.dylib" ;;
+    MINGW*|MSYS*|CYGWIN*) shim="$repo_root/discord_voice/shim/target/release/discord_voice_shim.dll" ;;
     *)
       echo "error: unsupported coverage host: $(uname -s)" >&2
       exit 2
@@ -61,7 +61,7 @@ else
   # then fails closed if that verified library cannot be loaded at runtime.
   (cd "$repo_root" &&
     MOON_CC="${MOON_CC:-cc}" moon build --target native --release --deny-warn \
-      discord/src/voice) >/dev/null || {
+      discord_voice/src) >/dev/null || {
       echo "error: pinned libdave bootstrap/native voice build failed" >&2
       exit 2
     }

@@ -39,8 +39,10 @@ async fn main {
       let intents = @model.Intents::guilds() |
         @model.Intents::guild_voice_states()
       let bot = @discord.BotBuilder(app.build(), token~, intents~)
+      let voice = @voice.VoiceClient()
+      voice.attach(bot)
       bot.service(name="voice-recorder", ctx => {
-        let connection = ctx.join_voice(guild_id, channel_id)
+        let connection = voice.join(ctx, guild_id, channel_id)
         errdefer @async.protect_from_cancel(() => {
           connection.disconnect() catch {
             _ => ()
@@ -51,7 +53,7 @@ async fn main {
           end_after_silence_ms=Some(1000),
         )
         errdefer stream.close()
-        let audio : &@discord.AudioSource = stream
+        let audio : &@voice.AudioSource = stream
         guard audio.next_frame() is Some(first) else {
           stream.close()
           connection.disconnect()
@@ -61,7 +63,7 @@ async fn main {
         println("[voice] recording \{target_user_id} ...")
         let output = @fs.create(output_path)
         defer output.close()
-        let writer = @discord.OggOpusWriter::new(channels=2)
+        let writer = @voice.OggOpusWriter::new(channels=2)
         let mut frame_count = 1
         writer.write_frame(first)
         output.write(writer.take_output())
