@@ -436,5 +436,5 @@ async test "offline client" {
 }
 ```
 
-The [testkit](../testkit/README.mbt.md) shows the same client driving a full
+The [testkit](https://github.com/gaato/discord.mbt/blob/main/discord/src/testkit/README.mbt.md) shows the same client driving a full
 App dispatch with interaction fixtures.

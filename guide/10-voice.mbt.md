@@ -5,7 +5,7 @@ v8, Discord's DAVE end-to-end encryption, Opus playback, and per-user raw
 Opus receive. DAVE MLS and media crypto come from the native-only `gaato/dave`
 binding to Discord's official `libdave`; the repository's Rust shim handles
 RTP transport AEAD only. The accepted design and its milestones are
-documented in [`src/voice/DESIGN.md`](../voice/DESIGN.md).
+documented in [`src/voice/DESIGN.md`](https://github.com/gaato/discord.mbt/blob/main/discord/src/voice/DESIGN.md).
 
 ## Install the native dependencies
 

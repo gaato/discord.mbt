@@ -2,5 +2,6 @@ members = [
   "./discord",
   "./dave",
   "./examples",
+  "./guide",
   "./template",
 ]

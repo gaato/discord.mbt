@@ -2,8 +2,8 @@
 
 Long-form guides for building applications with discord.mbt. Every MoonBit
 code block marked `mbt check` in these chapters compiles and runs as part of
-the test suite (`moon test --target native src/guide`), so the examples cannot
-drift from the library.
+the test suite (`moon test --target native guide` from the repository root),
+so the examples cannot drift from the library.
 
 1. [Getting started](01-getting-started.mbt.md): install the module and run a
    minimal slash-command bot.

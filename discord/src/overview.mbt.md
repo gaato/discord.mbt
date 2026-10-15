@@ -18,9 +18,10 @@ typed interaction declarations.
 > **Status**: experimental. Minor releases may contain breaking changes; see the
 > [changelog](CHANGELOG.md) for migration notes.
 
-Long-form guides live in [`src/guide/`](src/guide/README.md); their code
-blocks compile and run as part of the test suite, so the examples cannot
-drift from the library. Task-focused recipes are docstring examples on the
+Long-form guides live in the repository's
+[`guide/`](https://github.com/gaato/discord.mbt/blob/main/guide/README.md);
+their code blocks compile and run as part of the test suite, so the examples
+cannot drift from the library. Task-focused recipes are docstring examples on the
 relevant symbols — look anything up with `moon ide doc` (see
 [Development](#development)).
 
@@ -249,13 +250,13 @@ three-second initial-response deadline: `Immediate` computes and returns a
 flows. Subcommands carry their own typed `Args`, autocomplete attaches
 directly to the focused argument, and context-menu commands, components, and
 typed modals route through the same App — see the
-[commands](src/guide/02-commands.mbt.md) and
-[components and modals](src/guide/03-components-modals.mbt.md) guides.
+[commands](https://github.com/gaato/discord.mbt/blob/main/guide/02-commands.mbt.md) and
+[components and modals](https://github.com/gaato/discord.mbt/blob/main/guide/03-components-modals.mbt.md) guides.
 
 `Client`, `AppBuilder`, and `BotBuilder` each accept onion-style middleware — around one
 logical REST call, around routed interaction dispatch, and around gateway
 event fan-out — plus structured telemetry callbacks. See the
-[middleware guide](src/guide/09-middleware.mbt.md).
+[middleware guide](https://github.com/gaato/discord.mbt/blob/main/guide/09-middleware.mbt.md).
 
 ### Gateway executor
 
@@ -272,7 +273,7 @@ If `intents` is omitted, `Bot` derives non-privileged intents from typed
 subscriptions; pass privileged intents (members, presences, message content)
 explicitly, and pass the full set when raw event handlers are used.
 `ctx.wait_for(...)` makes one-shot typed event observations inside a handler.
-The [events and intents guide](src/guide/04-events-intents.mbt.md) covers
+The [events and intents guide](https://github.com/gaato/discord.mbt/blob/main/guide/04-events-intents.mbt.md) covers
 descriptors, intent derivation, decode-error observers, opt-in `zlib-stream`
 compression, and the gateway-driven in-memory cache.
 
@@ -287,7 +288,7 @@ let bot = @discord.BotBuilder(app, token~, shards=Auto)
 Identify calls honor the `max_concurrency` bucket rules from
 `GET /gateway/bot`, and multi-process deployments can share Identify and REST
 limits through the bundled TCP coordinator. See the
-[scaling guide](src/guide/08-scaling-processes.mbt.md).
+[scaling guide](https://github.com/gaato/discord.mbt/blob/main/guide/08-scaling-processes.mbt.md).
 
 ### Voice (experimental)
 
@@ -300,7 +301,7 @@ official `libdave` for MLS and media encryption. The separate Rust library in
 upstream `v1.2.0/cpp`; `gaato/discord` pins transport component release
 `voice-shim-v0.1.0`. A native voice build can bootstrap and verify both
 prebuilt runtimes without installing Cargo. See the
-[voice guide](src/guide/10-voice.mbt.md) for installation and runtime limits,
+[voice guide](https://github.com/gaato/discord.mbt/blob/main/guide/10-voice.mbt.md) for installation and runtime limits,
 the `dave_probe`, `voice_player`, and `voice_recorder` examples, and the accepted design in
 [`src/voice/DESIGN.md`](src/voice/DESIGN.md).
 
@@ -342,7 +343,7 @@ Install `app.error_policy(...)` to map failures to logs or interaction
 responses; handlers raise `HandlerError` variants such as `UserMessage` or
 `MissingPermission` for expected failures, and commands accept ordered
 pre-execution checks and fixed-window cooldowns. See the
-[structuring bots guide](src/guide/07-structuring-bots.mbt.md).
+[structuring bots guide](https://github.com/gaato/discord.mbt/blob/main/guide/07-structuring-bots.mbt.md).
 
 ## HTTP interactions (experimental)
 
@@ -379,7 +380,7 @@ tested inside Cloudflare's local `workerd` runtime and supports streamed
 multipart callbacks for in-memory `FileUpload` values. On native,
 `@discord.serve_interactions(group, app, access=Token(token), addr~, public_key~)` is a
 complete signed-interactions HTTP server. See the
-[HTTP interactions guide](src/guide/06-http-interactions.mbt.md) and the
+[HTTP interactions guide](https://github.com/gaato/discord.mbt/blob/main/guide/06-http-interactions.mbt.md) and the
 `interactions_http`, `workers_echo`, `deno_echo`, `bun_echo`, and `vercel_echo`
 examples. The separate
 [Spin experiment](https://github.com/gaato/discord.mbt/blob/main/experiments/spin_interactions/README.md) uses WASIp2 and
@@ -465,7 +466,7 @@ println(id.timestamp_ms()) // 1462015105796
 Wire models use `T?` for optional fields and `Nullable[T]` for nullable
 fields; PATCH methods expose plain optional arguments with
 `clear_<field>=true` flags for clearing. See the
-[models and utilities guide](src/guide/12-models-utilities.mbt.md).
+[models and utilities guide](https://github.com/gaato/discord.mbt/blob/main/guide/12-models-utilities.mbt.md).
 
 ## REST without the gateway
 
@@ -491,21 +492,21 @@ client.guild_ref(guild_id).emoji_ref(emoji_id).edit(name="renamed") |> ignore
 
 Validation failures raise before any I/O, request failures use
 `DiscordHttpError`, and list endpoints expose stateful `Paginator[T]` values.
-The [REST guide](src/guide/05-rest.mbt.md) covers the full ref surface,
+The [REST guide](https://github.com/gaato/discord.mbt/blob/main/guide/05-rest.mbt.md) covers the full ref surface,
 allowed mentions, file uploads, pagination, and custom routes.
 
 Also in the box, each with its guide chapter:
 
 - an opt-in, gateway-driven in-memory cache —
-  [events and intents](src/guide/04-events-intents.mbt.md);
+  [events and intents](https://github.com/gaato/discord.mbt/blob/main/guide/04-events-intents.mbt.md);
 - pure helpers for permissions, mentions, timestamps, and CDN URLs —
-  [models and utilities](src/guide/12-models-utilities.mbt.md);
+  [models and utilities](https://github.com/gaato/discord.mbt/blob/main/guide/12-models-utilities.mbt.md);
 - structured REST, gateway, and dispatch telemetry —
-  [middleware](src/guide/09-middleware.mbt.md);
+  [middleware](https://github.com/gaato/discord.mbt/blob/main/guide/09-middleware.mbt.md);
 - a feature-installer convention for structuring larger bots —
-  [structuring bots](src/guide/07-structuring-bots.mbt.md);
+  [structuring bots](https://github.com/gaato/discord.mbt/blob/main/guide/07-structuring-bots.mbt.md);
 - the interaction router, response gates, and no-network handler testing
-  under `App` — [the framework layer](src/guide/11-framework.mbt.md).
+  under `App` — [the framework layer](https://github.com/gaato/discord.mbt/blob/main/guide/11-framework.mbt.md).
 
 ## Development
 
@@ -550,7 +551,7 @@ review its diff when checking API drift.
 
 Every MoonBit code block in this README has a compiled twin in
 `src/readme_native_test.mbt`, and code blocks marked `mbt check` in the
-[guides](src/guide/README.md) and in docstrings compile and run as part of
+[guides](https://github.com/gaato/discord.mbt/blob/main/guide/README.md) and in docstrings compile and run as part of
 the test suite.
 
 ## License
