@@ -1,7 +1,5 @@
 name = "gaato/discord_voice"
 
-// Not published yet; the first release's version is still to be decided.
-
 version = "0.1.0"
 
 readme = "README.md"

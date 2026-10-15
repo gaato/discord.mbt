@@ -12,7 +12,7 @@ is a MoonBit workspace; each directory below is a module.
 | Directory | Module | Contents |
 | --- | --- | --- |
 | [`discord/`](discord/README.md) | [`gaato/discord`](https://mooncakes.io/docs/gaato/discord) | REST, interactions, and gateway bots |
-| [`discord_voice/`](discord_voice/README.md) | `gaato/discord_voice` | Voice for `gaato/discord` bots (native) |
+| [`discord_voice/`](discord_voice/README.md) | [`gaato/discord_voice`](https://mooncakes.io/docs/gaato/discord_voice) | Voice for `gaato/discord` bots (native) |
 | [`dave/`](dave/README.mbt.md) | [`gaato/dave`](https://mooncakes.io/docs/gaato/dave) | Bindings to Discord's `libdave` for DAVE end-to-end encryption |
 | [`examples/`](examples) | (not published) | Runnable bots and JavaScript host adapters |
 | [`guide/`](guide/README.md) | (not published) | Long-form guides whose code is tested |
