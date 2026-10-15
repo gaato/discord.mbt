@@ -4,6 +4,8 @@ name = "local/discord_examples"
 
 version = "0.0.0"
 
+private = true
+
 license = "Apache-2.0"
 
 preferred_target = "native"
