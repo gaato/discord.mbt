@@ -37,8 +37,9 @@ original wire form, unknown parts included.
 These enums are also `#non_exhaustive`, so a later release can turn a value
 that arrives as `Unknown(...)` today into its own constructor without
 breaking your code. A `match` outside the library that lists every
-constructor ends with a `Type::..` arm for those future constructors; a
-`match` that already ends with `_` needs nothing more:
+constructor ends with a `Type::..` arm for those future constructors. A `_`
+there would be reported as unused, since it does not stand for future
+constructors; a `_` that still covers some current constructors is enough:
 
 ```mbt check
 ///|

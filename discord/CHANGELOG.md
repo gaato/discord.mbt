@@ -36,8 +36,10 @@ breaking change is listed with a migration note.
   - Migration: a `match` outside this module that lists every constructor of
     one of these enums needs a last arm `Type::..`, for example
     `@model.InteractionType::.. => ...`; it can share an arm with
-    `Unknown(_)`. A `match` that already ends with `_` or a binding needs no
-    change.
+    `Unknown(_)`. A `_` or binding arm after every constructor is reported as
+    unused, because it does not stand for future constructors: replace it
+    with `Type::..`. A `match` whose `_` or binding arm still covers some
+    constructors needs no change.
 - **Voice moved to its own module, `gaato/discord_voice`.** The
   `gaato/discord/voice` package, `GatewayCtx::join_voice`, and the native
   facade re-exports (`VoiceConnection`, `VoiceEvent`, `VoiceError`,
