@@ -371,21 +371,18 @@ test "RTP extension stripping skips the extension body or reports truncation" {
   let base = build_rtp_header(sequence=1, timestamp=0U, ssrc=1U)
   let plain = base + b"opus"
   assert_eq(
-    rtp_payload_without_extension(parse_rtp_packet(plain), plain),
+    rtp_payload_without_extension(parse_rtp_packet(plain)),
     Some(b"opus"),
   )
   let with_csrc = b"\x91" +
     base[1:].to_owned() +
     b"\x00\x00\x00\x09\xBE\xDE\x00\x01\x12\x34\x56\x78opus"
   assert_eq(
-    rtp_payload_without_extension(parse_rtp_packet(with_csrc), with_csrc),
+    rtp_payload_without_extension(parse_rtp_packet(with_csrc)),
     Some(b"opus"),
   )
   let truncated = b"\x90" +
     base[1:].to_owned() +
     b"\xBE\xDE\x00\x02\x12\x34\x56\x78"
-  assert_eq(
-    rtp_payload_without_extension(parse_rtp_packet(truncated), truncated),
-    None,
-  )
+  assert_eq(rtp_payload_without_extension(parse_rtp_packet(truncated)), None)
 }

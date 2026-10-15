@@ -61,14 +61,6 @@ pub fn build_ip_discovery_request(ssrc : UInt32) -> Bytes {
 }
 
 ///|
-fn read_u32_be(bytes : Bytes, offset : Int32) -> UInt32 {
-  (bytes[offset].to_uint() << 24) |
-  (bytes[offset + 1].to_uint() << 16) |
-  (bytes[offset + 2].to_uint() << 8) |
-  bytes[offset + 3].to_uint()
-}
-
-///|
 /// Parse Discord's 74-byte voice IP discovery response.
 pub fn parse_ip_discovery_response(
   bytes : Bytes,
@@ -77,19 +69,19 @@ pub fn parse_ip_discovery_response(
   if bytes.length() != 74 {
     raise InvalidDiscoveryPacket(reason="response must contain 74 bytes")
   }
-  let packet_type = (bytes[0].to_int() << 8) | bytes[1].to_int()
-  let payload_length = (bytes[2].to_int() << 8) | bytes[3].to_int()
-  if packet_type != 2 || payload_length != 70 {
+  // type, length, SSRC, NUL-padded address, port
+  guard bytes
+    is [u16be(2), u16be(70), u32be(ssrc), .. address_field, u16be(port)] else {
     raise InvalidDiscoveryPacket(
       reason="expected discovery response type 2 with length 70",
     )
   }
-  if read_u32_be(bytes, 4) != expected_ssrc {
+  if ssrc != expected_ssrc {
     raise InvalidDiscoveryPacket(reason="response SSRC does not match request")
   }
   let mut terminator = -1
-  for index in 8..<72 {
-    if bytes[index] == 0 {
+  for index in 0..<address_field.length() {
+    if address_field[index] == 0 {
       terminator = index
       break
     }
@@ -99,14 +91,13 @@ pub fn parse_ip_discovery_response(
       reason="response address is not NUL terminated",
     )
   }
-  let address = @utf8.decode(bytes[8:terminator]) catch {
+  let address = @utf8.decode(address_field[:terminator]) catch {
     _ => raise InvalidDiscoveryPacket(reason="response address is not UTF-8")
   }
   if address.is_empty() {
     raise InvalidDiscoveryPacket(reason="response address is empty")
   }
-  let port = (bytes[72].to_int() << 8) | bytes[73].to_int()
-  (address, port)
+  (address, port.reinterpret_as_int())
 }
 
 ///|

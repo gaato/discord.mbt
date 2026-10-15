@@ -41,12 +41,25 @@ pub fn build_rtp_header(
 ///|
 /// Return the cleartext RTP header length used as AEAD associated data.
 pub fn rtpsize_header_len(bytes : Bytes) -> Int32 {
-  if bytes.length() < 12 {
-    return 0
+  // version, padding, extension, CSRC count | marker + payload type,
+  // sequence, timestamp, SSRC
+  match bytes {
+    [
+      u2be(_),
+      u1be(_),
+      u1be(extension),
+      u4be(csrc_count),
+      u8be(_),
+      u16be(_),
+      u32be(_),
+      u32be(_),
+      ..,
+    ] =>
+      12 +
+      csrc_count.reinterpret_as_int() * 4 +
+      extension.reinterpret_as_int() * 4
+    _ => 0
   }
-  let csrc_count = (bytes[0].to_int() & 0x0f) * 4
-  let extension_header = if (bytes[0].to_int() & 0x10) != 0 { 4 } else { 0 }
-  12 + csrc_count + extension_header
 }
 
 ///|
@@ -55,18 +68,16 @@ pub fn parse_rtp_packet(bytes : Bytes) -> RtpPacket raise RtpError {
   if bytes.length() < 12 {
     raise InvalidRtpPacket(reason="RTP packet is shorter than 12 bytes")
   }
-  if bytes[0].to_int() >> 6 != 2 {
+  guard bytes
+    is [u2be(2), u14be(_), u16be(sequence), u32be(timestamp), u32be(ssrc), ..] else {
     raise InvalidRtpPacket(reason="RTP version is not 2")
   }
   let header_len = rtpsize_header_len(bytes)
-  if header_len == 0 || header_len > bytes.length() {
+  if header_len > bytes.length() {
     raise InvalidRtpPacket(reason="RTP CSRC or extension header is truncated")
   }
-  let sequence = (bytes[2].to_uint16() << 8) | bytes[3].to_uint16()
-  let timestamp = read_u32_be(bytes, 4)
-  let ssrc = read_u32_be(bytes, 8)
   {
-    sequence,
+    sequence: sequence.to_uint16(),
     timestamp,
     ssrc,
     header_len,

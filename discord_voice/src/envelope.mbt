@@ -229,23 +229,21 @@ pub fn parse_text_frame(
 pub fn parse_binary_frame(
   bytes : Bytes,
 ) -> (VoiceMessage, Int32?) raise VoiceEnvelopeError {
-  if bytes.length() < 3 {
+  guard bytes is [u16be(seq), u8be(op), .. payload] else {
     raise InvalidBinaryFrame(reason="frame is shorter than sequence and opcode")
   }
-  let seq = (bytes[0].to_int() << 8) | bytes[1].to_int()
-  let op = bytes[2].to_int()
-  let payload = bytes[3:].to_owned()
+  let op = op.reinterpret_as_int()
   let message = match op {
-    25 => DaveMlsExternalSender(payload~)
-    27 => DaveMlsProposals(payload~)
+    25 => DaveMlsExternalSender(payload=payload.to_owned())
+    27 => DaveMlsProposals(payload=payload.to_owned())
     29 | 30 => {
-      if payload.length() < 2 {
+      guard payload is [u16be(transition_id), .. mls_message] else {
         raise InvalidBinaryFrame(
           reason="opcode \{op} payload is missing transition_id",
         )
       }
-      let transition_id = (payload[0].to_int() << 8) | payload[1].to_int()
-      let mls_message = payload[2:].to_owned()
+      let transition_id = transition_id.reinterpret_as_int()
+      let mls_message = mls_message.to_owned()
       if op == 29 {
         DaveMlsAnnounceCommitTransition(transition_id~, commit=mls_message)
       } else {
@@ -254,7 +252,7 @@ pub fn parse_binary_frame(
     }
     other => Unknown(op=other)
   }
-  (message, Some(seq))
+  (message, Some(seq.reinterpret_as_int()))
 }
 
 ///|

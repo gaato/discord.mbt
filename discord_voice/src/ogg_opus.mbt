@@ -33,14 +33,6 @@ fn ogg_page_crc(page : ArrayView[Byte]) -> UInt32 {
 }
 
 ///|
-fn read_array_u32_le(bytes : Array[Byte], offset : Int32) -> UInt32 {
-  bytes[offset].to_uint() |
-  (bytes[offset + 1].to_uint() << 8) |
-  (bytes[offset + 2].to_uint() << 16) |
-  (bytes[offset + 3].to_uint() << 24)
-}
-
-///|
 /// Streaming Ogg packet reassembler. Feed arbitrary chunks with `push`, then
 /// pull complete packets with `next_packet`.
 pub struct OggPacketReader {
@@ -97,16 +89,33 @@ fn OggPacketReader::parse_page(
     return false
   }
   let start = self.cursor
-  if self.buffer[start] != b'O' ||
-    self.buffer[start + 1] != b'g' ||
-    self.buffer[start + 2] != b'g' ||
-    self.buffer[start + 3] != b'S' {
-    raise InvalidOggPage(reason="missing OggS capture pattern")
+  // "OggS", version, header type (continuation is the low bit), granule
+  // position, serial, page sequence, CRC, segment count
+  let (continued, serial, page_sequence, expected_crc, segment_count) = match
+    self.buffer[start:] {
+    [
+      u32be(0x4F676753),
+      u8be(0),
+      u7be(_),
+      u1be(continued),
+      u64le(_),
+      u32le(serial),
+      u32le(page_sequence),
+      u32le(crc),
+      u8be(segment_count),
+      ..,
+    ] =>
+      (
+        continued == 1,
+        serial,
+        page_sequence,
+        crc,
+        segment_count.reinterpret_as_int(),
+      )
+    [u32be(0x4F676753), ..] =>
+      raise InvalidOggPage(reason="unsupported Ogg bitstream version")
+    _ => raise InvalidOggPage(reason="missing OggS capture pattern")
   }
-  if self.buffer[start + 4] != 0 {
-    raise InvalidOggPage(reason="unsupported Ogg bitstream version")
-  }
-  let segment_count = self.buffer[start + 26].to_int()
   if available < 27 + segment_count {
     return false
   }
@@ -119,13 +128,10 @@ fn OggPacketReader::parse_page(
     return false
   }
   let page = self.buffer[start:start + page_length]
-  let expected_crc = read_array_u32_le(self.buffer, start + 22)
   if ogg_page_crc(page) != expected_crc {
     raise InvalidOggPage(reason="Ogg page CRC mismatch")
   }
 
-  let serial = read_array_u32_le(self.buffer, start + 14)
-  let page_sequence = read_array_u32_le(self.buffer, start + 18)
   match self.stream_serial {
     None => self.stream_serial = Some(serial)
     Some(expected) if expected != serial =>
@@ -142,7 +148,6 @@ fn OggPacketReader::parse_page(
   }
   self.expected_page_sequence = Some(page_sequence + 1)
 
-  let continued = (self.buffer[start + 5].to_int() & 0x01) != 0
   if continued && self.partial_packet.is_empty() {
     raise InvalidOggPage(reason="continued page has no preceding packet")
   }
@@ -191,11 +196,6 @@ fn OggPacketReader::has_incomplete_input(self : OggPacketReader) -> Bool {
 }
 
 ///|
-fn has_magic(bytes : Bytes, magic : Bytes) -> Bool {
-  bytes.length() >= magic.length() && bytes[:magic.length()] == magic
-}
-
-///|
 /// In-memory Ogg/Opus source. Opus packets must already represent 20 ms audio
 /// frames; this demuxer does not decode or resample them.
 pub struct OggOpusSource {
@@ -213,24 +213,35 @@ fn validate_opus_headers(
   guard head is Some(head) else {
     raise InvalidOpusStream(reason="missing OpusHead packet")
   }
-  if !has_magic(head, b"OpusHead") || head.length() < 19 {
+  // "OpusHead", version, channels, pre-skip, input sample rate, output
+  // gain, channel mapping family
+  guard head
+    is [
+      u64be(0x4F70757348656164),
+      u8be(version),
+      u8be(channels),
+      u16le(pre_skip),
+      u32le(_),
+      u16le(_),
+      u8be(_),
+      ..,
+    ] else {
     raise InvalidOpusStream(reason="invalid OpusHead packet")
   }
-  if head[8] != 1 {
+  if version != 1 {
     raise InvalidOpusStream(reason="unsupported OpusHead version")
   }
-  let channels = head[9].to_int()
   if channels == 0 {
     raise InvalidOpusStream(reason="OpusHead channel count is zero")
   }
-  let pre_skip = head[10].to_int() | (head[11].to_int() << 8)
   guard tags is Some(tags) else {
     raise InvalidOpusStream(reason="missing OpusTags packet")
   }
-  if !has_magic(tags, b"OpusTags") {
+  // "OpusTags"
+  if !(tags is [u64be(0x4F70757354616773), ..]) {
     raise InvalidOpusStream(reason="invalid OpusTags packet")
   }
-  (channels, pre_skip)
+  (channels.reinterpret_as_int(), pre_skip.reinterpret_as_int())
 }
 
 ///|
