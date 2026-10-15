@@ -350,7 +350,7 @@ pub async fn Framework::process_with(
       }
       false
     }
-    Unknown(_) => false
+    Unknown(_) | @model.InteractionType::.. => false
   }
 }
 

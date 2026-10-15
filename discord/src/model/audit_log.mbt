@@ -33,6 +33,7 @@ pub(all) struct AuditLogChange {
 
 ///|
 /// The action category recorded by a guild audit log.
+#non_exhaustive
 pub(all) enum AuditLogEvent {
   GuildUpdate
   ChannelCreate

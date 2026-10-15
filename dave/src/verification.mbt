@@ -19,21 +19,27 @@ fn write_five_digits(output : StringBuilder, value : UInt64) -> Unit {
 pub fn pairwise_verification_code(
   fingerprint : Bytes,
 ) -> String raise DaveError {
-  if fingerprint.length() < 45 {
+  guard fingerprint
+    is [
+      u40be(g1),
+      u40be(g2),
+      u40be(g3),
+      u40be(g4),
+      u40be(g5),
+      u40be(g6),
+      u40be(g7),
+      u40be(g8),
+      u40be(g9),
+      ..,
+    ] else {
     raise InvalidArgument(
       operation="pairwise_verification_code",
       reason="a verification fingerprint must contain at least 45 bytes",
     )
   }
   let output = StringBuilder()
-  for group in 0..<9 {
-    let offset = group * 5
-    let value = (fingerprint[offset].to_uint64() << 32) |
-      (fingerprint[offset + 1].to_uint64() << 24) |
-      (fingerprint[offset + 2].to_uint64() << 16) |
-      (fingerprint[offset + 3].to_uint64() << 8) |
-      fingerprint[offset + 4].to_uint64()
-    write_five_digits(output, value % 100000UL)
+  for group in [g1, g2, g3, g4, g5, g6, g7, g8, g9] {
+    write_five_digits(output, group % 100000UL)
   }
   output.to_string()
 }

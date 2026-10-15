@@ -56,6 +56,7 @@ pub(all) struct GuildScheduledEventRecurrenceRuleNWeekday {
 
 ///|
 /// The base period used by a scheduled-event recurrence rule.
+#non_exhaustive
 pub(all) enum GuildScheduledEventRecurrenceRuleFrequency {
   Yearly
   Monthly
@@ -261,6 +262,7 @@ pub impl @json.FromJson for GuildScheduledEventRecurrenceRuleMonth with fn from_
 
 ///|
 /// The audience allowed to access a scheduled event.
+#non_exhaustive
 pub(all) enum GuildScheduledEventPrivacyLevel {
   GuildOnly
   Unknown(Int32)
@@ -310,6 +312,7 @@ pub impl @json.FromJson for GuildScheduledEventPrivacyLevel with fn from_json(
 
 ///|
 /// The lifecycle state of a scheduled event.
+#non_exhaustive
 pub(all) enum GuildScheduledEventStatus {
   Scheduled
   Active
@@ -365,6 +368,7 @@ pub impl @json.FromJson for GuildScheduledEventStatus with fn from_json(
 
 ///|
 /// The hosting entity used by a scheduled event.
+#non_exhaustive
 pub(all) enum GuildScheduledEventEntityType {
   StageInstance
   Voice

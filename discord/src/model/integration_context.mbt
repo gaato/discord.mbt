@@ -1,5 +1,6 @@
 ///|
 /// Where an application command is installed.
+#non_exhaustive
 pub(all) enum ApplicationIntegrationType {
   GuildInstall
   UserInstall
@@ -49,6 +50,7 @@ pub impl @json.FromJson for ApplicationIntegrationType with fn from_json(
 
 ///|
 /// Where an interaction was triggered.
+#non_exhaustive
 pub(all) enum InteractionContextType {
   Guild
   BotDm

@@ -71,6 +71,7 @@ pub(all) struct CurrentUserGuild {
 
 ///|
 /// Discord's guild verification level.
+#non_exhaustive
 pub(all) enum VerificationLevel {
   None
   Low
@@ -122,6 +123,7 @@ pub impl @json.FromJson for VerificationLevel with fn from_json(json, path) {
 
 ///|
 /// Discord's default message notification level.
+#non_exhaustive
 pub(all) enum DefaultMessageNotifications {
   AllMessages
   OnlyMentions
@@ -171,6 +173,7 @@ pub impl @json.FromJson for DefaultMessageNotifications with fn from_json(
 
 ///|
 /// Discord's explicit content filter level.
+#non_exhaustive
 pub(all) enum ExplicitContentFilter {
   Disabled
   MembersWithoutRoles
@@ -216,6 +219,7 @@ pub impl @json.FromJson for ExplicitContentFilter with fn from_json(json, path) 
 
 ///|
 /// Discord's guild MFA level.
+#non_exhaustive
 pub(all) enum MfaLevel {
   None
   Elevated
@@ -255,6 +259,7 @@ pub impl @json.FromJson for MfaLevel with fn from_json(json, path) {
 
 ///|
 /// Discord's guild premium tier.
+#non_exhaustive
 pub(all) enum PremiumTier {
   None
   Tier1
@@ -300,6 +305,7 @@ pub impl @json.FromJson for PremiumTier with fn from_json(json, path) {
 
 ///|
 /// Discord's guild NSFW level.
+#non_exhaustive
 pub(all) enum NsfwLevel {
   Default
   Explicit
@@ -345,6 +351,7 @@ pub impl @json.FromJson for NsfwLevel with fn from_json(json, path) {
 
 ///|
 /// A capability enabled for a Discord guild.
+#non_exhaustive
 pub(all) enum GuildFeature {
   AnimatedBanner
   AnimatedIcon

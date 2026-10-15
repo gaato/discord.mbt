@@ -11,6 +11,7 @@ pub(all) struct StageInstance {
 
 ///|
 /// The audience allowed to discover a stage instance.
+#non_exhaustive
 pub(all) enum StagePrivacyLevel {
   Public
   GuildOnly

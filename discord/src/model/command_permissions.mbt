@@ -12,6 +12,7 @@ pub(all) struct ApplicationCommandPermission {
 
 ///|
 /// The target kind of an application-command permission override.
+#non_exhaustive
 pub(all) enum ApplicationCommandPermissionType {
   Role
   User

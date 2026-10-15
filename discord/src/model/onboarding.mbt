@@ -40,6 +40,7 @@ pub(all) struct OnboardingPromptOption {
 
 ///|
 /// The input control used by an onboarding prompt.
+#non_exhaustive
 pub(all) enum OnboardingPromptType {
   MultipleChoice
   Dropdown
@@ -80,6 +81,7 @@ pub impl @json.FromJson for OnboardingPromptType with fn from_json(json, path) {
 
 ///|
 /// How extensively onboarding is configured for a guild.
+#non_exhaustive
 pub(all) enum OnboardingMode {
   Default
   Advanced

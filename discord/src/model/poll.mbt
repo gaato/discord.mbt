@@ -81,6 +81,7 @@ pub impl ToJson for PollCreateRequest with fn to_json(self) {
 
 ///|
 /// The presentation layout used by a poll.
+#non_exhaustive
 pub(all) enum PollLayoutType {
   Default
   Unknown(Int32)

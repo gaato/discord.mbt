@@ -19,6 +19,7 @@ pub(all) struct ActivityLocation {
 
 ///|
 /// The channel context hosting an application activity instance.
+#non_exhaustive
 pub(all) enum ActivityLocationKind {
   GuildChannel
   PrivateChannel

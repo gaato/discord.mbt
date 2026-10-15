@@ -68,6 +68,7 @@ pub(all) struct ApplicationIntegrationTypeConfiguration {
 ///|
 /// Whether Discord delivers event webhooks to the application;
 /// `DisabledByDiscord` means delivery was deactivated for inactivity.
+#non_exhaustive
 pub(all) enum ApplicationEventWebhookStatus {
   Disabled
   Enabled

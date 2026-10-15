@@ -1,5 +1,6 @@
 ///|
 /// The operation whose handler failed.
+#non_exhaustive
 pub(all) enum FailureOrigin {
   Command(name~ : String)
   Autocomplete(name~ : String)

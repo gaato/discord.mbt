@@ -128,6 +128,7 @@ pub(all) struct ActivityLocation {
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn ActivityLocation::to_json(Self) -> Json
 
+#non_exhaustive
 pub(all) enum ActivityLocationKind {
   GuildChannel
   PrivateChannel
@@ -162,6 +163,7 @@ pub impl @json.FromJson for ActivityTimestamps
 
 type ActivityTimestampsWire derive(@json.FromJson)
 
+#non_exhaustive
 pub(all) enum ActivityType {
   Playing
   Streaming
@@ -271,6 +273,7 @@ pub(all) struct ApplicationCommandPermission {
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn ApplicationCommandPermission::to_json(Self) -> Json
 
+#non_exhaustive
 pub(all) enum ApplicationCommandPermissionType {
   Role
   User
@@ -283,6 +286,7 @@ pub fn ApplicationCommandPermissionType::to_json(Self) -> Json
 pub impl ToJson for ApplicationCommandPermissionType
 pub impl @json.FromJson for ApplicationCommandPermissionType
 
+#non_exhaustive
 pub(all) enum ApplicationCommandType {
   ChatInput
   User
@@ -301,6 +305,7 @@ pub(all) struct ApplicationDeauthorizedEvent {
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn ApplicationDeauthorizedEvent::to_json(Self) -> Json
 
+#non_exhaustive
 pub(all) enum ApplicationEventWebhookStatus {
   Disabled
   Enabled
@@ -349,6 +354,7 @@ pub(all) struct ApplicationIdentity {
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn ApplicationIdentity::to_json(Self) -> Json
 
+#non_exhaustive
 pub(all) enum ApplicationIdentityDynamicField {
   StringField(ApplicationIdentityDynamicStringField)
   NumberField(ApplicationIdentityDynamicNumberField)
@@ -417,6 +423,7 @@ pub(all) struct ApplicationIdentityProfileMedia {
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn ApplicationIdentityProfileMedia::to_json(Self) -> Json
 
+#non_exhaustive
 pub(all) enum ApplicationIntegrationType {
   GuildInstall
   UserInstall
@@ -453,6 +460,7 @@ pub(all) struct ApplicationRoleConnectionMetadata {
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn ApplicationRoleConnectionMetadata::to_json(Self) -> Json
 
+#non_exhaustive
 pub(all) enum ApplicationRoleConnectionMetadataType {
   IntegerLessThanOrEqual
   IntegerGreaterThanOrEqual
@@ -565,6 +573,7 @@ pub fn AuditLogEntry::to_json(Self) -> Json
 pub enum AuditLogEntryMarker {
 }
 
+#non_exhaustive
 pub(all) enum AuditLogEvent {
   GuildUpdate
   ChannelCreate
@@ -672,6 +681,7 @@ pub(all) struct AutoModerationActionExecutionEvent {
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn AutoModerationActionExecutionEvent::to_json(Self) -> Json
 
+#non_exhaustive
 pub(all) enum AutoModerationActionType {
   BlockMessage
   SendAlertMessage
@@ -685,6 +695,7 @@ pub fn AutoModerationActionType::to_json(Self) -> Json
 pub impl ToJson for AutoModerationActionType
 pub impl @json.FromJson for AutoModerationActionType
 
+#non_exhaustive
 pub(all) enum AutoModerationEventType {
   MessageSend
   MemberUpdate
@@ -696,6 +707,7 @@ pub fn AutoModerationEventType::to_json(Self) -> Json
 pub impl ToJson for AutoModerationEventType
 pub impl @json.FromJson for AutoModerationEventType
 
+#non_exhaustive
 pub(all) enum AutoModerationKeywordPresetType {
   Profanity
   SexualContent
@@ -726,6 +738,7 @@ pub fn AutoModerationRule::to_json(Self) -> Json
 pub enum AutoModerationRuleMarker {
 }
 
+#non_exhaustive
 pub(all) enum AutoModerationTriggerType {
   Keyword
   Spam
@@ -763,6 +776,7 @@ pub(all) struct AvatarDecorationData {
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn AvatarDecorationData::to_json(Self) -> Json
 
+#non_exhaustive
 pub(all) enum BaseTheme {
   Unset
   Dark
@@ -795,6 +809,7 @@ pub(all) struct Button {
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn Button::to_json(Self) -> Json
 
+#non_exhaustive
 pub(all) enum ButtonStyle {
   Primary
   Secondary
@@ -911,6 +926,7 @@ pub(all) struct ChannelPinsUpdateEvent {
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn ChannelPinsUpdateEvent::to_json(Self) -> Json
 
+#non_exhaustive
 pub(all) enum ChannelType {
   GuildText
   Dm
@@ -1014,6 +1030,7 @@ pub(all) struct CommandOptionChoice {
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn CommandOptionChoice::to_json(Self) -> Json
 
+#non_exhaustive
 pub(all) enum CommandOptionType {
   SubCommand
   SubCommandGroup
@@ -1037,6 +1054,7 @@ pub impl @json.FromJson for CommandOptionType
 pub enum CommandVersionMarker {
 }
 
+#non_exhaustive
 pub(all) enum Component {
   ActionRow(ActionRow)
   Button(Button)
@@ -1086,6 +1104,7 @@ pub(all) struct Connection {
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn Connection::to_json(Self) -> Json
 
+#non_exhaustive
 pub(all) enum ConnectionService {
   AmazonMusic
   BattleNet
@@ -1142,6 +1161,7 @@ pub(all) struct CurrentUserGuild {
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn CurrentUserGuild::to_json(Self) -> Json
 
+#non_exhaustive
 pub(all) enum DefaultMessageNotifications {
   AllMessages
   OnlyMentions
@@ -1237,6 +1257,7 @@ pub(all) struct EmbedThumbnail {
 pub fn EmbedThumbnail::EmbedThumbnail(String) -> Self
 pub fn EmbedThumbnail::to_json(Self) -> Json
 
+#non_exhaustive
 pub(all) enum EmbedType {
   Rich
   Image
@@ -1295,6 +1316,7 @@ pub fn Entitlement::to_json(Self) -> Json
 pub enum EntitlementMarker {
 }
 
+#non_exhaustive
 pub(all) enum EntitlementOwnerType {
   Guild
   User
@@ -1306,6 +1328,7 @@ pub fn EntitlementOwnerType::to_json(Self) -> Json
 pub impl ToJson for EntitlementOwnerType
 pub impl @json.FromJson for EntitlementOwnerType
 
+#non_exhaustive
 pub(all) enum EntitlementType {
   Purchase
   PremiumSubscription
@@ -1328,6 +1351,7 @@ pub(all) struct EntityMetadata {
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn EntityMetadata::to_json(Self) -> Json
 
+#non_exhaustive
 pub(all) enum EntryPointCommandHandlerType {
   AppHandler
   DiscordLaunchActivity
@@ -1339,6 +1363,7 @@ pub fn EntryPointCommandHandlerType::to_json(Self) -> Json
 pub impl ToJson for EntryPointCommandHandlerType
 pub impl @json.FromJson for EntryPointCommandHandlerType
 
+#non_exhaustive
 pub(all) enum Event {
   ApplicationCommandPermissionsUpdate(GuildApplicationCommandPermissions)
   AutoModerationActionExecution(AutoModerationActionExecutionEvent)
@@ -1422,6 +1447,7 @@ pub(all) enum Event {
   Unknown(t~ : String, d~ : Json)
 } derive(@debug.Debug)
 
+#non_exhaustive
 pub(all) enum EventKind {
   KApplicationCommandPermissionsUpdate
   KAutoModerationActionExecution
@@ -1507,6 +1533,7 @@ pub(all) enum EventKind {
 pub fn EventKind::of_name(String) -> Self
 pub fn EventKind::required_intents(Self) -> Intents
 
+#non_exhaustive
 pub(all) enum ExplicitContentFilter {
   Disabled
   MembersWithoutRoles
@@ -1528,6 +1555,7 @@ pub(all) struct FileComponent {
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn FileComponent::to_json(Self) -> Json
 
+#non_exhaustive
 pub(all) enum FileTypeFilter {
   Image
   Video
@@ -1558,6 +1586,7 @@ pub(all) struct FollowedChannel {
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn FollowedChannel::to_json(Self) -> Json
 
+#non_exhaustive
 pub(all) enum ForumLayoutType {
   NotSet
   ListView
@@ -1630,6 +1659,7 @@ pub impl BitOr for GatewayCapabilities
 pub impl ToJson for GatewayCapabilities
 pub impl @debug.Debug for GatewayCapabilities
 
+#non_exhaustive
 pub(all) enum GatewayOpcode {
   Dispatch
   Heartbeat
@@ -1743,6 +1773,7 @@ pub(all) struct GuildEmojisUpdateEvent {
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn GuildEmojisUpdateEvent::to_json(Self) -> Json
 
+#non_exhaustive
 pub(all) enum GuildFeature {
   AnimatedBanner
   AnimatedIcon
@@ -1956,6 +1987,7 @@ pub(all) struct GuildScheduledEvent {
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn GuildScheduledEvent::to_json(Self) -> Json
 
+#non_exhaustive
 pub(all) enum GuildScheduledEventEntityType {
   StageInstance
   Voice
@@ -1968,6 +2000,7 @@ pub fn GuildScheduledEventEntityType::to_json(Self) -> Json
 pub impl ToJson for GuildScheduledEventEntityType
 pub impl @json.FromJson for GuildScheduledEventEntityType
 
+#non_exhaustive
 pub(all) enum GuildScheduledEventPrivacyLevel {
   GuildOnly
   Unknown(Int)
@@ -1992,6 +2025,7 @@ pub(all) struct GuildScheduledEventRecurrenceRule {
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn GuildScheduledEventRecurrenceRule::to_json(Self) -> Json
 
+#non_exhaustive
 pub(all) enum GuildScheduledEventRecurrenceRuleFrequency {
   Yearly
   Monthly
@@ -2048,6 +2082,7 @@ pub fn GuildScheduledEventRecurrenceRuleWeekday::to_json(Self) -> Json
 pub impl ToJson for GuildScheduledEventRecurrenceRuleWeekday
 pub impl @json.FromJson for GuildScheduledEventRecurrenceRuleWeekday
 
+#non_exhaustive
 pub(all) enum GuildScheduledEventStatus {
   Scheduled
   Active
@@ -2293,6 +2328,7 @@ pub(all) struct IntegrationEvent {
 } derive(@debug.Debug)
 pub impl @json.FromJson for IntegrationEvent
 
+#non_exhaustive
 pub(all) enum IntegrationExpireBehavior {
   RemoveRole
   Kick
@@ -2394,6 +2430,7 @@ pub(all) struct InteractionCallbackResponse {
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn InteractionCallbackResponse::to_json(Self) -> Json
 
+#non_exhaustive
 pub(all) enum InteractionContextType {
   Guild
   BotDm
@@ -2406,6 +2443,7 @@ pub fn InteractionContextType::to_json(Self) -> Json
 pub impl ToJson for InteractionContextType
 pub impl @json.FromJson for InteractionContextType
 
+#non_exhaustive
 pub(all) enum InteractionData {
   Command(CommandData)
   Component(ComponentData)
@@ -2424,6 +2462,7 @@ pub(all) struct InteractionResponse {
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn InteractionResponse::to_json(Self) -> Json
 
+#non_exhaustive
 pub(all) enum InteractionResponseType {
   Pong
   ChannelMessageWithSource
@@ -2442,6 +2481,7 @@ pub fn InteractionResponseType::to_json(Self) -> Json
 pub impl ToJson for InteractionResponseType
 pub impl @json.FromJson for InteractionResponseType
 
+#non_exhaustive
 pub(all) enum InteractionType {
   Ping
   ApplicationCommand
@@ -2513,6 +2553,7 @@ pub impl ToJson for InviteFlags
 pub impl @debug.Debug for InviteFlags
 pub impl @json.FromJson for InviteFlags
 
+#non_exhaustive
 pub(all) enum InviteTargetType {
   Stream
   EmbeddedApplication
@@ -2524,6 +2565,7 @@ pub fn InviteTargetType::to_json(Self) -> Json
 pub impl ToJson for InviteTargetType
 pub impl @json.FromJson for InviteTargetType
 
+#non_exhaustive
 pub(all) enum InviteType {
   Guild
   GroupDm
@@ -2636,6 +2678,7 @@ pub(all) struct MessageActivity {
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn MessageActivity::to_json(Self) -> Json
 
+#non_exhaustive
 pub(all) enum MessageActivityType {
   Join
   Spectate
@@ -2784,6 +2827,7 @@ pub(all) struct MessageReference {
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn MessageReference::to_json(Self) -> Json
 
+#non_exhaustive
 pub(all) enum MessageReferenceType {
   Default
   Forward
@@ -2815,6 +2859,7 @@ pub(all) struct MessageSnapshotContent {
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn MessageSnapshotContent::to_json(Self) -> Json
 
+#non_exhaustive
 pub(all) enum MessageType {
   Default
   RecipientAdd
@@ -2873,6 +2918,7 @@ pub(all) struct MessageUpdateEvent {
 pub fn MessageUpdateEvent::is_edit(Self) -> Bool
 pub impl @json.FromJson for MessageUpdateEvent
 
+#non_exhaustive
 pub(all) enum MfaLevel {
   None
   Elevated
@@ -2907,6 +2953,7 @@ pub fn Nonce::to_json(Self) -> Json
 pub impl ToJson for Nonce
 pub impl @json.FromJson for Nonce
 
+#non_exhaustive
 pub(all) enum NsfwLevel {
   Default
   Explicit
@@ -2939,6 +2986,7 @@ pub fn[T : ToJson] ObjBuilder::field(Self, String, T) -> Self
 pub fn[T : ToJson] ObjBuilder::opt(Self, String, T?) -> Self
 pub fn[T : ToJson] ObjBuilder::und(Self, String, Undefinable[T]) -> Self
 
+#non_exhaustive
 pub(all) enum OnboardingMode {
   Default
   Advanced
@@ -2974,6 +3022,7 @@ pub(all) struct OnboardingPromptOption {
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn OnboardingPromptOption::to_json(Self) -> Json
 
+#non_exhaustive
 pub(all) enum OnboardingPromptType {
   MultipleChoice
   Dropdown
@@ -2993,6 +3042,7 @@ pub(all) struct Overwrite {
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn Overwrite::to_json(Self) -> Json
 
+#non_exhaustive
 pub(all) enum OverwriteType {
   Role
   Member
@@ -3142,6 +3192,7 @@ pub(all) struct PollCreateRequest {
 pub fn PollCreateRequest::to_json(Self) -> Json
 pub impl ToJson for PollCreateRequest
 
+#non_exhaustive
 pub(all) enum PollLayoutType {
   Default
   Unknown(Int)
@@ -3164,6 +3215,7 @@ pub(all) struct PollResults {
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn PollResults::to_json(Self) -> Json
 
+#non_exhaustive
 pub(all) enum PremiumTier {
   None
   Tier1
@@ -3177,6 +3229,7 @@ pub fn PremiumTier::to_json(Self) -> Json
 pub impl ToJson for PremiumTier
 pub impl @json.FromJson for PremiumTier
 
+#non_exhaustive
 pub(all) enum PremiumType {
   None
   NitroClassic
@@ -3190,6 +3243,7 @@ pub fn PremiumType::to_json(Self) -> Json
 pub impl ToJson for PremiumType
 pub impl @json.FromJson for PremiumType
 
+#non_exhaustive
 pub(all) enum PresenceStatus {
   Idle
   Dnd
@@ -3252,6 +3306,7 @@ pub(all) struct ReactionCountDetails {
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn ReactionCountDetails::to_json(Self) -> Json
 
+#non_exhaustive
 pub(all) enum ReactionType {
   Normal
   Burst
@@ -3443,6 +3498,7 @@ pub impl @json.FromJson for SkuFlags
 pub enum SkuMarker {
 }
 
+#non_exhaustive
 pub(all) enum SkuType {
   Durable
   Consumable
@@ -3456,6 +3512,7 @@ pub fn SkuType::to_json(Self) -> Json
 pub impl ToJson for SkuType
 pub impl @json.FromJson for SkuType
 
+#non_exhaustive
 pub(all) enum SortOrderType {
   LatestActivity
   CreationDate
@@ -3501,6 +3558,7 @@ pub fn StageInstance::to_json(Self) -> Json
 pub enum StageInstanceMarker {
 }
 
+#non_exhaustive
 pub(all) enum StagePrivacyLevel {
   Public
   GuildOnly
@@ -3528,6 +3586,7 @@ pub(all) struct Sticker {
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn Sticker::to_json(Self) -> Json
 
+#non_exhaustive
 pub(all) enum StickerFormatType {
   Png
   Apng
@@ -3570,6 +3629,7 @@ pub(all) struct StickerPacksResponse {
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn StickerPacksResponse::to_json(Self) -> Json
 
+#non_exhaustive
 pub(all) enum StickerType {
   Standard
   Guild
@@ -3598,6 +3658,7 @@ pub fn Subscription::to_json(Self) -> Json
 pub enum SubscriptionMarker {
 }
 
+#non_exhaustive
 pub(all) enum SubscriptionStatus {
   Active
   Ending
@@ -3638,6 +3699,7 @@ pub(all) struct TargetUsersJobStatus {
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn TargetUsersJobStatus::to_json(Self) -> Json
 
+#non_exhaustive
 pub(all) enum TargetUsersJobStatusCode {
   Unspecified
   Processing
@@ -3671,6 +3733,7 @@ pub(all) struct TeamMember {
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn TeamMember::to_json(Self) -> Json
 
+#non_exhaustive
 pub(all) enum TeamMembershipState {
   Invited
   Accepted
@@ -3701,6 +3764,7 @@ pub(all) struct TextInput {
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn TextInput::to_json(Self) -> Json
 
+#non_exhaustive
 pub(all) enum TextInputStyle {
   Short
   Paragraph
@@ -3712,6 +3776,7 @@ pub fn TextInputStyle::to_json(Self) -> Json
 pub impl ToJson for TextInputStyle
 pub impl @json.FromJson for TextInputStyle
 
+#non_exhaustive
 pub(all) enum ThreadAutoArchiveDuration {
   OneHour
   OneDay
@@ -3927,6 +3992,7 @@ pub(all) struct UserPrimaryGuild {
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn UserPrimaryGuild::to_json(Self) -> Json
 
+#non_exhaustive
 pub(all) enum VerificationLevel {
   None
   Low
@@ -3941,6 +4007,7 @@ pub fn VerificationLevel::to_json(Self) -> Json
 pub impl ToJson for VerificationLevel
 pub impl @json.FromJson for VerificationLevel
 
+#non_exhaustive
 pub(all) enum VideoQualityMode {
   Auto
   Full
@@ -4027,6 +4094,7 @@ pub(all) struct Webhook {
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn Webhook::to_json(Self) -> Json
 
+#non_exhaustive
 pub(all) enum WebhookEvent {
   ApplicationAuthorized(ApplicationAuthorizedEvent)
   ApplicationDeauthorized(ApplicationDeauthorizedEvent)
@@ -4059,6 +4127,7 @@ pub(all) struct WebhookEventPayload {
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn WebhookEventPayload::to_json(Self) -> Json
 
+#non_exhaustive
 pub(all) enum WebhookEventType {
   ApplicationAuthorized
   ApplicationDeauthorized
@@ -4083,6 +4152,7 @@ pub impl @json.FromJson for WebhookEventType
 pub enum WebhookMarker {
 }
 
+#non_exhaustive
 pub(all) enum WebhookPayloadType {
   Ping
   Event
@@ -4094,6 +4164,7 @@ pub fn WebhookPayloadType::to_json(Self) -> Json
 pub impl ToJson for WebhookPayloadType
 pub impl @json.FromJson for WebhookPayloadType
 
+#non_exhaustive
 pub(all) enum WebhookType {
   Incoming
   ChannelFollower

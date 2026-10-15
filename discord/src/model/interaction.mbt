@@ -25,6 +25,7 @@ pub(all) struct Interaction {
 
 ///|
 /// The dispatch category of an interaction.
+#non_exhaustive
 pub(all) enum InteractionType {
   Ping
   ApplicationCommand
@@ -76,6 +77,7 @@ pub impl @json.FromJson for InteractionType with fn from_json(json, path) {
 
 ///|
 /// Polymorphic interaction data selected by the parent interaction type.
+#non_exhaustive
 pub(all) enum InteractionData {
   Command(CommandData)
   Component(ComponentData)
@@ -280,6 +282,7 @@ pub(all) struct InteractionResponse {
 
 ///|
 /// The callback behavior requested by an interaction response.
+#non_exhaustive
 pub(all) enum InteractionResponseType {
   Pong
   ChannelMessageWithSource

@@ -44,6 +44,7 @@ pub(all) struct IntegrationApplication {
 
 ///|
 /// What happens to a subscriber when their integration expires.
+#non_exhaustive
 pub(all) enum IntegrationExpireBehavior {
   RemoveRole
   Kick

@@ -24,6 +24,22 @@ breaking change is listed with a migration note.
 
 ### Changed
 
+- **Enums whose values Discord may extend, and the library enums that report
+  events and results, are `#non_exhaustive`.** This covers the `@model` value
+  sets that carry `Unknown(..)` (for example `ChannelType`,
+  `InteractionType`, `MessageType`, `Component`, `Event` and `EventKind`) and
+  `ShardEvent`, `DeliveryFailure`, `AppWarning`, `InteractionOutcome`,
+  `FailureOrigin`, `InteractionTarget` and `TelemetryEvent`. A value that
+  arrives as `Unknown(..)` today, or a new library event, can then become a
+  constructor without breaking matches in your code. `Unknown(..)` still
+  carries values Discord sends that this version does not know.
+  - Migration: a `match` outside this module that lists every constructor of
+    one of these enums needs a last arm `Type::..`, for example
+    `@model.InteractionType::.. => ...`; it can share an arm with
+    `Unknown(_)`. A `_` or binding arm after every constructor is reported as
+    unused, because it does not stand for future constructors: replace it
+    with `Type::..`. A `match` whose `_` or binding arm still covers some
+    constructors needs no change.
 - **Voice moved to its own module, `gaato/discord_voice`.** The
   `gaato/discord/voice` package, `GatewayCtx::join_voice`, and the native
   facade re-exports (`VoiceConnection`, `VoiceEvent`, `VoiceError`,

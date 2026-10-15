@@ -16,6 +16,7 @@ pub(all) struct AutoModerationRule {
 
 ///|
 /// The condition category that activates an auto-moderation rule.
+#non_exhaustive
 pub(all) enum AutoModerationTriggerType {
   Keyword
   Spam
@@ -87,6 +88,7 @@ pub(all) struct TriggerMetadata {
 
 ///|
 /// A built-in keyword set used by auto moderation.
+#non_exhaustive
 pub(all) enum AutoModerationKeywordPresetType {
   Profanity
   SexualContent
@@ -142,6 +144,7 @@ pub impl @json.FromJson for AutoModerationKeywordPresetType with fn from_json(
 
 ///|
 /// The guild event evaluated by an auto-moderation rule.
+#non_exhaustive
 pub(all) enum AutoModerationEventType {
   MessageSend
   MemberUpdate
@@ -202,6 +205,7 @@ pub(all) struct AutoModerationAction {
 
 ///|
 /// The operation performed by auto moderation.
+#non_exhaustive
 pub(all) enum AutoModerationActionType {
   BlockMessage
   SendAlertMessage

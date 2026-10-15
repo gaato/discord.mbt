@@ -63,6 +63,7 @@ async fn main {
               println("[shard] fatally closed: code=\{code}")
               break
             }
+            @gateway.ShardEvent::.. => ()
           }
         }
       })

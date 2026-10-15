@@ -464,7 +464,7 @@ fn event_kind(event : @model.Event) -> @model.EventKind {
     VoiceServerUpdate(_) => KVoiceServerUpdate
     VoiceStateUpdate(_) => KVoiceStateUpdate
     WebhooksUpdate(_) => KWebhooksUpdate
-    Unknown(..) => KUnknown
+    Unknown(..) | @model.Event::.. => KUnknown
   }
 }
 
@@ -865,6 +865,7 @@ async fn BotCore::run(self : BotCore) -> Unit {
           close_shards(shard_handles)
           raise BotError::FatallyClosed(code~)
         }
+        @gateway.ShardEvent::.. => ()
       }
     }
   })

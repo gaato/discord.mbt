@@ -58,6 +58,7 @@ pub(all) struct Overwrite {
 
 ///|
 /// The target category of a permission overwrite.
+#non_exhaustive
 pub(all) enum OverwriteType {
   Role
   Member
@@ -97,6 +98,7 @@ pub impl @json.FromJson for OverwriteType with fn from_json(json, path) {
 
 ///|
 /// The camera quality mode used by a voice channel.
+#non_exhaustive
 pub(all) enum VideoQualityMode {
   Auto
   Full
@@ -136,6 +138,7 @@ pub impl @json.FromJson for VideoQualityMode with fn from_json(json, path) {
 
 ///|
 /// The ordering used for posts in a forum or media channel.
+#non_exhaustive
 pub(all) enum SortOrderType {
   LatestActivity
   CreationDate
@@ -175,6 +178,7 @@ pub impl @json.FromJson for SortOrderType with fn from_json(json, path) {
 
 ///|
 /// The presentation layout used by a forum channel.
+#non_exhaustive
 pub(all) enum ForumLayoutType {
   NotSet
   ListView
@@ -217,6 +221,7 @@ pub impl @json.FromJson for ForumLayoutType with fn from_json(json, path) {
 
 ///|
 /// The inactivity duration in minutes before a thread is archived.
+#non_exhaustive
 pub(all) enum ThreadAutoArchiveDuration {
   OneHour
   OneDay

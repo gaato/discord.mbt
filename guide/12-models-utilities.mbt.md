@@ -34,6 +34,33 @@ variants instead of failing, so a new Discord feature does not break an
 application built on an older model. Serializing the value back produces the
 original wire form, unknown parts included.
 
+These enums are also `#non_exhaustive`, so a later release can turn a value
+that arrives as `Unknown(...)` today into its own constructor without
+breaking your code. A `match` outside the library that lists every
+constructor ends with a `Type::..` arm for those future constructors. A `_`
+there would be reported as unused, since it does not stand for future
+constructors; a `_` that still covers some current constructors is enough:
+
+```mbt check
+///|
+fn premium_label(premium : @model.PremiumType) -> String {
+  match premium {
+    None => "none"
+    NitroClassic => "Nitro Classic"
+    Nitro => "Nitro"
+    NitroBasic => "Nitro Basic"
+    Unknown(value) => "unknown (\{value})"
+    @model.PremiumType::.. => "newer than this library"
+  }
+}
+
+///|
+test "match a non-exhaustive model enum" {
+  inspect(premium_label(Nitro), content="Nitro")
+  inspect(premium_label(Unknown(9)), content="unknown (9)")
+}
+```
+
 ## Typed snowflakes
 
 IDs are phantom-typed: a `UserId` (`Id[UserMarker]`) cannot be passed where a

@@ -2,6 +2,7 @@
 /// Membership and lifecycle events of a live voice connection. Received audio
 /// is not an event: it is delivered per user through
 /// `VoiceConnection::subscribe`.
+#non_exhaustive
 pub(all) enum VoiceEvent {
   SpeakingChanged(user_id~ : String, ssrc~ : UInt32, flags~ : Int32)
   UserConnected(user_id~ : String)
@@ -22,6 +23,7 @@ pub(all) enum ReceivedAudio {
 
 ///|
 /// Non-fatal diagnostics from the connection's gateway and media paths.
+#non_exhaustive
 pub(all) enum VoiceTelemetry {
   GatewayEvent(VoiceGatewayEvent)
   /// A DAVE media context became active after its local key ratchet was
@@ -129,21 +131,15 @@ fn ReceivePipeline::handle_gateway_message(
 }
 
 ///|
-fn rtp_payload_without_extension(
-  packet : RtpPacket,
-  decrypted : Bytes,
-) -> Bytes? {
-  if (decrypted[0].to_int() & 0x10) == 0 {
+fn rtp_payload_without_extension(packet : RtpPacket) -> Bytes? {
+  guard packet.header is [u2be(_), u1be(_), u1be(1), ..] else {
     return Some(packet.payload)
   }
-  let csrc_bytes = (decrypted[0].to_int() & 0x0f) * 4
-  let extension_header = 12 + csrc_bytes
-  if extension_header + 4 > decrypted.length() {
+  // The extension preamble (profile, word count) ends the rtpsize header.
+  guard packet.header[packet.header_len - 4:] is [u16be(_), u16be(word_count)] else {
     return None
   }
-  let word_count = (decrypted[extension_header + 2].to_int() << 8) |
-    decrypted[extension_header + 3].to_int()
-  let extension_bytes = word_count * 4
+  let extension_bytes = word_count.reinterpret_as_int() * 4
   if extension_bytes > packet.payload.length() {
     return None
   }
@@ -217,7 +213,7 @@ fn ReceivePipeline::process_udp_packet(
     error =>
       return self.drop_packet("invalid decrypted RTP packet: \{Repr(error)}")
   }
-  guard rtp_payload_without_extension(rtp, decrypted) is Some(payload) else {
+  guard rtp_payload_without_extension(rtp) is Some(payload) else {
     return self.drop_packet("RTP extension data is truncated")
   }
   let dave_magic = has_dave_magic(payload)

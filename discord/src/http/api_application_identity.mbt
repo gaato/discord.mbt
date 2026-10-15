@@ -25,7 +25,7 @@ fn validate_application_identity_profile_data(
         StringField(value) => Some(value.name)
         NumberField(value) => Some(value.name)
         MediaField(value) => Some(value.name)
-        Unknown(_) => None
+        Unknown(_) | @model.ApplicationIdentityDynamicField::.. => None
       }
       validate_length("profile dynamic field name", name, max=100)
     }

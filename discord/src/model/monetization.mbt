@@ -20,6 +20,7 @@ pub(all) struct Entitlement {
 
 ///|
 /// The origin of an application entitlement.
+#non_exhaustive
 pub(all) enum EntitlementType {
   Purchase
   PremiumSubscription
@@ -80,6 +81,7 @@ pub impl @json.FromJson for EntitlementType with fn from_json(json, path) {
 
 ///|
 /// The owner scope used when creating a test entitlement.
+#non_exhaustive
 pub(all) enum EntitlementOwnerType {
   Guild
   User
@@ -135,6 +137,7 @@ pub(all) struct Sku {
 
 ///|
 /// The product category represented by a SKU.
+#non_exhaustive
 pub(all) enum SkuType {
   Durable
   Consumable
@@ -274,6 +277,7 @@ pub(all) struct Subscription {
 
 ///|
 /// The renewal state of a Discord application subscription.
+#non_exhaustive
 pub(all) enum SubscriptionStatus {
   Active
   Ending

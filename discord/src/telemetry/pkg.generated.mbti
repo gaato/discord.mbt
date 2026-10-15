@@ -10,6 +10,7 @@ import {
 // Errors
 
 // Types and methods
+#non_exhaustive
 pub(all) enum TelemetryEvent {
   ShardConnecting(shard_id~ : Int)
   ShardCompressionEnabled(shard_id~ : Int)

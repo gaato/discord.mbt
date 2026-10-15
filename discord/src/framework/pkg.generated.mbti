@@ -108,6 +108,7 @@ pub fn ComponentCtx::token_remaining_ms(Self) -> Int
 pub async fn ComponentCtx::update_message(Self, content? : String, clear_content? : Bool, embeds? : Array[@model.Embed], components? : Array[@model.Component], allowed_mentions? : @model.AllowedMentions, files? : Array[@http.FileUpload], keep_attachments? : Array[@model.AttachmentRequest], poll? : @model.PollCreateRequest) -> Unit
 pub fn ComponentCtx::user(Self) -> @model.User
 
+#non_exhaustive
 pub(all) enum DeliveryFailure {
   Rejected
   Expired

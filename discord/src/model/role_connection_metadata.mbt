@@ -15,6 +15,7 @@ pub(all) struct ApplicationRoleConnectionMetadata {
 
 ///|
 /// The comparison used for an application role connection metadata record.
+#non_exhaustive
 pub(all) enum ApplicationRoleConnectionMetadataType {
   IntegerLessThanOrEqual
   IntegerGreaterThanOrEqual

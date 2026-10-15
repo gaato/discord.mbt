@@ -11,6 +11,7 @@
 ///   inspect(Json(filter).stringify(), content="[\"image\",\".pdf\"]")
 /// }
 /// ```
+#non_exhaustive
 pub(all) enum FileTypeFilter {
   Image
   Video

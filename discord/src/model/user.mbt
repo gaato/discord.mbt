@@ -225,6 +225,7 @@ pub fn UserFlags::restricted_collaborator() -> UserFlags {
 
 ///|
 /// The type of Nitro subscription on a user's account.
+#non_exhaustive
 pub(all) enum PremiumType {
   None
   NitroClassic

@@ -1,5 +1,6 @@
 ///|
 /// Events surfaced by `Shard::next`.
+#non_exhaustive
 pub(all) enum ShardEvent {
   Dispatch(@model.Event)
   Connected(resumed~ : Bool)

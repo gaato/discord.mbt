@@ -36,3 +36,28 @@ test "rtpsize header length covers CSRC and extension preamble" {
     20,
   )
 }
+
+///|
+fn expect_rtp_error(bytes : Bytes, expected : String) -> Unit raise {
+  try @voice.parse_rtp_packet(bytes) catch {
+    InvalidRtpPacket(reason~) => assert_eq(reason, expected)
+  } noraise {
+    _ => fail("expected an RTP parse error: \{expected}")
+  }
+}
+
+///|
+test "RTP parsing rejects each malformed header" {
+  let base = @voice.build_rtp_header(sequence=0, timestamp=0U, ssrc=1U)
+  expect_rtp_error(base[:11].to_owned(), "RTP packet is shorter than 12 bytes")
+  expect_rtp_error(b"\x40" + base[1:].to_owned(), "RTP version is not 2")
+  expect_rtp_error(
+    b"\x81" + base[1:].to_owned(),
+    "RTP CSRC or extension header is truncated",
+  )
+  expect_rtp_error(
+    b"\x90" + base[1:].to_owned(),
+    "RTP CSRC or extension header is truncated",
+  )
+  assert_eq(@voice.rtpsize_header_len(base[:11].to_owned()), 0)
+}

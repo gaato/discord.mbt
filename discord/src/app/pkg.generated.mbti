@@ -124,6 +124,7 @@ pub fn AppCtx::application_ref(Self) -> @http.ApplicationRef
 pub fn AppCtx::http(Self) -> @http.Client
 pub fn AppCtx::latency_ms(Self) -> Int64?
 
+#non_exhaustive
 pub(all) enum AppWarning {
   AutoDeferFailed(target~ : String, error~ : Error)
   InteractionDropped(target~ : String)
@@ -284,6 +285,7 @@ pub async fn FailureCtx::respond_error(Self, content? : String, embeds? : Array[
 pub fn FailureCtx::response_state(Self) -> @framework.ResponseState?
 pub fn FailureCtx::user(Self) -> @model.User?
 
+#non_exhaustive
 pub(all) enum FailureOrigin {
   Command(name~ : String)
   Autocomplete(name~ : String)
@@ -358,6 +360,7 @@ pub(all) struct InteractionHttpResponse {
   body : InteractionHttpBody
 }
 
+#non_exhaustive
 pub(all) enum InteractionOutcome {
   Reply(response~ : @model.InteractionResponse, files~ : Array[@http.FileUpload]?)
   NoRoute
@@ -365,6 +368,7 @@ pub(all) enum InteractionOutcome {
   TimedOut
 } derive(@debug.Debug)
 
+#non_exhaustive
 pub(all) enum InteractionTarget {
   Command(name~ : String)
   Component(custom_id~ : String)

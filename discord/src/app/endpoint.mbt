@@ -1,5 +1,6 @@
 ///|
 /// The result of dispatching one HTTP-delivered interaction.
+#non_exhaustive
 pub(all) enum InteractionOutcome {
   Reply(
     response~ : @model.InteractionResponse,

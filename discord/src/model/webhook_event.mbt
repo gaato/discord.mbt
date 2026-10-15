@@ -13,6 +13,7 @@ pub(all) struct WebhookEventPayload {
 
 ///|
 /// The outer category of an outbound Discord webhook payload.
+#non_exhaustive
 pub(all) enum WebhookPayloadType {
   Ping
   Event
@@ -67,6 +68,7 @@ pub(all) struct WebhookEventBody {
 
 ///|
 /// A subscribable outbound webhook event category.
+#non_exhaustive
 pub(all) enum WebhookEventType {
   ApplicationAuthorized
   ApplicationDeauthorized
@@ -142,6 +144,7 @@ pub impl @json.FromJson for WebhookEventType with fn from_json(json, path) {
 ///
 /// Known event names always use a typed variant. Unknown names retain their
 /// original name and optional data for forward compatibility.
+#non_exhaustive
 pub(all) enum WebhookEvent {
   ApplicationAuthorized(ApplicationAuthorizedEvent)
   ApplicationDeauthorized(ApplicationDeauthorizedEvent)

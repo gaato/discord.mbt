@@ -1,5 +1,6 @@
 ///|
 /// Discord voice transport encryption modes supported by this package.
+#non_exhaustive
 pub(all) enum EncryptionMode {
   AeadAes256GcmRtpsize
   AeadXChaCha20Poly1305Rtpsize
