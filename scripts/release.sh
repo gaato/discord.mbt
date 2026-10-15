@@ -3,18 +3,22 @@
 # version is not yet in the registry index. Idempotent, so it runs on every
 # push to main and only a version bump releases anything.
 #
-# Usage: scripts/release.sh [--dry-run] [MODULE_DIR]
-#   MODULE_DIR  the module to publish: `.` (gaato/discord, the default) or
-#               `dave` (gaato/dave)
+# Usage: scripts/release.sh [--dry-run] MODULE_DIR
+#   MODULE_DIR  the workspace member to publish, such as `discord` or `dave`
 #   --dry-run   only package and verify
+#
+# The module is built outside the workspace (MOON_WORK=off), so it resolves
+# every dependency from the registry as a consumer does.
 set -euo pipefail
 dry_run=false
 if [ "${1:-}" = "--dry-run" ]; then
   dry_run=true
   shift
 fi
+module="${1:?usage: scripts/release.sh [--dry-run] MODULE_DIR}"
+export MOON_WORK=off
 cd "$(dirname "$0")/.."
-cd "${1:-.}"
+cd "$module"
 name=$(sed -nE 's/^name = "(.*)"$/\1/p' moon.mod)
 version=$(sed -nE 's/^version = "(.*)"$/\1/p' moon.mod)
 moon update >/dev/null

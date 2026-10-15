@@ -5,21 +5,21 @@ on:
     branches: [main]
     paths:
       - "voice-shim/**"
-      - "build.js"
-      - "release/voice-shim-v0.1.0.js"
-      - "moon.mod"
-      - "src/voice/shim_stub.c"
-      - "test/prebuild.test.js"
+      - "discord/build.js"
+      - "discord/release/voice-shim-v0.1.0.js"
+      - "discord/moon.mod"
+      - "discord/src/voice/shim_stub.c"
+      - "discord/test/prebuild.test.js"
       - ".github/workflows/voice-shim.yml"
   pull_request:
     branches: [main]
     paths:
       - "voice-shim/**"
-      - "build.js"
-      - "release/voice-shim-v0.1.0.js"
-      - "moon.mod"
-      - "src/voice/shim_stub.c"
-      - "test/prebuild.test.js"
+      - "discord/build.js"
+      - "discord/release/voice-shim-v0.1.0.js"
+      - "discord/moon.mod"
+      - "discord/src/voice/shim_stub.c"
+      - "discord/test/prebuild.test.js"
       - ".github/workflows/voice-shim.yml"
   workflow_dispatch:
   release:
@@ -132,7 +132,7 @@ jobs:
       - name: Bootstrap the released component
         env:
           DISCORD_VOICE_SHIM_CACHE_DIR: ${{ runner.temp }}/discord-voice-shim-cache
-        run: node build.js
+        run: node discord/build.js
 
       - name: Install MoonBit (Linux and macOS)
         if: matrix.moonbit_smoke && runner.os != 'Windows'
@@ -167,7 +167,7 @@ jobs:
           DISCORD_VOICE_SHIM_CACHE_DIR: ${{ runner.temp }}/discord-voice-shim-cache
         run: |
           moon update
-          moon test src/voice/crypto_test.mbt --target native --release --deny-warn
+          moon test discord/src/voice/crypto_test.mbt --target native --release --deny-warn
 
       - name: Stage component contents
         shell: bash

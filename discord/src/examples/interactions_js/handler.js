@@ -3,7 +3,7 @@
 let modulePromise;
 function loadMoonBit() {
   modulePromise ??= import(
-    "../../../_build/js/release/build/examples/interactions_js/interactions_js.js"
+    "../../../../_build/js/release/build/gaato/discord/examples/interactions_js/interactions_js.js"
   );
   return modulePromise;
 }

@@ -59,9 +59,7 @@ jobs:
           moon check --target wasm --deny-warn
 
       - name: Format check
-        run: |
-          moon fmt --check
-          moon -C template fmt --check
+        run: moon fmt --check
 
       - name: Test native
         run: moon test --target native
@@ -75,6 +73,7 @@ jobs:
       - name: Check and test gaato/dave
         working-directory: dave
         env:
+          MOON_WORK: "off"
           MBT_DAVE_REQUIRE_NATIVE: "1"
         run: |
           moon check --target all --deny-warn

@@ -19,7 +19,7 @@ npx wrangler deploy
 ```
 
 The MoonBit build emits
-`_build/js/release/build/examples/interactions_js/interactions_js.js`. `entry.js`
+`_build/js/release/build/gaato/discord/examples/interactions_js/interactions_js.js` (at the repository root). `entry.js`
 imports that ESM artifact, and Wrangler bundles it into the Worker.
 
 The `/file` command returns `hello.txt` as a streamed multipart callback.

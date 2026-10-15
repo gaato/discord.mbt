@@ -1,7 +1,7 @@
 "use strict";
 
-// The prebuild protocol handling here and in ../build.js is the same; change
-// both together.
+// The prebuild protocol handling here and in ../discord/build.js is the same;
+// change both together.
 
 const crypto = require("node:crypto");
 const fs = require("node:fs");

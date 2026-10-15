@@ -251,7 +251,7 @@ describe("Cloudflare Worker interaction endpoint", () => {
 
   it("rejects a pre-aborted response waiter but completes the background", async () => {
     const moonbit = await import(
-      "../../../../_build/js/release/build/examples/interactions_js/interactions_js.js"
+      "../../../../../_build/js/release/build/gaato/discord/examples/interactions_js/interactions_js.js"
     );
     const controller = new AbortController();
     controller.abort();

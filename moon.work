@@ -1,0 +1,5 @@
+members = [
+  "./discord",
+  "./dave",
+  "./template",
+]

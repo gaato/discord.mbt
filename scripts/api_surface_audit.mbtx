@@ -2,7 +2,7 @@
 /// Audit the public API surface recorded in the generated interfaces.
 ///
 /// 1. Facade closure: every type that a facade-exported type or function
-///    mentions is itself exported by the facade (`src/pkg.generated.mbti`),
+///    mentions is itself exported by the facade (`discord/src/pkg.generated.mbti`),
 ///    so a program that imports only `@discord` (plus the `@model` data
 ///    package) can name everything the golden path hands it.
 /// 2. Positional arguments: no public function takes two consecutive
@@ -402,10 +402,10 @@ async fn main {
   if args.length() > 2 || (args.length() == 2 && !self_test) {
     fail("usage: moon run scripts/api_surface_audit.mbtx [--self-test]")
   }
-  let facade = @fs.read_file("src/pkg.generated.mbti").text()
+  let facade = @fs.read_file("discord/src/pkg.generated.mbti").text()
   let package_texts : Map[String, String] = Map([])
   for pkg in tracked {
-    package_texts[pkg] = @fs.read_file("src/\{pkg}/pkg.generated.mbti").text()
+    package_texts[pkg] = @fs.read_file("discord/src/\{pkg}/pkg.generated.mbti").text()
   }
   let allow = @fs.read_file("scripts/api_surface_audit.allow").text()
   audit(facade, package_texts, allow)

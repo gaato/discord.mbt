@@ -48,9 +48,9 @@ jobs:
           MOONCAKES_TOKEN: ${{ secrets.MOONCAKES_TOKEN }}
           MOONCAKES_USERNAME: ${{ secrets.MOONCAKES_USERNAME }}
           MODULES: >-
-            ${{ github.event_name == 'workflow_dispatch' && 'dave .'
+            ${{ github.event_name == 'workflow_dispatch' && 'dave discord'
               || github.event.workflow_run.name == 'Dave' && 'dave'
-              || '.' }}
+              || 'discord' }}
         run: |
           if [ -z "$MOONCAKES_TOKEN" ]; then
             echo "MOONCAKES_TOKEN is not set; nothing published" >&2

@@ -3,7 +3,7 @@
 #
 # Runs `moon coverage analyze` in Coveralls-JSON mode (the `summary` format
 # silently omits fully covered files, which skews package totals), restricts
-# the result to library packages (src/ minus src/examples/), prints a
+# the result to library packages (LIBRARY below), prints a
 # per-package table, and checks every remaining uncovered file against the
 # TEST_COVERAGE.md ledger: a file with uncovered lines must have a ledger row
 # whose budget covers them.
@@ -17,6 +17,12 @@
 # gaps or over-budget files, 2 = setup/run failure.
 
 set -euo pipefail
+
+# Workspace-relative paths, as `moon coverage analyze` names them at the
+# workspace root: the library sources that are measured, minus the example
+# packages that still live under them.
+LIBRARY='^discord/src/'
+NOT_LIBRARY='^discord/src/examples/'
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 ledger="$repo_root/TEST_COVERAGE.md"
@@ -57,7 +63,7 @@ else
   # then fails closed if that verified library cannot be loaded at runtime.
   (cd "$repo_root" &&
     MOON_CC="${MOON_CC:-cc}" moon build --target native --release --deny-warn \
-      src/voice) >/dev/null || {
+      discord/src/voice) >/dev/null || {
       echo "error: pinned libdave bootstrap/native voice build failed" >&2
       exit 2
     }
@@ -79,21 +85,22 @@ else
 fi
 
 # One "file<TAB>covered<TAB>total" line per library source file.
-jq -r '
+jq -r --arg lib "$LIBRARY" --arg not_lib "$NOT_LIBRARY" '
   .source_files[]
-  | select(.name | startswith("src/"))
-  | select(.name | startswith("src/examples/") | not)
+  | select(.name | test($lib))
+  | select(.name | test($not_lib) | not)
   | [ .name,
       ([.coverage[] | select(. != null and . > 0)] | length),
       ([.coverage[] | select(. != null)] | length) ]
   | @tsv
-' "$json_file" | awk -F '\t' -v ledger="$ledger" '
-  # ---- ledger: rows like "| src/foo/bar.mbt | 12 | reason |" -------------
+' "$json_file" | awk -F '\t' -v ledger="$ledger" -v lib="$LIBRARY" '
+  # ---- ledger: rows like "| discord/src/foo/bar.mbt | 12 | reason |" -----
   BEGIN {
     while ((getline line < ledger) > 0) {
-      if (line !~ /^\| *src\//) continue
+      if (line !~ /^\|/) continue
       split(line, cell, /\|/)
       file = cell[2]; gsub(/^ +| +$/, "", file)
+      if (file !~ lib) continue
       budget_str = cell[3]; gsub(/^ +| +$/, "", budget_str)
       if (budget_str + 0 == budget_str) budget[file] = budget_str + 0
     }

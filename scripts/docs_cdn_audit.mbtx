@@ -298,7 +298,7 @@ async fn main {
   }
   let text = @fs.read_file(args[1]).text()
   let allow = @fs.read_file("scripts/docs_cdn_audit.allow").text()
-  let source = @fs.read_file("src/util/cdn.mbt").text()
+  let source = @fs.read_file("discord/src/util/cdn.mbt").text()
   audit(text, allow, source)
   if args.length() == 3 {
     if args[2] != "--self-test" {

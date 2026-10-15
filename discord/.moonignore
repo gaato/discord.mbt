@@ -1,0 +1,6 @@
+# Packaging rules for gaato/discord. This file replaces .gitignore for this
+# directory; the repository root's .gitignore still applies.
+_build/
+.mooncakes/
+# Repository-only Node tests of the prebuild hook and version metadata.
+test/

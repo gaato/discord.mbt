@@ -27,6 +27,11 @@ defaults:
   run:
     working-directory: dave
 
+# Build gaato/dave on its own, as it is published; it has no dependency on the
+# other workspace members.
+env:
+  MOON_WORK: "off"
+
 jobs:
   unavailable:
     name: Unavailable facade (${{ matrix.target }})

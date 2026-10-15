@@ -291,7 +291,7 @@ limits through the bundled TCP coordinator. See the
 Native builds can join voice gateway v8 calls, play 20 ms Opus frames, and
 receive per-user Opus streams. Discord requires DAVE encryption, so voice
 applications use the native-only
-[`gaato/dave`](dave/README.mbt.md) binding to Discord's
+[`gaato/dave`](https://github.com/gaato/discord.mbt/blob/main/dave/README.mbt.md) binding to Discord's
 official `libdave` for MLS and media encryption. The separate Rust library in
 `voice-shim/` handles RTP transport AEAD only. `gaato/dave` currently pins
 upstream `v1.2.0/cpp`; `gaato/discord` pins transport component release
@@ -379,7 +379,7 @@ complete signed-interactions HTTP server. See the
 [HTTP interactions guide](src/guide/06-http-interactions.mbt.md) and the
 `interactions_http`, `workers_echo`, `deno_echo`, `bun_echo`, and `vercel_echo`
 examples. The separate
-[Spin experiment](experiments/spin_interactions/README.md) uses WASIp2 and
+[Spin experiment](https://github.com/gaato/discord.mbt/blob/main/experiments/spin_interactions/README.md) uses WASIp2 and
 Spin's variables import for an immediate handler. It does not yet run the
 async `App` on a general Wasm host.
 
@@ -400,7 +400,7 @@ Other JavaScript function platforms can reuse the handler if they provide Web
 background-work API, deployment bundle, and execution limits still need
 platform-specific checks. The Spin experiment instead tests the WASIp2
 component boundary.
-The [host entry point survey](docs/interaction-host-entrypoints.md) records the
+The [host entry point survey](https://github.com/gaato/discord.mbt/blob/main/docs/interaction-host-entrypoints.md) records the
 other host conventions and the remaining API decisions, including multipart
 responses and background-work lifetime.
 
@@ -508,9 +508,14 @@ Also in the box, each with its guide chapter:
 
 For handler tests without a Discord connection, `Client::offline` answers REST
 calls from a function you write, and the native/JS/Wasm
-[`gaato/discord/testkit`](testkit/README.mbt.md) provides deterministic
+[`gaato/discord/testkit`](src/testkit/README.mbt.md) provides deterministic
 interaction and model fixtures. Import the testkit only in your package's
 `for "test"` block.
+
+The repository is a MoonBit workspace: this module is in `discord/`, next to
+`gaato/dave` in `dave/` and the bot template in `template/`. Run these from
+the repository root; they cover every member, and build this module against
+the in-tree `gaato/dave`:
 
 ```fish
 moon check --target native --deny-warn
@@ -520,10 +525,12 @@ moon test --target native --release   # debug native builds need a working tcc s
 moon test --target js --release
 moon test --target wasm --release
 moon fmt
-moon -C template fmt --check
 moon info --target native             # regenerate pkg.generated.mbti (API review signal)
 scripts/gen_extends.py                # regenerate extends.mbt after adding or removing a ToJson type
 ```
+
+To build this module alone against the published `gaato/dave`, as a consumer
+does, run `MOON_WORK=off moon -C discord check --target native`.
 
 Look up any package, type, or symbol — including its docstring examples —
 from the terminal:
@@ -537,16 +544,6 @@ moon ide doc "@util.channel_permissions"
 
 Each package's `pkg.generated.mbti` is a concise public-interface snapshot;
 review its diff when checking API drift.
-
-The `gaato/dave` module lives in [`dave/`](dave/README.mbt.md) and is
-published separately. This module builds against the published version, as
-consumers do; to test a change in `dave/` together with voice, put both
-modules in a workspace from a scratch directory:
-
-```fish
-moon work init /path/to/discord.mbt /path/to/discord.mbt/dave
-env MBT_DAVE_REQUIRE_NATIVE=1 DISCORD_VOICE_REQUIRE_SHIM=1 moon test /path/to/discord.mbt/src/voice --target native --release
-```
 
 Every MoonBit code block in this README has a compiled twin in
 `src/readme_native_test.mbt`, and code blocks marked `mbt check` in the

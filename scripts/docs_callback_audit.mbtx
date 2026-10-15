@@ -45,8 +45,8 @@ struct Surface {
 /// Helpers shared by every message body: content/embeds/components/flags and
 /// the `attachments` array.
 let shared_builders : Array[(String, String)] = [
-  ("src/http/patch_fields.mbt", "message_patch_builder"),
-  ("src/http/multipart.mbt", "edit_attachments_field"),
+  ("discord/src/http/patch_fields.mbt", "message_patch_builder"),
+  ("discord/src/http/multipart.mbt", "edit_attachments_field"),
 ]
 
 ///|
@@ -62,7 +62,7 @@ fn surfaces() -> Array[Surface] {
         "poll",
       ],
       builders: [
-        ("src/http/interaction_callback.mbt", "interaction_message_data"),
+        ("discord/src/http/interaction_callback.mbt", "interaction_message_data"),
         ..shared_builders,
       ],
     },
@@ -76,8 +76,8 @@ fn surfaces() -> Array[Surface] {
         "poll",
       ],
       builders: [
-        ("src/http/api_interaction.mbt", "Client::create_followup"),
-        ("src/http/multipart.mbt", "attachments_json"),
+        ("discord/src/http/api_interaction.mbt", "Client::create_followup"),
+        ("discord/src/http/multipart.mbt", "attachments_json"),
       ],
     },
     {
@@ -90,7 +90,7 @@ fn surfaces() -> Array[Surface] {
         "poll",
       ],
       builders: [
-        ("src/http/api_interaction.mbt", "Client::edit_original_response"),
+        ("discord/src/http/api_interaction.mbt", "Client::edit_original_response"),
         ..shared_builders,
       ],
     },
@@ -103,7 +103,7 @@ fn surfaces() -> Array[Surface] {
         "content", "embeds", "flags", "allowed_mentions", "components", "attachments",
       ],
       builders: [
-        ("src/http/api_interaction.mbt", "Client::edit_followup"),
+        ("discord/src/http/api_interaction.mbt", "Client::edit_followup"),
         ..shared_builders,
       ],
     },
@@ -304,7 +304,7 @@ async fn main {
     )
     must_fail(() => audit(dropped, sources, allow))
     let unbuilt = sources.copy()
-    unbuilt["src/http/interaction_callback.mbt"] = sources["src/http/interaction_callback.mbt"].replace(
+    unbuilt["discord/src/http/interaction_callback.mbt"] = sources["discord/src/http/interaction_callback.mbt"].replace(
       old="\"poll\"",
       new="\"pole\"",
     )
@@ -312,7 +312,7 @@ async fn main {
     // Only `edit_original_response` sends a poll; dropping it there must fail
     // even though other operations share the same documented table.
     let original_without_poll = sources.copy()
-    let interaction_api = "src/http/api_interaction.mbt"
+    let interaction_api = "discord/src/http/api_interaction.mbt"
     let edit_original = function_body(
       sources[interaction_api],
       "Client::edit_original_response",

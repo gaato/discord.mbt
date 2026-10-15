@@ -3,7 +3,7 @@
 let workerModule;
 function loadWorkerModule() {
   workerModule ??= import(
-    "../../../_build/js/release/build/examples/workers_gateway/workers_gateway.js"
+    "../../../../_build/js/release/build/gaato/discord/examples/workers_gateway/workers_gateway.js"
   );
   return workerModule;
 }
