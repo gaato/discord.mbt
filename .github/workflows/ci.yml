@@ -62,9 +62,25 @@ jobs:
 
       - name: Check gaato/discord against published dependencies
         run: |
-          # The workspace resolves gaato/dave and the template to their
-          # directories here; a consumer gets every dependency from the registry.
+          # The workspace resolves every member to its directory here; a
+          # consumer gets every dependency from the registry.
           MOON_WORK=off moon -C discord check --target native --deny-warn
+
+      - name: Check published module contents
+        run: |
+          # Each module ships its own LICENSE copy, which must match the
+          # repository's, and none of the repository-only files.
+          for module in discord discord_voice dave; do
+            cmp LICENSE "$module/LICENSE"
+            list="$(moon -C "$module" package --list 2>&1)" || {
+              echo "$list" >&2
+              exit 1
+            }
+            if grep -E '^(test|shim|examples|guide|src/examples|src/guide)/' <<<"$list"; then
+              echo "$module packages repository-only files" >&2
+              exit 1
+            fi
+          done
 
       - name: Public API drift check
         run: |
