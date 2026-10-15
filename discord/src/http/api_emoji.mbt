@@ -13,12 +13,12 @@ fn decode_application_emoji_items(
 
 ///|
 fn create_application_emoji_body(name : String, image : String) -> Json {
-  @model.ObjBuilder().field("name", name).field("image", image).build()
+  @sdkjson.ObjBuilder::new().field("name", name).field("image", image).build()
 }
 
 ///|
 fn modify_application_emoji_body(name : String) -> Json {
-  @model.ObjBuilder().field("name", name).build()
+  @sdkjson.ObjBuilder::new().field("name", name).build()
 }
 
 ///|
@@ -50,7 +50,7 @@ pub async fn Client::create_guild_emoji(
   roles? : Array[@model.RoleId],
   audit_reason? : String,
 ) -> @model.Emoji raise DiscordHttpError {
-  let body = @model.ObjBuilder()
+  let body = @sdkjson.ObjBuilder::new()
     .field("name", name)
     .field("image", image)
     .opt("roles", roles)
@@ -68,7 +68,10 @@ pub async fn Client::modify_guild_emoji(
   roles? : Array[@model.RoleId],
   audit_reason? : String,
 ) -> @model.Emoji raise DiscordHttpError {
-  let body = @model.ObjBuilder().opt("name", name).opt("roles", roles).build()
+  let body = @sdkjson.ObjBuilder::new()
+    .opt("name", name)
+    .opt("roles", roles)
+    .build()
   decode(
     self.request(ModifyGuildEmoji(guild_id~, emoji_id~), body~, audit_reason?),
   )

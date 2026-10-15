@@ -222,10 +222,10 @@ async test "a supplied transport keeps its errors and gets the attempt deadline"
       @ghttp.HttpError::Connect("refused"),
       @ghttp.HttpError::Protocol("garbled"),
     ] {
-    let transport = TimeoutTransport::{
-      inner: ScriptedFailure::{ fail_with: Some(error), },
-      timeout_ms: 1000,
-    }
+    let transport = @transport.DeadlineTransport::new(
+      ScriptedFailure::{ fail_with: Some(error), },
+      timeout_ms=1000,
+    )
     for streaming in [false, true] {
       let raised = try {
         if streaming {
@@ -240,10 +240,10 @@ async test "a supplied transport keeps its errors and gets the attempt deadline"
       assert_eq(raised, @debug.to_string(error))
     }
   }
-  let stalled = TimeoutTransport::{
-    inner: ScriptedFailure::{ fail_with: None, },
-    timeout_ms: 10,
-  }
+  let stalled = @transport.DeadlineTransport::new(
+    ScriptedFailure::{ fail_with: None, },
+    timeout_ms=10,
+  )
   for streaming in [false, true] {
     try {
       if streaming {

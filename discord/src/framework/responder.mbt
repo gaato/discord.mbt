@@ -62,7 +62,7 @@ async fn Responder::show_modal(
   self.gate.send({
     typ: Modal,
     data: Some(
-      @model.ObjBuilder()
+      @sdkjson.ObjBuilder::new()
       .field("custom_id", custom_id)
       .field("title", title)
       .field("components", components)

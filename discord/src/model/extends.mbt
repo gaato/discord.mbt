@@ -877,9 +877,6 @@ pub extend TypingStartEvent with ToJson::{to_json}
 pub extend UnavailableGuild with ToJson::{to_json}
 
 ///|
-pub extend Undefinable with ToJson::{to_json}
-
-///|
 pub extend UnfurledMediaItem with ToJson::{to_json}
 
 ///|

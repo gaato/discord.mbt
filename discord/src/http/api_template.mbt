@@ -20,7 +20,7 @@ fn create_guild_from_template_body(
   icon : String?,
 ) -> Json raise DiscordHttpError {
   validate_guild_from_template_name(name)
-  @model.ObjBuilder().field("name", name).opt("icon", icon).build()
+  @sdkjson.ObjBuilder::new().field("name", name).opt("icon", icon).build()
 }
 
 ///|
@@ -29,7 +29,7 @@ fn create_guild_template_body(
   description : String?,
 ) -> Json raise DiscordHttpError {
   validate_guild_template_fields(Some(name), description)
-  @model.ObjBuilder()
+  @sdkjson.ObjBuilder::new()
   .field("name", name)
   .opt("description", description)
   .build()
@@ -42,9 +42,9 @@ fn modify_guild_template_body(
   clear_description : Bool,
 ) -> Json raise DiscordHttpError {
   validate_guild_template_fields(name, description)
-  @model.ObjBuilder()
+  @sdkjson.ObjBuilder::new()
   .opt("name", name)
-  .und(
+  .presence(
     "description",
     patch_nullable("description", description, clear_description),
   )

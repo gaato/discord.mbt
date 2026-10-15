@@ -347,7 +347,7 @@ pub(all) struct ForumTagRequest {
 
 ///|
 pub impl ToJson for ForumTagRequest with fn to_json(self) {
-  ObjBuilder()
+  @sdkjson.ObjBuilder::new()
   .opt("id", self.id)
   .field("name", self.name)
   .opt("moderated", self.moderated)

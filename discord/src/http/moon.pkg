@@ -1,4 +1,5 @@
 import {
+  "gaato/sdk-runtime/json" @sdkjson,
   "gaato/discord/model",
   "gaato/discord/telemetry",
   "gaato/discord/ratelimit",

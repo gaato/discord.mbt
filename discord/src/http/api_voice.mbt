@@ -38,10 +38,10 @@ fn modify_current_user_voice_state_body(
   request_to_speak_timestamp : @model.Timestamp?,
   clear_request_to_speak_timestamp : Bool,
 ) -> Json raise DiscordHttpError {
-  @model.ObjBuilder()
+  @sdkjson.ObjBuilder::new()
   .opt("channel_id", channel_id)
   .opt("suppress", suppress)
-  .und(
+  .presence(
     "request_to_speak_timestamp",
     patch_nullable(
       "request_to_speak_timestamp", request_to_speak_timestamp, clear_request_to_speak_timestamp,
@@ -75,7 +75,7 @@ fn modify_user_voice_state_body(
   channel_id : @model.ChannelId,
   suppress : Bool?,
 ) -> Json {
-  @model.ObjBuilder()
+  @sdkjson.ObjBuilder::new()
   .field("channel_id", channel_id)
   .opt("suppress", suppress)
   .build()

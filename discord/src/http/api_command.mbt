@@ -39,14 +39,14 @@ fn command_body(
   contexts : Array[@model.InteractionContextType]?,
   handler : @model.EntryPointCommandHandlerType?,
 ) -> Json raise DiscordHttpError {
-  @model.ObjBuilder()
+  @sdkjson.ObjBuilder::new()
   .field("name", name)
   .opt("name_localizations", name_localizations)
   .opt("description", description)
   .opt("description_localizations", description_localizations)
   .opt("options", options)
   .opt("type", typ)
-  .und(
+  .presence(
     "default_member_permissions",
     patch_nullable(
       "default_member_permissions", default_member_permissions, clear_default_member_permissions,
@@ -75,23 +75,23 @@ fn command_patch_body(
   contexts : Array[@model.InteractionContextType]?,
   handler : @model.EntryPointCommandHandlerType?,
 ) -> Json raise DiscordHttpError {
-  @model.ObjBuilder()
+  @sdkjson.ObjBuilder::new()
   .opt("name", name)
-  .und(
+  .presence(
     "name_localizations",
     patch_nullable(
       "name_localizations", name_localizations, clear_name_localizations,
     ),
   )
   .opt("description", description)
-  .und(
+  .presence(
     "description_localizations",
     patch_nullable(
       "description_localizations", description_localizations, clear_description_localizations,
     ),
   )
-  .und("options", patch_value(options))
-  .und(
+  .presence("options", patch_value(options))
+  .presence(
     "default_member_permissions",
     patch_nullable(
       "default_member_permissions", default_member_permissions, clear_default_member_permissions,
@@ -128,7 +128,7 @@ fn edit_application_command_permissions_body(
       message="application command permissions exceed 100 entries",
     )
   }
-  @model.ObjBuilder().field("permissions", permissions).build()
+  @sdkjson.ObjBuilder::new().field("permissions", permissions).build()
 }
 
 ///|

@@ -1,9 +1,9 @@
 ///|
 fn Client::with_channel_allowed_mentions(
   self : Client,
-  builder : @model.ObjBuilder,
+  builder : @sdkjson.ObjBuilder,
   allowed_mentions : @model.AllowedMentions?,
-) -> @model.ObjBuilder {
+) -> @sdkjson.ObjBuilder {
   builder.field(
     "allowed_mentions",
     allowed_mentions.unwrap_or(self.default_allowed_mentions),
@@ -93,7 +93,7 @@ pub async fn Client::create_message(
   )
   let body = self
     .with_channel_allowed_mentions(
-      @model.ObjBuilder()
+      @sdkjson.ObjBuilder::new()
       .opt("content", content)
       .opt("embeds", embeds)
       .opt("components", components)
@@ -184,7 +184,7 @@ pub async fn Client::bulk_delete_messages(
   audit_reason? : String,
 ) -> Unit raise DiscordHttpError {
   validate_bulk_delete_messages(messages)
-  let body = @model.ObjBuilder().field("messages", messages).build()
+  let body = @sdkjson.ObjBuilder::new().field("messages", messages).build()
   self.request(BulkDeleteMessages(channel_id~), body~, audit_reason?) |> ignore
 }
 
@@ -328,7 +328,7 @@ fn search_guild_messages_query(
     params.push("slop=\{value}")
   }
   if content is Some(value) {
-    params.push("content=" + percent_encode(value))
+    params.push("content=" + @ghttp.percent_encode(value))
   }
   if mention_everyone is Some(value) {
     params.push("mention_everyone=\{value}")
@@ -398,22 +398,22 @@ fn search_guild_messages_query(
   }
   if embed_provider is Some(values) {
     for value in values {
-      params.push("embed_provider=" + percent_encode(value))
+      params.push("embed_provider=" + @ghttp.percent_encode(value))
     }
   }
   if link_hostname is Some(values) {
     for value in values {
-      params.push("link_hostname=" + percent_encode(value))
+      params.push("link_hostname=" + @ghttp.percent_encode(value))
     }
   }
   if attachment_filename is Some(values) {
     for value in values {
-      params.push("attachment_filename=" + percent_encode(value))
+      params.push("attachment_filename=" + @ghttp.percent_encode(value))
     }
   }
   if attachment_extension is Some(values) {
     for value in values {
-      params.push("attachment_extension=" + percent_encode(value))
+      params.push("attachment_extension=" + @ghttp.percent_encode(value))
     }
   }
   if params.length() == 0 {

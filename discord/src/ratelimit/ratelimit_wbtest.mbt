@@ -1,108 +1,25 @@
 ///|
-async fn wait_until_rate_limit_gate_is_held(bucket : Bucket) -> Unit {
-  for _ in 0..<100 {
-    if !bucket.gate.try_acquire() {
-      return
-    }
-    bucket.gate.release()
-    @async.sleep(1)
-  }
-  fail("rate-limit waiter did not acquire its bucket gate")
-}
-
-///|
-async test "a cancelled bucket reset wait releases its gate" {
-  let limiter = InMemoryRateLimiter()
-  let key = "POST:/channels/5/messages"
-  @runtime.RateLimiter::acquire(limiter, key, global_exempt=true)
-  @runtime.RateLimiter::release(
-    limiter,
-    key,
-    status=200,
-    headers=@http.Headers::from_array([
-      ("x-ratelimit-remaining", "0"),
-      ("x-ratelimit-reset-after", "60"),
-    ]),
-  )
-  guard limiter.buckets.get(key) is Some(bucket) else {
-    fail("rate-limit bucket was not created")
-  }
+async test "Discord allows only one request in flight per bucket" {
+  let limiter = rate_limiter()
+  limiter.acquire("bucket", global_exempt=true)
   @async.with_task_group(group => {
-    let waiting = group.spawn(no_wait=true, allow_failure=true, () => {
-      @runtime.RateLimiter::acquire(limiter, key, global_exempt=true)
+    let started = @async.Semaphore(1, initial_value=0)
+    let admitted = Ref(false)
+    let waiting = group.spawn(no_wait=true, () => {
+      started.release()
+      limiter.acquire("bucket", global_exempt=true)
+      admitted.val = true
+      limiter.release("bucket", status=200, headers=@http.Headers::new())
     })
-    wait_until_rate_limit_gate_is_held(bucket)
-    waiting.cancel()
-    try waiting.wait() catch {
-      @async.WaitedTaskAlreadyCancelled => ()
-      error => fail("unexpected cancellation error: \{Repr(error)}")
-    } noraise {
-      _ => fail("cancelled rate-limit wait unexpectedly completed")
-    }
-
-    assert_eq(bucket.remaining, 0)
-    assert_true(bucket.gate.try_acquire())
-    bucket.gate.release()
-    bucket.reset_at_ms = 0
-    @async.with_timeout(100, () => {
-      @runtime.RateLimiter::acquire(limiter, key, global_exempt=true)
-    })
-    @runtime.RateLimiter::release(
-      limiter,
-      key,
-      status=200,
-      headers=@http.Headers::new(),
-    )
+    started.acquire()
+    @async.sleep(10)
+    assert_false(admitted.val)
+    // A different bucket still proceeds while the first exchange is in flight.
+    limiter.acquire("other", global_exempt=true)
+    limiter.release("other", status=200, headers=@http.Headers::new())
+    assert_false(admitted.val)
+    limiter.release("bucket", status=200, headers=@http.Headers::new())
+    @async.with_timeout(1000, () => waiting.wait())
+    assert_true(admitted.val)
   })
-}
-
-///|
-async test "a shorter global 429 never shortens an existing block" {
-  let limiter = InMemoryRateLimiter()
-  let key = "POST:/channels/global/messages"
-  @runtime.RateLimiter::acquire(limiter, key, global_exempt=true)
-  @runtime.RateLimiter::release(
-    limiter,
-    key,
-    status=429,
-    headers=@http.Headers::from_array([
-      ("x-ratelimit-global", "true"),
-      ("retry-after", "60"),
-    ]),
-  )
-  let first_deadline = limiter.global_blocked_until
-  guard limiter.buckets.get(key) is Some(bucket) else {
-    fail("rate-limit bucket was not created")
-  }
-  bucket.gate.acquire()
-  @runtime.RateLimiter::release(
-    limiter,
-    key,
-    status=429,
-    headers=@http.Headers::from_array([
-      ("x-ratelimit-global", "true"),
-      ("retry-after", "1"),
-    ]),
-  )
-  assert_true(limiter.global_blocked_until >= first_deadline)
-}
-
-///|
-async test "a 429 without retry-after blocks its bucket for one second" {
-  let limiter = InMemoryRateLimiter()
-  let key = "POST:/channels/6/messages"
-  @runtime.RateLimiter::acquire(limiter, key, global_exempt=true)
-  let before = @clock.now_ms()
-  @runtime.RateLimiter::release(
-    limiter,
-    key,
-    status=429,
-    headers=@http.Headers::new(),
-  )
-  guard limiter.buckets.get(key) is Some(bucket) else {
-    fail("rate-limit bucket was not created")
-  }
-  assert_eq(bucket.remaining, 0)
-  let reset_in = bucket.reset_at_ms - before
-  assert_true(reset_in >= 1000L && reset_in <= 1100L)
 }

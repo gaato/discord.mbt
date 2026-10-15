@@ -235,7 +235,7 @@ fn redact_path(path : String) -> String {
 fn attach_payload_log(p : P) -> Unit {
   p.client.middleware((request, next) => {
     let response = next(request)
-    let line = @model.ObjBuilder()
+    let line = @sdkjson.ObjBuilder::new()
       .field("method", Repr(request.route.method_()).to_string())
       .field("path", redact_path(request.route.path()))
       .field("bucket", redact_path(request.route.bucket()))

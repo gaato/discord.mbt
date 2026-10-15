@@ -8,7 +8,7 @@ pub struct Coordinator {
 ///|
 priv struct CoordinatorState {
   identify : @queue.InMemoryQueue
-  limiter : @ratelimit.InMemoryRateLimiter
+  limiter : @runtime.WindowLimiter
   cooldown : @cooldown.InMemoryCooldownStore
   owners : Map[String, BucketOwner]
   next_connection_id : Ref[Int32]
@@ -57,7 +57,7 @@ pub async fn[X] Coordinator::serve(
   let server = @socket.TcpServer(@socket.Addr::parse(addr), reuse_addr=true)
   let state = CoordinatorState::{
     identify: InMemoryQueue(max_concurrency~, spacing_ms=identify_spacing_ms),
-    limiter: InMemoryRateLimiter(global_limit~),
+    limiter: @ratelimit.rate_limiter(global_limit~),
     cooldown: @cooldown.InMemoryCooldownStore(),
     owners: Map([]),
     next_connection_id: Ref(0),

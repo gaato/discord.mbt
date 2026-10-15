@@ -7,6 +7,8 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-15
+
 ### Added
 
 - `GatewayCtx::expect_event(event_type, predicate)` registers an expected
@@ -24,6 +26,29 @@ breaking change is listed with a migration note.
 
 ### Changed
 
+- **`@ratelimit.InMemoryRateLimiter` is replaced by
+  `@ratelimit.rate_limiter()`**, which returns sdk-runtime's `WindowLimiter`
+  configured for Discord and accepts an injected `clock`. Migration:
+  `InMemoryRateLimiter(global_limit=n)` → `rate_limiter(global_limit=n)`;
+  change type annotations to `@runtime.WindowLimiter`, which needs
+  `"gaato/sdk-runtime@0.2.2"` in your `moon.mod` and `"gaato/sdk-runtime"
+  @runtime` in `moon.pkg`.
+  Bucket state now requires valid remaining and reset-after headers together,
+  decrements remaining on admission, and leaves state unchanged on status 0.
+  Waits no longer add a millisecond to the reset deadline. Retry-After also
+  accepts HTTP dates; malformed values use the one-second fallback.
+- **Request bodies now use `gaato/sdk-runtime/json`'s presence values and
+  object builder.** Migration: add `"gaato/sdk-runtime@0.2.2"` to the
+  `import` of your `moon.mod` (a `moon.pkg` import alone does not resolve),
+  import `"gaato/sdk-runtime/json" @sdkjson` in `moon.pkg`, and replace
+  `@model.Undefinable[T]` with `@sdkjson.Presence[T]` (`Missing` →
+  `Absent`), `@model.ObjBuilder()` with `@sdkjson.ObjBuilder::new()`, and
+  `.und(...)` with `.presence(...)`.
+  `Presence` values are emitted through the builder rather than standalone
+  `ToJson`/`FromJson` implementations.
+- **Removed `@model.Undefinable` and its `ToJson`/`FromJson` implementations
+  and `to_option`, and `@model.ObjBuilder`.** Use the sdk-runtime replacements
+  above; `Presence::to_option` preserves the lossy option conversion.
 - **Enums whose values Discord may extend, and the library enums that report
   events and results, are `#non_exhaustive`.** This covers the `@model` value
   sets that carry `Unknown(..)` (for example `ChannelType`,

@@ -60,12 +60,15 @@ pub(all) struct PollCreateRequest {
 ///|
 /// Request-side poll media omits absent fields instead of sending nulls.
 fn poll_media_request_json(media : PollMedia) -> Json {
-  ObjBuilder().opt("text", media.text).opt("emoji", media.emoji).build()
+  @sdkjson.ObjBuilder::new()
+  .opt("text", media.text)
+  .opt("emoji", media.emoji)
+  .build()
 }
 
 ///|
 pub impl ToJson for PollCreateRequest with fn to_json(self) {
-  ObjBuilder()
+  @sdkjson.ObjBuilder::new()
   .field("question", poll_media_request_json(self.question))
   .field(
     "answers",

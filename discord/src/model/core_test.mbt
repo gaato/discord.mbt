@@ -117,14 +117,14 @@ test "derived struct composes core types (encode, absent optional omitted)" {
 }
 
 ///|
-test "obj_builder emits field/opt/und correctly" {
-  let body = @model.ObjBuilder()
+test "obj_builder emits field/opt/presence correctly" {
+  let body = @sdkjson.ObjBuilder::new()
     .field("name", "general")
     .opt("topic", (None : String?))
     .opt("position", Some(3))
-    .und("icon", (Missing : @model.Undefinable[String]))
-    .und("banner", (Null : @model.Undefinable[String]))
-    .und("nick", Value("neko"))
+    .presence("icon", (Absent : @sdkjson.Presence[String]))
+    .presence("banner", (Null : @sdkjson.Presence[String]))
+    .presence("nick", Value("neko"))
     .build()
   inspect(
     body.stringify(),

@@ -27,7 +27,7 @@ priv enum Backend {
 
 ///|
 /// Library version, sent in the User-Agent header.
-pub const VERSION : String = "0.7.0"
+pub const VERSION : String = "0.8.0"
 
 ///|
 /// Create a client. `token` is the raw bot token (without the `Bot ` prefix).
@@ -47,7 +47,7 @@ pub const VERSION : String = "0.7.0"
 /// still bounded by `request_timeout_ms`.
 ///
 /// `limiter` is a `gaato/sdk-runtime` `RateLimiter`; the default is an
-/// `InMemoryRateLimiter` with Discord's per-bucket and global accounting.
+/// `@ratelimit.rate_limiter()` with Discord's per-bucket and global accounting.
 pub fn Client::Client(
   token : String,
   base_url~ : String = "https://discord.com",
@@ -61,7 +61,7 @@ pub fn Client::Client(
 ) -> Client {
   let limiter : &@runtime.RateLimiter = match limiter {
     Some(l) => l
-    None => @ratelimit.InMemoryRateLimiter()
+    None => @ratelimit.rate_limiter()
   }
   let (transport, owned_transport) : (
     &@ghttp.Transport,
@@ -71,7 +71,7 @@ pub fn Client::Client(
     // the same deadline from the outside.
     Some(shared) =>
       (
-        TimeoutTransport::{ inner: shared, timeout_ms: request_timeout_ms, },
+        @transport.DeadlineTransport::new(shared, timeout_ms=request_timeout_ms),
         None,
       )
     None => {
@@ -267,45 +267,6 @@ pub fn Client::close(self : Client) -> Unit {
   self.closed_ = true
   if self.owned_transport is Some(transport) {
     transport.close()
-  }
-}
-
-///|
-/// A supplied transport with the client's per-attempt deadline around each
-/// exchange. Expiry surfaces as `HttpError::Timeout`, which the runtime
-/// classifies as a transport failure that `DiscordRetry` never resends.
-priv struct TimeoutTransport {
-  inner : &@ghttp.Transport
-  timeout_ms : Int32
-}
-
-///|
-impl @ghttp.Transport for TimeoutTransport with fn send(self, request) {
-  within_deadline(self.timeout_ms, () => self.inner.send(request))
-}
-
-///|
-impl @ghttp.Transport for TimeoutTransport with fn send_stream(self, request) {
-  within_deadline(self.timeout_ms, () => self.inner.send_stream(request))
-}
-
-///|
-/// Run one exchange under a deadline, keeping the transport's error type.
-async fn[X] within_deadline(
-  timeout_ms : Int32,
-  exchange : async () -> X raise @ghttp.HttpError,
-) -> X raise @ghttp.HttpError {
-  @async.with_timeout(
-    timeout_ms,
-    () => exchange(),
-    error=@ghttp.HttpError::Timeout(timeout_ms),
-  ) catch {
-    @ghttp.HttpError::Connect(message) => raise Connect(message)
-    @ghttp.HttpError::Timeout(ms) => raise Timeout(ms)
-    @ghttp.HttpError::Protocol(message) => raise Protocol(message)
-    // `with_timeout` is typed to raise any error, but here it only passes on
-    // the exchange's own errors and its timeout.
-    error => raise Protocol("\{error}")
   }
 }
 

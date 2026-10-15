@@ -51,7 +51,7 @@ pub async fn Client::update_application_identity_profile(
   if data is Some(value) {
     validate_application_identity_profile_data(value)
   }
-  let body = @model.ObjBuilder()
+  let body = @sdkjson.ObjBuilder::new()
     .opt("username", username)
     .opt("data", data)
     .build()
@@ -115,7 +115,7 @@ pub async fn Client::get_application_identities_by_external_id(
   provider_id? : String,
 ) -> Array[@model.ApplicationIdentity] raise DiscordHttpError {
   let query = match provider_id {
-    Some(value) => "?provider_id=\{percent_encode(value)}"
+    Some(value) => "?provider_id=\{@ghttp.percent_encode(value)}"
     None => ""
   }
   let envelope : ApplicationIdentities = decode(

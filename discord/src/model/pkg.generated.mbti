@@ -2977,15 +2977,6 @@ pub fn[T] Nullable::to_option(Self[T]) -> T?
 pub impl[T : ToJson] ToJson for Nullable[T]
 pub impl[T : @json.FromJson] @json.FromJson for Nullable[T]
 
-pub struct ObjBuilder {
-  // private fields
-}
-pub fn ObjBuilder::ObjBuilder() -> Self
-pub fn ObjBuilder::build(Self) -> Json
-pub fn[T : ToJson] ObjBuilder::field(Self, String, T) -> Self
-pub fn[T : ToJson] ObjBuilder::opt(Self, String, T?) -> Self
-pub fn[T : ToJson] ObjBuilder::und(Self, String, Undefinable[T]) -> Self
-
 #non_exhaustive
 pub(all) enum OnboardingMode {
   Default
@@ -3889,16 +3880,6 @@ pub(all) struct UnavailableGuild {
   unavailable : Bool
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn UnavailableGuild::to_json(Self) -> Json
-
-pub(all) enum Undefinable[T] {
-  Missing
-  Null
-  Value(T)
-} derive(Eq, @debug.Debug)
-pub fn[T : ToJson] Undefinable::to_json(Self[T]) -> Json
-pub fn[T] Undefinable::to_option(Self[T]) -> T?
-pub impl[T : ToJson] ToJson for Undefinable[T]
-pub impl[T : @json.FromJson] @json.FromJson for Undefinable[T]
 
 pub(all) struct UnfurledMediaItem {
   url : String

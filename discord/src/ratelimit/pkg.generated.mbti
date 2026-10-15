@@ -2,26 +2,16 @@
 package "gaato/discord/ratelimit"
 
 import {
-  "gaato/http",
+  "gaato/http/clock",
   "gaato/sdk-runtime",
 }
 
 // Values
+pub fn rate_limiter(global_limit? : Int, clock? : &@clock.Clock) -> @sdk-runtime.WindowLimiter
 
 // Errors
 
 // Types and methods
-pub struct InMemoryRateLimiter {
-  global_limit : Int
-  mut global_window_start : Int64
-  mut global_count : Int
-  mut global_blocked_until : Int64
-  // private fields
-}
-pub fn InMemoryRateLimiter::InMemoryRateLimiter(global_limit? : Int) -> Self
-pub async fn InMemoryRateLimiter::acquire(Self, String, global_exempt~ : Bool) -> Unit
-pub async fn InMemoryRateLimiter::release(Self, String, status~ : Int, headers~ : @http.Headers) -> Unit
-pub impl @sdk-runtime.RateLimiter for InMemoryRateLimiter
 
 // Type aliases
 

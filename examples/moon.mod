@@ -14,7 +14,8 @@ preferred_target = "native"
 warnings = "-implicit_impl_as_method"
 
 import {
-  "gaato/discord@0.7.0",
+  "gaato/sdk-runtime@0.2.2",
+  "gaato/discord@0.8.0",
   "gaato/discord_voice@0.1.0",
   "moonbitlang/async@0.22.5",
 }

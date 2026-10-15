@@ -2,7 +2,7 @@
 
 The native `gaato/discord/coordinator` package provides a small TCP service for
 deployments that split Gateway shards between processes. It centralizes the
-existing `InMemoryQueue` Identify buckets, `InMemoryRateLimiter` REST state,
+existing `InMemoryQueue` Identify buckets, `rate_limiter()` REST state,
 and `InMemoryCooldownStore` command windows;
 no Redis or external database is required.
 

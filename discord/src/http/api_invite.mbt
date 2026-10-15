@@ -81,7 +81,7 @@ fn invite_target_users_body(
   if user_ids.length() > 1000 {
     raise Validation(message="invite target users exceed 1000 users")
   }
-  @model.ObjBuilder().field("user_ids", user_ids).build()
+  @sdkjson.ObjBuilder::new().field("user_ids", user_ids).build()
 }
 
 ///|

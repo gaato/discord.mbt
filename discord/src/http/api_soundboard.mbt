@@ -17,7 +17,7 @@ pub async fn Client::send_soundboard_sound(
   sound_id : @model.SoundboardSoundId,
   source_guild_id? : @model.GuildId,
 ) -> Unit raise DiscordHttpError {
-  let body = @model.ObjBuilder()
+  let body = @sdkjson.ObjBuilder::new()
     .field("sound_id", sound_id)
     .opt("source_guild_id", source_guild_id)
     .build()
@@ -73,7 +73,7 @@ pub async fn Client::create_guild_soundboard_sound(
   audit_reason? : String,
 ) -> @model.SoundboardSound raise DiscordHttpError {
   validate_soundboard_fields(Some(name), volume)
-  let body = @model.ObjBuilder()
+  let body = @sdkjson.ObjBuilder::new()
     .field("name", name)
     .field("sound", sound)
     .opt("volume", volume)
@@ -100,11 +100,11 @@ pub async fn Client::modify_guild_soundboard_sound(
   audit_reason? : String,
 ) -> @model.SoundboardSound raise DiscordHttpError {
   validate_soundboard_fields(name, volume)
-  let body = @model.ObjBuilder()
+  let body = @sdkjson.ObjBuilder::new()
     .opt("name", name)
     .opt("volume", volume)
-    .und("emoji_id", patch_nullable("emoji_id", emoji_id, clear_emoji_id))
-    .und(
+    .presence("emoji_id", patch_nullable("emoji_id", emoji_id, clear_emoji_id))
+    .presence(
       "emoji_name",
       patch_nullable("emoji_name", emoji_name, clear_emoji_name),
     )

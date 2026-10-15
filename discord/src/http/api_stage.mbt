@@ -15,7 +15,7 @@ pub async fn Client::create_stage_instance(
   audit_reason? : String,
 ) -> @model.StageInstance raise DiscordHttpError {
   validate_stage_topic(Some(topic))
-  let body = @model.ObjBuilder()
+  let body = @sdkjson.ObjBuilder::new()
     .field("channel_id", channel_id)
     .field("topic", topic)
     .opt("privacy_level", privacy_level)
@@ -44,7 +44,7 @@ pub async fn Client::modify_stage_instance(
   audit_reason? : String,
 ) -> @model.StageInstance raise DiscordHttpError {
   validate_stage_topic(topic)
-  let body = @model.ObjBuilder()
+  let body = @sdkjson.ObjBuilder::new()
     .opt("topic", topic)
     .opt("privacy_level", privacy_level)
     .build()

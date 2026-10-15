@@ -33,7 +33,7 @@ fn auto_moderation_rule_body(
   exempt_channels : Array[@model.ChannelId]?,
 ) -> Json raise DiscordHttpError {
   validate_auto_moderation_rule(name, actions, exempt_roles, exempt_channels)
-  @model.ObjBuilder()
+  @sdkjson.ObjBuilder::new()
   .opt("name", name)
   .opt("event_type", event_type)
   .opt("trigger_type", trigger_type)

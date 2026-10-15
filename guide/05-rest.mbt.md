@@ -319,7 +319,7 @@ interaction or webhook token; this also omits bot-token authentication. Set
 
 ## Rate-limit behavior
 
-The default `InMemoryRateLimiter` coordinates route buckets and Discord's
+The default `@ratelimit.rate_limiter()` coordinates route buckets and Discord's
 global window inside one process. The client updates bucket state from response
 headers and retries 429 responses after the declared delay. Typed and custom
 routes use the same request path, so no separate limiter integration is
