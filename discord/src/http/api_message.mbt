@@ -1,9 +1,9 @@
 ///|
 fn Client::with_channel_allowed_mentions(
   self : Client,
-  builder : @model.ObjBuilder,
+  builder : @sdkjson.ObjBuilder,
   allowed_mentions : @model.AllowedMentions?,
-) -> @model.ObjBuilder {
+) -> @sdkjson.ObjBuilder {
   builder.field(
     "allowed_mentions",
     allowed_mentions.unwrap_or(self.default_allowed_mentions),
@@ -93,7 +93,7 @@ pub async fn Client::create_message(
   )
   let body = self
     .with_channel_allowed_mentions(
-      @model.ObjBuilder()
+      @sdkjson.ObjBuilder::new()
       .opt("content", content)
       .opt("embeds", embeds)
       .opt("components", components)
@@ -184,7 +184,7 @@ pub async fn Client::bulk_delete_messages(
   audit_reason? : String,
 ) -> Unit raise DiscordHttpError {
   validate_bulk_delete_messages(messages)
-  let body = @model.ObjBuilder().field("messages", messages).build()
+  let body = @sdkjson.ObjBuilder::new().field("messages", messages).build()
   self.request(BulkDeleteMessages(channel_id~), body~, audit_reason?) |> ignore
 }
 

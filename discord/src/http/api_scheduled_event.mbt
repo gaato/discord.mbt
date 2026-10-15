@@ -24,16 +24,19 @@ fn scheduled_event_create_body(
   recurrence_rule : @model.GuildScheduledEventRecurrenceRule?,
 ) -> Json raise DiscordHttpError {
   validate_scheduled_event_text(Some(name), description)
-  @model.ObjBuilder()
-  .und("channel_id", patch_nullable("channel_id", channel_id, clear_channel_id))
-  .und(
+  @sdkjson.ObjBuilder::new()
+  .presence(
+    "channel_id",
+    patch_nullable("channel_id", channel_id, clear_channel_id),
+  )
+  .presence(
     "entity_metadata",
     patch_nullable("entity_metadata", entity_metadata, clear_entity_metadata),
   )
   .field("name", name)
   .field("privacy_level", privacy_level)
   .field("scheduled_start_time", scheduled_start_time)
-  .und(
+  .presence(
     "scheduled_end_time",
     patch_nullable(
       "scheduled_end_time", scheduled_end_time, clear_scheduled_end_time,
@@ -67,29 +70,32 @@ fn scheduled_event_modify_body(
   clear_recurrence_rule : Bool,
 ) -> Json raise DiscordHttpError {
   validate_scheduled_event_text(name, description)
-  @model.ObjBuilder()
-  .und("channel_id", patch_nullable("channel_id", channel_id, clear_channel_id))
-  .und(
+  @sdkjson.ObjBuilder::new()
+  .presence(
+    "channel_id",
+    patch_nullable("channel_id", channel_id, clear_channel_id),
+  )
+  .presence(
     "entity_metadata",
     patch_nullable("entity_metadata", entity_metadata, clear_entity_metadata),
   )
   .opt("name", name)
   .opt("privacy_level", privacy_level)
   .opt("scheduled_start_time", scheduled_start_time)
-  .und(
+  .presence(
     "scheduled_end_time",
     patch_nullable(
       "scheduled_end_time", scheduled_end_time, clear_scheduled_end_time,
     ),
   )
-  .und(
+  .presence(
     "description",
     patch_nullable("description", description, clear_description),
   )
   .opt("entity_type", entity_type)
   .opt("status", status)
-  .und("image", patch_nullable("image", image, clear_image))
-  .und(
+  .presence("image", patch_nullable("image", image, clear_image))
+  .presence(
     "recurrence_rule",
     patch_nullable("recurrence_rule", recurrence_rule, clear_recurrence_rule),
   )

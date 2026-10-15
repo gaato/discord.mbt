@@ -100,7 +100,7 @@ pub async fn Client::create_guild_sticker(
   if file.content.length() > 512 * 1024 {
     raise Validation(message="guild sticker file exceeds 512 KiB")
   }
-  let body = @model.ObjBuilder()
+  let body = @sdkjson.ObjBuilder::new()
     .field("name", name)
     .field("description", description)
     .field("tags", tags)
@@ -130,9 +130,9 @@ pub async fn Client::modify_guild_sticker(
     tags,
     allow_empty_description=false,
   )
-  let body = @model.ObjBuilder()
+  let body = @sdkjson.ObjBuilder::new()
     .opt("name", name)
-    .und(
+    .presence(
       "description",
       patch_nullable("description", description, clear_description),
     )

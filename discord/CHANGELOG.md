@@ -24,6 +24,18 @@ breaking change is listed with a migration note.
 
 ### Changed
 
+- **Request bodies now use `gaato/sdk-runtime/json`'s presence values and
+  object builder.** Migration: add `"gaato/sdk-runtime@0.2.2"` to the
+  `import` of your `moon.mod` (a `moon.pkg` import alone does not resolve),
+  import `"gaato/sdk-runtime/json" @sdkjson` in `moon.pkg`, and replace
+  `@model.Undefinable[T]` with `@sdkjson.Presence[T]` (`Missing` →
+  `Absent`), `@model.ObjBuilder()` with `@sdkjson.ObjBuilder::new()`, and
+  `.und(...)` with `.presence(...)`.
+  `Presence` values are emitted through the builder rather than standalone
+  `ToJson`/`FromJson` implementations.
+- **Removed `@model.Undefinable` and its `ToJson`/`FromJson` implementations
+  and `to_option`, and `@model.ObjBuilder`.** Use the sdk-runtime replacements
+  above; `Presence::to_option` preserves the lossy option conversion.
 - **Enums whose values Discord may extend, and the library enums that report
   events and results, are `#non_exhaustive`.** This covers the `@model` value
   sets that carry `Unknown(..)` (for example `ChannelType`,

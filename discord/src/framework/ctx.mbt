@@ -956,6 +956,6 @@ pub async fn AutocompleteCtx::suggest(
   }
   self.gate.send({
     typ: Autocomplete,
-    data: Some(@model.ObjBuilder().field("choices", choices).build()),
+    data: Some(@sdkjson.ObjBuilder::new().field("choices", choices).build()),
   })
 }

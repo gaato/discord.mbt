@@ -518,7 +518,7 @@ test "scheduled event request bodies model null and recurrence explicitly" {
 
 ///|
 test "guild sticker multipart uses named form fields and file" {
-  let body = @model.ObjBuilder()
+  let body = @sdkjson.ObjBuilder::new()
     .field("name", "Wave")
     .field("description", "Wumpus waves")
     .field("tags", "wave,hello")

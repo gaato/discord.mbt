@@ -64,10 +64,10 @@ pub async fn Client::modify_current_user(
   clear_banner~ : Bool = false,
 ) -> @model.User raise DiscordHttpError {
   validate_length("username", username, min=2, max=32)
-  let body = @model.ObjBuilder()
+  let body = @sdkjson.ObjBuilder::new()
     .opt("username", username)
-    .und("avatar", patch_nullable("avatar", avatar, clear_avatar))
-    .und("banner", patch_nullable("banner", banner, clear_banner))
+    .presence("avatar", patch_nullable("avatar", avatar, clear_avatar))
+    .presence("banner", patch_nullable("banner", banner, clear_banner))
     .build()
   decode(self.request(ModifyCurrentUser, body~))
 }
@@ -105,7 +105,9 @@ pub async fn Client::create_dm(
   self : Client,
   recipient_id : @model.UserId,
 ) -> @model.Channel raise DiscordHttpError {
-  let body = @model.ObjBuilder().field("recipient_id", recipient_id).build()
+  let body = @sdkjson.ObjBuilder::new()
+    .field("recipient_id", recipient_id)
+    .build()
   decode(self.request(CreateDm, body~))
 }
 
@@ -165,7 +167,7 @@ fn update_current_user_application_role_connection_body(
 ) -> Json raise DiscordHttpError {
   validate_length("platform_name", platform_name, max=50)
   validate_length("platform_username", platform_username, max=100)
-  @model.ObjBuilder()
+  @sdkjson.ObjBuilder::new()
   .opt("platform_name", platform_name)
   .opt("platform_username", platform_username)
   .opt("metadata", metadata)

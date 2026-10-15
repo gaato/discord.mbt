@@ -117,7 +117,7 @@ pub fn attachments_json(files : Array[FileUpload]) -> Json {
   let items : Array[Json] = []
   for i, file in files {
     items.push(
-      @model.ObjBuilder()
+      @sdkjson.ObjBuilder::new()
       .field("id", i)
       .field("filename", file.filename)
       .opt("description", file.description)
@@ -157,10 +157,10 @@ fn merged_attachments_json(
 /// always sent (merged with any new uploads, `[]` clears), while without it
 /// the field only announces fresh uploads, matching the create path.
 fn edit_attachments_field(
-  body : @model.ObjBuilder,
+  body : @sdkjson.ObjBuilder,
   keep : Array[@model.AttachmentRequest]?,
   files : Array[FileUpload]?,
-) -> @model.ObjBuilder {
+) -> @sdkjson.ObjBuilder {
   match (keep, files) {
     (Some(kept), _) =>
       body.field(

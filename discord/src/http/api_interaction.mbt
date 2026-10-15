@@ -136,7 +136,7 @@ pub async fn Client::create_followup(
     components,
     has_poll=poll is Some(_),
   )
-  let builder = @model.ObjBuilder()
+  let builder = @sdkjson.ObjBuilder::new()
     .opt("content", content)
     .opt("embeds", embeds)
     .opt("components", components)

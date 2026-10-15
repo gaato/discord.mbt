@@ -110,7 +110,7 @@ pub fn CommandSpec::message(
 /// The command registration payload, omitting fields left at their
 /// defaults so command-sync diffs stay minimal.
 pub impl ToJson for CommandSpec with fn to_json(self) {
-  let builder = @model.ObjBuilder()
+  let builder = @sdkjson.ObjBuilder::new()
     .field("name", self.name)
     .opt("name_localizations", self.name_localizations)
     .field("description", self.description)

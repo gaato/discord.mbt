@@ -33,7 +33,7 @@ pub async fn Client::create_webhook(
   audit_reason? : String,
 ) -> @model.Webhook raise DiscordHttpError {
   validate_webhook_name(name)
-  let body = @model.ObjBuilder()
+  let body = @sdkjson.ObjBuilder::new()
     .field("name", name)
     .opt("avatar", avatar)
     .build()
@@ -81,9 +81,9 @@ pub async fn Client::modify_webhook(
   if name is Some(value) {
     validate_webhook_name(value)
   }
-  let body = @model.ObjBuilder()
+  let body = @sdkjson.ObjBuilder::new()
     .opt("name", name)
-    .und("avatar", patch_nullable("avatar", avatar, clear_avatar))
+    .presence("avatar", patch_nullable("avatar", avatar, clear_avatar))
     .opt("channel_id", channel_id)
     .build()
   decode(self.request(ModifyWebhook(webhook_id~), body~, audit_reason?))
@@ -108,9 +108,9 @@ fn modify_webhook_with_token_body(
   if name is Some(value) {
     validate_webhook_name(value)
   }
-  @model.ObjBuilder()
+  @sdkjson.ObjBuilder::new()
   .opt("name", name)
-  .und("avatar", patch_nullable("avatar", avatar, clear_avatar))
+  .presence("avatar", patch_nullable("avatar", avatar, clear_avatar))
   .build()
 }
 
@@ -257,7 +257,7 @@ pub async fn Client::execute_webhook(
     components,
     has_poll=poll is Some(_),
   )
-  let builder = @model.ObjBuilder()
+  let builder = @sdkjson.ObjBuilder::new()
     .opt("content", content)
     .opt("embeds", embeds)
     .opt("components", components)

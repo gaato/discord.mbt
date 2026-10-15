@@ -182,20 +182,21 @@ test "timestamp rare timezone branches and malformed branches are pinned" {
 }
 
 ///|
-test "undefinable JSON helpers cover value, null, and missing fallbacks" {
-  let value : @model.Undefinable[Int32] = Value(7)
+test "presence helpers cover value, null, and absent fields" {
+  let value : @sdkjson.Presence[Int32] = Value(7)
   assert_eq(value.to_option(), Some(7))
-  assert_eq(value.to_json().stringify(), "7")
-  let null_value : @model.Undefinable[Int32] = Null
-  assert_eq(null_value.to_json().stringify(), "null")
-  let missing : @model.Undefinable[Int32] = Missing
-  assert_eq(missing.to_json().stringify(), "null")
-  let decoded_null : @model.Undefinable[Int32] = @json.from_json(Json::null())
-  assert_true(decoded_null is Null)
-  let decoded_value : @model.Undefinable[Int32] = @json.from_json(
-    Json::number(8),
+  let null_value : @sdkjson.Presence[Int32] = Null
+  assert_eq(null_value.to_option(), None)
+  let absent : @sdkjson.Presence[Int32] = Absent
+  assert_eq(absent.to_option(), None)
+  json_inspect(
+    @sdkjson.ObjBuilder::new()
+    .presence("value", value)
+    .presence("null", null_value)
+    .presence("absent", absent)
+    .build(),
+    content={ "value": 7, "null": null },
   )
-  assert_eq(decoded_value.to_option(), Some(8))
 }
 
 ///|

@@ -55,22 +55,25 @@ pub async fn Client::modify_channel(
   validate_length("channel name", name, min=1, max=100)
   validate_length("channel topic", topic, max=4096)
   validate_range("rate_limit_per_user", rate_limit_per_user, min=0, max=21600)
-  let body = @model.ObjBuilder()
+  let body = @sdkjson.ObjBuilder::new()
     .opt("name", name)
     .opt("type", typ)
-    .und("topic", patch_nullable("topic", topic, clear_topic))
+    .presence("topic", patch_nullable("topic", topic, clear_topic))
     .opt("nsfw", nsfw)
-    .und("parent_id", patch_nullable("parent_id", parent_id, clear_parent_id))
+    .presence(
+      "parent_id",
+      patch_nullable("parent_id", parent_id, clear_parent_id),
+    )
     .opt("rate_limit_per_user", rate_limit_per_user)
     .opt("position", position)
     .opt("bitrate", bitrate)
     .opt("user_limit", user_limit)
     .opt("permission_overwrites", permission_overwrites)
-    .und(
+    .presence(
       "rtc_region",
       patch_nullable("rtc_region", rtc_region, clear_rtc_region),
     )
-    .und(
+    .presence(
       "video_quality_mode",
       patch_nullable(
         "video_quality_mode", video_quality_mode, clear_video_quality_mode,
@@ -78,7 +81,7 @@ pub async fn Client::modify_channel(
     )
     .opt("default_auto_archive_duration", default_auto_archive_duration)
     .opt("available_tags", available_tags)
-    .und(
+    .presence(
       "default_reaction_emoji",
       patch_nullable(
         "default_reaction_emoji", default_reaction_emoji, clear_default_reaction_emoji,
@@ -87,7 +90,7 @@ pub async fn Client::modify_channel(
     .opt(
       "default_thread_rate_limit_per_user", default_thread_rate_limit_per_user,
     )
-    .und(
+    .presence(
       "default_sort_order",
       patch_nullable(
         "default_sort_order", default_sort_order, clear_default_sort_order,
@@ -192,7 +195,7 @@ pub async fn Client::edit_channel_permissions(
   deny? : @model.Permissions,
   audit_reason? : String,
 ) -> Unit raise DiscordHttpError {
-  let body = @model.ObjBuilder()
+  let body = @sdkjson.ObjBuilder::new()
     .opt("allow", allow)
     .opt("deny", deny)
     .field("type", typ)
@@ -268,7 +271,7 @@ pub async fn Client::create_channel_invite(
       message="target_type EmbeddedApplication requires target_application_id",
     )
   }
-  let body = @model.ObjBuilder()
+  let body = @sdkjson.ObjBuilder::new()
     .opt("max_age", max_age)
     .opt("max_uses", max_uses)
     .opt("temporary", temporary)
@@ -289,7 +292,9 @@ pub async fn Client::create_channel_invite(
 fn follow_announcement_channel_body(
   webhook_channel_id : @model.ChannelId,
 ) -> Json {
-  @model.ObjBuilder().field("webhook_channel_id", webhook_channel_id).build()
+  @sdkjson.ObjBuilder::new()
+  .field("webhook_channel_id", webhook_channel_id)
+  .build()
 }
 
 ///|
@@ -312,7 +317,7 @@ fn set_voice_channel_status_body(
   status : String?,
 ) -> Json raise DiscordHttpError {
   validate_length("voice channel status", status, max=500)
-  @model.ObjBuilder()
+  @sdkjson.ObjBuilder::new()
   .field("status", @model.Nullable::from_option(status))
   .build()
 }
@@ -332,7 +337,7 @@ pub async fn Client::set_voice_channel_status(
 
 ///|
 fn group_dm_add_recipient_body(access_token : String, nick : String?) -> Json {
-  @model.ObjBuilder()
+  @sdkjson.ObjBuilder::new()
   .field("access_token", access_token)
   .opt("nick", nick)
   .build()
@@ -464,7 +469,7 @@ pub async fn Client::start_thread_from_message(
 ) -> @model.Channel raise DiscordHttpError {
   validate_length("thread name", Some(name), min=1, max=100)
   validate_range("rate_limit_per_user", rate_limit_per_user, min=0, max=21600)
-  let body = @model.ObjBuilder()
+  let body = @sdkjson.ObjBuilder::new()
     .field("name", name)
     .opt("auto_archive_duration", auto_archive_duration)
     .opt("rate_limit_per_user", rate_limit_per_user)
@@ -495,7 +500,7 @@ pub async fn Client::start_thread_without_message(
 ) -> @model.Channel raise DiscordHttpError {
   validate_length("thread name", Some(name), min=1, max=100)
   validate_range("rate_limit_per_user", rate_limit_per_user, min=0, max=21600)
-  let body = @model.ObjBuilder()
+  let body = @sdkjson.ObjBuilder::new()
     .field("name", name)
     .opt("type", typ)
     .opt("auto_archive_duration", auto_archive_duration)
@@ -547,7 +552,7 @@ pub async fn Client::start_thread_in_forum_or_media_channel(
     )
   }
   let message = self.with_channel_allowed_mentions(
-    @model.ObjBuilder()
+    @sdkjson.ObjBuilder::new()
     .opt("content", content)
     .opt("embeds", embeds)
     .opt("components", components)
@@ -558,7 +563,7 @@ pub async fn Client::start_thread_in_forum_or_media_channel(
   if files is Some(fs) && fs.length() > 0 {
     message.field("attachments", attachments_json(fs)) |> ignore
   }
-  let body = @model.ObjBuilder()
+  let body = @sdkjson.ObjBuilder::new()
     .field("name", name)
     .opt("auto_archive_duration", auto_archive_duration)
     .opt("rate_limit_per_user", rate_limit_per_user)

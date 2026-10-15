@@ -74,42 +74,42 @@ fn edit_current_application_body(
       validate_length("application tag", Some(tag), max=20)
     }
   }
-  @model.ObjBuilder()
-  .und(
+  @sdkjson.ObjBuilder::new()
+  .presence(
     "custom_install_url",
     patch_nullable(
       "custom_install_url", custom_install_url, clear_custom_install_url,
     ),
   )
-  .und(
+  .presence(
     "description",
     patch_nullable("description", description, clear_description),
   )
-  .und(
+  .presence(
     "role_connections_verification_url",
     patch_nullable(
       "role_connections_verification_url", role_connections_verification_url, clear_role_connections_verification_url,
     ),
   )
-  .und(
+  .presence(
     "install_params",
     patch_nullable("install_params", install_params, clear_install_params),
   )
   .opt("integration_types_config", integration_types_config)
   .opt("flags", flags)
-  .und("icon", patch_nullable("icon", icon, clear_icon))
-  .und(
+  .presence("icon", patch_nullable("icon", icon, clear_icon))
+  .presence(
     "cover_image",
     patch_nullable("cover_image", cover_image, clear_cover_image),
   )
-  .und(
+  .presence(
     "interactions_endpoint_url",
     patch_nullable(
       "interactions_endpoint_url", interactions_endpoint_url, clear_interactions_endpoint_url,
     ),
   )
-  .und("tags", patch_nullable("tags", tags, clear_tags))
-  .und(
+  .presence("tags", patch_nullable("tags", tags, clear_tags))
+  .presence(
     "event_webhooks_url",
     patch_nullable(
       "event_webhooks_url", event_webhooks_url, clear_event_webhooks_url,

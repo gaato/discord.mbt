@@ -3,7 +3,7 @@ test "create_message applies the safe client allowed mentions default" {
   let client = Client("test-token")
   let body = client
     .with_channel_allowed_mentions(
-      @model.ObjBuilder().field("content", "hello"),
+      @sdkjson.ObjBuilder::new().field("content", "hello"),
       None,
     )
     .build()
@@ -20,12 +20,16 @@ test "create_message honors client and per-request allowed mention overrides" {
     default_allowed_mentions=@model.AllowedMentions::none(),
   )
   json_inspect(
-    client.with_channel_allowed_mentions(ObjBuilder(), None).build(),
+    client
+    .with_channel_allowed_mentions(@sdkjson.ObjBuilder::new(), None)
+    .build(),
     content={ "allowed_mentions": { "parse": [] } },
   )
   let explicit = @model.AllowedMentions(parse=[Everyone])
   json_inspect(
-    client.with_channel_allowed_mentions(ObjBuilder(), Some(explicit)).build(),
+    client
+    .with_channel_allowed_mentions(@sdkjson.ObjBuilder::new(), Some(explicit))
+    .build(),
     content={ "allowed_mentions": { "parse": ["everyone"] } },
   )
 }

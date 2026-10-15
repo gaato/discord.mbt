@@ -44,7 +44,7 @@ pub(all) struct AttachmentRequest {
 
 ///|
 pub impl ToJson for AttachmentRequest with fn to_json(self) {
-  ObjBuilder()
+  @sdkjson.ObjBuilder::new()
   .field("id", self.id)
   .opt("filename", self.filename)
   .opt("title", self.title)

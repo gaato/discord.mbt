@@ -48,7 +48,7 @@ fn create_test_entitlement_body(
   owner_id : @model.GenericId,
   owner_type : @model.EntitlementOwnerType,
 ) -> Json {
-  @model.ObjBuilder()
+  @sdkjson.ObjBuilder::new()
   .field("sku_id", sku_id)
   .field("owner_id", owner_id)
   .field("owner_type", owner_type)

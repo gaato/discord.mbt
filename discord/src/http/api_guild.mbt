@@ -52,40 +52,40 @@ pub async fn Client::modify_guild(
 ) -> @model.Guild raise DiscordHttpError {
   validate_length("guild name", name, min=2, max=100)
   validate_length("guild description", description, max=120)
-  let body = @model.ObjBuilder()
+  let body = @sdkjson.ObjBuilder::new()
     .opt("name", name)
     .opt("verification_level", verification_level)
     .opt("default_message_notifications", default_message_notifications)
     .opt("explicit_content_filter", explicit_content_filter)
-    .und(
+    .presence(
       "afk_channel_id",
       patch_nullable("afk_channel_id", afk_channel_id, clear_afk_channel_id),
     )
     .opt("afk_timeout", afk_timeout)
-    .und("icon", patch_nullable("icon", icon, clear_icon))
+    .presence("icon", patch_nullable("icon", icon, clear_icon))
     .opt("owner_id", owner_id)
-    .und("splash", patch_nullable("splash", splash, clear_splash))
-    .und(
+    .presence("splash", patch_nullable("splash", splash, clear_splash))
+    .presence(
       "discovery_splash",
       patch_nullable(
         "discovery_splash", discovery_splash, clear_discovery_splash,
       ),
     )
-    .und("banner", patch_nullable("banner", banner, clear_banner))
-    .und(
+    .presence("banner", patch_nullable("banner", banner, clear_banner))
+    .presence(
       "system_channel_id",
       patch_nullable(
         "system_channel_id", system_channel_id, clear_system_channel_id,
       ),
     )
     .opt("system_channel_flags", system_channel_flags)
-    .und(
+    .presence(
       "rules_channel_id",
       patch_nullable(
         "rules_channel_id", rules_channel_id, clear_rules_channel_id,
       ),
     )
-    .und(
+    .presence(
       "public_updates_channel_id",
       patch_nullable(
         "public_updates_channel_id", public_updates_channel_id, clear_public_updates_channel_id,
@@ -93,12 +93,12 @@ pub async fn Client::modify_guild(
     )
     .opt("preferred_locale", preferred_locale)
     .opt("features", features)
-    .und(
+    .presence(
       "description",
       patch_nullable("description", description, clear_description),
     )
     .opt("premium_progress_bar_enabled", premium_progress_bar_enabled)
-    .und(
+    .presence(
       "safety_alerts_channel_id",
       patch_nullable(
         "safety_alerts_channel_id", safety_alerts_channel_id, clear_safety_alerts_channel_id,
@@ -206,7 +206,7 @@ pub async fn Client::create_guild_channel(
   validate_length("channel name", Some(name), min=1, max=100)
   validate_length("channel topic", topic, max=4096)
   validate_range("rate_limit_per_user", rate_limit_per_user, min=0, max=21600)
-  let body = @model.ObjBuilder()
+  let body = @sdkjson.ObjBuilder::new()
     .field("name", name)
     .opt("type", typ)
     .opt("topic", topic)
@@ -239,7 +239,7 @@ pub struct GuildChannelPosition {
   priv id : @model.ChannelId
   priv position : Int32?
   priv lock_permissions : Bool?
-  priv parent_id : @model.Undefinable[@model.ChannelId]
+  priv parent_id : @sdkjson.Presence[@model.ChannelId]
 }
 
 ///|
@@ -265,11 +265,11 @@ fn modify_guild_channel_positions_body(
 ) -> Json {
   Json::array(
     positions.map(entry => {
-      @model.ObjBuilder()
+      @sdkjson.ObjBuilder::new()
       .field("id", entry.id)
       .opt("position", entry.position)
       .opt("lock_permissions", entry.lock_permissions)
-      .und("parent_id", entry.parent_id)
+      .presence("parent_id", entry.parent_id)
       .build()
     }),
   )
@@ -357,16 +357,16 @@ pub async fn Client::modify_guild_member(
   flags? : @model.GuildMemberFlags,
   audit_reason? : String,
 ) -> @model.GuildMember raise DiscordHttpError {
-  let body = @model.ObjBuilder()
-    .und("nick", patch_nullable("nick", nick, clear_nick))
-    .und("roles", patch_value(roles))
+  let body = @sdkjson.ObjBuilder::new()
+    .presence("nick", patch_nullable("nick", nick, clear_nick))
+    .presence("roles", patch_value(roles))
     .opt("mute", mute)
     .opt("deaf", deaf)
-    .und(
+    .presence(
       "channel_id",
       patch_nullable("channel_id", channel_id, clear_channel_id),
     )
-    .und(
+    .presence(
       "communication_disabled_until",
       patch_nullable(
         "communication_disabled_until", communication_disabled_until, clear_communication_disabled_until,
@@ -394,11 +394,11 @@ pub async fn Client::modify_current_member(
   clear_bio~ : Bool = false,
   audit_reason? : String,
 ) -> @model.GuildMember raise DiscordHttpError {
-  let body = @model.ObjBuilder()
-    .und("nick", patch_nullable("nick", nick, clear_nick))
-    .und("avatar", patch_nullable("avatar", avatar, clear_avatar))
-    .und("banner", patch_nullable("banner", banner, clear_banner))
-    .und("bio", patch_nullable("bio", bio, clear_bio))
+  let body = @sdkjson.ObjBuilder::new()
+    .presence("nick", patch_nullable("nick", nick, clear_nick))
+    .presence("avatar", patch_nullable("avatar", avatar, clear_avatar))
+    .presence("banner", patch_nullable("banner", banner, clear_banner))
+    .presence("bio", patch_nullable("bio", bio, clear_bio))
     .build()
   decode(self.request(ModifyCurrentMember(guild_id~), body~, audit_reason?))
 }
@@ -458,7 +458,7 @@ pub async fn Client::create_guild_ban(
     min=0,
     max=604800,
   )
-  let body = @model.ObjBuilder()
+  let body = @sdkjson.ObjBuilder::new()
     .opt("delete_message_seconds", delete_message_seconds)
     .build()
   self.request(CreateGuildBan(guild_id~, user_id~), body~, audit_reason?)
@@ -503,7 +503,7 @@ pub async fn Client::create_guild_role(
   audit_reason? : String,
 ) -> @model.Role raise DiscordHttpError {
   validate_length("role name", name, min=1, max=100)
-  let body = @model.ObjBuilder()
+  let body = @sdkjson.ObjBuilder::new()
     .opt("name", name)
     .opt("permissions", permissions)
     .opt("color", color)
@@ -537,14 +537,14 @@ pub async fn Client::modify_guild_role(
   audit_reason? : String,
 ) -> @model.Role raise DiscordHttpError {
   validate_length("role name", name, min=1, max=100)
-  let body = @model.ObjBuilder()
+  let body = @sdkjson.ObjBuilder::new()
     .opt("name", name)
     .opt("permissions", permissions)
     .opt("color", color)
     .opt("colors", colors)
     .opt("hoist", hoist)
-    .und("icon", patch_nullable("icon", icon, clear_icon))
-    .und(
+    .presence("icon", patch_nullable("icon", icon, clear_icon))
+    .presence(
       "unicode_emoji",
       patch_nullable("unicode_emoji", unicode_emoji, clear_unicode_emoji),
     )
@@ -600,7 +600,7 @@ fn bulk_guild_ban_body(
     min=0,
     max=604800,
   )
-  @model.ObjBuilder()
+  @sdkjson.ObjBuilder::new()
   .field("user_ids", user_ids)
   .opt("delete_message_seconds", delete_message_seconds)
   .build()
@@ -660,7 +660,7 @@ fn begin_guild_prune_body(
   include_roles : Array[@model.RoleId]?,
 ) -> Json raise DiscordHttpError {
   validate_range("prune days", days, min=1, max=30)
-  @model.ObjBuilder()
+  @sdkjson.ObjBuilder::new()
   .opt("days", days)
   .opt("compute_prune_count", compute_prune_count)
   .opt("include_roles", include_roles)
@@ -747,9 +747,12 @@ fn modify_guild_widget_body(
   channel_id : @model.ChannelId?,
   clear_channel_id : Bool,
 ) -> Json raise DiscordHttpError {
-  @model.ObjBuilder()
+  @sdkjson.ObjBuilder::new()
   .opt("enabled", enabled)
-  .und("channel_id", patch_nullable("channel_id", channel_id, clear_channel_id))
+  .presence(
+    "channel_id",
+    patch_nullable("channel_id", channel_id, clear_channel_id),
+  )
   .build()
 }
 
@@ -810,13 +813,13 @@ fn modify_guild_welcome_screen_body(
   description : String?,
   clear_description : Bool,
 ) -> Json raise DiscordHttpError {
-  @model.ObjBuilder()
-  .und("enabled", patch_nullable("enabled", enabled, clear_enabled))
-  .und(
+  @sdkjson.ObjBuilder::new()
+  .presence("enabled", patch_nullable("enabled", enabled, clear_enabled))
+  .presence(
     "welcome_channels",
     patch_nullable("welcome_channels", welcome_channels, clear_welcome_channels),
   )
-  .und(
+  .presence(
     "description",
     patch_nullable("description", description, clear_description),
   )
@@ -862,7 +865,7 @@ fn modify_guild_onboarding_body(
   enabled : Bool,
   mode : @model.OnboardingMode,
 ) -> Json {
-  @model.ObjBuilder()
+  @sdkjson.ObjBuilder::new()
   .field("prompts", prompts)
   .field("default_channel_ids", default_channel_ids)
   .field("enabled", enabled)
@@ -894,14 +897,14 @@ fn modify_guild_incident_actions_body(
   dms_disabled_until : @model.Timestamp?,
   clear_dms_disabled_until : Bool,
 ) -> Json raise DiscordHttpError {
-  @model.ObjBuilder()
-  .und(
+  @sdkjson.ObjBuilder::new()
+  .presence(
     "invites_disabled_until",
     patch_nullable(
       "invites_disabled_until", invites_disabled_until, clear_invites_disabled_until,
     ),
   )
-  .und(
+  .presence(
     "dms_disabled_until",
     patch_nullable(
       "dms_disabled_until", dms_disabled_until, clear_dms_disabled_until,
@@ -944,7 +947,7 @@ fn modify_guild_role_positions_body(
   Json::array(
     positions.map(position => {
       let (id, value) = position
-      let builder = @model.ObjBuilder().field("id", id)
+      let builder = @sdkjson.ObjBuilder::new().field("id", id)
       match value {
         Some(position) => builder.field("position", position).build()
         None => builder.field("position", Json::null()).build()
@@ -975,7 +978,7 @@ fn add_guild_member_body(
   mute : Bool?,
   deaf : Bool?,
 ) -> Json {
-  @model.ObjBuilder()
+  @sdkjson.ObjBuilder::new()
   .field("access_token", access_token)
   .opt("nick", nick)
   .opt("roles", roles)

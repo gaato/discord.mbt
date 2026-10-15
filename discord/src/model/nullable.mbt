@@ -14,8 +14,8 @@
 ///       #|Some("Moon")
 ///     ),
 ///   )
-///   let missing : @model.Undefinable[String] = Missing
-///   let cleared : @model.Undefinable[String] = Null
+///   let missing : @sdkjson.Presence[String] = Absent
+///   let cleared : @sdkjson.Presence[String] = Null
 ///   assert_true(missing.to_option() is None)
 ///   assert_true(cleared.to_option() is None)
 /// }
@@ -85,49 +85,6 @@ pub impl[T : ToJson] ToJson for Nullable[T] with fn to_json(self) {
 
 ///|
 pub impl[T : @json.FromJson] @json.FromJson for Nullable[T] with fn from_json(
-  json,
-  path,
-) {
-  match json {
-    Null => Null
-    v => Value(@json.from_json(v, path~))
-  }
-}
-
-///|
-/// Tri-state value for PATCH-style requests: leave a field untouched
-/// (`Missing`, omitted from the payload), clear it (`Null`, an explicit JSON
-/// `null`), or set it (`Value`).
-///
-/// This is an *input* type for request builders (see `ObjBuilder::und`); it is
-/// not meant to appear in received models. Decoding never produces `Missing`.
-pub(all) enum Undefinable[T] {
-  Missing
-  Null
-  Value(T)
-} derive(Eq, Debug)
-
-///|
-/// `Some` for a value; `None` for both JSON `null` and an absent field.
-pub fn[T] Undefinable::to_option(self : Undefinable[T]) -> T? {
-  match self {
-    Value(v) => Some(v)
-    _ => None
-  }
-}
-
-///|
-pub impl[T : ToJson] ToJson for Undefinable[T] with fn to_json(self) {
-  match self {
-    // Missing should have been omitted by the caller; encode as null as the
-    // least-wrong fallback.
-    Missing | Null => Json::null()
-    Value(v) => v.to_json()
-  }
-}
-
-///|
-pub impl[T : @json.FromJson] @json.FromJson for Undefinable[T] with fn from_json(
   json,
   path,
 ) {
