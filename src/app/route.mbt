@@ -1,7 +1,8 @@
 ///|
 /// A custom id that exceeds Discord's limit or cannot round-trip its segments.
 pub(all) suberror CustomIdError {
-  /// The encoded state or complete custom id exceeds 100 UTF-16 units.
+  /// The encoded state or complete custom id exceeds 100 characters
+  /// (`@model.text_length`).
   TooLong(custom_id~ : String, length~ : Int32)
   /// A non-final zip segment contains `:` and would not round-trip.
   SeparatorInSegment(segment~ : String)
@@ -9,7 +10,7 @@ pub(all) suberror CustomIdError {
 
 ///|
 fn check_custom_id_length(custom_id : String) -> Unit raise CustomIdError {
-  let length = custom_id.length()
+  let length = @model.text_length(custom_id)
   if length > 100 {
     raise TooLong(custom_id~, length~)
   }
@@ -112,7 +113,7 @@ pub fn[A, B] CustomIdCodec::imap(
 }
 
 ///|
-/// Encode state, rejecting ambiguous zip segments and text over 100 UTF-16 units.
+/// Encode state, rejecting ambiguous zip segments and text over 100 characters.
 /// The complete route id is checked separately by `ComponentRoute::custom_id`.
 pub fn[A] CustomIdCodec::encode(
   self : CustomIdCodec[A],
@@ -146,7 +147,7 @@ pub struct ComponentRoute[A] {
 /// Define a component route matching `id` or `id:state`.
 /// The id may itself contain `:`, so ids that are already in use elsewhere
 /// (`bot:rolemenu`) keep working. `AppBuilder::build` rejects empty ids, ids over
-/// 100 units, and an id that extends another typed route's id at a `:`
+/// 100 characters, and an id that extends another typed route's id at a `:`
 /// (`ticket` beside `ticket:close`), because the shorter route's state could
 /// then produce a custom id the longer route receives.
 ///
@@ -171,7 +172,7 @@ pub fn[A] component_route(
 }
 
 ///|
-/// Build the id or `id:state`, enforcing Discord's 100 UTF-16-unit limit.
+/// Build the id or `id:state`, enforcing Discord's 100-character limit.
 /// An empty encoded state produces the bare id.
 pub fn[A] ComponentRoute::custom_id(
   self : ComponentRoute[A],
@@ -248,10 +249,10 @@ fn validate_route(
   let effective_prefix = match pattern {
     Prefix(prefix) => prefix
     Id(id) => {
-      if id.length() > 100 {
+      if @model.text_length(id) > 100 {
         raise InvalidRouteId(
           custom_id~,
-          reason="route ids cannot exceed 100 UTF-16 units",
+          reason="route ids cannot exceed 100 characters",
         )
       }
       "\{id}:"

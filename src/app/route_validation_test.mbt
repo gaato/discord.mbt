@@ -132,7 +132,7 @@ test "id route collides with its literal prefix form" {
 
 ///|
 test "invalid route ids are rejected" {
-  for id in ["x".repeat(101), "😀".repeat(51)] {
+  for id in ["x".repeat(101), "😀".repeat(101)] {
     for modal in [false, true] {
       let app = @app.AppBuilder()
       if modal {
@@ -209,7 +209,7 @@ test "strict prefix routes and separate interaction kinds remain legal" {
     app.on_component_raw(prefix~, _ => ())
     app.on_modal_raw(prefix~, _ => ())
   }
-  for id in ["same", "x".repeat(100), "😀".repeat(50)] {
+  for id in ["same", "x".repeat(100), "😀".repeat(100)] {
     app.on_component(
       @app.component_route(id~, state=@app.CustomIdCodec::unit()),
       Raw(_ => ()),

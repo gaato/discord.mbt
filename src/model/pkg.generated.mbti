@@ -23,6 +23,8 @@ pub fn requires_components_v2(Array[Component]) -> Bool
 
 pub let text_input_max_length : Int
 
+pub fn text_length(String) -> Int
+
 // Errors
 pub(all) suberror AllowedMentionsError {
   ParseAndExplicit(typ~ : AllowedMentionType)

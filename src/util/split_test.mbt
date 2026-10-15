@@ -16,13 +16,17 @@ test "split content handles empty, under-limit, and exact-limit input" {
 }
 
 ///|
-test "split content preserves surrogate pairs and CRLF" {
+test "split content counts code points and preserves surrogate pairs and CRLF" {
   debug_inspect(
     @util.split_content("abc😀def", limit=4),
     content=(
-      #|["abc", "😀de", "f"]
+      #|["abc😀", "def"]
     ),
   )
+  // Discord accepts 2000 emoji in one message: they are 2000 characters
+  let emoji = "😀".repeat(2001)
+  let chunks = @util.split_content(emoji)
+  assert_eq(chunks.map(chunk => chunk.char_length()), [2000, 1])
   debug_inspect(
     @util.split_content("abc\r\ndef", limit=4),
     content=(
@@ -60,7 +64,7 @@ test "split content prefers newlines, then ASCII spaces, then hard cuts" {
 }
 
 ///|
-test "split content preserves every code unit" {
+test "split content preserves every character" {
   for
     pair in [
       ("abc😀def", 4),
@@ -73,6 +77,6 @@ test "split content preserves every code unit" {
     let chunks = @util.split_content(content, limit~)
     assert_eq(chunks.join(""), content)
     let effective_limit = if limit < 2 { 2 } else { limit }
-    assert_true(chunks.all(chunk => chunk.length() <= effective_limit))
+    assert_true(chunks.all(chunk => chunk.char_length() <= effective_limit))
   }
 }

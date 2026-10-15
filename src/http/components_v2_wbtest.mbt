@@ -187,7 +187,7 @@ async test "message sends reject embeds and components outside Discord's limits"
       debug_inspect(
         err,
         content=(
-          #|Validation(message="embeds[0].description: 4097 units (at most 4096)")
+          #|Validation(message="embeds[0].description: 4097 characters (at most 4096)")
         ),
       )
   } noraise {
@@ -208,7 +208,7 @@ async test "message sends reject embeds and components outside Discord's limits"
       debug_inspect(
         err,
         content=(
-          #|Validation(message="components[0].components[0].label: 81 units (at most 80)")
+          #|Validation(message="components[0].components[0].label: 81 characters (at most 80)")
         ),
       )
   } noraise {

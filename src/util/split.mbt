@@ -1,15 +1,16 @@
 ///|
-/// Split message content into chunks of at most `limit` UTF-16 code units.
+/// Split message content into chunks of at most `limit` characters
+/// (`@model.text_length`: Unicode code points).
 ///
-/// Discord limits bot message content to 2000 UTF-16 code units, which is the
+/// Discord limits bot message content to 2000 characters, which is the
 /// default limit. The effective limit is clamped to at least 2. Empty content
 /// produces no chunks.
 ///
 /// Splits prefer the position immediately after the last newline in the
 /// current window, then the position after the last ASCII space, and finally
-/// a hard cut. A hard cut moves back one code unit rather than splitting a
-/// surrogate pair or CRLF sequence. No content is discarded, so
-/// `chunks.join("") == content` always holds.
+/// a hard cut. A cut never splits a surrogate pair, and a hard cut moves back
+/// one character rather than splitting a CRLF sequence. No content is
+/// discarded, so `chunks.join("") == content` always holds.
 ///
 /// ```mbt check
 /// test "split and restore message content" {
@@ -33,31 +34,38 @@ pub fn split_content(content : String, limit~ : Int32 = 2000) -> Array[String] {
   let length = content.length()
   let mut start = 0
   while start < length {
-    if length - start <= limit {
-      chunks.push(content.unsafe_substring(start~, end=length))
-      break
-    }
-    let window_end = start + limit
+    // advance `limit` characters; indices stay on code point boundaries
+    let mut window_end = start
     let mut last_newline = None
     let mut last_space = None
-    for i in start..<window_end {
-      if content[i] == '\n' {
-        last_newline = Some(i + 1)
-      } else if content[i] == ' ' {
-        last_space = Some(i + 1)
+    for _ in 0..<limit {
+      if window_end >= length {
+        break
       }
+      let unit = content[window_end]
+      window_end += if unit.is_leading_surrogate() &&
+        window_end + 1 < length &&
+        content[window_end + 1].is_trailing_surrogate() {
+        2
+      } else {
+        1
+      }
+      if unit == '\n' {
+        last_newline = Some(window_end)
+      } else if unit == ' ' {
+        last_space = Some(window_end)
+      }
+    }
+    if window_end >= length {
+      chunks.push(content.unsafe_substring(start~, end=length))
+      break
     }
     let mut cut = match last_newline {
       Some(index) => index
       None => last_space.unwrap_or(window_end)
     }
-    if cut == window_end {
-      if content[cut - 1].is_leading_surrogate() &&
-        content[cut].is_trailing_surrogate() {
-        cut -= 1
-      } else if content[cut - 1] == '\r' && content[cut] == '\n' {
-        cut -= 1
-      }
+    if cut == window_end && content[cut - 1] == '\r' && content[cut] == '\n' {
+      cut -= 1
     }
     chunks.push(content.unsafe_substring(start~, end=cut))
     start = cut

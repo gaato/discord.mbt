@@ -10,8 +10,8 @@ ticket-close:42
              ^^ encoded state
 ```
 
-`route.custom_id(state)` enforces Discord's 100-character limit, measured
-conservatively in UTF-16 units. Treat decoded state as untrusted input and
+`route.custom_id(state)` enforces Discord's 100-character limit, counted in
+code points as Discord counts it. Treat decoded state as untrusted input and
 authorize the user again in the handler.
 
 `route.decode(custom_id)` is the inverse: it reads the state back from an id
@@ -117,7 +117,7 @@ policy logs the reason and tells the user the interaction is out of date.
 
 Typed routes match the exact id or that id followed by `:` and state, so
 `ticket-closeish` does not match `ticket-close`. Route ids must be nonempty
-and fit within 100 UTF-16 units. An id may contain `:` — a bot that adopts
+and fit within 100 characters. An id may contain `:` — a bot that adopts
 typed routes can keep ids already attached to posted messages, such as
 `bot:rolemenu` — but two typed ids may not nest at a `:` boundary: `ticket`
 beside `ticket:close` is rejected, because state encoded for `ticket` could

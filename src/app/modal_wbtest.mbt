@@ -300,7 +300,7 @@ test "app validation rejects modal fields outside Discord's limits" {
       text_field(custom_id="body", label="Body", value="x".repeat(4001)),
     ),
     content=(
-      #|body components[0].component.value: 4001 units (at most 4000)
+      #|body components[0].component.value: 4001 UTF-16 units (at most 4000)
     ),
   )
   inspect(
@@ -308,13 +308,13 @@ test "app validation rejects modal fields outside Discord's limits" {
       text_field(custom_id="body", label="Body", placeholder="x".repeat(101)),
     ),
     content=(
-      #|body components[0].component.placeholder: 101 units (at most 100)
+      #|body components[0].component.placeholder: 101 characters (at most 100)
     ),
   )
   inspect(
     modal_limit_violation(text_field(custom_id="body", label="x".repeat(46))),
     content=(
-      #|body components[0].label: 46 units (at most 45)
+      #|body components[0].label: 46 characters (at most 45)
     ),
   )
   inspect(
@@ -322,7 +322,7 @@ test "app validation rejects modal fields outside Discord's limits" {
       text_field(custom_id="body", label="Body", description="x".repeat(101)),
     ),
     content=(
-      #|body components[0].description: 101 units (at most 100)
+      #|body components[0].description: 101 characters (at most 100)
     ),
   )
   inspect(
@@ -354,7 +354,7 @@ test "app validation rejects modal fields outside Discord's limits" {
       title="x".repeat(46),
     ),
     content=(
-      #|- title: 46 units (at most 45)
+      #|- title: 46 characters (at most 45)
     ),
   )
 }

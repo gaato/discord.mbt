@@ -43,8 +43,8 @@ pub struct ModalHandle {
 ///|
 /// Why `Modal::show` could not prepare a modal response.
 pub(all) suberror ModalShowError {
-  /// The state does not encode, or the complete custom id exceeds 100 UTF-16
-  /// units.
+  /// The state does not encode, or the complete custom id exceeds 100
+  /// characters.
   InvalidCustomId(CustomIdError)
   UnknownCustomId(custom_id~ : String)
   NonTextInput(custom_id~ : String)
@@ -505,7 +505,7 @@ pub fn[S, A] modal(
 /// Prepare a modal response carrying `state`, optionally overriding
 /// text-input defaults by `custom_id` for this response only. Raises
 /// `ModalShowError::InvalidCustomId` when the state does not encode or the
-/// complete id exceeds 100 UTF-16 units, and the other variants when an
+/// complete id exceeds 100 characters, and the other variants when an
 /// override key is unknown, does not name a text input, or carries a value
 /// over 4000 UTF-16 units.
 pub fn[S, A] Modal::show(

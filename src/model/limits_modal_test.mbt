@@ -29,7 +29,11 @@ test "modal title and top-level component count boundaries" {
     ),
     content=(
       #|[
-      #|  { path: "title", custom_id: None, reason: "46 units (at most 45)" },
+      #|  {
+      #|    path: "title",
+      #|    custom_id: None,
+      #|    reason: "46 characters (at most 45)",
+      #|  },
       #|  { path: "components", custom_id: None, reason: "6 (1 to 5)" },
       #|]
     ),
@@ -60,15 +64,15 @@ test "modal text input boundary limits and optional values" {
       modal=true,
     ),
     content=(
-      #|components[0].component.custom_id: 0 units (1 to 100)
-      #|components[0].component.custom_id: 101 units (1 to 100)
+      #|components[0].component.custom_id: 0 characters (1 to 100)
+      #|components[0].component.custom_id: 101 characters (1 to 100)
       #|components[0].component.min_length: -1 (0 to 4000)
       #|components[0].component.min_length: 4001 (0 to 4000)
       #|components[0].component.max_length: 0 (1 to 4000)
       #|components[0].component.max_length: 4001 (1 to 4000)
-      #|components[0].component.value: 4001 units (at most 4000)
-      #|components[0].component.value: 4001 units (at most 4000)
-      #|components[0].component.placeholder: 101 units (at most 100)
+      #|components[0].component.value: 4001 UTF-16 units (at most 4000)
+      #|components[0].component.value: 4001 UTF-16 units (at most 4000)
+      #|components[0].component.placeholder: 101 characters (at most 100)
     ),
   )
   inspect(
@@ -140,112 +144,112 @@ test "modal labels attach all interactive custom ids" {
       #|  {
       #|    path: "components[0].label",
       #|    custom_id: Some("button"),
-      #|    reason: "46 units (at most 45)",
+      #|    reason: "46 characters (at most 45)",
       #|  },
       #|  {
       #|    path: "components[0].description",
       #|    custom_id: Some("button"),
-      #|    reason: "101 units (at most 100)",
+      #|    reason: "101 characters (at most 100)",
       #|  },
       #|  {
       #|    path: "components[0].label",
       #|    custom_id: Some("string"),
-      #|    reason: "46 units (at most 45)",
+      #|    reason: "46 characters (at most 45)",
       #|  },
       #|  {
       #|    path: "components[0].description",
       #|    custom_id: Some("string"),
-      #|    reason: "101 units (at most 100)",
+      #|    reason: "101 characters (at most 100)",
       #|  },
       #|  {
       #|    path: "components[0].label",
       #|    custom_id: Some("text"),
-      #|    reason: "46 units (at most 45)",
+      #|    reason: "46 characters (at most 45)",
       #|  },
       #|  {
       #|    path: "components[0].description",
       #|    custom_id: Some("text"),
-      #|    reason: "101 units (at most 100)",
+      #|    reason: "101 characters (at most 100)",
       #|  },
       #|  {
       #|    path: "components[0].label",
       #|    custom_id: Some("user"),
-      #|    reason: "46 units (at most 45)",
+      #|    reason: "46 characters (at most 45)",
       #|  },
       #|  {
       #|    path: "components[0].description",
       #|    custom_id: Some("user"),
-      #|    reason: "101 units (at most 100)",
+      #|    reason: "101 characters (at most 100)",
       #|  },
       #|  {
       #|    path: "components[0].label",
       #|    custom_id: Some("role"),
-      #|    reason: "46 units (at most 45)",
+      #|    reason: "46 characters (at most 45)",
       #|  },
       #|  {
       #|    path: "components[0].description",
       #|    custom_id: Some("role"),
-      #|    reason: "101 units (at most 100)",
+      #|    reason: "101 characters (at most 100)",
       #|  },
       #|  {
       #|    path: "components[0].label",
       #|    custom_id: Some("mention"),
-      #|    reason: "46 units (at most 45)",
+      #|    reason: "46 characters (at most 45)",
       #|  },
       #|  {
       #|    path: "components[0].description",
       #|    custom_id: Some("mention"),
-      #|    reason: "101 units (at most 100)",
+      #|    reason: "101 characters (at most 100)",
       #|  },
       #|  {
       #|    path: "components[0].label",
       #|    custom_id: Some("channel"),
-      #|    reason: "46 units (at most 45)",
+      #|    reason: "46 characters (at most 45)",
       #|  },
       #|  {
       #|    path: "components[0].description",
       #|    custom_id: Some("channel"),
-      #|    reason: "101 units (at most 100)",
+      #|    reason: "101 characters (at most 100)",
       #|  },
       #|  {
       #|    path: "components[0].label",
       #|    custom_id: Some("upload"),
-      #|    reason: "46 units (at most 45)",
+      #|    reason: "46 characters (at most 45)",
       #|  },
       #|  {
       #|    path: "components[0].description",
       #|    custom_id: Some("upload"),
-      #|    reason: "101 units (at most 100)",
+      #|    reason: "101 characters (at most 100)",
       #|  },
       #|  {
       #|    path: "components[0].label",
       #|    custom_id: Some("radio"),
-      #|    reason: "46 units (at most 45)",
+      #|    reason: "46 characters (at most 45)",
       #|  },
       #|  {
       #|    path: "components[0].description",
       #|    custom_id: Some("radio"),
-      #|    reason: "101 units (at most 100)",
+      #|    reason: "101 characters (at most 100)",
       #|  },
       #|  {
       #|    path: "components[0].label",
       #|    custom_id: Some("group"),
-      #|    reason: "46 units (at most 45)",
+      #|    reason: "46 characters (at most 45)",
       #|  },
       #|  {
       #|    path: "components[0].description",
       #|    custom_id: Some("group"),
-      #|    reason: "101 units (at most 100)",
+      #|    reason: "101 characters (at most 100)",
       #|  },
       #|  {
       #|    path: "components[0].label",
       #|    custom_id: Some("checkbox"),
-      #|    reason: "46 units (at most 45)",
+      #|    reason: "46 characters (at most 45)",
       #|  },
       #|  {
       #|    path: "components[0].description",
       #|    custom_id: Some("checkbox"),
-      #|    reason: "101 units (at most 100)",
+      #|    reason: "101 characters (at most 100)",
       #|  },
       #|]
     ),
@@ -277,8 +281,8 @@ test "modal file upload and file type count boundaries" {
       modal=true,
     ),
     content=(
-      #|components[0].component.custom_id: 0 units (1 to 100)
-      #|components[0].component.custom_id: 101 units (1 to 100)
+      #|components[0].component.custom_id: 0 characters (1 to 100)
+      #|components[0].component.custom_id: 101 characters (1 to 100)
       #|components[0].component.min_values: -1 (0 to 10)
       #|components[0].component.min_values: 11 (0 to 10)
       #|components[0].component.max_values: 11 (0 to 10)
@@ -357,20 +361,20 @@ test "modal radio and checkbox groups bound options and option text" {
   inspect(
     messages.join("\n"),
     content=(
-      #|components[0].component.custom_id: 0 units (1 to 100)
-      #|components[0].component.custom_id: 101 units (1 to 100)
+      #|components[0].component.custom_id: 0 characters (1 to 100)
+      #|components[0].component.custom_id: 101 characters (1 to 100)
       #|components[0].component.options: 1 (2 to 10)
       #|components[0].component.options: 11 (2 to 10)
-      #|components[0].component.options[0].label: 101 units (at most 100)
-      #|components[0].component.options[0].value: 101 units (at most 100)
-      #|components[0].component.options[0].description: 101 units (at most 100)
-      #|components[0].component.custom_id: 0 units (1 to 100)
-      #|components[0].component.custom_id: 101 units (1 to 100)
+      #|components[0].component.options[0].label: 101 characters (at most 100)
+      #|components[0].component.options[0].value: 101 characters (at most 100)
+      #|components[0].component.options[0].description: 101 characters (at most 100)
+      #|components[0].component.custom_id: 0 characters (1 to 100)
+      #|components[0].component.custom_id: 101 characters (1 to 100)
       #|components[0].component.options: 0 (1 to 10)
       #|components[0].component.options: 11 (1 to 10)
-      #|components[0].component.options[0].label: 101 units (at most 100)
-      #|components[0].component.options[0].value: 101 units (at most 100)
-      #|components[0].component.options[0].description: 101 units (at most 100)
+      #|components[0].component.options[0].label: 101 characters (at most 100)
+      #|components[0].component.options[0].value: 101 characters (at most 100)
+      #|components[0].component.options[0].description: 101 characters (at most 100)
     ),
   )
 }
@@ -450,8 +454,8 @@ test "modal single checkbox bounds only its custom id" {
       modal=true,
     ),
     content=(
-      #|components[0].component.custom_id: 0 units (1 to 100)
-      #|components[0].component.custom_id: 101 units (1 to 100)
+      #|components[0].component.custom_id: 0 characters (1 to 100)
+      #|components[0].component.custom_id: 101 characters (1 to 100)
     ),
   )
   debug_inspect(limit_check(base, modal=true), content="[]")
@@ -509,12 +513,12 @@ test "existing modal text input label string select and upload reasons stay stab
       #|  {
       #|    path: "components[0].components[0].description",
       #|    custom_id: Some(""),
-      #|    reason: "101 units (at most 100)",
+      #|    reason: "101 characters (at most 100)",
       #|  },
       #|  {
       #|    path: "components[0].components[0].component.custom_id",
       #|    custom_id: Some(""),
-      #|    reason: "0 units (1 to 100)",
+      #|    reason: "0 characters (1 to 100)",
       #|  },
       #|  {
       #|    path: "components[0].components[0].component.min_length",
@@ -534,17 +538,17 @@ test "existing modal text input label string select and upload reasons stay stab
       #|  {
       #|    path: "components[0].components[0].component.value",
       #|    custom_id: Some(""),
-      #|    reason: "4001 units (at most 4000)",
+      #|    reason: "4001 UTF-16 units (at most 4000)",
       #|  },
       #|  {
       #|    path: "components[0].components[0].component.placeholder",
       #|    custom_id: Some(""),
-      #|    reason: "101 units (at most 100)",
+      #|    reason: "101 characters (at most 100)",
       #|  },
       #|  {
       #|    path: "components[1].component.placeholder",
       #|    custom_id: Some("select"),
-      #|    reason: "151 units (at most 150)",
+      #|    reason: "151 characters (at most 150)",
       #|  },
       #|  {
       #|    path: "components[1].component.min_values",

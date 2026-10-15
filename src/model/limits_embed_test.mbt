@@ -8,7 +8,7 @@ test "embed limits accept every documented boundary" {
     (
       "title",
       @model.embed_limit_violations([
-        @model.Embed(title=" \{"😀".repeat(128)} "),
+        @model.Embed(title=" \{"😀".repeat(256)} "),
       ]),
     ),
     (
@@ -86,7 +86,7 @@ test "embed limits report every documented violation" {
     (
       "title",
       @model.embed_limit_violations([
-        @model.Embed(title=" \{"😀".repeat(129)} "),
+        @model.Embed(title=" \{"😀".repeat(257)} "),
       ]),
     ),
     (
@@ -150,7 +150,7 @@ test "embed limits report every documented violation" {
       #|      {
       #|        path: "embeds[0].title",
       #|        custom_id: None,
-      #|        reason: "258 units (at most 256)",
+      #|        reason: "257 characters (at most 256)",
       #|      },
       #|    ],
       #|  ),
@@ -160,7 +160,7 @@ test "embed limits report every documented violation" {
       #|      {
       #|        path: "embeds[0].description",
       #|        custom_id: None,
-      #|        reason: "4097 units (at most 4096)",
+      #|        reason: "4097 characters (at most 4096)",
       #|      },
       #|    ],
       #|  ),
@@ -174,7 +174,7 @@ test "embed limits report every documented violation" {
       #|      {
       #|        path: "embeds[0].fields[0].name",
       #|        custom_id: None,
-      #|        reason: "257 units (at most 256)",
+      #|        reason: "257 characters (at most 256)",
       #|      },
       #|    ],
       #|  ),
@@ -184,7 +184,7 @@ test "embed limits report every documented violation" {
       #|      {
       #|        path: "embeds[0].fields[0].value",
       #|        custom_id: None,
-      #|        reason: "1025 units (at most 1024)",
+      #|        reason: "1025 characters (at most 1024)",
       #|      },
       #|    ],
       #|  ),
@@ -194,7 +194,7 @@ test "embed limits report every documented violation" {
       #|      {
       #|        path: "embeds[0].footer.text",
       #|        custom_id: None,
-      #|        reason: "2049 units (at most 2048)",
+      #|        reason: "2049 characters (at most 2048)",
       #|      },
       #|    ],
       #|  ),
@@ -204,7 +204,7 @@ test "embed limits report every documented violation" {
       #|      {
       #|        path: "embeds[0].author.name",
       #|        custom_id: None,
-      #|        reason: "257 units (at most 256)",
+      #|        reason: "257 characters (at most 256)",
       #|      },
       #|    ],
       #|  ),
@@ -214,7 +214,7 @@ test "embed limits report every documented violation" {
       #|      {
       #|        path: "embeds",
       #|        custom_id: None,
-      #|        reason: "6001 units across all title, description, field.name, field.value, footer.text, and author.name values (at most 6000)",
+      #|        reason: "6001 characters across all title, description, field.name, field.value, footer.text, and author.name values (at most 6000)",
       #|      },
       #|    ],
       #|  ),

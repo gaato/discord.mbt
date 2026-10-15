@@ -60,8 +60,10 @@ test "valid slash, user, and localized declarations pass" {
 
 ///|
 test "command names follow the length and naming rules" {
-  assert_eq(slash_violations(name=""), ["name: 0 units (1 to 32)"])
-  assert_eq(slash_violations(name="x".repeat(33)), ["name: 33 units (1 to 32)"])
+  assert_eq(slash_violations(name=""), ["name: 0 characters (1 to 32)"])
+  assert_eq(slash_violations(name="x".repeat(33)), [
+    "name: 33 characters (1 to 32)",
+  ])
   assert_eq(slash_violations(name="Echo"), [
     "name: `E` is not allowed (lowercase letters, digits, `-`, and `_`)",
   ])
@@ -72,7 +74,7 @@ test "command names follow the length and naming rules" {
     "name_localizations.fr: `!` is not allowed (lowercase letters, digits, `-`, and `_`)",
   ])
   assert_eq(slash_violations(description=""), [
-    "description: 0 units (1 to 100)",
+    "description: 0 characters (1 to 100)",
   ])
 }
 
@@ -115,7 +117,7 @@ test "options, choices, and lengths stay within their documented limits" {
       }),
     ]),
     [
-      "options[0].choices[0].name: 0 units (1 to 100)", "options[0].choices[0].value: 101 units (at most 100)",
+      "options[0].choices[0].name: 0 characters (1 to 100)", "options[0].choices[0].value: 101 characters (at most 100)",
       "options[0].min_length: 6001 (0 to 6000)", "options[0].max_length: 0 (1 to 6000)",
     ],
   )
@@ -136,7 +138,7 @@ test "options, choices, and lengths stay within their documented limits" {
 }
 
 ///|
-test "a command totals at most 8000 units, counting its longest localization" {
+test "a command totals at most 8000 characters, counting its longest localization" {
   let wide = (index : Int32) => {
     command_option({
       "type": 1,
@@ -157,7 +159,7 @@ test "a command totals at most 8000 units, counting its longest localization" {
   assert_true(violations[0].has_prefix("name: 10"))
   assert_true(
     violations[0].has_suffix(
-      "units of names, descriptions, and choice values (at most 8000)",
+      "characters of names, descriptions, and choice values (at most 8000)",
     ),
   )
   assert_eq(slash_violations(options=Array::makei(2, wide)), [])
@@ -191,10 +193,10 @@ test "localized descriptions, option names, and choice names are checked" {
     violations,
     content=(
       #|[
-      #|  "description_localizations.de: 101 units (1 to 100)",
+      #|  "description_localizations.de: 101 characters (1 to 100)",
       #|  "options[0].name_localizations.de: `T` is not allowed (lowercase letters, digits, `-`, and `_`)",
-      #|  "options[0].description_localizations.de: 0 units (1 to 100)",
-      #|  "options[0].choices[0].name_localizations.de: 101 units (1 to 100)",
+      #|  "options[0].description_localizations.de: 0 characters (1 to 100)",
+      #|  "options[0].choices[0].name_localizations.de: 101 characters (1 to 100)",
       #|]
     ),
   )

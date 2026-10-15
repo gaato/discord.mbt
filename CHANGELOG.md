@@ -21,6 +21,8 @@ breaking change is listed with a migration note.
 - `VoiceTelemetry::ReceiveDropped(user_id~, backlog~)` and
   `VoiceTelemetry::EventDropped(backlog~)` report each item a full backlog
   discards.
+- `@model.text_length` returns the length Discord applies its text limits
+  to: Unicode code points.
 
 ### Changed
 
@@ -64,6 +66,18 @@ breaking change is listed with a migration note.
   counted before encoding; an empty or longer one raises `Validation` before
   the request is sent, where Discord would silently truncate it. A value set
   directly through `headers` is still sent as given.
+- Text limits are counted in code points, as Discord counts them, instead of
+  UTF-16 units. An emoji outside the Basic Multilingual Plane counted as two,
+  so the client rejected text Discord accepts: a 51-emoji role name or a
+  1001-emoji message. This covers `Validation` for REST parameters and
+  message content, `@model` embed, component, modal, and command limits (the
+  embed and command totals included), custom ids and route ids, and
+  `@util.split_content`, which now fills each chunk with up to 2000 code
+  points. Verified against the live API for message content, embed fields
+  and totals, button custom ids and labels, command descriptions, role names,
+  and audit log reasons. A modal text input's prefilled `value` stays in
+  UTF-16 units (reported as such): its counting cannot be checked without a
+  user opening the modal, and UTF-16 units never undercount.
 
 ## [0.7.0] - 2026-10-08
 

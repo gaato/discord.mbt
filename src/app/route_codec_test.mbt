@@ -4,23 +4,24 @@ test "custom_id over 100 characters raises at encode" {
   let route = @app.component_route(id="a", state=codec)
   assert_eq(codec.encode("x".repeat(100)).length(), 100)
   assert_eq(route.custom_id("x".repeat(98)).length(), 100)
-  assert_eq(route.custom_id("😀".repeat(49)).length(), 100)
-  for text in ["x".repeat(101), "😀".repeat(51)] {
+  // Discord counts code points: an emoji is one character
+  assert_eq(route.custom_id("😀".repeat(98)).char_length(), 100)
+  for text in ["x".repeat(101), "😀".repeat(101)] {
     try codec.encode(text) |> ignore catch {
       @app.CustomIdError::TooLong(custom_id~, length~) => {
         assert_eq(custom_id, text)
-        assert_eq(length, text.length())
+        assert_eq(length, 101)
       }
       error => fail("unexpected error: \{Repr(error)}")
     } noraise {
       _ => fail("expected oversized encoded state")
     }
   }
-  for text in ["x".repeat(99), "x".repeat(101), "😀".repeat(50)] {
+  for text in ["x".repeat(99), "x".repeat(101), "😀".repeat(99)] {
     try route.custom_id(text) |> ignore catch {
       @app.CustomIdError::TooLong(custom_id~, length~) => {
         assert_eq(custom_id, "a:\{text}")
-        assert_eq(length, text.length() + 2)
+        assert_eq(length, text.char_length() + 2)
       }
       error => fail("unexpected error: \{Repr(error)}")
     } noraise {
@@ -120,12 +121,12 @@ test "modal show enforces the custom id limit" {
     show in [
       () => modal.show("x".repeat(92)),
       () => route_test_modal("x".repeat(101)).show(""),
-      () => route_test_modal("😀".repeat(49) + "x").show("y"),
+      () => route_test_modal("😀".repeat(99)).show("y"),
     ] {
     try show() |> ignore catch {
       @app.ModalShowError::InvalidCustomId(TooLong(custom_id~, length~)) => {
         assert_eq(length, 101)
-        assert_eq(custom_id.length(), length)
+        assert_eq(custom_id.char_length(), length)
       }
       error => fail("unexpected error: \{Repr(error)}")
     } noraise {

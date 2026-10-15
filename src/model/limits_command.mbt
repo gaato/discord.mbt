@@ -2,17 +2,17 @@
 /// The limits Discord documents for an application command declaration
 /// (<https://docs.discord.com/developers/interactions/application-commands>):
 ///
-/// - command and option names are 1 to 32 units, and CHAT_INPUT command and
-///   option names follow the naming rule (lowercase where a lowercase variant
-///   exists, no spaces or punctuation other than `-` and `_`);
-/// - CHAT_INPUT descriptions and option descriptions are 1 to 100 units;
+/// - command and option names are 1 to 32 characters, and CHAT_INPUT command
+///   and option names follow the naming rule (lowercase where a lowercase
+///   variant exists, no spaces or punctuation other than `-` and `_`);
+/// - CHAT_INPUT descriptions and option descriptions are 1 to 100 characters;
 /// - localizations follow the rules of the field they localize;
 /// - each options array holds at most 25 entries with unique names;
-/// - an option has at most 25 choices, whose names are 1 to 100 units and
-///   whose string values are at most 100 units;
+/// - an option has at most 25 choices, whose names are 1 to 100 characters and
+///   whose string values are at most 100 characters;
 /// - `min_length` is 0 to 6000 and `max_length` is 1 to 6000;
 /// - a CHAT_INPUT command's names, descriptions, and string choice values
-///   total at most 8000 units, counting only the longest localization of
+///   total at most 8000 characters, counting only the longest localization of
 ///   each field.
 ///
 /// The naming rule is checked for ASCII characters only: a non-ASCII
@@ -48,11 +48,11 @@ pub fn command_limit_violations(
     checker.command_options("options", options)
     let total = longest_localized(name, name_localizations) +
       longest_localized(description, description_localizations) +
-      options.fold(init=0, (sum, option) => sum + option_text_units(option))
+      options.fold(init=0, (sum, option) => sum + option_text_length(option))
     if total > 8000 {
       checker.report(
         "name",
-        "\{total} units of names, descriptions, and choice values (at most 8000)",
+        "\{total} characters of names, descriptions, and choice values (at most 8000)",
       )
     }
   }
@@ -60,7 +60,7 @@ pub fn command_limit_violations(
 }
 
 ///|
-/// Report a command or option name outside 1 to 32 units, or one that breaks
+/// Report a command or option name outside 1 to 32 characters, or one that breaks
 /// the CHAT_INPUT naming rule in its ASCII characters.
 fn LimitChecker::command_name(
   self : LimitChecker,
@@ -180,19 +180,17 @@ fn LimitChecker::command_options(
 /// A field's contribution to the 8000-unit command total: the longest of
 /// the default value and its localizations.
 fn longest_localized(value : String, localized : Map[String, String]?) -> Int32 {
-  let mut longest = value.length()
+  let mut longest = text_length(value)
   if localized is Some(localized) {
     for _, text in localized {
-      if text.length() > longest {
-        longest = text.length()
-      }
+      longest = longest.max(text_length(text))
     }
   }
   longest
 }
 
 ///|
-fn option_text_units(option : CommandOption) -> Int32 {
+fn option_text_length(option : CommandOption) -> Int32 {
   let mut total = longest_localized(
       option.name,
       nullable_map(option.name_localizations),
@@ -208,13 +206,13 @@ fn option_text_units(option : CommandOption) -> Int32 {
         nullable_map(choice.name_localizations),
       )
       if choice.value is String(value) {
-        total += value.length()
+        total += text_length(value)
       }
     }
   }
   if option.options is Some(children) {
     for child in children {
-      total += option_text_units(child)
+      total += option_text_length(child)
     }
   }
   total

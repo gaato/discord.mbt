@@ -72,25 +72,25 @@ fn limit_field_cases(
 }
 
 ///|
-test "message button length boundaries use UTF-16 units" {
+test "message button length boundaries count characters" {
   inspect(
     limit_field_cases({ "type": 2, "style": 1, "custom_id": "button" }, [
       ("label", limit_text(80), limit_text(81)),
       (
         "label",
-        Json::string("😀".repeat(40)),
-        Json::string("😀".repeat(40) + "x"),
+        Json::string("😀".repeat(80)),
+        Json::string("😀".repeat(81)),
       ),
       ("custom_id", limit_text(1), limit_text(0)),
       ("custom_id", limit_text(100), limit_text(101)),
       ("url", limit_text(512), limit_text(513)),
     ]),
     content=(
-      #|components[0].label: 81 units (at most 80)
-      #|components[0].label: 81 units (at most 80)
-      #|components[0].custom_id: 0 units (1 to 100)
-      #|components[0].custom_id: 101 units (1 to 100)
-      #|components[0].url: 513 units (at most 512)
+      #|components[0].label: 81 characters (at most 80)
+      #|components[0].label: 81 characters (at most 80)
+      #|components[0].custom_id: 0 characters (1 to 100)
+      #|components[0].custom_id: 101 characters (1 to 100)
+      #|components[0].url: 513 characters (at most 512)
     ),
   )
   debug_inspect(
@@ -133,81 +133,81 @@ test "all select types share message and modal field boundaries" {
   inspect(
     messages.join("\n"),
     content=(
-      #|components[0].custom_id: 0 units (1 to 100)
-      #|components[0].custom_id: 101 units (1 to 100)
-      #|components[0].placeholder: 151 units (at most 150)
+      #|components[0].custom_id: 0 characters (1 to 100)
+      #|components[0].custom_id: 101 characters (1 to 100)
+      #|components[0].placeholder: 151 characters (at most 150)
       #|components[0].min_values: -1 (0 to 25)
       #|components[0].min_values: 26 (0 to 25)
       #|components[0].max_values: 26 (0 to 25)
       #|components[0].max_values: -1 (0 to 25)
       #|components[0].min_values: 3 exceeds the maximum 2
-      #|components[0].custom_id: 0 units (1 to 100)
-      #|components[0].custom_id: 101 units (1 to 100)
-      #|components[0].placeholder: 151 units (at most 150)
+      #|components[0].custom_id: 0 characters (1 to 100)
+      #|components[0].custom_id: 101 characters (1 to 100)
+      #|components[0].placeholder: 151 characters (at most 150)
       #|components[0].min_values: -1 (0 to 25)
       #|components[0].min_values: 26 (0 to 25)
       #|components[0].max_values: 26 (0 to 25)
       #|components[0].max_values: -1 (0 to 25)
       #|components[0].min_values: 3 exceeds the maximum 2
-      #|components[0].custom_id: 0 units (1 to 100)
-      #|components[0].custom_id: 101 units (1 to 100)
-      #|components[0].placeholder: 151 units (at most 150)
+      #|components[0].custom_id: 0 characters (1 to 100)
+      #|components[0].custom_id: 101 characters (1 to 100)
+      #|components[0].placeholder: 151 characters (at most 150)
       #|components[0].min_values: -1 (0 to 25)
       #|components[0].min_values: 26 (0 to 25)
       #|components[0].max_values: 26 (0 to 25)
       #|components[0].max_values: -1 (0 to 25)
       #|components[0].min_values: 3 exceeds the maximum 2
-      #|components[0].custom_id: 0 units (1 to 100)
-      #|components[0].custom_id: 101 units (1 to 100)
-      #|components[0].placeholder: 151 units (at most 150)
+      #|components[0].custom_id: 0 characters (1 to 100)
+      #|components[0].custom_id: 101 characters (1 to 100)
+      #|components[0].placeholder: 151 characters (at most 150)
       #|components[0].min_values: -1 (0 to 25)
       #|components[0].min_values: 26 (0 to 25)
       #|components[0].max_values: 26 (0 to 25)
       #|components[0].max_values: -1 (0 to 25)
       #|components[0].min_values: 3 exceeds the maximum 2
-      #|components[0].custom_id: 0 units (1 to 100)
-      #|components[0].custom_id: 101 units (1 to 100)
-      #|components[0].placeholder: 151 units (at most 150)
+      #|components[0].custom_id: 0 characters (1 to 100)
+      #|components[0].custom_id: 101 characters (1 to 100)
+      #|components[0].placeholder: 151 characters (at most 150)
       #|components[0].min_values: -1 (0 to 25)
       #|components[0].min_values: 26 (0 to 25)
       #|components[0].max_values: 26 (0 to 25)
       #|components[0].max_values: -1 (0 to 25)
       #|components[0].min_values: 3 exceeds the maximum 2
-      #|components[0].component.custom_id: 0 units (1 to 100)
-      #|components[0].component.custom_id: 101 units (1 to 100)
-      #|components[0].component.placeholder: 151 units (at most 150)
+      #|components[0].component.custom_id: 0 characters (1 to 100)
+      #|components[0].component.custom_id: 101 characters (1 to 100)
+      #|components[0].component.placeholder: 151 characters (at most 150)
       #|components[0].component.min_values: -1 (0 to 25)
       #|components[0].component.min_values: 26 (0 to 25)
       #|components[0].component.max_values: 26 (0 to 25)
       #|components[0].component.max_values: -1 (0 to 25)
       #|components[0].component.min_values: 3 exceeds the maximum 2
-      #|components[0].component.custom_id: 0 units (1 to 100)
-      #|components[0].component.custom_id: 101 units (1 to 100)
-      #|components[0].component.placeholder: 151 units (at most 150)
+      #|components[0].component.custom_id: 0 characters (1 to 100)
+      #|components[0].component.custom_id: 101 characters (1 to 100)
+      #|components[0].component.placeholder: 151 characters (at most 150)
       #|components[0].component.min_values: -1 (0 to 25)
       #|components[0].component.min_values: 26 (0 to 25)
       #|components[0].component.max_values: 26 (0 to 25)
       #|components[0].component.max_values: -1 (0 to 25)
       #|components[0].component.min_values: 3 exceeds the maximum 2
-      #|components[0].component.custom_id: 0 units (1 to 100)
-      #|components[0].component.custom_id: 101 units (1 to 100)
-      #|components[0].component.placeholder: 151 units (at most 150)
+      #|components[0].component.custom_id: 0 characters (1 to 100)
+      #|components[0].component.custom_id: 101 characters (1 to 100)
+      #|components[0].component.placeholder: 151 characters (at most 150)
       #|components[0].component.min_values: -1 (0 to 25)
       #|components[0].component.min_values: 26 (0 to 25)
       #|components[0].component.max_values: 26 (0 to 25)
       #|components[0].component.max_values: -1 (0 to 25)
       #|components[0].component.min_values: 3 exceeds the maximum 2
-      #|components[0].component.custom_id: 0 units (1 to 100)
-      #|components[0].component.custom_id: 101 units (1 to 100)
-      #|components[0].component.placeholder: 151 units (at most 150)
+      #|components[0].component.custom_id: 0 characters (1 to 100)
+      #|components[0].component.custom_id: 101 characters (1 to 100)
+      #|components[0].component.placeholder: 151 characters (at most 150)
       #|components[0].component.min_values: -1 (0 to 25)
       #|components[0].component.min_values: 26 (0 to 25)
       #|components[0].component.max_values: 26 (0 to 25)
       #|components[0].component.max_values: -1 (0 to 25)
       #|components[0].component.min_values: 3 exceeds the maximum 2
-      #|components[0].component.custom_id: 0 units (1 to 100)
-      #|components[0].component.custom_id: 101 units (1 to 100)
-      #|components[0].component.placeholder: 151 units (at most 150)
+      #|components[0].component.custom_id: 0 characters (1 to 100)
+      #|components[0].component.custom_id: 101 characters (1 to 100)
+      #|components[0].component.placeholder: 151 characters (at most 150)
       #|components[0].component.min_values: -1 (0 to 25)
       #|components[0].component.min_values: 26 (0 to 25)
       #|components[0].component.max_values: 26 (0 to 25)
@@ -260,13 +260,13 @@ test "string select options and option text boundaries in both contexts" {
     messages.join("\n"),
     content=(
       #|components[0].options: 26 (0 to 25)
-      #|components[0].options[0].label: 101 units (at most 100)
-      #|components[0].options[0].value: 101 units (at most 100)
-      #|components[0].options[0].description: 101 units (at most 100)
+      #|components[0].options[0].label: 101 characters (at most 100)
+      #|components[0].options[0].value: 101 characters (at most 100)
+      #|components[0].options[0].description: 101 characters (at most 100)
       #|components[0].component.options: 26 (0 to 25)
-      #|components[0].component.options[0].label: 101 units (at most 100)
-      #|components[0].component.options[0].value: 101 units (at most 100)
-      #|components[0].component.options[0].description: 101 units (at most 100)
+      #|components[0].component.options[0].label: 101 characters (at most 100)
+      #|components[0].component.options[0].value: 101 characters (at most 100)
+      #|components[0].component.options[0].description: 101 characters (at most 100)
     ),
   )
   debug_inspect(
@@ -536,7 +536,7 @@ test "section gallery thumbnail separator and container limits" {
       ("description", limit_text(1024), limit_text(1025)),
     ]),
     content=(
-      #|components[0].description: 1025 units (at most 1024)
+      #|components[0].description: 1025 characters (at most 1024)
     ),
   )
   let item : Json = { "media": { "url": "attachment://image.png" } }
@@ -553,7 +553,7 @@ test "section gallery thumbnail separator and container limits" {
     content=(
       #|components[0].items: 0 (1 to 10)
       #|components[0].items: 11 (1 to 10)
-      #|components[0].items[0].description: 1025 units (at most 1024)
+      #|components[0].items[0].description: 1025 characters (at most 1024)
     ),
   )
   inspect(
@@ -627,12 +627,12 @@ test "message validation preserves nested paths and nearest custom id" {
       #|  {
       #|    path: "components[0].components[0].accessory.label",
       #|    custom_id: Some("details"),
-      #|    reason: "81 units (at most 80)",
+      #|    reason: "81 characters (at most 80)",
       #|  },
       #|  {
       #|    path: "components[0].components[1].components[0].options[0].value",
       #|    custom_id: Some("color"),
-      #|    reason: "101 units (at most 100)",
+      #|    reason: "101 characters (at most 100)",
       #|  },
       #|]
     ),

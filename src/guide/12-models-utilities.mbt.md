@@ -122,8 +122,8 @@ test "format timestamps" {
 ## Safe message content
 
 Escape user-controlled markdown and mentions before including them in a
-message, then split the result to Discord's 2000 UTF-16-code-unit content
-limit:
+message, then split the result to Discord's 2000-character content limit
+(Discord counts code points, so an emoji is one character):
 
 ```mbt check
 ///|

@@ -52,7 +52,7 @@ pub fn embed_limit_violations(embeds : Array[Embed]) -> Array[LimitViolation] {
   if total_length > 6000 {
     checker.report(
       "embeds",
-      "\{total_length} units across all title, description, field.name, field.value, footer.text, and author.name values (at most 6000)",
+      "\{total_length} characters across all title, description, field.name, field.value, footer.text, and author.name values (at most 6000)",
     )
   }
   checker.violations
@@ -70,5 +70,5 @@ fn LimitChecker::embed_text(
   guard text is Some(text) else { return 0 }
   let trimmed = text.trim().to_owned()
   self.text(path, Some(trimmed), max~)
-  trimmed.length()
+  text_length(trimmed)
 }
