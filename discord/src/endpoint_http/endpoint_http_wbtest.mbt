@@ -382,3 +382,120 @@ async test "interactions server answers 202, 504, and 500 and reports startup fa
     assert_true(warning.has_prefix("interaction HTTP request failed: "))
   })
 }
+
+///|
+/// Send `head` and `body` on a raw connection and return everything the server
+/// writes before closing it.
+async fn raw_exchange(addr : String, head : String, body : String) -> String {
+  let socket = @socket.Tcp::connect(@socket.Addr::parse(addr))
+  defer socket.close()
+  socket.write(head + body)
+  guard @async.with_timeout_opt(2000, () => socket.read_all().text())
+    is Some(reply) else {
+    fail("the server kept the connection open")
+  }
+  reply
+}
+
+///|
+async test "interactions server bounds request bodies by size and read time" {
+  let private_seed = @hex.decode(
+    "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60",
+  )
+  let public_key = "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a"
+  let timestamp = "1720951200"
+  let ping = ping_body()
+  let app = @app.AppBuilder()
+  @async.with_task_group(group => {
+    let server = serve_interactions(
+      group,
+      app.build(),
+      access=Token("test-token"),
+      addr="127.0.0.1:0",
+      public_key~,
+      application_id=@model.Id::parse("400000000000000001"),
+      max_body_bytes=ping.length(),
+      body_timeout_ms=200,
+    )
+    defer server.close()
+    // A body of exactly the limit is accepted.
+    let (exact, exact_result) = http_request(
+      server.addr(),
+      Post,
+      "/",
+      ping,
+      signed_headers(private_seed, timestamp, ping),
+    )
+    assert_eq(exact.code, 200)
+    assert_eq(exact_result, "{\"type\":1}")
+    // One byte more is refused before verification, and the connection closes.
+    let over = ping + " "
+    let headers = signed_headers(private_seed, timestamp, over)
+    let signed_head = "X-Signature-Ed25519: \{headers["X-Signature-Ed25519"]}\r\n" +
+      "X-Signature-Timestamp: \{timestamp}\r\n"
+    let too_large = raw_exchange(
+      server.addr(),
+      "POST / HTTP/1.1\r\nHost: localhost\r\nContent-Length: \{over.length()}\r\n" +
+      signed_head +
+      "\r\n",
+      over,
+    )
+    assert_true(too_large.has_prefix("HTTP/1.1 413 Content Too Large\r\n"))
+    // A body that stalls is refused once the read timeout passes.
+    let stalled = raw_exchange(
+      server.addr(),
+      "POST / HTTP/1.1\r\nHost: localhost\r\nContent-Length: 100\r\n" +
+      signed_head +
+      "\r\n",
+      "{}",
+    )
+    assert_true(stalled.has_prefix("HTTP/1.1 408 Request Timeout\r\n"))
+    // A rejected request with an oversized body is answered and closed rather
+    // than drained.
+    let unsigned = raw_exchange(
+      server.addr(),
+      "POST / HTTP/1.1\r\nHost: localhost\r\nContent-Length: \{over.length()}\r\n\r\n",
+      over,
+    )
+    assert_true(unsigned.has_prefix("HTTP/1.1 401 Unauthorized\r\n"))
+  })
+}
+
+///|
+async test "interactions server rejects non-positive body limits" {
+  let app = @app.AppBuilder()
+  @async.with_task_group(group => {
+    try
+      serve_interactions(
+        group,
+        app.build(),
+        access=Token("test-token"),
+        addr="127.0.0.1:0",
+        public_key="d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+        max_body_bytes=0,
+      )
+      |> ignore
+    catch {
+      InvalidMaxBodyBytes(value~) => assert_eq(value, 0)
+      error => fail("unexpected startup error: \{Repr(error)}")
+    } noraise {
+      _ => fail("a zero body limit was accepted")
+    }
+    try
+      serve_interactions(
+        group,
+        app.build(),
+        access=Token("test-token"),
+        addr="127.0.0.1:0",
+        public_key="d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+        body_timeout_ms=-1,
+      )
+      |> ignore
+    catch {
+      InvalidBodyTimeoutMs(value~) => assert_eq(value, -1)
+      error => fail("unexpected startup error: \{Repr(error)}")
+    } noraise {
+      _ => fail("a negative body timeout was accepted")
+    }
+  })
+}
