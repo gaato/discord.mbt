@@ -5,12 +5,17 @@ import {
   "gaato/discord/app",
   "gaato/discord/model",
   "moonbitlang/async",
+  "moonbitlang/core/debug",
 }
 
 // Values
-pub async fn[X] serve_interactions(@async.TaskGroup[X], @app.App, addr~ : String, public_key~ : String, access~ : @app.RestAccess, application_id? : @model.Id[@model.ApplicationMarker], path? : String, deadline_ms? : Int) -> InteractionsServer
+pub async fn[X] serve_interactions(@async.TaskGroup[X], @app.App, addr~ : String, public_key~ : String, access~ : @app.RestAccess, application_id? : @model.Id[@model.ApplicationMarker], path? : String, deadline_ms? : Int, max_body_bytes? : Int, body_timeout_ms? : Int) -> InteractionsServer
 
 // Errors
+pub(all) suberror ServerConfigError {
+  InvalidMaxBodyBytes(value~ : Int)
+  InvalidBodyTimeoutMs(value~ : Int)
+} derive(@debug.Debug)
 
 // Types and methods
 pub struct InteractionsServer {

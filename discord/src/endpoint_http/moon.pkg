@@ -8,6 +8,7 @@ import {
   "moonbitlang/async/http" @ahttp,
   "moonbitlang/async/io",
   "moonbitlang/async/socket",
+  "moonbitlang/core/debug",
   "moonbitlang/core/json",
   "moonbitlang/core/encoding/utf8",
 }

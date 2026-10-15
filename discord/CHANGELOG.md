@@ -121,6 +121,12 @@ breaking change is listed with a migration note.
   chunk and no longer queues a scheduler tick for a coroutine that has already
   finished, so the JS example hosts' `whenIdle()` no longer yields an extra
   macrotask to let that tick run.
+- `serve_interactions` bounds request bodies: a body over `max_body_bytes`
+  (default 1 MiB) gets 413 and one not received within `body_timeout_ms`
+  (default 5000) gets 408, both closing the connection. A request rejected
+  before verification (405, 404, or missing signature headers) has its body
+  discarded up to the same limits instead of drained without bound.
+  Non-positive values raise `ServerConfigError`.
 
 ### Fixed
 

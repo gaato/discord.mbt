@@ -14,41 +14,108 @@ fn text_response(status : Int32, body : String) -> @app.InteractionHttpResponse 
 }
 
 ///|
+/// Configuration rejected by `serve_interactions` before it starts listening.
+pub(all) suberror ServerConfigError {
+  InvalidMaxBodyBytes(value~ : Int32)
+  InvalidBodyTimeoutMs(value~ : Int32)
+} derive(@debug.Debug)
+
+///|
+priv enum BodyRead {
+  Complete(Bytes)
+  TooLarge
+  TimedOut
+}
+
+///|
+/// Read a request body of at most `max_bytes` within `timeout_ms`, so a client
+/// can neither exhaust memory with a large body nor hold the connection by
+/// sending slowly. With `keep=false` the body is counted and discarded.
+async fn read_body(
+  body_reader : &@io.Reader,
+  max_bytes : Int32,
+  timeout_ms : Int32,
+  keep~ : Bool,
+) -> BodyRead {
+  let buffer = Buffer()
+  let mut length = 0
+  let read = @async.with_timeout_opt(timeout_ms, () => {
+    for ;; {
+      // Ask for one byte past the limit to tell a body of exactly
+      // `max_bytes` from a larger one, in chunks of at most 64 KiB.
+      let room = max_bytes - length
+      let max_len = if room < 65536 { room + 1 } else { 65536 }
+      guard body_reader.read_some(max_len~) is Some(chunk) else { break true }
+      // Compare against the room left rather than summing first, which would
+      // overflow when `max_bytes` is near `Int` maximum.
+      if chunk.length() > room {
+        break false
+      }
+      length += chunk.length()
+      if keep {
+        buffer.write_bytes(chunk)
+      }
+    }
+  })
+  match read {
+    Some(true) => Complete(buffer.to_bytes())
+    Some(false) => TooLarge
+    None => TimedOut
+  }
+}
+
+///|
+/// Route one request. The flag is true when the connection must close after
+/// the response because the body was not read to its end.
 async fn route_request(
   request : @ahttp.Request,
   body_reader : &@io.Reader,
-  conn : @ahttp.ServerConnection,
   endpoint : @app.InteractionEndpoint,
   verifier : @verify.InteractionVerifier,
   path : String,
   deadline_ms : Int32,
-) -> @app.InteractionHttpResponse {
-  if request.meth != Post {
-    conn.skip_request_body()
-    return text_response(405, "method not allowed")
+  max_body_bytes : Int32,
+  body_timeout_ms : Int32,
+) -> (@app.InteractionHttpResponse, Bool) {
+  let rejection = if request.meth != Post {
+    Some(text_response(405, "method not allowed"))
+  } else if request.path != path {
+    Some(text_response(404, "not found"))
+  } else if !(request.headers.contains("x-signature-ed25519") &&
+    request.headers.contains("x-signature-timestamp")) {
+    // A request without both signature headers cannot verify, so answer
+    // without keeping a body that an unauthenticated client controls.
+    Some(text_response(401, "missing signature"))
+  } else {
+    None
   }
-  if request.path != path {
-    conn.skip_request_body()
-    return text_response(404, "not found")
+  let body = read_body(
+    body_reader,
+    max_body_bytes,
+    body_timeout_ms,
+    keep=rejection is None,
+  )
+  if rejection is Some(response) {
+    // Drain a small rejected body to keep the connection; give up on a large
+    // or slow one and close instead.
+    return (response, !(body is Complete(_)))
   }
-  // A request without both signature headers cannot verify, so answer before
-  // buffering a body that an unauthenticated client controls.
-  guard request.headers.get("x-signature-ed25519") is Some(signature) &&
-    request.headers.get("x-signature-timestamp") is Some(timestamp) else {
-    conn.skip_request_body()
-    return text_response(401, "missing signature")
+  let body_bytes = match body {
+    Complete(bytes) => bytes
+    TooLarge => return (text_response(413, "request body too large"), true)
+    TimedOut => return (text_response(408, "request body timed out"), true)
   }
-  let body_bytes = body_reader.read_all().binary()
-  endpoint.handle_signed_http(
+  let response = endpoint.handle_signed_http(
     {
       http_method: "POST",
-      signature: Some(signature),
-      timestamp: Some(timestamp),
+      signature: request.headers.get("x-signature-ed25519"),
+      timestamp: request.headers.get("x-signature-timestamp"),
       body: body_bytes,
     },
     verifier,
     deadline_ms~,
   )
+  (response, false)
 }
 
 ///|
@@ -67,6 +134,8 @@ async fn send_response(
     401 => "Unauthorized"
     404 => "Not Found"
     405 => "Method Not Allowed"
+    408 => "Request Timeout"
+    413 => "Content Too Large"
     504 => "Gateway Timeout"
     _ => "Internal Server Error"
   }
@@ -91,11 +160,14 @@ async fn handle_request(
   verifier : @verify.InteractionVerifier,
   path : String,
   deadline_ms : Int32,
+  max_body_bytes : Int32,
+  body_timeout_ms : Int32,
   warn : (@app.AppWarning) -> Unit,
 ) -> Unit {
-  let response = try
+  let (response, close) = try
     route_request(
-      request, body_reader, conn, endpoint, verifier, path, deadline_ms,
+      request, body_reader, endpoint, verifier, path, deadline_ms, max_body_bytes,
+      body_timeout_ms,
     )
   catch {
     error if @async.is_being_cancelled() => raise error
@@ -106,10 +178,10 @@ async fn handle_request(
           message="interaction HTTP request failed: \{Repr(error)}",
         ),
       )
-      text_response(500, "internal server error")
+      (text_response(500, "internal server error"), false)
     }
   } noraise {
-    response => response
+    routed => routed
   }
   send_response(conn, response) catch {
     error if @async.is_being_cancelled() => raise error
@@ -122,6 +194,9 @@ async fn handle_request(
       )
       conn.close()
     }
+  }
+  if close {
+    conn.close()
   }
 }
 
@@ -153,6 +228,11 @@ pub async fn InteractionsServer::close(
 ///
 /// Use port zero in `addr` to let the OS choose a free port, then read the
 /// resolved address from `InteractionsServer::addr`.
+///
+/// A request body larger than `max_body_bytes` gets 413, and one not received
+/// within `body_timeout_ms` gets 408; both close the connection. Discord's
+/// interaction payloads are far below the 1 MiB default. Non-positive limits
+/// raise `ServerConfigError` before the server listens.
 pub async fn[X] serve_interactions(
   group : @async.TaskGroup[X],
   app : @app.App,
@@ -162,7 +242,15 @@ pub async fn[X] serve_interactions(
   application_id? : @model.ApplicationId,
   path~ : String = "/",
   deadline_ms~ : Int32 = 2500,
+  max_body_bytes~ : Int32 = 1048576,
+  body_timeout_ms~ : Int32 = 5000,
 ) -> InteractionsServer {
+  guard max_body_bytes > 0 else {
+    raise InvalidMaxBodyBytes(value=max_body_bytes)
+  }
+  guard body_timeout_ms > 0 else {
+    raise InvalidBodyTimeoutMs(value=body_timeout_ms)
+  }
   let verifier = @verify.InteractionVerifier::new(public_key)
   let server = @ahttp.Server(@socket.Addr::parse(addr))
   let address = server.addr.to_string()
@@ -177,7 +265,8 @@ pub async fn[X] serve_interactions(
       inner.spawn_bg(() => {
         server.run_forever(allow_failure=true, (request, body_reader, conn) => {
           handle_request(
-            request, body_reader, conn, endpoint, verifier, path, deadline_ms, warn,
+            request, body_reader, conn, endpoint, verifier, path, deadline_ms, max_body_bytes,
+            body_timeout_ms, warn,
           )
         })
       })
