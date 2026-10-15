@@ -367,34 +367,19 @@ pub fn Session::process_proposals(
 }
 
 ///|
-fn read_u64_be(record : Bytes) -> UInt64 {
-  (record[0].to_uint64() << 56) |
-  (record[1].to_uint64() << 48) |
-  (record[2].to_uint64() << 40) |
-  (record[3].to_uint64() << 32) |
-  (record[4].to_uint64() << 24) |
-  (record[5].to_uint64() << 16) |
-  (record[6].to_uint64() << 8) |
-  record[7].to_uint64()
-}
-
-///|
 fn decode_roster_change(
   record : Bytes,
   operation : String,
 ) -> RosterChange raise DaveError {
-  if record.length() < 8 {
-    raise NativeFailure(
-      operation~,
-      reason="roster-change record is shorter than its 8-byte user ID",
-    )
-  }
-  let user_id = read_u64_be(record)
-  let signature_key = record[8:].to_owned()
-  if signature_key.length() == 0 {
-    Remove(user_id~)
-  } else {
-    Upsert(user_id~, signature_key~)
+  match record {
+    [u64be(user_id)] => Remove(user_id~)
+    [u64be(user_id), .. signature_key] =>
+      Upsert(user_id~, signature_key=signature_key.to_owned())
+    _ =>
+      raise NativeFailure(
+        operation~,
+        reason="roster-change record is shorter than its 8-byte user ID",
+      )
   }
 }
 
