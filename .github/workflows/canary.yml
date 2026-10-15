@@ -5,7 +5,8 @@ name: Canary
 # green CI means the language or toolchain changed under us. Read the two
 # channels differently:
 #   latest  - the release users install has moved: fix it, then bump the
-#             pinned image and MOONBIT_INSTALL_VERSION in ci.yml.
+#             pinned image and MOONBIT_INSTALL_VERSION in ci.yml, dave.yml,
+#             release.yml, and voice-shim.yml.
 #   nightly - an early warning of what the next release will do; nightly itself
 #             is sometimes broken, so confirm before changing anything.
 # The voice shim, JavaScript host runtimes, and template image stay in CI only:
@@ -42,7 +43,8 @@ jobs:
       - name: Install build dependencies
         run: |
           apt-get update
-          apt-get install -y --no-install-recommends zlib1g-dev
+          # unzip extracts the libdave archive for the native gaato/dave tests.
+          apt-get install -y --no-install-recommends zlib1g-dev unzip
 
       - name: Toolchain versions
         run: moon version --all
@@ -69,3 +71,14 @@ jobs:
 
       - name: Test Wasm
         run: moon test --target wasm --release
+
+      - name: Check and test gaato/dave
+        working-directory: dave
+        env:
+          MBT_DAVE_REQUIRE_NATIVE: "1"
+        run: |
+          moon check --target all --deny-warn
+          moon fmt --check
+          moon test --target native --release
+          moon test --target js --release
+          moon test --target wasm --release

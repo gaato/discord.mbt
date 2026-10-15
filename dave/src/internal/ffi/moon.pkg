@@ -1,0 +1,19 @@
+import {
+  "moonbitlang/core/encoding/utf8",
+}
+
+supported_targets = "js + native + wasm"
+
+// UTF-8 is used by the native FFI only.
+
+warnings = "-29"
+
+options(
+  "native-stub": [ "loader.c" ],
+  targets: {
+    "ffi.mbt": [ "native" ],
+    "ffi_unavailable.mbt": [ "js", "wasm" ],
+    "handles_js.mbt": [ "js" ],
+    "handles_wasm.mbt": [ "wasm" ],
+  },
+)

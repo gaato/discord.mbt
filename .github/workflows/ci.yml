@@ -333,6 +333,16 @@ jobs:
       - name: Test with transport shim and official libdave
         run: moon test --target native --release --deny-warn
 
+      - name: Test voice against the in-tree gaato/dave
+        run: |
+          # The steps above use the published gaato/dave, as consumers do. A
+          # workspace swaps in dave/ so a change there is tested with voice
+          # before it is published.
+          workdir="$(mktemp -d)"
+          cd "$workdir"
+          moon work init "$GITHUB_WORKSPACE" "$GITHUB_WORKSPACE/dave"
+          moon test "$GITHUB_WORKSPACE/src/voice" --target native --release --deny-warn
+
   template-image:
     runs-on: ubuntu-24.04
     timeout-minutes: 20

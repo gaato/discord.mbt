@@ -1,12 +1,15 @@
 name: Release
 
-# Publishes to mooncakes.io after CI is green on main. Idempotent: when the
-# version in moon.mod is already in the registry index nothing happens, so only
-# a version bump releases (scripts/release.sh).
+# Publishes to mooncakes.io after a module's CI is green on main: gaato/discord
+# after CI, gaato/dave (dave/) after Dave. Idempotent: when the version in a
+# moon.mod is already in the registry index nothing happens, so only a version
+# bump releases (scripts/release.sh). Bump gaato/dave and publish it before a
+# gaato/discord commit imports the new version: CI resolves dependencies from
+# the registry, as consumers do. A manual run publishes both, gaato/dave first.
 
 on:
   workflow_run:
-    workflows: [CI]
+    workflows: [CI, Dave]
     types: [completed]
     branches: [main]
   workflow_dispatch:
@@ -44,6 +47,10 @@ jobs:
         env:
           MOONCAKES_TOKEN: ${{ secrets.MOONCAKES_TOKEN }}
           MOONCAKES_USERNAME: ${{ secrets.MOONCAKES_USERNAME }}
+          MODULES: >-
+            ${{ github.event_name == 'workflow_dispatch' && 'dave .'
+              || github.event.workflow_run.name == 'Dave' && 'dave'
+              || '.' }}
         run: |
           if [ -z "$MOONCAKES_TOKEN" ]; then
             echo "MOONCAKES_TOKEN is not set; nothing published" >&2
@@ -55,5 +62,7 @@ jobs:
           umask 077
           printf '{"token":"%s","username":"%s"}\n' "$MOONCAKES_TOKEN" "$MOONCAKES_USERNAME" > "$moon_home/credentials.json"
           trap 'rm -f "$moon_home/credentials.json"' EXIT
-          scripts/release.sh --dry-run
-          scripts/release.sh
+          for module in $MODULES; do
+            scripts/release.sh --dry-run "$module"
+            scripts/release.sh "$module"
+          done

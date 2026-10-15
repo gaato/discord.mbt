@@ -290,7 +290,7 @@ limits through the bundled TCP coordinator. See the
 Native builds can join voice gateway v8 calls, play 20 ms Opus frames, and
 receive per-user Opus streams. Discord requires DAVE encryption, so voice
 applications use the native-only
-[`gaato/dave`](https://github.com/gaato/dave.mbt) binding to Discord's
+[`gaato/dave`](dave/README.mbt.md) binding to Discord's
 official `libdave` for MLS and media encryption. The separate Rust library in
 `voice-shim/` handles RTP transport AEAD only. `gaato/dave` currently pins
 upstream `v1.2.0/cpp`; `gaato/discord` pins transport component release
@@ -536,6 +536,16 @@ moon ide doc "@util.channel_permissions"
 
 Each package's `pkg.generated.mbti` is a concise public-interface snapshot;
 review its diff when checking API drift.
+
+The `gaato/dave` module lives in [`dave/`](dave/README.mbt.md) and is
+published separately. This module builds against the published version, as
+consumers do; to test a change in `dave/` together with voice, put both
+modules in a workspace from a scratch directory:
+
+```fish
+moon work init /path/to/discord.mbt /path/to/discord.mbt/dave
+env MBT_DAVE_REQUIRE_NATIVE=1 DISCORD_VOICE_REQUIRE_SHIM=1 moon test /path/to/discord.mbt/src/voice --target native --release
+```
 
 Every MoonBit code block in this README has a compiled twin in
 `src/readme_native_test.mbt`, and code blocks marked `mbt check` in the

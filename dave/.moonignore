@@ -1,0 +1,6 @@
+AGENTS.md
+.githooks/
+test/
+_build/
+target/
+.repos/

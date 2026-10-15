@@ -1,0 +1,57 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "gaato/dave/internal/ffi"
+
+// Values
+pub fn available() -> Bool
+
+pub fn max_supported_protocol_version() -> UInt16
+
+pub fn unavailable_reason() -> String
+
+// Errors
+
+// Types and methods
+pub type RawDecryptor
+pub fn RawDecryptor::decrypt(Self, media_type~ : Int, Bytes) -> Bytes
+pub fn RawDecryptor::is_valid(Self) -> Bool
+pub fn RawDecryptor::last_status(Self) -> Int
+pub fn RawDecryptor::new() -> Self
+pub fn RawDecryptor::transition_to_key_ratchet(Self, RawKeyRatchet) -> Unit
+pub fn RawDecryptor::transition_to_passthrough(Self, enabled~ : Bool) -> Unit
+
+pub type RawEncryptor
+pub fn RawEncryptor::assign_ssrc(Self, ssrc~ : UInt, codec~ : Int) -> Unit
+pub fn RawEncryptor::encrypt(Self, media_type~ : Int, ssrc~ : UInt, Bytes) -> Bytes
+pub fn RawEncryptor::has_key(Self) -> Bool
+pub fn RawEncryptor::is_passthrough(Self) -> Bool
+pub fn RawEncryptor::is_valid(Self) -> Bool
+pub fn RawEncryptor::last_status(Self) -> Int
+pub fn RawEncryptor::new() -> Self
+pub fn RawEncryptor::protocol_version(Self) -> UInt16
+pub fn RawEncryptor::set_key_ratchet(Self, RawKeyRatchet) -> Unit
+pub fn RawEncryptor::set_passthrough(Self, enabled~ : Bool) -> Unit
+
+pub type RawKeyRatchet
+pub fn RawKeyRatchet::is_valid(Self) -> Bool
+
+pub type RawSession
+pub fn RawSession::init(Self, protocol_version~ : UInt16, group_id~ : UInt64, self_user_id~ : UInt64) -> Unit
+pub fn RawSession::is_valid(Self) -> Bool
+pub fn RawSession::key_package(Self) -> Bytes
+pub fn RawSession::key_ratchet(Self, user_id~ : UInt64) -> RawKeyRatchet
+pub fn RawSession::last_epoch_authenticator(Self) -> Bytes
+pub fn RawSession::last_failure(Self) -> (String, String)
+pub fn RawSession::last_status(Self) -> Int
+pub fn RawSession::new(auth_session_id? : String) -> Self
+pub fn RawSession::pairwise_fingerprint(Self, user_id~ : UInt64, fingerprint_version~ : UInt16) -> Bytes
+pub fn RawSession::process_commit(Self, Bytes) -> FixedArray[Bytes]
+pub fn RawSession::process_proposals(Self, Bytes, Array[UInt64]) -> Bytes
+pub fn RawSession::process_welcome(Self, Bytes, Array[UInt64]) -> FixedArray[Bytes]
+pub fn RawSession::protocol_version(Self) -> UInt16
+pub fn RawSession::reset(Self) -> Unit
+pub fn RawSession::set_external_sender(Self, Bytes) -> Unit
+pub fn RawSession::set_protocol_version(Self, protocol_version~ : UInt16) -> Unit
+
+// Type aliases
+
+// Traits
