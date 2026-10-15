@@ -16,6 +16,7 @@ pub(all) enum PresenceStatus {
   Dnd
   Online
   Offline
+  Invisible
   Unknown(String)
 } derive(Eq, Debug)
 
@@ -26,6 +27,7 @@ pub fn PresenceStatus::to_string(self : PresenceStatus) -> String {
     Dnd => "dnd"
     Online => "online"
     Offline => "offline"
+    Invisible => "invisible"
     Unknown(value) => value
   }
 }
@@ -37,6 +39,7 @@ pub fn PresenceStatus::from_string(value : String) -> PresenceStatus {
     "dnd" => Dnd
     "online" => Online
     "offline" => Offline
+    "invisible" => Invisible
     value => Unknown(value)
   }
 }
@@ -60,6 +63,7 @@ pub(all) struct ClientStatus {
   desktop : PresenceStatus?
   mobile : PresenceStatus?
   web : PresenceStatus?
+  vr : PresenceStatus?
 } derive(ToJson, Debug)
 
 ///|
@@ -279,6 +283,60 @@ pub fn ActivityFlags::bits(self : ActivityFlags) -> UInt64 {
 }
 
 ///|
+/// The activity is an instanced game session.
+pub fn ActivityFlags::instance() -> ActivityFlags {
+  ActivityFlags(1UL << 0)
+}
+
+///|
+/// The activity supports joining.
+pub fn ActivityFlags::join() -> ActivityFlags {
+  ActivityFlags(1UL << 1)
+}
+
+///|
+/// The activity supports spectating.
+pub fn ActivityFlags::spectate() -> ActivityFlags {
+  ActivityFlags(1UL << 2)
+}
+
+///|
+/// The activity supports join requests.
+pub fn ActivityFlags::join_request() -> ActivityFlags {
+  ActivityFlags(1UL << 3)
+}
+
+///|
+/// The activity supports synchronization.
+pub fn ActivityFlags::sync() -> ActivityFlags {
+  ActivityFlags(1UL << 4)
+}
+
+///|
+/// The activity supports playing.
+pub fn ActivityFlags::play() -> ActivityFlags {
+  ActivityFlags(1UL << 5)
+}
+
+///|
+/// The activity party is available to friends.
+pub fn ActivityFlags::party_privacy_friends() -> ActivityFlags {
+  ActivityFlags(1UL << 6)
+}
+
+///|
+/// The activity party is available to the voice channel.
+pub fn ActivityFlags::party_privacy_voice_channel() -> ActivityFlags {
+  ActivityFlags(1UL << 7)
+}
+
+///|
+/// The activity is embedded.
+pub fn ActivityFlags::embedded() -> ActivityFlags {
+  ActivityFlags(1UL << 8)
+}
+
+///|
 pub impl Debug for ActivityFlags with fn to_repr(self) {
   Repr(self.0)
 }
@@ -348,6 +406,7 @@ pub impl @json.FromJson for ClientStatus with fn from_json(json, path) {
     desktop: lenient_presence_field(fields, "desktop", path),
     mobile: lenient_presence_field(fields, "mobile", path),
     web: lenient_presence_field(fields, "web", path),
+    vr: lenient_presence_field(fields, "vr", path),
   }
 }
 

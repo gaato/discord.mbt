@@ -43,6 +43,8 @@ pub(all) struct GuildMemberUpdateEvent {
   user : User
   nick : Nullable[String]?
   avatar : Nullable[ImageHash]
+  banner : Nullable[ImageHash]?
+  collectibles : Nullable[Collectibles]?
   joined_at : Nullable[Timestamp]
   premium_since : Nullable[Timestamp]?
   deaf : Bool?

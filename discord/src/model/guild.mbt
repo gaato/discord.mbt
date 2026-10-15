@@ -392,6 +392,7 @@ pub(all) enum GuildFeature {
   EnhancedRoleColors
   GuestsEnabled
   PinPermissionMigrationComplete
+  PruneRequiresAdmin
   Unknown(String)
 } derive(Eq, Debug)
 
@@ -438,6 +439,7 @@ pub fn GuildFeature::to_string(self : GuildFeature) -> String {
     EnhancedRoleColors => "ENHANCED_ROLE_COLORS"
     GuestsEnabled => "GUESTS_ENABLED"
     PinPermissionMigrationComplete => "PIN_PERMISSION_MIGRATION_COMPLETE"
+    PruneRequiresAdmin => "PRUNE_REQUIRES_ADMIN"
     Unknown(value) => value
   }
 }
@@ -485,6 +487,7 @@ pub fn GuildFeature::from_string(value : String) -> GuildFeature {
     "ENHANCED_ROLE_COLORS" => EnhancedRoleColors
     "GUESTS_ENABLED" => GuestsEnabled
     "PIN_PERMISSION_MIGRATION_COMPLETE" => PinPermissionMigrationComplete
+    "PRUNE_REQUIRES_ADMIN" => PruneRequiresAdmin
     value => Unknown(value)
   }
 }

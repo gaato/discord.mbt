@@ -104,6 +104,15 @@ pub fn[T] BotBuilder::on(
 }
 
 ///|
+/// Set the initial presence used by every shard managed by this process.
+pub fn BotBuilder::presence(
+  self : BotBuilder,
+  presence : @model.UpdatePresence,
+) -> Unit {
+  self.core.presence_ = Some(presence)
+}
+
+///|
 /// Subscribe to the raw event stream: every decoded gateway dispatch,
 /// including `Resumed` and `Unknown`, without payload projection. Unlike
 /// `on`, this adds nothing to the inferred intent set.

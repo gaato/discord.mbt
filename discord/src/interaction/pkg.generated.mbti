@@ -37,7 +37,7 @@ pub fn button(custom_id~ : String, label? : String, style? : @model.ButtonStyle,
 
 pub fn channel_option(String, String, required? : Bool, channel_types? : Array[@model.ChannelType], name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @model.CommandOption
 
-pub fn channel_select(custom_id~ : String, placeholder? : String, min_values? : Int, max_values? : Int, disabled? : Bool, channel_types? : Array[@model.ChannelType]) -> @model.Component
+pub fn channel_select(custom_id~ : String, placeholder? : String, min_values? : Int, max_values? : Int, disabled? : Bool, required? : Bool, channel_types? : Array[@model.ChannelType]) -> @model.Component
 
 pub fn container(components~ : Array[@model.Component], accent_color? : Int, spoiler? : Bool) -> @model.Component
 
@@ -57,7 +57,7 @@ pub fn media_item(url~ : String, description? : String, spoiler? : Bool) -> @mod
 
 pub fn mentionable_option(String, String, required? : Bool, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @model.CommandOption
 
-pub fn mentionable_select(custom_id~ : String, placeholder? : String, min_values? : Int, max_values? : Int, disabled? : Bool) -> @model.Component
+pub fn mentionable_select(custom_id~ : String, placeholder? : String, min_values? : Int, max_values? : Int, disabled? : Bool, required? : Bool) -> @model.Component
 
 pub fn number_choice(name~ : String, value~ : Double, name_localizations? : Map[String, String]) -> @model.CommandOptionChoice
 
@@ -65,7 +65,7 @@ pub fn number_option(String, String, required? : Bool, choices? : Array[@model.C
 
 pub fn role_option(String, String, required? : Bool, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @model.CommandOption
 
-pub fn role_select(custom_id~ : String, placeholder? : String, min_values? : Int, max_values? : Int, disabled? : Bool) -> @model.Component
+pub fn role_select(custom_id~ : String, placeholder? : String, min_values? : Int, max_values? : Int, disabled? : Bool, required? : Bool) -> @model.Component
 
 pub fn section(components~ : Array[@model.Component], accessory~ : @model.Component) -> @model.Component
 
@@ -77,7 +77,7 @@ pub fn string_choice(name~ : String, value~ : String, name_localizations? : Map[
 
 pub fn string_option(String, String, required? : Bool, choices? : Array[@model.CommandOptionChoice], min_length? : Int, max_length? : Int, autocomplete? : Bool, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @model.CommandOption
 
-pub fn string_select(custom_id~ : String, options~ : Array[@model.SelectOption], placeholder? : String, min_values? : Int, max_values? : Int, disabled? : Bool) -> @model.Component
+pub fn string_select(custom_id~ : String, options~ : Array[@model.SelectOption], placeholder? : String, min_values? : Int, max_values? : Int, disabled? : Bool, required? : Bool) -> @model.Component
 
 pub fn sub_command(String, String, options? : Array[@model.CommandOption], name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @model.CommandOption
 
@@ -91,7 +91,7 @@ pub fn thumbnail(url~ : String, description? : String, spoiler? : Bool) -> @mode
 
 pub fn user_option(String, String, required? : Bool, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @model.CommandOption
 
-pub fn user_select(custom_id~ : String, placeholder? : String, min_values? : Int, max_values? : Int, disabled? : Bool) -> @model.Component
+pub fn user_select(custom_id~ : String, placeholder? : String, min_values? : Int, max_values? : Int, disabled? : Bool, required? : Bool) -> @model.Component
 
 // Errors
 pub(all) suberror ArgsDecodeError {

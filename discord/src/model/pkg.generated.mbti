@@ -32,6 +32,10 @@ pub(all) suberror AllowedMentionsError {
   TooManyUsers(count~ : Int)
 } derive(Eq, @debug.Debug)
 
+pub(all) suberror GatewayCommandError {
+  InvalidCommand(LimitViolation)
+} derive(@debug.Debug)
+
 pub suberror TimestampError {
   InvalidTimestamp(String)
 } derive(@debug.Debug)
@@ -105,7 +109,16 @@ pub fn ActivityEmoji::to_json(Self) -> Json
 
 pub(all) struct ActivityFlags(UInt64) derive(Eq)
 pub fn ActivityFlags::bits(Self) -> UInt64
+pub fn ActivityFlags::embedded() -> Self
 pub fn ActivityFlags::from_bits(UInt64) -> Self
+pub fn ActivityFlags::instance() -> Self
+pub fn ActivityFlags::join() -> Self
+pub fn ActivityFlags::join_request() -> Self
+pub fn ActivityFlags::party_privacy_friends() -> Self
+pub fn ActivityFlags::party_privacy_voice_channel() -> Self
+pub fn ActivityFlags::play() -> Self
+pub fn ActivityFlags::spectate() -> Self
+pub fn ActivityFlags::sync() -> Self
 pub fn ActivityFlags::to_json(Self) -> Json
 pub impl ToJson for ActivityFlags
 pub impl @debug.Debug for ActivityFlags
@@ -791,6 +804,20 @@ pub fn BaseTheme::to_json(Self) -> Json
 pub impl ToJson for BaseTheme
 pub impl @json.FromJson for BaseTheme
 
+pub(all) struct BotActivity {
+  name : String
+  type_ : ActivityType
+  state : String?
+  url : String?
+} derive(ToJson, @debug.Debug)
+pub fn BotActivity::competing(String) -> Self
+pub fn BotActivity::custom(String) -> Self
+pub fn BotActivity::listening(String) -> Self
+pub fn BotActivity::playing(String) -> Self
+pub fn BotActivity::streaming(String, String) -> Self
+pub fn BotActivity::to_json(Self) -> Json
+pub fn BotActivity::watching(String) -> Self
+
 pub(all) struct BulkBanResponse {
   banned_users : Array[Id[UserMarker]]
   failed_users : Array[Id[UserMarker]]
@@ -902,6 +929,15 @@ pub(all) struct ChannelInfoEvent {
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn ChannelInfoEvent::to_json(Self) -> Json
 
+#non_exhaustive
+pub(all) enum ChannelInfoField {
+  Status
+  VoiceStartTime
+  Other(String)
+} derive(Eq, @debug.Debug)
+pub fn ChannelInfoField::to_json(Self) -> Json
+pub impl ToJson for ChannelInfoField
+
 pub enum ChannelMarker {
 }
 
@@ -972,6 +1008,7 @@ pub(all) struct ClientStatus {
   desktop : PresenceStatus?
   mobile : PresenceStatus?
   web : PresenceStatus?
+  vr : PresenceStatus?
 } derive(ToJson, @debug.Debug)
 pub fn ClientStatus::to_json(Self) -> Json
 pub impl @json.FromJson for ClientStatus
@@ -1238,6 +1275,11 @@ pub(all) struct EmbedImage {
   proxy_url : String?
   height : Int?
   width : Int?
+  content_type : String?
+  placeholder : String?
+  placeholder_version : Int?
+  description : String?
+  flags : Int?
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn EmbedImage::EmbedImage(String) -> Self
 pub fn EmbedImage::to_json(Self) -> Json
@@ -1281,6 +1323,11 @@ pub(all) struct EmbedVideo {
   proxy_url : String?
   height : Int?
   width : Int?
+  content_type : String?
+  placeholder : String?
+  placeholder_version : Int?
+  description : String?
+  flags : Int?
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn EmbedVideo::to_json(Self) -> Json
 
@@ -1673,6 +1720,7 @@ pub(all) enum GatewayOpcode {
   Hello
   HeartbeatAck
   RequestSoundboardSounds
+  RequestChannelInfo
   Unknown(Int)
 } derive(Eq, @debug.Debug)
 pub fn GatewayOpcode::from_int(Int) -> Self
@@ -1814,6 +1862,7 @@ pub(all) enum GuildFeature {
   EnhancedRoleColors
   GuestsEnabled
   PinPermissionMigrationComplete
+  PruneRequiresAdmin
   Unknown(String)
 } derive(Eq, @debug.Debug)
 pub fn GuildFeature::from_string(String) -> Self
@@ -1890,6 +1939,8 @@ pub(all) struct GuildMemberUpdateEvent {
   user : User
   nick : Nullable[String]?
   avatar : Nullable[ImageHash]
+  banner : Nullable[ImageHash]?
+  collectibles : Nullable[Collectibles]?
   joined_at : Nullable[Timestamp]
   premium_since : Nullable[Timestamp]?
   deaf : Bool?
@@ -2633,6 +2684,12 @@ pub(all) struct MediaGalleryItem {
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn MediaGalleryItem::to_json(Self) -> Json
 
+pub(all) enum MemberSelect {
+  All
+  Prefix(String, limit~ : Int)
+  Ids(Array[Id[UserMarker]])
+} derive(@debug.Debug)
+
 pub(all) struct Message {
   id : Id[MessageMarker]
   channel_id : Id[ChannelMarker]
@@ -2684,6 +2741,7 @@ pub(all) enum MessageActivityType {
   Spectate
   Listen
   JoinRequest
+  StreamRequest
   Unknown(Int)
 } derive(Eq, @debug.Debug)
 pub fn MessageActivityType::from_int(Int) -> Self
@@ -3240,6 +3298,7 @@ pub(all) enum PresenceStatus {
   Dnd
   Online
   Offline
+  Invisible
   Unknown(String)
 } derive(Eq, @debug.Debug)
 pub fn PresenceStatus::from_string(String) -> Self
@@ -3323,8 +3382,30 @@ pub fn Ready::to_json(Self) -> Json
 pub(all) struct ReadyApplication {
   id : Id[ApplicationMarker]
   flags : ApplicationFlags?
+  flags_new : ApplicationFlags?
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn ReadyApplication::to_json(Self) -> Json
+
+pub(all) struct RequestChannelInfo {
+  guild_id : Id[GuildMarker]
+  fields : Array[ChannelInfoField]
+} derive(ToJson, @debug.Debug)
+pub fn RequestChannelInfo::to_json(Self) -> Json
+
+pub(all) struct RequestGuildMembers {
+  guild_id : Id[GuildMarker]
+  select : MemberSelect
+  presences : Bool
+  nonce : String?
+} derive(@debug.Debug)
+pub fn RequestGuildMembers::to_json(Self) -> Json
+pub fn RequestGuildMembers::validate(Self) -> Unit raise GatewayCommandError
+pub impl ToJson for RequestGuildMembers
+
+pub(all) struct RequestSoundboardSounds {
+  guild_ids : Array[Id[GuildMarker]]
+} derive(ToJson, @debug.Debug)
+pub fn RequestSoundboardSounds::to_json(Self) -> Json
 
 pub(all) struct ResolvedData {
   users : Map[String, User]?
@@ -3419,6 +3500,7 @@ pub(all) struct SelectMenu {
   min_values : Int?
   max_values : Int?
   disabled : Bool?
+  required : Bool?
   options : Array[SelectOption]?
   channel_types : Array[ChannelType]?
   default_values : Array[SelectDefaultValue]?
@@ -3893,6 +3975,16 @@ pub(all) struct UnfurledMediaItem {
   attachment_id : String?
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn UnfurledMediaItem::to_json(Self) -> Json
+
+pub(all) struct UpdatePresence {
+  status : PresenceStatus
+  activities : Array[BotActivity]
+  afk : Bool
+  since : Int64?
+} derive(@debug.Debug)
+pub fn UpdatePresence::UpdatePresence(status? : PresenceStatus, activities? : Array[BotActivity], afk? : Bool, since? : Int64) -> Self
+pub fn UpdatePresence::to_json(Self) -> Json
+pub impl ToJson for UpdatePresence
 
 pub(all) struct UpdateVoiceState {
   guild_id : Id[GuildMarker]

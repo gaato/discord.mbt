@@ -486,6 +486,7 @@ pub(all) enum MessageActivityType {
   Spectate
   Listen
   JoinRequest
+  StreamRequest
   Unknown(Int32)
 } derive(Eq, Debug)
 
@@ -496,6 +497,7 @@ pub fn MessageActivityType::to_int(self : MessageActivityType) -> Int32 {
     Spectate => 2
     Listen => 3
     JoinRequest => 5
+    StreamRequest => 6
     Unknown(value) => value
   }
 }
@@ -507,6 +509,7 @@ pub fn MessageActivityType::from_int(value : Int32) -> MessageActivityType {
     2 => Spectate
     3 => Listen
     5 => JoinRequest
+    6 => StreamRequest
     value => Unknown(value)
   }
 }

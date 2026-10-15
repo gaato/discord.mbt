@@ -175,6 +175,9 @@ pub extend AvatarDecorationData with ToJson::{to_json}
 pub extend BaseTheme with ToJson::{to_json}
 
 ///|
+pub extend BotActivity with ToJson::{to_json}
+
+///|
 pub extend BulkBanResponse with ToJson::{to_json}
 
 ///|
@@ -194,6 +197,9 @@ pub extend ChannelInfo with ToJson::{to_json}
 
 ///|
 pub extend ChannelInfoEvent with ToJson::{to_json}
+
+///|
+pub extend ChannelInfoField with ToJson::{to_json}
 
 ///|
 pub extend ChannelMention with ToJson::{to_json}
@@ -730,6 +736,15 @@ pub extend Ready with ToJson::{to_json}
 pub extend ReadyApplication with ToJson::{to_json}
 
 ///|
+pub extend RequestChannelInfo with ToJson::{to_json}
+
+///|
+pub extend RequestGuildMembers with ToJson::{to_json}
+
+///|
+pub extend RequestSoundboardSounds with ToJson::{to_json}
+
+///|
 pub extend ResolvedData with ToJson::{to_json}
 
 ///|
@@ -878,6 +893,9 @@ pub extend UnavailableGuild with ToJson::{to_json}
 
 ///|
 pub extend UnfurledMediaItem with ToJson::{to_json}
+
+///|
+pub extend UpdatePresence with ToJson::{to_json}
 
 ///|
 pub extend UpdateVoiceState with ToJson::{to_json}

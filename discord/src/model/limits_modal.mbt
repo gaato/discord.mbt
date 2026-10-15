@@ -79,12 +79,12 @@ fn LimitChecker::modal_component(
       self.text("\{path}.placeholder", input.placeholder, max=100, custom_id~)
     }
     StringSelect(select) =>
-      self.select_component(path, select, string_select=true)
+      self.select_component(path, select, string_select=true, in_modal=true)
     UserSelect(select)
     | RoleSelect(select)
     | MentionableSelect(select)
     | ChannelSelect(select) =>
-      self.select_component(path, select, string_select=false)
+      self.select_component(path, select, string_select=false, in_modal=true)
     FileUpload(upload) => {
       let custom_id = upload.custom_id
       self.text(

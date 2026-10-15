@@ -15,6 +15,8 @@ pub(all) enum ShardEvent {
 pub struct Shard {
   priv events : @aqueue.Queue[ShardEvent]
   priv command_limiter : CommandLimiter
+  priv presence_limiter : CommandLimiter
+  priv presence_gate : @async.Semaphore
   priv send_gate : @async.Semaphore
   priv mut transport : &GatewayTransport?
   priv mut state : ShardState
@@ -22,6 +24,7 @@ pub struct Shard {
   priv mut latency : Int64?
   priv mut closing : Bool
   priv mut runner : @async.Task[Unit]?
+  priv mut presence : @model.UpdatePresence?
   priv shard_id : Int32
   priv telemetry_ : (@telemetry.TelemetryEvent) -> Unit
 }
@@ -62,6 +65,11 @@ pub async fn Shard::next(self : Shard) -> ShardEvent {
 /// shard's other writes.
 pub async fn Shard::send(self : Shard, command : Json) -> Unit {
   self.command_limiter.acquire()
+  self.send_after_limit(command)
+}
+
+///|
+async fn Shard::send_after_limit(self : Shard, command : Json) -> Unit {
   guard self.transport is Some(transport) else {
     raise TransportClosed(code=None, reason="shard is not connected")
   }
@@ -76,6 +84,52 @@ pub async fn Shard::update_voice_state(
   state : @model.UpdateVoiceState,
 ) -> Unit {
   self.send({ "op": 4, "d": state.to_json() })
+}
+
+///|
+/// Send opcode 3 and retain a snapshot of the last successfully sent presence
+/// for Identify. Serializes presence updates and waits for the general command
+/// limit before pacing updates at five per 20-second sliding window. The
+/// presence window records successful writes only, after they complete.
+pub async fn Shard::update_presence(
+  self : Shard,
+  presence : @model.UpdatePresence,
+) -> Unit {
+  self.presence_gate.acquire()
+  defer self.presence_gate.release()
+  self.command_limiter.acquire()
+  self.presence_limiter.wait_for_slot()
+  self.send_after_limit({ "op": 3, "d": presence.to_json() })
+  self.presence_limiter.record()
+  self.presence = Some({ ..presence, activities: presence.activities.copy(), })
+}
+
+///|
+/// Validate and send opcode 8 on the shard that owns the request's guild.
+pub async fn Shard::request_guild_members(
+  self : Shard,
+  request : @model.RequestGuildMembers,
+) -> Unit {
+  request.validate()
+  self.send({ "op": 8, "d": request.to_json() })
+}
+
+///|
+/// Send opcode 31 for guilds owned by this shard.
+pub async fn Shard::request_soundboard_sounds(
+  self : Shard,
+  request : @model.RequestSoundboardSounds,
+) -> Unit {
+  self.send({ "op": 31, "d": request.to_json() })
+}
+
+///|
+/// Send opcode 43 on the shard that owns the request's guild.
+pub async fn Shard::request_channel_info(
+  self : Shard,
+  request : @model.RequestChannelInfo,
+) -> Unit {
+  self.send({ "op": 43, "d": request.to_json() })
 }
 
 ///|
@@ -151,6 +205,7 @@ async fn Shard::finish_transport(
 ///|
 /// Spawn a shard into `group` and return its handle. `resume` seeds the
 /// session so the first connection attempts RESUME at its `resume_url`.
+/// The initial presence is retained with a copy of its activities array.
 pub fn[X] Shard::start(
   group : @async.TaskGroup[X],
   token~ : String,
@@ -169,10 +224,14 @@ pub fn[X] Shard::start(
   sleeper~ : async (Int32) -> Unit = ms => @async.sleep(ms),
   rand~ : @random.Rand = @random.Rand(),
   resume? : Session,
+  presence? : @model.UpdatePresence,
 ) -> Shard {
   let shard = Shard::{
+    presence: presence.map(p => { ..p, activities: p.activities.copy(), }),
     events: Queue(kind=Blocking(queue_capacity)),
     command_limiter: CommandLimiter(sleeper~),
+    presence_limiter: CommandLimiter(limit=5, window_ms=20000, sleeper~),
+    presence_gate: Semaphore(1),
     send_gate: Semaphore(1),
     transport: None,
     state: Disconnected(reconnect_attempts=0),
@@ -467,6 +526,9 @@ async fn Shard::run_connection(
         }
         if capabilities != @model.GatewayCapabilities::none() {
           data["capabilities"] = capabilities.to_json()
+        }
+        if self.presence is Some(presence) {
+          data["presence"] = presence.to_json()
         }
         self.raw_send(transport, { "op": 2, "d": Json::object(data) })
       }

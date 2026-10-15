@@ -123,6 +123,7 @@ fn LimitChecker::select_component(
   path : String,
   select : SelectMenu,
   string_select~ : Bool,
+  in_modal~ : Bool = false,
 ) -> Unit {
   let custom_id = select.custom_id
   self.text("\{path}.custom_id", Some(custom_id), min=1, max=100, custom_id~)
@@ -136,7 +137,20 @@ fn LimitChecker::select_component(
     )
   }
   self.text("\{path}.placeholder", select.placeholder, max=150, custom_id~)
-  self.count("\{path}.min_values", select.min_values, min=0, max=25, custom_id~)
+  // In a modal a select is required unless `required` is false, and a
+  // required select must keep a minimum of at least one.
+  let min_values_floor = if in_modal && select.required != Some(false) {
+    1
+  } else {
+    0
+  }
+  self.count(
+    "\{path}.min_values",
+    select.min_values,
+    min=min_values_floor,
+    max=25,
+    custom_id~,
+  )
   self.count("\{path}.max_values", select.max_values, min=0, max=25, custom_id~)
   self.ordered(
     "\{path}.min_values",

@@ -474,6 +474,7 @@ async test "a voice state update for a shard run elsewhere raises" {
     app.build(),
     token="test-token",
     client=Client("test-token"),
+    gateway_url="wss://gateway.example",
     shards=Single(id=0, count=2),
   )
   bot.core.gateway_bot_info_.val = Some(manager_gateway_info())

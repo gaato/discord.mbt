@@ -1,13 +1,13 @@
 ///|
 /// A value outside a limit Discord documents for an outgoing embed, message
-/// component, or modal. Discord rejects the whole request with 400 Invalid
-/// Form Body, so the send paths report it before any request is made.
+/// component, modal, or Gateway command. Send paths report these before any
+/// request is made.
 ///
 /// `path` locates the value from the checked argument, such as
 /// `embeds[0].fields[2].value` or `components[1].components[0].label`.
 /// `custom_id` is the nearest component custom id, when there is one.
-/// Lengths are `text_length` characters, like every other length check in
-/// this library.
+/// Text lengths are `text_length` characters, except where the protocol
+/// explicitly requires bytes (such as a Gateway member-request nonce).
 pub(all) struct LimitViolation {
   path : String
   custom_id : String?

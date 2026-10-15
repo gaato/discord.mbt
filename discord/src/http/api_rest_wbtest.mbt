@@ -830,12 +830,21 @@ test "guild channel positions body omits unset fields and can null parent_id" {
         position=1,
         lock_permissions=true,
         parent_id=category,
+        flags=@model.ChannelFlags::from_bits(16UL),
       ),
-      GuildChannelPosition(channel_b, clear_parent_id=true),
+      GuildChannelPosition(channel_b, clear_parent_id=true, clear_flags=true),
+      GuildChannelPosition(channel_a),
     ]),
     content=[
-      { "id": "30", "position": 1, "lock_permissions": true, "parent_id": "32" },
-      { "id": "31", "parent_id": null },
+      {
+        "id": "30",
+        "position": 1,
+        "lock_permissions": true,
+        "parent_id": "32",
+        "flags": 16,
+      },
+      { "id": "31", "parent_id": null, "flags": null },
+      { "id": "30" },
     ],
   )
 }

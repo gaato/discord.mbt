@@ -51,7 +51,7 @@ pub async fn Client::modify_guild(
   audit_reason? : String,
 ) -> @model.Guild raise DiscordHttpError {
   validate_length("guild name", name, min=2, max=100)
-  validate_length("guild description", description, max=120)
+  validate_length("guild description", description, max=300)
   let body = @sdkjson.ObjBuilder::new()
     .opt("name", name)
     .opt("verification_level", verification_level)
@@ -201,6 +201,7 @@ pub async fn Client::create_guild_channel(
   default_thread_rate_limit_per_user? : Int32,
   default_sort_order? : @model.SortOrderType,
   default_forum_layout? : @model.ForumLayoutType,
+  flags? : @model.ChannelFlags,
   audit_reason? : String,
 ) -> @model.Channel raise DiscordHttpError {
   validate_length("channel name", Some(name), min=1, max=100)
@@ -227,6 +228,7 @@ pub async fn Client::create_guild_channel(
     )
     .opt("default_sort_order", default_sort_order)
     .opt("default_forum_layout", default_forum_layout)
+    .opt("flags", flags)
     .build()
   decode(self.request(CreateGuildChannel(guild_id~), body~, audit_reason?))
 }
@@ -240,22 +242,27 @@ pub struct GuildChannelPosition {
   priv position : Int32?
   priv lock_permissions : Bool?
   priv parent_id : @sdkjson.Presence[@model.ChannelId]
+  priv flags : @sdkjson.Presence[@model.ChannelFlags]
 }
 
 ///|
 /// Construct one channel-position entry.
+/// Use `clear_flags=true` to send null for the documented nullable flags field.
 pub fn GuildChannelPosition::GuildChannelPosition(
   id : @model.ChannelId,
   position? : Int32,
   lock_permissions? : Bool,
   parent_id? : @model.ChannelId,
   clear_parent_id~ : Bool = false,
+  flags? : @model.ChannelFlags,
+  clear_flags~ : Bool = false,
 ) -> GuildChannelPosition raise DiscordHttpError {
   {
     id,
     position,
     lock_permissions,
     parent_id: patch_nullable("parent_id", parent_id, clear_parent_id),
+    flags: patch_nullable("flags", flags, clear_flags),
   }
 }
 
@@ -270,6 +277,7 @@ fn modify_guild_channel_positions_body(
       .opt("position", entry.position)
       .opt("lock_permissions", entry.lock_permissions)
       .presence("parent_id", entry.parent_id)
+      .presence("flags", entry.flags)
       .build()
     }),
   )

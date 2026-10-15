@@ -297,3 +297,27 @@ test "numeric flag decoders reject non-numbers and negative representations" {
     @model.ActivityFlags::from_bits(0UL),
   )
 }
+
+///|
+test "activity flags and newly documented enum values" {
+  let flags = [
+    @model.ActivityFlags::instance(),
+    @model.ActivityFlags::join(),
+    @model.ActivityFlags::spectate(),
+    @model.ActivityFlags::join_request(),
+    @model.ActivityFlags::sync(),
+    @model.ActivityFlags::play(),
+    @model.ActivityFlags::party_privacy_friends(),
+    @model.ActivityFlags::party_privacy_voice_channel(),
+    @model.ActivityFlags::embedded(),
+  ]
+  for index, flag in flags {
+    assert_eq(flag.bits(), 1UL << index)
+  }
+  let activity : @model.MessageActivityType = @json.from_json(6)
+  assert_true(activity is StreamRequest)
+  json_inspect(activity, content=6)
+  let feature : @model.GuildFeature = @json.from_json("PRUNE_REQUIRES_ADMIN")
+  assert_true(feature is PruneRequiresAdmin)
+  json_inspect(feature, content="PRUNE_REQUIRES_ADMIN")
+}

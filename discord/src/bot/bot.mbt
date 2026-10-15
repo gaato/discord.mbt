@@ -20,6 +20,10 @@ pub(all) suberror BotError {
   /// A guild command such as `GatewayCtx::update_voice_state` belongs on a
   /// shard that this process does not run.
   ShardNotManaged(shard_id~ : Int32)
+  /// Discord rejected a Gateway command; retry after the given milliseconds.
+  GatewayRateLimited(opcode~ : Int32, retry_after_ms~ : Int64)
+  /// A complete member response did not arrive within the operation deadline.
+  GatewayRequestTimeout
 } derive(Debug)
 
 ///|
@@ -47,6 +51,11 @@ pub impl Show for BotError with fn output(self, logger) {
       )
     ShardNotManaged(shard_id~) =>
       logger.write_string("shard \{shard_id} is not run by this process")
+    GatewayRateLimited(opcode~, retry_after_ms~) =>
+      logger.write_string(
+        "gateway opcode \{opcode} rate limited; retry in \{retry_after_ms}ms",
+      )
+    GatewayRequestTimeout => logger.write_string("gateway request timed out")
   }
 }
 
@@ -76,6 +85,7 @@ priv struct BotCore {
   token_ : String
   intents_ : @model.Intents?
   capabilities_ : @model.GatewayCapabilities
+  mut presence_ : @model.UpdatePresence?
   client_ : @dhttp.Client?
   gateway_url_ : String?
   shards_ : ShardConfig
@@ -150,6 +160,7 @@ fn BotCore::new(
     token_: token,
     intents_: intents,
     capabilities_: capabilities,
+    presence_: None,
     client_: client,
     gateway_url_: gateway_url,
     shards_: shards,

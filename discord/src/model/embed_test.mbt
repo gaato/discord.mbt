@@ -72,6 +72,11 @@ test "embed decodes a rich fixture with every sub-object" {
       #|      proxy_url: Some("https://proxy.example/image.png"),
       #|      height: Some(600),
       #|      width: Some(800),
+      #|      content_type: None,
+      #|      placeholder: None,
+      #|      placeholder_version: None,
+      #|      description: None,
+      #|      flags: None,
       #|    },
       #|  ),
       #|  thumbnail: Some(
@@ -88,6 +93,11 @@ test "embed decodes a rich fixture with every sub-object" {
       #|      proxy_url: Some("https://proxy.example/video.mp4"),
       #|      height: Some(720),
       #|      width: Some(1280),
+      #|      content_type: None,
+      #|      placeholder: None,
+      #|      placeholder_version: None,
+      #|      description: None,
+      #|      flags: None,
       #|    },
       #|  ),
       #|  provider: Some({ name: Some("Discord"), url: Some("https://discord.com") }),
@@ -267,4 +277,31 @@ test "embed type string enum preserves unknown values" {
     ),
   )
   assert_eq(components.to_string(), "components")
+}
+
+///|
+test "embed image and video decode media metadata" {
+  let media : Json = {
+    "url": "https://example.com/media",
+    "content_type": "image/gif",
+    "placeholder": "hash",
+    "placeholder_version": 1,
+    "description": "alt",
+    "flags": 32,
+  }
+  let image : @model.EmbedImage = @json.from_json(media)
+  let video : @model.EmbedVideo = @json.from_json(media)
+  assert_eq(image.content_type, Some("image/gif"))
+  assert_eq(image.placeholder, Some("hash"))
+  assert_eq(image.placeholder_version, Some(1))
+  assert_eq(image.description, Some("alt"))
+  assert_eq(image.flags, Some(32))
+  assert_eq(video.content_type, image.content_type)
+  assert_eq(video.placeholder, image.placeholder)
+  assert_eq(video.placeholder_version, image.placeholder_version)
+  assert_eq(video.description, image.description)
+  assert_eq(video.flags, image.flags)
+  json_inspect(@model.EmbedImage("https://example.com/image"), content={
+    "url": "https://example.com/image",
+  })
 }

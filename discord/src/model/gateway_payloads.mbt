@@ -14,6 +14,7 @@ pub(all) enum GatewayOpcode {
   Hello
   HeartbeatAck
   RequestSoundboardSounds
+  RequestChannelInfo
   Unknown(Int32)
 } derive(Eq, Debug)
 
@@ -32,6 +33,7 @@ pub fn GatewayOpcode::to_int(self : GatewayOpcode) -> Int32 {
     Hello => 10
     HeartbeatAck => 11
     RequestSoundboardSounds => 31
+    RequestChannelInfo => 43
     Unknown(v) => v
   }
 }
@@ -51,6 +53,7 @@ pub fn GatewayOpcode::from_int(value : Int32) -> GatewayOpcode {
     10 => Hello
     11 => HeartbeatAck
     31 => RequestSoundboardSounds
+    43 => RequestChannelInfo
     v => Unknown(v)
   }
 }
@@ -66,6 +69,7 @@ pub(all) struct Hello {
 pub(all) struct ReadyApplication {
   id : ApplicationId
   flags : ApplicationFlags?
+  flags_new : ApplicationFlags?
 } derive(ToJson, FromJson, Debug)
 
 ///|
