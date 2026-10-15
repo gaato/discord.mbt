@@ -60,6 +60,11 @@ breaking change is listed with a migration note.
   `max~`.
   - Migration: add `max~` (or `..`) to `ValueTooLong(custom_id~, length~)`
     patterns.
+- Requires `moonbitlang/async` 0.22.5 (was 0.22.4); the bot template depends
+  on the same version. It fixes an HTTP chunked body that ends early inside a
+  chunk and no longer queues a scheduler tick for a coroutine that has already
+  finished, so the JS example hosts' `whenIdle()` no longer yields an extra
+  macrotask to let that tick run.
 
 ### Fixed
 
