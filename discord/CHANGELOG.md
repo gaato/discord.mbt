@@ -24,6 +24,17 @@ breaking change is listed with a migration note.
 
 ### Changed
 
+- **`@ratelimit.InMemoryRateLimiter` is replaced by
+  `@ratelimit.rate_limiter()`**, which returns sdk-runtime's `WindowLimiter`
+  configured for Discord and accepts an injected `clock`. Migration:
+  `InMemoryRateLimiter(global_limit=n)` → `rate_limiter(global_limit=n)`;
+  change type annotations to `@runtime.WindowLimiter`, which needs
+  `"gaato/sdk-runtime@0.2.2"` in your `moon.mod` and `"gaato/sdk-runtime"
+  @runtime` in `moon.pkg`.
+  Bucket state now requires valid remaining and reset-after headers together,
+  decrements remaining on admission, and leaves state unchanged on status 0.
+  Waits no longer add a millisecond to the reset deadline. Retry-After also
+  accepts HTTP dates; malformed values use the one-second fallback.
 - **Request bodies now use `gaato/sdk-runtime/json`'s presence values and
   object builder.** Migration: add `"gaato/sdk-runtime@0.2.2"` to the
   `import` of your `moon.mod` (a `moon.pkg` import alone does not resolve),

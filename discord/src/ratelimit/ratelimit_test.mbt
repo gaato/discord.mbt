@@ -1,105 +1,110 @@
 ///|
 async test "unknown bucket admits immediately" {
-  let limiter = @ratelimit.InMemoryRateLimiter()
-  let start = @clock.now_ms()
-  limiter.acquire("GET:/channels/1/messages", global_exempt=false)
-  limiter.release(
-    "GET:/channels/1/messages",
-    status=200,
-    headers=@http.Headers::new(),
-  )
-  assert_true(@clock.now_ms() - start < 100L)
+  let clock = @mock.FakeClock::new()
+  let limiter = @ratelimit.rate_limiter(clock~)
+  limiter.acquire("unknown", global_exempt=false)
+  limiter.release("unknown", status=200, headers=@http.Headers::new())
+  assert_eq(clock.slept(), [])
 }
 
 ///|
-async test "exhausted bucket waits for reset-after" {
-  let limiter = @ratelimit.InMemoryRateLimiter()
-  let key = "POST:/channels/1/messages"
-  limiter.acquire(key, global_exempt=false)
+async test "exhausted bucket waits 1500 ms for Discord reset-after" {
+  let clock = @mock.FakeClock::new()
+  let limiter = @ratelimit.rate_limiter(clock~)
+  limiter.acquire("bucket", global_exempt=false)
   limiter.release(
-    key,
+    "bucket",
     status=200,
     headers=@http.Headers::from_array([
       ("x-ratelimit-remaining", "0"),
-      ("x-ratelimit-reset-after", "0.08"),
+      ("x-ratelimit-reset-after", "1.5"),
     ]),
   )
-  let start = @clock.now_ms()
-  limiter.acquire(key, global_exempt=false)
-  let waited = @clock.now_ms() - start
-  limiter.release(
-    key,
-    status=200,
-    headers=@http.Headers::from_array([
-      ("x-ratelimit-remaining", "4"),
-      ("x-ratelimit-reset-after", "60"),
-    ]),
-  )
-  assert_true(waited >= 60L)
+  limiter.acquire("bucket", global_exempt=false)
+  limiter.release("bucket", status=200, headers=@http.Headers::new())
+  assert_eq(clock.slept(), [1500])
 }
 
 ///|
 async test "remaining budget admits without waiting" {
-  let limiter = @ratelimit.InMemoryRateLimiter()
-  let key = "POST:/channels/2/messages"
-  limiter.acquire(key, global_exempt=false)
+  let clock = @mock.FakeClock::new()
+  let limiter = @ratelimit.rate_limiter(clock~)
+  limiter.acquire("bucket", global_exempt=false)
   limiter.release(
-    key,
+    "bucket",
     status=200,
     headers=@http.Headers::from_array([
       ("x-ratelimit-remaining", "3"),
       ("x-ratelimit-reset-after", "60"),
     ]),
   )
-  let start = @clock.now_ms()
-  limiter.acquire(key, global_exempt=false)
-  limiter.release(key, status=200, headers=@http.Headers::new())
-  assert_true(@clock.now_ms() - start < 100L)
+  limiter.acquire("bucket", global_exempt=false)
+  limiter.release("bucket", status=200, headers=@http.Headers::new())
+  assert_eq(clock.slept(), [])
 }
 
 ///|
-async test "global 429 blocks subsequent requests until retry-after" {
-  let limiter = @ratelimit.InMemoryRateLimiter()
-  let key = "GET:/users/@me"
-  limiter.acquire(key, global_exempt=false)
+async test "global 429 blocks another bucket but exempts interaction routes" {
+  let clock = @mock.FakeClock::new()
+  let limiter = @ratelimit.rate_limiter(clock~)
+  limiter.acquire("bucket", global_exempt=false)
   limiter.release(
-    key,
+    "bucket",
     status=429,
     headers=@http.Headers::from_array([
       ("x-ratelimit-global", "true"),
-      ("retry-after", "0.08"),
+      ("retry-after", "1.5"),
     ]),
   )
-  let start = @clock.now_ms()
-  limiter.acquire("GET:/gateway", global_exempt=false)
-  let waited = @clock.now_ms() - start
-  limiter.release("GET:/gateway", status=200, headers=@http.Headers::new())
-  assert_true(waited >= 60L)
+  limiter.acquire("interaction", global_exempt=true)
+  limiter.release("interaction", status=200, headers=@http.Headers::new())
+  assert_eq(clock.slept(), [])
+  limiter.acquire("other", global_exempt=false)
+  limiter.release("other", status=200, headers=@http.Headers::new())
+  assert_eq(clock.slept(), [1500])
 }
 
 ///|
 async test "route 429 exhausts only its bucket" {
-  let limiter = @ratelimit.InMemoryRateLimiter()
-  let key = "POST:/channels/3/messages"
-  limiter.acquire(key, global_exempt=false)
+  let clock = @mock.FakeClock::new()
+  let limiter = @ratelimit.rate_limiter(clock~)
+  limiter.acquire("bucket", global_exempt=false)
   limiter.release(
-    key,
+    "bucket",
     status=429,
     headers=@http.Headers::from_array([("retry-after", "0.08")]),
   )
-  // a different bucket is unaffected
-  let start = @clock.now_ms()
-  limiter.acquire("POST:/channels/4/messages", global_exempt=false)
-  limiter.release(
-    "POST:/channels/4/messages",
-    status=200,
-    headers=@http.Headers::new(),
-  )
-  assert_true(@clock.now_ms() - start < 100L)
-  // the same bucket waits
-  let start2 = @clock.now_ms()
-  limiter.acquire(key, global_exempt=false)
-  let waited = @clock.now_ms() - start2
-  limiter.release(key, status=200, headers=@http.Headers::new())
-  assert_true(waited >= 60L)
+  limiter.acquire("other", global_exempt=false)
+  limiter.release("other", status=200, headers=@http.Headers::new())
+  assert_eq(clock.slept(), [])
+  limiter.acquire("bucket", global_exempt=false)
+  limiter.release("bucket", status=200, headers=@http.Headers::new())
+  assert_eq(clock.slept(), [80])
+}
+
+///|
+async test "a 429 without Retry-After waits one second on its bucket" {
+  let clock = @mock.FakeClock::new()
+  let limiter = @ratelimit.rate_limiter(clock~)
+  limiter.acquire("bucket", global_exempt=true)
+  limiter.release("bucket", status=429, headers=@http.Headers::new())
+  limiter.acquire("bucket", global_exempt=true)
+  limiter.release("bucket", status=200, headers=@http.Headers::new())
+  assert_eq(clock.slept(), [1000])
+}
+
+///|
+async test "the default global window delays the 51st non-exempt acquire" {
+  let clock = @mock.FakeClock::new()
+  let limiter = @ratelimit.rate_limiter(clock~)
+  for _ in 0..<50 {
+    limiter.acquire("bucket", global_exempt=false)
+    limiter.release("bucket", status=200, headers=@http.Headers::new())
+  }
+  limiter.acquire("interaction", global_exempt=true)
+  limiter.release("interaction", status=200, headers=@http.Headers::new())
+  assert_eq(clock.slept(), [])
+  limiter.acquire("bucket", global_exempt=false)
+  limiter.release("bucket", status=200, headers=@http.Headers::new())
+  assert_eq(clock.slept(), [1000])
 }

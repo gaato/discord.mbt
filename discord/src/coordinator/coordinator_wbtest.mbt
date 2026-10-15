@@ -189,7 +189,7 @@ async test "remote rate limiter closes its first client when the second connecti
 async test "a stale HTTP release lease cannot release the current owner" {
   let state = CoordinatorState::{
     identify: InMemoryQueue(max_concurrency=1, spacing_ms=0),
-    limiter: InMemoryRateLimiter(global_limit=50),
+    limiter: @ratelimit.rate_limiter(global_limit=50),
     cooldown: @cooldown.InMemoryCooldownStore(),
     owners: Map([]),
     next_connection_id: Ref(2),
