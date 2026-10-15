@@ -74,10 +74,11 @@ jobs:
         working-directory: dave
         env:
           MOON_WORK: "off"
-          MBT_DAVE_REQUIRE_NATIVE: "1"
         run: |
-          moon check --target all --deny-warn
+          # Only the native backend can load libdave; js and wasm test the
+          # unavailable facade, as in dave.yml.
+          MBT_DAVE_REQUIRE_NATIVE=1 moon check --target all --deny-warn
           moon fmt --check
-          moon test --target native --release
+          MBT_DAVE_REQUIRE_NATIVE=1 moon test --target native --release
           moon test --target js --release
           moon test --target wasm --release
