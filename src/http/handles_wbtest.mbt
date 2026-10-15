@@ -50,7 +50,7 @@ async test "member ref ban delegates the audit reason header" {
   debug_inspect(
     headers.get("x-audit-log-reason"),
     content=(
-      #|Some("remove spam")
+      #|Some("remove%20spam")
     ),
   )
   json_inspect(captured_body.val, content={ "delete_message_seconds": 3600 })

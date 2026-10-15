@@ -1,5 +1,9 @@
 ///|
 /// The headers every call to `route` carries before the caller's own.
+///
+/// Discord reads `X-Audit-Log-Reason` as URL-encoded UTF-8, so the reason
+/// (validated in `execute`) is percent-encoded here. A reason set directly
+/// through the caller's `headers` is sent as is.
 fn base_headers(
   token : String,
   route : Route,
@@ -13,7 +17,7 @@ fn base_headers(
     headers["authorization"] = "Bot \{token}"
   }
   if audit_reason is Some(reason) {
-    headers["x-audit-log-reason"] = reason
+    headers["x-audit-log-reason"] = percent_encode(reason)
   }
   headers
 }
@@ -246,6 +250,9 @@ async fn Client::execute(self : Client, request : HttpRequest) -> HttpResponse {
   if request.files is Some(files) {
     validate_files(files)
   }
+  // Discord accepts 1-512 characters; checked after middleware, which may
+  // rewrite the reason.
+  validate_length("audit_reason", request.audit_reason, min=1, max=512)
   if request.route is CreateGuildSticker(..) &&
     !(request.files is Some([_]) && request.body is Some(_)) {
     raise DiscordHttpError::Validation(

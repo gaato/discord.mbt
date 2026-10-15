@@ -22,6 +22,12 @@ breaking change is listed with a migration note.
   close, so those resumes could not succeed. Shutdown (`close`, or cancelling
   the shard's task group) still sends 1000. The voice gateway follows the same
   rule.
+- `X-Audit-Log-Reason` is percent-encoded UTF-8, as Discord documents. A
+  reason with non-ASCII text, spaces, or line breaks was sent raw, and Discord
+  stored non-ASCII text as mojibake. The reason must be 1-512 characters,
+  counted before encoding; an empty or longer one raises `Validation` before
+  the request is sent, where Discord would silently truncate it. A value set
+  directly through `headers` is still sent as given.
 
 ## [0.7.0] - 2026-10-08
 
