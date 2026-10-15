@@ -59,14 +59,23 @@ test "bot telemetry hook failures flow to app warnings" {
 }
 
 ///|
+/// Heartbeats (op 1) go to `heartbeats`, every other frame to `outgoing`. The
+/// first heartbeat waits a random fraction of the interval, so it can come
+/// before an identify that is itself waiting; tests that expect a particular
+/// frame must not see it in between.
 struct BotFakeTransport {
   incoming : @aqueue.Queue[String]
   outgoing : @aqueue.Queue[Json]
+  heartbeats : @aqueue.Queue[Json]
 }
 
 ///|
 fn BotFakeTransport::BotFakeTransport() -> BotFakeTransport {
-  { incoming: Queue(kind=Unbounded), outgoing: Queue(kind=Unbounded), }
+  {
+    incoming: Queue(kind=Unbounded),
+    outgoing: Queue(kind=Unbounded),
+    heartbeats: Queue(kind=Unbounded),
+  }
 }
 
 ///|
@@ -76,7 +85,12 @@ impl @gateway.GatewayTransport for BotFakeTransport with fn recv(self) {
 
 ///|
 impl @gateway.GatewayTransport for BotFakeTransport with fn send(self, text) {
-  self.outgoing.put(@json.parse(text) catch { _ => Json::null() })
+  let frame = @json.parse(text) catch { _ => Json::null() }
+  if frame is { "op": Number(1, ..), .. } {
+    self.heartbeats.put(frame)
+  } else {
+    self.outgoing.put(frame)
+  }
 }
 
 ///|
@@ -694,12 +708,16 @@ async test "gateway contexts expose heartbeat latency" {
     assert_true(ctx.cache() is None)
     debug_inspect(ctx.latency_ms(), content="None")
     debug_inspect(ctx.app().latency_ms(), content="None")
+    // Drop any jittered heartbeat so the one read below answers the request.
+    while transport.heartbeats.try_get() is Some(_) {
+
+    }
     transport.incoming.put(
       (
         #|{"op":1,"d":null}
       ),
     )
-    guard transport.outgoing.get() is { "op": Number(1, ..), .. } else {
+    guard transport.heartbeats.get() is { "op": Number(1, ..), .. } else {
       fail("expected heartbeat")
     }
     transport.incoming.put(

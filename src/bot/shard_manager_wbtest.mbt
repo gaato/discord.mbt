@@ -1,7 +1,11 @@
 ///|
+/// Like `BotFakeTransport`, keeps heartbeats (op 1) out of `outgoing`: a
+/// jittered first heartbeat can come before an identify that waits for the
+/// identify queue.
 struct ManagerFakeTransport {
   incoming : @aqueue.Queue[String]
   outgoing : @aqueue.Queue[(Int64, Json)]
+  heartbeats : @aqueue.Queue[Json]
   closed : Ref[Bool]
 }
 
@@ -10,6 +14,7 @@ fn ManagerFakeTransport::ManagerFakeTransport() -> ManagerFakeTransport {
   {
     incoming: Queue(kind=Unbounded),
     outgoing: Queue(kind=Unbounded),
+    heartbeats: Queue(kind=Unbounded),
     closed: Ref(false),
   }
 }
@@ -31,7 +36,12 @@ impl @gateway.GatewayTransport for ManagerFakeTransport with fn recv(self) {
 
 ///|
 impl @gateway.GatewayTransport for ManagerFakeTransport with fn send(self, text) {
-  self.outgoing.put((@clock.now_ms(), @json.parse(text)))
+  let frame = @json.parse(text)
+  if frame is { "op": Number(1, ..), .. } {
+    self.heartbeats.put(frame)
+  } else {
+    self.outgoing.put((@clock.now_ms(), frame))
+  }
 }
 
 ///|

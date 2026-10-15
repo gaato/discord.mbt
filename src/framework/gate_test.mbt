@@ -285,9 +285,18 @@ async test "the token lifetime is counted from when the gate was built" {
     ),
   }
   let (gate, _) = @framework.ResponseGate::capture(interaction)
+  let built_by = @clock.now_ms()
   let fresh = gate.token_remaining_ms()
   assert_true(fresh <= @framework.INTERACTION_TOKEN_LIFETIME_MS)
   assert_true(fresh > @framework.INTERACTION_TOKEN_LIFETIME_MS - 1000)
   @async.sleep(30)
-  assert_true(gate.token_remaining_ms() <= fresh - 30)
+  // Compare with the clock rather than the sleep length: a timer may fire a
+  // millisecond before the wall clock has moved by as much.
+  let later = @clock.now_ms()
+  let remaining = gate.token_remaining_ms().to_int64()
+  assert_true(later > built_by)
+  assert_true(
+    remaining <=
+    @framework.INTERACTION_TOKEN_LIFETIME_MS.to_int64() - (later - built_by),
+  )
 }
