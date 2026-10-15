@@ -6,6 +6,8 @@ releases (0.x → 0.y) may contain breaking changes; patch releases do not.
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-16
+
 First release, split from the `gaato/discord/voice` package of
 `gaato/discord`; its earlier history is in
 [gaato/discord's changelog](https://github.com/gaato/discord.mbt/blob/main/discord/CHANGELOG.md).
