@@ -78,3 +78,29 @@ pub(all) struct Ready {
   shard : Array[Int32]?
   application : ReadyApplication
 } derive(ToJson, FromJson, Debug)
+
+///|
+/// Payload of opcode 4 (Update Voice State): join or move to `channel_id`
+/// in `guild_id`, or leave the guild's voice channel with `channel_id = None`.
+pub(all) struct UpdateVoiceState {
+  guild_id : GuildId
+  channel_id : ChannelId?
+  self_mute : Bool
+  self_deaf : Bool
+} derive(Eq, Debug)
+
+///|
+/// Leaving is an explicit `"channel_id": null`, so a missing channel is
+/// written as null rather than omitted.
+pub impl ToJson for UpdateVoiceState with fn to_json(self) {
+  let channel : Json = match self.channel_id {
+    Some(id) => id.to_json()
+    None => Json::null()
+  }
+  {
+    "guild_id": self.guild_id.to_json(),
+    "channel_id": channel,
+    "self_mute": Json::boolean(self.self_mute),
+    "self_deaf": Json::boolean(self.self_deaf),
+  }
+}

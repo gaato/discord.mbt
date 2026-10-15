@@ -1,4 +1,15 @@
 ///|
+/// `GatewayCtx::wait_for` without a context: register, then wait.
+async fn[T] EventCollector::wait_for(
+  self : EventCollector,
+  event_type : EventType[T],
+  predicate : (T) -> Bool,
+  timeout_ms? : Int32,
+) -> T? {
+  self.register(event_type, predicate).wait(timeout_ms?)
+}
+
+///|
 fn message_delete_event(id : String) -> @model.Event raise {
   MessageDelete({
     id: @model.Id::parse(id),

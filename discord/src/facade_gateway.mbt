@@ -7,6 +7,7 @@ pub using @bot {
   type BotSession,
   type GatewayCtx,
   type EventType,
+  type PendingEvent,
   type Events,
   type BotError,
   type ShardConfig,

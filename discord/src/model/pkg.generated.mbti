@@ -3848,6 +3848,15 @@ pub(all) struct UnfurledMediaItem {
 } derive(ToJson, @debug.Debug, @json.FromJson)
 pub fn UnfurledMediaItem::to_json(Self) -> Json
 
+pub(all) struct UpdateVoiceState {
+  guild_id : Id[GuildMarker]
+  channel_id : Id[ChannelMarker]?
+  self_mute : Bool
+  self_deaf : Bool
+} derive(Eq, @debug.Debug)
+pub fn UpdateVoiceState::to_json(Self) -> Json
+pub impl ToJson for UpdateVoiceState
+
 pub(all) struct User {
   id : Id[UserMarker]
   username : String

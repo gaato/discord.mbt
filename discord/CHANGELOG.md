@@ -9,6 +9,16 @@ breaking change is listed with a migration note.
 
 ### Added
 
+- `GatewayCtx::expect_event(event_type, predicate)` registers an expected
+  gateway event at once and returns a `PendingEvent` to `wait` on (or
+  `cancel`), so it can be installed before sending the command that makes
+  Discord dispatch the event. `wait_for` is `expect_event(..).wait(..)`.
+  `PendingEvent` is re-exported from the facade.
+- `@model.UpdateVoiceState` and `@gateway.Shard::update_voice_state` send
+  opcode 4; `GatewayCtx::update_voice_state` sends it on the shard that owns
+  the guild. `BotError::ShardNotManaged(shard_id~)` reports a guild whose
+  shard runs in another process.
+- `GatewayCtx::intents` returns the intents the bot identified with.
 - `VoiceReceiveStream::next_packet` yields `ReceivedAudio` values in RTP
   sequence order: `Opus(sequence~, timestamp~, opus~)` for a frame and
   `Lost(count~)` for frames that never arrived or that the stream dropped.
@@ -26,6 +36,8 @@ breaking change is listed with a migration note.
 
 ### Changed
 
+- `BotError` gains `ShardNotManaged(shard_id~)`.
+  - Migration: add an arm (or a wildcard) to exhaustive `BotError` matches.
 - **Received voice audio is delivered only through `subscribe`, and every
   voice queue is bounded.** Before, each received packet was queued for
   `next_event` with no limit, also when the caller only subscribed or never
@@ -76,6 +88,10 @@ breaking change is listed with a migration note.
 
 ### Fixed
 
+- `GatewayCtx::join_voice` sends opcode 4 on the shard that owns the guild.
+  It used the calling context's shard, so a join started from a service (which
+  gets the context of whichever shard was ready first) for a guild on another
+  shard went out on the wrong connection and timed out.
 - A shard closes its WebSocket with code 4000 when it is about to resume (op
   7 Reconnect, op 9, a missed heartbeat ACK, or a read failure). It sent 1000
   for every close, and Discord invalidates the session on a 1000 or 1001

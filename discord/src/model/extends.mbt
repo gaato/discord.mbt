@@ -883,6 +883,9 @@ pub extend Undefinable with ToJson::{to_json}
 pub extend UnfurledMediaItem with ToJson::{to_json}
 
 ///|
+pub extend UpdateVoiceState with ToJson::{to_json}
+
+///|
 pub extend User with ToJson::{to_json}
 
 ///|

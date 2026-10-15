@@ -14,3 +14,25 @@ test "gateway capabilities preserve unknown bits through bit operations and JSON
   assert_eq(@model.GatewayCapabilities::from_bits(bits), combined)
   debug_inspect(combined, content="2147516416")
 }
+
+///|
+test "update voice state writes a missing channel as null" {
+  let join : @model.UpdateVoiceState = {
+    guild_id: Id(10UL),
+    channel_id: Some(Id(20UL)),
+    self_mute: false,
+    self_deaf: true,
+  }
+  json_inspect(join, content={
+    "guild_id": "10",
+    "channel_id": "20",
+    "self_mute": false,
+    "self_deaf": true,
+  })
+  json_inspect({ ..join, channel_id: None, }, content={
+    "guild_id": "10",
+    "channel_id": null,
+    "self_mute": false,
+    "self_deaf": true,
+  })
+}

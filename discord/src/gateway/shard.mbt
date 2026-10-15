@@ -68,6 +68,16 @@ pub async fn Shard::send(self : Shard, command : Json) -> Unit {
 }
 
 ///|
+/// Send opcode 4 (Update Voice State) on this shard. Send it on the shard that
+/// owns `state.guild_id`; `@bot.GatewayCtx::update_voice_state` picks it.
+pub async fn Shard::update_voice_state(
+  self : Shard,
+  state : @model.UpdateVoiceState,
+) -> Unit {
+  self.send({ "op": 4, "d": state.to_json() })
+}
+
+///|
 /// Request a graceful shutdown: closes the connection with code 1000 (which
 /// invalidates the session — Discord will not allow a resume after it).
 pub async fn Shard::close(self : Shard) -> Unit noraise {

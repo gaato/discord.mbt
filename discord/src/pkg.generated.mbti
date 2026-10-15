@@ -285,6 +285,8 @@ pub using @voice {type OggOpusSource}
 
 pub using @voice {type OggOpusWriter}
 
+pub using @bot {type PendingEvent}
+
 pub using @voice {type ReceivedAudio}
 
 pub using @framework {type ResponseState}

@@ -12,28 +12,6 @@ fn VoiceSessions::new() -> VoiceSessions {
 }
 
 ///|
-fn voice_state_command(
-  guild_id : @model.Id[@model.GuildMarker],
-  channel_id : @model.Id[@model.ChannelMarker]?,
-  self_mute : Bool,
-  self_deaf : Bool,
-) -> Json {
-  let channel : Json = match channel_id {
-    Some(id) => id.to_json()
-    None => Json::null()
-  }
-  {
-    "op": 4,
-    "d": {
-      "guild_id": guild_id.to_json(),
-      "channel_id": channel,
-      "self_mute": self_mute,
-      "self_deaf": self_deaf,
-    },
-  }
-}
-
-///|
 async fn GatewayCtx::request_voice_credentials(
   self : GatewayCtx,
   guild_id : @model.Id[@model.GuildMarker],
@@ -42,18 +20,21 @@ async fn GatewayCtx::request_voice_credentials(
   self_deaf : Bool,
   timeout_ms : Int32,
 ) -> @voice.VoiceCredentials {
-  let user_id = self.ready_.user.id
-  let state = self.collector_.register(Events::voice_state_update(), update => {
+  let user_id = self.ready().user.id
+  let state = self.expect_event(Events::voice_state_update(), update => {
     update.user_id == user_id && update.guild_id == Some(guild_id)
   })
-  let server = self.collector_.register(Events::voice_server_update(), update => {
+  let server = self.expect_event(Events::voice_server_update(), update => {
     update.guild_id == guild_id && update.endpoint is Value(_)
   })
   defer state.cancel()
   defer server.cancel()
-  self.shard_.send(
-    voice_state_command(guild_id, Some(channel_id), self_mute, self_deaf),
-  )
+  self.update_voice_state({
+    guild_id,
+    channel_id: Some(channel_id),
+    self_mute,
+    self_deaf,
+  })
   @async.with_task_group(group => {
     let state_task = group.spawn(no_wait=true, () => state.wait(timeout_ms~))
     let server_task = group.spawn(no_wait=true, () => server.wait(timeout_ms~))
@@ -149,7 +130,7 @@ pub async fn GatewayCtx::join_voice(
   telemetry~ : (@voice.VoiceTelemetry) -> Unit = _ => (),
 ) -> @voice.VoiceConnection {
   let required_intents = Events::voice_state_update().required_intents()
-  if !self.intents_.contains(required_intents) {
+  if !self.intents().contains(required_intents) {
     raise @voice.VoiceError::MissingIntent(intent="GUILD_VOICE_STATES")
   }
   let join_gate = match self.voice_.join_gates.get(guild_id) {
@@ -175,7 +156,12 @@ pub async fn GatewayCtx::join_voice(
   let rejoin_in_progress = Ref(false)
   let leave = () => {
     defer self.voice_.connections.remove(guild_id)
-    self.shard_.send(voice_state_command(guild_id, None, self_mute, self_deaf))
+    self.update_voice_state({
+      guild_id,
+      channel_id: None,
+      self_mute,
+      self_deaf,
+    })
   }
   let rejoin = () => {
     rejoin_in_progress.val = true
@@ -189,7 +175,7 @@ pub async fn GatewayCtx::join_voice(
   let connection = @voice.VoiceConnection::start(
     self.group_,
     credentials,
-    user_id=self.ready_.user.id.to_string(),
+    user_id=self.ready().user.id.to_string(),
     channel_id=channel_id.value(),
     leave~,
     rejoin~,

@@ -7,6 +7,8 @@ pub struct GatewayCtx {
   priv intents_ : @model.Intents
   priv shard_ : @gateway.Shard
   priv shards_ : Array[@gateway.Shard]
+  priv shard_routes_ : Map[Int32, @gateway.Shard]
+  priv shard_count_ : Int32
   priv cache_ : @cache.InMemoryCache?
   priv framework_ : @framework.Framework
   priv collector_ : EventCollector
@@ -172,7 +174,50 @@ pub async fn[T] GatewayCtx::wait_for(
   predicate : (T) -> Bool,
   timeout_ms? : Int32,
 ) -> T? {
-  self.collector_.wait_for(event_type, predicate, timeout_ms?)
+  self.expect_event(event_type, predicate).wait(timeout_ms?)
+}
+
+///|
+/// Expect the next gateway event of `event_type` that satisfies `predicate`.
+/// The expectation is registered now, so create it before sending the command
+/// that makes Discord dispatch the event, then `wait` for it. Like `wait_for`,
+/// the event stays visible to other collectors and registered handlers.
+pub fn[T] GatewayCtx::expect_event(
+  self : GatewayCtx,
+  event_type : EventType[T],
+  predicate : (T) -> Bool,
+) -> PendingEvent[T] {
+  self.collector_.register(event_type, predicate)
+}
+
+///|
+/// The intents this bot identified with.
+pub fn GatewayCtx::intents(self : GatewayCtx) -> @model.Intents {
+  self.intents_
+}
+
+///|
+/// Send opcode 4 (Update Voice State) on the shard that owns
+/// `state.guild_id`, which need not be this context's shard. Raises
+/// `BotError::ShardNotManaged` when that shard runs in another process.
+pub async fn GatewayCtx::update_voice_state(
+  self : GatewayCtx,
+  state : @model.UpdateVoiceState,
+) -> Unit {
+  let shard_id = guild_shard_id(state.guild_id, self.shard_count_)
+  guard self.shard_routes_.get(shard_id) is Some(shard) else {
+    raise BotError::ShardNotManaged(shard_id~)
+  }
+  shard.update_voice_state(state)
+}
+
+///|
+/// The shard Discord assigns a guild to: `(guild_id >> 22) % shard_count`.
+fn guild_shard_id(
+  guild_id : @model.Id[@model.GuildMarker],
+  shard_count : Int32,
+) -> Int32 {
+  ((guild_id.value() >> 22) % shard_count.to_uint64()).to_int()
 }
 
 ///|

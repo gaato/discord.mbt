@@ -17,6 +17,9 @@ pub(all) suberror BotError {
     remaining~ : Int32,
     reset_after_ms~ : Int64
   )
+  /// A guild command such as `GatewayCtx::update_voice_state` belongs on a
+  /// shard that this process does not run.
+  ShardNotManaged(shard_id~ : Int32)
 } derive(Debug)
 
 ///|
@@ -42,6 +45,8 @@ pub impl Show for BotError with fn output(self, logger) {
       logger.write_string(
         "gateway session start limit exceeded: need \{required}, have \{remaining}; resets in \{reset_after_ms}ms",
       )
+    ShardNotManaged(shard_id~) =>
+      logger.write_string("shard \{shard_id} is not run by this process")
   }
 }
 
@@ -615,6 +620,10 @@ async fn BotCore::run(self : BotCore) -> Unit {
       shard_handles.push(shard)
     }
     self.running_shards_.val = managed_shards
+    let shard_routes : Map[Int32, @gateway.Shard] = Map([])
+    for owner in managed_shards {
+      shard_routes[owner.id] = owner.shard
+    }
     self.starting_.val = false
     for owner in managed_shards {
       group.spawn_bg(no_wait=true, () => {
@@ -719,6 +728,8 @@ async fn BotCore::run(self : BotCore) -> Unit {
             intents_: intents,
             shard_: owner.shard,
             shards_: shard_handles,
+            shard_routes_: shard_routes,
+            shard_count_: resolved.count,
             cache_: self.cache_,
             framework_: router,
             collector_: self.collector_,

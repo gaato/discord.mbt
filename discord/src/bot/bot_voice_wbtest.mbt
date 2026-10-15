@@ -419,22 +419,6 @@ async test "join_voice fails before opcode 4 without guild voice states intent" 
 }
 
 ///|
-test "voice state command encodes a disconnect as a null channel" {
-  let disconnect = voice_state_command(
-    @model.Id::parse("100"),
-    None,
-    false,
-    true,
-  )
-  inspect(
-    disconnect.stringify(),
-    content=(
-      #|{"op":4,"d":{"guild_id":"100","channel_id":null,"self_mute":false,"self_deaf":true}}
-    ),
-  )
-}
-
-///|
 fn voice_state_frame(sequence : Int32, endpoint_session : String) -> String {
   (
     #|{"op":0,"s":SEQUENCE_PLACEHOLDER,"t":"VOICE_STATE_UPDATE","d":{"guild_id":"100","channel_id":"200","user_id":"1","session_id":"SESSION_PLACEHOLDER","deaf":false,"mute":false,"self_deaf":false,"self_mute":false,"suppress":false,"request_to_speak_timestamp":null}}

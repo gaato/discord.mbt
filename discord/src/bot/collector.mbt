@@ -19,13 +19,13 @@ priv struct EventCollector {
 }
 
 ///|
-/// A synchronously registered event observation. Registration is separate
-/// from waiting so callers can install collectors before sending the command
-/// that causes Discord to dispatch the matching event.
-priv struct EventRegistration[T] {
-  collector : EventCollector
-  waiter : EventWaiter
-  event_type : EventType[T]
+/// One expected gateway event, from `GatewayCtx::expect_event`. It is
+/// registered when created, separately from waiting, so a caller can install
+/// it before sending the command that makes Discord dispatch the event.
+pub struct PendingEvent[T] {
+  priv collector : EventCollector
+  priv waiter : EventWaiter
+  priv event_type : EventType[T]
 }
 
 ///|
@@ -77,7 +77,7 @@ fn[T] EventCollector::register(
   self : EventCollector,
   event_type : EventType[T],
   predicate : (T) -> Bool,
-) -> EventRegistration[T] {
+) -> PendingEvent[T] {
   let waiter = EventWaiter::{
     kind: event_type.kind(),
     matches: event => event_type.project(event).map(predicate).unwrap_or(false),
@@ -88,13 +88,18 @@ fn[T] EventCollector::register(
 }
 
 ///|
-fn[T] EventRegistration::cancel(self : EventRegistration[T]) -> Unit {
+/// Stop expecting the event. `wait` also cancels when it returns, so this is
+/// for an expectation that is abandoned without waiting.
+pub fn[T] PendingEvent::cancel(self : PendingEvent[T]) -> Unit {
   self.collector.remove(self.waiter)
 }
 
 ///|
-async fn[T] EventRegistration::wait(
-  self : EventRegistration[T],
+/// Wait for the expected event. Returns `None` on timeout. An event that
+/// arrived after the expectation was created and before this call is
+/// returned at once.
+pub async fn[T] PendingEvent::wait(
+  self : PendingEvent[T],
   timeout_ms? : Int32,
 ) -> T? {
   defer self.cancel()
@@ -103,14 +108,4 @@ async fn[T] EventRegistration::wait(
     None => Some(self.waiter.queue.get())
   }
   raw.bind(raw_event => self.event_type.project(raw_event))
-}
-
-///|
-async fn[T] EventCollector::wait_for(
-  self : EventCollector,
-  event_type : EventType[T],
-  predicate : (T) -> Bool,
-  timeout_ms? : Int32,
-) -> T? {
-  self.register(event_type, predicate).wait(timeout_ms?)
 }

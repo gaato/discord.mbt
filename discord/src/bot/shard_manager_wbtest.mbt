@@ -390,3 +390,122 @@ async test "fatal close fails the manager and closes sibling shards" {
   })
   assert_true(second.closed.val)
 }
+
+///|
+async test "voice state updates go to the shard that owns the guild" {
+  let first = ManagerFakeTransport()
+  let second = ManagerFakeTransport()
+  let pending : Array[ManagerFakeTransport] = [second, first]
+  let app = @app.AppBuilder()
+  let bot = BotBuilder(
+    app.build(),
+    token="test-token",
+    client=Client("test-token"),
+    shards=Fixed(count=2),
+  )
+  bot.core.gateway_bot_info_.val = Some(manager_gateway_info(max_concurrency=2))
+  bot.core.identify_spacing_ms_.val = 1
+  bot.core.connector_.val = Some(_ => {
+    match pending.pop() {
+      Some(transport) => (transport : &@gateway.GatewayTransport)
+      None => raise @gateway.TransportClosed(code=None, reason="no transport")
+    }
+  })
+  let ready : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
+  bot.on(Events::ready(), (ctx, _) => ready.put(ctx))
+  let bot_bot = bot.build()
+  @async.with_task_group(group => {
+    let running = group.spawn(no_wait=true, allow_failure=true, () => {
+      bot_bot.run()
+    })
+    first.incoming.put(MANAGER_HELLO)
+    second.incoming.put(MANAGER_HELLO)
+    let (_, first_identify) = manager_get(first.outgoing, "first identify")
+    let (_, second_identify) = manager_get(second.outgoing, "second identify")
+    let (first_id, _) = identify_shard(first_identify)
+    let (second_id, _) = identify_shard(second_identify)
+    first.incoming.put(manager_ready_frame(first_id, 2))
+    second.incoming.put(manager_ready_frame(second_id, 2))
+    let ctx = manager_get(ready, "first READY handler")
+    manager_get(ready, "second READY handler") |> ignore
+    // (guild_id >> 22) % 2: 1 << 22 is on shard 1 and 2 << 22 on shard 0,
+    // whichever shard's context sends the command.
+    let on_shard_one : @model.Id[@model.GuildMarker] = Id(4194304UL)
+    let on_shard_zero : @model.Id[@model.GuildMarker] = Id(8388608UL)
+    ctx.update_voice_state({
+      guild_id: on_shard_one,
+      channel_id: Some(Id(7UL)),
+      self_mute: false,
+      self_deaf: false,
+    })
+    ctx.update_voice_state({
+      guild_id: on_shard_zero,
+      channel_id: None,
+      self_mute: false,
+      self_deaf: false,
+    })
+    let (one, zero) = if first_id == 1 {
+      (first, second)
+    } else {
+      (second, first)
+    }
+    let (_, sent_one) = manager_get(one.outgoing, "shard 1 voice state")
+    let (_, sent_zero) = manager_get(zero.outgoing, "shard 0 voice state")
+    guard sent_one
+      is { "op": Number(4, ..), "d": { "guild_id": "4194304", .. }, .. } else {
+      fail("shard 1 got \{sent_one.stringify()}")
+    }
+    guard sent_zero
+      is { "op": Number(4, ..), "d": { "guild_id": "8388608", .. }, .. } else {
+      fail("shard 0 got \{sent_zero.stringify()}")
+    }
+    ctx.shutdown()
+    guard @async.with_timeout_opt(1000, () => running.wait()) is Some(_) else {
+      fail("timed out stopping shards")
+    }
+  })
+}
+
+///|
+async test "a voice state update for a shard run elsewhere raises" {
+  let transport = ManagerFakeTransport()
+  let app = @app.AppBuilder()
+  let bot = BotBuilder(
+    app.build(),
+    token="test-token",
+    client=Client("test-token"),
+    shards=Single(id=0, count=2),
+  )
+  bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
+  bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  let ready : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
+  bot.on(Events::ready(), (ctx, _) => ready.put(ctx))
+  let bot_bot = bot.build()
+  @async.with_task_group(group => {
+    let running = group.spawn(no_wait=true, allow_failure=true, () => {
+      bot_bot.run()
+    })
+    transport.incoming.put(MANAGER_HELLO)
+    manager_get(transport.outgoing, "identify") |> ignore
+    transport.incoming.put(manager_ready_frame(0, 2))
+    let ctx = manager_get(ready, "READY handler")
+    try
+      ctx.update_voice_state({
+        guild_id: Id(4194304UL),
+        channel_id: None,
+        self_mute: false,
+        self_deaf: false,
+      })
+    catch {
+      BotError::ShardNotManaged(shard_id=1) as error =>
+        assert_eq(error.to_string(), "shard 1 is not run by this process")
+      error => fail("unexpected error: \{error}")
+    } noraise {
+      _ => fail("expected ShardNotManaged")
+    }
+    ctx.shutdown()
+    guard @async.with_timeout_opt(1000, () => running.wait()) is Some(_) else {
+      fail("timed out stopping the shard")
+    }
+  })
+}
