@@ -18,11 +18,9 @@
 
 set -euo pipefail
 
-# Workspace-relative paths, as `moon coverage analyze` names them at the
-# workspace root: the library sources that are measured, minus the example
-# packages that still live under them.
+# The measured library sources, as workspace-relative paths: that is how
+# `moon coverage analyze` names files at the workspace root.
 LIBRARY='^discord/src/'
-NOT_LIBRARY='^discord/src/examples/'
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 ledger="$repo_root/TEST_COVERAGE.md"
@@ -68,13 +66,16 @@ else
       exit 2
     }
   # moon_cove_report merges every counter/trace file it finds under the
-  # working directory, so counters left by earlier runs and trace maps from
-  # the release profile silently corrupt the numbers (the analyze run itself
-  # builds the debug profile). Do not delete debug .trace.source files — the
-  # incremental build will not regenerate them.
+  # working directory, so counters left by earlier runs, trace maps from the
+  # release profile, and trace maps of packages that have since moved or been
+  # removed corrupt the numbers or crash the report (the analyze run itself
+  # builds the debug profile). The incremental build does not regenerate a
+  # deleted .trace.source on its own, so drop the whole debug test build and
+  # let the analyze run rebuild it.
   find "$repo_root/_build" -name 'moonbit_coverage_*' -delete 2>/dev/null || true
   find "$repo_root/_build/native/release" "$repo_root/_build/js" \
     -name '*.trace.source' -delete 2>/dev/null || true
+  rm -rf "$repo_root/_build/native/debug/test"
   # moon's bundled tcc cannot link on some hosts (openSUSE); use the system cc.
   (cd "$repo_root" &&
     MOON_CC="${MOON_CC:-cc}" moon coverage analyze -- -f coveralls -o "$json_file") \
@@ -85,10 +86,9 @@ else
 fi
 
 # One "file<TAB>covered<TAB>total" line per library source file.
-jq -r --arg lib "$LIBRARY" --arg not_lib "$NOT_LIBRARY" '
+jq -r --arg lib "$LIBRARY" '
   .source_files[]
   | select(.name | test($lib))
-  | select(.name | test($not_lib) | not)
   | [ .name,
       ([.coverage[] | select(. != null and . > 0)] | length),
       ([.coverage[] | select(. != null)] | length) ]

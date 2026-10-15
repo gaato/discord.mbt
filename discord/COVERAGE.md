@@ -271,7 +271,7 @@ Codex review, findings verified against the developer docs) of every typed
 wrapper's *parameter list* has also been closed: all 19 audited gaps were
 implemented the same day, each pinned by a wire-boundary wbtest
 (`src/http/api_params_*_wbtest.mbt`) and, where the environment allows,
-exercised against the live API by `src/examples/live_probe`.
+exercised against the live API by `examples/live_probe`.
 
 Fixed in the same audit: `SubscriptionStatus` INACTIVE/ENDING value swap;
 `get_invite` sent the removed `with_expiration` query key.

@@ -188,7 +188,7 @@ for ;; {
 }
 ```
 
-`src/examples/low_level` is the complete runnable version. HTTP executors
+`examples/low_level` is the complete runnable version. HTTP executors
 should not call `process` — it acknowledges through REST, while an HTTP
 adapter must return the initial callback in the HTTP response body. Use
 `process_with` and a capture gate (below), or better, the finished HTTP

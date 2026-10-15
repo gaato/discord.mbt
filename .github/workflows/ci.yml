@@ -134,17 +134,17 @@ jobs:
         run: moon test --target js
 
       - name: Install Workers test dependencies
-        working-directory: discord/src/examples/workers_echo
+        working-directory: examples/workers_echo
         run: npm ci
 
       - name: Test Cloudflare Worker
-        working-directory: discord/src/examples/workers_echo
+        working-directory: examples/workers_echo
         env:
           WRANGLER_SEND_METRICS: "false"
         run: npm test
 
       - name: Check Cloudflare Worker bundle
-        working-directory: discord/src/examples/workers_echo
+        working-directory: examples/workers_echo
         env:
           WRANGLER_SEND_METRICS: "false"
         run: npm run bundle:check -- --outdir "$RUNNER_TEMP/workers-echo"
@@ -160,15 +160,15 @@ jobs:
 
       - name: Test Deno interaction adapter
         run: |
-          moon build discord/src/examples/interactions_js --target js --release --deny-warn
-          deno test --allow-net discord/src/examples/deno_echo/entry.test.js
+          moon build examples/interactions_js --target js --release --deny-warn
+          deno test --allow-net examples/deno_echo/entry.test.js
 
       - name: Test shared interactions on Node.js
         run: |
-          node discord/src/examples/interactions_js/runtime.test.mjs
-          node --test discord/src/examples/vercel_echo/adapter.test.mjs
-          node --test discord/src/examples/fastly_echo/adapter.test.mjs
-          node --test discord/src/examples/lambda_url_echo/adapter.test.mjs
+          node examples/interactions_js/runtime.test.mjs
+          node --test examples/vercel_echo/adapter.test.mjs
+          node --test examples/fastly_echo/adapter.test.mjs
+          node --test examples/lambda_url_echo/adapter.test.mjs
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
@@ -177,21 +177,21 @@ jobs:
 
       - name: Test shared interactions on Bun
         run: |
-          bun discord/src/examples/interactions_js/runtime.test.mjs
-          bun test discord/src/examples/bun_echo/entry.test.js
+          bun examples/interactions_js/runtime.test.mjs
+          bun test examples/bun_echo/entry.test.js
 
       - name: Install Workers gateway test dependencies
-        working-directory: discord/src/examples/workers_gateway
+        working-directory: examples/workers_gateway
         run: npm ci
 
       - name: Test Cloudflare Workers gateway
-        working-directory: discord/src/examples/workers_gateway
+        working-directory: examples/workers_gateway
         env:
           WRANGLER_SEND_METRICS: "false"
         run: npm test
 
       - name: Check Cloudflare Workers gateway bundle
-        working-directory: discord/src/examples/workers_gateway
+        working-directory: examples/workers_gateway
         env:
           WRANGLER_SEND_METRICS: "false"
         run: npm run bundle:check -- --outdir "$RUNNER_TEMP/workers-gateway"
@@ -226,7 +226,7 @@ jobs:
         run: moon test --target wasm --release --verbose
 
       - name: Build HTTP interactions example
-        run: moon build discord/src/examples/interactions_http --target wasm --release --deny-warn
+        run: moon build examples/interactions_http --target wasm --release --deny-warn
 
   spin-component:
     runs-on: ubuntu-24.04

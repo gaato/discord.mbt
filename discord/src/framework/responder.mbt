@@ -77,7 +77,7 @@ async fn Responder::show_modal(
 /// placeholder, and a followup otherwise. Editing replaces the deprecated
 /// behavior where the first followup after a deferral edits the original.
 ///
-/// Verified live on 2026-09-28 with `src/examples/gate_probe`: the edit
+/// Verified live on 2026-09-28 with `examples/gate_probe`: the edit
 /// replaces the loading message and keeps the defer's visibility; after an
 /// edit or a `DeferredUpdateMessage` the reply is a separate followup; and
 /// when an unconfirmed deferral's edit fails, the fallback followup still

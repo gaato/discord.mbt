@@ -175,12 +175,12 @@ new credentials into an active connection, so the watcher disconnects and
 joins the same channel again; callers holding the old handle should fetch the
 guild connection by calling `join_voice` again after a region move.
 
-See `src/examples/voice_player` for an executable that reads configuration
+See `examples/voice_player` for an executable that reads configuration
 from `DISCORD_TOKEN`, `GUILD_ID`, `CHANNEL_ID`, and `AUDIO_FILE`.
 
 ## Verify DAVE against a live channel
 
-`src/examples/dave_probe` joins an existing channel, waits for
+`examples/dave_probe` joins an existing channel, waits for
 `DaveMediaContextActivated(protocol_version=1)`, sends one second of canonical
 Opus silence through the active libdave encryptor, and disconnects. It does
 not create or delete Discord resources. Keep a normal DAVE-capable Discord
@@ -189,7 +189,7 @@ to the other pending members, so a bot alone cannot establish the group. Set
 `DISCORD_TOKEN`, `GUILD_ID`, and `CHANNEL_ID`, then run:
 
 ```fish
-env DISCORD_VOICE_REQUIRE_SHIM=1 MBT_DAVE_REQUIRE_NATIVE=1 moon run --target native --release src/examples/dave_probe
+env DISCORD_VOICE_REQUIRE_SHIM=1 MBT_DAVE_REQUIRE_NATIVE=1 moon run --target native --release examples/dave_probe
 ```
 
 With no other announced participant, the probe reports an inconclusive result.
@@ -206,7 +206,7 @@ activation before playback and clips the input at three seconds. For example:
 
 ```fish
 ffmpeg -y -hide_banner -loglevel error -f lavfi -i 'sine=frequency=880:duration=1.5' -filter:a 'volume=0.7' -c:a libopus -ar 48000 -ac 2 -frame_duration 20 /tmp/discord-dave-tone.ogg
-env DAVE_PROBE_AUDIBLE=1 DAVE_PROBE_AUDIO_FILE=/tmp/discord-dave-tone.ogg DISCORD_VOICE_REQUIRE_SHIM=1 MBT_DAVE_REQUIRE_NATIVE=1 moon run --target native --release src/examples/dave_probe
+env DAVE_PROBE_AUDIBLE=1 DAVE_PROBE_AUDIO_FILE=/tmp/discord-dave-tone.ogg DISCORD_VOICE_REQUIRE_SHIM=1 MBT_DAVE_REQUIRE_NATIVE=1 moon run --target native --release examples/dave_probe
 ```
 
 Have the other participant confirm hearing the short tone, and also
@@ -220,7 +220,7 @@ when the receive probe starts. It waits up to 20 seconds for ten decrypted Opus
 frames and stores only the frame count:
 
 ```fish
-env DAVE_PROBE_RECEIVE=1 DISCORD_VOICE_REQUIRE_SHIM=1 MBT_DAVE_REQUIRE_NATIVE=1 moon run --target native --release src/examples/dave_probe
+env DAVE_PROBE_RECEIVE=1 DISCORD_VOICE_REQUIRE_SHIM=1 MBT_DAVE_REQUIRE_NATIVE=1 moon run --target native --release examples/dave_probe
 ```
 
 UDP can arrive before the voice gateway's initial Speaking event establishes
@@ -238,7 +238,7 @@ so it cannot create a continuous feedback loop. It logs only Opus packet-size
 statistics, not the sender ID or audio content:
 
 ```fish
-env DAVE_PROBE_ECHO=1 DISCORD_VOICE_REQUIRE_SHIM=1 MBT_DAVE_REQUIRE_NATIVE=1 moon run --target native --release src/examples/dave_probe
+env DAVE_PROBE_ECHO=1 DISCORD_VOICE_REQUIRE_SHIM=1 MBT_DAVE_REQUIRE_NATIVE=1 moon run --target native --release examples/dave_probe
 ```
 
 When explicit recording is acceptable, set `DAVE_PROBE_RECORD_PATH` to an Ogg
@@ -246,5 +246,5 @@ output path. This also uses the Speaking-gated two-second capture, but does not
 enable echo unless `DAVE_PROBE_ECHO=1` is set separately:
 
 ```fish
-env DAVE_PROBE_RECORD_PATH=/tmp/discord-dave-receive-check.ogg DISCORD_VOICE_REQUIRE_SHIM=1 MBT_DAVE_REQUIRE_NATIVE=1 moon run --target native --release src/examples/dave_probe
+env DAVE_PROBE_RECORD_PATH=/tmp/discord-dave-receive-check.ogg DISCORD_VOICE_REQUIRE_SHIM=1 MBT_DAVE_REQUIRE_NATIVE=1 moon run --target native --release examples/dave_probe
 ```

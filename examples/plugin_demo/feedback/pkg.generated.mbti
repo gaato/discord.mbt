@@ -1,0 +1,30 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "local/discord_examples/plugin_demo/feedback"
+
+import {
+  "gaato/discord/app",
+  "gaato/discord/model",
+}
+
+// Values
+pub fn install_feedback(@app.AppBuilder, config~ : FeedbackConfig) -> Unit
+
+// Errors
+
+// Types and methods
+pub(all) struct FeedbackConfig {
+  destination_channel : @model.Id[@model.ChannelMarker]
+  cooldown_seconds : Int
+}
+pub fn FeedbackConfig::FeedbackConfig(destination_channel~ : @model.Id[@model.ChannelMarker], cooldown_seconds? : Int) -> Self
+
+pub struct FeedbackFeature {
+  // private fields
+}
+pub fn FeedbackFeature::FeedbackFeature(FeedbackConfig) -> Self
+pub fn FeedbackFeature::install(Self, @app.AppBuilder) -> Unit
+pub fn FeedbackFeature::stored_count(Self) -> Int
+
+// Type aliases
+
+// Traits

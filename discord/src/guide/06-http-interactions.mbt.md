@@ -246,7 +246,7 @@ it. Each dispatch owns one REST `Client` built from `token` and the optional
 reused across interactions. `application_id` is required so no startup
 request is made. A handler that produces no initial response yields status
 202 with a `null` body and `null` content type; multipart replies arrive as a
-`ReadableStream` of chunks. See `src/examples/interactions_js/handler.js` for
+`ReadableStream` of chunks. See `examples/interactions_js/handler.js` for
 a reference host adapter.
 
 ```mbt nocheck
@@ -281,7 +281,7 @@ cooldowns. The implementation must own its clock and atomically acquire each
 key's window; account for the storage service's consistency and atomicity
 guarantees. The TCP `RemoteCooldownStore` is native-only.
 
-The `src/examples/workers_echo` adapter exports two promises:
+The `examples/workers_echo` adapter exports two promises:
 
 1. A response promise resolves when the initial Discord callback is known.
 2. A background promise resolves after the task group and deferred handlers
@@ -301,7 +301,7 @@ drops unsent chunks and does not leave a MoonBit producer task behind.
 Run its signed endpoint tests in Cloudflare's local runtime with:
 
 ```fish
-cd src/examples/workers_echo
+cd examples/workers_echo
 npm ci
 env WRANGLER_SEND_METRICS=false npm test
 ```

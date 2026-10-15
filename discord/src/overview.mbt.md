@@ -65,7 +65,7 @@ Voice is native-only. These executors use
 
 Build the interaction `App`, then pass it to the gateway `Bot` executor. This
 example registers and answers a `/echo` command. See
-`src/examples/slash_echo` for the runnable version.
+`examples/slash_echo` for the runnable version.
 
 ```mbt nocheck
 ///|
@@ -154,8 +154,8 @@ required for the build-time prebuild hooks described above.
 The `interactions_http` example also builds for Wasm:
 
 ```fish
-moon build --target wasm --release src/examples/interactions_http
-moonrun --policy discord-policy.json _build/wasm/release/build/examples/interactions_http/interactions_http.wasm
+moon build --target wasm --release examples/interactions_http
+moonrun --policy discord-policy.json _build/wasm/release/build/local/discord_examples/interactions_http/interactions_http.wasm
 ```
 
 An example `discord-policy.json` for that server:
@@ -197,7 +197,10 @@ coordination, observability events, or raw option declarations.
 
 ## Examples
 
-Runnable programs live under `src/examples/`:
+Runnable programs live in the repository's
+[`examples/`](https://github.com/gaato/discord.mbt/tree/main/examples)
+workspace module; run them from the repository root, for example
+`moon run --target native examples/slash_echo`:
 
 - `slash_echo`: minimal typed Gateway bot.
 - `kitchen_sink`: subcommands, autocomplete, context menus, components, and
@@ -213,7 +216,7 @@ Runnable programs live under `src/examples/`:
 - `workers_gateway`: Cloudflare Durable Object running a gateway bot (no voice).
 - `interactions_http`: native signed-interactions HTTP server.
 - `experiments/spin_interactions`: WASIp2 Spin component for signed PING and
-  immediate echo; this experiment sits outside `src/examples/`.
+  immediate echo; this experiment sits outside `examples/`.
 - `plugin_demo`: a stateful feedback feature installed as a separate package.
 - `gate_probe`: live probe for error-policy recovery and user-restricted
   component waits (needs a Discord client; guild commands only).
@@ -364,7 +367,7 @@ async fn handle_http_interaction(
 The Cloudflare Worker, Deno, Bun, and Vercel Function HTTP adapters verify
 the raw request bytes with the reusable pure MoonBit
 `@discord.InteractionVerifier` before parsing. The dispatch bridge is
-`App::start_signed_http` in the library. The `src/examples/interactions_js`
+`App::start_signed_http` in the library. The `examples/interactions_js`
 example is an exported wrapper plus a small `handler.js` that maps a Web
 `Request` to `InteractionHttpRequest` and back; the per-host adapters
 (Workers, Deno, Bun, Vercel, Fastly, Lambda) only wire their entry point and
@@ -411,7 +414,7 @@ gateway also runs on JavaScript and moonrun Wasm.
 
 ### Cloudflare Workers gateway
 
-The [`workers_gateway` example](src/examples/workers_gateway/README.md) runs one
+The [`workers_gateway` example](https://github.com/gaato/discord.mbt/blob/main/examples/workers_gateway/README.md) runs one
 gateway shard in a Durable Object with an outbound WebSocket. A bot accepts
 saved `BotSession` values through `resume~`; `bot.sessions()` returns snapshots
 containing both the Gateway session and its original READY metadata. The

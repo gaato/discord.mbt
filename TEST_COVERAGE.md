@@ -1,6 +1,6 @@
 # Test coverage ledger
 
-Line coverage of the library packages (`discord/src/` minus `discord/src/examples/`), measured
+Line coverage of the library packages (`discord/src/`), measured
 with `moon coverage analyze` in Coveralls-JSON mode. Companion to
 [COVERAGE.md](discord/COVERAGE.md), which tracks REST *endpoint* coverage; this file
 tracks *test* coverage and applies the same closed-ledger rule:

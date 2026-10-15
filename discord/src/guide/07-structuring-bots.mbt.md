@@ -375,5 +375,5 @@ packages at compile time, so runtime module reload does not fit this design.
 If shared tooling later needs discovery metadata or lifecycle hooks, that use
 case can define the contract.
 
-See [`src/examples/plugin_demo`](../examples/plugin_demo) for a compiling
+See [`examples/plugin_demo`](https://github.com/gaato/discord.mbt/tree/main/examples/plugin_demo) for a compiling
 feedback feature with injected configuration and retained state.

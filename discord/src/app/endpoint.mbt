@@ -45,7 +45,7 @@ pub(all) enum RestAccess {
 /// token.
 ///
 /// Command registration is a deploy-time step. Call `app.sync_commands(...)`
-/// from a one-shot program (see `src/examples/workers_echo/register`), never
+/// from a one-shot program (see `examples/workers_echo/register`), never
 /// per request.
 pub async fn App::serve(
   self : App,
