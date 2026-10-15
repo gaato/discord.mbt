@@ -7,6 +7,15 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+### Fixed
+
+- A shard closes its WebSocket with code 4000 when it is about to resume (op
+  7 Reconnect, op 9, a missed heartbeat ACK, or a read failure). It sent 1000
+  for every close, and Discord invalidates the session on a 1000 or 1001
+  close, so those resumes could not succeed. Shutdown (`close`, or cancelling
+  the shard's task group) still sends 1000. The voice gateway follows the same
+  rule.
+
 ## [0.7.0] - 2026-10-08
 
 ### Added

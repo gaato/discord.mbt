@@ -116,6 +116,11 @@ async fn Shard::stop_runner(self : Shard) -> Unit noraise {
 }
 
 ///|
+/// Close code for a connection the shard will resume. Discord invalidates
+/// the session when the client closes with 1000 or 1001.
+const RESUMABLE_CLOSE_CODE : Int32 = 4000
+
+///|
 async fn Shard::finish_transport(
   self : Shard,
   transport : &GatewayTransport,
@@ -278,9 +283,14 @@ async fn Shard::run(
     consecutive_connector_failures = 0
     self.transport = Some(transport)
     let ended = try {
-      defer @async.protect_from_cancel(() => {
-        self.finish_transport(transport, code=1000)
-      })
+      defer {
+        let code = if self.closing || @async.is_being_cancelled() {
+          1000
+        } else {
+          RESUMABLE_CLOSE_CODE
+        }
+        @async.protect_from_cancel(() => self.finish_transport(transport, code~))
+      }
       if compress {
         self.emit_telemetry(ShardCompressionEnabled(shard_id~))
       }

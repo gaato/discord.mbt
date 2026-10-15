@@ -121,6 +121,11 @@ async fn VoiceGateway::stop_runner(self : VoiceGateway) -> Unit noraise {
 }
 
 ///|
+/// Close code for a connection the gateway will resume, matching the main
+/// gateway: a 1000 close is reserved for shutdown.
+const RESUMABLE_CLOSE_CODE : Int32 = 4000
+
+///|
 async fn VoiceGateway::finish_transport(
   self : VoiceGateway,
   transport : &VoiceTransport,
@@ -269,9 +274,14 @@ async fn VoiceGateway::run(
     self.transport = Some(transport)
     let is_resuming = self.has_session
     let ended = try {
-      defer @async.protect_from_cancel(() => {
-        self.finish_transport(transport, code=1000)
-      })
+      defer {
+        let code = if self.closing || @async.is_being_cancelled() {
+          1000
+        } else {
+          RESUMABLE_CLOSE_CODE
+        }
+        @async.protect_from_cancel(() => self.finish_transport(transport, code~))
+      }
       self.run_connection(
         transport,
         is_resuming~,

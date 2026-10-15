@@ -12,6 +12,7 @@ struct FakeVoiceTransport {
   close_during_send : Ref[Bool]
   close_during_recv : Ref[Bool]
   close_calls : Ref[Int32]
+  close_code : Ref[Int32?]
   fail_close : Ref[Bool]
 }
 
@@ -29,6 +30,7 @@ fn FakeVoiceTransport::FakeVoiceTransport() -> FakeVoiceTransport {
     close_during_send: Ref(false),
     close_during_recv: Ref(false),
     close_calls: Ref(0),
+    close_code: Ref(None),
     fail_close: Ref(false),
   }
 }
@@ -95,6 +97,7 @@ impl @voice.VoiceTransport for FakeVoiceTransport with fn close(self, code~) {
     return
   }
   self.close_calls.val += 1
+  self.close_code.val = Some(code)
   self.incoming.close(
     error=@voice.VoiceTransportClosed(code=Some(code), reason="client closed"),
   )
@@ -397,6 +400,7 @@ async test "cancelling a voice gateway closes its transport exactly once" {
     transport.outgoing_text.get() |> ignore
   })
   assert_eq(transport.close_calls.val, 1)
+  assert_eq(transport.close_code.val, Some(1000))
 }
 
 ///|
@@ -607,10 +611,12 @@ async test "missing heartbeat ACK closes with 4000 and reconnects" {
       is { "op": Number(3, ..), "d": { "seq_ack": Number(2, ..), .. }, .. }
     // Do not ACK: the following heartbeat deadline closes the fake with 4000.
     guard! gateway.next() is Disconnected(code=Some(4000), resuming=true)
+    assert_eq(first.close_code.val, Some(4000))
     second.incoming.put(hello_frame(60000))
     guard! second.outgoing_text.get()
       is { "op": Number(7, ..), "d": { "seq_ack": Number(2, ..), .. }, .. }
     gateway.close()
+    assert_eq(second.close_code.val, Some(1000))
   })
 }
 

@@ -10,6 +10,7 @@ struct FakeTransport {
   close_during_send : Ref[Bool]
   close_during_recv : Ref[Bool]
   close_calls : Ref[Int32]
+  close_code : Ref[Int32?]
   fail_close : Ref[Bool]
 }
 
@@ -25,6 +26,7 @@ fn FakeTransport::FakeTransport() -> FakeTransport {
     close_during_send: Ref(false),
     close_during_recv: Ref(false),
     close_calls: Ref(0),
+    close_code: Ref(None),
     fail_close: Ref(false),
   }
 }
@@ -71,6 +73,7 @@ impl @gateway.GatewayTransport for FakeTransport with fn close(self, code~) {
     return
   }
   self.close_calls.val += 1
+  self.close_code.val = Some(code)
   self.incoming.close(
     error=@gateway.TransportClosed(code=Some(code), reason="client closed"),
   )
@@ -300,6 +303,8 @@ async test "shard ignores incomplete dispatches and reconnects from a zero seque
     guard! shard.next() is Dispatch(Ready(_))
     first.incoming.put("{\"op\":7,\"d\":null}")
     guard! shard.next() is Disconnected(code=None, resuming=true)
+    // a 1000 close would invalidate the session we are about to resume
+    assert_eq(first.close_code.val, Some(4000))
     gate.requests.get() |> ignore
     gate.release()
     second.incoming.put(HELLO_FAST)
@@ -403,6 +408,7 @@ async test "cancelling a shard closes its transport exactly once" {
     transport.outgoing.get() |> ignore
   })
   assert_eq(transport.close_calls.val, 1)
+  assert_eq(transport.close_code.val, Some(1000))
 }
 
 ///|
@@ -1134,6 +1140,7 @@ async test "shard heartbeat loop beats, tracks acks, and zombie-closes" {
     assert_eq(steady2, 60000)
     gate.release()
     guard! shard.next() is Disconnected(code=Some(4000), resuming=true)
+    assert_eq(first.close_code.val, Some(4000))
     // and the reconnect resumes after the gated backoff
     let backoff = gate.requests.get()
     assert_true(backoff >= 250 && backoff < 2250)
@@ -1143,6 +1150,7 @@ async test "shard heartbeat loop beats, tracks acks, and zombie-closes" {
       fail("expected resume after the zombie close")
     }
     shard.close()
+    assert_eq(second.close_code.val, Some(1000))
   })
 }
 
