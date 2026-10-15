@@ -1,8 +1,8 @@
 # Voice
 
 Voice support is native-only and experimental. It implements voice gateway
-v8, Discord's DAVE end-to-end encryption, Opus playback, and raw Opus receive
-events. DAVE MLS and media crypto come from the native-only `gaato/dave`
+v8, Discord's DAVE end-to-end encryption, Opus playback, and per-user raw
+Opus receive. DAVE MLS and media crypto come from the native-only `gaato/dave`
 binding to Discord's official `libdave`; the repository's Rust shim handles
 RTP transport AEAD only. The accepted design and its milestones are
 documented in [`src/voice/DESIGN.md`](../voice/DESIGN.md).
@@ -120,22 +120,30 @@ registered connection and does not move it to another channel.
 
 ## Receive Opus
 
-`next_event` returns membership, speaking, packet-loss, and media events. The
-receive path maps SSRC values to users when Discord has announced the mapping.
+Receiving is per user. `subscribe` returns a stream of that user's audio in
+RTP sequence order; packets from users nobody subscribed to are discarded on
+arrival, before decryption. `next_event` carries only membership, speaking,
+and lifecycle events, so a common pattern is to subscribe when a user starts
+speaking:
 
 ```mbt check
 ///|
 async fn receive_opus(
   connection : @discord.VoiceConnection,
-  consume_opus : (String?, UInt32, Int32, UInt32, Bytes) -> Unit,
+  consume_opus : (Int32, UInt32, Bytes) -> Unit,
 ) -> Unit {
-  for ;; {
+  let user_id = for ;; {
     match connection.next_event() {
-      OpusReceived(user_id~, ssrc~, sequence~, timestamp~, opus~) =>
-        consume_opus(user_id, ssrc, sequence, timestamp, opus)
-      PacketsLost(user_id~, ssrc~, count~) =>
-        println("lost \{count} packet(s) from \{Repr(user_id)} / \{ssrc}")
+      SpeakingChanged(user_id~, flags~, ..) if flags != 0 => break user_id
       _ => ()
+    }
+  }
+  let stream = connection.subscribe(user_id~, end_after_silence_ms=Some(1000))
+  while stream.next_packet() is Some(audio) {
+    match audio {
+      Opus(sequence~, timestamp~, opus~) =>
+        consume_opus(sequence, timestamp, opus)
+      Lost(count~) => println("lost \{count} frame(s) from \{user_id}")
     }
   }
 }
@@ -148,8 +156,15 @@ test "voice declarations compile" {
 }
 ```
 
-The library emits encoded Opus frames. It does not bundle an Opus decoder.
-Packet loss events report gaps flushed by the reorder buffer.
+The library delivers encoded Opus frames. It does not bundle an Opus decoder.
+`Lost` reports frames that never arrived (gaps flushed by the reorder buffer)
+and frames dropped because the reader fell behind: each stream holds at most
+`backlog` unread items (`DEFAULT_RECEIVE_BACKLOG`, five seconds of audio), and
+`VoiceTelemetry::ReceiveDropped` reports each drop. The stream also works as an
+`AudioSource`, which skips `Lost`, so it can be passed to `play` or written
+with `OggOpusWriter`. Unread events are bounded the same way: past
+`event_backlog` the oldest event is discarded with
+`VoiceTelemetry::EventDropped`.
 
 ## Region changes and reconnects
 
@@ -198,8 +213,8 @@ Have the other participant confirm hearing the short tone, and also
 require the probe to report no DAVE diagnostics and a clean disconnect. This
 is an opt-in manual live test, not a CI test. Hearing the tone confirms the
 outbound bot-to-client decrypt/decode/render path; validating the reverse path
-requires speaking from the client and observing decrypted `OpusReceived`
-events separately. To perform that reverse check without recording the audio,
+requires speaking from the client and observing decrypted frames on a
+subscription separately. To perform that reverse check without recording the audio,
 set `DAVE_PROBE_RECEIVE=1`, run the same probe, and speak from the other client
 when the receive probe starts. It waits up to 20 seconds for ten decrypted Opus
 frames and stores only the frame count:
@@ -209,9 +224,10 @@ env DAVE_PROBE_RECEIVE=1 DISCORD_VOICE_REQUIRE_SHIM=1 MBT_DAVE_REQUIRE_NATIVE=1 
 ```
 
 UDP can arrive before the voice gateway's initial Speaking event establishes
-the SSRC-to-user mapping. The probe reports those pre-mapping frames as a
-warning; it passes the receive check only after ten later frames have a mapped
-sender and decrypt successfully. Other DAVE decrypt failures remain fatal.
+the SSRC-to-user mapping. The probe subscribes to the first user whose
+Speaking event arrives, so earlier frames are discarded unread; it passes the
+receive check once ten later frames from that user decrypt successfully. DAVE
+decrypt failures remain fatal.
 
 For a content-level manual check, `DAVE_PROBE_ECHO=1` implies receive mode,
 waits for a peer Speaking event, discards five warm-up frames, holds the next

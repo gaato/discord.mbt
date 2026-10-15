@@ -154,20 +154,15 @@ test "receive pipeline strips RTP extensions and decrypts mapped DAVE frames" {
       cipher,
       Some(machine),
       arrival_ms=0L,
+      wants=_ => true,
     ),
-    [
-      OpusReceived(
-        user_id=Some("200"),
-        ssrc=77U,
-        sequence=10,
-        timestamp=960U,
-        opus=b"decrypted-opus",
-      ),
-    ],
+    [("200", Opus(sequence=10, timestamp=960U, opus=b"decrypted-opus"))],
   )
   assert_eq(provider.decrypted_users, [200UL])
   assert_eq(provider.decrypted_frames, [b"encrypted\xFA\xFA"])
 
+  pipeline.handle_gateway_message(Speaking(ssrc=88U, user_id="300", flags=1))
+  |> ignore
   let base = build_rtp_header(sequence=1, timestamp=1920U, ssrc=88U)
   let extension_header = b"\x90" + base[1:].to_owned() + b"\xBE\xDE\x00\x01"
   let encrypted_extension = cipher.seal(
@@ -180,44 +175,56 @@ test "receive pipeline strips RTP extensions and decrypts mapped DAVE frames" {
       cipher,
       None,
       arrival_ms=1L,
+      wants=_ => true,
     ),
-    [
-      OpusReceived(
-        user_id=None,
-        ssrc=88U,
-        sequence=1,
-        timestamp=1920U,
-        opus=b"opus-after-extension",
-      ),
-    ],
+    [("300", Opus(sequence=1, timestamp=1920U, opus=b"opus-after-extension"))],
   )
   assert_eq(telemetry, [])
 }
 
 ///|
-test "receive pipeline drops an unmapped encrypted DAVE sender with telemetry" {
+test "receive pipeline discards unmapped and unwanted senders before decrypting" {
   if !shim_available() {
     return
   }
   let telemetry : Array[VoiceTelemetry] = []
   let pipeline = ReceivePipeline::new(event => telemetry.push(event))
+  let provider = ReceiveTestDave::new(active_version=1, remote_users=[200UL])
+  let machine = receive_test_machine(provider)
   let cipher = TransportCipher::new(AeadAes256GcmRtpsize, Bytes::new(32))
-  let header = build_rtp_header(sequence=1, timestamp=960U, ssrc=99U)
-  let datagram = cipher.seal(header~, b"encrypted\xFA\xFA")
+  // the payload is not a valid ciphertext: decrypting it would be reported
+  let undecryptable = build_rtp_header(sequence=1, timestamp=960U, ssrc=99U) +
+    b"not-a-ciphertext-at-all"
   assert_eq(
-    pipeline.process_udp_packet(datagram, cipher, None, arrival_ms=0L),
+    pipeline.process_udp_packet(
+      undecryptable,
+      cipher,
+      Some(machine),
+      arrival_ms=0L,
+      wants=_ => true,
+    ),
     [],
   )
-  assert_eq(telemetry, [
-    DaveDecryptDropped(
-      user_id=None,
-      ssrc=99U,
-      count=1,
-      reason="DAVE frame has no mapped sender",
-    ),
-  ])
+  pipeline.handle_gateway_message(Speaking(ssrc=99U, user_id="200", flags=1))
+  |> ignore
+  let header = build_rtp_header(sequence=2, timestamp=1920U, ssrc=99U)
+  let encrypted = cipher.seal(header~, b"encrypted\xFA\xFA")
   assert_eq(
-    pipeline.process_udp_packet(b"keepalive", cipher, None, arrival_ms=1L),
+    pipeline.process_udp_packet(
+      encrypted,
+      cipher,
+      Some(machine),
+      arrival_ms=1L,
+      wants=user_id => user_id != "200",
+    ),
+    [],
+  )
+  assert_eq(provider.decrypted_users, [])
+  assert_eq(telemetry, [])
+  assert_eq(
+    pipeline.process_udp_packet(b"keepalive", cipher, None, arrival_ms=2L, wants=_ => {
+      true
+    }),
     [],
   )
 }
@@ -237,16 +244,14 @@ test "receive pipeline delegates an old encrypted frame after downgrade" {
   let header = build_rtp_header(sequence=1, timestamp=960U, ssrc=77U)
   let datagram = cipher.seal(header~, b"old-encrypted\xFA\xFA")
   assert_eq(
-    pipeline.process_udp_packet(datagram, cipher, Some(machine), arrival_ms=0L),
-    [
-      OpusReceived(
-        user_id=Some("200"),
-        ssrc=77U,
-        sequence=1,
-        timestamp=960U,
-        opus=b"decrypted-opus",
-      ),
-    ],
+    pipeline.process_udp_packet(
+      datagram,
+      cipher,
+      Some(machine),
+      arrival_ms=0L,
+      wants=_ => true,
+    ),
+    [("200", Opus(sequence=1, timestamp=960U, opus=b"decrypted-opus"))],
   )
   assert_eq(provider.decrypted_users, [200UL])
   assert_eq(provider.decrypted_frames, [b"old-encrypted\xFA\xFA"])
@@ -272,7 +277,13 @@ test "receive pipeline delegates plaintext-looking media during active DAVE" {
   let header = build_rtp_header(sequence=1, timestamp=960U, ssrc=77U)
   let datagram = cipher.seal(header~, b"plaintext-opus")
   assert_eq(
-    pipeline.process_udp_packet(datagram, cipher, Some(machine), arrival_ms=0L),
+    pipeline.process_udp_packet(
+      datagram,
+      cipher,
+      Some(machine),
+      arrival_ms=0L,
+      wants=_ => true,
+    ),
     [],
   )
   assert_eq(provider.decrypted_users, [200UL])
@@ -304,16 +315,9 @@ test "receive pipeline permits plaintext only while DAVE is disabled" {
       cipher,
       Some(machine),
       arrival_ms=0L,
+      wants=_ => true,
     ),
-    [
-      OpusReceived(
-        user_id=Some("200"),
-        ssrc=77U,
-        sequence=1,
-        timestamp=960U,
-        opus=b"plaintext-opus",
-      ),
-    ],
+    [("200", Opus(sequence=1, timestamp=960U, opus=b"plaintext-opus"))],
   )
 
   provider.active_version = 1
@@ -325,6 +329,7 @@ test "receive pipeline permits plaintext only while DAVE is disabled" {
       cipher,
       Some(machine),
       arrival_ms=1L,
+      wants=_ => true,
     ),
     [],
   )
@@ -341,6 +346,7 @@ test "receive pipeline permits plaintext only while DAVE is disabled" {
       cipher,
       Some(machine),
       arrival_ms=2L,
+      wants=_ => true,
     ),
     [],
   )

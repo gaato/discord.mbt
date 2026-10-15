@@ -675,7 +675,7 @@ fn[X] dave_test_connection(
   group : @async.TaskGroup[X],
   transport : DaveConnectionTransport,
   telemetry : Array[VoiceTelemetry],
-) -> VoiceConnection {
+) -> VoiceConnection raise {
   let parked : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   VoiceConnection::start(
     group,
@@ -818,16 +818,17 @@ async test "voice connection removes a subscription whose queue has failed" {
     let connection = dave_test_connection(group, transport, [])
     let subscription = connection.subscribe(user_id="200")
     subscription.queue.close(error=VoiceError::Disconnected)
-    let event = VoiceEvent::OpusReceived(
-      user_id=Some("200"),
-      ssrc=42U,
-      sequence=1,
-      timestamp=960U,
-      opus=b"opus",
+    let healthy = connection.subscribe(user_id="200")
+    connection.deliver_audio(
+      "200",
+      Opus(sequence=1, timestamp=960U, opus=b"opus"),
     )
-    connection.emit(event)
-    assert_eq(connection.next_event(), event)
-    assert_eq(connection.subscriptions.length(), 0)
+    assert_eq(connection.subscriptions.length(), 1)
+    assert_true(physical_equal(connection.subscriptions[0], healthy))
+    assert_eq(
+      healthy.next_packet(),
+      Some(Opus(sequence=1, timestamp=960U, opus=b"opus")),
+    )
     connection.disconnect()
   })
 }

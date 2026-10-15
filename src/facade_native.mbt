@@ -11,5 +11,6 @@ pub using @voice {
   type OggOpusWriter,
   type OggOpusError,
   type VoiceReceiveStream,
+  type ReceivedAudio,
   SILENCE_FRAME,
 }

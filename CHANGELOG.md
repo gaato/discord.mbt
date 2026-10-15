@@ -7,8 +7,41 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+### Added
+
+- `VoiceReceiveStream::next_packet` yields `ReceivedAudio` values in RTP
+  sequence order: `Opus(sequence~, timestamp~, opus~)` for a frame and
+  `Lost(count~)` for frames that never arrived or that the stream dropped.
+  `ReceivedAudio` is re-exported from the facade.
+- `VoiceConnection::subscribe` takes `backlog~` (default
+  `DEFAULT_RECEIVE_BACKLOG` = 250 frames, five seconds) and
+  `VoiceConnection::start` takes `event_backlog~` (default
+  `DEFAULT_VOICE_EVENT_BACKLOG` = 256). Values below 1 raise the new
+  `VoiceError::InvalidBacklog`.
+- `VoiceTelemetry::ReceiveDropped(user_id~, backlog~)` and
+  `VoiceTelemetry::EventDropped(backlog~)` report each item a full backlog
+  discards.
+
 ### Changed
 
+- **Received voice audio is delivered only through `subscribe`, and every
+  voice queue is bounded.** Before, each received packet was queued for
+  `next_event` with no limit, also when the caller only subscribed or never
+  read events at all (`GatewayCtx::join_voice` receives by default), so a
+  connection with someone speaking grew without bound. Now `next_event`
+  carries membership, speaking, and lifecycle events only, and drops its
+  oldest event past `event_backlog`. Packets from users without a live
+  subscription are discarded before decryption, so receiving costs nothing
+  until something subscribes. A subscription drops new frames past its
+  backlog and reports them in the stream as one `Lost`, so the reader always
+  sees where audio is missing.
+  - Migration: remove `OpusReceived` and `PacketsLost` arms from
+    `next_event` loops. Subscribe to the user instead, typically on
+    `SpeakingChanged`, and read `next_packet()`: `Opus(sequence~,
+    timestamp~, opus~)` replaces `OpusReceived`, and `Lost(count~)` replaces
+    `PacketsLost`. Packets from an SSRC Discord never mapped to a user are no
+    longer surfaced. `subscribe` and `VoiceConnection::start` now raise
+    `VoiceError`.
 - `TransportCipher::seal` raises the new `VoiceCryptoError::NonceExhausted`
   after 2^32 packets instead of wrapping its nonce counter and reusing a
   nonce under the same key. A new voice session issues a new key.

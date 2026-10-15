@@ -10,6 +10,10 @@ import {
 }
 
 // Values
+pub const DEFAULT_RECEIVE_BACKLOG : Int = 250
+
+pub const DEFAULT_VOICE_EVENT_BACKLOG : Int = 256
+
 pub const SILENCE_FRAME : Bytes = b"\xF8\xFF\xFE"
 
 pub fn build_ip_discovery_request(UInt) -> Bytes
@@ -95,6 +99,7 @@ pub(all) suberror VoiceError {
   GatewayClosed(code~ : Int?)
   IpDiscoveryFailed(reason~ : String)
   Disconnected
+  InvalidBacklog(value~ : Int)
 } derive(@debug.Debug)
 
 pub(all) suberror VoiceTransportClosed {
@@ -158,6 +163,11 @@ pub fn OggPacketReader::new() -> Self
 pub fn OggPacketReader::next_packet(Self) -> Bytes? raise OggOpusError
 pub fn OggPacketReader::push(Self, Bytes) -> Unit
 
+pub(all) enum ReceivedAudio {
+  Opus(sequence~ : Int, timestamp~ : UInt, opus~ : Bytes)
+  Lost(count~ : Int)
+} derive(Eq, @debug.Debug)
+
 pub struct ReorderBuffer[T] {
   // private fields
 }
@@ -193,10 +203,10 @@ pub fn VoiceConnection::latency_ms(Self) -> Int64?
 pub async fn VoiceConnection::next_event(Self) -> VoiceEvent
 pub async fn VoiceConnection::play(Self, &AudioSource) -> Unit
 pub async fn VoiceConnection::set_speaking(Self, Int) -> Unit
-pub fn[X] VoiceConnection::start(@async.TaskGroup[X], VoiceCredentials, user_id~ : String, channel_id~ : UInt64, leave~ : async () -> Unit, rejoin~ : async () -> VoiceCredentials, connector? : async (String) -> &VoiceTransport, udp_opener? : async (String, Int) -> &VoiceUdp, receive? : Bool, telemetry? : (VoiceTelemetry) -> Unit, sleeper? : async (Int) -> Unit, rand? : @random.Rand) -> Self
+pub fn[X] VoiceConnection::start(@async.TaskGroup[X], VoiceCredentials, user_id~ : String, channel_id~ : UInt64, leave~ : async () -> Unit, rejoin~ : async () -> VoiceCredentials, connector? : async (String) -> &VoiceTransport, udp_opener? : async (String, Int) -> &VoiceUdp, receive? : Bool, event_backlog? : Int, telemetry? : (VoiceTelemetry) -> Unit, sleeper? : async (Int) -> Unit, rand? : @random.Rand) -> Self raise VoiceError
 pub fn VoiceConnection::state(Self) -> VoiceConnectionState
 pub async fn VoiceConnection::stop(Self) -> Unit
-pub fn VoiceConnection::subscribe(Self, user_id~ : String, end_after_silence_ms? : Int?) -> VoiceReceiveStream
+pub fn VoiceConnection::subscribe(Self, user_id~ : String, end_after_silence_ms? : Int?, backlog? : Int) -> VoiceReceiveStream raise VoiceError
 pub async fn VoiceConnection::wait_ready(Self, timeout_ms? : Int) -> Unit raise VoiceError
 
 pub(all) enum VoiceConnectionState {
@@ -215,8 +225,6 @@ pub(all) struct VoiceCredentials {
 } derive(Eq, @debug.Debug)
 
 pub(all) enum VoiceEvent {
-  OpusReceived(user_id~ : String?, ssrc~ : UInt, sequence~ : Int, timestamp~ : UInt, opus~ : Bytes)
-  PacketsLost(user_id~ : String?, ssrc~ : UInt, count~ : Int)
   SpeakingChanged(user_id~ : String, ssrc~ : UInt, flags~ : Int)
   UserConnected(user_id~ : String)
   UserDisconnected(user_id~ : String)
@@ -285,6 +293,7 @@ pub struct VoiceReceiveStream {
 }
 pub fn VoiceReceiveStream::close(Self) -> Unit
 pub async fn VoiceReceiveStream::next_frame(Self) -> Bytes?
+pub async fn VoiceReceiveStream::next_packet(Self) -> ReceivedAudio?
 pub impl AudioSource for VoiceReceiveStream
 
 pub(all) enum VoiceReconnectPolicy {
@@ -300,6 +309,8 @@ pub(all) enum VoiceTelemetry {
   PacketDropped(reason~ : String)
   DaveEncryptDropped(reason~ : String)
   DaveDecryptDropped(user_id~ : String?, ssrc~ : UInt, count~ : Int, reason~ : String)
+  EventDropped(backlog~ : Int)
+  ReceiveDropped(user_id~ : String, backlog~ : Int)
 } derive(Eq, @debug.Debug)
 
 // Type aliases

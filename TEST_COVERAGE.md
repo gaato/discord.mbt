@@ -94,12 +94,12 @@ ledgered):
 
 | File | Budget | Reason |
 | --- | --- | --- |
-| src/voice/connection.mbt | 17 | Impossible alternate negotiation errors, shim-loader failure while the shim is required, opener/discovery cancellation catches, event-pump and receiver queue teardown, an unemitted `ConnectFailed` case, and unreachable session-state/typed-error fallbacks. Negotiation, discovery, session, DAVE-control, source-replacement, receiver, and lifecycle-recovery failures are tested through the UDP/voice/DAVE seams. |
+| src/voice/connection.mbt | 16 | Impossible alternate negotiation errors, shim-loader failure while the shim is required, opener/discovery cancellation catches, event-pump and receiver queue teardown, an unemitted `ConnectFailed` case, and unreachable session-state/typed-error fallbacks. Negotiation, discovery, session, DAVE-control, source-replacement, receiver, and lifecycle-recovery failures are tested through the UDP/voice/DAVE seams. |
 | src/voice/gateway.mbt | 13 | Protected-shutdown and event-queue teardown catches, stale-transport and non-returning-loop fallbacks, and read-loop cancellation propagation. Disconnected sends, malformed Hello/frames, the Hello sequence, send failures, and protected connector cleanup are tested; backoff and heartbeat cadence use the injected sleeper. |
 | src/voice/dave.mbt | 52 | DAVE/MLS transitions that need a second member and real libdave group state. |
 | src/voice/audio.mbt | 6 | Real-time pacing loop (deadline sleeps) and DAVE encrypt-drop telemetry arms. |
-| src/voice/subscribe.mbt | 4 | Silence-timeout stream end arms. |
-| src/voice/receive.mbt | 7 | Decrypt arms needing real DAVE frames from a second member. |
+| src/voice/subscribe.mbt | 3 | Silence-timeout stream end arms. |
+| src/voice/receive.mbt | 6 | Decrypt arms needing real DAVE frames from a second member. |
 | src/voice/reorder.mbt | 3 | Arrival-time flush arms. |
 | src/voice/rtp.mbt | 3 | Header arms only produced by real senders (CSRC counts). |
 | src/voice/ogg_opus.mbt | 4 | Constructor `abort`s (unreachable by construction) and one reader break arm. |

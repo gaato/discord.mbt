@@ -10,6 +10,8 @@ pub(all) suberror VoiceError {
   GatewayClosed(code~ : Int32?)
   IpDiscoveryFailed(reason~ : String)
   Disconnected
+  /// A receive or event backlog below 1 was requested.
+  InvalidBacklog(value~ : Int32)
 } derive(Debug)
 
 ///|
@@ -38,10 +40,16 @@ priv struct PlaybackRequest {
 }
 
 ///|
+/// Default number of unread `VoiceEvent`s a connection keeps for
+/// `next_event`.
+pub const DEFAULT_VOICE_EVENT_BACKLOG : Int32 = 256
+
+///|
 /// High-level owner of voice gateway, UDP media, DAVE, sender, and receiver
 /// tasks. All background work is attached to the task group passed to `start`.
 pub struct VoiceConnection {
   priv events : @aqueue.Queue[VoiceEvent]
+  priv event_backlog : Int32
   priv playback : @aqueue.Queue[PlaybackRequest]
   priv subscriptions : Array[VoiceReceiveStream]
   priv user_id : String
@@ -216,24 +224,39 @@ fn[X] VoiceConnection::new_gateway(
 }
 
 ///|
+/// Queue an event for `next_event`. The queue discards its oldest entry when
+/// full, so a connection whose events nobody reads stays bounded.
 async fn VoiceConnection::emit(
   self : VoiceConnection,
   event : VoiceEvent,
 ) -> Unit {
-  if event is OpusReceived(user_id=Some(user_id), opus~, ..) {
-    let matched : Array[VoiceReceiveStream] = []
-    for subscription in self.subscriptions {
-      if !subscription.closed && subscription.user_id == user_id {
-        matched.push(subscription)
-      }
-    }
-    for subscription in matched {
-      (subscription.queue.try_put(opus) |> ignore) catch {
+  if !self.events.try_put(event) {
+    (self.telemetry_)(EventDropped(backlog=self.event_backlog))
+    self.events.put(event)
+  }
+}
+
+///|
+fn VoiceConnection::is_subscribed(
+  self : VoiceConnection,
+  user_id : String,
+) -> Bool {
+  self.subscriptions.iter().any(stream => stream.user_id == user_id)
+}
+
+///|
+fn VoiceConnection::deliver_audio(
+  self : VoiceConnection,
+  user_id : String,
+  audio : ReceivedAudio,
+) -> Unit {
+  for subscription in self.subscriptions.copy() {
+    if subscription.user_id == user_id {
+      subscription.deliver(audio) catch {
         _ => self.remove_subscription(subscription)
       }
     }
   }
-  self.events.put(event)
 }
 
 ///|
@@ -473,16 +496,16 @@ async fn VoiceConnection::run_receiver(self : VoiceConnection) -> Unit noraise {
       continue
     }
     let datagram = Bytes::from_array(buffer[:received])
-    for
-      event in self.receiver.process_udp_packet(
-        datagram,
-        cipher,
-        self.dave,
-        arrival_ms=@clock.now_ms(),
-      ) {
-      self.emit(event) catch {
-        _ => return
-      }
+    let delivered = self.receiver.process_udp_packet(
+      datagram,
+      cipher,
+      self.dave,
+      arrival_ms=@clock.now_ms(),
+      wants=user_id => self.is_subscribed(user_id),
+    )
+    for item in delivered {
+      let (user_id, audio) = item
+      self.deliver_audio(user_id, audio)
     }
   }
 }
@@ -565,14 +588,20 @@ pub fn[X] VoiceConnection::start(
   connector~ : async (String) -> &VoiceTransport = connect_voice_websocket,
   udp_opener~ : async (String, Int32) -> &VoiceUdp = open_voice_udp,
   receive~ : Bool = true,
+  event_backlog~ : Int32 = DEFAULT_VOICE_EVENT_BACKLOG,
   telemetry~ : (VoiceTelemetry) -> Unit = _ => (),
   sleeper~ : async (Int32) -> Unit = ms => @async.sleep(ms),
   rand~ : @random.Rand = @random.Rand(),
-) -> VoiceConnection {
+) -> VoiceConnection raise VoiceError {
+  if event_backlog < 1 {
+    raise InvalidBacklog(value=event_backlog)
+  }
   let receiver = ReceivePipeline::new(telemetry)
   let connection = VoiceConnection::{
-    events: Queue(kind=Unbounded),
-    playback: Queue(kind=Unbounded),
+    events: Queue(kind=DiscardOldest(event_backlog)),
+    event_backlog,
+    // Only the newest request matters: `play` supersedes earlier sources.
+    playback: Queue(kind=DiscardOldest(1)),
     subscriptions: [],
     user_id,
     channel_id,
@@ -686,7 +715,9 @@ pub async fn VoiceConnection::set_speaking(
 }
 
 ///|
-/// Pull the next received media or voice membership event.
+/// Pull the next membership or lifecycle event. At most `event_backlog`
+/// unread events are kept; older ones are discarded first. Received audio is
+/// read through `subscribe`.
 pub async fn VoiceConnection::next_event(self : VoiceConnection) -> VoiceEvent {
   self.events.get()
 }

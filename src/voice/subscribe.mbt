@@ -1,14 +1,48 @@
 ///|
-/// A per-user stream of received Opus packets. Streams are created with
-/// `VoiceConnection::subscribe` and can be passed directly to `play` or read
-/// through the `AudioSource` trait.
+/// Default number of unread items a receive stream holds: five seconds of
+/// 20 ms Opus frames.
+pub const DEFAULT_RECEIVE_BACKLOG : Int32 = 250
+
+///|
+/// A per-user stream of received audio. Streams are created with
+/// `VoiceConnection::subscribe`; read them with `next_packet`, or as an
+/// `AudioSource` (for `play` or recording) when only the Opus frames matter.
 pub struct VoiceReceiveStream {
   priv connection : VoiceConnection
   priv user_id : String
-  priv queue : @aqueue.Queue[Bytes]
+  priv backlog : Int32
+  priv queue : @aqueue.Queue[ReceivedAudio]
   priv end_after_silence_ms : Int32?
+  priv mut dropped : Int32
   priv mut started : Bool
   priv mut closed : Bool
+}
+
+///|
+/// Queue one item without ever blocking the receive loop. When the backlog is
+/// full the frame is discarded and counted; the count reaches the reader as a
+/// single `Lost` ahead of the next item that fits, so stream order always
+/// accounts for every frame.
+fn VoiceReceiveStream::deliver(
+  self : VoiceReceiveStream,
+  audio : ReceivedAudio,
+) -> Unit raise {
+  let (missing, frame) = match audio {
+    Lost(count~) => (self.dropped + count, None)
+    Opus(..) => (self.dropped, Some(audio))
+  }
+  if missing > 0 && !self.queue.try_put(Lost(count=missing)) {
+    self.dropped = missing
+  } else {
+    self.dropped = 0
+  }
+  guard frame is Some(frame) else { return }
+  if self.dropped > 0 || !self.queue.try_put(frame) {
+    self.dropped += 1
+    (self.connection.telemetry_)(
+      ReceiveDropped(user_id=self.user_id, backlog=self.backlog),
+    )
+  }
 }
 
 ///|
@@ -41,9 +75,14 @@ fn VoiceConnection::close_subscriptions(self : VoiceConnection) -> Unit {
 }
 
 ///|
-/// Subscribe to received Opus packets for one Discord user. With
-/// `end_after_silence_ms`, the first frame waits indefinitely and subsequent
-/// reads end the stream after the requested silence interval.
+/// Subscribe to received audio from one Discord user. Only subscribed users'
+/// packets are decrypted; everything else is discarded on arrival.
+///
+/// With `end_after_silence_ms`, the first read waits indefinitely and later
+/// reads end the stream after the requested silence interval. At most
+/// `backlog` items wait unread; newer frames are dropped past that and
+/// reported as `ReceivedAudio::Lost` (and `VoiceTelemetry::ReceiveDropped`).
+/// Raises `InvalidBacklog` when `backlog` is below 1.
 ///
 /// # Example
 /// ```mbt nocheck
@@ -67,18 +106,27 @@ pub fn VoiceConnection::subscribe(
   self : VoiceConnection,
   user_id~ : String,
   end_after_silence_ms~ : Int32? = None,
-) -> VoiceReceiveStream {
+  backlog~ : Int32 = DEFAULT_RECEIVE_BACKLOG,
+) -> VoiceReceiveStream raise VoiceError {
+  if backlog < 1 {
+    raise InvalidBacklog(value=backlog)
+  }
   let stream = VoiceReceiveStream::{
     connection: self,
     user_id,
-    queue: Queue(kind=Unbounded),
+    backlog,
+    queue: Queue(kind=Blocking(backlog)),
     end_after_silence_ms,
+    dropped: 0,
     started: false,
     closed: false,
   }
   if self.closing || self.state_ is Closed(_) {
     stream.close_queue()
   } else {
+    if !self.is_subscribed(user_id) {
+      self.receiver.reset_reorder(user_id)
+    }
     self.subscriptions.push(stream)
   }
   stream
@@ -86,7 +134,7 @@ pub fn VoiceConnection::subscribe(
 
 ///|
 /// End this stream and unregister it from its connection. Repeated calls are
-/// harmless, and a blocked `next_frame` wakes with `None`.
+/// harmless, and a blocked read wakes with `None`.
 pub fn VoiceReceiveStream::close(self : VoiceReceiveStream) -> Unit {
   guard !self.closed else { return }
   self.connection.remove_subscription(self)
@@ -94,14 +142,14 @@ pub fn VoiceReceiveStream::close(self : VoiceReceiveStream) -> Unit {
 }
 
 ///|
-pub extend VoiceReceiveStream with AudioSource::{next_frame}
-
-///|
-/// Yield the next Opus packet received from the subscribed user; `None`
-/// after `close` or once the configured trailing silence elapses.
-pub impl AudioSource for VoiceReceiveStream with fn next_frame(self) {
+/// Yield the subscribed user's next frame or loss marker; `None` after
+/// `close`, once the connection ends, or once the configured trailing silence
+/// elapses.
+pub async fn VoiceReceiveStream::next_packet(
+  self : VoiceReceiveStream,
+) -> ReceivedAudio? {
   guard !self.closed else { return None }
-  let next : Bytes? = match (self.started, self.end_after_silence_ms) {
+  let next = match (self.started, self.end_after_silence_ms) {
     (true, Some(timeout_ms)) =>
       @async.with_timeout_opt(timeout_ms, () => self.queue.get()) catch {
         @aqueue.QueueAlreadyClosed => None
@@ -114,13 +162,29 @@ pub impl AudioSource for VoiceReceiveStream with fn next_frame(self) {
       }
   }
   match next {
-    Some(frame) => {
+    Some(audio) => {
       self.started = true
-      Some(frame)
+      Some(audio)
     }
     None => {
       self.close()
       None
+    }
+  }
+}
+
+///|
+pub extend VoiceReceiveStream with AudioSource::{next_frame}
+
+///|
+/// Yield the next Opus frame received from the subscribed user, skipping
+/// loss markers; `None` when `next_packet` would end.
+pub impl AudioSource for VoiceReceiveStream with fn next_frame(self) {
+  for ;; {
+    match self.next_packet() {
+      Some(Opus(opus~, ..)) => return Some(opus)
+      Some(Lost(..)) => continue
+      None => return None
     }
   }
 }

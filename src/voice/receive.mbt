@@ -1,19 +1,23 @@
 ///|
-/// Events emitted by a live voice connection.
+/// Membership and lifecycle events of a live voice connection. Received audio
+/// is not an event: it is delivered per user through
+/// `VoiceConnection::subscribe`.
 pub(all) enum VoiceEvent {
-  OpusReceived(
-    user_id~ : String?,
-    ssrc~ : UInt32,
-    sequence~ : Int32,
-    timestamp~ : UInt32,
-    opus~ : Bytes
-  )
-  PacketsLost(user_id~ : String?, ssrc~ : UInt32, count~ : Int32)
   SpeakingChanged(user_id~ : String, ssrc~ : UInt32, flags~ : Int32)
   UserConnected(user_id~ : String)
   UserDisconnected(user_id~ : String)
   ConnectionReady
   ConnectionResumed
+} derive(Debug, Eq)
+
+///|
+/// One item of a user's received audio, in RTP sequence order.
+pub(all) enum ReceivedAudio {
+  /// An Opus frame as the sender encoded it.
+  Opus(sequence~ : Int32, timestamp~ : UInt32, opus~ : Bytes)
+  /// `count` frames that never arrived, or that were dropped because the
+  /// stream's backlog was full, before the next item.
+  Lost(count~ : Int32)
 } derive(Debug, Eq)
 
 ///|
@@ -35,12 +39,16 @@ pub(all) enum VoiceTelemetry {
     count~ : Int32,
     reason~ : String
   )
+  /// `next_event` fell `backlog` events behind, so the oldest unread event
+  /// was discarded.
+  EventDropped(backlog~ : Int32)
+  /// A receive stream for `user_id` held `backlog` unread items, so a newly
+  /// received frame was discarded. The reader sees it as `Lost`.
+  ReceiveDropped(user_id~ : String, backlog~ : Int32)
 } derive(Debug, Eq)
 
 ///|
 priv struct ReceivedOpus {
-  user_id : String?
-  ssrc : UInt32
   sequence : Int32
   timestamp : UInt32
   opus : Bytes
@@ -71,6 +79,24 @@ fn ReceivePipeline::reset_session(self : ReceivePipeline) -> Unit {
   self.users_by_ssrc.clear()
   self.reorder_by_ssrc.clear()
   self.dave_drop_count = 0
+}
+
+///|
+/// Forget the reorder windows of `user_id`'s SSRCs, so a new subscription
+/// never receives packets buffered for an earlier one.
+fn ReceivePipeline::reset_reorder(
+  self : ReceivePipeline,
+  user_id : String,
+) -> Unit {
+  let ssrcs : Array[UInt32] = []
+  for ssrc, mapped_user_id in self.users_by_ssrc {
+    if mapped_user_id == user_id {
+      ssrcs.push(ssrc)
+    }
+  }
+  for ssrc in ssrcs {
+    self.reorder_by_ssrc.remove(ssrc)
+  }
 }
 
 ///|
@@ -132,42 +158,57 @@ fn has_dave_magic(frame : Bytes) -> Bool {
 }
 
 ///|
-fn ReceivePipeline::drop_packet(
+fn[T] ReceivePipeline::drop_packet(
   self : ReceivePipeline,
   reason : String,
-) -> Array[VoiceEvent] {
+) -> Array[T] {
   (self.telemetry)(PacketDropped(reason~))
   []
 }
 
 ///|
-fn ReceivePipeline::drop_dave_packet(
+fn[T] ReceivePipeline::drop_dave_packet(
   self : ReceivePipeline,
-  user_id : String?,
+  user_id : String,
   ssrc : UInt32,
   reason : String,
-) -> Array[VoiceEvent] {
+) -> Array[T] {
   self.dave_drop_count += 1
   (self.telemetry)(
-    DaveDecryptDropped(user_id~, ssrc~, count=self.dave_drop_count, reason~),
+    DaveDecryptDropped(
+      user_id=Some(user_id),
+      ssrc~,
+      count=self.dave_drop_count,
+      reason~,
+    ),
   )
   []
 }
 
 ///|
+/// Decrypt one media datagram for a subscribed sender and restore RTP order.
+/// Packets from SSRCs that are unmapped or that `wants` declines are dropped
+/// before decryption, and their reorder state is discarded so a later
+/// subscription starts from a clean window.
 fn ReceivePipeline::process_udp_packet(
   self : ReceivePipeline,
   datagram : Bytes,
   cipher : TransportCipher,
   dave : DaveMachine?,
   arrival_ms~ : Int64,
-) -> Array[VoiceEvent] {
+  wants~ : (String) -> Bool,
+) -> Array[(String, ReceivedAudio)] {
   if datagram.length() == 0 ||
     (datagram[0] != b'\x80' && datagram[0] != b'\x90') {
     return []
   }
   let encrypted_rtp = parse_rtp_packet(datagram) catch {
     error => return self.drop_packet("invalid RTP packet: \{Repr(error)}")
+  }
+  guard self.users_by_ssrc.get(encrypted_rtp.ssrc) is Some(user_id) &&
+    wants(user_id) else {
+    self.reorder_by_ssrc.remove(encrypted_rtp.ssrc)
+    return []
   }
   let decrypted = cipher.open(datagram, header_len=encrypted_rtp.header_len) catch {
     error => return self.drop_packet("RTP decryption failed: \{Repr(error)}")
@@ -179,43 +220,25 @@ fn ReceivePipeline::process_udp_packet(
   guard rtp_payload_without_extension(rtp, decrypted) is Some(payload) else {
     return self.drop_packet("RTP extension data is truncated")
   }
-  let user_id = self.users_by_ssrc.get(rtp.ssrc)
   let dave_magic = has_dave_magic(payload)
   let opus = match dave {
     Some(machine) => {
-      let has_decryptor = match user_id {
-        Some(sender) =>
-          machine.has_remote_decryptor(user_id=sender) catch {
-            error =>
-              return self.drop_dave_packet(user_id, rtp.ssrc, "\{Repr(error)}")
-          }
-        None => false
+      let has_decryptor = machine.has_remote_decryptor(user_id~) catch {
+        error =>
+          return self.drop_dave_packet(user_id, rtp.ssrc, "\{Repr(error)}")
       }
       if has_decryptor {
-        match user_id {
-          Some(sender) =>
-            machine.decrypt_opus_frame(user_id=sender, payload) catch {
-              error =>
-                return self.drop_dave_packet(
-                  user_id,
-                  rtp.ssrc,
-                  "\{Repr(error)}",
-                )
-            }
-          None =>
-            return self.drop_dave_packet(
-              user_id,
-              rtp.ssrc,
-              "DAVE frame has no mapped sender",
-            )
+        machine.decrypt_opus_frame(user_id~, payload) catch {
+          error =>
+            return self.drop_dave_packet(user_id, rtp.ssrc, "\{Repr(error)}")
         }
       } else if machine.active_protocol_version() == 0 && !dave_magic {
         payload
       } else {
-        let reason = match user_id {
-          None => "DAVE frame has no mapped sender"
-          Some(_) if dave_magic => "DAVE frame has no decryptor"
-          Some(_) => "DAVE media is active but sender has no decryptor"
+        let reason = if dave_magic {
+          "DAVE frame has no decryptor"
+        } else {
+          "DAVE media is active but sender has no decryptor"
         }
         return self.drop_dave_packet(user_id, rtp.ssrc, reason)
       }
@@ -225,15 +248,13 @@ fn ReceivePipeline::process_udp_packet(
         return self.drop_dave_packet(
           user_id,
           rtp.ssrc,
-          "DAVE frame has no mapped sender",
+          "DAVE frame without a DAVE session",
         )
       } else {
         payload
       }
   }
   let packet = ReceivedOpus::{
-    user_id,
-    ssrc: rtp.ssrc,
     sequence: rtp.sequence.to_int(),
     timestamp: rtp.timestamp,
     opus,
@@ -241,21 +262,18 @@ fn ReceivePipeline::process_udp_packet(
   let reorder = self.reorder_by_ssrc.get_or_init(rtp.ssrc, () => {
     ReorderBuffer::new()
   })
-  let events : Array[VoiceEvent] = []
-  for output in reorder.push(seq=packet.sequence, arrival_ms~, packet) {
-    match output {
+  reorder
+  .push(seq=packet.sequence, arrival_ms~, packet)
+  .map(output => {
+    let audio : ReceivedAudio = match output {
       Deliver(delivered) =>
-        events.push(
-          OpusReceived(
-            user_id=delivered.user_id,
-            ssrc=delivered.ssrc,
-            sequence=delivered.sequence,
-            timestamp=delivered.timestamp,
-            opus=delivered.opus,
-          ),
+        Opus(
+          sequence=delivered.sequence,
+          timestamp=delivered.timestamp,
+          opus=delivered.opus,
         )
-      Lost(count~) => events.push(PacketsLost(user_id~, ssrc=rtp.ssrc, count~))
+      Lost(count~) => Lost(count~)
     }
-  }
-  events
+    (user_id, audio)
+  })
 }

@@ -38,6 +38,7 @@ test "receive pipeline drops undecodable datagrams with telemetry" {
       cipher,
       None,
       arrival_ms=0L,
+      wants=_ => true,
     ),
     [],
   )
@@ -46,11 +47,16 @@ test "receive pipeline drops undecodable datagrams with telemetry" {
   }
   assert_true(first_reason.contains("RTP"))
 
-  // A valid RTP header whose payload fails authentication.
+  // A subscribed sender's valid RTP header whose payload fails
+  // authentication.
+  pipeline.handle_gateway_message(Speaking(ssrc=9U, user_id="200", flags=1))
+  |> ignore
   let header = build_rtp_header(sequence=1, timestamp=960U, ssrc=9U)
   let tampered = header + Bytes::new(24)
   assert_eq(
-    pipeline.process_udp_packet(tampered, cipher, None, arrival_ms=1L),
+    pipeline.process_udp_packet(tampered, cipher, None, arrival_ms=1L, wants=_ => {
+      true
+    }),
     [],
   )
   assert_eq(telemetry.length(), 2)

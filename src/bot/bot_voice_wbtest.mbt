@@ -64,7 +64,7 @@ fn[X] pending_bot_voice_connection(
   group : @async.TaskGroup[X],
   transport : PendingBotVoiceTransport,
   leave_calls : Ref[Int32],
-) -> @voice.VoiceConnection {
+) -> @voice.VoiceConnection raise {
   @voice.VoiceConnection::start(
     group,
     bot_voice_test_credentials(),

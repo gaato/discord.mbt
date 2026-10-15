@@ -44,8 +44,8 @@ and the official https://github.com/discord/libdave implementation.
    Welcome results then apply roster deltas; an empty delta preserves the
    existing membership.
 6. The sender encrypts each Opus frame with DAVE, then wraps it with transport
-   AEAD. The receiver reverses both layers and reorders RTP packets before it
-   emits `VoiceEvent` values.
+   AEAD. The receiver reverses both layers for subscribed senders only and
+   reorders their RTP packets before delivering them to per-user streams.
 
 Voice WebSocket reconnects use resume where Discord permits it. A close code
 that requires a fresh main-Gateway handshake invokes the `rejoin` closure
@@ -67,7 +67,7 @@ The native-only `src/voice/` package owns the public connection and audio API.
 | transport crypto | AES-256-GCM and XChaCha20-Poly1305 through the Rust shim |
 | DAVE | `gaato/dave` safe MoonBit API backed by Discord's official `libdave` |
 | audio | 20 ms Opus `AudioSource`, Ogg/Opus demuxing, paced sending |
-| receive | transport/DAVE decryption, SSRC mapping, reorder buffer, `VoiceEvent` |
+| receive | SSRC mapping, transport/DAVE decryption, reorder buffer, bounded per-user streams |
 
 `VoiceConnection::start` attaches the gateway driver, event pump, sender,
 receiver, and UDP keepalive tasks to the bot run loop's `TaskGroup`.
@@ -133,5 +133,9 @@ and DAVE runtimes are diagnosed independently.
 - **M4:** receive/reorder pipeline, `VoiceConnection`, bot integration,
   facade, example, and user documentation.
 
-The v1 receive API emits raw Opus frames. Applications can add decoding above
-`VoiceEvent::OpusReceived` without changing the transport package.
+The receive API delivers raw Opus frames through `VoiceConnection::subscribe`.
+Audio is not a `VoiceEvent`: only subscribed users' packets are decrypted, and
+every queue a reader can fall behind on is bounded. A subscription drops new
+frames past its backlog and reports them in-stream as `ReceivedAudio::Lost`;
+unread events drop the oldest. Applications can add decoding above
+`ReceivedAudio::Opus` without changing the transport package.

@@ -15,11 +15,7 @@ type AudibleProbeSource
 
 type BufferedProbeSource
 
-type DropCorrelation
-
 type SilenceProbeSource
-
-type UnmappedDropSample
 
 // Type aliases
 

@@ -1,6 +1,5 @@
 import {
   "gaato/discord",
-  "gaato/discord/internal/clock",
   "gaato/discord/model",
   "moonbitlang/async",
   "moonbitlang/async/aqueue",

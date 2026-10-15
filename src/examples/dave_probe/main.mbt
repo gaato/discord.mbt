@@ -100,20 +100,6 @@ struct BufferedProbeSource {
 }
 
 ///|
-struct UnmappedDropSample {
-  ssrc : UInt32
-  at_ms : Int64
-}
-
-///|
-struct DropCorrelation {
-  matching : Int32
-  other : Int32
-  first_lead_ms : Int64
-  last_lead_ms : Int64
-}
-
-///|
 fn BufferedProbeSource::finish(self : BufferedProbeSource) -> Unit {
   if !self.finished {
     self.finished = true
@@ -164,97 +150,31 @@ fn record_probe_path() -> String? {
 }
 
 ///|
-fn is_transient_unmapped_sender(reason : String) -> Bool {
-  reason == "DAVE frame has no mapped sender"
-}
-
-///|
-fn correlate_unmapped_drops(
-  samples : Array[UnmappedDropSample],
-  peer_ssrc~ : UInt32,
-  speaking_at_ms~ : Int64,
-) -> DropCorrelation {
-  let mut matching = 0
-  let mut other = 0
-  let mut first_at_ms = speaking_at_ms
-  let mut last_at_ms = speaking_at_ms
-  for sample in samples {
-    if sample.ssrc == peer_ssrc {
-      if matching == 0 {
-        first_at_ms = sample.at_ms
-      }
-      last_at_ms = sample.at_ms
-      matching += 1
-    } else {
-      other += 1
-    }
-  }
-  {
-    matching,
-    other,
-    first_lead_ms: speaking_at_ms - first_at_ms,
-    last_lead_ms: speaking_at_ms - last_at_ms,
-  }
-}
-
-///|
-fn report_drop_correlation(
-  samples : Array[UnmappedDropSample],
-  peer_ssrc~ : UInt32,
-  speaking_at_ms~ : Int64,
-) -> Unit {
-  let correlation = correlate_unmapped_drops(
-    samples,
-    peer_ssrc~,
-    speaking_at_ms~,
-  )
-  println(
-    "[dave] pre-mapping correlation: \{correlation.matching} peer SSRC frame(s), \{correlation.other} other SSRC frame(s)",
-  )
-  if correlation.matching > 0 {
-    println(
-      "[dave] peer UDP led Speaking mapping by first/last: \{correlation.first_lead_ms}/\{correlation.last_lead_ms} ms",
-    )
-  }
-}
-
-///|
 async fn receive_peer_probe(
   connection : @discord.VoiceConnection,
   required_frames : Int32,
-  unmapped_drops : Array[UnmappedDropSample],
 ) -> Array[Bytes] {
   println("[dave] receive probe waiting for peer speaking (20 second timeout)")
   let frames : Array[Bytes] = []
-  let sender : Ref[String?] = Ref(None)
-  let warmup_frames = Ref(5)
   @async.with_timeout_opt(20_000, () => {
-    while frames.length() < required_frames {
+    let sender = for ;; {
       match connection.next_event() {
-        SpeakingChanged(user_id~, ssrc~, flags~) if flags != 0 &&
-          sender.val is None => {
-          sender.val = Some(user_id)
-          report_drop_correlation(
-            unmapped_drops,
-            peer_ssrc=ssrc,
-            speaking_at_ms=@clock.now_ms(),
-          )
-          println(
-            "[dave] peer speaking detected; capturing decrypted Opus (memory only)",
-          )
-        }
-        OpusReceived(user_id=Some(user_id), opus~, ..) =>
-          match sender.val {
-            Some(selected) if selected == user_id =>
-              if warmup_frames.val > 0 {
-                warmup_frames.val -= 1
-              } else {
-                frames.push(opus)
-              }
-            Some(_) => ()
-            None => ()
-          }
+        SpeakingChanged(user_id~, flags~, ..) if flags != 0 => break user_id
         _ => ()
+      }
+    }
+    println(
+      "[dave] peer speaking detected; capturing decrypted Opus (memory only)",
+    )
+    let stream = connection.subscribe(user_id=sender)
+    defer stream.close()
+    let mut warmup_frames = 5
+    while frames.length() < required_frames {
+      guard stream.next_frame() is Some(opus) else { break }
+      if warmup_frames > 0 {
+        warmup_frames -= 1
+      } else {
+        frames.push(opus)
       }
     }
   })
@@ -361,7 +281,6 @@ async fn run_probe(
   let peer_seen = Ref(false)
   let activations : @aqueue.Queue[Int32] = Queue(kind=Unbounded)
   let dave_failures : Array[String] = []
-  let unmapped_sender_drops : Array[UnmappedDropSample] = []
   let connection = ctx.join_voice(guild_id, channel_id, timeout_ms=20_000, telemetry=event => {
     match event {
       GatewayEvent(SessionEstablished(dave_protocol_version~, ..)) => {
@@ -417,12 +336,7 @@ async fn run_probe(
       PacketDropped(reason~) if reason.contains("DAVE") =>
         dave_failures.push(reason)
       DaveEncryptDropped(reason~) => dave_failures.push(reason)
-      DaveDecryptDropped(ssrc~, reason~, ..) =>
-        if is_transient_unmapped_sender(reason) {
-          unmapped_sender_drops.push({ ssrc, at_ms: @clock.now_ms(), })
-        } else {
-          dave_failures.push(reason)
-        }
+      DaveDecryptDropped(reason~, ..) => dave_failures.push(reason)
       _ => ()
     }
   })
@@ -455,9 +369,7 @@ async fn run_probe(
     0
   }
   let received = if required_receive_frames > 0 {
-    receive_peer_probe(
-      connection, required_receive_frames, unmapped_sender_drops,
-    )
+    receive_peer_probe(connection, required_receive_frames)
   } else {
     []
   }
@@ -487,11 +399,6 @@ async fn run_probe(
   }
   if echoed_frames > 0 {
     println("[dave] re-encrypted and echoed \{echoed_frames} peer Opus frames")
-  }
-  if !unmapped_sender_drops.is_empty() {
-    println(
-      "[dave] warning: dropped \{unmapped_sender_drops.length()} inbound frame(s) before sender mapping",
-    )
   }
   connection.disconnect()
 }

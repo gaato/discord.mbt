@@ -561,6 +561,8 @@ async test "voice receiver discards empty datagrams and stops after UDP close" {
   let udp = ConnectionTestUdp::new()
   @async.with_task_group(group => {
     let connection = ready_receive_connection(group, transport, udp)
+    map_connection_speaker(connection, transport, "200", 77U, 3)
+    let stream = connection.subscribe(user_id="200")
     udp.recv_started.get()
     udp.recv_started.get()
     udp.fail_recv.val = true
@@ -576,14 +578,8 @@ async test "voice receiver discards empty datagrams and stops after UDP close" {
     let header = @voice.build_rtp_header(sequence=1, timestamp=960U, ssrc=77U)
     udp.incoming.put(cipher.seal(header~, b"after-empty"))
     assert_eq(
-      connection.next_event(),
-      OpusReceived(
-        user_id=None,
-        ssrc=77U,
-        sequence=1,
-        timestamp=960U,
-        opus=b"after-empty",
-      ),
+      stream.next_packet(),
+      Some(Opus(sequence=1, timestamp=960U, opus=b"after-empty")),
     )
     udp.recv_started.get()
     connection.disconnect()
@@ -990,38 +986,23 @@ async test "voice connection becomes ready, plays, receives, and disconnects ide
       connection.next_event(),
       SpeakingChanged(user_id="200", ssrc=77U, flags=1),
     )
+    let stream = connection.subscribe(user_id="200")
     let sender = @voice.TransportCipher::new(
       AeadAes256GcmRtpsize,
       Bytes::new(32),
     )
-    let header = @voice.build_rtp_header(sequence=10, timestamp=960U, ssrc=77U)
-    udp.incoming.put(sender.seal(header~, b"received-opus"))
-    assert_eq(
-      connection.next_event(),
-      OpusReceived(
-        user_id=Some("200"),
-        ssrc=77U,
-        sequence=10,
-        timestamp=960U,
-        opus=b"received-opus",
-      ),
-    )
-
+    // an SSRC nobody announced is discarded rather than surfaced
     let unknown_header = @voice.build_rtp_header(
       sequence=1,
       timestamp=1920U,
       ssrc=99U,
     )
     udp.incoming.put(sender.seal(header=unknown_header, b"unknown"))
+    let header = @voice.build_rtp_header(sequence=10, timestamp=960U, ssrc=77U)
+    udp.incoming.put(sender.seal(header~, b"received-opus"))
     assert_eq(
-      connection.next_event(),
-      OpusReceived(
-        user_id=None,
-        ssrc=99U,
-        sequence=1,
-        timestamp=1920U,
-        opus=b"unknown",
-      ),
+      stream.next_packet(),
+      Some(Opus(sequence=10, timestamp=960U, opus=b"received-opus")),
     )
 
     connection.disconnect()
@@ -1053,6 +1034,8 @@ async test "voice connection reports reordered packet loss" {
     transport.incoming.put(connection_session_description(2))
     connection.wait_ready(timeout_ms=1000)
     connection.next_event() |> ignore
+    map_connection_speaker(connection, transport, "200", 55U, 3)
+    let stream = connection.subscribe(user_id="200")
     let sender = @voice.TransportCipher::new(
       AeadAes256GcmRtpsize,
       Bytes::new(32),
@@ -1066,16 +1049,13 @@ async test "voice connection reports reordered packet loss" {
       sender.seal(header~, b"opus-\{sequence}")
     }
     udp.incoming.put(packet(1, 960U))
-    guard! connection.next_event() is OpusReceived(sequence=1, ..)
+    guard! stream.next_packet() is Some(Opus(sequence=1, ..))
     udp.incoming.put(packet(3, 2880U))
     @async.sleep(65)
     udp.incoming.put(packet(4, 3840U))
-    assert_eq(
-      connection.next_event(),
-      PacketsLost(user_id=None, ssrc=55U, count=1),
-    )
-    guard! connection.next_event() is OpusReceived(sequence=3, ..)
-    guard! connection.next_event() is OpusReceived(sequence=4, ..)
+    assert_eq(stream.next_packet(), Some(Lost(count=1)))
+    guard! stream.next_packet() is Some(Opus(sequence=3, ..))
+    guard! stream.next_packet() is Some(Opus(sequence=4, ..))
     connection.disconnect()
   })
 }
@@ -1346,7 +1326,7 @@ fn connection_opus_datagram(
 }
 
 ///|
-async test "voice subscriptions filter users without consuming main events" {
+async test "voice subscriptions receive only their own user's audio" {
   if !@voice.shim_available() {
     return
   }
@@ -1361,36 +1341,6 @@ async test "voice subscriptions filter users without consuming main events" {
     udp.incoming.put(connection_opus_datagram(77U, 1, b"target-one"))
     udp.incoming.put(connection_opus_datagram(88U, 1, b"other"))
     udp.incoming.put(connection_opus_datagram(77U, 2, b"target-two"))
-    assert_eq(
-      connection.next_event(),
-      OpusReceived(
-        user_id=Some("200"),
-        ssrc=77U,
-        sequence=1,
-        timestamp=960U,
-        opus=b"target-one",
-      ),
-    )
-    assert_eq(
-      connection.next_event(),
-      OpusReceived(
-        user_id=Some("300"),
-        ssrc=88U,
-        sequence=1,
-        timestamp=960U,
-        opus=b"other",
-      ),
-    )
-    assert_eq(
-      connection.next_event(),
-      OpusReceived(
-        user_id=Some("200"),
-        ssrc=77U,
-        sequence=2,
-        timestamp=1920U,
-        opus=b"target-two",
-      ),
-    )
     assert_eq(audio.next_frame(), Some(b"target-one"))
     assert_eq(audio.next_frame(), Some(b"target-two"))
     stream.close()
@@ -1414,11 +1364,9 @@ async test "voice subscription ends and unregisters after silence" {
     )
     let audio : &@voice.AudioSource = stream
     udp.incoming.put(connection_opus_datagram(77U, 1, b"first"))
-    guard! connection.next_event() is OpusReceived(opus=b"first", ..)
     assert_eq(audio.next_frame(), Some(b"first"))
     assert_eq(@async.with_timeout(200, () => audio.next_frame()), None)
     udp.incoming.put(connection_opus_datagram(77U, 2, b"too-late"))
-    guard! connection.next_event() is OpusReceived(opus=b"too-late", ..)
     assert_eq(audio.next_frame(), None)
     connection.disconnect()
   })
@@ -1488,7 +1436,6 @@ async test "manual voice subscription waits across a long gap" {
     let blocked = group.spawn(() => audio.next_frame())
     @async.sleep(60)
     udp.incoming.put(connection_opus_datagram(77U, 1, b"after-gap"))
-    guard! connection.next_event() is OpusReceived(opus=b"after-gap", ..)
     assert_eq(
       @async.with_timeout(200, () => blocked.wait()),
       Some(b"after-gap"),

@@ -61,6 +61,7 @@ options(
     "reorder_test.mbt": [ "native" ],
     "receive.mbt": [ "native" ],
     "receive_wbtest.mbt": [ "native" ],
+    "receive_backlog_wbtest.mbt": [ "native" ],
     "receive_drop_wbtest.mbt": [ "native" ],
     "shim_ffi.mbt": [ "native" ],
     "state.mbt": [ "native" ],
