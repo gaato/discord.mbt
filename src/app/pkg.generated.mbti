@@ -86,7 +86,7 @@ pub(all) suberror ModalShowError {
   InvalidCustomId(CustomIdError)
   UnknownCustomId(custom_id~ : String)
   NonTextInput(custom_id~ : String)
-  ValueTooLong(custom_id~ : String, length~ : Int)
+  ValueTooLong(custom_id~ : String, length~ : Int, max~ : Int)
 } derive(@debug.Debug)
 
 // Types and methods

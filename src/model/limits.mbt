@@ -25,7 +25,9 @@ pub fn LimitViolation::message(self : LimitViolation) -> String {
 /// points. An emoji outside the Basic Multilingual Plane is one character
 /// here, though it is two UTF-16 units in a MoonBit `String`. Verified live
 /// for message content, embed fields and totals, component custom ids and
-/// labels, command descriptions, role names, and audit log reasons.
+/// labels, command descriptions, role names, and audit log reasons. The
+/// official clients count their own input fields in UTF-16 units, so users
+/// typing emoji reach a field's limit sooner than a bot sending the same text.
 pub fn text_length(text : String) -> Int32 {
   text.char_length()
 }

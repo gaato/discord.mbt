@@ -360,21 +360,38 @@ test "app validation rejects modal fields outside Discord's limits" {
 }
 
 ///|
-test "modal show rejects a prefill value over 4000 units" {
+test "modal show rejects a prefill the client could not submit" {
   let form = modal(
     custom_id="edit",
     title="Edit",
     state=CustomIdCodec::unit(),
-    fields=ModalFields::of(text_field(custom_id="body", label="Body")),
+    fields=ModalFields::map2(
+      text_field(custom_id="body", label="Body"),
+      text_field(custom_id="short", label="Short", max_length=10),
+      (body, short) => (body, short),
+    ),
   )
-  form.show((), values={ "body": "x".repeat(4000) }) |> ignore
-  try form.show((), values={ "body": "x".repeat(4001) }) |> ignore catch {
-    ValueTooLong(custom_id~, length~) => {
-      inspect(custom_id, content="body")
-      inspect(length, content="4001")
+  form.show((), values={ "body": "x".repeat(4000), "short": "😀".repeat(5) })
+  |> ignore
+  let rejected = [
+    { "body": "x".repeat(4001) },
+    // 2001 code points, which Discord accepts, but 4002 UTF-16 units
+    { "body": "😀".repeat(2001) },
+    // the input's own max_length bounds the prefill, in UTF-16 units
+    { "short": "😀".repeat(6) },
+  ]
+  let seen = rejected.map(values => {
+    try form.show((), values~) |> ignore catch {
+      ValueTooLong(custom_id~, length~, max~) => "\{custom_id} \{length}/\{max}"
+      error => "unexpected \{Repr(error)}"
+    } noraise {
+      _ => "no error"
     }
-    error => fail("unexpected error: \{Repr(error)}")
-  } noraise {
-    _ => fail("expected value too long error")
-  }
+  })
+  debug_inspect(
+    seen,
+    content=(
+      #|["body 4001/4000", "body 4002/4000", "short 12/10"]
+    ),
+  )
 }

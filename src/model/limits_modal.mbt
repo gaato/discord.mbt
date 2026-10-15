@@ -16,9 +16,11 @@ pub fn modal_limit_violations(
 
 ///|
 /// Discord's upper bound for a text input's `min_length`, `max_length`, and
-/// `value`. A prefilled `value` is measured in UTF-16 units: unlike the other
-/// limits, its counting cannot be checked without a user opening the modal,
-/// and UTF-16 units never undercount code points.
+/// `value`. A prefilled `value` must also fit the input's own `max_length`
+/// (this bound when unset) measured in UTF-16 units: Discord accepts up to
+/// 4000 code points, but the official clients count the field in UTF-16 units
+/// and refuse to submit a modal whose prefill exceeds `max_length` until the
+/// user deletes text. Checked live on the Android and web clients.
 pub let text_input_max_length : Int32 = 4000
 
 ///|
@@ -70,7 +72,7 @@ fn LimitChecker::modal_component(
       self.text(
         "\{path}.value",
         input.value,
-        max=text_input_max_length,
+        max=input.max_length.unwrap_or(text_input_max_length),
         custom_id~,
         measure=Utf16Units,
       )

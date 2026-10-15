@@ -48,8 +48,11 @@ pub(all) suberror ModalShowError {
   InvalidCustomId(CustomIdError)
   UnknownCustomId(custom_id~ : String)
   NonTextInput(custom_id~ : String)
-  /// The value exceeds Discord's 4000 UTF-16 unit limit for a text input.
-  ValueTooLong(custom_id~ : String, length~ : Int32)
+  /// The value is longer, in UTF-16 units, than the input's `max_length`
+  /// (4000 when unset). Discord would accept it up to 4000 code points, but
+  /// the official clients count the field in UTF-16 units and would not
+  /// submit the modal until the user deleted text.
+  ValueTooLong(custom_id~ : String, length~ : Int32, max~ : Int32)
 } derive(Debug)
 
 ///|
@@ -171,10 +174,12 @@ fn prefill_modal_components(
 ) -> Array[@model.Component] raise ModalShowError {
   for custom_id, value in values {
     match find_modal_component(components, custom_id) {
-      Some(TextInput(_)) =>
-        if value.length() > @model.text_input_max_length {
-          raise ValueTooLong(custom_id~, length=value.length())
+      Some(TextInput(input)) => {
+        let max = input.max_length.unwrap_or(@model.text_input_max_length)
+        if value.length() > max {
+          raise ValueTooLong(custom_id~, length=value.length(), max~)
         }
+      }
       Some(_) => raise NonTextInput(custom_id~)
       None => raise UnknownCustomId(custom_id~)
     }
@@ -507,7 +512,7 @@ pub fn[S, A] modal(
 /// `ModalShowError::InvalidCustomId` when the state does not encode or the
 /// complete id exceeds 100 characters, and the other variants when an
 /// override key is unknown, does not name a text input, or carries a value
-/// over 4000 UTF-16 units.
+/// longer than the input's `max_length` (4000 when unset) in UTF-16 units.
 pub fn[S, A] Modal::show(
   self : Modal[S, A],
   state : S,

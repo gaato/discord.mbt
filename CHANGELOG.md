@@ -51,6 +51,15 @@ breaking change is listed with a migration note.
   connection reaches READY or RESUMED (voice: an active session), so a
   single drop after a long healthy run waits the first backoff step instead
   of the cap reached by earlier failures.
+- A modal text input's prefilled `value` must fit the input's own
+  `max_length` (4000 when unset), counted in UTF-16 units. Discord accepts a
+  prefill up to 4000 code points, but the official clients (checked on
+  Android and the web) count the field in UTF-16 units and would not submit
+  the modal until the user deleted text, so a prefill over `max_length` was a
+  modal nobody could submit as shown. `ModalShowError::ValueTooLong` gains
+  `max~`.
+  - Migration: add `max~` (or `..`) to `ValueTooLong(custom_id~, length~)`
+    patterns.
 
 ### Fixed
 
@@ -75,9 +84,8 @@ breaking change is listed with a migration note.
   `@util.split_content`, which now fills each chunk with up to 2000 code
   points. Verified against the live API for message content, embed fields
   and totals, button custom ids and labels, command descriptions, role names,
-  and audit log reasons. A modal text input's prefilled `value` stays in
-  UTF-16 units (reported as such): its counting cannot be checked without a
-  user opening the modal, and UTF-16 units never undercount.
+  and audit log reasons. A modal text input's prefilled `value` is the
+  exception (see Changed).
 
 ## [0.7.0] - 2026-10-08
 

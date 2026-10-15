@@ -134,8 +134,8 @@ test "modal show reports each kind of invalid response" {
     try show() |> ignore catch {
       InvalidCustomId(TooLong(length~, ..)) => "InvalidCustomId(\{length})"
       UnknownCustomId(custom_id~) => "UnknownCustomId(\{custom_id})"
-      ValueTooLong(custom_id~, length~) =>
-        "ValueTooLong(\{custom_id}, \{length})"
+      ValueTooLong(custom_id~, length~, max~) =>
+        "ValueTooLong(\{custom_id}, \{length}, \{max})"
       error => "unexpected \{Repr(error)}"
     } noraise {
       _ => "no error"
@@ -147,7 +147,7 @@ test "modal show reports each kind of invalid response" {
       #|[
       #|  "InvalidCustomId(102)",
       #|  "UnknownCustomId(missing)",
-      #|  "ValueTooLong(note, 4001)",
+      #|  "ValueTooLong(note, 4001, 4000)",
       #|]
     ),
   )

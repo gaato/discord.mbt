@@ -244,9 +244,12 @@ fn register_feedback(app : @discord.AppBuilder) -> Unit {
 does not mutate the modal definition, so later calls return to the static
 default. Override keys are text-input `custom_id` values. An unknown key or a
 key naming a non-text field raises `ModalShowError` instead of being
-silently ignored, and so does a value over Discord's 4000-unit text-input
-limit: check the length before calling `show` when the prefill comes from
-longer content such as an embed description (4096).
+silently ignored, and so does a value longer than the input's `max_length`
+(4000 when unset). This one check counts UTF-16 units, so an emoji is two:
+Discord itself accepts the value, but the official clients count the field in
+UTF-16 units and will not submit the modal until the user deletes text. Check
+the length with `String::length` before calling `show` when the prefill comes
+from longer content such as an embed description (4096 characters).
 
 Discord documents hard limits for everything in this chapter — 45 units for a
 modal title or label, 4000 for a text input, 80 for a button label, 25 select

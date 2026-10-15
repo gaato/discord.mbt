@@ -538,7 +538,7 @@ test "existing modal text input label string select and upload reasons stay stab
       #|  {
       #|    path: "components[0].components[0].component.value",
       #|    custom_id: Some(""),
-      #|    reason: "4001 UTF-16 units (at most 4000)",
+      #|    reason: "4001 UTF-16 units (at most 0)",
       #|  },
       #|  {
       #|    path: "components[0].components[0].component.placeholder",
@@ -662,5 +662,39 @@ test "realistic fully valid modal and unbounded text display" {
       Unknown({ "type": 999, "custom_id": limit_text(101) }),
     ]),
     content="[]",
+  )
+}
+
+///|
+test "a modal prefill fits its input's max_length in UTF-16 units" {
+  let input = (max_length : Int32?, value : String) => {
+    @model.modal_limit_violations(title="Edit", components=[
+      Label({
+        id: None,
+        label: Some("Body"),
+        description: None,
+        component: TextInput({
+          id: None,
+          custom_id: "body",
+          style: Some(Short),
+          label: None,
+          min_length: None,
+          max_length,
+          required: None,
+          value: Some(value),
+          placeholder: None,
+        }),
+      }),
+    ]).map(violation => violation.message())
+  }
+  assert_eq(input(Some(10), "😀".repeat(5)), [])
+  debug_inspect(
+    [input(Some(10), "😀".repeat(6)), input(None, "😀".repeat(2001))],
+    content=(
+      #|[
+      #|  ["components[0].component.value: 12 UTF-16 units (at most 10)"],
+      #|  ["components[0].component.value: 4002 UTF-16 units (at most 4000)"],
+      #|]
+    ),
   )
 }
