@@ -553,7 +553,7 @@ test "existing modal text input label string select and upload reasons stay stab
       #|  {
       #|    path: "components[1].component.min_values",
       #|    custom_id: Some("select"),
-      #|    reason: "26 (0 to 25)",
+      #|    reason: "26 (1 to 25)",
       #|  },
       #|  {
       #|    path: "components[1].component.min_values",
@@ -584,7 +584,10 @@ test "existing modal text input label string select and upload reasons stay stab
     content="[]",
   )
   debug_inspect(
-    limit_check(limit_with(base, "min_values", 0), modal=true),
+    limit_check(
+      limit_with(limit_with(base, "required", false), "min_values", 0),
+      modal=true,
+    ),
     content="[]",
   )
 }
@@ -695,6 +698,41 @@ test "a modal prefill fits its input's max_length in UTF-16 units" {
       #|  ["components[0].component.value: 12 UTF-16 units (at most 10)"],
       #|  ["components[0].component.value: 4002 UTF-16 units (at most 4000)"],
       #|]
+    ),
+  )
+}
+
+///|
+test "modal selects keep a nonzero minimum unless required is false" {
+  let select : Json = {
+    "type": 3,
+    "custom_id": "pick",
+    "options": [{ "label": "Yes", "value": "yes" }],
+  }
+  inspect(
+    limit_field_cases(select, [("min_values", 1, 0)], modal=true),
+    content=(
+      #|components[0].component.min_values: 0 (1 to 25)
+    ),
+  )
+  inspect(
+    limit_field_cases(
+      limit_with(select, "required", true),
+      [("min_values", 1, 0)],
+      modal=true,
+    ),
+    content=(
+      #|components[0].component.min_values: 0 (1 to 25)
+    ),
+  )
+  inspect(
+    limit_field_cases(
+      limit_with({ "type": 5, "custom_id": "who" }, "required", false),
+      [("min_values", 0, -1)],
+      modal=true,
+    ),
+    content=(
+      #|components[0].component.min_values: -1 (0 to 25)
     ),
   )
 }

@@ -22,6 +22,8 @@ breaking change is listed with a migration note.
   with `BotError::GatewayRateLimited` and `GatewayRequestTimeout` failures.
 - Select-menu `required`, READY application `flags_new`, client status `vr`,
   member-update `banner`/`collectibles`, and embed image/video media metadata.
+  Modal validation rejects `min_values=0` on a select unless `required=false`,
+  as Discord does.
 - Guild channel creation and position updates accept channel `flags`; position
   updates also accept `clear_flags=true` for the documented nullable field.
 - `MessageActivityType::StreamRequest`, `GuildFeature::PruneRequiresAdmin`, and
