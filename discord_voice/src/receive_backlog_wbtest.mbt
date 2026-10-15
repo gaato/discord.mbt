@@ -76,11 +76,11 @@ async test "unread voice events keep only the newest backlog" {
 }
 
 ///|
-async test "voice backlogs below one are rejected" {
+async test "receive backlogs below two and event backlogs below one are rejected" {
   let transport = DaveConnectionTransport()
   @async.with_task_group(group => {
     let connection = dave_test_connection(group, transport, [])
-    for backlog in [0, -1] {
+    for backlog in [1, 0, -1] {
       try connection.subscribe(user_id="200", backlog~) catch {
         InvalidBacklog(value~) => assert_eq(value, backlog)
         error => fail("unexpected error: \{Repr(error)}")
@@ -167,6 +167,35 @@ async test "resubscribing never replays packets buffered for an earlier stream" 
     assert_eq(receive(101), [
       ("200", Opus(sequence=101, timestamp=96960U, opus=b"opus")),
     ])
+    connection.disconnect()
+  })
+}
+
+///|
+async test "the smallest receive backlog recovers once its reader catches up" {
+  let transport = DaveConnectionTransport()
+  let telemetry : Array[VoiceTelemetry] = []
+  @async.with_task_group(group => {
+    let connection = dave_test_connection(group, transport, telemetry)
+    let stream = connection.subscribe(user_id="200", backlog=2)
+    for sequence in 1..<=3 {
+      connection.deliver_audio("200", backlog_test_opus(sequence))
+    }
+    assert_eq(stream.next_packet(), Some(backlog_test_opus(1)))
+    assert_eq(stream.next_packet(), Some(backlog_test_opus(2)))
+    // The reader caught up: the marker and the next frame both fit, and
+    // later frames arrive without further loss.
+    for sequence in 4..<=6 {
+      connection.deliver_audio("200", backlog_test_opus(sequence))
+      if sequence == 4 {
+        assert_eq(stream.next_packet(), Some(Lost(count=1)))
+      }
+      assert_eq(stream.next_packet(), Some(backlog_test_opus(sequence)))
+    }
+    assert_eq(
+      telemetry.filter(event => event is ReceiveDropped(..)).length(),
+      1,
+    )
     connection.disconnect()
   })
 }

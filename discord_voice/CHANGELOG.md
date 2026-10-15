@@ -33,8 +33,9 @@ The entries below are relative to that package in `gaato/discord` 0.7.0.
 - `VoiceConnection::subscribe` takes `backlog~` (default
   `DEFAULT_RECEIVE_BACKLOG` = 250 frames, five seconds) and
   `VoiceConnection::start` takes `event_backlog~` (default
-  `DEFAULT_VOICE_EVENT_BACKLOG` = 256). Values below 1 raise the new
-  `VoiceError::InvalidBacklog`.
+  `DEFAULT_VOICE_EVENT_BACKLOG` = 256). A receive backlog below 2 (after a
+  drop, a delivery needs a slot for the `Lost` marker and one for its frame)
+  or an event backlog below 1 raises the new `VoiceError::InvalidBacklog`.
 - `VoiceTelemetry::ReceiveDropped(user_id~, backlog~)` and
   `VoiceTelemetry::EventDropped(backlog~)` report each item a full backlog
   discards.

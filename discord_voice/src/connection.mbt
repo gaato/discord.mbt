@@ -10,7 +10,7 @@ pub(all) suberror VoiceError {
   GatewayClosed(code~ : Int32?)
   IpDiscoveryFailed(reason~ : String)
   Disconnected
-  /// A receive or event backlog below 1 was requested.
+  /// A receive backlog below 2 or an event backlog below 1 was requested.
   InvalidBacklog(value~ : Int32)
   /// `VoiceClient::join` ran while the client's `run` (the service `attach`
   /// registers) was not running.

@@ -82,7 +82,9 @@ fn VoiceConnection::close_subscriptions(self : VoiceConnection) -> Unit {
 /// reads end the stream after the requested silence interval. At most
 /// `backlog` items wait unread; newer frames are dropped past that and
 /// reported as `ReceivedAudio::Lost` (and `VoiceTelemetry::ReceiveDropped`).
-/// Raises `InvalidBacklog` when `backlog` is below 1.
+/// Raises `InvalidBacklog` when `backlog` is below 2: after a drop, the next
+/// delivery needs one slot for the `Lost` marker and one for its frame, so a
+/// single slot would never let the stream recover.
 ///
 /// # Example
 /// ```mbt nocheck
@@ -108,7 +110,7 @@ pub fn VoiceConnection::subscribe(
   end_after_silence_ms~ : Int32? = None,
   backlog~ : Int32 = DEFAULT_RECEIVE_BACKLOG,
 ) -> VoiceReceiveStream raise VoiceError {
-  if backlog < 1 {
+  if backlog < 2 {
     raise InvalidBacklog(value=backlog)
   }
   let stream = VoiceReceiveStream::{
