@@ -1,23 +1,20 @@
 name: Release
 
-# Publishes to mooncakes.io after a module's CI is green on main: gaato/discord
-# and then gaato/discord_voice after CI, gaato/dave after Dave. Idempotent:
-# when the version in a moon.mod is already in the registry index nothing
-# happens, so only a version bump releases (scripts/release.sh). Modules are
-# published in dependency order and resolve their dependencies from the
-# registry, as consumers do: a module that needs a new version of another must
-# name it in its moon.mod, and that version must be published first. A manual
-# run publishes all three: gaato/dave, gaato/discord, then gaato/discord_voice.
-# Each release is tagged `<directory>-v<version>` (discord-v0.8.0,
-# discord_voice-v0.1.0, dave-v0.1.2); earlier gaato/discord releases are
-# tagged `v<version>`.
+# Publishes one module to mooncakes.io when its release tag is pushed:
+# `discord-v<version>`, `discord_voice-v<version>`, or `dave-v<version>`.
+# The tag must name the version in that module's moon.mod and point at a
+# commit on main, which CI has checked. The module is built on its own and
+# resolves its dependencies from the registry, as consumers do, so a module
+# that needs a new version of another is tagged after that version is
+# published. Earlier gaato/discord releases are tagged `v<version>`;
+# `voice-shim-v*` tags release the Rust shim (voice-shim.yml).
 
 on:
-  workflow_run:
-    workflows: [CI, Dave]
-    types: [completed]
-    branches: [main]
-  workflow_dispatch:
+  push:
+    tags:
+      - "discord-v*"
+      - "discord_voice-v*"
+      - "dave-v*"
 
 permissions:
   contents: read
@@ -31,19 +28,15 @@ env:
 
 jobs:
   publish:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     container: ghcr.io/gaato/moonbit:0.10.15-943464bfa
     environment: mooncakes
-    permissions:
-      # scripts/release.sh tags each module release it publishes.
-      contents: write
     steps:
-      - name: Check out the commit CI validated
+      - name: Check out the tagged commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Install build dependencies
@@ -51,20 +44,37 @@ jobs:
           apt-get update
           apt-get install -y --no-install-recommends zlib1g-dev
 
+      - name: Check the tag against main and moon.mod
+        id: tag
+        shell: bash
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          # The container's git sees a checkout owned by another user.
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          module="${TAG%-v*}"
+          version="${TAG##*-v}"
+          test -f "$module/moon.mod" || { echo "no module directory for $TAG" >&2; exit 1; }
+          declared=$(sed -nE 's/^version = "(.*)"$/\1/p' "$module/moon.mod")
+          if [ "$declared" != "$version" ]; then
+            echo "$TAG names $version, but $module/moon.mod declares $declared" >&2
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor HEAD origin/main; then
+            echo "$TAG points at a commit that is not on main" >&2
+            exit 1
+          fi
+          echo "module=$module" >> "$GITHUB_OUTPUT"
+
       - name: Publish
         env:
           MOONCAKES_TOKEN: ${{ secrets.MOONCAKES_TOKEN }}
           MOONCAKES_USERNAME: ${{ secrets.MOONCAKES_USERNAME }}
-          GITHUB_TOKEN: ${{ github.token }}
-          RELEASE_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
-          MODULES: >-
-            ${{ github.event_name == 'workflow_dispatch' && 'dave discord discord_voice'
-              || github.event.workflow_run.name == 'Dave' && 'dave'
-              || 'discord discord_voice' }}
+          MODULE: ${{ steps.tag.outputs.module }}
         run: |
           if [ -z "$MOONCAKES_TOKEN" ]; then
             echo "MOONCAKES_TOKEN is not set; nothing published" >&2
-            exit 0
+            exit 1
           fi
           # moon needs credentials even for --dry-run.
           moon_home="${MOON_HOME:-$HOME/.moon}"
@@ -72,7 +82,5 @@ jobs:
           umask 077
           printf '{"token":"%s","username":"%s"}\n' "$MOONCAKES_TOKEN" "$MOONCAKES_USERNAME" > "$moon_home/credentials.json"
           trap 'rm -f "$moon_home/credentials.json"' EXIT
-          for module in $MODULES; do
-            scripts/release.sh --dry-run "$module"
-            scripts/release.sh "$module"
-          done
+          scripts/release.sh --dry-run "$MODULE"
+          scripts/release.sh "$MODULE"

@@ -1,7 +1,8 @@
 name: Dave
 
-# CI for the gaato/dave module in dave/. Release publishes gaato/dave only after
-# this workflow passes on main. Its toolchain pin moves with the one in ci.yml.
+# CI for the gaato/dave module in dave/; a `dave-v<version>` tag on a commit
+# that passed it publishes the module (release.yml). Its toolchain pin moves
+# with the one in ci.yml.
 
 on:
   push:
