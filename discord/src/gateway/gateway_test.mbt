@@ -131,6 +131,9 @@ async test "typed commands and latest presence survive re-identify" {
       guard! shard.next() is Connected(resumed=false)
       guard! shard.next() is Dispatch(Ready(_))
       shard.update_presence(latest)
+      let sent_presence = latest.to_json()
+      latest.activities.clear()
+      latest.activities.push(@model.BotActivity::custom("changed after send"))
       shard.request_guild_members({
         guild_id: Id(1UL),
         select: All,
@@ -161,7 +164,7 @@ async test "typed commands and latest presence survive re-identify" {
       for ;; {
         if second.outgoing.get()
           is { "op": Number(2, ..), "d": { "presence": presence, .. }, .. } {
-          assert_eq(presence, latest.to_json())
+          assert_eq(presence, sent_presence)
           break
         }
       }

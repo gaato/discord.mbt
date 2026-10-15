@@ -78,3 +78,64 @@ async test "presence allows five updates and waits on the sixth" {
     shard.close()
   })
 }
+
+///|
+async test "concurrent presence updates wait for general slots before presence slots" {
+  let general_waits = Ref(0)
+  let presence_waits = Ref(0)
+  let holder : Ref[Shard?] = Ref(None)
+  @async.with_task_group(group => {
+    let shard = Shard::start(
+      group,
+      token="test-token",
+      intents=@model.Intents::none(),
+      connector=_ => {
+        @async.sleep(3600000)
+        raise TransportClosed(code=None, reason="test ended")
+      },
+      sleeper=ms => {
+        guard! holder.val is Some(shard)
+        if ms > 20001 {
+          general_waits.val += 1
+          assert_eq(shard.presence_limiter.timestamps.length(), 0)
+          // Let the other presence tasks contend for the presence gate.
+          @async.sleep(1)
+          assert_eq(shard.presence_limiter.timestamps.length(), 0)
+          for index in 0..<shard.command_limiter.timestamps.length() {
+            shard.command_limiter.timestamps[index] -= 60001L
+          }
+        } else {
+          presence_waits.val += 1
+          assert_eq(shard.command_limiter.timestamps.length(), 6)
+          assert_eq(shard.presence_limiter.timestamps.length(), 5)
+          for index in 0..<shard.presence_limiter.timestamps.length() {
+            shard.presence_limiter.timestamps[index] -= 20001L
+          }
+        }
+      },
+    )
+    holder.val = Some(shard)
+    let transport = PresenceTestTransport::{ sent: [], }
+    shard.transport = Some(transport)
+    for _ in 0..<115 {
+      shard.command_limiter.acquire()
+    }
+    @async.with_task_group(updates => {
+      let tasks = []
+      for _ in 0..<6 {
+        tasks.push(
+          updates.spawn(no_wait=true, () => {
+            shard.update_presence(@model.UpdatePresence(status=Online))
+          }),
+        )
+      }
+      for task in tasks {
+        task.wait()
+      }
+    })
+    assert_eq(general_waits.val, 1)
+    assert_eq(presence_waits.val, 1)
+    assert_eq(transport.sent.length(), 6)
+    shard.close()
+  })
+}
