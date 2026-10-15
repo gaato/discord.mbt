@@ -5,6 +5,8 @@ name = "local/discord_guide"
 
 version = "0.0.0"
 
+private = true
+
 license = "Apache-2.0"
 
 preferred_target = "native"
