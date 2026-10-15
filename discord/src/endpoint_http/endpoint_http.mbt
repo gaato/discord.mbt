@@ -46,10 +46,12 @@ async fn read_body(
       let room = max_bytes - length
       let max_len = if room < 65536 { room + 1 } else { 65536 }
       guard body_reader.read_some(max_len~) is Some(chunk) else { break true }
-      length += chunk.length()
-      if length > max_bytes {
+      // Compare against the room left rather than summing first, which would
+      // overflow when `max_bytes` is near `Int` maximum.
+      if chunk.length() > room {
         break false
       }
+      length += chunk.length()
       if keep {
         buffer.write_bytes(chunk)
       }
