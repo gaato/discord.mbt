@@ -161,18 +161,6 @@ jobs:
           & $installer
           "$HOME\.moon\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
-      - name: Install zlib headers (Windows)
-        # Voice builds the Gateway package, whose zlib_stream.c includes
-        # <zlib.h> for the stream layout; zlib itself is loaded at run time.
-        if: matrix.moonbit_smoke && runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
-          & "$env:VCPKG_INSTALLATION_ROOT\vcpkg.exe" install zlib:x64-windows
-          $include = Join-Path $env:VCPKG_INSTALLATION_ROOT "installed\x64-windows\include"
-          # cl.exe reads extra options from CL.
-          "CL=/I`"$include`"" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-
       - name: Test MoonBit loader integration
         if: matrix.moonbit_smoke
         env:

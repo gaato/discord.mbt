@@ -1,31 +1,14 @@
 ///|
-priv type ZlibHandle
-
-///|
-extern "C" fn zlib_new() -> ZlibHandle = "discord_gateway_zlib_new"
-
-///|
-#borrow(handle)
-extern "C" fn zlib_status(handle : ZlibHandle) -> Int32 = "discord_gateway_zlib_status"
-
-///|
-#borrow(handle, input)
-extern "C" fn zlib_inflate(handle : ZlibHandle, input : Bytes) -> Bytes = "discord_gateway_zlib_inflate"
-
-///|
 priv struct ZlibStreamInflater {
-  handle : ZlibHandle
+  decoder : @zlib.Decoder
   pending : Array[Byte]
+  // Reused across messages; grows to the largest message seen.
+  mut out : FixedArray[Byte]
 }
 
 ///|
-fn ZlibStreamInflater::ZlibStreamInflater() -> ZlibStreamInflater raise InflateError {
-  let handle = zlib_new()
-  let status = zlib_status(handle)
-  if status != 0 {
-    raise InflateError(status~)
-  }
-  { handle, pending: [], }
+fn ZlibStreamInflater::ZlibStreamInflater() -> ZlibStreamInflater {
+  { decoder: @zlib.Decoder(), pending: [], out: FixedArray::make(16384, 0), }
 }
 
 ///|
@@ -39,6 +22,35 @@ fn has_sync_flush_suffix(bytes : Array[Byte]) -> Bool {
 }
 
 ///|
+/// Inflate one sync-flushed message. The decoder emits every byte up to the
+/// flush point, so `NeedMoreInput` means the message is complete.
+fn ZlibStreamInflater::inflate(
+  self : ZlibStreamInflater,
+  compressed : Bytes,
+) -> Bytes raise InflateError {
+  let mut input = compressed[:]
+  let mut len = 0
+  while true {
+    if len == self.out.length() {
+      let grown = FixedArray::make(len * 2, b'\x00')
+      self.out.blit_to(grown, len~)
+      self.out = grown
+    }
+    let status = self.decoder.step(input, self.out.mut_view(start=len)) catch {
+      ZlibError(_, message) => raise Malformed(message~)
+    }
+    len += self.decoder.last_produced()
+    input = input[self.decoder.last_consumed():]
+    match status {
+      NeedMoreInput => break
+      NeedMoreOutput => continue
+      Done => raise Malformed(message="zlib-stream ended")
+    }
+  }
+  Bytes::from_array(self.out[:len])
+}
+
+///|
 impl Inflater for ZlibStreamInflater with fn push(self, bytes) {
   for byte in bytes {
     self.pending.push(byte)
@@ -48,22 +60,6 @@ impl Inflater for ZlibStreamInflater with fn push(self, bytes) {
   }
   let compressed = Bytes::from_array(self.pending)
   self.pending.clear()
-  let plain = zlib_inflate(self.handle, compressed)
-  let status = zlib_status(self.handle)
-  if status != 0 {
-    raise InflateError(status~)
-  }
+  let plain = self.inflate(compressed)
   Some(@utf8.decode(plain) catch { _ => raise InflateError::InvalidUtf8 })
-}
-
-///|
-fn new_zlib_stream_inflater() -> &Inflater raise {
-  ZlibStreamInflater()
-}
-
-///|
-/// Whether this backend can inflate Discord's `zlib-stream` transport
-/// compression. True on native (zlib is loaded at runtime).
-pub fn zlib_stream_supported() -> Bool {
-  true
 }

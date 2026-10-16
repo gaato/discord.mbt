@@ -56,8 +56,8 @@ eviction rules resume. Alarms and requests restart an evicted object. A live
 connection incurs Durable Object duration charges. [Platform limits](https://developers.cloudflare.com/durable-objects/platform/limits/)
 include a default 30-second CPU limit per event and a 32 MiB inbound WebSocket
 message limit. [Workers WebSocket documentation](https://developers.cloudflare.com/workers/runtime-apis/websockets/)
-describes the outbound client API. JavaScript does not support this library's
-zlib-stream Gateway compression, so the example leaves it off.
+describes the outbound client API. The example leaves zlib-stream Gateway
+compression off.
 
 ## Verified deployment
 

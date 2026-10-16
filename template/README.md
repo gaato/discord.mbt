@@ -23,12 +23,6 @@ registry. A bot that adds voice (`gaato/discord_voice`) also needs Node.js on
 and its `gaato/dave` dependency declare prebuild hooks that Moon runs with
 `node`. Node.js is not needed to run the built executable.
 
-Native builds also require the zlib development headers because the
-Gateway package always compiles a C source that includes `<zlib.h>`, even when
-compression is disabled. Install `zlib1g-dev` on Debian/Ubuntu or `zlib-devel`
-on Fedora/openSUSE. The zlib shared library is required at runtime when using
-Gateway zlib-stream compression.
-
 Before publication, use a Moon workspace to resolve `gaato/discord` from a
 local checkout. Current Moon represents local path dependencies as workspace
 members rather than paths inside `moon.mod`. From a directory containing (or
@@ -54,9 +48,7 @@ docker build -t my-discord-bot .
 docker run --rm -e DISCORD_TOKEN="your-token" my-discord-bot
 ```
 
-The runtime image carries no zlib. If you enable Gateway zlib-stream
-compression, switch the final stage to a base that provides `zlib1g`, such as
-`debian:trixie-slim`. Pass `--build-arg MOONBIT_IMAGE=...` to build with
+Pass `--build-arg MOONBIT_IMAGE=...` to build with
 another toolchain tag.
 
 ## Configure and run

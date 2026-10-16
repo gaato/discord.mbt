@@ -30,12 +30,6 @@ relevant symbols — look anything up with `moon ide doc` (see
 On a clean machine, install `git` and run `moon update` before resolving the
 module dependencies. Moon uses `git` to clone the package registry.
 
-Every native build compiles the Gateway package's `zlib_stream.c`, which
-always includes `<zlib.h>` even when `compress=false`. The zlib development
-headers are therefore required for all native builds: install `zlib1g-dev` on
-Debian/Ubuntu or `zlib-devel` on Fedora/openSUSE. The zlib shared library is
-additionally required at runtime when native Gateway zlib-stream compression is used.
-
 The [`ghcr.io/gaato/moonbit`](https://github.com/gaato/moonbit-docker)
 toolchain image bundles the pinned toolchain with Node.js 24, `gcc`, and
 `git`; the
@@ -127,9 +121,7 @@ async fn run_echo_bot(token : String) -> Unit {
 moonbitlang/async, so generic WASI runtimes, browsers, and wasm-gc are not
 targets. See [Wasm runtime and permissions](#wasm-runtime-and-permissions).
 
-² The HTTP-server exports exist on native and Wasm. Gateway zlib-stream
-compression is native-only; check `zlib_stream_supported()` before enabling
-it. Packages that are empty on a backend do not provide that feature, even if
+² The HTTP-server exports exist on native and Wasm. Packages that are empty on a backend do not provide that feature, even if
 Moon accepts them as dependencies. Voice (`gaato/discord_voice`) is
 native-only.
 
@@ -138,8 +130,6 @@ native-only.
 Use `--target wasm` with the pinned MoonBit toolchain and its matching `moonrun`.
 This backend uses MoonBit host APIs for sockets, TLS, timers, and environment
 variables; it is not a browser, generic WASI, or wasm-gc application target.
-Gateway zlib-stream compression is unavailable on Wasm (leave `compress`
-off).
 
 The `interactions_http` example also builds for Wasm:
 
@@ -429,8 +419,7 @@ restarts and clears the saved session because a graceful close invalidates it;
 the public controls require a separate bearer secret. Snapshots are periodic:
 they do not guarantee exactly-once event handling or restore application state
 or optional cache contents. Cloudflare can evict an object after an outbound
-socket has protected it for up to 15 minutes. The JavaScript gateway does not
-support zlib-stream compression; received WebSocket messages are limited to
+socket has protected it for up to 15 minutes. Received WebSocket messages are limited to
 32 MiB, CPU to 30 seconds per event by default, and a connected object incurs
 duration charges. See the example README for deployment and local test details.
 

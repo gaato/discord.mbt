@@ -218,7 +218,7 @@ pub fn[X] Shard::start(
   event_filter~ : (@model.EventKind) -> Bool = _ => true,
   connector~ : async (String) -> &GatewayTransport = connect_websocket,
   compress~ : Bool = false,
-  inflater_factory~ : () -> &Inflater raise = new_zlib_stream_inflater,
+  inflater_factory~ : () -> &Inflater raise = () => ZlibStreamInflater(),
   queue_capacity~ : Int32 = 256,
   telemetry~ : (@telemetry.TelemetryEvent) -> Unit = _ => (),
   sleeper~ : async (Int32) -> Unit = ms => @async.sleep(ms),

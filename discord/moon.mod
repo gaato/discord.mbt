@@ -27,4 +27,5 @@ import {
   "gaato/sdk-runtime@0.2.2",
   "moonbitlang/async@0.22.5",
   "hustcer/ed25519@0.6.0",
+  "moonbit-community/flate@0.9.0",
 }

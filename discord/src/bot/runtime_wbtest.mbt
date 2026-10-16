@@ -1021,40 +1021,6 @@ async test "gateway context resolves cached channels and falls back to REST" {
 }
 
 ///|
-async test "build rejects unsupported compression before REST or connector setup" {
-  if @gateway.zlib_stream_supported() {
-    return
-  }
-  let client = @dhttp.Client("test-token")
-  defer client.close()
-  let rest_calls = Ref(0)
-  let connector_calls = Ref(0)
-  client.middleware((_request, _next) => {
-    rest_calls.val += 1
-    fail("compression reached REST")
-  })
-  let bot = BotBuilder(
-    @app.AppBuilder().build(),
-    token="test-token",
-    client~,
-    compress=true,
-  )
-  bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
-  bot.core.connector_.val = Some(_ => {
-    connector_calls.val += 1
-    fail("compression reached connector")
-  })
-  try bot.build() |> ignore catch {
-    CompressionUnavailable => ()
-    error => fail("unexpected compression error: \{Repr(error)}")
-  } noraise {
-    _ => fail("unsupported compression unexpectedly built")
-  }
-  assert_eq(rest_calls.val, 0)
-  assert_eq(connector_calls.val, 0)
-}
-
-///|
 async test "event middleware drops handlers after wire-level cache updates" {
   let transport = BotFakeTransport()
   let app = @app.AppBuilder()

@@ -112,13 +112,11 @@ run; the gateway/voice loops are additionally tested via injected sleepers):
 | --- | --- | --- |
 | discord/src/gateway/shard.mbt | 15 | Protected-shutdown and event-queue teardown catches (including fatal inflater failure), stale-transport and normal-return fallbacks, and read-loop cancellation re-raise plumbing (async 0.22 cancellation does not pass through ordinary catches). Malformed Hello/frame, compression-mismatch, connector/backoff, and disconnected-send arms are tested through the fake transport. |
 | discord/src/gateway/platform_native.mbt | 2 | Two OS-specific Identify property arms unavailable on Linux. |
-| discord/src/gateway/compression.mbt | 3 | zlib failure statuses require a corrupted native stream state. |
 | discord/src/ratelimit/ratelimit.mbt | 1 | Global-window sleep. |
 | discord/src/http/handles_channel.mbt | 3 | `with_typing` refresh-failure arm sits behind the real 8-second cadence. |
 | discord/src/bot/middleware.mbt | 1 | Middleware chain cancellation arm. |
 | discord/src/bot/shard_manager.mbt | 4 | Live gateway discovery and default-connector startup (including saved-session projection), plus defensive shard-config arms; fake-connector startup and resume are tested. |
 | discord/src/bot/bot.mbt | 16 | Gateway run-loop teardown/cancellation arms; startup, intents, telemetry, and event routing are covered. The event-backlog put fails only on a queue closed by shutdown. |
-| discord/src/bot/builder.mbt | 2 | The compression check in `build` raises only on js/wasm, where zlib-stream is unavailable (covered by the JS run). |
 
 Defensive arms unreachable by construction:
 
