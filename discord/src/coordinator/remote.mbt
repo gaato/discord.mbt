@@ -89,17 +89,7 @@ async fn CoordinatorClient::request_once(
   } noraise {
     line => line
   }
-  let response = @json.parse(response_line) catch {
-    error =>
-      raise CoordinatorError::InvalidResponse(message="invalid JSON: \{error}")
-  }
-  match response {
-    { "ok": True, .. } => response
-    { "ok": False, "error": String(message), .. } =>
-      raise CoordinatorError::Remote(message~)
-    _ =>
-      raise CoordinatorError::InvalidResponse(message="expected an ok response")
-  }
+  decode_response(response_line)
 }
 
 ///|
@@ -384,15 +374,5 @@ pub impl @cooldown.CooldownStore for RemoteCooldownStore with fn try_acquire(
     }
     error => raise error
   }
-  guard response is { "retry_after_ms": retry_json, .. } &&
-    json_nonnegative_int64(retry_json) is Some(retry_after_ms) else {
-    raise CoordinatorError::InvalidResponse(
-      message="missing non-negative decimal string retry_after_ms",
-    )
-  }
-  if retry_after_ms == 0L {
-    Acquired
-  } else {
-    Active(retry_after_ms~)
-  }
+  decode_cooldown(response)
 }
