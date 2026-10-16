@@ -201,3 +201,78 @@ async test "non-interaction error responses warn with a payload summary" {
     ),
   )
 }
+
+///|
+test "the default error policy tells the user about expected failures" {
+  let origin = FailureOrigin::Command(name="ping")
+  for
+    row in [
+      (
+        HandlerError::UserMessage(message="Pick a channel.", ephemeral=false),
+        "Pick a channel.",
+        false,
+      ),
+      (
+        HandlerError::UserMessage(message="Pick a channel.", ephemeral=true),
+        "Pick a channel.",
+        true,
+      ),
+      (GuildOnly, "This command can only be used in a server.", true),
+      (DmOnly, "This command can only be used in a direct message.", true),
+      (CheckFailed, "You cannot use this command.", true),
+      (
+        MissingPermission(@model.Permissions::from_bits(8)),
+        "Missing required permission: 8",
+        true,
+      ),
+      (
+        OnCooldown(retry_after_ms=1500),
+        "This command is on cooldown. Try again in 1500 ms.",
+        true,
+      ),
+      (
+        InvalidInput(name=Some("count"), message="must be positive"),
+        "Invalid value for count: must be positive",
+        true,
+      ),
+      (
+        InvalidInput(name=None, message="must be positive"),
+        "Invalid input: must be positive",
+        true,
+      ),
+      (Busy, "The bot is busy right now. Please try again in a moment.", true),
+    ] {
+    let (error, content, ephemeral) = row
+    guard default_reply(error, origin)
+      is Tell(actual, ephemeral=actual_ephemeral) else {
+      fail("expected a direct reply for \{Repr(error)}")
+    }
+    assert_eq(actual, content)
+    assert_eq(actual_ephemeral, ephemeral)
+  }
+}
+
+///|
+test "the default error policy reports unexpected failures" {
+  let origin = FailureOrigin::Component(custom_id="confirm")
+  assert_true(
+    default_reply(HandlerError::Malformed(reason="stale"), origin)
+    is Report(
+      MalformedInteraction(
+        origin=Component(custom_id="confirm"),
+        reason="stale"
+      ),
+      "This interaction is out of date. Please try again."
+    ),
+  )
+  assert_true(
+    default_reply(PolicyTestFailure, origin)
+    is Report(
+      UnhandledFailure(
+        origin=Component(custom_id="confirm"),
+        error=PolicyTestFailure
+      ),
+      "Something went wrong."
+    ),
+  )
+}
