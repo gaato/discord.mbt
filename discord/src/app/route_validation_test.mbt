@@ -24,8 +24,12 @@ test "validate rejects duplicate component routes" {
       }
     }
     try app.build() |> ignore catch {
-      @app.AppConfigError::DuplicateComponentRoute(custom_id~) =>
+      @app.AppConfigError::DuplicateComponentRoute(custom_id~, first~, second~) => {
         assert_eq(custom_id, "ticket")
+        // Both registrations come from the loop above, in this file.
+        assert_true("\{first}".contains("route_validation_test.mbt"))
+        assert_eq("\{second}", "\{first}")
+      }
       error => fail("unexpected error: \{Repr(error)}")
     } noraise {
       _ => fail("expected duplicate component route")
@@ -46,7 +50,7 @@ test "validate rejects duplicate modal routes" {
       }
     }
     try app.build() |> ignore catch {
-      @app.AppConfigError::DuplicateModalRoute(custom_id~) =>
+      @app.AppConfigError::DuplicateModalRoute(custom_id~, ..) =>
         assert_eq(custom_id, "ticket")
       error => fail("unexpected error: \{Repr(error)}")
     } noraise {
@@ -114,14 +118,14 @@ test "id route collides with its literal prefix form" {
     }
     let duplicate = if raw_first { "a" } else { "a:" }
     try components.build() |> ignore catch {
-      @app.AppConfigError::DuplicateComponentRoute(custom_id~) =>
+      @app.AppConfigError::DuplicateComponentRoute(custom_id~, ..) =>
         assert_eq(custom_id, duplicate)
       error => fail("unexpected error: \{Repr(error)}")
     } noraise {
       _ => fail("expected duplicate component route")
     }
     try modals.build() |> ignore catch {
-      @app.AppConfigError::DuplicateModalRoute(custom_id~) =>
+      @app.AppConfigError::DuplicateModalRoute(custom_id~, ..) =>
         assert_eq(custom_id, duplicate)
       error => fail("unexpected error: \{Repr(error)}")
     } noraise {

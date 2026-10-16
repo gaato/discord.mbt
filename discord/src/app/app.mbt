@@ -10,13 +10,27 @@ pub(all) enum CommandScope {
 /// Configuration errors detected before starting an application executor.
 pub(all) suberror AppConfigError {
   EmptyToken
-  DuplicateCommand(name~ : String)
+  /// Two registrations share a command name and type; `first` and `second`
+  /// are their call sites.
+  DuplicateCommand(name~ : String, first~ : SourceLoc, second~ : SourceLoc)
   DuplicateCommandPath(command~ : String, path~ : String)
   NestedSubcommandGroup(command~ : String, path~ : String)
   ChoicesWithAutocomplete(command~ : String, path~ : String)
   RequiredOptionAfterOptional(command~ : String, path~ : String)
-  DuplicateComponentRoute(custom_id~ : String)
-  DuplicateModalRoute(custom_id~ : String)
+  /// Two component routes share an effective prefix; `first` and `second`
+  /// are their call sites.
+  DuplicateComponentRoute(
+    custom_id~ : String,
+    first~ : SourceLoc,
+    second~ : SourceLoc
+  )
+  /// Two modal routes share an effective prefix; `first` and `second` are
+  /// their call sites.
+  DuplicateModalRoute(
+    custom_id~ : String,
+    first~ : SourceLoc,
+    second~ : SourceLoc
+  )
   EmptyComponentRoute
   EmptyModalRoute
   InvalidRouteId(custom_id~ : String, reason~ : String)
@@ -36,6 +50,13 @@ pub(all) suberror AppConfigError {
   /// `max_pending` must allow at least one waiting deferred interaction.
   InvalidMaxPending(value~ : Int32)
 } derive(Debug)
+
+///|
+/// A declaration and the call site that registered it.
+priv struct Declared[T] {
+  entry : T
+  loc : SourceLoc
+}
 
 ///|
 priv struct RegisteredModal {
@@ -74,9 +95,9 @@ pub type Spawner = async (async () -> Unit) -> Unit
 pub struct AppBuilder {
   priv max_in_flight_ : Int32
   priv max_pending_ : Int32
-  priv commands_ : Array[RegisteredCommand]
-  priv components_ : Array[RegisteredComponent]
-  priv modals_ : Array[RegisteredModal]
+  priv commands_ : Array[Declared[RegisteredCommand]]
+  priv components_ : Array[Declared[RegisteredComponent]]
+  priv modals_ : Array[Declared[RegisteredModal]]
   priv autocompletes_ : Array[AutocompleteHandler]
   priv middleware_ : Array[InteractionMiddleware]
   priv mut policy_ : ErrorPolicy?
@@ -143,15 +164,18 @@ pub fn AppBuilder::AppBuilder(
 pub fn AppBuilder::build(self : AppBuilder) -> App raise AppConfigError {
   // Validate the snapshot the App keeps, so nothing the caller still holds
   // can change a declaration after it passed.
-  let commands = self.commands_.map(RegisteredCommand::snapshot)
+  let commands = self.commands_.map(declared => {
+    ..declared,
+    entry: declared.entry.snapshot(),
+  })
   { ..self, commands_: commands, }.validate()
   {
     max_in_flight_: self.max_in_flight_,
     max_pending_: self.max_pending_,
     deferred_wait_ms_: @framework.INTERACTION_TOKEN_LIFETIME_MS,
-    commands_: commands,
-    components_: self.components_.copy(),
-    modals_: self.modals_.copy(),
+    commands_: commands.map(declared => declared.entry),
+    components_: self.components_.map(declared => declared.entry),
+    modals_: self.modals_.map(declared => declared.entry),
     autocompletes_: self.autocompletes_.copy(),
     middleware_: self.middleware_.copy(),
     policy_: self.policy_,
@@ -173,45 +197,62 @@ pub fn AppBuilder::middleware(
 
 ///|
 /// Register a typed slash or context-menu command built with the
-/// `command` / `user_command` / `message_command` builders.
-pub fn[A] AppBuilder::command(self : AppBuilder, command : Command[A]) -> Unit {
-  self.register(command.erase())
+/// `command` / `user_command` / `message_command` builders. `loc` is filled
+/// with the caller's location, which duplicate-registration errors report.
+#callsite(autofill(loc))
+pub fn[A] AppBuilder::command(
+  self : AppBuilder,
+  command : Command[A],
+  loc~ : SourceLoc,
+) -> Unit {
+  self.register(command.erase(), loc~)
 }
 
 ///|
 /// Register a type-erased command. `App::command` is the typed
 /// entry point; use this when composing pre-erased commands, e.g. from
-/// a plugin.
+/// a plugin. `loc` is filled with the caller's location.
+#callsite(autofill(loc))
 pub fn AppBuilder::register(
   self : AppBuilder,
   command : RegisteredCommand,
+  loc~ : SourceLoc,
 ) -> Unit {
-  self.commands_.push(command)
+  self.commands_.push({ entry: command, loc, })
 }
 
 ///|
 /// Route a component's exact id or `id:state`, decoding state before the handler.
-/// Use the same route's `custom_id` when building buttons and selects.
+/// Use the same route's `custom_id` when building buttons and selects. `loc`
+/// is filled with the caller's location.
+#callsite(autofill(loc))
 pub fn[A] AppBuilder::on_component(
   self : AppBuilder,
   route : ComponentRoute[A],
   handler : ComponentHandler[A],
+  loc~ : SourceLoc,
 ) -> Unit {
-  self.components_.push(route.erase(handler))
+  self.components_.push({ entry: route.erase(handler), loc, })
 }
 
 ///|
 /// Register a fully raw literal-prefix component route. Longer prefixes win.
-/// `AppBuilder::build` rejects empty or duplicate effective prefixes.
+/// `AppBuilder::build` rejects empty or duplicate effective prefixes. `loc`
+/// is filled with the caller's location.
+#callsite(autofill(loc))
 pub fn AppBuilder::on_component_raw(
   self : AppBuilder,
   prefix~ : String,
   handler : async (@framework.ComponentCtx) -> Unit,
+  loc~ : SourceLoc,
 ) -> Unit {
   self.components_.push({
-    pattern: Prefix(prefix),
-    ack: Respond,
-    dispatch: (_, _, _, raw) => handler(raw),
+    entry: {
+      pattern: Prefix(prefix),
+      ack: Respond,
+      dispatch: (_, _, _, raw) => handler(raw),
+    },
+    loc,
   })
 }
 
@@ -219,45 +260,57 @@ pub fn AppBuilder::on_component_raw(
 /// Route submissions of the typed `modal` to `handler`; field values
 /// are decoded through the modal's `ModalFields` before the handler
 /// runs. Matches the exact modal id or that id followed by `:` and state.
+/// `loc` is filled with the caller's location.
+#callsite(autofill(loc))
 pub fn[S, A] AppBuilder::on_modal(
   self : AppBuilder,
   modal : Modal[S, A],
   handler : ModalSubmitHandler[S, A],
+  loc~ : SourceLoc,
 ) -> Unit {
   self.modals_.push({
-    pattern: Id(modal.route_.id_),
-    field_count: Some(modal.fields_.definitions_.length()),
-    text_input_ids: Some(modal_text_input_ids(modal.fields_.definitions_)),
-    file_type_filters: modal_file_type_filters(modal.fields_.definitions_),
-    limit_violations: @model.modal_limit_violations(
-      title=modal.title_,
-      components=modal.fields_.definitions_,
-    ),
-    ack: raw => handler.ack_plan(raw),
-    preflight: raw => handler.preflight(raw),
-    dispatch: (bot, waiter, warn, raw) => {
-      dispatch_modal_handler(modal, handler, bot, waiter, warn, raw)
+    entry: {
+      pattern: Id(modal.route_.id_),
+      field_count: Some(modal.fields_.definitions_.length()),
+      text_input_ids: Some(modal_text_input_ids(modal.fields_.definitions_)),
+      file_type_filters: modal_file_type_filters(modal.fields_.definitions_),
+      limit_violations: @model.modal_limit_violations(
+        title=modal.title_,
+        components=modal.fields_.definitions_,
+      ),
+      ack: raw => handler.ack_plan(raw),
+      preflight: raw => handler.preflight(raw),
+      dispatch: (bot, waiter, warn, raw) => {
+        dispatch_modal_handler(modal, handler, bot, waiter, warn, raw)
+      },
     },
+    loc,
   })
 }
 
 ///|
 /// Register a fully raw literal-prefix modal route. Longer prefixes win.
-/// `AppBuilder::build` rejects empty or duplicate effective prefixes.
+/// `AppBuilder::build` rejects empty or duplicate effective prefixes. `loc`
+/// is filled with the caller's location.
+#callsite(autofill(loc))
 pub fn AppBuilder::on_modal_raw(
   self : AppBuilder,
   prefix~ : String,
   handler : async (@framework.ModalCtx) -> Unit,
+  loc~ : SourceLoc,
 ) -> Unit {
   self.modals_.push({
-    pattern: Prefix(prefix),
-    field_count: None,
-    text_input_ids: None,
-    file_type_filters: [],
-    limit_violations: [],
-    ack: _ => Respond,
-    preflight: _ => (),
-    dispatch: (_, _, _, raw) => handler(raw),
+    entry: {
+      pattern: Prefix(prefix),
+      field_count: None,
+      text_input_ids: None,
+      file_type_filters: [],
+      limit_violations: [],
+      ack: _ => Respond,
+      preflight: _ => (),
+      dispatch: (_, _, _, raw) => handler(raw),
+    },
+    loc,
   })
 }
 
@@ -367,13 +420,14 @@ fn AppBuilder::validate(self : AppBuilder) -> Unit raise AppConfigError {
   if self.max_pending_ <= 0 {
     raise InvalidMaxPending(value=self.max_pending_)
   }
-  let commands : Set[String] = Set([])
-  for command in self.commands_ {
+  let commands : Map[String, SourceLoc] = Map([])
+  for declared in self.commands_ {
+    let command = declared.entry
     let command_key = command.key()
-    if commands.contains(command_key) {
-      raise DuplicateCommand(name=command.name_)
+    if commands.get(command_key) is Some(first) {
+      raise DuplicateCommand(name=command.name_, first~, second=declared.loc)
     }
-    commands.add(command_key)
+    commands[command_key] = declared.loc
     for path in command.nested_group_paths_ {
       raise NestedSubcommandGroup(command=command.name_, path=path.join("/"))
     }
@@ -393,15 +447,28 @@ fn AppBuilder::validate(self : AppBuilder) -> Unit raise AppConfigError {
       raise InvalidCooldown(command=command.name_, seconds=config.seconds)
     }
   }
-  let components : Set[String] = Set([])
+  let components : Map[String, SourceLoc] = Map([])
   let component_ids : Array[String] = []
   for component in self.components_ {
-    validate_route(component.pattern, components, component_ids, modal=false)
+    validate_route(
+      component.entry.pattern,
+      components,
+      component_ids,
+      modal=false,
+      loc=component.loc,
+    )
   }
-  let modals : Set[String] = Set([])
+  let modals : Map[String, SourceLoc] = Map([])
   let modal_ids : Array[String] = []
-  for modal in self.modals_ {
-    validate_route(modal.pattern, modals, modal_ids, modal=true)
+  for declared in self.modals_ {
+    let modal = declared.entry
+    validate_route(
+      modal.pattern,
+      modals,
+      modal_ids,
+      modal=true,
+      loc=declared.loc,
+    )
     let custom_id = modal.pattern.base()
     if modal.field_count is Some(count) && (count < 1 || count > 5) {
       raise InvalidModalFieldCount(custom_id~, count~)

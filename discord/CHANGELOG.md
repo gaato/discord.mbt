@@ -27,6 +27,13 @@ breaking change is listed with a migration note.
 - **`Client::get_pinned_messages` and `ChannelRef::pins` are deprecated**,
   following Discord's deprecation of the array-returning pins endpoint.
   Migration: page with `get_channel_pins` or `ChannelRef::pins_page`.
+- **Duplicate registrations report both call sites.**
+  `AppConfigError::DuplicateCommand`, `DuplicateComponentRoute`, and
+  `DuplicateModalRoute` gain `first~` and `second~` source locations, filled
+  automatically by `AppBuilder::command`, `register`, `on_component`,
+  `on_component_raw`, `on_modal`, and `on_modal_raw` through
+  `#callsite(autofill(loc))`. Callers pass nothing new. Migration: a pattern
+  naming only the old fields warns until it adds `..` or binds the locations.
 
 ### Removed
 

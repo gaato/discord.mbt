@@ -44,13 +44,13 @@ pub fn user_command(name~ : String, handler~ : InteractionHandler[@framework.Tar
 // Errors
 pub(all) suberror AppConfigError {
   EmptyToken
-  DuplicateCommand(name~ : String)
+  DuplicateCommand(name~ : String, first~ : SourceLoc, second~ : SourceLoc)
   DuplicateCommandPath(command~ : String, path~ : String)
   NestedSubcommandGroup(command~ : String, path~ : String)
   ChoicesWithAutocomplete(command~ : String, path~ : String)
   RequiredOptionAfterOptional(command~ : String, path~ : String)
-  DuplicateComponentRoute(custom_id~ : String)
-  DuplicateModalRoute(custom_id~ : String)
+  DuplicateComponentRoute(custom_id~ : String, first~ : SourceLoc, second~ : SourceLoc)
+  DuplicateModalRoute(custom_id~ : String, first~ : SourceLoc, second~ : SourceLoc)
   EmptyComponentRoute
   EmptyModalRoute
   InvalidRouteId(custom_id~ : String, reason~ : String)
@@ -106,15 +106,21 @@ pub struct AppBuilder {
 pub fn AppBuilder::AppBuilder(max_in_flight? : Int, max_pending? : Int, cooldown_store? : &@cooldown.CooldownStore) -> Self
 pub fn AppBuilder::autocomplete(Self, String, async (@framework.AutocompleteCtx) -> Unit) -> Unit
 pub fn AppBuilder::build(Self) -> App raise AppConfigError
-pub fn[A] AppBuilder::command(Self, Command[A]) -> Unit
+#callsite(autofill(loc))
+pub fn[A] AppBuilder::command(Self, Command[A], loc~ : SourceLoc) -> Unit
 pub fn AppBuilder::error_policy(Self, async (FailureCtx, Error) -> Unit) -> Unit
 pub fn AppBuilder::middleware(Self, async (InteractionCtx, async () -> Unit) -> Unit) -> Unit
-pub fn[A] AppBuilder::on_component(Self, ComponentRoute[A], ComponentHandler[A]) -> Unit
-pub fn AppBuilder::on_component_raw(Self, prefix~ : String, async (@framework.ComponentCtx) -> Unit) -> Unit
-pub fn[S, A] AppBuilder::on_modal(Self, Modal[S, A], ModalSubmitHandler[S, A]) -> Unit
-pub fn AppBuilder::on_modal_raw(Self, prefix~ : String, async (@framework.ModalCtx) -> Unit) -> Unit
+#callsite(autofill(loc))
+pub fn[A] AppBuilder::on_component(Self, ComponentRoute[A], ComponentHandler[A], loc~ : SourceLoc) -> Unit
+#callsite(autofill(loc))
+pub fn AppBuilder::on_component_raw(Self, prefix~ : String, async (@framework.ComponentCtx) -> Unit, loc~ : SourceLoc) -> Unit
+#callsite(autofill(loc))
+pub fn[S, A] AppBuilder::on_modal(Self, Modal[S, A], ModalSubmitHandler[S, A], loc~ : SourceLoc) -> Unit
+#callsite(autofill(loc))
+pub fn AppBuilder::on_modal_raw(Self, prefix~ : String, async (@framework.ModalCtx) -> Unit, loc~ : SourceLoc) -> Unit
 pub fn AppBuilder::on_warn(Self, (AppWarning) -> Unit) -> Unit
-pub fn AppBuilder::register(Self, RegisteredCommand) -> Unit
+#callsite(autofill(loc))
+pub fn AppBuilder::register(Self, RegisteredCommand, loc~ : SourceLoc) -> Unit
 
 pub struct AppCtx {
   // private fields

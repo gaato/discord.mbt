@@ -234,9 +234,10 @@ fn AppRoutePattern::base(self : AppRoutePattern) -> String {
 ///|
 fn validate_route(
   pattern : AppRoutePattern,
-  seen : Set[String],
+  seen : Map[String, SourceLoc],
   ids : Array[String],
   modal~ : Bool,
+  loc~ : SourceLoc,
 ) -> Unit raise AppConfigError {
   let custom_id = pattern.base()
   if custom_id.is_empty() {
@@ -258,14 +259,14 @@ fn validate_route(
       "\{id}:"
     }
   }
-  if seen.contains(effective_prefix) {
+  if seen.get(effective_prefix) is Some(first) {
     if modal {
-      raise DuplicateModalRoute(custom_id~)
+      raise DuplicateModalRoute(custom_id~, first~, second=loc)
     } else {
-      raise DuplicateComponentRoute(custom_id~)
+      raise DuplicateComponentRoute(custom_id~, first~, second=loc)
     }
   }
-  seen.add(effective_prefix)
+  seen[effective_prefix] = loc
   if pattern is Id(id) {
     // Typed routes never shadow each other: `a` and `a:b` would both match
     // `a:b:state`, and state encoded for `a` could reach the handler of `a:b`.
