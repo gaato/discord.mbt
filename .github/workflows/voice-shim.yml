@@ -11,8 +11,9 @@ on:
       - "discord_voice/src/shim_stub.c"
       - "discord_voice/test/prebuild.test.js"
       - ".github/workflows/voice-shim.yml"
+  # Every base branch, so a stacked pull request is checked before it is
+  # retargeted to main.
   pull_request:
-    branches: [main]
     paths:
       - "discord_voice/shim/**"
       - "discord_voice/build.js"

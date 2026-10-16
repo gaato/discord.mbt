@@ -3,8 +3,9 @@ name: CI
 on:
   push:
     branches: [main]
+  # Every base branch, so a stacked pull request is checked before it is
+  # retargeted to main.
   pull_request:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
