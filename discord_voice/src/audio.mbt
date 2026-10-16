@@ -52,14 +52,40 @@ async fn send_opus_packet(
 }
 
 ///|
+/// RTP timestamp ticks per Opus frame: 20 ms at 48 kHz.
+const RTP_TICKS_PER_FRAME : UInt32 = 960
+
+///|
 priv struct SendLoopState {
-  mut sequence : UInt16
-  mut timestamp : UInt32
-  mut deadline : Int64
+  sequence : UInt16
+  timestamp : UInt32
+  deadline : Int64
+}
+
+///|
+/// Counters after one frame slot. The sequence number advances only for a
+/// packet that went out; the timestamp and pacing deadline advance for every
+/// slot, so receivers see the gap. Both RTP counters wrap.
+fn SendLoopState::advance(
+  self : SendLoopState,
+  sent~ : Bool,
+  pace_ms~ : Int32,
+) -> SendLoopState {
+  {
+    sequence: if sent {
+      self.sequence + 1
+    } else {
+      self.sequence
+    },
+    timestamp: self.timestamp + RTP_TICKS_PER_FRAME,
+    deadline: self.deadline + pace_ms.to_int64(),
+  }
 }
 
 ///|
 /// Internal paced sender used by the M4 connection driver.
+/// `frame_duration_ms` is only the pacing interval between packets: every
+/// `AudioSource` frame is 20 ms, so RTP timestamps always advance by 960.
 #doc(hidden)
 pub async fn run_send_loop(
   source : &AudioSource,
@@ -74,17 +100,13 @@ pub async fn run_send_loop(
   dave? : DaveMachine,
   on_dave_error~ : (String) -> Unit = _ => (),
 ) -> Unit {
-  let state = SendLoopState::{
+  let mut state = SendLoopState::{
     sequence: initial_sequence,
     timestamp: initial_timestamp,
     deadline: now_ms(),
   }
-  gateway.send_json(encode_speaking(ssrc~, flags=1))
-  for ;; {
-    if stop is Some(flag) && flag.val {
-      break
-    }
-    guard source.next_frame() is Some(frame) else { break }
+  // Send one frame (counting it only if it went out), then wait out its slot.
+  async fn send_paced(frame : Bytes) -> Unit {
     let sent = send_opus_packet(
       cipher,
       udp,
@@ -95,31 +117,21 @@ pub async fn run_send_loop(
       frame,
       on_dave_error,
     )
-    if sent {
-      state.sequence += 1
-    }
-    state.timestamp += 960
-    state.deadline += frame_duration_ms.to_int64()
+    state = state.advance(sent~, pace_ms=frame_duration_ms)
     pace_until(state.deadline)
+  }
+
+  gateway.send_json(encode_speaking(ssrc~, flags=1))
+  for ;; {
+    if stop is Some(flag) && flag.val {
+      break
+    }
+    guard source.next_frame() is Some(frame) else { break }
+    send_paced(frame)
   }
   // Discord recommends five silence frames to flush decoder state on stop.
   for _ in 0..<5 {
-    let sent = send_opus_packet(
-      cipher,
-      udp,
-      dave,
-      state.sequence,
-      state.timestamp,
-      ssrc,
-      SILENCE_FRAME,
-      on_dave_error,
-    )
-    if sent {
-      state.sequence += 1
-    }
-    state.timestamp += 960
-    state.deadline += frame_duration_ms.to_int64()
-    pace_until(state.deadline)
+    send_paced(SILENCE_FRAME)
   }
   gateway.send_json(encode_speaking(ssrc~, flags=0))
 }
