@@ -80,7 +80,7 @@ Live socket, websocket, and FFI adapters (live-verified; no unit seam):
 | discord_voice/src/shim_ffi.mbt | 3 | Extern-C glue whose arms depend on host library state. |
 | discord_voice/src/crypto.mbt | 5 | Shim error-status translation paths; round-trips and geometry checks are covered with the shim loaded. |
 | discord/src/http/client.mbt | 2 | Default warning sinks (`println`) of the online and offline constructors. |
-| discord/src/http/request.mbt | 4 | Pre-IO rejections of sticker and invite upload shapes the typed wrappers never build, and the `Api` re-raise for middleware that raises it itself; the send loop, its retry rule, and every error mapping are covered by the fake-wire contract tests. |
+| discord/src/http/request.mbt | 1 | The `Api` re-raise for middleware that raises it itself; the send loop, its retry rule, request validation, and every error mapping are covered by table and fake-wire contract tests. |
 | discord/src/endpoint_http/endpoint_http.mbt | 7 | Arms that need a broken connection or a cancellation mid-failure: a response write that fails because the peer is gone, cancellation of a failed request or write, and a server that stops after startup. Startup failure, 202/504 replies, and a request whose body fails mid-read are tested. |
 | discord/src/coordinator/protocol.mbt | 3 | Cross-process wire error arms. |
 | discord/src/coordinator/remote.mbt | 20 | Reconnecting remote clients against a real coordinator socket; for the cooldown store, the cancellation-during-connect arms and malformed-response arm (its outage, deadline, and gate-wait paths are covered). |
