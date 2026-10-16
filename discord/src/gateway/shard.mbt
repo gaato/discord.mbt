@@ -469,8 +469,7 @@ async fn Shard::run_connection(
     raise ConnectionEnded(code=None, reason="expected Hello")
   }
   let heartbeat_interval = iv.to_int()
-  let heartbeat_state : Ref[Bool] = Ref(true) // last heartbeat was acked
-  let heartbeat_sent_at : Ref[Int64] = Ref(0)
+  let heartbeat = Heartbeat::new()
 
   @async.with_task_group(conn_group => {
     // --- heartbeat task (single writer discipline via send_gate) ---
@@ -478,15 +477,14 @@ async fn Shard::run_connection(
       // jittered first beat per the docs
       sleeper(rand.int(limit=heartbeat_interval))
       for ;; {
-        if !heartbeat_state.val {
+        if heartbeat.awaiting_ack() {
           // previous beat never acked: the connection is a zombie
           raise ConnectionEnded(
             code=Some(4000),
             reason="heartbeat ACK timed out",
           )
         }
-        heartbeat_state.val = false
-        heartbeat_sent_at.val = @clock.now_ms()
+        heartbeat.beat(@clock.now_ms())
         self.send_heartbeat(transport)
         sleeper(heartbeat_interval)
       }
@@ -591,8 +589,7 @@ async fn Shard::run_connection(
           }
         }
         1 => {
-          heartbeat_state.val = false
-          heartbeat_sent_at.val = @clock.now_ms()
+          heartbeat.beat(@clock.now_ms())
           self.send_heartbeat(transport)
         }
         7 =>
@@ -607,12 +604,11 @@ async fn Shard::run_connection(
           }
           raise ConnectionEnded(code=None, reason="invalid session")
         }
-        11 => {
-          heartbeat_state.val = true
-          let latency_ms = @clock.now_ms() - heartbeat_sent_at.val
-          self.latency = Some(latency_ms)
-          self.emit_telemetry(ShardHeartbeatLatency(shard_id~, latency_ms~))
-        }
+        11 =>
+          if heartbeat.ack(@clock.now_ms()) is Some(latency_ms) {
+            self.latency = Some(latency_ms)
+            self.emit_telemetry(ShardHeartbeatLatency(shard_id~, latency_ms~))
+          }
         _ => ()
       }
     }

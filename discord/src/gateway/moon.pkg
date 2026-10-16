@@ -39,6 +39,8 @@ options(
     "compression_wbtest.mbt": [ "js", "native", "wasm" ],
     "gateway_test.mbt": [ "js", "native", "wasm" ],
     "extends.mbt": [ "js", "native", "wasm" ],
+    "heartbeat.mbt": [ "js", "native", "wasm" ],
+    "heartbeat_wbtest.mbt": [ "js", "native", "wasm" ],
     "inflater.mbt": [ "js", "native", "wasm" ],
     "pkg.generated.mbti": [ "native" ],
     "platform.js.mbt": [ "js" ],
