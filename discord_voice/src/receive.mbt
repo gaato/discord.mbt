@@ -182,6 +182,33 @@ fn[T] ReceivePipeline::drop_dave_packet(
 }
 
 ///|
+/// What to do with a received frame while a DAVE session exists.
+priv enum DaveReceive {
+  Decrypt
+  Passthrough
+  Drop(reason~ : String)
+}
+
+///|
+/// Plaintext passes only while DAVE is inactive and the frame carries no DAVE
+/// marker; any other frame without a sender decryptor is dropped.
+fn dave_receive_action(
+  has_decryptor~ : Bool,
+  active_version~ : Int32,
+  magic~ : Bool,
+) -> DaveReceive {
+  if has_decryptor {
+    Decrypt
+  } else if active_version == 0 && !magic {
+    Passthrough
+  } else if magic {
+    Drop(reason="DAVE frame has no decryptor")
+  } else {
+    Drop(reason="DAVE media is active but sender has no decryptor")
+  }
+}
+
+///|
 /// Decrypt one media datagram for a subscribed sender and restore RTP order.
 /// Packets from SSRCs that are unmapped or that `wants` declines are dropped
 /// before decryption, and their reorder state is discarded so a later
@@ -223,20 +250,19 @@ fn ReceivePipeline::process_udp_packet(
         error =>
           return self.drop_dave_packet(user_id, rtp.ssrc, "\{Repr(error)}")
       }
-      if has_decryptor {
-        machine.decrypt_opus_frame(user_id~, payload) catch {
-          error =>
-            return self.drop_dave_packet(user_id, rtp.ssrc, "\{Repr(error)}")
-        }
-      } else if machine.active_protocol_version() == 0 && !dave_magic {
-        payload
-      } else {
-        let reason = if dave_magic {
-          "DAVE frame has no decryptor"
-        } else {
-          "DAVE media is active but sender has no decryptor"
-        }
-        return self.drop_dave_packet(user_id, rtp.ssrc, reason)
+      match
+        dave_receive_action(
+          has_decryptor~,
+          active_version=machine.active_protocol_version(),
+          magic=dave_magic,
+        ) {
+        Decrypt =>
+          machine.decrypt_opus_frame(user_id~, payload) catch {
+            error =>
+              return self.drop_dave_packet(user_id, rtp.ssrc, "\{Repr(error)}")
+          }
+        Passthrough => payload
+        Drop(reason~) => return self.drop_dave_packet(user_id, rtp.ssrc, reason)
       }
     }
     None =>
