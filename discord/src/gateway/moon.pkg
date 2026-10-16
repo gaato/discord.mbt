@@ -47,6 +47,8 @@ options(
     "pkg.generated.mbti": [ "native" ],
     "platform.js.mbt": [ "js" ],
     "platform_native.mbt": [ "native", "wasm" ],
+    "reconnect.mbt": [ "js", "native", "wasm" ],
+    "reconnect_wbtest.mbt": [ "js", "native", "wasm" ],
     "shard.mbt": [ "js", "native", "wasm" ],
     "state.mbt": [ "js", "native", "wasm" ],
     "transport.mbt": [ "js", "native", "wasm" ],

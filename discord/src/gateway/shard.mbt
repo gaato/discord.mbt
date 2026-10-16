@@ -276,11 +276,6 @@ fn Shard::emit_telemetry(
 }
 
 ///|
-priv suberror ConnectionEnded {
-  ConnectionEnded(code~ : Int32?, reason~ : String)
-} derive(Debug)
-
-///|
 /// The reconnect loop: connect, run one connection to completion, classify
 /// the close, back off, repeat.
 async fn Shard::run(
@@ -299,14 +294,10 @@ async fn Shard::run(
   sleeper~ : async (Int32) -> Unit,
   rand~ : @random.Rand,
 ) -> Unit noraise {
-  let mut attempts = 0
-  let mut consecutive_connector_failures = 0
+  let reconnect = Reconnect::new()
   while !self.closing {
-    if attempts > 0 {
-      // full-jitter exponential backoff, capped at 30s
-      let max_delay = 1000 * (1 << (if attempts > 5 { 5 } else { attempts }))
-      let capped = if max_delay > 30000 { 30000 } else { max_delay }
-      sleeper(rand.int(limit=capped) + 250) catch {
+    if reconnect.delay is Some(delay) {
+      sleeper(delay.sample_ms(rand)) catch {
         _ => return
       }
     }
@@ -337,20 +328,17 @@ async fn Shard::run(
     let transport = connector("\{base}/?v=10&encoding=json\{compression_query}") catch {
       _ if @async.is_being_cancelled() => return
       _ => {
-        attempts += 1
-        consecutive_connector_failures += 1
-        // A persisted resume_url can point at a dead host; fall back to gateway_url.
-        if consecutive_connector_failures >= 3 && self.session is Some(_) {
+        if reconnect.on_connector_failure(has_session=self.session is Some(_)) {
           self.session = None
         }
-        self.state = Disconnected(reconnect_attempts=attempts)
+        self.state = Disconnected(reconnect_attempts=reconnect.attempts)
         self.emit_telemetry(
           ShardDisconnected(shard_id~, code=None, will_resume=false),
         )
         continue
       }
     }
-    consecutive_connector_failures = 0
+    reconnect.on_connected()
     self.transport = Some(transport)
     let ended = try {
       defer {
@@ -381,6 +369,8 @@ async fn Shard::run(
     } catch {
       _ if @async.is_being_cancelled() => return
       ConnectionEnded(code~, reason~) => ConnectionEnded(code~, reason~)
+      ConnectionEnded::InvalidSession(resumable~) =>
+        ConnectionEnded::InvalidSession(resumable~)
       TransportClosed(code~, reason~) => ConnectionEnded(code~, reason~)
       e => ConnectionEnded(code=None, reason="\{e}")
     } noraise {
@@ -388,24 +378,24 @@ async fn Shard::run(
     }
     self.transport = None
     self.latency = None
-    guard ended is ConnectionEnded(code~, ..)
-    // A connection that got as far as READY/RESUMED starts the backoff over;
-    // only consecutive failures should push the delay toward its cap.
-    if self.state is Active {
-      attempts = 0
-    }
-    if self.closing {
-      self.state = Disconnected(reconnect_attempts=0)
-      self.emit_telemetry(
-        ShardDisconnected(shard_id~, code~, will_resume=false),
-      )
-      self.events.put(Disconnected(code~, resuming=false)) catch {
-        _ => ()
+    match
+      reconnect.after_close(
+        ended,
+        closing=self.closing,
+        was_active=self.state is Active,
+        has_session=self.session is Some(_),
+      ) {
+      Stop(code~) => {
+        self.state = Disconnected(reconnect_attempts=0)
+        self.emit_telemetry(
+          ShardDisconnected(shard_id~, code~, will_resume=false),
+        )
+        self.events.put(Disconnected(code~, resuming=false)) catch {
+          _ => ()
+        }
+        break
       }
-      break
-    }
-    match on_close(code, self.session is Some(_)) {
-      Fatal => {
+      Fatal(code~) => {
         let fatal_code = code.unwrap_or(0)
         self.state = FatallyClosed(code=fatal_code)
         self.emit_telemetry(
@@ -416,24 +406,15 @@ async fn Shard::run(
         }
         break
       }
-      Reidentify => {
-        self.session = None
-        attempts += 1
-        self.state = Disconnected(reconnect_attempts=attempts)
-        self.emit_telemetry(
-          ShardDisconnected(shard_id~, code~, will_resume=false),
-        )
-        self.events.put(Disconnected(code~, resuming=false)) catch {
-          _ => ()
+      Reconnect(code~, resuming~, clear_session~) => {
+        if clear_session {
+          self.session = None
         }
-      }
-      Resume => {
-        attempts += 1
-        self.state = Disconnected(reconnect_attempts=attempts)
+        self.state = Disconnected(reconnect_attempts=reconnect.attempts)
         self.emit_telemetry(
-          ShardDisconnected(shard_id~, code~, will_resume=true),
+          ShardDisconnected(shard_id~, code~, will_resume=resuming),
         )
-        self.events.put(Disconnected(code~, resuming=true)) catch {
+        self.events.put(Disconnected(code~, resuming~)) catch {
           _ => ()
         }
       }
@@ -556,14 +537,8 @@ async fn Shard::run_connection(
         Reconnect =>
           // Reconnect request: close and resume
           raise ConnectionEnded(code=None, reason="server requested reconnect")
-        InvalidSession(resumable~) => {
-          if !resumable {
-            self.session = None
-            // wait 1-5s before re-identifying, per the docs
-            sleeper(1000 + rand.int(limit=4000))
-          }
-          raise ConnectionEnded(code=None, reason="invalid session")
-        }
+        InvalidSession(resumable~) =>
+          raise ConnectionEnded::InvalidSession(resumable~)
         HeartbeatAck =>
           if heartbeat.ack(@clock.now_ms()) is Some(latency_ms) {
             self.latency = Some(latency_ms)

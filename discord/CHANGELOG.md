@@ -47,6 +47,10 @@ breaking change is listed with a migration note.
   first beat, or a duplicate ACK) no longer reports a latency. It reported
   the time since the Unix epoch, or since the previous beat, through
   `Shard::latency_ms` and `ShardHeartbeatLatency`.
+- After a non-resumable INVALID_SESSION (op 9), a shard waits the documented
+  1-5 s once before identifying. It waited 1-5 s with the connection still
+  open and then also took a reconnect backoff. The shard now closes the
+  connection and emits `Disconnected` before the wait.
 
 ## [0.8.0] - 2026-10-16
 
