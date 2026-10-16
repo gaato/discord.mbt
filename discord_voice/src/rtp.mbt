@@ -1,5 +1,6 @@
 ///|
 /// A parsed RTP packet with the `rtpsize` cleartext header separated.
+#doc(hidden)
 pub(all) struct RtpPacket {
   sequence : UInt16
   timestamp : UInt32
@@ -11,12 +12,14 @@ pub(all) struct RtpPacket {
 
 ///|
 /// Errors raised while validating an RTP packet.
+#doc(hidden)
 pub(all) suberror RtpError {
   InvalidRtpPacket(reason~ : String)
 } derive(Debug, Eq)
 
 ///|
 /// Build Discord's RTP header for a 20 ms Opus frame.
+#doc(hidden)
 pub fn build_rtp_header(
   sequence~ : UInt16,
   timestamp~ : UInt32,
@@ -40,6 +43,7 @@ pub fn build_rtp_header(
 
 ///|
 /// Return the cleartext RTP header length used as AEAD associated data.
+#doc(hidden)
 pub fn rtpsize_header_len(bytes : Bytes) -> Int32 {
   // version, padding, extension, CSRC count | marker + payload type,
   // sequence, timestamp, SSRC
@@ -64,6 +68,7 @@ pub fn rtpsize_header_len(bytes : Bytes) -> Int32 {
 
 ///|
 /// Parse an RTP v2 packet and retain extension data in `payload`.
+#doc(hidden)
 pub fn parse_rtp_packet(bytes : Bytes) -> RtpPacket raise RtpError {
   if bytes.length() < 12 {
     raise InvalidRtpPacket(reason="RTP packet is shorter than 12 bytes")

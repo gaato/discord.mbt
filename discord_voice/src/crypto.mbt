@@ -1,5 +1,6 @@
 ///|
 /// Discord voice transport encryption modes supported by this package.
+#doc(hidden)
 #non_exhaustive
 pub(all) enum EncryptionMode {
   AeadAes256GcmRtpsize
@@ -8,6 +9,7 @@ pub(all) enum EncryptionMode {
 
 ///|
 /// Errors raised by transport-mode negotiation and packet encryption.
+#doc(hidden)
 pub(all) suberror VoiceCryptoError {
   NoCompatibleMode(modes~ : Array[String])
   ShimUnavailable(reason~ : String)
@@ -22,6 +24,7 @@ pub(all) suberror VoiceCryptoError {
 
 ///|
 /// Select the preferred common Discord transport encryption mode.
+#doc(hidden)
 pub fn EncryptionMode::negotiate(
   modes : Array[String],
 ) -> EncryptionMode raise VoiceCryptoError {
@@ -118,6 +121,7 @@ fn make_nonce(mode : EncryptionMode, suffix : Bytes) -> Bytes {
 /// Stateful voice transport cipher. The sender counter never wraps: after
 /// 2^32 packets `seal` raises `NonceExhausted` instead of reusing a nonce.
 /// Receivers reconstruct nonces from the packet suffix and need no counter.
+#doc(hidden)
 pub struct TransportCipher {
   priv mode : EncryptionMode
   priv secret_key : Bytes
@@ -127,6 +131,7 @@ pub struct TransportCipher {
 ///|
 /// Create a cipher for `mode` from the 32-byte session `secret_key`
 /// delivered by the voice gateway.
+#doc(hidden)
 pub fn TransportCipher::new(
   mode : EncryptionMode,
   secret_key : Bytes,
@@ -144,6 +149,7 @@ pub fn TransportCipher::new(
 
 ///|
 /// Encrypt an RTP payload and append the four-byte nonce suffix.
+#doc(hidden)
 pub fn TransportCipher::seal(
   self : TransportCipher,
   header~ : Bytes,
@@ -167,6 +173,7 @@ pub fn TransportCipher::seal(
 
 ///|
 /// Authenticate and decrypt a packet, returning `header || plaintext`.
+#doc(hidden)
 pub fn TransportCipher::open(
   self : TransportCipher,
   packet : Bytes,

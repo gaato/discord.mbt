@@ -111,6 +111,7 @@ pub async fn ChannelRef::joined_private_archived_threads(Self, before? : @model.
 pub async fn ChannelRef::leave_thread(Self) -> Unit raise DiscordHttpError
 pub fn ChannelRef::message_ref(Self, @model.Id[@model.MessageMarker]) -> MessageRef
 pub fn ChannelRef::messages(Self, before? : @model.Id[@model.MessageMarker], after? : @model.Id[@model.MessageMarker], around? : @model.Id[@model.MessageMarker], page_size? : Int) -> @sdk-runtime.Paginator[@model.Message, DiscordHttpError] raise DiscordHttpError
+#deprecated
 pub async fn ChannelRef::pins(Self) -> Array[@model.Message] raise DiscordHttpError
 pub async fn ChannelRef::pins_page(Self, before? : @model.Timestamp, limit? : Int) -> @model.ChannelPins raise DiscordHttpError
 pub async fn ChannelRef::private_archived_threads(Self, before? : @model.Timestamp, limit? : Int) -> @model.ArchivedThreads raise DiscordHttpError
@@ -280,6 +281,7 @@ pub async fn Client::get_invite(Self, String, with_counts? : Bool, guild_schedul
 pub async fn Client::get_invite_target_users_job_status(Self, String) -> @model.TargetUsersJobStatus raise DiscordHttpError
 pub async fn Client::get_message(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker]) -> @model.Message raise DiscordHttpError
 pub async fn Client::get_original_response(Self, @model.Id[@model.ApplicationMarker], String) -> @model.Message raise DiscordHttpError
+#deprecated
 pub async fn Client::get_pinned_messages(Self, @model.Id[@model.ChannelMarker]) -> Array[@model.Message] raise DiscordHttpError
 pub async fn Client::get_poll_answer_voters(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], Int, after? : @model.Id[@model.UserMarker], limit? : Int) -> @model.PollAnswerVoters raise DiscordHttpError
 pub async fn Client::get_reactions(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], String, typ? : @model.ReactionType, limit? : Int, after? : @model.Id[@model.UserMarker]) -> Array[@model.User] raise DiscordHttpError

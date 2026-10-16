@@ -30,6 +30,7 @@ test "app validation rejects modals with more than five fields" {
 }
 
 ///|
+#warnings("-alert_unchecked")
 async test "command contexts expose their interaction and REST surfaces" {
   let app = @app.AppBuilder()
   let rest_paths : Array[String] = []

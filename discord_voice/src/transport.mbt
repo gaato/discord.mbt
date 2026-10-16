@@ -101,6 +101,7 @@ fn voice_close_code_to_int(code : @websocket.CloseCode) -> Int32 {
 ///|
 /// Connect to a voice-gateway WebSocket. The caller supplies the complete
 /// v8 URL, normally `wss://<endpoint>?v=8`.
+#doc(hidden)
 pub async fn connect_voice_websocket(url : String) -> &VoiceTransport {
   let conn = @websocket.connect(url)
   VoiceWsTransport::{ conn, closed: Ref(false), }

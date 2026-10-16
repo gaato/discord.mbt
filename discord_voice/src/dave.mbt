@@ -1,5 +1,6 @@
 ///|
 /// Errors reported while coordinating Discord's DAVE protocol.
+#doc(hidden)
 pub(all) suberror DaveError {
   DaveInvalid(reason~ : String)
   DaveUnavailable(reason~ : String)
@@ -8,6 +9,7 @@ pub(all) suberror DaveError {
 
 ///|
 /// Side effects requested by the DAVE gateway/MLS orchestration state machine.
+#doc(hidden)
 #non_exhaustive
 pub(all) enum DaveAction {
   SendJson(Json)
@@ -335,6 +337,7 @@ impl DaveBackend for LibdaveBackend with fn decrypt_opus(self, user_id~, frame) 
 
 ///|
 /// DAVE gateway/MLS orchestration. Networking remains outside this type.
+#doc(hidden)
 pub struct DaveMachine {
   priv backend : &DaveBackend
   priv self_user_id : UInt64
@@ -363,6 +366,7 @@ fn parse_roster(roster : Array[String]) -> Set[UInt64] raise DaveError {
 ///|
 /// Create the production DAVE state machine backed by the official libdave
 /// wrapper. `protocol_version` is the version selected by the voice gateway.
+#doc(hidden)
 pub fn DaveMachine::new(
   protocol_version~ : Int32,
   self_user_id~ : String,
@@ -498,6 +502,7 @@ fn DaveMachine::handle_welcome(
 
 ///|
 /// Handle one decoded voice-gateway message and return transport actions.
+#doc(hidden)
 pub fn DaveMachine::handle(
   self : DaveMachine,
   message : VoiceMessage,
@@ -579,6 +584,7 @@ pub fn DaveMachine::handle(
 
 ///|
 /// Return the protocol version currently selected for outbound media.
+#doc(hidden)
 pub fn DaveMachine::active_protocol_version(self : DaveMachine) -> Int32 {
   self.backend.active_protocol_version()
 }
@@ -599,6 +605,7 @@ fn DaveMachine::has_remote_decryptor(
 ///|
 /// Encrypt one Opus frame. Passthrough is delegated to libdave as well, so
 /// the encryptor remains the sole owner of media-transition state.
+#doc(hidden)
 pub fn DaveMachine::encrypt_opus_frame(
   self : DaveMachine,
   ssrc~ : UInt32,

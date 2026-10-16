@@ -19,6 +19,14 @@ breaking change is listed with a migration note.
   `Unsupported` marked targets without compression; both are removed.
   Migration: match `Malformed(..)` where you matched `InflateError(..)`, and
   drop `Unsupported` arms.
+- **The three `unchecked_raw` escape hatches now raise an
+  `alert_unchecked` warning** at each use, since a reply sent through them
+  breaks the handler's initial-response discipline. Migration: none needed;
+  silence it with `warnings = "-alert_unchecked"` where the bypass is
+  deliberate.
+- **`Client::get_pinned_messages` and `ChannelRef::pins` are deprecated**,
+  following Discord's deprecation of the array-returning pins endpoint.
+  Migration: page with `get_channel_pins` or `ChannelRef::pins_page`.
 
 ### Removed
 

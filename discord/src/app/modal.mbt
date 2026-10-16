@@ -758,7 +758,10 @@ pub fn ModalImmediateCtx::remaining_ms(self : ModalImmediateCtx) -> Int32? {
 /// handler's discipline of returning its initial response: a callback sent
 /// through it makes the returned reply fail with
 /// `ResponseGateError::AlreadyResponded`, which reaches the error policy.
-/// Prefer the read-only accessors on this context.
+/// Prefer the read-only accessors on this context. Each use raises an
+/// `alert_unchecked` warning; once the bypass is deliberate, silence it with
+/// `warnings = "-alert_unchecked"` in that package's `moon.pkg`.
+#alert(unchecked, "bypasses the initial-response discipline; a reply sent through it makes the handler's returned reply fail with AlreadyResponded")
 pub fn ModalImmediateCtx::unchecked_raw(
   self : ModalImmediateCtx,
 ) -> @framework.ModalCtx {

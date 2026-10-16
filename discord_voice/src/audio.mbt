@@ -60,6 +60,7 @@ priv struct SendLoopState {
 
 ///|
 /// Internal paced sender used by the M4 connection driver.
+#doc(hidden)
 pub async fn run_send_loop(
   source : &AudioSource,
   cipher : TransportCipher,
