@@ -252,7 +252,7 @@ pub impl @runtime.RateLimiter for RemoteRateLimiter with fn acquire(
     "global_exempt": global_exempt,
   })
   guard response is { "lease": lease_json, .. } &&
-    coordinator_nonnegative_int(lease_json) is Some(lease) else {
+    json_nonnegative_int(lease_json) is Some(lease) else {
     raise CoordinatorError::InvalidResponse(message="missing integer lease")
   }
   self.leases[bucket_key] = lease
@@ -287,17 +287,6 @@ pub impl @runtime.RateLimiter for RemoteRateLimiter with fn release(
     }),
   )
   self.leases.remove(bucket_key)
-}
-
-///|
-fn coordinator_nonnegative_int(value : Json) -> Int32? {
-  guard value is Number(number, ..) else { return None }
-  let integer = number.to_int()
-  if integer >= 0 && integer.to_double() == number {
-    Some(integer)
-  } else {
-    None
-  }
 }
 
 ///|
