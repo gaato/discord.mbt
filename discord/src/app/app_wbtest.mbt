@@ -660,6 +660,15 @@ test "initial response emits explicit typed allowed mentions" {
 }
 
 ///|
+/// The file and line of a `SourceLoc` rendered as `file:line:col-line:col`.
+fn call_site(loc : SourceLoc) -> (String, Int32) raise {
+  guard loc.to_string().split(":").to_array() is [file, line, ..] else {
+    fail("unexpected source location \{loc}")
+  }
+  (file.to_owned(), @string.parse_int(line))
+}
+
+///|
 test "app validates command type names and slash child structure" {
   let duplicate = AppBuilder()
   let command = slash(
@@ -671,7 +680,15 @@ test "app validates command type names and slash child structure" {
   duplicate.command(command)
   duplicate.command(command)
   try duplicate.build() |> ignore catch {
-    DuplicateCommand(name~) => inspect(name, content="same")
+    DuplicateCommand(name~, first~, second~) => {
+      inspect(name, content="same")
+      // Both sites are the two calls above, on consecutive lines.
+      let (first_file, first_line) = call_site(first)
+      let (second_file, second_line) = call_site(second)
+      assert_true(first_file.has_suffix("app_wbtest.mbt"))
+      assert_eq(second_file, first_file)
+      assert_eq(second_line, first_line + 1)
+    }
     error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected duplicate command error")
