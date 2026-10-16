@@ -79,7 +79,7 @@ Live socket, websocket, and FFI adapters (live-verified; no unit seam):
 | discord_voice/src/udp.mbt | 4 | SocketVoiceUdp impls and `open_voice_udp` over a real UDP socket; parse and retry logic is covered via fakes. |
 | discord_voice/src/shim_ffi.mbt | 3 | Extern-C glue whose arms depend on host library state. |
 | discord_voice/src/crypto.mbt | 5 | Shim error-status translation paths; round-trips and geometry checks are covered with the shim loaded. |
-| discord/src/http/client.mbt | 3 | Default warning sinks (`println`) of the online and offline constructors, and the catch-all arm the per-attempt deadline needs because `with_timeout` is typed to raise any error. |
+| discord/src/http/client.mbt | 2 | Default warning sinks (`println`) of the online and offline constructors. |
 | discord/src/http/request.mbt | 4 | Pre-IO rejections of sticker and invite upload shapes the typed wrappers never build, and the `Api` re-raise for middleware that raises it itself; the send loop, its retry rule, and every error mapping are covered by the fake-wire contract tests. |
 | discord/src/endpoint_http/endpoint_http.mbt | 7 | Arms that need a broken connection or a cancellation mid-failure: a response write that fails because the peer is gone, cancellation of a failed request or write, and a server that stops after startup. Startup failure, 202/504 replies, and a request whose body fails mid-read are tested. |
 | discord/src/coordinator/protocol.mbt | 3 | Cross-process wire error arms. |
@@ -100,9 +100,8 @@ ledgered):
 | discord_voice/src/audio.mbt | 6 | Real-time pacing loop (deadline sleeps) and DAVE encrypt-drop telemetry arms. |
 | discord_voice/src/subscribe.mbt | 3 | Silence-timeout stream end arms. |
 | discord_voice/src/client.mbt | 31 | `from_gateway`, `pending_voice_event`, and `join` adapt a `GatewayCtx`, which only a running bot creates, and the service `attach` registers runs only in one; the new-join/rejoin closures and the ready path cross a live `VoiceConnection::start`; the endpoint fallback contradicts the server predicate; disconnect and cancellation catches. Joins, reuse, eviction, gates, expectations before opcode 4, timeouts, a client that never runs, and the watcher's rejoin are tested through a fake `VoiceGatewayPort`. |
-| discord_voice/src/receive.mbt | 6 | Decrypt arms needing real DAVE frames from a second member. |
+| discord_voice/src/receive.mbt | 5 | Decrypt arms needing real DAVE frames from a second member. |
 | discord_voice/src/reorder.mbt | 3 | Arrival-time flush arms. |
-| discord_voice/src/rtp.mbt | 3 | Header arms only produced by real senders (CSRC counts). |
 | discord_voice/src/ogg_opus.mbt | 4 | Constructor `abort`s (unreachable by construction) and one reader break arm. |
 
 Reconnect/backoff and timed-wait loops (exercised in every live gateway
@@ -112,16 +111,17 @@ run; the gateway/voice loops are additionally tested via injected sleepers):
 | --- | --- | --- |
 | discord/src/gateway/shard.mbt | 15 | Protected-shutdown and event-queue teardown catches (including fatal inflater failure), stale-transport and normal-return fallbacks, and read-loop cancellation re-raise plumbing (async 0.22 cancellation does not pass through ordinary catches). Malformed Hello/frame, compression-mismatch, connector/backoff, and disconnected-send arms are tested through the fake transport. |
 | discord/src/gateway/platform_native.mbt | 2 | Two OS-specific Identify property arms unavailable on Linux. |
-| discord/src/ratelimit/ratelimit.mbt | 1 | Global-window sleep. |
 | discord/src/http/handles_channel.mbt | 3 | `with_typing` refresh-failure arm sits behind the real 8-second cadence. |
 | discord/src/bot/middleware.mbt | 1 | Middleware chain cancellation arm. |
 | discord/src/bot/shard_manager.mbt | 4 | Live gateway discovery and default-connector startup (including saved-session projection), plus defensive shard-config arms; fake-connector startup and resume are tested. |
-| discord/src/bot/bot.mbt | 16 | Gateway run-loop teardown/cancellation arms; startup, intents, telemetry, and event routing are covered. The event-backlog put fails only on a queue closed by shutdown. |
+| discord/src/bot/bot.mbt | 17 | Gateway run-loop teardown/cancellation arms; startup, intents, telemetry, and event routing are covered. The event-backlog put fails only on a queue closed by shutdown, and the `ShardEvent::..` arm that `#non_exhaustive` requires outside `@gateway` matches no current event. |
 
 Defensive arms unreachable by construction:
 
 | File | Budget | Reason |
 | --- | --- | --- |
+| discord/src/util/cdn.mbt | 1 | The `StickerFormatType::..` arm that `#non_exhaustive` requires outside `@model`; every current format is matched by name. |
+| discord/src/bot/gateway_commands.mbt | 1 | Non-chunk arm of the member-chunk wait; the collector only delivers events of the registered kind. |
 | discord/src/bot/session.mbt | 1 | Abort if an already decoded READY fails its own JSON round trip; snapshot independence and serialization are tested. |
 | discord/src/http/multipart.mbt | 2 | `attachments_json` always returns an array, and encoder errors other than a boundary collision, which `validate_files` rules out before encoding. |
 | discord/src/model/interaction.mbt | 4 | Fallbacks behind emitters that always produce objects. |
@@ -140,7 +140,7 @@ variant fallbacks; decode is pinned by fixtures):
 | discord/src/model/channel.mbt | 5 | Emit arms of receive-only fields. |
 | discord/src/model/command_permissions.mbt | 3 | Emit arms of receive-only structs. |
 | discord/src/model/embed.mbt | 13 | Emit arms of receive-only sub-objects (provider/video). |
-| discord/src/model/gateway_presence.mbt | 16 | Activity emit arms for fields bots never send. |
+| discord/src/model/gateway_presence.mbt | 9 | Activity emit arms for fields bots never send. |
 | discord/src/model/guild_create.mbt | 2 | Emit arms of the gateway-only guild-create extras. |
 | discord/src/model/integration.mbt | 8 | Emit arms of receive-only integration fields. |
 | discord/src/model/integration_context.mbt | 2 | Unknown-variant emit fallbacks. |
@@ -175,7 +175,6 @@ show-flows beyond the covered happy and failing paths):
 | discord/src/interaction/options.mbt | 8 | Focused-option accessors for kinds not used by any covered command shape. |
 | discord/src/cache/cache.mbt | 17 | Permission-overwrite computation arms needing full guild channel fixtures. |
 | discord/src/http/api_application.mbt | 2 | Emit arms of optional request fields not exercised by the pinned shapes. |
-| discord/src/http/api_channel.mbt | 15 | Remaining optional-parameter emit arms. |
 | discord/src/http/api_guild.mbt | 4 | Remaining optional-parameter emit arms. |
 | discord/src/http/api_interaction.mbt | 3 | Callback-with-files arms needing a live token. |
 | discord/src/http/api_message.mbt | 3 | Remaining optional-parameter emit arms. |

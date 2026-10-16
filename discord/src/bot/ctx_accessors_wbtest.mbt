@@ -22,6 +22,18 @@ test "bot error messages render actionable diagnostics" {
     "\{limit}",
     content="gateway session start limit exceeded: need 2, have 1; resets in 5000ms",
   )
+  inspect(
+    "\{BotError::ShardNotManaged(shard_id=1)}",
+    content="shard 1 is not run by this process",
+  )
+  inspect(
+    "\{BotError::GatewayRateLimited(opcode=8, retry_after_ms=1500L)}",
+    content="gateway opcode 8 rate limited; retry in 1500ms",
+  )
+  inspect(
+    "\{BotError::GatewayRequestTimeout}",
+    content="gateway request timed out",
+  )
 }
 
 ///|
