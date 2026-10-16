@@ -262,11 +262,8 @@ async fn VoiceGateway::run(
   let mut attempts = 0
   while !self.closing {
     if attempts > 0 {
-      // Full-jitter exponential reconnect delay, capped at 30 seconds.
-      let exponent = if attempts > 5 { 5 } else { attempts }
-      let max_delay = 1000 * (1 << exponent)
-      let capped = if max_delay > 30000 { 30000 } else { max_delay }
-      sleeper(rand.int(limit=capped) + 250) catch {
+      // Full-jitter exponential backoff.
+      sleeper(rand.int(limit=reconnect_delay_limit(attempts)) + 250) catch {
         _ => return
       }
     }
@@ -321,37 +318,19 @@ async fn VoiceGateway::run(
     if self.state_ is Active {
       attempts = 0
     }
-    if self.closing {
-      self.state_ = Disconnected(reconnect_attempts=0)
-      self.emit(Disconnected(code~, resuming=false)) catch {
-        _ => ()
-      }
-      break
+    let outcome = close_outcome(
+      code,
+      closing=self.closing,
+      has_session=self.has_session,
+      attempts~,
+    )
+    attempts = outcome.attempts
+    self.state_ = outcome.state
+    self.emit(outcome.event) catch {
+      _ => ()
     }
-    match voice_on_close(code, self.has_session) {
-      Fatal => {
-        let fatal_code = code.unwrap_or(0)
-        self.state_ = FatallyClosed(code=fatal_code)
-        self.emit(FatallyClosed(code=fatal_code)) catch {
-          _ => ()
-        }
-        break
-      }
-      Rejoin => {
-        attempts += 1
-        self.state_ = Disconnected(reconnect_attempts=attempts)
-        self.emit(NeedsRejoin(code~)) catch {
-          _ => ()
-        }
-        break
-      }
-      Resume => {
-        attempts += 1
-        self.state_ = Disconnected(reconnect_attempts=attempts)
-        self.emit(Disconnected(code~, resuming=true)) catch {
-          _ => ()
-        }
-      }
+    if outcome.stop {
+      break
     }
   }
 }
