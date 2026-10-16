@@ -1,5 +1,6 @@
 ///|
 /// Values produced while restoring RTP sequence order.
+#doc(hidden)
 pub(all) enum ReorderOutput[T] {
   Deliver(T)
   Lost(count~ : Int32)
@@ -16,6 +17,7 @@ priv struct ReorderEntry[T] {
 /// A small RTP reorder window. The first packet establishes the expected
 /// sequence; later gaps are held until `hold_ms` elapses or eight packets are
 /// buffered.
+#doc(hidden)
 pub struct ReorderBuffer[T] {
   priv entries : Array[ReorderEntry[T]]
   priv mut expected : Int32?
@@ -25,6 +27,7 @@ pub struct ReorderBuffer[T] {
 ///|
 /// Create an empty window that holds packets behind a sequence gap for up to
 /// `hold_ms` milliseconds.
+#doc(hidden)
 pub fn[T] ReorderBuffer::new(hold_ms~ : Int32 = 60) -> ReorderBuffer[T] {
   { entries: [], expected: None, hold_ms: hold_ms.to_int64(), }
 }
@@ -95,6 +98,7 @@ fn[T] ReorderBuffer::drain_contiguous(
 ///|
 /// Insert one RTP packet. Arrival time is supplied by the caller so timeout
 /// behavior is deterministic in tests.
+#doc(hidden)
 pub fn[T] ReorderBuffer::push(
   self : ReorderBuffer[T],
   seq~ : Int32,

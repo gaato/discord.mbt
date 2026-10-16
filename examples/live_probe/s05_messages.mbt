@@ -183,20 +183,7 @@ async fn sec_messages(p : P) -> Unit {
     c.delete_all_reactions(text, mid)
     "ok"
   })
-  // Pins
-  p.probe("pin_message / get_pinned_messages / unpin_message", () => {
-    c.pin_message(text, mid, audit_reason="live probe pin")
-    let pins = c.get_pinned_messages(text)
-    c.unpin_message(text, mid)
-    "pins=\{pins.length()}"
-  })
-  p.probe("MessageRef::pin/unpin + ChannelRef::pins", () => {
-    let r = c.message_ref(text, mid)
-    r.pin()
-    let pins = c.channel_ref(text).pins()
-    r.unpin()
-    "pins=\{pins.length()}"
-  })
+  sec_deprecated_pins(p, text, mid)
   // Bulk delete
   p.probe("bulk_delete_messages", () => {
     let a = c.create_message(text, content="bulk 1")
@@ -277,5 +264,30 @@ async fn sec_messages(p : P) -> Unit {
       _ => ()
     }
     "webhook=\{followed.webhook_id}"
+  })
+}
+
+///|
+/// Pins through Discord's deprecated array-returning endpoint, which the
+/// library still wraps while Discord serves it.
+#warnings("-deprecated")
+async fn sec_deprecated_pins(
+  p : P,
+  text : @model.ChannelId,
+  mid : @model.MessageId,
+) -> Unit {
+  let c = p.client
+  p.probe("pin_message / get_pinned_messages / unpin_message", () => {
+    c.pin_message(text, mid, audit_reason="live probe pin")
+    let pins = c.get_pinned_messages(text)
+    c.unpin_message(text, mid)
+    "pins=\{pins.length()}"
+  })
+  p.probe("MessageRef::pin/unpin + ChannelRef::pins", () => {
+    let r = c.message_ref(text, mid)
+    r.pin()
+    let pins = c.channel_ref(text).pins()
+    r.unpin()
+    "pins=\{pins.length()}"
   })
 }

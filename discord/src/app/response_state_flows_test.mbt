@@ -124,6 +124,7 @@ async test "raw modal handler that responds then raises gets a followup" {
 }
 
 ///|
+#warnings("-alert_unchecked")
 async test "immediate handler responding through raw then raising gets a followup" {
   let app = @app.AppBuilder()
   app.command(

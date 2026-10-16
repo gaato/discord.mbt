@@ -1,5 +1,6 @@
 ///|
 /// Voice gateway lifecycle state.
+#doc(hidden)
 pub(all) enum VoiceGatewayState {
   Disconnected(reconnect_attempts~ : Int32)
   Connecting
@@ -13,6 +14,7 @@ pub(all) enum VoiceGatewayState {
 ///|
 /// Action after a voice WebSocket close: resume the session, rejoin from
 /// scratch, or give up because reconnecting cannot succeed.
+#doc(hidden)
 pub(all) enum VoiceReconnectPolicy {
   Resume
   Rejoin
@@ -22,6 +24,7 @@ pub(all) enum VoiceReconnectPolicy {
 ///|
 /// Classify a voice WebSocket close code. A resumable transport failure still
 /// requires a fresh join when no established voice session exists.
+#doc(hidden)
 pub fn voice_on_close(
   code : Int32?,
   has_session : Bool,

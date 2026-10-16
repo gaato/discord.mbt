@@ -8,6 +8,7 @@ pub(open) trait VoiceUdp {
 
 ///|
 /// Errors raised by voice UDP setup and IP discovery.
+#doc(hidden)
 pub(all) suberror VoiceUdpError {
   InvalidDiscoveryPacket(reason~ : String)
   IpDiscoveryFailed(attempts~ : Int32, reason~ : String)
@@ -40,6 +41,7 @@ impl VoiceUdp for SocketVoiceUdp with fn close(self) {
 
 ///|
 /// Open a connected UDP socket for a Discord voice server.
+#doc(hidden)
 pub async fn open_voice_udp(ip : String, port : Int32) -> &VoiceUdp {
   let address = @socket.Addr::resolve(ip, port~)
   let client = @socket.UdpClient(address)
@@ -48,6 +50,7 @@ pub async fn open_voice_udp(ip : String, port : Int32) -> &VoiceUdp {
 
 ///|
 /// Build Discord's 74-byte voice IP discovery request.
+#doc(hidden)
 pub fn build_ip_discovery_request(ssrc : UInt32) -> Bytes {
   let bytes : Array[Byte] = [0, 1, 0, 70]
   bytes.push((ssrc >> 24).to_byte())
@@ -62,6 +65,7 @@ pub fn build_ip_discovery_request(ssrc : UInt32) -> Bytes {
 
 ///|
 /// Parse Discord's 74-byte voice IP discovery response.
+#doc(hidden)
 pub fn parse_ip_discovery_response(
   bytes : Bytes,
   expected_ssrc~ : UInt32,
@@ -102,6 +106,7 @@ pub fn parse_ip_discovery_response(
 
 ///|
 /// Run voice IP discovery, retrying only receive timeouts.
+#doc(hidden)
 pub async fn discover_external_address(
   udp : &VoiceUdp,
   ssrc : UInt32,

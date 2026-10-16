@@ -175,7 +175,7 @@ pub(all) enum Route {
   PinMessage(channel_id~ : @model.ChannelId, message_id~ : @model.MessageId)
   UnpinMessage(channel_id~ : @model.ChannelId, message_id~ : @model.MessageId)
   GetChannelPins(channel_id~ : @model.ChannelId, query~ : String)
-  // Kept for source compatibility with the deprecated array-returning API.
+  // Discord-deprecated array-returning endpoint behind the deprecated helpers.
   GetPinnedMessages(channel_id~ : @model.ChannelId)
   EditChannelPermissions(
     channel_id~ : @model.ChannelId,

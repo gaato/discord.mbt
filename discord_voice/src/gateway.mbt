@@ -19,6 +19,7 @@ pub(all) enum VoiceGatewayEvent {
 ///|
 /// Voice gateway v8 driver. The caller-owned task group controls its
 /// lifetime; cancelling the group tears down connection and heartbeat tasks.
+#doc(hidden)
 pub struct VoiceGateway {
   priv events : @aqueue.Queue[VoiceGatewayEvent]
   priv send_gate : @async.Semaphore
@@ -34,24 +35,28 @@ pub struct VoiceGateway {
 
 ///|
 /// Current voice gateway lifecycle state.
+#doc(hidden)
 pub fn VoiceGateway::state(self : VoiceGateway) -> VoiceGatewayState {
   self.state_
 }
 
 ///|
 /// Latest matched heartbeat round-trip time in milliseconds.
+#doc(hidden)
 pub fn VoiceGateway::latency_ms(self : VoiceGateway) -> Int64? {
   self.latency
 }
 
 ///|
 /// Pull the next voice gateway event. Blocks until one is available.
+#doc(hidden)
 pub async fn VoiceGateway::next(self : VoiceGateway) -> VoiceGatewayEvent {
   self.events.get()
 }
 
 ///|
 /// Send an arbitrary JSON voice gateway envelope.
+#doc(hidden)
 pub async fn VoiceGateway::send_json(
   self : VoiceGateway,
   payload : Json,
@@ -67,6 +72,7 @@ pub async fn VoiceGateway::send_json(
 
 ///|
 /// Send a client-to-server DAVE binary envelope.
+#doc(hidden)
 pub async fn VoiceGateway::send_binary(
   self : VoiceGateway,
   op~ : Int32,
@@ -83,6 +89,7 @@ pub async fn VoiceGateway::send_binary(
 
 ///|
 /// Request graceful shutdown of the voice WebSocket.
+#doc(hidden)
 pub async fn VoiceGateway::close(self : VoiceGateway) -> Unit noraise {
   if self.closing {
     @async.protect_from_cancel(() => self.wait_runner()) catch {
@@ -148,6 +155,7 @@ async fn VoiceGateway::finish_transport(
 /// `max_dave_protocol_version` is advertised in Identify. It defaults to zero
 /// so low-level callers do not negotiate DAVE without an active backend; pass
 /// a supported maximum explicitly to enable it.
+#doc(hidden)
 pub fn[X] VoiceGateway::start(
   group : @async.TaskGroup[X],
   server_id~ : String,

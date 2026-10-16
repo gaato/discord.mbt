@@ -197,7 +197,9 @@ pub async fn ChannelRef::delete(
 }
 
 ///|
-/// List every pinned message in this channel.
+/// List every pinned message in this channel through Discord's deprecated
+/// array-returning endpoint. `pins_page` pages the current endpoint.
+#deprecated("Discord deprecated this endpoint; use pins_page", skip_current_package=true)
 pub async fn ChannelRef::pins(
   self : ChannelRef,
 ) -> Array[@model.Message] raise DiscordHttpError {

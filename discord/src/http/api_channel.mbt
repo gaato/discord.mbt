@@ -150,7 +150,9 @@ pub async fn Client::unpin_message(
 }
 
 ///|
-/// List every pinned message in a channel.
+/// List every pinned message in a channel through Discord's deprecated
+/// array-returning endpoint. `get_channel_pins` pages the current endpoint.
+#deprecated("Discord deprecated this endpoint; use get_channel_pins", skip_current_package=true)
 pub async fn Client::get_pinned_messages(
   self : Client,
   channel_id : @model.ChannelId,

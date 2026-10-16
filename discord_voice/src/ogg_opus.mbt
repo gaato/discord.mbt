@@ -35,6 +35,7 @@ fn ogg_page_crc(page : ArrayView[Byte]) -> UInt32 {
 ///|
 /// Streaming Ogg packet reassembler. Feed arbitrary chunks with `push`, then
 /// pull complete packets with `next_packet`.
+#doc(hidden)
 pub struct OggPacketReader {
   priv buffer : Array[Byte]
   priv mut cursor : Int32
@@ -48,6 +49,7 @@ pub struct OggPacketReader {
 ///|
 /// Create an empty reader; feed it Ogg data with `push` and drain packets
 /// with `next_packet`.
+#doc(hidden)
 pub fn OggPacketReader::new() -> OggPacketReader {
   {
     buffer: [],
@@ -62,6 +64,7 @@ pub fn OggPacketReader::new() -> OggPacketReader {
 
 ///|
 /// Add bytes to the streaming input without requiring a page boundary.
+#doc(hidden)
 pub fn OggPacketReader::push(self : OggPacketReader, bytes : Bytes) -> Unit {
   for byte in bytes {
     self.buffer.push(byte)
@@ -176,6 +179,7 @@ fn OggPacketReader::parse_page(
 
 ///|
 /// Return the next complete Ogg packet, or `None` when more input is needed.
+#doc(hidden)
 pub fn OggPacketReader::next_packet(
   self : OggPacketReader,
 ) -> Bytes? raise OggOpusError {
