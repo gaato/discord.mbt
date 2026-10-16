@@ -65,6 +65,48 @@ async fn read_body(
 }
 
 ///|
+/// The answer to a request its head already rules out: the wrong method, the
+/// wrong path, or a missing signature header, checked in that order.
+fn request_rejection(
+  request : @ahttp.Request,
+  path : String,
+) -> @app.InteractionHttpResponse? {
+  if request.meth != Post {
+    Some(text_response(405, "method not allowed"))
+  } else if request.path != path {
+    Some(text_response(404, "not found"))
+  } else if !(request.headers.contains("x-signature-ed25519") &&
+    request.headers.contains("x-signature-timestamp")) {
+    // A request without both signature headers cannot verify, so answer
+    // without keeping a body that an unauthenticated client controls.
+    Some(text_response(401, "missing signature"))
+  } else {
+    None
+  }
+}
+
+///|
+/// The body to hand the endpoint, or the response to send instead with
+/// whether the connection must close because the body was not read to its
+/// end.
+fn settle_body(
+  rejection : @app.InteractionHttpResponse?,
+  body : BodyRead,
+) -> Result[Bytes, (@app.InteractionHttpResponse, Bool)] {
+  match (rejection, body) {
+    // Drain a small rejected body to keep the connection; give up on a large
+    // or slow one and close instead.
+    (Some(response), Complete(_)) => Err((response, false))
+    (Some(response), TooLarge | TimedOut) => Err((response, true))
+    (None, Complete(bytes)) => Ok(bytes)
+    (None, TooLarge) =>
+      Err((text_response(413, "request body too large"), true))
+    (None, TimedOut) =>
+      Err((text_response(408, "request body timed out"), true))
+  }
+}
+
+///|
 /// Route one request. The flag is true when the connection must close after
 /// the response because the body was not read to its end.
 async fn route_request(
@@ -77,33 +119,16 @@ async fn route_request(
   max_body_bytes : Int32,
   body_timeout_ms : Int32,
 ) -> (@app.InteractionHttpResponse, Bool) {
-  let rejection = if request.meth != Post {
-    Some(text_response(405, "method not allowed"))
-  } else if request.path != path {
-    Some(text_response(404, "not found"))
-  } else if !(request.headers.contains("x-signature-ed25519") &&
-    request.headers.contains("x-signature-timestamp")) {
-    // A request without both signature headers cannot verify, so answer
-    // without keeping a body that an unauthenticated client controls.
-    Some(text_response(401, "missing signature"))
-  } else {
-    None
-  }
+  let rejection = request_rejection(request, path)
   let body = read_body(
     body_reader,
     max_body_bytes,
     body_timeout_ms,
     keep=rejection is None,
   )
-  if rejection is Some(response) {
-    // Drain a small rejected body to keep the connection; give up on a large
-    // or slow one and close instead.
-    return (response, !(body is Complete(_)))
-  }
-  let body_bytes = match body {
-    Complete(bytes) => bytes
-    TooLarge => return (text_response(413, "request body too large"), true)
-    TimedOut => return (text_response(408, "request body timed out"), true)
+  let body_bytes = match settle_body(rejection, body) {
+    Ok(bytes) => bytes
+    Err(answer) => return answer
   }
   let response = endpoint.handle_signed_http(
     {

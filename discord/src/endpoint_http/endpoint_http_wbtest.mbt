@@ -499,3 +499,55 @@ async test "interactions server rejects non-positive body limits" {
     }
   })
 }
+
+///|
+test "request_rejection checks the method, then the path, then the signature headers" {
+  let signed : @ahttp.Headers = {
+    "x-signature-ed25519": "aa",
+    "x-signature-timestamp": "1",
+  }
+  let cases : Array[(@ahttp.RequestMethod, String, @ahttp.Headers, Int32?)] = [
+    (Get, "/", signed, Some(405)),
+    (Get, "/x", signed, Some(405)),
+    (Post, "/x", signed, Some(404)),
+    (Post, "/", {}, Some(401)),
+    (Post, "/", { "x-signature-ed25519": "aa" }, Some(401)),
+    (Post, "/", { "x-signature-timestamp": "1" }, Some(401)),
+    (Post, "/", signed, None),
+    (
+      Post,
+      "/",
+      { "X-Signature-Ed25519": "aa", "X-SIGNATURE-TIMESTAMP": "1" },
+      None,
+    ),
+  ]
+  for case in cases {
+    let (meth, path, headers, expected) = case
+    let rejection = request_rejection({ meth, path, headers, }, "/")
+    assert_eq(rejection.map(response => response.status), expected)
+  }
+}
+
+///|
+test "settle_body keeps the connection only for a body read to its end" {
+  let unauthorized = Some(text_response(401, "missing signature"))
+  let not_allowed = Some(text_response(405, "method not allowed"))
+  let cases : Array[
+    (@app.InteractionHttpResponse?, BodyRead, Result[Bytes, (Int32, Bool)]),
+  ] = [
+    (None, Complete(b"{}"), Ok(b"{}")),
+    (None, TooLarge, Err((413, true))),
+    (None, TimedOut, Err((408, true))),
+    (unauthorized, Complete(b""), Err((401, false))),
+    (unauthorized, TooLarge, Err((401, true))),
+    (not_allowed, TimedOut, Err((405, true))),
+  ]
+  for case in cases {
+    let (rejection, body, expected) = case
+    let settled = settle_body(rejection, body).map_err(answer => {
+      let (response, close) = answer
+      (response.status, close)
+    })
+    assert_eq(settled, expected)
+  }
+}
