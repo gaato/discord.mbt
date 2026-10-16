@@ -40,6 +40,22 @@ pub fn InMemoryQueue::InMemoryQueue(
 pub extend InMemoryQueue with IdentifyQueue::{wait_for_identify}
 
 ///|
+/// Milliseconds until a bucket that last identified at `last_identify_ms` may
+/// identify again; 0 when it may now.
+fn identify_wait_ms(
+  last_identify_ms : Int64,
+  spacing_ms : Int32,
+  now : Int64,
+) -> Int32 {
+  let wait = last_identify_ms + spacing_ms.to_int64() - now
+  if wait > 0 {
+    wait.to_int()
+  } else {
+    0
+  }
+}
+
+///|
 /// Wait until the shard's bucket (`shard_id % max_concurrency`) allows the
 /// next identify.
 pub impl IdentifyQueue for InMemoryQueue with fn wait_for_identify(
@@ -49,11 +65,13 @@ pub impl IdentifyQueue for InMemoryQueue with fn wait_for_identify(
   let bucket = self.buckets[shard_id % self.buckets.length()]
   bucket.gate.acquire()
   defer bucket.gate.release()
-  let wait = bucket.last_identify_ms +
-    self.spacing_ms.to_int64() -
-    @clock.now_ms()
+  let wait = identify_wait_ms(
+    bucket.last_identify_ms,
+    self.spacing_ms,
+    @clock.now_ms(),
+  )
   if wait > 0 {
-    @async.sleep(wait.to_int())
+    @async.sleep(wait)
   }
   bucket.last_identify_ms = @clock.now_ms()
 }
