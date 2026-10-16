@@ -39,7 +39,7 @@ jobs:
       - name: Install build dependencies
         run: |
           apt-get update
-          apt-get install -y --no-install-recommends python3 zlib1g-dev
+          apt-get install -y --no-install-recommends python3
 
       - name: Version
         run: |

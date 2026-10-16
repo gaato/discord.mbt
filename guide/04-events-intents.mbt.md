@@ -332,22 +332,14 @@ fn compressed_bot(app : @discord.App, token : String) -> @discord.BotBuilder {
 }
 ```
 
-On native, each compressed Gateway connection requests `compress=zlib-stream`
-and retains one inflate context, including across consecutive Gateway
-messages. Only server-to-client binary messages are decompressed; identify,
-heartbeat, and other client-to-server payloads remain uncompressed text.
+Each compressed Gateway connection requests `compress=zlib-stream` and
+retains one inflate context, including across consecutive Gateway messages.
+Only server-to-client binary messages are decompressed; identify, heartbeat,
+and other client-to-server payloads remain uncompressed text.
 
-Compression is available only on native; `zlib_stream_supported()` reports
-whether the current backend can use it. On JavaScript and Wasm,
-`BotBuilder::build` rejects `compress=true` with
-`BotConfigError::CompressionUnavailable`.
-
-The zlib shared library is loaded at runtime on native (like the async runtime loads
-OpenSSL), so neither this library nor applications using it need extra link
-flags; building only requires the zlib header. If the shared library is
-missing at runtime, enabling compression raises before any connection is
-attempted. A successful compressed connection emits `ShardCompressionEnabled`
-telemetry.
+The inflater is pure MoonBit, so compression works the same on native,
+JavaScript, and Wasm and needs no zlib library. A successful compressed
+connection emits `ShardCompressionEnabled` telemetry.
 
 ## Opt-in cache
 

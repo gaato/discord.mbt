@@ -1,10 +1,9 @@
 ///|
-/// Raised when a compressed Gateway stream cannot be initialized or decoded.
+/// Raised when a compressed Gateway stream cannot be decoded.
 pub(all) suberror InflateError {
-  InflateError(status~ : Int32)
+  /// The zlib-stream bytes are corrupt or end the stream early.
+  Malformed(message~ : String)
   InvalidUtf8
-  /// This backend has no zlib-stream inflater (JavaScript and Wasm).
-  Unsupported
 } derive(Debug)
 
 ///|

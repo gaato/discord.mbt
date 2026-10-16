@@ -44,7 +44,7 @@ jobs:
         run: |
           apt-get update
           # unzip extracts the libdave archive for the native gaato/dave tests.
-          apt-get install -y --no-install-recommends zlib1g-dev unzip
+          apt-get install -y --no-install-recommends unzip
 
       - name: Toolchain versions
         run: moon version --all

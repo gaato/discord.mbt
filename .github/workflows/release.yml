@@ -51,11 +51,6 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Install build dependencies
-        run: |
-          apt-get update
-          apt-get install -y --no-install-recommends zlib1g-dev
-
       - name: Check the tag against main and moon.mod
         id: tag
         shell: bash

@@ -4,9 +4,6 @@
 pub(all) suberror BotConfigError {
   /// The bot token is empty.
   EmptyToken
-  /// `compress=true` on a backend without zlib-stream inflate (see
-  /// `@gateway.zlib_stream_supported`).
-  CompressionUnavailable
   /// A shard id/count selection cannot be represented by Discord's sharding
   /// rules.
   InvalidShardConfig(message~ : String)
@@ -186,17 +183,13 @@ pub fn BotBuilder::on_decode_error(
 
 ///|
 /// Validate the configuration and freeze the registrations into a `Bot`.
-/// Raises `BotConfigError` for an empty token, `compress=true` without
-/// zlib-stream support, a shard selection Discord cannot represent, a saved
-/// session whose ids disagree, or an `event_backlog` below 1. Intents are resolved here, so warnings about
+/// Raises `BotConfigError` for an empty token, a shard selection Discord
+/// cannot represent, a saved session whose ids disagree, or an `event_backlog` below 1. Intents are resolved here, so warnings about
 /// subscriptions the intents cannot deliver appear once, at build time.
 pub fn BotBuilder::build(self : BotBuilder) -> Bot raise BotConfigError {
   let core = self.core
   if core.token_.is_empty() {
     raise EmptyToken
-  }
-  if core.compress_ && !@gateway.zlib_stream_supported() {
-    raise CompressionUnavailable
   }
   if core.event_backlog_ < 1 {
     raise InvalidEventBacklog(value=core.event_backlog_)

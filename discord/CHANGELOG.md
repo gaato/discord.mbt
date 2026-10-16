@@ -7,6 +7,25 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+### Changed
+
+- **Gateway zlib-stream compression is pure MoonBit and works on every
+  target.** The inflater now uses `moonbit-community/flate` instead of a C
+  stub that loaded zlib at runtime, so `compress=true` also works on
+  JavaScript and Wasm, and native builds no longer need the zlib development
+  headers or the zlib shared library.
+- **`@gateway.InflateError` now reports `Malformed(message~)` for a corrupt
+  stream.** `InflateError(status~)` carried a zlib status code and
+  `Unsupported` marked targets without compression; both are removed.
+  Migration: match `Malformed(..)` where you matched `InflateError(..)`, and
+  drop `Unsupported` arms.
+
+### Removed
+
+- `@gateway.zlib_stream_supported()` and
+  `BotConfigError::CompressionUnavailable`, since compression is available on
+  every target. Migration: delete the checks and their `match` arms.
+
 ## [0.8.0] - 2026-10-16
 
 ### Added

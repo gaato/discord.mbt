@@ -20,7 +20,6 @@ pub const DEFAULT_EVENT_BACKLOG : Int = 10000
 // Errors
 pub(all) suberror BotConfigError {
   EmptyToken
-  CompressionUnavailable
   InvalidShardConfig(message~ : String)
   MismatchedSession(shard_id~ : Int)
   InvalidEventBacklog(value~ : Int)

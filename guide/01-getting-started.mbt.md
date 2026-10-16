@@ -10,13 +10,7 @@ package registry with `git` when resolving dependencies.
 A bot that adds voice also needs Node.js on `PATH` for native builds: the
 `gaato/discord_voice` module and its `gaato/dave` dependency declare prebuild
 hooks that Moon runs with `node` (see [Voice](10-voice.mbt.md)).
-`gaato/discord` itself has no build hooks.
-
-All native builds compile the Gateway package's `zlib_stream.c`, which always
-includes `<zlib.h>`, regardless of whether Gateway compression is enabled.
-Install the zlib development headers (`zlib1g-dev` on Debian/Ubuntu or
-`zlib-devel` on Fedora/openSUSE). The zlib shared library is also needed at
-runtime if the bot enables zlib-stream compression.
+`gaato/discord` itself has no build hooks and no C library dependencies.
 
 ## Install
 

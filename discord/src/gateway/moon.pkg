@@ -9,6 +9,7 @@ import {
   "moonbitlang/core/json",
   "moonbitlang/core/random",
   "moonbitlang/core/encoding/utf8",
+  "moonbit-community/flate/zlib",
 }
 
 import {
@@ -21,7 +22,7 @@ import {
   "gaato/discord/internal/clock",
 } for "test"
 
-// The gateway runs on native, JavaScript, and moonrun Wasm; zlib-stream compression is native-only.
+// The gateway, including zlib-stream compression, runs on native, JavaScript, and moonrun Wasm.
 
 // `resume` is the public API label and is reserved by the current compiler.
 
@@ -30,15 +31,12 @@ warnings = "-29-35"
 supported_targets = "js + native + wasm"
 
 options(
-  "native-stub": [ "zlib_stream.c" ],
   targets: {
     "command_limit.mbt": [ "js", "native", "wasm" ],
     "command_limit_wbtest.mbt": [ "js", "native", "wasm" ],
-    "compression.mbt": [ "native" ],
-    "compression_unsupported.mbt": [ "js", "wasm" ],
-    "compression_wbtest.mbt": [ "native" ],
     "capabilities_test.mbt": [ "js", "native", "wasm" ],
-    "gateway_js_test.mbt": [ "js" ],
+    "compression.mbt": [ "js", "native", "wasm" ],
+    "compression_wbtest.mbt": [ "js", "native", "wasm" ],
     "gateway_test.mbt": [ "js", "native", "wasm" ],
     "extends.mbt": [ "js", "native", "wasm" ],
     "inflater.mbt": [ "js", "native", "wasm" ],
