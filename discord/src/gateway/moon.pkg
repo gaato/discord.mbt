@@ -37,6 +37,8 @@ options(
     "capabilities_test.mbt": [ "js", "native", "wasm" ],
     "compression.mbt": [ "js", "native", "wasm" ],
     "compression_wbtest.mbt": [ "js", "native", "wasm" ],
+    "frame.mbt": [ "js", "native", "wasm" ],
+    "frame_wbtest.mbt": [ "js", "native", "wasm" ],
     "gateway_test.mbt": [ "js", "native", "wasm" ],
     "extends.mbt": [ "js", "native", "wasm" ],
     "heartbeat.mbt": [ "js", "native", "wasm" ],

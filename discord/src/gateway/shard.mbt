@@ -460,15 +460,9 @@ async fn Shard::run_connection(
 ) -> Unit {
   // --- Hello ---
   let hello_frame = @json.parse(recv_payload(transport, inflater~))
-  guard hello_frame
-    is {
-      "op": Number(10, ..),
-      "d": { "heartbeat_interval": Number(iv, ..), .. },
-      ..
-    } else {
+  guard decode_hello(hello_frame) is Some(heartbeat_interval) else {
     raise ConnectionEnded(code=None, reason="expected Hello")
   }
-  let heartbeat_interval = iv.to_int()
   let heartbeat = Heartbeat::new()
 
   @async.with_task_group(conn_group => {
@@ -494,41 +488,24 @@ async fn Shard::run_connection(
     match self.session {
       Some(session) => {
         self.state = Resuming
-        let resume_payload : Json = {
-          "op": 6,
-          "d": {
-            "token": Json::string(token),
-            "session_id": Json::string(session.id),
-            "seq": Json::number(session.sequence.to_double()),
-          },
-        }
-        self.raw_send(transport, resume_payload)
+        self.raw_send(transport, resume_payload(token~, session))
       }
       None => {
         self.state = Identifying
         if identify_queue is Some(q) {
           q.wait_for_identify(shard_id)
         }
-        let data : Map[String, Json] = {
-          "token": Json::string(token),
-          "intents": intents.to_json(),
-          "shard": [
-            Json::number(shard_id.to_double()),
-            Json::number(shard_count.to_double()),
-          ],
-          "properties": {
-            "os": Json::string(identify_os()),
-            "browser": "discord.mbt",
-            "device": "discord.mbt",
-          },
-        }
-        if capabilities != @model.GatewayCapabilities::none() {
-          data["capabilities"] = capabilities.to_json()
-        }
-        if self.presence is Some(presence) {
-          data["presence"] = presence.to_json()
-        }
-        self.raw_send(transport, { "op": 2, "d": Json::object(data) })
+        self.raw_send(
+          transport,
+          identify_payload(
+            token~,
+            intents~,
+            shard_id~,
+            shard_count~,
+            capabilities~,
+            presence=self.presence,
+          ),
+        )
       }
     }
 
@@ -539,31 +516,15 @@ async fn Shard::run_connection(
         TransportClosed(code~, reason~) => raise ConnectionEnded(code~, reason~)
         e => raise ConnectionEnded(code=None, reason="bad frame: \{e}")
       }
-      guard frame is { "op": Number(op, ..), .. } else { continue }
-      match op.to_int() {
-        0 => {
-          guard frame is { "t": String(t), "s": s, "d": d, .. } else {
-            continue
-          }
-          if self.session is Some(session) && s is Number(seq, ..) {
-            session.sequence = seq.to_int64()
+      match decode_frame(frame) {
+        Dispatch(t~, seq~, d~) => {
+          if self.session is Some(session) && seq is Some(seq) {
+            session.sequence = seq
           }
           match t {
             "READY" => {
-              guard d
-                is {
-                  "session_id": String(session_id),
-                  "resume_gateway_url": String(resume_url),
-                  ..
-                } else {
-                continue
-              }
-              let sequence = if s is Number(seq, ..) {
-                seq.to_int64()
-              } else {
-                0L
-              }
-              self.session = Some({ id: session_id, resume_url, sequence, })
+              guard ready_session(d, seq) is Some(session) else { continue }
+              self.session = Some(session)
               self.state = Active
               self.emit_telemetry(ShardIdentified(shard_id~))
               self.emit_telemetry(ShardConnected(shard_id~))
@@ -588,15 +549,14 @@ async fn Shard::run_connection(
             self.events.put(Dispatch(event))
           }
         }
-        1 => {
+        HeartbeatRequest => {
           heartbeat.beat(@clock.now_ms())
           self.send_heartbeat(transport)
         }
-        7 =>
+        Reconnect =>
           // Reconnect request: close and resume
           raise ConnectionEnded(code=None, reason="server requested reconnect")
-        9 => {
-          let resumable = frame is { "d": True, .. }
+        InvalidSession(resumable~) => {
           if !resumable {
             self.session = None
             // wait 1-5s before re-identifying, per the docs
@@ -604,12 +564,12 @@ async fn Shard::run_connection(
           }
           raise ConnectionEnded(code=None, reason="invalid session")
         }
-        11 =>
+        HeartbeatAck =>
           if heartbeat.ack(@clock.now_ms()) is Some(latency_ms) {
             self.latency = Some(latency_ms)
             self.emit_telemetry(ShardHeartbeatLatency(shard_id~, latency_ms~))
           }
-        _ => ()
+        Ignored => ()
       }
     }
   })
