@@ -8,6 +8,11 @@ name: Release
 # that needs a new version of another is tagged after that version is
 # published. Earlier gaato/discord releases are tagged `v<version>`;
 # `voice-shim-v*` tags release the Rust shim (voice-shim.yml).
+#
+# After the publish, a GitHub Release is created for the tag from that
+# version's section of `<module>/CHANGELOG.md`. Only gaato/discord releases are
+# marked latest. Run the workflow by hand with a tag to create a missing
+# Release for a version already published; that run does not publish.
 
 on:
   push:
@@ -15,6 +20,12 @@ on:
       - "discord-v*"
       - "discord_voice-v*"
       - "dave-v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag of a published version, such as discord-v0.8.0
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -28,6 +39,7 @@ env:
 
 jobs:
   publish:
+    if: github.event_name == 'push'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     container: ghcr.io/gaato/moonbit:0.10.15-943464bfa
@@ -84,3 +96,55 @@ jobs:
           trap 'rm -f "$moon_home/credentials.json"' EXIT
           scripts/release.sh --dry-run "$MODULE"
           scripts/release.sh "$MODULE"
+
+  github-release:
+    needs: publish
+    # A manual run skips the publish and only creates the Release.
+    if: >-
+      !cancelled() && (needs.publish.result == 'success' ||
+      (github.event_name == 'workflow_dispatch' && needs.publish.result == 'skipped'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Check out the tagged commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: refs/tags/${{ inputs.tag || github.ref_name }}
+          persist-credentials: false
+
+      - name: Create the Release from the changelog
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          module="${TAG%-v*}"
+          version="${TAG##*-v}"
+          case "$module" in
+            discord | discord_voice | dave) ;;
+            *) echo "$TAG is not a module release tag" >&2; exit 1 ;;
+          esac
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "A Release for $TAG already exists"
+            exit 0
+          fi
+          notes="$RUNNER_TEMP/notes.md"
+          # The section runs from `## [<version>]` to the next `## [` heading.
+          awk -v heading="## [$version]" '
+            index($0, heading) == 1 { found = 1; next }
+            found && /^## \[/ { exit }
+            found { print }
+          ' "$module/CHANGELOG.md" > "$notes"
+          if ! grep -q '[^[:space:]]' "$notes"; then
+            echo "$module/CHANGELOG.md has no section for $version" >&2
+            exit 1
+          fi
+          printf '\nPublished as [gaato/%s@%s](https://mooncakes.io/docs/gaato/%s).\n' \
+            "$module" "$version" "$module" >> "$notes"
+          latest=false
+          if [ "$module" = discord ]; then latest=true; fi
+          gh release create "$TAG" --verify-tag --title "gaato/$module $version" \
+            --notes-file "$notes" --latest="$latest"
