@@ -12,7 +12,7 @@ releases (0.x → 0.y) may contain breaking changes; patch releases do not.
   package interface with `#doc(hidden)`: the `encode_*` / `parse_*` /
   `build_*` helpers, the socket openers, `run_send_loop`, `VoiceGateway`,
   `DaveMachine`, `TransportCipher`, `RtpPacket`, `ReorderBuffer`,
-  `OggPacketReader`, and their error types. They remain callable; the
+  `OggPacketReader`, and their error types, including `DaveError`. They remain callable; the
   documented surface is `VoiceClient`, `VoiceConnection`, audio sources, and
   the events they deliver.
 

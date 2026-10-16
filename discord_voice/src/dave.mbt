@@ -1,5 +1,6 @@
 ///|
 /// Errors reported while coordinating Discord's DAVE protocol.
+#doc(hidden)
 pub(all) suberror DaveError {
   DaveInvalid(reason~ : String)
   DaveUnavailable(reason~ : String)

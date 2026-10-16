@@ -22,12 +22,6 @@ pub fn shim_available() -> Bool
 pub fn shim_unavailable_reason() -> String?
 
 // Errors
-pub(all) suberror DaveError {
-  DaveInvalid(reason~ : String)
-  DaveUnavailable(reason~ : String)
-  DaveInternal(reason~ : String)
-} derive(Eq, @debug.Debug)
-
 pub(all) suberror OggOpusError {
   InvalidOggPage(reason~ : String)
   InvalidOpusStream(reason~ : String)
