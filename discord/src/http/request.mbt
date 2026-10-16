@@ -73,27 +73,28 @@ impl @runtime.RetryDecider for DiscordRetry with fn next_delay_ms(
 
 ///|
 /// Retry delay and scope of a 429 response: the body's `retry_after` (in
-/// seconds, the more precise source), then the `Retry-After` header, then one
-/// second; `global` when the response says the whole account is limited.
-fn rate_limit_details(headers : @ghttp.Headers, body : Bytes) -> (Int64, Bool) {
+/// seconds, the more precise source), then the `Retry-After-Ms` or
+/// `Retry-After` header, then one second; `global` when the
+/// `X-RateLimit-Global` header says the whole account is limited.
+fn rate_limit_from_json(headers : @ghttp.Headers, body : Json) -> (Int64, Bool) {
   let global = headers.get("x-ratelimit-global") is Some(_)
-  let parsed : Json? = Some(@json.parse(@utf8.decode_lossy(body))) catch {
-    _ => None
-  }
-  let from_body : Int64? = match parsed {
-    Some({ "retry_after": Number(seconds, ..), .. }) =>
-      Some((seconds * 1000.0).to_int64())
-    _ => None
-  }
-  let retry_after_ms : Int64 = match from_body {
-    Some(ms) => ms
-    None =>
+  let retry_after_ms : Int64 = match body {
+    { "retry_after": Number(seconds, ..), .. } => (seconds * 1000.0).to_int64()
+    _ =>
       match @runtime.retry_after_ms(headers) {
         Some(ms) => ms.to_int64()
         None => 1000L
       }
   }
   (retry_after_ms, global)
+}
+
+///|
+/// `rate_limit_from_json` for a wire body; one that is not JSON counts as no
+/// body.
+fn rate_limit_details(headers : @ghttp.Headers, body : Bytes) -> (Int64, Bool) {
+  let parsed = @json.parse(@utf8.decode_lossy(body)) catch { _ => Json::null() }
+  rate_limit_from_json(headers, parsed)
 }
 
 ///|
@@ -315,24 +316,16 @@ async fn Client::answer_offline(
     ),
   )
   if response.status == 429 {
-    let (retry_after_ms, global) = offline_rate_limit_details(response)
+    let (retry_after_ms, global) = rate_limit_from_json(
+      @ghttp.Headers::from_array(response.headers.to_array()),
+      response.body,
+    )
     self.emit_telemetry(
       HttpRateLimited(route_bucket=bucket, global~, retry_after_ms~),
     )
     raise DiscordHttpError::RateLimited(retry_after_ms~, global~)
   }
   response
-}
-
-///|
-/// `rate_limit_details` for a response an offline handler produced.
-fn offline_rate_limit_details(response : HttpResponse) -> (Int64, Bool) {
-  let global = response.headers.get("x-ratelimit-global") is Some(_)
-  let retry_after_ms : Int64 = match response.body {
-    { "retry_after": Number(seconds, ..), .. } => (seconds * 1000.0).to_int64()
-    _ => 1000L
-  }
-  (retry_after_ms, global)
 }
 
 ///|
