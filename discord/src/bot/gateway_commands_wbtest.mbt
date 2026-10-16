@@ -323,3 +323,32 @@ async test "fetch watches matching rate limits and times out with no leaked expe
     assert_eq(ctx.collector_.waiters.length(), 0)
   })
 }
+
+///|
+test "rate_limit_matches requires opcode 8, the guild, and this nonce or none" {
+  let guild_id : @model.GuildId = Id(1UL)
+  let rows : Array[(Int32, Json, Bool)] = [
+    (8, { "guild_id": "1", "nonce": "members-1" }, true),
+    (8, { "guild_id": "1" }, true),
+    (3, { "guild_id": "1", "nonce": "members-1" }, false),
+    (8, {}, false),
+    (8, { "guild_id": "x" }, false),
+    (8, { "guild_id": "2" }, false),
+    (8, { "guild_id": "1", "nonce": "other" }, false),
+    (8, { "guild_id": "1", "nonce": 1 }, false),
+    (8, { "guild_id": "1", "nonce": Json::null() }, false),
+  ]
+  for row in rows {
+    let (opcode, meta, expected) = row
+    let event : @model.GatewayRateLimitedEvent = {
+      opcode,
+      retry_after: 1.0,
+      meta,
+    }
+    assert_eq(
+      rate_limit_matches(event, guild_id, "members-1"),
+      expected,
+      msg="opcode=\{opcode} meta=\{meta.stringify()}",
+    )
+  }
+}
