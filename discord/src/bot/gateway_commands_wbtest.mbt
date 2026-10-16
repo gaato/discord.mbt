@@ -209,10 +209,17 @@ async test "fetch assembles out-of-order chunks ignores foreign nonces and clean
       }
       assert_true(ctx.collector_.waits_for(KGuildMembersChunk))
       assert_true(ctx.collector_.waits_for(KRateLimited))
+      let nonce = nonce.to_string()
       transports[0].incoming.put(chunk_frame("other", 0))
+      // Chunks with an impossible index or count are dropped.
+      transports[0].incoming.put(chunk_frame(nonce, 3))
+      transports[0].incoming.put(chunk_frame(nonce, 0, count=0))
+      transports[0].incoming.put(chunk_frame(nonce, 2))
+      // A chunk disagreeing with the first chunk's count is dropped too.
+      transports[0].incoming.put(chunk_frame(nonce, 1, count=2))
       // Back-to-back delivery also verifies that registrations survive a chunk.
-      for index in [2, 0, 2, 1] {
-        transports[0].incoming.put(chunk_frame(nonce.to_string(), index))
+      for index in [0, 2, 1] {
+        transports[0].incoming.put(chunk_frame(nonce, index))
       }
       let result = fetching.wait()
       assert_eq(result.members.length(), 3)
@@ -254,6 +261,21 @@ async test "fetch watches matching rate limits and times out with no leaked expe
         "d": { "opcode": 8, "retry_after": 0.0011, "meta": { "guild_id": "2" } },
       }
       transports[0].incoming.put(other_guild.stringify())
+      // So are an unparseable guild id, a non-string nonce, and no guild id.
+      for
+        meta in [
+          ({ "guild_id": "x" } : Json),
+          { "guild_id": "1", "nonce": 1 },
+          {},
+        ] {
+        let malformed : Json = {
+          "op": 0,
+          "s": 3,
+          "t": "RATE_LIMITED",
+          "d": { "opcode": 8, "retry_after": 0.0011, "meta": meta },
+        }
+        transports[0].incoming.put(malformed.stringify())
+      }
       transports[0].incoming.put(chunk_frame(nonce.to_string(), 0, count=1))
       assert_eq(fetching.wait().members.length(), 1)
     })

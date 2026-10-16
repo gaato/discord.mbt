@@ -129,19 +129,22 @@ test "member request validates selection bounds and UTF-8 nonce bytes" {
     ] {
     @model.RequestGuildMembers::{ ..base, select, }.validate()
   }
-  @model.RequestGuildMembers::{
-    ..base,
-    nonce: Some("😀😀😀😀😀😀😀😀"),
-  }.validate()
-  try
-    @model.RequestGuildMembers::{
-      ..base,
-      nonce: Some("😀😀😀😀😀😀😀😀a"),
-    }.validate()
-  catch {
-    @model.GatewayCommandError::InvalidCommand(violation) =>
-      assert_eq(violation.path, "nonce")
-  } noraise {
-    _ => fail("33 UTF-8 bytes accepted")
+  // One case per UTF-8 width: 1-, 2-, 3- and 4-byte characters.
+  for
+    nonce in [
+      "a".repeat(32),
+      "é".repeat(16),
+      "あ".repeat(10) + "aa",
+      "😀".repeat(8),
+    ] {
+    @model.RequestGuildMembers::{ ..base, nonce: Some(nonce), }.validate()
+    try
+      @model.RequestGuildMembers::{ ..base, nonce: Some(nonce + "a"), }.validate()
+    catch {
+      @model.GatewayCommandError::InvalidCommand(violation) =>
+        assert_eq(violation.path, "nonce")
+    } noraise {
+      _ => fail("33 UTF-8 bytes accepted for \{nonce}")
+    }
   }
 }
