@@ -248,6 +248,20 @@ pub async fn Framework::process(
 }
 
 ///|
+/// Whether a component click from `user` on `custom_id` satisfies this waiter.
+fn ComponentWaiter::accepts(
+  self : ComponentWaiter,
+  custom_id : String,
+  user : @model.UserId,
+) -> Bool {
+  self.custom_id == custom_id &&
+  (match self.user {
+    Some(expected) => expected == user
+    None => true
+  })
+}
+
+///|
 /// Route one interaction through a caller-provided initial-response gate.
 pub async fn Framework::process_with(
   self : Framework,
@@ -308,12 +322,9 @@ pub async fn Framework::process_with(
         message_: message,
         gate,
       }
+      let user = ctx.user().id
       for i, waiter in self.waiters {
-        let user_matches = match waiter.user {
-          Some(user) => user == ctx.user().id
-          None => true
-        }
-        if waiter.custom_id == data.custom_id && user_matches {
+        if waiter.accepts(data.custom_id, user) {
           self.waiters.remove(i) |> ignore
           waiter.queue.put(ctx)
           return true
