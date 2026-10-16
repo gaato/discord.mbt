@@ -469,22 +469,37 @@ async fn[A] dispatch_command_handler(
 }
 
 ///|
+fn find_slash_route(
+  routes : Array[SlashRoute],
+  path : Array[String],
+) -> SlashRoute? {
+  let key = path_key(path)
+  for route in routes {
+    if path_key(route.path) == key {
+      return Some(route)
+    }
+  }
+  None
+}
+
+///|
 /// The acknowledgement plan of the route an invocation selects.
+///
+/// An unknown path plans `Respond` on purpose: the plan is taken before
+/// admission, so nothing auto-defers, and the `Malformed` error that
+/// `dispatch_typed` raises later reaches the error policy while the callback
+/// is still pending, which lets it answer with an "out of date" initial reply.
 fn[A] Command::ack_plan(
   self : Command[A],
   raw : @framework.CommandCtx,
 ) -> AckPlan {
   match self.routes {
     None => self.handler.ack_plan()
-    Some(routes) => {
-      let key = path_key(raw.options.path())
-      for route in routes {
-        if path_key(route.path) == key {
-          return route.ack
-        }
+    Some(routes) =>
+      match find_slash_route(routes, raw.options.path()) {
+        Some(route) => route.ack
+        None => Respond
       }
-      Respond
-    }
   }
 }
 
@@ -508,18 +523,29 @@ async fn[A] Command::dispatch_typed(
       )
     Some(routes) => {
       let path = raw.options.path()
-      let key = path_key(path)
-      for route in routes {
-        if path_key(route.path) == key {
-          (route.dispatch)(bot, waiter, warn, raw)
-          return
-        }
+      guard find_slash_route(routes, path) is Some(route) else {
+        raise HandlerError::Malformed(
+          reason="unknown subcommand path: \{if path.is_empty() { "<empty>" } else { path.join("/") }}",
+        )
       }
-      raise HandlerError::Malformed(
-        reason="unknown subcommand path: \{if path.is_empty() { "<empty>" } else { path.join("/") }}",
-      )
+      (route.dispatch)(bot, waiter, warn, raw)
     }
   }
+}
+
+///|
+fn find_suggest_route(
+  routes : Array[SuggestRoute],
+  path : Array[String],
+  option : String,
+) -> SuggestRoute? {
+  let key = path_key(path)
+  for route in routes {
+    if path_key(route.path) == key && route.option_name == option {
+      return Some(route)
+    }
+  }
+  None
 }
 
 ///|
@@ -534,32 +560,31 @@ async fn dispatch_suggest(
       reason="autocomplete payload has no focused option",
     )
   }
-  for route in routes {
-    if path_key(route.path) == path_key(path) &&
-      route.option_name == input.name() {
-      let ctx = @interaction.SuggestCtx::{
-        interaction: raw.interaction,
-        options: raw.options,
-        guild_id: raw.interaction.guild_id,
-        locale: raw.interaction.locale,
-      }
-      let choices = route.handler.suggest(ctx, input)
-      let choices = if choices.length() > 25 {
-        let count = choices.length()
-        let command_path = [raw.data.name, ..path].join("/")
-        warn(AutocompleteTruncated(command_path~, option=input.name(), count~))
-        choices[:25].to_owned()
-      } else {
-        choices
-      }
-      raw.suggest(choices)
-      return
-    }
+  guard find_suggest_route(routes, path, input.name()) is Some(route) else {
+    let display_path = if path.is_empty() { "<root>" } else { path.join("/") }
+    raise HandlerError::Malformed(
+      reason="no autocomplete route for \{display_path}:\{input.name()}",
+    )
   }
-  let display_path = if path.is_empty() { "<root>" } else { path.join("/") }
-  raise HandlerError::Malformed(
-    reason="no autocomplete route for \{display_path}:\{input.name()}",
-  )
+  let ctx = @interaction.SuggestCtx::{
+    interaction: raw.interaction,
+    options: raw.options,
+    guild_id: raw.interaction.guild_id,
+    locale: raw.interaction.locale,
+  }
+  let choices = route.handler.suggest(ctx, input)
+  // `suggest` sends the first 25; say so when it drops the rest.
+  if choices.length() > 25 {
+    let command_path = [raw.data.name, ..path].join("/")
+    warn(
+      AutocompleteTruncated(
+        command_path~,
+        option=input.name(),
+        count=choices.length(),
+      ),
+    )
+  }
+  raw.suggest(choices)
 }
 
 ///|
