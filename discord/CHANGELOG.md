@@ -25,6 +25,15 @@ breaking change is listed with a migration note.
   `http_acquire` from an older client (before reserving its bucket, so the
   refusal blocks no one else). Migration: upgrade bot processes before the
   coordinator.
+- **A guild or channel limit in `CacheLimits` now bounds the state that
+  belongs to it.** A guild that left the cache through its entry limit or TTL
+  kept its roles, members, voice states, presences, channels, and the messages
+  of its channels, and a channel that left the same way kept its messages;
+  only GUILD_DELETE and CHANNEL_DELETE released them. Per-guild and
+  per-channel maps emptied by deletes or expiry are now dropped too, and the
+  cache no longer keeps a channel-to-guild entry for every channel it has
+  seen, including threads a THREAD_LIST_SYNC dropped while channels were not
+  retained.
 
 ## [0.9.0] - 2026-10-17
 
