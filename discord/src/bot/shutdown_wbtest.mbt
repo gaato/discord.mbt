@@ -117,3 +117,74 @@ fn BotCore::use_test_time(
   self.clock_.val = clock
   self.rand_.val = Some(@random.Rand::chacha8())
 }
+
+///|
+async test "shutdown from a handler starts the grace once every shard has closed" {
+  let clock = @simclock.VirtualClock()
+  let first = @gatewaysim.FakeTransport(clock~)
+  let second = @gatewaysim.FakeTransport(clock~)
+  // The second shard takes longer to close than the grace allows.
+  second.close_takes_ms.val = 3000
+  let pending : Array[@gatewaysim.FakeTransport] = [second, first]
+  let app = @app.AppBuilder()
+  let warnings : Array[String] = []
+  app.on_warn(warning => warnings.push(warning.to_string()))
+  let ready_ctx : Ref[GatewayCtx?] = Ref(None)
+  let stopped = Ref(false)
+  app.command(
+    @app.slash(
+      name="raw",
+      description="Stop the bot",
+      args=@interaction.Args::unit(),
+      handler=Raw(_ => {
+        guard ready_ctx.val is Some(ctx) else { fail("no context") }
+        ctx.shutdown()
+        stopped.val = true
+      }),
+    ),
+  )
+  let bot = BotBuilder(
+    app.build(),
+    token="test-token",
+    client=Client("test-token"),
+    shards=Fixed(count=2),
+    shutdown_grace_ms=1000,
+  )
+  bot.core.gateway_bot_info_.val = Some(manager_gateway_info(max_concurrency=2))
+  bot.core.connector_.val = Some(_ => {
+    match pending.pop() {
+      Some(transport) => (transport : &@gateway.GatewayTransport)
+      None => raise @gateway.TransportClosed(code=None, reason="no transport")
+    }
+  })
+  bot.core.use_test_time(clock)
+  bot.on(Events::ready(), (ctx, _) => ready_ctx.val = Some(ctx))
+  let bot_bot = bot.build()
+  let returned = Ref(false)
+  @async.with_task_group(group => {
+    group.spawn_bg(() => {
+      bot_bot.run()
+      returned.val = true
+    })
+    first.put(MANAGER_HELLO)
+    second.put(MANAGER_HELLO)
+    ignore(identify_times(clock, [first, second]))
+    for transport in [first, second] {
+      guard sent_identify(transport) is Some(identify) else {
+        fail("expected identify")
+      }
+      let (shard_id, _) = identify_shard(identify)
+      transport.put(manager_ready_frame(shard_id, 2))
+    }
+    clock.settle()
+    first.put(command_frame(2, "500000000000000001"))
+    while !returned.val && clock.advance_to_next() {
+      ()
+    }
+  })
+  assert_true(returned.val)
+  assert_true(stopped.val)
+  assert_eq(warnings, [])
+  assert_eq(first.close_calls.val, 1)
+  assert_eq(second.close_calls.val, 1)
+}

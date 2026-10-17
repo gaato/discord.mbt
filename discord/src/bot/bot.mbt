@@ -889,8 +889,11 @@ async fn BotCore::run(self : BotCore) -> Unit {
         @gateway.ShardEvent::.. => ()
       }
     }
-    // Only a requested shutdown ends the loop. Give running handlers the
-    // grace period, then cancel what is left with the rest of the group.
+    // Only a requested shutdown ends the loop, at the first shard to go; the
+    // handler that asked may still be closing the others. Finish closing them
+    // all, then give running handlers the grace period and cancel what is
+    // left with the rest of the group.
+    close_shards(shard_handles)
     let grace_ms = self.shutdown_grace_ms_
     if @clock.timeout_opt(self.clock_.val, grace_ms, () => handlers.wait_idle())
       is None {
