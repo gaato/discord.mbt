@@ -61,7 +61,7 @@ async fn shutdown_with_running_handler(
   )
   bot.core.gateway_bot_info_.val = Some(manager_gateway_info(shards=1))
   bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
-  bot.core.clock_.val = clock
+  bot.core.use_test_time(clock)
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
   let bot_bot = bot.build()
@@ -104,4 +104,16 @@ async test "shutdown cancels handlers still running after the grace period" {
   assert_eq(warnings, [
     "1 handlers were still running 5000 ms after shutdown; cancelling them",
   ])
+}
+
+///|
+/// Run a bot on `clock` with a fixed-seed shard randomness, so heartbeat jitter
+/// and backoff are the same on every run (a zero first jitter would beat
+/// before IDENTIFY with no timer).
+fn BotCore::use_test_time(
+  self : BotCore,
+  clock : @simclock.VirtualClock,
+) -> Unit {
+  self.clock_.val = clock
+  self.rand_.val = Some(@random.Rand::chacha8())
 }

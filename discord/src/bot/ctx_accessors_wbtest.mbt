@@ -116,7 +116,7 @@ async test "gateway context exposes raw handles, refs, and waiters" {
   )
   bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
-  bot.core.clock_.val = clock
+  bot.core.use_test_time(clock)
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
   let bot_bot = bot.build()

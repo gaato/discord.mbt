@@ -115,6 +115,9 @@ priv struct BotCore {
   // Whitebox seam for virtual time: shards, the identify queue, interaction
   // timing, and the shutdown grace period all read this clock.
   clock_ : Ref[&@hclock.Clock]
+  // Whitebox seam for the shards' heartbeat jitter and backoff; `None` lets
+  // each shard seed its own.
+  rand_ : Ref[@random.Rand?]
   // Intents resolved (and warned about) once by `BotBuilder::build`.
   frozen_intents_ : @model.Intents?
 }
@@ -195,6 +198,7 @@ fn BotCore::new(
     connector_: Ref(None),
     gateway_bot_info_: Ref(None),
     clock_: clock,
+    rand_: Ref(None),
     frozen_intents_: None,
   }
 }

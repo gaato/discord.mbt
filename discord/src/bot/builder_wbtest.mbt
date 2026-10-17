@@ -119,7 +119,7 @@ async test "a supplied client reports to the bot once per call, only while it ru
     }
   })
   let clock = @simclock.VirtualClock()
-  builder.core.clock_.val = clock
+  builder.core.use_test_time(clock)
   let bot = builder.build()
   for _ in 0..<2 {
     let transport = @gatewaysim.FakeTransport(clock~)
@@ -163,7 +163,7 @@ async test "events beyond the backlog skip handlers with telemetry and one warni
   builder.core.connector_.val = Some(_ => {
     (transport : &@gateway.GatewayTransport)
   })
-  builder.core.clock_.val = clock
+  builder.core.use_test_time(clock)
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   builder.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
   // Subscribing is what lets MESSAGE_CREATE through the gateway filter;
