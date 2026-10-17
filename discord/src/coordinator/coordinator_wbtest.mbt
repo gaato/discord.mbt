@@ -560,6 +560,23 @@ async test "malformed and truncated coordinator responses" {
       _ => fail("a malformed response was accepted")
     }
   })
+  // Two lines for one request put the stream out of step with the requests.
+  with_scripted_coordinator(
+    "{\"ok\":true,\"retry_after_ms\":\"0\"}\n{\"ok\":true}\n",
+    close_after=false,
+    addr => {
+      let remote = RemoteCooldownStore::connect(addr, timeout_ms=1000)
+      defer remote.close()
+      try remote.try_acquire("global", window_ms=10_000L) |> ignore catch {
+        CoordinatorError::InvalidResponse(message~) =>
+          assert_eq(message, "data after the response line")
+        error => fail("unexpected \{Repr(error)}")
+      } noraise {
+        _ => fail("a second response line was accepted")
+      }
+      assert_true(remote.client.conn.val is None)
+    },
+  )
   // A response cut off by the connection closing is an outage, not a value.
   with_scripted_coordinator("{\"ok\":tr", close_after=true, addr => {
     let remote = RemoteCooldownStore::connect(addr, timeout_ms=1000)
