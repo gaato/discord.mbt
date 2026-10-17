@@ -28,6 +28,8 @@ import {
   "gaato/discord/internal/simclock",
   "gaato/discord/internal/gatewaysim",
   "moonbitlang/core/json",
+  "moonbitlang/core/random",
+  "moonbitlang/core/debug",
   "moonbitlang/async/aqueue",
 } for "wbtest"
 
@@ -38,3 +40,10 @@ import {
 warnings = "-29-35"
 
 supported_targets = "js + native + wasm"
+
+options(
+  targets: {
+    "runtime_fuzz_seeds_wbtest.mbt": [ "native", "wasm" ],
+    "runtime_fuzz_seeds_js_wbtest.mbt": [ "js" ],
+  },
+)
