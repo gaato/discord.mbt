@@ -138,8 +138,7 @@ async test "an open window runs on a free permit and returns it" {
 fn step_label(step : AdmissionStep) -> String {
   match step {
     Refuse => "refuse"
-    Deferred(watchdog_delay~, wait_ms~) =>
-      "deferred: watchdog \{watchdog_delay}, wait \{wait_ms}"
+    Deferred(wait_ms~) => "deferred: wait \{wait_ms}"
     Direct(wait_ms=Some(ms)) => "direct: wait \{ms}"
     Direct(wait_ms=None) => "direct: unbounded"
   }
@@ -159,50 +158,12 @@ test "admission step for each plan and budget" {
       (defer_message, 5, 4, Some(2500), 900000, "refuse"),
       (defer_message, 0, 0, Some(2500), 900000, "refuse"),
       (DeferUpdate, 4, 4, Some(2500), 900000, "refuse"),
-      // The watchdog fires once `AUTO_DEFER_MARGIN_MS` of the window is left.
-      (
-        defer_message,
-        0,
-        4,
-        Some(2500),
-        900000,
-        "deferred: watchdog 1500, wait 5000",
-      ),
-      (
-        DeferUpdate,
-        0,
-        4,
-        Some(2500),
-        900000,
-        "deferred: watchdog 1500, wait 5000",
-      ),
-      (
-        defer_message,
-        0,
-        4,
-        Some(1000),
-        900000,
-        "deferred: watchdog 0, wait 5000",
-      ),
-      (
-        defer_message,
-        0,
-        4,
-        Some(1001),
-        900000,
-        "deferred: watchdog 1, wait 5000",
-      ),
-      (defer_message, 0, 4, None, 900000, "deferred: watchdog 0, wait 5000"),
+      // Deferring routes under the limit are admitted with a bounded wait.
+      (defer_message, 0, 4, Some(2500), 900000, "deferred: wait 5000"),
+      (DeferUpdate, 0, 4, None, 900000, "deferred: wait 5000"),
       // The permit wait never outlives the token.
-      (
-        defer_message,
-        0,
-        4,
-        Some(2500),
-        3000,
-        "deferred: watchdog 1500, wait 3000",
-      ),
-      (defer_message, 0, 4, Some(2500), 0, "deferred: watchdog 1500, wait 0"),
+      (defer_message, 0, 4, Some(2500), 3000, "deferred: wait 3000"),
+      (defer_message, 0, 4, Some(2500), 0, "deferred: wait 0"),
     ] {
     let (plan, pending, max_pending, remaining_ms, token_left_ms, step) = row
     assert_eq(
@@ -218,5 +179,20 @@ test "admission step for each plan and budget" {
       ),
       step,
     )
+  }
+}
+
+///|
+test "auto-defer waits until the margin of the window is left" {
+  for
+    row in [
+      (Some(2500), 1500),
+      (Some(1001), 1),
+      (Some(1000), 0),
+      (Some(0), 0),
+      (None, 0),
+    ] {
+    let (remaining_ms, delay) = row
+    assert_eq(auto_defer_delay(remaining_ms), delay)
   }
 }

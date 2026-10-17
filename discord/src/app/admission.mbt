@@ -148,11 +148,22 @@ async fn acquire_while_open(
 priv enum AdmissionStep {
   /// Too many deferred interactions already wait: refuse through `busy`.
   Refuse
-  /// Acknowledge after `watchdog_delay` unless already answered, and wait at
-  /// most `wait_ms` for a permit.
-  Deferred(watchdog_delay~ : Int32, wait_ms~ : Int32)
+  /// Acknowledge through the auto-defer watchdog unless already answered,
+  /// and wait at most `wait_ms` for a permit.
+  Deferred(wait_ms~ : Int32)
   /// Wait for a permit for at most `wait_ms` (`None`: as long as it takes).
   Direct(wait_ms~ : Int32?)
+}
+
+///|
+/// How long the auto-defer watchdog waits before acknowledging: until
+/// `AUTO_DEFER_MARGIN_MS` of the callback window is left, or not at all when
+/// less remains or the gate has no deadline.
+fn auto_defer_delay(remaining_ms : Int32?) -> Int32 {
+  match remaining_ms {
+    Some(left) if left > AUTO_DEFER_MARGIN_MS => left - AUTO_DEFER_MARGIN_MS
+    _ => 0
+  }
 }
 
 ///|
@@ -170,10 +181,6 @@ fn admission_step(
   if pending >= max_pending {
     return Refuse
   }
-  let watchdog_delay = match remaining_ms {
-    Some(left) if left > AUTO_DEFER_MARGIN_MS => left - AUTO_DEFER_MARGIN_MS
-    _ => 0
-  }
   // Past the token's lifetime (counted from receipt) the handler could not
   // answer anyway.
   let wait_ms = if token_left_ms < wait_limit_ms {
@@ -181,7 +188,7 @@ fn admission_step(
   } else {
     wait_limit_ms
   }
-  Deferred(watchdog_delay~, wait_ms~)
+  Deferred(wait_ms~)
 }
 
 ///|
@@ -223,13 +230,16 @@ async fn run_admitted(
         busy()
         return
       }
-      Deferred(watchdog_delay~, wait_ms~) => {
+      Deferred(wait_ms~) => {
         admission.pending += 1
         let waiting = Ref(true)
         defer (if waiting.val { admission.pending -= 1 })
         group.spawn_bg(no_wait=true, () => {
-          if watchdog_delay > 0 {
-            @async.sleep(watchdog_delay)
+          // Read the window when the task runs, so a late start still
+          // leaves the margin.
+          let delay = auto_defer_delay((gate.remaining_ms)())
+          if delay > 0 {
+            @async.sleep(delay)
           }
           if (gate.is_pending)() {
             ensure_acknowledged(gate, plan) catch {
