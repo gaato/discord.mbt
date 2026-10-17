@@ -74,6 +74,7 @@ pub using @app {
   type InteractionCtx,
   type InteractionTarget,
   type SyncReport,
+  type CommandPlan,
   type RestAccess,
   type InteractionOutcome,
   type InteractionHttpRequest,

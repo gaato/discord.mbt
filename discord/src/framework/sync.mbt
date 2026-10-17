@@ -285,15 +285,27 @@ pub fn plan_command_sync(
 }
 
 ///|
-/// Fetch raw commands with localizations, plan changes, and overwrite only
-/// when needed. Failures propagate without returning a successful report.
-pub async fn sync_command_scope(
+/// One scope's planned synchronization: the changes `report` lists and the
+/// bulk overwrite that makes them. Nothing is sent until `apply`. Apply soon
+/// after planning: the overwrite replaces whatever the scope holds by then,
+/// including commands registered after the plan was made.
+pub struct CommandSyncPlan {
+  application_id : @model.ApplicationId
+  report : ScopeSyncReport
+  priv payload : Json?
+}
+
+///|
+/// Fetch raw commands with localizations and plan the changes, without
+/// modifying anything. Inspect `report` (for example `deleted`) before
+/// calling `apply`.
+pub async fn plan_command_scope(
   client : @dhttp.Client,
   application_id : @model.ApplicationId,
   declared : Array[@interaction.CommandSpec],
   unowned~ : UnownedCommands = Delete,
   guild_id? : @model.GuildId,
-) -> ScopeSyncReport {
+) -> CommandSyncPlan {
   let fetched = match guild_id {
     None =>
       client.get_global_commands_raw(application_id, with_localizations=true)
@@ -310,13 +322,45 @@ pub async fn sync_command_scope(
     unowned~,
     guild_id?,
   )
-  if payload is Some(body) {
-    let route = match guild_id {
-      None => @dhttp.Route::BulkOverwriteGlobalCommands(application_id~)
+  { application_id, report, payload, }
+}
+
+///|
+/// Send the planned bulk overwrite, if the plan has changes, and return its
+/// report. Failures propagate without returning a successful report.
+pub async fn CommandSyncPlan::apply(
+  self : CommandSyncPlan,
+  client : @dhttp.Client,
+) -> ScopeSyncReport {
+  if self.payload is Some(body) {
+    let route = match self.report.guild_id {
+      None =>
+        @dhttp.Route::BulkOverwriteGlobalCommands(
+          application_id=self.application_id,
+        )
       Some(guild_id) =>
-        @dhttp.Route::BulkOverwriteGuildCommands(application_id~, guild_id~)
+        @dhttp.Route::BulkOverwriteGuildCommands(
+          application_id=self.application_id,
+          guild_id~,
+        )
     }
     client.request(route, body~) |> ignore
   }
-  report
+  self.report
+}
+
+///|
+/// Plan one scope and apply the plan: fetch raw commands with localizations,
+/// and overwrite only when something changed. Failures propagate without
+/// returning a successful report.
+pub async fn sync_command_scope(
+  client : @dhttp.Client,
+  application_id : @model.ApplicationId,
+  declared : Array[@interaction.CommandSpec],
+  unowned~ : UnownedCommands = Delete,
+  guild_id? : @model.GuildId,
+) -> ScopeSyncReport {
+  plan_command_scope(client, application_id, declared, unowned~, guild_id?).apply(
+    client,
+  )
 }

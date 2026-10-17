@@ -799,7 +799,64 @@ pub(all) struct SyncReport {
 } derive(Debug)
 
 ///|
-/// Synchronize the declared commands and report each scope's changes.
+/// Planned synchronizations for each requested scope, in order. Inspect
+/// `report()` before `apply`.
+pub struct CommandPlan {
+  plans : Array[@framework.CommandSyncPlan]
+}
+
+///|
+/// What applying the plan would change, scope by scope.
+pub fn CommandPlan::report(self : CommandPlan) -> SyncReport {
+  { scopes: self.plans.map(plan => plan.report), }
+}
+
+///|
+/// Apply every scope's plan in order and report what changed.
+pub async fn CommandPlan::apply(
+  self : CommandPlan,
+  client : @dhttp.Client,
+) -> SyncReport {
+  let scopes = []
+  for plan in self.plans {
+    scopes.push(plan.apply(client))
+  }
+  { scopes, }
+}
+
+///|
+/// Fetch each scope's registered commands and plan their synchronization with
+/// the declared ones, without changing anything: a dry run of
+/// `sync_commands`. Entry points are always preserved; `Keep` also preserves
+/// other owners, while the default `Delete` plans to remove them, so check
+/// `report().scopes[..].deleted` before applying in a shared application.
+pub async fn App::plan_commands(
+  self : App,
+  client : @dhttp.Client,
+  application_id : @model.ApplicationId,
+  scope~ : CommandScope,
+  unowned~ : @framework.UnownedCommands = Delete,
+) -> CommandPlan {
+  let specs = self.commands_.map(command => command.definition)
+  let plans = []
+  for guild_id in scope_guilds(scope) {
+    plans.push(
+      @framework.plan_command_scope(
+        client,
+        application_id,
+        specs,
+        unowned~,
+        guild_id?,
+      ),
+    )
+  }
+  { plans, }
+}
+
+///|
+/// Synchronize the declared commands and report each scope's changes,
+/// planning and applying one scope at a time (see `plan_commands` for a dry
+/// run).
 /// Entry points are always preserved; `Keep` also preserves other owners.
 pub async fn App::sync_commands(
   self : App,
@@ -810,35 +867,30 @@ pub async fn App::sync_commands(
 ) -> SyncReport {
   let specs = self.commands_.map(command => command.definition)
   let scopes = []
-  match scope {
-    Global =>
-      scopes.push(
-        @framework.sync_command_scope(client, application_id, specs, unowned~),
-      )
-    Guild(guild_id) =>
-      scopes.push(
-        @framework.sync_command_scope(
-          client,
-          application_id,
-          specs,
-          unowned~,
-          guild_id~,
-        ),
-      )
-    Guilds(guild_ids) =>
-      for guild_id in guild_ids {
-        scopes.push(
-          @framework.sync_command_scope(
-            client,
-            application_id,
-            specs,
-            unowned~,
-            guild_id~,
-          ),
-        )
-      }
+  // Plan each scope just before applying it, so no plan waits on another
+  // scope's requests and goes stale.
+  for guild_id in scope_guilds(scope) {
+    scopes.push(
+      @framework.plan_command_scope(
+        client,
+        application_id,
+        specs,
+        unowned~,
+        guild_id?,
+      ).apply(client),
+    )
   }
   { scopes, }
+}
+
+///|
+/// The scopes a `CommandScope` names, `None` for the global one.
+fn scope_guilds(scope : CommandScope) -> Array[@model.GuildId?] {
+  match scope {
+    Global => [None]
+    Guild(guild_id) => [Some(guild_id)]
+    Guilds(guild_ids) => guild_ids.map(guild_id => Some(guild_id))
+  }
 }
 
 ///|

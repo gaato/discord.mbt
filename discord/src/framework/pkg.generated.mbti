@@ -16,6 +16,8 @@ pub const INTERACTION_TOKEN_LIFETIME_MS : Int = 900_000
 
 pub fn classify_rest_callback_failure(Error) -> DeliveryFailure
 
+pub async fn plan_command_scope(@http.Client, @model.Id[@model.ApplicationMarker], Array[@interaction.CommandSpec], unowned? : UnownedCommands, guild_id? : @model.Id[@model.GuildMarker]) -> CommandSyncPlan
+
 pub fn plan_command_sync(Array[@interaction.CommandSpec], Array[Json], unowned~ : UnownedCommands, guild_id? : @model.Id[@model.GuildMarker]) -> (Json?, ScopeSyncReport)
 
 pub async fn sync_command_scope(@http.Client, @model.Id[@model.ApplicationMarker], Array[@interaction.CommandSpec], unowned? : UnownedCommands, guild_id? : @model.Id[@model.GuildMarker]) -> ScopeSyncReport
@@ -81,6 +83,13 @@ pub fn CommandCtx::target_user(Self) -> TargetUser?
 pub fn CommandCtx::token_remaining_ms(Self) -> Int
 pub fn CommandCtx::user(Self) -> @model.User
 
+pub struct CommandSyncPlan {
+  application_id : @model.Id[@model.ApplicationMarker]
+  report : ScopeSyncReport
+  // private fields
+}
+pub async fn CommandSyncPlan::apply(Self, @http.Client) -> ScopeSyncReport
+
 pub(all) struct ComponentCtx {
   client : @http.Client
   application_id : @model.Id[@model.ApplicationMarker]
@@ -129,6 +138,8 @@ pub fn Framework::component_id(Self, String, async (ComponentCtx) -> Unit) -> Se
 pub fn Framework::modal(Self, String, async (ModalCtx) -> Unit) -> Self
 pub fn Framework::modal_id(Self, String, async (ModalCtx) -> Unit) -> Self
 pub fn Framework::on_error(Self, async (String, Error) -> Unit) -> Self
+pub async fn Framework::plan_global(Self, unowned? : UnownedCommands) -> CommandSyncPlan
+pub async fn Framework::plan_guild(Self, @model.Id[@model.GuildMarker], unowned? : UnownedCommands) -> CommandSyncPlan
 pub async fn Framework::process(Self, @model.Interaction, deadline_ms? : Int) -> Bool
 pub async fn Framework::process_with(Self, @model.Interaction, gate~ : ResponseGate) -> Bool
 pub async fn Framework::sync_global(Self, unowned? : UnownedCommands) -> ScopeSyncReport

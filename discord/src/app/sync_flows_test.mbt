@@ -149,3 +149,48 @@ async test "guild sync targets each configured guild" {
     ),
   )
 }
+
+///|
+async test "planning reports deletions without changing anything until applied" {
+  let app = @app.AppBuilder()
+  app.command(
+    @app.slash(
+      name="ping",
+      description="Ping",
+      args=@interaction.Args::unit(),
+      handler=Raw(_ => ()),
+    ),
+  )
+  let application_id : @model.ApplicationId = @model.Id::parse(
+    "400000000000000001",
+  )
+  let requests : Array[String] = []
+  let client = sync_stub_client(
+    requests,
+    @json.parse(
+      (
+        #|[{"id":"600000000000000002","application_id":"400000000000000001","name":"legacy","description":"Undeclared","type":1,"default_member_permissions":null,"version":"1"}]
+      ),
+    ),
+  )
+  defer client.close()
+  let plan = app.build().plan_commands(client, application_id, scope=Global)
+  let report = plan.report()
+  assert_eq(report.scopes[0].created, ["ping"])
+  assert_eq(report.scopes[0].deleted, ["legacy"])
+  inspect(
+    requests.join("\n"),
+    content=(
+      #|Get /applications/400000000000000001/commands?with_localizations=true
+    ),
+  )
+  let applied = plan.apply(client)
+  assert_eq(applied.scopes[0].deleted, ["legacy"])
+  inspect(
+    requests.join("\n"),
+    content=(
+      #|Get /applications/400000000000000001/commands?with_localizations=true
+      #|Put /applications/400000000000000001/commands
+    ),
+  )
+}

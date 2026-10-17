@@ -224,6 +224,13 @@ commands in the selected scope, while always preserving the Entry Point
 command. Use `unowned=Keep` on `sync_commands` or `sync_unowned=Keep` on
 `BotBuilder` for a scope shared with other command owners.
 
+To see what a sync would do before it does it, call
+`app.plan_commands(client, application_id, scope~)`: it fetches each scope
+and returns a `CommandPlan` without changing anything. `plan.report()` lists
+what would be created, updated, and deleted; `plan.apply(client)` performs
+it. Check `deleted` this way before the first sync of an application whose
+commands other tools also register.
+
 ```mbt check
 ///|
 async test "command sync keeps the entry point under either ownership policy" {

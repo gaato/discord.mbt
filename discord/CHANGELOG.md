@@ -41,6 +41,13 @@ breaking change is listed with a migration note.
   exposes it to executors. `ResponseGate`, `ResponseGate::rest`,
   `ResponseGate::capture`, and `App::serve` accept the same `clock?`. Every
   default is the wall clock.
+- **Command sync can be planned before it is applied.**
+  `App::plan_commands` fetches each scope and returns a `CommandPlan` whose
+  `report()` lists the commands a sync would create, update, and delete,
+  without changing anything; `CommandPlan::apply` performs it.
+  `@framework.plan_command_scope`, `Framework::plan_global`, and
+  `Framework::plan_guild` return the per-scope `CommandSyncPlan`. The default
+  ownership policy is unchanged.
 - **Bot shutdown is bounded.** After `GatewayCtx::shutdown`, `run` waits for
   event and interaction handlers that are still running for at most
   `BotBuilder(shutdown_grace_ms~)` (default `DEFAULT_SHUTDOWN_GRACE_MS`,

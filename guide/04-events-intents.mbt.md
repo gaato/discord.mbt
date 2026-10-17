@@ -320,6 +320,62 @@ RESUME would keep the old guild assignment. For multiple processes, use the
 bundled coordinator described in
 [Scaling across processes](08-scaling-processes.mbt.md).
 
+## Redelivered events
+
+A Gateway RESUME replays the events a shard missed, and a process that
+restarts from a saved session (see `Bot::sessions`) resumes from the sequence
+it last saved, so events it handled after that save arrive again. An
+`INTERACTION_CREATE` can be replayed the same way. The library does not
+deduplicate: it cannot know which of your side effects completed before a
+crash. Make handlers whose effects must not repeat idempotent. Events that
+happen once per object can be keyed by that object: an interaction by its id,
+`MESSAGE_CREATE` and `MESSAGE_DELETE` by the message id with the event name:
+
+```mbt check
+///|
+/// Ids handled within the last `ttl_ms`. In memory this only covers replays
+/// within one process; keep the same record in durable storage (a database
+/// or KV store) when duplicates across a restart matter.
+struct SeenIds {
+  ttl_ms : Int64
+  seen : Map[String, Int64]
+}
+
+///|
+/// Record `id` at `now_ms`; false when it was already handled recently.
+fn SeenIds::first_time(self : SeenIds, id : String, now_ms : Int64) -> Bool {
+  let expired = self.seen
+    .iter()
+    .filter(entry => now_ms - entry.1 >= self.ttl_ms)
+    .map(entry => entry.0)
+    .collect()
+  for key in expired {
+    self.seen.remove(key)
+  }
+  if self.seen.contains(id) {
+    return false
+  }
+  self.seen[id] = now_ms
+  true
+}
+
+///|
+test "a replayed interaction is handled once" {
+  let seen = SeenIds::{ ttl_ms: 900_000L, seen: Map([]), }
+  assert_true(seen.first_time("interaction:500000000000000001", 0L))
+  assert_false(seen.first_time("interaction:500000000000000001", 1_000L))
+  assert_true(seen.first_time("interaction:500000000000000001", 900_000L))
+}
+```
+
+Fifteen minutes covers an interaction: its token expires then, so a later
+replay cannot be answered anyway.
+
+Events that legitimately repeat for one object — `MESSAGE_UPDATE`,
+reactions, member updates — carry no per-delivery id, so a key like this would
+also drop real later events. Write those handlers to apply the state the event
+carries (set, not increment), so a replay sets the same state again.
+
 ## Gateway compression
 
 Gateway `zlib-stream` transport compression is opt-in. Pass `compress=true`

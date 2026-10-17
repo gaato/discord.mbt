@@ -274,3 +274,28 @@ test "a remote command without a name is treated as undeclared" {
   assert_true(payload is Some(Array([])))
   assert_eq(report.deleted, [""])
 }
+
+///|
+async test "planning a scope sends nothing until the plan is applied" {
+  let requests = []
+  let bodies = []
+  let client = sync_stub_client(requests, bodies, [
+    { "id": "902", "name": "old", "description": "Old" },
+  ])
+  defer client.close()
+  let fw = @framework.Framework(client, @model.Id::parse("42"))
+  fw.command(@interaction.CommandSpec::slash("ping", "Ping"), _ => ()) |> ignore
+  let global = fw.plan_global()
+  assert_eq(global.report.created, ["ping"])
+  assert_eq(global.report.deleted, ["old"])
+  let guild_id : @model.GuildId = @model.Id::parse("100")
+  let guild = fw.plan_guild(guild_id, unowned=Keep)
+  assert_eq(guild.report.guild_id, Some(guild_id))
+  assert_eq(guild.report.preserved, ["old"])
+  assert_eq(requests, [
+    "Get /applications/42/commands?with_localizations=true", "Get /applications/42/guilds/100/commands?with_localizations=true",
+  ])
+  assert_eq(global.apply(client).deleted, ["old"])
+  assert_eq(requests.length(), 3)
+  assert_eq(requests[2], "Put /applications/42/commands")
+}

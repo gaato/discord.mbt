@@ -199,6 +199,36 @@ pub fn Framework::command_specs(self : Framework) -> Json {
 }
 
 ///|
+/// Plan the global scope's synchronization without changing it.
+pub async fn Framework::plan_global(
+  self : Framework,
+  unowned~ : UnownedCommands = Delete,
+) -> CommandSyncPlan {
+  plan_command_scope(
+    self.client,
+    self.application_id,
+    self.commands.values().map(entry => entry.spec).collect(),
+    unowned~,
+  )
+}
+
+///|
+/// Plan one guild's synchronization without changing it.
+pub async fn Framework::plan_guild(
+  self : Framework,
+  guild_id : @model.GuildId,
+  unowned~ : UnownedCommands = Delete,
+) -> CommandSyncPlan {
+  plan_command_scope(
+    self.client,
+    self.application_id,
+    self.commands.values().map(entry => entry.spec).collect(),
+    unowned~,
+    guild_id~,
+  )
+}
+
+///|
 /// Synchronize global commands, preserving entry points and reporting changes.
 pub async fn Framework::sync_global(
   self : Framework,
