@@ -20,6 +20,10 @@ pub async fn connect_websocket(String, max_message_bytes? : Int) -> &GatewayTran
 pub fn on_close(Int?, Bool) -> ReconnectPolicy
 
 // Errors
+pub(all) suberror GatewayConfigError {
+  InvalidMaxMessageBytes(value~ : Int)
+} derive(@debug.Debug)
+
 pub(all) suberror InflateError {
   Malformed(message~ : String)
   InvalidUtf8

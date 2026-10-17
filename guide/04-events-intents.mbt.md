@@ -327,9 +327,9 @@ restarts from a saved session (see `Bot::sessions`) resumes from the sequence
 it last saved, so events it handled after that save arrive again. An
 `INTERACTION_CREATE` can be replayed the same way. The library does not
 deduplicate: it cannot know which of your side effects completed before a
-crash. Make handlers whose effects must not repeat idempotent, keyed by the
-event's identity — the interaction id, or the message id together with the
-event name for message events:
+crash. Make handlers whose effects must not repeat idempotent. Events that
+happen once per object can be keyed by that object: an interaction by its id,
+`MESSAGE_CREATE` and `MESSAGE_DELETE` by the message id with the event name:
 
 ```mbt check
 ///|
@@ -370,6 +370,11 @@ test "a replayed interaction is handled once" {
 
 Fifteen minutes covers an interaction: its token expires then, so a later
 replay cannot be answered anyway.
+
+Events that legitimately repeat for one object — `MESSAGE_UPDATE`,
+reactions, member updates — carry no per-delivery id, so a key like this would
+also drop real later events. Write those handlers to apply the state the event
+carries (set, not increment), so a replay sets the same state again.
 
 ## Gateway compression
 

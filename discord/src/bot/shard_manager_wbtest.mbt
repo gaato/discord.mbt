@@ -257,7 +257,7 @@ async test "fixed shards share identify queue and dispatch path" {
       None => raise @gateway.TransportClosed(code=None, reason="no transport")
     }
   })
-  bot.core.clock_.val = clock
+  bot.core.use_test_time(clock)
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
   let deleted : @aqueue.Queue[(String, Int32)] = Queue(kind=Unbounded)
@@ -341,7 +341,7 @@ async test "fatal close fails the manager and closes sibling shards" {
       None => raise @gateway.TransportClosed(code=None, reason="no transport")
     }
   })
-  bot.core.clock_.val = clock
+  bot.core.use_test_time(clock)
   let ready : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (_, _) => ready.put(()))
 
@@ -392,7 +392,7 @@ async test "voice state updates go to the shard that owns the guild" {
       None => raise @gateway.TransportClosed(code=None, reason="no transport")
     }
   })
-  bot.core.clock_.val = clock
+  bot.core.use_test_time(clock)
   let ready : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready.put(ctx))
   let bot_bot = bot.build()
@@ -460,7 +460,7 @@ async test "a voice state update for a shard run elsewhere raises" {
   )
   bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
-  bot.core.clock_.val = clock
+  bot.core.use_test_time(clock)
   let ready : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready.put(ctx))
   let bot_bot = bot.build()

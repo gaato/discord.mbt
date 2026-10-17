@@ -87,16 +87,24 @@ fn coordinator_retryable(error : Error) -> Bool {
 /// One newline-terminated response, or `None` when the connection ends first.
 /// `read_until` hands back an unterminated tail at end of stream, which would
 /// turn a coordinator dying mid-response into a malformed, unretried answer
-/// instead of a disconnect.
+/// instead of a disconnect. One request is in flight per connection, so
+/// anything after the newline is a protocol error.
 async fn read_line(conn : @socket.Tcp) -> String? {
   let line : Array[Byte] = []
-  let byte = FixedArray::make(1, b'\x00')
-  // One request is in flight per connection, so nothing follows the newline.
-  while conn.read(byte) == 1 {
-    if byte[0] == b'\n' {
+  let chunk = FixedArray::make(4096, b'\x00')
+  while conn.read(chunk) is n && n > 0 {
+    for i in 0..<n {
+      if chunk[i] != b'\n' {
+        line.push(chunk[i])
+        continue
+      }
+      if i + 1 < n {
+        raise CoordinatorError::InvalidResponse(
+          message="data after the response line",
+        )
+      }
       return Some(@utf8.decode_lossy(Bytes::from_array(line)))
     }
-    line.push(byte[0])
   }
   None
 }
@@ -121,6 +129,11 @@ async fn CoordinatorClient::request_once(
   } catch {
     error if @async.is_being_cancelled() => raise error
     CoordinatorError::Disconnected => raise CoordinatorError::Disconnected
+    CoordinatorError::InvalidResponse(message~) => {
+      // The stream is out of step with the requests; start over.
+      self.drop_connection()
+      raise CoordinatorError::InvalidResponse(message~)
+    }
     error => raise CoordinatorError::Transport(message="\{Repr(error)}")
   } noraise {
     line => line
@@ -226,7 +239,7 @@ pub impl @queue.IdentifyQueue for RemoteIdentifyQueue with fn wait_for_identify(
 pub struct RemoteRateLimiter {
   priv acquire_client : CoordinatorClient
   priv release_client : CoordinatorClient
-  priv leases : Map[String, Int32]
+  priv leases : Map[String, Json]
 }
 
 ///|
@@ -276,10 +289,14 @@ pub impl @runtime.RateLimiter for RemoteRateLimiter with fn acquire(
     "op": "http_acquire",
     "bucket": Json::string(bucket_key),
     "global_exempt": global_exempt,
+    // Lets the coordinator refuse clients that predate string leases; an
+    // older coordinator ignores it.
+    "leases": "string",
   })
-  guard response is { "lease": lease_json, .. } &&
-    json_nonnegative_int(lease_json) is Some(lease) else {
-    raise CoordinatorError::InvalidResponse(message="missing integer lease")
+  // The lease is opaque; an older coordinator sends an integer.
+  guard response is { "lease": lease, .. } &&
+    (lease is String(_) || json_nonnegative_int(lease) is Some(_)) else {
+    raise CoordinatorError::InvalidResponse(message="missing lease")
   }
   self.leases[bucket_key] = lease
 }

@@ -112,7 +112,7 @@ async test "bot restores context before replay and snapshots live sessions" {
     urls.push(url)
     (transport : &@gateway.GatewayTransport)
   })
-  bot.core.clock_.val = clock
+  bot.core.use_test_time(clock)
   let ready_calls = Ref(0)
   bot.on(Events::ready(), (_, _) => ready_calls.val += 1)
   let events : @aqueue.Queue[(GatewayCtx, String)] = Queue(kind=Unbounded)
@@ -214,7 +214,7 @@ async test "bot reports supplied sessions while resolving shards" {
   )
   bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
-  bot.core.clock_.val = clock
+  bot.core.use_test_time(clock)
   let events : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::message_delete(), (ctx, _) => events.put(ctx))
   let bot_bot = bot.build()
@@ -285,7 +285,7 @@ async test "bot identifies instead of resuming a session from another shard layo
   )
   bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
-  bot.core.clock_.val = clock
+  bot.core.use_test_time(clock)
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
   let bot_bot = bot.build()
@@ -344,7 +344,7 @@ async test "bot holds a fallback IDENTIFY when the session start limit is exhaus
   bot.core.connector_.val = Some(_ => {
     (pending.pop().unwrap() : &@gateway.GatewayTransport)
   })
-  bot.core.clock_.val = clock
+  bot.core.use_test_time(clock)
   let bot_bot = bot.build()
   try
     @async.with_task_group(group => {
@@ -394,7 +394,7 @@ async test "bot identifies with a warning when the session start limit cannot be
     gateway_url="wss://gateway.example",
   )
   bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
-  bot.core.clock_.val = clock
+  bot.core.use_test_time(clock)
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
   let bot_bot = bot.build()
@@ -452,7 +452,7 @@ async test "empty Bot replay starts services on RESUMED" {
   )
   bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
-  bot.core.clock_.val = clock
+  bot.core.use_test_time(clock)
   let service_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.service(name="empty-replay-service", ctx => service_contexts.put(ctx))
   let ready_calls = Ref(0)
@@ -548,7 +548,7 @@ async test "rejected Bot resume uses the next actual READY" {
       (second : &@gateway.GatewayTransport)
     }
   })
-  bot.core.clock_.val = clock
+  bot.core.use_test_time(clock)
   let ready_calls = Ref(0)
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => {
@@ -666,7 +666,7 @@ fn middleware_runtime_bot(
   )
   bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
-  bot.core.clock_.val = clock
+  bot.core.use_test_time(clock)
   bot
 }
 
@@ -746,7 +746,7 @@ async test "bot without sync performs no command requests" {
   )
   bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
-  bot.core.clock_.val = clock
+  bot.core.use_test_time(clock)
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
   let bot_bot = bot.build()
@@ -805,7 +805,7 @@ async test "bot warns when sync deletes undeclared commands" {
     )
     bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
     bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
-    bot.core.clock_.val = clock
+    bot.core.use_test_time(clock)
     let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
     bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
     @async.with_task_group(group => {
@@ -871,7 +871,7 @@ async test "bot Keep preserves other owners and emits no deletion warning" {
   )
   bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
-  bot.core.clock_.val = clock
+  bot.core.use_test_time(clock)
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
   let bot_bot = bot.build()
@@ -926,7 +926,7 @@ async test "bot sync failures stay fail-fast" {
     )
     bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
     bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
-    bot.core.clock_.val = clock
+    bot.core.use_test_time(clock)
     let ready_called = Ref(false)
     bot.on(Events::ready(), (ctx, _) => {
       ready_called.val = true
@@ -983,7 +983,7 @@ async test "gateway context resolves cached channels and falls back to REST" {
   )
   bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
-  bot.core.clock_.val = clock
+  bot.core.use_test_time(clock)
   let cache = @cache.InMemoryCache(resources=@cache.CacheResources::default())
   bot.attach_cache(cache)
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
@@ -1251,7 +1251,7 @@ async test "bot updates cache before typed event handlers" {
   )
   bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
-  bot.core.clock_.val = clock
+  bot.core.use_test_time(clock)
   let cache = @cache.InMemoryCache(resources=CacheResources(messages=true))
   bot.attach_cache(cache)
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
@@ -1398,7 +1398,7 @@ async test "bot run dispatches concurrently, survives handlers, and shuts down" 
   )
   bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
-  bot.core.clock_.val = clock
+  bot.core.use_test_time(clock)
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
   let event_calls : @aqueue.Queue[Int32] = Queue(kind=Unbounded)
@@ -1478,7 +1478,7 @@ async test "bot reports gateway decode errors and preserves dispatch" {
   )
   bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
-  bot.core.clock_.val = clock
+  bot.core.use_test_time(clock)
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
   let decode_errors : Array[(String, Json)] = []
@@ -1646,7 +1646,7 @@ async test "a deferred handler waiting at full capacity receives its button" {
   )
   bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
-  bot.core.clock_.val = clock
+  bot.core.use_test_time(clock)
   let service_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.service(name="capture-context", ctx => service_contexts.put(ctx))
   let bot_bot = bot.build()

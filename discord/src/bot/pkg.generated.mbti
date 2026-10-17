@@ -25,6 +25,8 @@ pub(all) suberror BotConfigError {
   InvalidShardConfig(message~ : String)
   MismatchedSession(shard_id~ : Int)
   InvalidEventBacklog(value~ : Int)
+  InvalidShutdownGrace(value~ : Int)
+  InvalidMaxMessageBytes(value~ : Int)
 } derive(@debug.Debug)
 
 pub(all) suberror BotError {
