@@ -227,6 +227,9 @@ async fn VoiceConnection::reset_session(self : VoiceConnection) -> Unit noraise 
   self.pending_dave_external_sender = None
   self.set_ssrc(None)
   self.receiver.reset_session()
+  // A new session lists the users present again with `ClientsConnect`; a
+  // disconnect lost with the old one would otherwise stay forever.
+  self.roster.clear()
 }
 
 ///|

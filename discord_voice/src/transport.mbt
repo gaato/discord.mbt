@@ -38,21 +38,58 @@ impl VoiceTransport for VoiceWsTransport with fn recv(self) {
       )
     error => raise VoiceTransportClosed(code=None, reason="\{Repr(error)}")
   }
-  let data = message.read_all() catch {
+  let data = read_bounded(chunk => message.read(chunk), MAX_VOICE_MESSAGE_BYTES) catch {
     error if @async.is_being_cancelled() => raise error
     error => raise VoiceTransportClosed(code=None, reason="\{Repr(error)}")
+  }
+  guard data is Some(data) else {
+    // 1009: Message Too Big, sent to the peer too; the connection's own
+    // close that follows is a no-op. The session survives, so it resumes.
+    VoiceTransport::close(self, code=1009) catch {
+      error if @async.is_being_cancelled() => raise error
+      _ => ()
+    }
+    raise VoiceTransportClosed(
+      code=Some(1009),
+      reason="message larger than \{MAX_VOICE_MESSAGE_BYTES} bytes",
+    )
   }
   match message.kind {
     Text =>
       Text(
-        data.text() catch {
-          error if @async.is_being_cancelled() => raise error
+        @utf8.decode(data) catch {
           error =>
             raise VoiceTransportClosed(code=None, reason="\{Repr(error)}")
         },
       )
-    Binary => Binary(data.binary())
+    Binary => Binary(data)
   }
+}
+
+///|
+/// The largest voice gateway message accepted: far above the JSON payloads
+/// and DAVE MLS messages Discord sends, but a bound on what one message can
+/// make the connection allocate.
+const MAX_VOICE_MESSAGE_BYTES : Int32 = 4_194_304
+
+///|
+/// Read a message through `read` until it returns 0, or `None` as soon as it
+/// grows past `max_bytes`.
+async fn read_bounded(
+  read : async (FixedArray[Byte]) -> Int32,
+  max_bytes : Int32,
+) -> Bytes? {
+  let data = @buffer.Buffer()
+  let chunk = FixedArray::make(65536, b'\x00')
+  while read(chunk) is n && n > 0 {
+    if data.length() + n > max_bytes {
+      return None
+    }
+    for i in 0..<n {
+      data.write_byte(chunk[i])
+    }
+  }
+  Some(data.to_bytes())
 }
 
 ///|

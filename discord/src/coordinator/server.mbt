@@ -137,7 +137,20 @@ async fn serve_connection(conn : @socket.Tcp, state : CoordinatorState) -> Unit 
       _ => ()
     }
   })
-  while conn.read_until("\n") is Some(line) {
+  let reader = LineReader::new()
+  for ;; {
+    let line = match reader.next(chunk => conn.read(chunk)) {
+      Line(line) => line
+      Ended => return
+      TooLong => {
+        // The stream cannot be resynchronized; answer and hang up.
+        conn.write(
+          error_response("request line longer than \{MAX_LINE_BYTES} bytes").stringify() +
+          "\n",
+        )
+        return
+      }
+    }
     let response = try
       dispatch_request(@json.parse(line), state, connection)
     catch {
