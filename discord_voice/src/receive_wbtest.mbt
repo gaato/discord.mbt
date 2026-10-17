@@ -400,3 +400,35 @@ test "a sender without a decryptor passes no plaintext while DAVE is active" {
     assert_eq(undecryptable_drop_reason(active_version~, magic~), reason)
   }
 }
+
+///|
+test "a user's new SSRC replaces the old one and its reorder window" {
+  let pipeline = ReceivePipeline::new(_ => ())
+  let cipher = TransportCipher::new(AeadAes256GcmRtpsize, Bytes::new(32))
+  let receive = (ssrc : UInt32) => {
+    let header = build_rtp_header(sequence=1, timestamp=960U, ssrc~)
+    pipeline.process_udp_packet(
+      cipher.seal(header~, b"opus"),
+      cipher,
+      None,
+      arrival_ms=0L,
+      wants=_ => true,
+    )
+  }
+  for ssrc in 1U..<1001U {
+    pipeline.handle_gateway_message(Speaking(ssrc~, user_id="200", flags=1))
+    |> ignore
+    assert_eq(receive(ssrc).length(), 1)
+  }
+  assert_eq(pipeline.users_by_ssrc.length(), 1)
+  assert_eq(pipeline.reorder_by_ssrc.length(), 1)
+  // Repeating the same mapping keeps the window.
+  pipeline.handle_gateway_message(Speaking(ssrc=1000U, user_id="200", flags=0))
+  |> ignore
+  assert_eq(pipeline.reorder_by_ssrc.length(), 1)
+  // An SSRC that changes hands starts from a clean window.
+  pipeline.handle_gateway_message(Speaking(ssrc=1000U, user_id="300", flags=1))
+  |> ignore
+  assert_eq(pipeline.users_by_ssrc.get(1000U), Some("300"))
+  assert_eq(pipeline.reorder_by_ssrc.length(), 0)
+}

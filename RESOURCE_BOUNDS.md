@@ -25,12 +25,13 @@ kind say what that product is.
 | Gateway commands per connection (`gateway/command_limit.mbt`) | 115 per 60 s, presence 5 per 20 s | The sender waits |
 | Cache entries (`cache/cache.mbt`) | `CacheLimits` per resource; everything keyed by a guild or channel leaves with it | Oldest entry evicted |
 | Cache unavailable-guild flags (`cache/cache.mbt`) | Guilds the bot is in | — |
-| Cooldown windows (`cooldown/cooldown.mbt`) | Live windows: expired keys are swept whenever the map doubles | — |
+| Cooldown windows (`cooldown/cooldown.mbt`) | Live windows: expired keys are swept whenever the map doubles, and at least once a minute | — |
 | REST rate-limit buckets (`gaato/sdk-runtime` `WindowLimiter`, also inside the coordinator) | Buckets in use: idle gates are dropped, expired states swept whenever the map doubles (needs the sdk-runtime release with that fix; until then a bucket per interaction token stays) | — |
 | Inbound interaction request body (`endpoint_http/endpoint_http.mbt`) | `max_body_bytes`, default 1 MiB | 413 and the connection closes |
 | Voice receive stream (`discord_voice/src/subscribe.mbt`) | 250 frames | Newest frames dropped, then a `Lost(count)` marker; `ReceiveDropped` telemetry |
 | Voice event queue (`discord_voice/src/connection.mbt`) | 256 events | Oldest dropped; `EventDropped` telemetry |
 | Voice reorder buffer (`discord_voice/src/reorder.mbt`) | 8 packets or 60 ms | Flushed as `Lost` |
+| Voice SSRC mappings and reorder windows (`discord_voice/src/receive.mbt`) | One per user in the channel: a user's new SSRC replaces the old one, and both leave on `ClientDisconnect` or a session reset | — |
 
 ## Bounded by rate and lifetime
 

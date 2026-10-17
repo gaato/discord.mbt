@@ -21,6 +21,14 @@ releases (0.x → 0.y) may contain breaking changes; patch releases do not.
   receive loop has no equivalent: disconnect instead.
   Migration: drop `sleeper=` or pass `clock=` with your own `Clock`.
 
+### Fixed
+
+- **Receive state no longer grows as users change SSRCs.** A `Speaking`
+  message for a user now replaces the user's earlier SSRC, and an SSRC that
+  passes to another user loses its reorder window, so the receive maps hold
+  one entry per user in the channel. Before, each SSRC a user ever spoke on
+  kept a mapping and a reorder buffer until the user disconnected.
+
 ## [0.2.0] - 2026-10-17
 
 ### Changed
