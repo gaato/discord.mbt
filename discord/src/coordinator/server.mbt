@@ -12,19 +12,22 @@ priv struct CoordinatorState {
   cooldown : @cooldown.InMemoryCooldownStore
   owners : Map[String, BucketOwner]
   next_connection_id : Ref[Int32]
+  // Prefixes every lease, so a lease from before a restart never names one
+  // granted by this process.
+  instance : String
   next_lease_id : Ref[Int32]
 }
 
 ///|
 priv struct ConnectionState {
   id : Int32
-  held_buckets : Ref[Map[String, Int32]]
+  held_buckets : Ref[Map[String, String]]
 }
 
 ///|
 priv struct BucketOwner {
   connection : ConnectionState
-  lease : Int32
+  lease : String
 }
 
 ///|
@@ -54,6 +57,7 @@ pub async fn[X] Coordinator::serve(
       message="global_limit must be positive",
     )
   }
+  let instance = coordinator_instance_id(@env.rand(16))
   let server = @socket.TcpServer(@socket.Addr::parse(addr), reuse_addr=true)
   let state = CoordinatorState::{
     identify: InMemoryQueue(max_concurrency~, spacing_ms=identify_spacing_ms),
@@ -61,6 +65,7 @@ pub async fn[X] Coordinator::serve(
     cooldown: @cooldown.InMemoryCooldownStore(),
     owners: Map([]),
     next_connection_id: Ref(0),
+    instance,
     next_lease_id: Ref(0),
   }
   let runner : Ref[@async.TaskGroup[Unit]?] = Ref(None)
@@ -78,6 +83,25 @@ pub async fn[X] Coordinator::serve(
   })
   started.acquire()
   { address: server.addr.to_string(), runner, }
+}
+
+///|
+/// 128 bits of platform entropy, so no two coordinator processes share a
+/// prefix. Without entropy there is nothing that tells two processes apart,
+/// so the coordinator refuses to start rather than risk reusing leases.
+fn coordinator_instance_id(entropy : Bytes?) -> String raise CoordinatorError {
+  guard entropy is Some(bytes) && bytes.length() == 16 else {
+    raise CoordinatorError::InvalidConfig(
+      message="platform entropy is unavailable; coordinator leases need a unique instance id",
+    )
+  }
+  let id = StringBuilder()
+  for byte in bytes {
+    let digit = byte.to_int()
+    id.write_char("0123456789abcdef"[digit >> 4].unsafe_to_char())
+    id.write_char("0123456789abcdef"[digit & 15].unsafe_to_char())
+  }
+  id.to_string()
 }
 
 ///|
@@ -159,7 +183,7 @@ async fn dispatch_request(
     }
     HttpAcquire(bucket~, global_exempt~) => {
       state.limiter.acquire(bucket, global_exempt~)
-      let lease = state.next_lease_id.val
+      let lease = "\{state.instance}-\{state.next_lease_id.val}"
       state.next_lease_id.val += 1
       state.owners[bucket] = BucketOwner::{ connection, lease, }
       connection.held_buckets.val[bucket] = lease
