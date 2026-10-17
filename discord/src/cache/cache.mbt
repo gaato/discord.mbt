@@ -534,9 +534,8 @@ fn InMemoryCache::cached_channel(
 
 ///|
 /// Releases the state of guilds and channels whose TTL has passed, so it does
-/// not outlive them while nothing reads the guild or channel. Every read of
-/// state owned by a guild or channel calls it first, so an expired owner's
-/// state is never served.
+/// not outlive them while nothing reads the guild or channel. Every public
+/// read calls it first, so an expired owner's state is never served.
 fn InMemoryCache::expire_owners(self : InMemoryCache) -> Unit {
   self.guilds_.sweep(evicted=guild_id => self.release_guild(guild_id))
   self.channels_.sweep(evicted=channel_id => self.release_channel(channel_id))
@@ -906,12 +905,14 @@ pub fn InMemoryCache::guild(
   self : InMemoryCache,
   id : @model.GuildId,
 ) -> @model.Guild? {
+  self.expire_owners()
   self.guilds_.get(id, evicted=guild_id => self.release_guild(guild_id))
 }
 
 ///|
 /// All cached guilds.
 pub fn InMemoryCache::guilds(self : InMemoryCache) -> Array[@model.Guild] {
+  self.expire_owners()
   self.guilds_.values(evicted=guild_id => self.release_guild(guild_id))
 }
 
@@ -922,6 +923,7 @@ pub fn InMemoryCache::is_guild_unavailable(
   self : InMemoryCache,
   id : @model.GuildId,
 ) -> Bool {
+  self.expire_owners()
   self.unavailable_guilds_.get(id) == Some(true)
 }
 
@@ -930,6 +932,7 @@ pub fn InMemoryCache::is_guild_unavailable(
 pub fn InMemoryCache::unavailable_guilds(
   self : InMemoryCache,
 ) -> Array[@model.GuildId] {
+  self.expire_owners()
   self.unavailable_guilds_.keys().to_array()
 }
 
@@ -939,12 +942,14 @@ pub fn InMemoryCache::channel(
   self : InMemoryCache,
   id : @model.ChannelId,
 ) -> @model.Channel? {
+  self.expire_owners()
   self.cached_channel(id).map(cached => cached.channel)
 }
 
 ///|
 /// All cached channels and threads.
 pub fn InMemoryCache::channels(self : InMemoryCache) -> Array[@model.Channel] {
+  self.expire_owners()
   self.channels_
   .values(evicted=channel_id => self.release_channel(channel_id))
   .map(cached => cached.channel)
@@ -999,12 +1004,14 @@ pub fn InMemoryCache::user(
   self : InMemoryCache,
   id : @model.UserId,
 ) -> @model.User? {
+  self.expire_owners()
   self.users_.get(id)
 }
 
 ///|
 /// All cached users.
 pub fn InMemoryCache::users(self : InMemoryCache) -> Array[@model.User] {
+  self.expire_owners()
   self.users_.values()
 }
 

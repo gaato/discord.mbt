@@ -540,6 +540,23 @@ test "reads of owned state honour an expired owner without any other event" {
   now.val = 1000L
   // Read the owned state first, before anything touches the guild or channel.
   assert_eq(cache.messages(channel_id).length(), 0)
+  assert_true(cache.channel(channel_id) is None)
   assert_eq(cache.roles(guild_id).length(), 0)
   assert_eq(cache.members(guild_id).length(), 0)
+}
+
+///|
+test "a channel outlives no expired guild on a channel read" {
+  let now = Ref(0L)
+  let cache = @cache.InMemoryCache(
+    resources=@cache.CacheResources::all(),
+    limits=CacheLimits(guilds=CacheLimit(ttl_ms=1000L)),
+    now=() => now.val,
+  )
+  cache.update(limit_cached_event("GUILD_CREATE", limit_guild_fixture()))
+  let channel_id : @model.ChannelId = @model.Id::parse("400")
+  assert_true(cache.channel(channel_id) is Some(_))
+  now.val = 1000L
+  assert_true(cache.channel(channel_id) is None)
+  assert_true(cache.channels().is_empty())
 }
