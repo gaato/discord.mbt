@@ -26,6 +26,9 @@ import {
   "gaato/http/clock" @hclock,
   "moonbitlang/core/random",
   "moonbitlang/core/debug",
+  "moonbitlang/async/http" @ahttp,
+  "moonbitlang/async/socket",
+  "moonbitlang/async/websocket" @asyncws,
 } for "test"
 
 import {
@@ -65,5 +68,6 @@ options(
     "shard_fuzz_seeds_js_test.mbt": [ "js" ],
     "state.mbt": [ "js", "native", "wasm" ],
     "transport.mbt": [ "js", "native", "wasm" ],
+    "transport_native_test.mbt": [ "native" ],
   },
 )

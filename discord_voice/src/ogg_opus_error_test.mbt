@@ -151,3 +151,18 @@ test "Ogg Opus writer rejects unwritable frames and splits full pages" {
   writer.finish()
   assert_true(writer.take_output().length() > 66000)
 }
+
+///|
+test "Ogg packet reader refuses a packet past 16 MiB" {
+  // Every lace is 255, so the packet continues across all of these pages.
+  let laces = Array::make(255, b'\xff')
+  let body = Bytes::make(255 * 255, b'x')
+  let pages = []
+  for sequence in 0..<259 {
+    let header_type : Byte = if sequence == 0 { b'\x00' } else { b'\x01' }
+    pages.push(
+      test_ogg_page(header_type, sequence.reinterpret_as_uint(), laces, body),
+    )
+  }
+  expect_page_error(pages, "packet larger than 16777216 bytes")
+}

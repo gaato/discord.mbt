@@ -27,10 +27,11 @@ artifact, and requires it to load so transport AEAD tests cannot skip.
 `--from-json` only rechecks a stored report against the ledger; it does not
 repeat either native bootstrap or runtime load check.
 
-Snapshot at the last full measurement (2026-09-25, after the REST layer moved
-onto `gaato/sdk-runtime`): **93.3 %** across the library (8511/9126 coverage
-points; http 96.8 %, model 95.4 %, interaction 95.1 %, testkit 100 %, util
-100 %, bot 94.6 %, app 91.3 %, voice 85.7 %, gateway 76.3 %).
+Snapshot at the last full measurement (2026-10-18, after the robustness
+work): **94.9 %** across the library (9617/10133 coverage points; http
+97.8 %, bot 97.8 %, model 95.9 %, framework 95.5 %, interaction 95.1 %,
+cache 93.7 %, app 93.0 %, endpoint_http 92.6 %, gateway 91.8 %,
+coordinator 91.3 %, voice 87.7 %).
 
 ## Policy
 
@@ -76,15 +77,15 @@ Live socket, websocket, and FFI adapters (live-verified; no unit seam):
 
 | File | Budget | Reason |
 | --- | --- | --- |
-| discord/src/gateway/transport.mbt | 22 | Real websocket adapter behind the GatewayTransport trait; every consumer is tested against FakeTransport. |
-| discord/src/internal/websocket/native.mbt | 1 | Native/Wasm connect wrapper delegates to the upstream live WebSocket client; the JS implementation has separate loopback tests. |
-| discord_voice/src/transport.mbt | 38 | Real voice websocket adapter behind the VoiceTransport trait. |
+| discord/src/gateway/transport.mbt | 8 | Error arms of the real WebSocket adapter: cancellation re-raises, receive and read failures other than a close, a failing 1009 close, invalid UTF-8 text, and `send`. A loopback test covers receiving, the size limit, the peer's close code, and closing twice. |
+| discord_voice/src/transport.mbt | 20 | Error arms of the real voice WebSocket adapter (cancellation re-raises, failures other than a close, a failing 1009 close, invalid UTF-8), `send_text`/`send_binary`, and the close-code mapping arms other than an application code. Loopback tests cover receiving, the size limit, the peer's close code, and closing twice. |
 | discord_voice/src/udp.mbt | 4 | SocketVoiceUdp impls and `open_voice_udp` over a real UDP socket; parse and retry logic is covered via fakes. |
 | discord_voice/src/shim_ffi.mbt | 3 | Extern-C glue whose arms depend on host library state. |
 | discord_voice/src/crypto.mbt | 5 | Shim error-status translation paths; round-trips and geometry checks are covered with the shim loaded. |
 | discord/src/http/client.mbt | 2 | Default warning sinks (`println`) of the online and offline constructors. |
 | discord/src/http/request.mbt | 1 | The `Api` re-raise for middleware that raises it itself; the send loop, its retry rule, request validation, and every error mapping are covered by table and fake-wire contract tests. |
 | discord/src/endpoint_http/endpoint_http.mbt | 7 | Arms that need a broken connection or a cancellation mid-failure: a response write that fails because the peer is gone, cancellation of a failed request or write, and a server that stops after startup. Startup failure, 202/504 replies, and a request whose body fails mid-read are tested. |
+| discord/src/internal/gatewaysim/fake_transport.mbt | 2 | The test fake's flags recording a close during a send or receive, which a correct shard never triggers; tests assert they stay false. |
 | discord/src/coordinator/remote.mbt | 16 | Reconnecting remote clients against a real coordinator socket; for the cooldown store, the cancellation-during-connect arms (its outage, deadline, gate-wait, and malformed-response paths are covered). |
 | discord/src/coordinator/server.mbt | 6 | Config validation arms, and per-connection cleanup on real disconnects (the existing socket test is retry-flaky; see project notes). |
 
@@ -111,11 +112,11 @@ run; the gateway and voice loops are additionally tested on injected clocks):
 
 | File | Budget | Reason |
 | --- | --- | --- |
-| discord/src/gateway/shard.mbt | 14 | Protected-shutdown and event-queue teardown catches (including fatal inflater failure), stale-transport and normal-return fallbacks, and read-loop cancellation re-raise plumbing (async 0.22 cancellation does not pass through ordinary catches). Malformed Hello/frame, compression-mismatch, connector/backoff, and disconnected-send arms are tested through the fake transport. |
+| discord/src/gateway/shard.mbt | 15 | Protected-shutdown and event-queue teardown catches (including the shared fatal close before connecting, reached by a failing inflater factory or a size limit below 1), stale-transport and normal-return fallbacks, and read-loop cancellation re-raise plumbing (async 0.22 cancellation does not pass through ordinary catches). Malformed Hello/frame, compression-mismatch, connector/backoff, the default connector, and disconnected-send arms are tested. |
 | discord/src/gateway/platform_native.mbt | 2 | Two OS-specific Identify property arms unavailable on Linux. |
 | discord/src/http/handles_channel.mbt | 3 | `with_typing` refresh-failure arm sits behind the real 8-second cadence. |
 | discord/src/bot/middleware.mbt | 1 | Middleware chain cancellation arm. |
-| discord/src/bot/shard_manager.mbt | 3 | Live gateway discovery and default-connector startup (including saved-session projection), plus defensive shard-config arms; fake-connector startup and resume are tested. |
+| discord/src/bot/shard_manager.mbt | 1 | Live gateway discovery's invalid-info arm; fake-connector startup and resume are tested. |
 | discord/src/bot/bot.mbt | 17 | Gateway run-loop teardown/cancellation arms; startup, intents, telemetry, and event routing are covered. The event-backlog put fails only on a queue closed by shutdown, and the `ShardEvent::..` arm that `#non_exhaustive` requires outside `@gateway` matches no current event. |
 
 Defensive arms unreachable by construction:
@@ -157,7 +158,7 @@ show-flows beyond the covered happy and failing paths):
 
 | File | Budget | Reason |
 | --- | --- | --- |
-| discord/src/app/app.mbt | 8 | Default warning sink (`println`), cancellation re-raise arms of the per-kind failure handlers, and the no-op busy handlers of autocomplete routes, which never defer and so are never refused. |
+| discord/src/app/app.mbt | 7 | Cancellation re-raise arms of the per-kind failure handlers and of the framework error hook, and the no-op busy handlers of autocomplete routes, which never defer and so are never refused. |
 | discord/src/app/check.mbt | 2 | Permission-check arms needing resolved member permissions in a guild payload. |
 | discord/src/app/command.mbt | 9 | Group/subcommand registration arms beyond the covered paths. |
 | discord/src/app/admission.mbt | 11 | Acknowledgement-plan arms for kinds that never carry that plan, the autocomplete gate stubs, the cancellation re-raise, the pending-count cleanup that only runs when a waiting deferred route is cancelled, and the watchdog's failed-defer warning (the defer itself is covered). |
@@ -171,10 +172,10 @@ show-flows beyond the covered happy and failing paths):
 | discord/src/framework/responder.mbt | 3 | `reply`'s cancellation re-raise, the re-raise of an edit failure on a confirmed deferral, and the followup fallback after an unconfirmed deferral's edit fails (verified live with `gate_probe`, 2026-09-28). |
 | discord/src/framework/sync.mbt | 1 | Option-comparison early exit not hit by the covered spec shapes (moved from `src/app/sync.mbt`). |
 | discord/src/framework/framework.mbt | 9 | Dispatch fallbacks for unroutable interactions. |
-| discord/src/framework/gate.mbt | 3 | The callback rule for an unknown interaction type, the cancellation re-raise during delivery, and a `send` that waits for an in-flight delivery to settle. |
+| discord/src/framework/gate.mbt | 2 | The callback rule for an unknown interaction type and the cancellation re-raise during delivery. |
 | discord/src/interaction/args.mbt | 8 | Suggest-handler closures that only run inside a live autocomplete dispatch. |
 | discord/src/interaction/options.mbt | 8 | Focused-option accessors for kinds not used by any covered command shape. |
-| discord/src/cache/cache.mbt | 17 | Permission-overwrite computation arms needing full guild channel fixtures. |
+| discord/src/cache/cache.mbt | 18 | Permission-overwrite computation arms needing full guild channel fixtures (14), and the eviction callbacks of reads (4), which run only when time passes between a read's sweep of expired owners and its lookup. |
 | discord/src/http/api_application.mbt | 2 | Emit arms of optional request fields not exercised by the pinned shapes. |
 | discord/src/http/api_guild.mbt | 4 | Remaining optional-parameter emit arms. |
 | discord/src/http/api_interaction.mbt | 3 | Callback-with-files arms needing a live token. |

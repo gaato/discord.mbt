@@ -29,6 +29,9 @@ import {
   "moonbitlang/core/env",
   "moonbitlang/core/json",
   "moonbitlang/core/random",
+  "moonbitlang/async/http" @ahttp,
+  "moonbitlang/async/socket",
+  "moonbitlang/async/websocket" @asyncws,
 } for "test"
 
 import {

@@ -714,3 +714,34 @@ async test "a legacy client is refused before it can hold a bucket" {
     current.release(bucket, status=200, headers=@http.Headers::new())
   })
 }
+
+///|
+async test "the coordinator answers an over-long request line and hangs up" {
+  @async.with_task_group(group => {
+    let coordinator = Coordinator::serve(group, addr="127.0.0.1:0")
+    defer coordinator.close()
+    let conn = @socket.Tcp::connect(@socket.Addr::parse(coordinator.addr()))
+    defer conn.close()
+    // One byte past the limit and no newline: the coordinator rejects the
+    // line once it has read every byte, so it closes with nothing unread
+    // and the client sees a clean end instead of a reset.
+    conn.write(Bytes::make(MAX_LINE_BYTES + 1, b'x'))
+    let reader = LineReader::new()
+    guard reader.next(chunk => conn.read(chunk)) is Line(line) else {
+      fail("no answer to an over-long line")
+    }
+    assert_eq(
+      decode_error_message(line),
+      "request line longer than \{MAX_LINE_BYTES} bytes",
+    )
+    assert_true(reader.next(chunk => conn.read(chunk)) is Ended)
+  })
+}
+
+///|
+fn decode_error_message(line : String) -> String raise {
+  guard @json.parse(line) is { "ok": False, "error": String(message), .. } else {
+    fail("not an error response: \{line}")
+  }
+  message
+}
