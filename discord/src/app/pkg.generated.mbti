@@ -104,7 +104,7 @@ pub fn App::warn(Self, AppWarning) -> Unit
 pub struct AppBuilder {
   // private fields
 }
-pub fn AppBuilder::AppBuilder(max_in_flight? : Int, max_pending? : Int, cooldown_store? : &@cooldown.CooldownStore) -> Self
+pub fn AppBuilder::AppBuilder(max_in_flight? : Int, max_pending? : Int, cooldown_store? : &@cooldown.CooldownStore, cooldown_outage? : CooldownOutage) -> Self
 pub fn AppBuilder::autocomplete(Self, String, async (@framework.AutocompleteCtx) -> Unit) -> Unit
 pub fn AppBuilder::build(Self) -> App raise AppConfigError
 #callsite(autofill(loc))
@@ -146,6 +146,7 @@ pub(all) enum AppWarning {
   WaiterUnavailable
   InteractionProcessingFailed(error~ : Error)
   Executor(source~ : String, message~ : String)
+  CooldownUnavailable(reason~ : String, outage~ : CooldownOutage)
 } derive(@debug.Debug)
 pub fn AppWarning::to_string(Self) -> String
 pub impl Show for AppWarning
@@ -248,6 +249,11 @@ pub(all) enum CooldownBucket {
   User
   Guild
   Global
+} derive(Eq, @debug.Debug)
+
+pub(all) enum CooldownOutage {
+  Allow
+  Refuse
 } derive(Eq, @debug.Debug)
 
 pub struct CustomIdCodec[A] {

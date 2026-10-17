@@ -317,86 +317,47 @@ async fn with_silent_coordinator(
 }
 
 ///|
-async test "unreachable coordinator fails open within the deadline" {
+async test "an unreachable coordinator yields Unavailable within the deadline" {
   with_silent_coordinator((addr, connections) => {
-    let errors : Array[Error] = []
     let timeout_ms = 100
-    let remote = RemoteCooldownStore::connect(addr, timeout_ms~, on_error=error => {
-      errors.push(error)
-    })
+    let remote = RemoteCooldownStore::connect(addr, timeout_ms~)
     defer remote.close()
     let started = @clock.now_ms()
-    assert_eq(remote.try_acquire("global", window_ms=10_000L), Acquired)
+    guard remote.try_acquire("global", window_ms=10_000L)
+      is Unavailable(reason~) else {
+      fail("expected Unavailable")
+    }
+    assert_true(reason.contains("TimeoutError"), msg=reason)
     let elapsed = @clock.now_ms() - started
     assert_true(elapsed < (2 * timeout_ms).to_int64())
-    assert_eq(errors.length(), 1)
-    assert_true(errors[0] is @async.TimeoutError)
     assert_eq(connections.val, 1)
     assert_true(remote.client.conn.val is None)
   })
 }
 
 ///|
-async test "unreachable coordinator fails closed within the deadline" {
-  with_silent_coordinator((addr, connections) => {
-    let errors : Array[Error] = []
-    let timeout_ms = 100
-    let remote = RemoteCooldownStore::connect(
-      addr,
-      timeout_ms~,
-      when_unreachable=FailClosed,
-      on_error=error => errors.push(error),
-    )
-    defer remote.close()
-    let started = @clock.now_ms()
-    assert_eq(
-      remote.try_acquire("global", window_ms=10_000L),
-      Active(retry_after_ms=10_000L),
-    )
-    let elapsed = @clock.now_ms() - started
-    assert_true(elapsed < (2 * timeout_ms).to_int64())
-    assert_eq(errors.length(), 1)
-    assert_true(errors[0] is @async.TimeoutError)
-    assert_eq(connections.val, 1)
-    assert_true(remote.client.conn.val is None)
-  })
-}
-
-///|
-async test "cooldown outage policies cover disconnection and initial refusal" {
+async test "cooldown outages cover disconnection and initial refusal" {
   @async.with_task_group(group => {
     let coordinator = Coordinator::serve(group, addr="127.0.0.1:0")
-    let errors = Ref(0)
-    let first = RemoteCooldownStore::connect(
+    let connected = RemoteCooldownStore::connect(
       coordinator.addr(),
       timeout_ms=100,
-      on_error=_ => errors.val += 1,
     )
-    let second = RemoteCooldownStore::connect(
-      coordinator.addr(),
-      timeout_ms=100,
-      when_unreachable=FailClosed,
-      on_error=_ => errors.val += 1,
-    )
-    defer first.close()
-    defer second.close()
+    defer connected.close()
     coordinator.close()
     @async.sleep(10)
-    assert_eq(first.try_acquire("global", window_ms=10_000L), Acquired)
-    assert_eq(
-      second.try_acquire("global", window_ms=10_000L),
-      Active(retry_after_ms=10_000L),
+    assert_true(
+      connected.try_acquire("global", window_ms=10_000L) is Unavailable(_),
     )
-    assert_eq(errors.val, 2)
+    // A coordinator that is down at startup still yields a store.
     let offline = RemoteCooldownStore::connect(
       coordinator.addr(),
       timeout_ms=100,
-      on_error=_ => errors.val += 1,
     )
     defer offline.close()
-    assert_eq(errors.val, 3)
-    assert_eq(offline.try_acquire("global", window_ms=10_000L), Acquired)
-    assert_eq(errors.val, 4)
+    assert_true(
+      offline.try_acquire("global", window_ms=10_000L) is Unavailable(_),
+    )
   })
 }
 
@@ -435,33 +396,24 @@ async test "a blocked http_acquire does not delay cooldown_acquire" {
 
 ///|
 async test "cooldown cancellation always propagates without reporting an outage" {
-  for policy in [FailOpen, FailClosed] {
-    with_silent_coordinator((addr, _) => {
-      let errors = Ref(0)
-      let returned = Ref(false)
-      let remote = RemoteCooldownStore::connect(
-        addr,
-        timeout_ms=1000,
-        when_unreachable=policy,
-        on_error=_ => errors.val += 1,
-      )
-      defer remote.close()
-      try
-        @async.with_timeout(20, () => {
-          remote.try_acquire("global", window_ms=10_000L) |> ignore
-          returned.val = true
-        })
-      catch {
-        @async.TimeoutError => ()
-        error => fail("unexpected cancellation result: \{Repr(error)}")
-      } noraise {
-        _ => fail("cancelled acquisition unexpectedly returned")
-      }
-      assert_false(returned.val)
-      assert_eq(errors.val, 0)
-      assert_true(remote.client.conn.val is None)
-    })
-  }
+  with_silent_coordinator((addr, _) => {
+    let returned = Ref(false)
+    let remote = RemoteCooldownStore::connect(addr, timeout_ms=1000)
+    defer remote.close()
+    try
+      @async.with_timeout(20, () => {
+        remote.try_acquire("global", window_ms=10_000L) |> ignore
+        returned.val = true
+      })
+    catch {
+      @async.TimeoutError => ()
+      error => fail("unexpected cancellation result: \{Repr(error)}")
+    } noraise {
+      _ => fail("cancelled acquisition unexpectedly returned")
+    }
+    assert_false(returned.val)
+    assert_true(remote.client.conn.val is None)
+  })
 }
 
 ///|
@@ -469,18 +421,17 @@ async test "cooldown deadline includes waiting for the connection gate" {
   @async.with_task_group(group => {
     let coordinator = Coordinator::serve(group, addr="127.0.0.1:0")
     defer coordinator.close()
-    let errors = Ref(0)
     let remote = RemoteCooldownStore::connect(
       coordinator.addr(),
       timeout_ms=100,
-      on_error=_ => errors.val += 1,
     )
     defer remote.close()
     remote.client.gate.acquire()
     let started = @clock.now_ms()
-    assert_eq(remote.try_acquire("global", window_ms=10_000L), Acquired)
+    assert_true(
+      remote.try_acquire("global", window_ms=10_000L) is Unavailable(_),
+    )
     assert_true(@clock.now_ms() - started < 200L)
-    assert_eq(errors.val, 1)
     remote.client.gate.release()
     remote.ping()
     assert_eq(remote.try_acquire("global", window_ms=10_000L), Acquired)

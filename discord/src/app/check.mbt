@@ -123,11 +123,42 @@ fn cooldown_key(
 }
 
 ///|
+
+///|
+/// Whether a command with a cooldown runs while the cooldown store cannot
+/// answer.
+pub(all) enum CooldownOutage {
+  /// Run it without a cooldown: cooldowns damp abuse, so an outage should not
+  /// take every command offline.
+  Allow
+  /// Refuse it as if its cooldown were active for its whole window.
+  Refuse
+} derive(Debug, Eq)
+
+///|
+/// The App's cooldown store, its outage policy, and whether the store is
+/// currently failing, so an outage is reported once rather than per command.
+priv struct Cooldowns {
+  store : &@cooldown.CooldownStore
+  outage : CooldownOutage
+  mut down : Bool
+}
+
+///|
+/// Record whether the store answered. Returns true when this starts an outage.
+fn Cooldowns::observe(self : Cooldowns, answered~ : Bool) -> Bool {
+  let starts = !answered && !self.down
+  self.down = !answered
+  starts
+}
+
+///|
 async fn RegisteredCommand::run_checks_and_cooldown(
   self : RegisteredCommand,
   bot : AppCtx,
   raw : @framework.CommandCtx,
-  store : &@cooldown.CooldownStore,
+  cooldowns : Cooldowns,
+  warn : (AppWarning) -> Unit,
 ) -> Unit {
   let ctx = CheckCtx::{ raw_: raw, bot_: bot, }
   for check in self.checks_ {
@@ -138,8 +169,17 @@ async fn RegisteredCommand::run_checks_and_cooldown(
   guard self.cooldown_ is Some(config) else { return }
   let key = self.key() + "|" + cooldown_key(config, ctx)
   let duration_ms = config.seconds.to_int64() * 1000L
-  match store.try_acquire(key, window_ms=duration_ms) {
+  let decision = cooldowns.store.try_acquire(key, window_ms=duration_ms)
+  if cooldowns.observe(answered=!(decision is Unavailable(_))) &&
+    decision is Unavailable(reason~) {
+    warn(CooldownUnavailable(reason~, outage=cooldowns.outage))
+  }
+  match decision {
     Acquired => ()
     Active(retry_after_ms~) => raise OnCooldown(retry_after_ms~)
+    Unavailable(_) =>
+      if cooldowns.outage is Refuse {
+        raise OnCooldown(retry_after_ms=duration_ms)
+      }
   }
 }

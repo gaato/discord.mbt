@@ -41,6 +41,9 @@ pub(all) enum AppWarning {
   /// A warning raised by an executor about its own transport (for example the
   /// gateway `Bot`), identified by `source`.
   Executor(source~ : String, message~ : String)
+  /// The cooldown store stopped answering; `outage` is what commands with a
+  /// cooldown do until it answers again. Reported once per outage.
+  CooldownUnavailable(reason~ : String, outage~ : CooldownOutage)
 } derive(Debug)
 
 ///|
@@ -91,5 +94,14 @@ pub impl Show for AppWarning with fn output(self, logger) {
     InteractionProcessingFailed(error~) =>
       logger.write_string("interaction processing failed: \{Repr(error)}")
     Executor(message~, ..) => logger.write_string(message)
+    CooldownUnavailable(reason~, outage~) => {
+      let effect = match outage {
+        Allow => "commands run without cooldowns"
+        Refuse => "commands with a cooldown are refused"
+      }
+      logger.write_string(
+        "cooldown store unavailable (\{reason}): \{effect} until it answers again",
+      )
+    }
   }
 }

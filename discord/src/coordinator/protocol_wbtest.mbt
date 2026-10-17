@@ -149,3 +149,11 @@ test "decode_cooldown inverts cooldown_response" {
     }
   }
 }
+
+///|
+test "an unavailable cooldown decision encodes as an error response" {
+  assert_eq(cooldown_response(Unavailable(reason="store down")), {
+    "ok": false,
+    "error": "store down",
+  })
+}

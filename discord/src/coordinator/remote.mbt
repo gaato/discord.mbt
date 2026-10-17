@@ -280,60 +280,44 @@ pub impl @runtime.RateLimiter for RemoteRateLimiter with fn release(
 }
 
 ///|
-/// Admission policy when the cooldown coordinator is unreachable.
-pub(all) enum UnreachablePolicy {
-  FailOpen
-  FailClosed
-} derive(Debug, Eq)
-
-///|
 /// Cross-process cooldown windows using the coordinator's clock.
 ///
-/// FailOpen is the default: cooldowns damp abuse, so an outage should not take
-/// every command offline. RemoteRateLimiter remains fail-closed because avoiding
-/// Discord's 429 bans is a correctness concern. Cancellation always propagates.
+/// An unreachable coordinator yields `Unavailable`, and the App applies its
+/// `cooldown_outage` policy and warns once per outage. RemoteRateLimiter, by
+/// contrast, fails closed because avoiding Discord's 429 bans is a
+/// correctness concern. Cancellation always propagates.
 pub struct RemoteCooldownStore {
   priv client : CoordinatorClient
   priv timeout_ms : Int32
-  priv policy : UnreachablePolicy
-  priv on_error : (Error) -> Unit
 }
 
 ///|
 /// Open a dedicated connection, independent of blocking HTTP acquisitions.
 /// Each acquisition has no retries and a `timeout_ms` deadline, including queue
-/// and reconnect time. Transport failures and timeouts call `on_error`, then
-/// use `when_unreachable`: Acquired for FailOpen, or Active for the requested window
-/// for FailClosed. Other errors propagate. The default error hook does nothing.
-/// An initial connection outage is reported but still returns a store; later
-/// acquisitions attempt to reconnect within the same deadline.
+/// and reconnect time; a transport failure or timeout yields `Unavailable`.
+/// Other errors propagate. A coordinator unreachable at startup still returns
+/// a store; later acquisitions attempt to reconnect within the same deadline.
 pub async fn RemoteCooldownStore::connect(
   addr : String,
   timeout_ms~ : Int32 = 1000,
-  when_unreachable~ : UnreachablePolicy = FailOpen,
-  on_error? : (Error) -> Unit,
 ) -> RemoteCooldownStore {
   if timeout_ms <= 0 {
     raise CoordinatorError::InvalidConfig(message="timeout_ms must be positive")
   }
   let client = CoordinatorClient(addr)
-  let on_error = on_error.unwrap_or_else(() => _ => ())
   @async.with_timeout(timeout_ms, () => client.connection() |> ignore) catch {
     error if @async.is_being_cancelled() => {
       client.close()
       raise error
     }
-    error if coordinator_unreachable(error) => {
-      client.drop_connection()
-      on_error(error)
-    }
+    error if coordinator_unreachable(error) => client.drop_connection()
     error => raise error
   }
-  { client, timeout_ms, policy: when_unreachable, on_error, }
+  { client, timeout_ms, }
 }
 
 ///|
-/// Close the connection permanently. Later acquisitions use `when_unreachable`.
+/// Close the connection permanently. Later acquisitions yield `Unavailable`.
 pub fn RemoteCooldownStore::close(self : RemoteCooldownStore) -> Unit {
   self.client.close()
 }
@@ -365,13 +349,8 @@ pub impl @cooldown.CooldownStore for RemoteCooldownStore with fn try_acquire(
     timeout_ms=self.timeout_ms,
   ) catch {
     error if @async.is_being_cancelled() => raise error
-    error if coordinator_unreachable(error) => {
-      (self.on_error)(error)
-      return match self.policy {
-        FailOpen => Acquired
-        FailClosed => Active(retry_after_ms=window_ms)
-      }
-    }
+    error if coordinator_unreachable(error) =>
+      return Unavailable(reason="\{Repr(error)}")
     error => raise error
   }
   decode_cooldown(response)
