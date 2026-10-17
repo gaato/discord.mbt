@@ -557,6 +557,28 @@ test "DAVE tracks multiple pending transitions independently" {
 }
 
 ///|
+test "DAVE keeps only the most recent prepared transitions" {
+  let fake = FakeDaveBackend::new()
+  let machine = fake_machine(fake)
+  for id in 1..<=1000 {
+    machine.handle(DavePrepareTransition(transition_id=id, protocol_version=1))
+    |> ignore
+  }
+  assert_eq(machine.pending.length(), MAX_PENDING_TRANSITIONS)
+  // The oldest were dropped; the latest still execute.
+  assert_eq(machine.handle(DaveExecuteTransition(transition_id=1)), [])
+  assert_eq(machine.handle(DaveExecuteTransition(transition_id=1000)), [
+    SwitchMediaContext(protocol_version=1),
+  ])
+  assert_eq(
+    machine.handle(
+      DaveExecuteTransition(transition_id=1001 - MAX_PENDING_TRANSITIONS),
+    ),
+    [SwitchMediaContext(protocol_version=1)],
+  )
+}
+
+///|
 test "DAVE connected MLS member receives the latest prepared ratchet" {
   let fake = FakeDaveBackend::new()
   let machine = fake_machine(fake)

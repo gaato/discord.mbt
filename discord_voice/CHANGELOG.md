@@ -28,6 +28,9 @@ releases (0.x → 0.y) may contain breaking changes; patch releases do not.
   passes to another user loses its reorder window, so the receive maps hold
   one entry per user in the channel. Before, each SSRC a user ever spoke on
   kept a mapping and a reorder buffer until the user disconnected.
+- **DAVE keeps at most 16 prepared transitions.** Preparing another forgets
+  the oldest; before, a transition the gateway never executed stayed for the
+  rest of the session.
 
 ## [0.2.0] - 2026-10-17
 

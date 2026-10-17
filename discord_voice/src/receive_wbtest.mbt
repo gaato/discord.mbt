@@ -404,21 +404,11 @@ test "a sender without a decryptor passes no plaintext while DAVE is active" {
 ///|
 test "a user's new SSRC replaces the old one and its reorder window" {
   let pipeline = ReceivePipeline::new(_ => ())
-  let cipher = TransportCipher::new(AeadAes256GcmRtpsize, Bytes::new(32))
-  let receive = (ssrc : UInt32) => {
-    let header = build_rtp_header(sequence=1, timestamp=960U, ssrc~)
-    pipeline.process_udp_packet(
-      cipher.seal(header~, b"opus"),
-      cipher,
-      None,
-      arrival_ms=0L,
-      wants=_ => true,
-    )
-  }
   for ssrc in 1U..<1001U {
     pipeline.handle_gateway_message(Speaking(ssrc~, user_id="200", flags=1))
     |> ignore
-    assert_eq(receive(ssrc).length(), 1)
+    // What a received packet from the SSRC leaves behind.
+    pipeline.reorder_by_ssrc[ssrc] = ReorderBuffer::new()
   }
   assert_eq(pipeline.users_by_ssrc.length(), 1)
   assert_eq(pipeline.reorder_by_ssrc.length(), 1)

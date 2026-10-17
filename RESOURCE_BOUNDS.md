@@ -32,6 +32,7 @@ kind say what that product is.
 | Voice event queue (`discord_voice/src/connection.mbt`) | 256 events | Oldest dropped; `EventDropped` telemetry |
 | Voice reorder buffer (`discord_voice/src/reorder.mbt`) | 8 packets or 60 ms | Flushed as `Lost` |
 | Voice SSRC mappings and reorder windows (`discord_voice/src/receive.mbt`) | One per user in the channel: a user's new SSRC replaces the old one, and both leave on `ClientDisconnect` or a session reset | — |
+| DAVE prepared transitions (`discord_voice/src/dave.mbt`) | 16 | The oldest is forgotten; executing it later does nothing |
 
 ## Bounded by rate and lifetime
 
