@@ -1,0 +1,43 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "gaato/discord/internal/gatewaysim"
+
+import {
+  "gaato/discord/gateway",
+  "gaato/discord/internal/simclock",
+  "moonbitlang/async/aqueue",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/ref",
+}
+
+// Values
+
+// Errors
+pub suberror SimFailure {
+  SimFailure
+} derive(@debug.Debug)
+
+// Types and methods
+pub struct FakeTransport {
+  incoming : @aqueue.Queue[@gateway.GatewayFrame]
+  outgoing : @aqueue.Queue[Json]
+  sent : Array[Json]
+  block_next_send : @ref.Ref[Bool]
+  send_started : @aqueue.Queue[Unit]
+  fail_close : @ref.Ref[Bool]
+  close_calls : @ref.Ref[Int]
+  close_code : @ref.Ref[Int?]
+  close_during_send : @ref.Ref[Bool]
+  close_during_recv : @ref.Ref[Bool]
+  sends_after_close : @ref.Ref[Int]
+  send_in_flight : @ref.Ref[Bool]
+  recv_in_flight : @ref.Ref[Bool]
+  // private fields
+}
+pub fn FakeTransport::FakeTransport(clock? : @simclock.VirtualClock) -> Self
+pub async fn FakeTransport::put(Self, String) -> Unit
+pub fn FakeTransport::server_close(Self, Int?) -> Unit
+pub impl @gateway.GatewayTransport for FakeTransport
+
+// Type aliases
+
+// Traits

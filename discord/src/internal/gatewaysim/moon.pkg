@@ -1,0 +1,14 @@
+import {
+  "gaato/discord/gateway",
+  "gaato/discord/internal/simclock",
+  "moonbitlang/async",
+  "moonbitlang/async/aqueue",
+  "moonbitlang/core/json",
+}
+
+supported_targets = "js + native + wasm"
+
+import {
+  "gaato/discord/gateway",
+  "gaato/discord/internal/simclock",
+} for "test"

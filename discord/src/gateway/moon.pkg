@@ -22,6 +22,7 @@ import {
   "gaato/discord/queue",
   "gaato/discord/internal/clock",
   "gaato/discord/internal/simclock",
+  "gaato/discord/internal/gatewaysim",
   "gaato/http/clock" @hclock,
 } for "test"
 
