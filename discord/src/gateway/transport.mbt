@@ -37,18 +37,18 @@ impl GatewayTransport for WsTransport with fn recv(self) {
         code=Some(@websocket.close_code_to_int(code)),
         reason=reason.unwrap_or(""),
       )
-    e => raise TransportClosed(code=None, reason="\{e}")
+    e => raise TransportClosed(code=None, reason="\{Repr(e)}")
   }
   let data = message.read_all() catch {
     error if @async.is_being_cancelled() => raise error
-    e => raise TransportClosed(code=None, reason="\{e}")
+    e => raise TransportClosed(code=None, reason="\{Repr(e)}")
   }
   match message.kind {
     Text =>
       Text(
         data.text() catch {
           error if @async.is_being_cancelled() => raise error
-          e => raise TransportClosed(code=None, reason="\{e}")
+          e => raise TransportClosed(code=None, reason="\{Repr(e)}")
         },
       )
     Binary => Binary(data.binary())

@@ -31,17 +31,16 @@ fn encode_headers(headers : @http.Headers) -> Json {
 }
 
 ///|
-fn decode_headers(fields : Map[String, Json]) -> @http.Headers raise {
+/// Headers from their wire object, or why one of them is not a string.
+fn decode_headers(fields : Map[String, Json]) -> Result[@http.Headers, String] {
   let headers = @http.Headers::new()
   for name, value in fields {
     guard value is String(text) else {
-      raise CoordinatorError::InvalidResponse(
-        message="header \{name} must be a string",
-      )
+      return Err("header \{name} must be a string")
     }
     headers.set(name.to_lower(), text)
   }
-  headers
+  Ok(headers)
 }
 
 ///|
@@ -157,10 +156,10 @@ fn parse_request(request : Json) -> Result[Request, String] {
           "http_release requires bucket, lease, non-negative integer status, and headers object",
         )
       }
-      let headers = decode_headers(header_fields) catch {
-        error => return Err("invalid headers: \{error}")
+      match decode_headers(header_fields) {
+        Ok(headers) => Ok(HttpRelease(bucket~, lease~, status~, headers~))
+        Err(message) => Err("invalid headers: \{message}")
       }
-      Ok(HttpRelease(bucket~, lease~, status~, headers~))
     }
     unknown => Err("unknown op: \{unknown}")
   }

@@ -306,7 +306,7 @@ async fn VoiceGateway::run(
         VoiceConnectionEnded(code~, reason~)
       VoiceTransportClosed(code~, reason~) =>
         VoiceConnectionEnded(code~, reason~)
-      error => VoiceConnectionEnded(code=None, reason="\{error}")
+      error => VoiceConnectionEnded(code=None, reason="\{Repr(error)}")
     } noraise {
       ended => ended
     }
@@ -413,7 +413,7 @@ async fn VoiceGateway::run_connection(
         error =>
           raise VoiceConnectionEnded(
             code=None,
-            reason="bad voice frame: \{error}",
+            reason="bad voice frame: \{Repr(error)}",
           )
       }
       if seq is Some(sequence) {

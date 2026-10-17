@@ -92,7 +92,7 @@ test "parse_request validates each op" {
   })
   assert_eq(
     parsed_label(bad_header),
-    "error: invalid headers: gaato/discord/coordinator.CoordinatorError.InvalidResponse",
+    "error: invalid headers: header Retry-After must be a string",
   )
 }
 

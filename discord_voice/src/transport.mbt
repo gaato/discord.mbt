@@ -36,18 +36,19 @@ impl VoiceTransport for VoiceWsTransport with fn recv(self) {
         code=Some(voice_close_code_to_int(code)),
         reason=reason.unwrap_or(""),
       )
-    error => raise VoiceTransportClosed(code=None, reason="\{error}")
+    error => raise VoiceTransportClosed(code=None, reason="\{Repr(error)}")
   }
   let data = message.read_all() catch {
     error if @async.is_being_cancelled() => raise error
-    error => raise VoiceTransportClosed(code=None, reason="\{error}")
+    error => raise VoiceTransportClosed(code=None, reason="\{Repr(error)}")
   }
   match message.kind {
     Text =>
       Text(
         data.text() catch {
           error if @async.is_being_cancelled() => raise error
-          error => raise VoiceTransportClosed(code=None, reason="\{error}")
+          error =>
+            raise VoiceTransportClosed(code=None, reason="\{Repr(error)}")
         },
       )
     Binary => Binary(data.binary())
