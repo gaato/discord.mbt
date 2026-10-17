@@ -62,7 +62,7 @@ pub struct VoiceConnection {
   priv connector_ : async (String) -> &VoiceTransport
   priv udp_opener_ : async (String, Int32) -> &VoiceUdp
   priv telemetry_ : (VoiceTelemetry) -> Unit
-  priv sleeper_ : async (Int32) -> Unit
+  priv clock_ : &@hclock.Clock
   priv rand_ : @random.Rand
   priv receiver : ReceivePipeline
   priv roster : Set[String]
@@ -321,7 +321,7 @@ fn[X] VoiceConnection::new_gateway(
     },
     connector=self.connector_,
     telemetry=event => (self.telemetry_)(GatewayEvent(event)),
-    sleeper=self.sleeper_,
+    clock=self.clock_,
     rand=self.rand_,
   )
 }
@@ -594,9 +594,7 @@ async fn VoiceConnection::run_receiver(self : VoiceConnection) -> Unit noraise {
         // A failure on the socket still in use is an I/O error worth backing
         // off from; one caused by a session reset just waits for the next.
         if generation == self.session_generation {
-          (self.sleeper_)(RECV_RETRY_DELAY_MS) catch {
-            _ => return
-          }
+          self.clock_.sleep(RECV_RETRY_DELAY_MS)
         }
         continue
       }
@@ -609,7 +607,7 @@ async fn VoiceConnection::run_receiver(self : VoiceConnection) -> Unit noraise {
       datagram,
       cipher,
       self.dave,
-      arrival_ms=now_ms(),
+      arrival_ms=self.clock_.now_unix_ms(),
       wants=user_id => self.is_subscribed(user_id),
     )
     for item in delivered {
@@ -628,9 +626,7 @@ fn keepalive_packet(counter : UInt64) -> Bytes {
 async fn VoiceConnection::run_keepalive(self : VoiceConnection) -> Unit noraise {
   let mut counter = 0UL
   while !self.closing {
-    (self.sleeper_)(5000) catch {
-      _ => return
-    }
+    self.clock_.sleep(5000)
     if self.udp is Some(udp) {
       udp.send(keepalive_packet(counter)) catch {
         _ => ()
@@ -674,6 +670,7 @@ async fn VoiceConnection::run_playback(self : VoiceConnection) -> Unit noraise {
       stop~,
       dave?=self.dave,
       on_dave_error=reason => (self.telemetry_)(DaveEncryptDropped(reason~)),
+      clock=self.clock_,
     ) catch {
       error =>
         (self.telemetry_)(PacketDropped(reason="send loop: \{Repr(error)}"))
@@ -683,7 +680,10 @@ async fn VoiceConnection::run_playback(self : VoiceConnection) -> Unit noraise {
 }
 
 ///|
-/// Start a voice connection and attach all of its tasks to `group`.
+/// Start a voice connection and attach all of its tasks to `group`. `clock`
+/// times everything the connection waits for: the gateway heartbeat and
+/// reconnect backoff, UDP keepalives, playback pacing, receive backoff and
+/// reordering, `wait_ready`, and subscription silence.
 pub fn[X] VoiceConnection::start(
   group : @async.TaskGroup[X],
   credentials : VoiceCredentials,
@@ -696,7 +696,7 @@ pub fn[X] VoiceConnection::start(
   receive~ : Bool = true,
   event_backlog~ : Int32 = DEFAULT_VOICE_EVENT_BACKLOG,
   telemetry~ : (VoiceTelemetry) -> Unit = _ => (),
-  sleeper~ : async (Int32) -> Unit = ms => @async.sleep(ms),
+  clock~ : &@hclock.Clock = default_clock(),
   rand~ : @random.Rand = @random.Rand(),
 ) -> VoiceConnection raise VoiceError {
   if event_backlog < 1 {
@@ -716,7 +716,7 @@ pub fn[X] VoiceConnection::start(
     connector_: connector,
     udp_opener_: udp_opener,
     telemetry_: telemetry,
-    sleeper_: sleeper,
+    clock_: clock,
     rand_: rand,
     receiver,
     roster: Set([]),
@@ -752,30 +752,21 @@ pub async fn VoiceConnection::wait_ready(
   self : VoiceConnection,
   timeout_ms~ : Int32 = 10000,
 ) -> Unit raise VoiceError {
-  @async.with_timeout(
-    timeout_ms,
-    () => {
-      self.wait_until(() => {
-        self.state_ is Ready || self.failure is Some(_) || self.closing
-      })
-      if self.state_ is Ready {
-        return
-      }
-      if self.failure is Some(error) {
-        raise error
-      }
-      raise VoiceError::Disconnected
-    },
-    error=JoinTimeout,
-  ) catch {
-    JoinTimeout => raise JoinTimeout
-    VoiceError::ShimUnavailable(reason~) => raise ShimUnavailable(reason~)
-    VoiceError::NoCompatibleMode(offered~) => raise NoCompatibleMode(offered~)
-    GatewayClosed(code~) => raise GatewayClosed(code~)
-    VoiceError::IpDiscoveryFailed(reason~) => raise IpDiscoveryFailed(reason~)
-    VoiceError::Disconnected => raise Disconnected
+  let settled = timeout_opt(self.clock_, timeout_ms, () => {
+    self.wait_until(() => {
+      self.state_ is Ready || self.failure is Some(_) || self.closing
+    })
+  }) catch {
     _ => raise Disconnected
   }
+  guard settled is Some(_) else { raise JoinTimeout }
+  if self.state_ is Ready {
+    return
+  }
+  if self.failure is Some(error) {
+    raise error
+  }
+  raise Disconnected
 }
 
 ///|
