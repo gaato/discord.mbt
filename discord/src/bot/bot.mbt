@@ -116,6 +116,9 @@ priv struct BotCore {
   // Whitebox seam for virtual time: shards, the identify queue, interaction
   // timing, and the shutdown grace period all read this clock.
   clock_ : Ref[&@hclock.Clock]
+  // Whitebox seam for the shards' heartbeat jitter and backoff; `None` lets
+  // each shard seed its own.
+  rand_ : Ref[@random.Rand?]
   // Intents resolved (and warned about) once by `BotBuilder::build`.
   frozen_intents_ : @model.Intents?
 }
@@ -198,6 +201,7 @@ fn BotCore::new(
     connector_: Ref(None),
     gateway_bot_info_: Ref(None),
     clock_: clock,
+    rand_: Ref(None),
     frozen_intents_: None,
   }
 }
@@ -888,8 +892,11 @@ async fn BotCore::run(self : BotCore) -> Unit {
         @gateway.ShardEvent::.. => ()
       }
     }
-    // Only a requested shutdown ends the loop. Give running handlers the
-    // grace period, then cancel what is left with the rest of the group.
+    // Only a requested shutdown ends the loop, at the first shard to go; the
+    // handler that asked may still be closing the others. Finish closing them
+    // all, then give running handlers the grace period and cancel what is
+    // left with the rest of the group.
+    close_shards(shard_handles)
     let grace_ms = self.shutdown_grace_ms_
     if @clock.timeout_opt(self.clock_.val, grace_ms, () => handlers.wait_idle())
       is None {

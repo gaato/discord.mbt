@@ -141,6 +141,7 @@ fn[X] BotCore::start_managed_shard(
     max_message_bytes=self.max_message_bytes_,
     telemetry=event => self.emit_telemetry(event),
     clock=self.clock_.val,
+    rand?=self.rand_.val,
     resume?,
   )
 }
