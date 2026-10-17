@@ -247,3 +247,17 @@ test "build rejects an event backlog that holds nothing" {
     _ => fail("expected InvalidEventBacklog")
   }
 }
+
+///|
+test "build rejects a negative shutdown grace" {
+  let app = @app.AppBuilder().build()
+  try
+    BotBuilder(app, token="token", shutdown_grace_ms=-1).build() |> ignore
+  catch {
+    InvalidShutdownGrace(value~) => assert_eq(value, -1)
+    _ => fail("expected InvalidShutdownGrace")
+  } noraise {
+    _ => fail("expected InvalidShutdownGrace")
+  }
+  BotBuilder(app, token="token", shutdown_grace_ms=0).build() |> ignore
+}
