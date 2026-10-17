@@ -47,6 +47,19 @@ breaking change is listed with a migration note.
   10 seconds), then cancels the rest with a warning. Before, it waited for
   them without limit, so one hung handler kept the process from stopping.
 
+### Fixed
+
+- **The coordinator notices peers that die without closing their
+  connection.** Coordinator connections now use TCP keepalive, so a client
+  host that crashes while holding a REST bucket releases it within about 25
+  seconds instead of blocking that bucket for every process until the
+  operating system gave up on the connection, and a client stops waiting on a
+  coordinator host that vanished.
+- **A coordinator response cut off by a closing connection reads as a
+  disconnect.** It used to surface as `InvalidResponse`, which is not
+  retried, so a coordinator dying mid-response failed the REST request or
+  Identify instead of reconnecting.
+
 ## [0.9.0] - 2026-10-17
 
 ### Changed

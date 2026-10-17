@@ -73,7 +73,15 @@ Connections are persistent and requests on one connection are ordered. After
 a transport failure, Identify and REST requests reconnect with bounded exponential
 backoff. Protocol errors from the server remain fatal and are not retried. If
 a process disconnects after acquiring a REST bucket, the server releases that
-bucket during connection cleanup.
+bucket during connection cleanup. Connections use TCP keepalive, so a process
+whose host dies without closing its connection is cleaned up the same way
+within about 25 seconds.
+
+The coordinator keeps all of its state in memory. Restarting it forgets the
+REST buckets and their rate-limit windows, the global window, and the Identify
+spacing, as well as cooldown windows. Requests waiting during a restart
+reconnect and continue against the new coordinator, which relearns bucket
+limits from the next responses; schedule restarts away from Identify bursts.
 
 ## Shared cooldowns
 
