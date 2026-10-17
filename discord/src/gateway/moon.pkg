@@ -24,6 +24,7 @@ import {
   "gaato/discord/internal/simclock",
   "gaato/discord/internal/gatewaysim",
   "gaato/http/clock" @hclock,
+  "moonbitlang/core/random",
 } for "test"
 
 import {
