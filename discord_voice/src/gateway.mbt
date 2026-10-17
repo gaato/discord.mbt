@@ -154,7 +154,8 @@ async fn VoiceGateway::finish_transport(
 /// Spawn a voice gateway driver into `group` and return its handle.
 /// `max_dave_protocol_version` is advertised in Identify. It defaults to zero
 /// so low-level callers do not negotiate DAVE without an active backend; pass
-/// a supported maximum explicitly to enable it.
+/// a supported maximum explicitly to enable it. `clock` times the heartbeat
+/// and the reconnect backoff and stamps heartbeat nonces.
 #doc(hidden)
 pub fn[X] VoiceGateway::start(
   group : @async.TaskGroup[X],
@@ -172,7 +173,7 @@ pub fn[X] VoiceGateway::start(
   connector~ : async (String) -> &VoiceTransport = connect_voice_websocket,
   queue_capacity~ : Int32 = 256,
   telemetry~ : (VoiceGatewayEvent) -> Unit = _ => (),
-  sleeper~ : async (Int32) -> Unit = ms => @async.sleep(ms),
+  clock~ : &@hclock.Clock = default_clock(),
   rand~ : @random.Rand = @random.Rand(),
 ) -> VoiceGateway {
   let gateway = VoiceGateway::{
@@ -197,7 +198,7 @@ pub fn[X] VoiceGateway::start(
       max_dave_protocol_version~,
       select_protocol~,
       connector~,
-      sleeper~,
+      clock~,
       rand~,
     )
   })
@@ -256,16 +257,14 @@ async fn VoiceGateway::run(
     String,
   ),
   connector~ : async (String) -> &VoiceTransport,
-  sleeper~ : async (Int32) -> Unit,
+  clock~ : &@hclock.Clock,
   rand~ : @random.Rand,
 ) -> Unit noraise {
   let mut attempts = 0
   while !self.closing {
     if attempts > 0 {
       // Full-jitter exponential backoff.
-      sleeper(rand.int(limit=reconnect_delay_limit(attempts)) + 250) catch {
-        _ => return
-      }
+      clock.sleep(rand.int(limit=reconnect_delay_limit(attempts)) + 250)
     }
     self.state_ = Connecting
     let transport = connector(voice_gateway_url(endpoint)) catch {
@@ -297,7 +296,7 @@ async fn VoiceGateway::run(
         token~,
         max_dave_protocol_version~,
         select_protocol~,
-        sleeper~,
+        clock~,
       )
       VoiceConnectionEnded(code=Some(1000), reason="connection loop exited")
     } catch {
@@ -350,7 +349,7 @@ async fn VoiceGateway::run_connection(
     Int32,
     String,
   ),
-  sleeper~ : async (Int32) -> Unit,
+  clock~ : &@hclock.Clock,
 ) -> Unit {
   let (hello, hello_seq) = recv_voice_message(transport)
   if hello_seq is Some(seq) {
@@ -365,7 +364,7 @@ async fn VoiceGateway::run_connection(
   @async.with_task_group(connection_group => {
     connection_group.spawn_bg(no_wait=true, () => {
       // Voice v8 does not require the gateway-identify jitter used by op 2.
-      sleeper(heartbeat_interval)
+      clock.sleep(heartbeat_interval)
       for ;; {
         if !heartbeat_acked.val {
           raise VoiceConnectionEnded(
@@ -373,7 +372,7 @@ async fn VoiceGateway::run_connection(
             reason="heartbeat ACK timed out",
           )
         }
-        let nonce = now_ms()
+        let nonce = clock.now_unix_ms()
         heartbeat_nonce.val = nonce
         heartbeat_sent_at.val = nonce
         heartbeat_acked.val = false
@@ -381,7 +380,7 @@ async fn VoiceGateway::run_connection(
           transport,
           encode_heartbeat(t=nonce, seq_ack=self.last_seq),
         )
-        sleeper(heartbeat_interval)
+        clock.sleep(heartbeat_interval)
       }
     })
 
@@ -446,7 +445,7 @@ async fn VoiceGateway::run_connection(
         HeartbeatAck(nonce~) =>
           if nonce == heartbeat_nonce.val {
             heartbeat_acked.val = true
-            self.latency = Some(now_ms() - heartbeat_sent_at.val)
+            self.latency = Some(clock.now_unix_ms() - heartbeat_sent_at.val)
           }
         other => self.emit(Message(other))
       }
