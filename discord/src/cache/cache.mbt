@@ -534,7 +534,9 @@ fn InMemoryCache::cached_channel(
 
 ///|
 /// Releases the state of guilds and channels whose TTL has passed, so it does
-/// not outlive them while nothing reads the guild or channel.
+/// not outlive them while nothing reads the guild or channel. Every read of
+/// state owned by a guild or channel calls it first, so an expired owner's
+/// state is never served.
 fn InMemoryCache::expire_owners(self : InMemoryCache) -> Unit {
   self.guilds_.sweep(evicted=guild_id => self.release_guild(guild_id))
   self.channels_.sweep(evicted=channel_id => self.release_channel(channel_id))
@@ -955,6 +957,7 @@ pub fn InMemoryCache::role(
   guild_id : @model.GuildId,
   role_id : @model.RoleId,
 ) -> @model.Role? {
+  self.expire_owners()
   self.roles_.get(guild_id, role_id)
 }
 
@@ -964,6 +967,7 @@ pub fn InMemoryCache::roles(
   self : InMemoryCache,
   guild_id : @model.GuildId,
 ) -> Array[@model.Role] {
+  self.expire_owners()
   self.roles_.values(guild_id)
 }
 
@@ -974,6 +978,7 @@ pub fn InMemoryCache::member(
   guild_id : @model.GuildId,
   user_id : @model.UserId,
 ) -> @model.GuildMember? {
+  self.expire_owners()
   self.members_.get(guild_id, user_id)
 }
 
@@ -984,6 +989,7 @@ pub fn InMemoryCache::members(
   self : InMemoryCache,
   guild_id : @model.GuildId,
 ) -> Array[@model.GuildMember] {
+  self.expire_owners()
   self.members_.values(guild_id)
 }
 
@@ -1009,6 +1015,7 @@ pub fn InMemoryCache::voice_state(
   guild_id : @model.GuildId,
   user_id : @model.UserId,
 ) -> @model.VoiceState? {
+  self.expire_owners()
   self.voice_states_.get(guild_id, user_id)
 }
 
@@ -1018,6 +1025,7 @@ pub fn InMemoryCache::voice_states(
   self : InMemoryCache,
   guild_id : @model.GuildId,
 ) -> Array[@model.VoiceState] {
+  self.expire_owners()
   self.voice_states_.values(guild_id)
 }
 
@@ -1028,6 +1036,7 @@ pub fn InMemoryCache::presence(
   guild_id : @model.GuildId,
   user_id : @model.UserId,
 ) -> @model.PresenceUpdateEvent? {
+  self.expire_owners()
   self.presences_.get(guild_id, user_id)
 }
 
@@ -1037,6 +1046,7 @@ pub fn InMemoryCache::presences(
   self : InMemoryCache,
   guild_id : @model.GuildId,
 ) -> Array[@model.PresenceUpdateEvent] {
+  self.expire_owners()
   self.presences_.values(guild_id)
 }
 
@@ -1047,6 +1057,7 @@ pub fn InMemoryCache::message(
   channel_id : @model.ChannelId,
   message_id : @model.MessageId,
 ) -> @model.Message? {
+  self.expire_owners()
   self.messages_.get(channel_id, message_id)
 }
 
@@ -1056,6 +1067,7 @@ pub fn InMemoryCache::messages(
   self : InMemoryCache,
   channel_id : @model.ChannelId,
 ) -> Array[@model.Message] {
+  self.expire_owners()
   self.messages_.values(channel_id)
 }
 
@@ -1066,6 +1078,7 @@ pub fn InMemoryCache::permissions(
   guild_id : @model.GuildId,
   user_id : @model.UserId,
 ) -> @model.Permissions? {
+  self.expire_owners()
   guard self.resources_.guilds_ &&
     self.resources_.members_ &&
     self.resources_.roles_ else {
@@ -1104,6 +1117,7 @@ pub fn InMemoryCache::permissions_in(
   channel_id : @model.ChannelId,
   user_id : @model.UserId,
 ) -> @model.Permissions? {
+  self.expire_owners()
   guard self.resources_.channels_ else { return None }
   guard self.permissions(guild_id, user_id) is Some(base) &&
     self.member(guild_id, user_id) is Some(cached_member) &&
