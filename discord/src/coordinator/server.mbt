@@ -76,6 +76,9 @@ pub async fn[X] Coordinator::serve(
       started.release()
       inner.spawn_bg(() => {
         server.run_forever(allow_failure=true, (conn, _) => {
+          // A client host that dies holding a bucket never sends EOF; only
+          // probing lets cleanup release the bucket for everyone else.
+          keep_alive(conn)
           serve_connection(conn, state)
         })
       })

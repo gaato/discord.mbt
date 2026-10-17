@@ -485,6 +485,118 @@ async test "remote cooldown store rejects a non-positive timeout" {
 }
 
 ///|
+async test "an acquire waiting through a coordinator restart lands on the new one" {
+  let bucket = "POST:/channels/restart/messages"
+  @async.with_task_group(group => {
+    let address : Ref[String] = Ref("")
+    let holder : Ref[RemoteRateLimiter?] = Ref(None)
+    let waiter : Ref[RemoteRateLimiter?] = Ref(None)
+    let acquired = Ref(false)
+    let waiting : Ref[@async.Task[Unit]?] = Ref(None)
+    // The first coordinator's group ends with its listener closed, so the
+    // second can bind the same address.
+    @async.with_task_group(first_group => {
+      let first = Coordinator::serve(first_group, addr="127.0.0.1:0")
+      address.val = first.addr()
+      let first_holder = RemoteRateLimiter::connect(address.val)
+      let first_waiter = RemoteRateLimiter::connect(address.val)
+      holder.val = Some(first_holder)
+      waiter.val = Some(first_waiter)
+      first_holder.acquire(bucket, global_exempt=true)
+      waiting.val = Some(
+        group.spawn(() => {
+          first_waiter.acquire(bucket, global_exempt=true)
+          acquired.val = true
+        }),
+      )
+      @async.sleep(20)
+      assert_false(acquired.val)
+      first.close()
+    })
+    guard holder.val is Some(holder) &&
+      waiter.val is Some(waiter) &&
+      waiting.val is Some(waiting) else {
+      fail("restart fixture did not initialize")
+    }
+    defer holder.close()
+    defer waiter.close()
+    // The restart dropped the waiter's connection; its retry reaches the new
+    // coordinator, which knows nothing of the old holder.
+    let second = Coordinator::serve(group, addr=address.val)
+    defer second.close()
+    guard @async.with_timeout_opt(5000, () => waiting.wait()) is Some(_) else {
+      fail("the waiting acquire never reached the new coordinator")
+    }
+    waiter.release(bucket, status=200, headers=@http.Headers::new())
+    holder.release(bucket, status=200, headers=@http.Headers::new())
+  })
+}
+
+///|
+/// A coordinator stand-in that answers every request line with `reply`
+/// verbatim, then closes the connection when `close_after` is set.
+async fn with_scripted_coordinator(
+  reply : String,
+  close_after~ : Bool,
+  run : async (String) -> Unit,
+) -> Unit {
+  @async.with_task_group(group => {
+    let server = @socket.TcpServer(@socket.Addr::parse("127.0.0.1:0"))
+    group.spawn_bg(no_wait=true, () => {
+      server.run_forever(allow_failure=true, (conn, _) => {
+        while true {
+          conn.read_until("\n") |> ignore
+          conn.write(reply)
+          if close_after {
+            break
+          }
+        }
+      })
+    })
+    run(server.addr.to_string())
+  })
+}
+
+///|
+async test "malformed and truncated coordinator responses" {
+  with_scripted_coordinator("not json\n", close_after=false, addr => {
+    let remote = RemoteCooldownStore::connect(addr, timeout_ms=1000)
+    defer remote.close()
+    try remote.try_acquire("global", window_ms=10_000L) |> ignore catch {
+      CoordinatorError::InvalidResponse(..) => ()
+      error => fail("unexpected \{Repr(error)}")
+    } noraise {
+      _ => fail("a malformed response was accepted")
+    }
+  })
+  // Two lines for one request put the stream out of step with the requests.
+  with_scripted_coordinator(
+    "{\"ok\":true,\"retry_after_ms\":\"0\"}\n{\"ok\":true}\n",
+    close_after=false,
+    addr => {
+      let remote = RemoteCooldownStore::connect(addr, timeout_ms=1000)
+      defer remote.close()
+      try remote.try_acquire("global", window_ms=10_000L) |> ignore catch {
+        CoordinatorError::InvalidResponse(message~) =>
+          assert_eq(message, "data after the response line")
+        error => fail("unexpected \{Repr(error)}")
+      } noraise {
+        _ => fail("a second response line was accepted")
+      }
+      assert_true(remote.client.conn.val is None)
+    },
+  )
+  // A response cut off by the connection closing is an outage, not a value.
+  with_scripted_coordinator("{\"ok\":tr", close_after=true, addr => {
+    let remote = RemoteCooldownStore::connect(addr, timeout_ms=1000)
+    defer remote.close()
+    assert_true(
+      remote.try_acquire("global", window_ms=10_000L) is Unavailable(_),
+    )
+  })
+}
+
+///|
 async test "a lease from before a coordinator restart cannot release a new owner" {
   let bucket = "POST:/channels/restart-lease/messages"
   let address : Ref[String?] = Ref(None)

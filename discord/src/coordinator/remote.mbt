@@ -31,9 +31,27 @@ fn CoordinatorClient::close(self : CoordinatorClient) -> Unit {
 
 ///|
 async fn CoordinatorClient::dial(addr : @socket.Addr) -> @socket.Tcp {
-  @socket.Tcp::connect(addr) catch {
+  let conn = @socket.Tcp::connect(addr) catch {
     error if @async.is_being_cancelled() => raise error
     error => raise CoordinatorError::Transport(message="\{Repr(error)}")
+  }
+  keep_alive(conn)
+  conn
+}
+
+///|
+/// Probe an idle connection so a peer whose host died without closing it is
+/// noticed in about 25 seconds rather than at the operating system's default
+/// of hours. Acquisitions legitimately wait that long and longer for a bucket
+/// reset or Identify spacing, so a request timeout cannot tell a dead peer
+/// from a slow answer. Best effort: a platform that refuses keeps the default.
+fn keep_alive(conn : @socket.Tcp) -> Unit {
+  conn.enable_keepalive(
+    idle_before_keep_alive=10,
+    keep_alive_interval=5,
+    keep_alive_count=3,
+  ) catch {
+    _ => ()
   }
 }
 
@@ -66,6 +84,32 @@ fn coordinator_retryable(error : Error) -> Bool {
 }
 
 ///|
+/// One newline-terminated response, or `None` when the connection ends first.
+/// `read_until` hands back an unterminated tail at end of stream, which would
+/// turn a coordinator dying mid-response into a malformed, unretried answer
+/// instead of a disconnect. One request is in flight per connection, so
+/// anything after the newline is a protocol error.
+async fn read_line(conn : @socket.Tcp) -> String? {
+  let line : Array[Byte] = []
+  let chunk = FixedArray::make(4096, b'\x00')
+  while conn.read(chunk) is n && n > 0 {
+    for i in 0..<n {
+      if chunk[i] != b'\n' {
+        line.push(chunk[i])
+        continue
+      }
+      if i + 1 < n {
+        raise CoordinatorError::InvalidResponse(
+          message="data after the response line",
+        )
+      }
+      return Some(@utf8.decode_lossy(Bytes::from_array(line)))
+    }
+  }
+  None
+}
+
+///|
 fn coordinator_fatal(error : Error) -> Bool {
   @async.is_being_cancelled() || !coordinator_retryable(error)
 }
@@ -78,13 +122,18 @@ async fn CoordinatorClient::request_once(
   let conn = self.connection()
   let response_line = try {
     conn.write(request.stringify() + "\n")
-    match conn.read_until("\n") {
+    match read_line(conn) {
       Some(line) => line
       None => raise CoordinatorError::Disconnected
     }
   } catch {
     error if @async.is_being_cancelled() => raise error
     CoordinatorError::Disconnected => raise CoordinatorError::Disconnected
+    CoordinatorError::InvalidResponse(message~) => {
+      // The stream is out of step with the requests; start over.
+      self.drop_connection()
+      raise CoordinatorError::InvalidResponse(message~)
+    }
     error => raise CoordinatorError::Transport(message="\{Repr(error)}")
   } noraise {
     line => line
