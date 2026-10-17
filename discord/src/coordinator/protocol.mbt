@@ -89,6 +89,8 @@ fn cooldown_response(decision : @cooldown.CooldownDecision) -> Json {
   let retry_after_ms = match decision {
     Acquired => 0L
     Active(retry_after_ms~) => retry_after_ms
+    // The coordinator's own store always answers; a substituted one may not.
+    Unavailable(reason~) => return error_response(reason)
   }
   { "ok": true, "retry_after_ms": Json::string(retry_after_ms.to_string()) }
 }

@@ -175,6 +175,14 @@ test "decode_cooldown inverts cooldown_response" {
 }
 
 ///|
+test "an unavailable cooldown decision encodes as an error response" {
+  assert_eq(cooldown_response(Unavailable(reason="store down")), {
+    "ok": false,
+    "error": "store down",
+  })
+}
+
+///|
 test "a coordinator instance id needs platform entropy" {
   let id = coordinator_instance_id(Some(Bytes::make(16, b'\xa5')))
   assert_eq(id, "a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5")

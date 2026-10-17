@@ -13,6 +13,7 @@ import {
 pub(all) enum CooldownDecision {
   Acquired
   Active(retry_after_ms~ : Int64)
+  Unavailable(reason~ : String)
 } derive(Eq, @debug.Debug)
 
 pub struct InMemoryCooldownStore {

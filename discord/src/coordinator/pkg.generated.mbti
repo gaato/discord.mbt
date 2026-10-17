@@ -33,7 +33,7 @@ pub struct RemoteCooldownStore {
   // private fields
 }
 pub fn RemoteCooldownStore::close(Self) -> Unit
-pub async fn RemoteCooldownStore::connect(String, timeout_ms? : Int, when_unreachable? : UnreachablePolicy, on_error? : (Error) -> Unit) -> Self
+pub async fn RemoteCooldownStore::connect(String, timeout_ms? : Int) -> Self
 pub async fn RemoteCooldownStore::ping(Self) -> Unit
 pub async fn RemoteCooldownStore::try_acquire(Self, String, window_ms~ : Int64) -> @cooldown.CooldownDecision
 pub impl @cooldown.CooldownStore for RemoteCooldownStore
@@ -56,11 +56,6 @@ pub async fn RemoteRateLimiter::connect(String) -> Self
 pub async fn RemoteRateLimiter::ping(Self) -> Unit
 pub async fn RemoteRateLimiter::release(Self, String, status~ : Int, headers~ : @http.Headers) -> Unit
 pub impl @sdk-runtime.RateLimiter for RemoteRateLimiter
-
-pub(all) enum UnreachablePolicy {
-  FailOpen
-  FailClosed
-} derive(Eq, @debug.Debug)
 
 // Type aliases
 

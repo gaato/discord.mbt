@@ -103,6 +103,7 @@ pub struct AppBuilder {
   priv mut policy_ : ErrorPolicy?
   priv mut warn_ : (AppWarning) -> Unit
   priv cooldown_store_ : &@cooldown.CooldownStore
+  priv cooldown_outage_ : CooldownOutage
 }
 
 ///|
@@ -122,7 +123,7 @@ pub struct App {
   priv middleware_ : Array[InteractionMiddleware]
   priv policy_ : ErrorPolicy?
   priv warn_ : (AppWarning) -> Unit
-  priv cooldown_store_ : &@cooldown.CooldownStore
+  priv cooldowns_ : Cooldowns
 }
 
 ///|
@@ -134,12 +135,15 @@ pub struct App {
 /// interactions waiting for a handler permit; one more is refused with
 /// `HandlerError::Busy` before it is acknowledged, and a deferred interaction
 /// still waiting when its token expires (15 minutes after the executor
-/// received it) is dropped with a warning. Cooldowns use a fresh in-memory store unless a shared
-/// `cooldown_store` is supplied.
+/// received it) is dropped with a warning. Cooldowns use a fresh in-memory
+/// store unless a shared `cooldown_store` is supplied; when that store cannot
+/// answer, `cooldown_outage` decides whether commands run, and the first
+/// failure of each outage is reported as `AppWarning::CooldownUnavailable`.
 pub fn AppBuilder::AppBuilder(
   max_in_flight~ : Int32 = 64,
   max_pending~ : Int32 = 1024,
   cooldown_store? : &@cooldown.CooldownStore,
+  cooldown_outage~ : CooldownOutage = Allow,
 ) -> AppBuilder {
   {
     max_in_flight_: max_in_flight,
@@ -154,6 +158,7 @@ pub fn AppBuilder::AppBuilder(
     cooldown_store_: cooldown_store.unwrap_or_else(() => {
       @cooldown.InMemoryCooldownStore()
     }),
+    cooldown_outage_: cooldown_outage,
   }
 }
 
@@ -180,7 +185,11 @@ pub fn AppBuilder::build(self : AppBuilder) -> App raise AppConfigError {
     middleware_: self.middleware_.copy(),
     policy_: self.policy_,
     warn_: self.warn_,
-    cooldown_store_: self.cooldown_store_,
+    cooldowns_: {
+      store: self.cooldown_store_,
+      outage: self.cooldown_outage_,
+      down: false,
+    },
   }
 }
 
@@ -545,7 +554,7 @@ async fn App::run_registered_command(
     raw_: failure_raw,
   }
   self.run_middleware(ctx, 0, () => {
-    command.run_checks_and_cooldown(bot, raw, self.cooldown_store_)
+    command.run_checks_and_cooldown(bot, raw, self.cooldowns_, self.warn_)
     (command.dispatch)(bot, waiter, self.warn_, raw)
   }) catch {
     error if @async.is_being_cancelled() => raise error

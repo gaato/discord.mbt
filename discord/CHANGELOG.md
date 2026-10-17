@@ -9,6 +9,19 @@ breaking change is listed with a migration note.
 
 ### Changed
 
+- **The App, not the store, decides what an unreachable cooldown store
+  means, and reports it.** `CooldownDecision` gains `Unavailable(reason~)`,
+  which `RemoteCooldownStore` now returns when the coordinator times out or
+  disconnects. `AppBuilder(cooldown_outage~)` picks `Allow` (the default: run
+  the command without a cooldown) or `Refuse` (refuse it for the requested
+  window), and the first failure of each outage reaches `on_warn` as the new
+  `AppWarning::CooldownUnavailable`. Before, the store chose with
+  `when_unreachable` and an outage was silent unless `on_error` was set.
+  Migration: drop `when_unreachable=` and `on_error=` from
+  `RemoteCooldownStore::connect`; pass `cooldown_outage=Refuse` to
+  `AppBuilder` where you used `FailClosed`; a custom `CooldownStore` may
+  return `Unavailable`, and code matching `CooldownDecision` needs the new
+  arm.
 - **`Shard::start` and `CommandLimiter` take a `clock~` instead of a
   `sleeper~`.** The clock (`gaato/http/clock`'s `Clock`, the same trait
   `@ratelimit.rate_limiter` takes) supplies both the current time and the

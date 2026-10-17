@@ -68,6 +68,7 @@ pub using @app {
   type App,
   type AppBuilder,
   type AppWarning,
+  type CooldownOutage,
   type AppCtx,
   type InteractionEndpoint,
   type InteractionCtx,

@@ -3,6 +3,10 @@
 pub(all) enum CooldownDecision {
   Acquired
   Active(retry_after_ms~ : Int64)
+  /// The store could not answer, for example because a shared store's server
+  /// is unreachable. The App decides whether the command runs (see
+  /// `AppBuilder(cooldown_outage~)`) and reports the outage.
+  Unavailable(reason~ : String)
 } derive(Debug, Eq)
 
 ///|

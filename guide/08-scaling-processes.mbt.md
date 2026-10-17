@@ -90,11 +90,11 @@ async test "shared cooldown store wiring" {
     let cooldown = @coordinator.RemoteCooldownStore::connect(
       coordinator.addr(),
       timeout_ms=1000,
-      on_error=error => println("cooldown coordinator: \{error}"),
     )
     defer cooldown.close()
     let app = @app.AppBuilder(
       cooldown_store=(cooldown : &@cooldown.CooldownStore),
+      cooldown_outage=Allow,
     )
     app.command(
       @app.slash(
@@ -116,18 +116,20 @@ name, and bucket identity, so commands sharing a store have independent
 windows. The coordinator owns the clock and keeps windows in memory; restarting
 it clears those windows.
 
-The `gaato/discord/cooldown` trait is portable to JS and native, while
-`RemoteCooldownStore` is native-only. Other deployments can implement
+The `gaato/discord/cooldown` trait is portable to every target, while
+`RemoteCooldownStore` runs on native and Wasm. Other deployments can implement
 `CooldownStore` over shared storage and pass it through the same App parameter.
 
-The remote store defaults to `when_unreachable=FailOpen`. A timeout or disconnect
-calls `on_error` and admits the command: cooldowns damp abuse, and an outage
-should not take every command offline. Use `when_unreachable=FailClosed` to deny the
-attempt with `retry_after_ms` equal to the requested window instead. The
-default error hook does nothing, so install it to observe outages. Initial
-connection outages also call the hook and return a store that can reconnect.
-Cancellation always propagates, as do protocol errors. `ping()` reports errors
-directly instead of applying the admission policy.
+When the coordinator times out or disconnects, the remote store answers
+`Unavailable` and the App applies `AppBuilder(cooldown_outage~)`. The default,
+`Allow`, runs the command without a cooldown: cooldowns damp abuse, and an
+outage should not take every command offline. `Refuse` denies the attempt with
+`retry_after_ms` equal to the requested window instead. Either way the first
+failure of each outage reaches `on_warn` as
+`AppWarning::CooldownUnavailable`, so an outage is visible without extra
+wiring. A coordinator that is down at startup still yields a store that can
+reconnect. Cancellation always propagates, as do protocol errors. `ping()`
+reports errors directly.
 
 Each cooldown store has its own connection, independent of blocking
 `http_acquire` requests. Acquisition makes one attempt with no retries;
@@ -157,5 +159,5 @@ existing numeric fields.
 
 Unknown or malformed operations return `{"ok":false,"error":"..."}`. The
 server keeps the connection open after these protocol-level errors. Transport
-failures close the connection. Identify and REST use bounded retries; cooldown
-acquisition applies its unreachable policy and tries to reconnect on the next call.
+failures close the connection. Identify and REST use bounded retries; a cooldown
+acquisition answers `Unavailable` and tries to reconnect on the next call.

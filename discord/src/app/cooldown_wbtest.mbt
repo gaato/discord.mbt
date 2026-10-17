@@ -204,3 +204,104 @@ async test "command type separates cooldown keys even with the same name" {
     ("2:shared|global", 10_000L),
   ])
 }
+
+///|
+test "an outage starts on the first unanswered attempt and ends on an answer" {
+  let cooldowns : Cooldowns = {
+    store: @cooldown.InMemoryCooldownStore(),
+    outage: Allow,
+    down: false,
+  }
+  let rows : Array[(Bool, Bool)] = [
+    (true, false),
+    (false, true),
+    (false, false),
+    (true, false),
+    (false, true),
+  ]
+  for i, row in rows {
+    let (answered, starts) = row
+    assert_eq(cooldowns.observe(answered~), starts, msg="attempt \{i}")
+  }
+}
+
+///|
+/// Answers from a script; an exhausted script answers `Acquired`.
+priv struct ScriptedCooldownStore {
+  answers : Array[@cooldown.CooldownDecision]
+}
+
+///|
+impl @cooldown.CooldownStore for ScriptedCooldownStore with fn try_acquire(
+  self,
+  _key,
+  window_ms~,
+) {
+  ignore(window_ms)
+  if self.answers.is_empty() {
+    @cooldown.Acquired
+  } else {
+    self.answers.remove(0)
+  }
+}
+
+///|
+async test "cooldown outages follow the App's policy and warn once each" {
+  for outage in [CooldownOutage::Allow, Refuse] {
+    let client = @dhttp.Client("test-token")
+    defer client.close()
+    let store = ScriptedCooldownStore::{
+      answers: [
+        Unavailable(reason="down"),
+        Unavailable(reason="still down"),
+        Acquired,
+        Unavailable(reason="down again"),
+      ],
+    }
+    let app = AppBuilder(cooldown_store=store, cooldown_outage=outage)
+    let warnings : Array[String] = []
+    app.on_warn(warning => warnings.push(warning.to_string()))
+    let refused : Array[Int64] = []
+    app.error_policy((_, error) => {
+      match error {
+        HandlerError::OnCooldown(retry_after_ms~) =>
+          refused.push(retry_after_ms)
+        _ => fail("unexpected error: \{Repr(error)}")
+      }
+    })
+    let handled = Ref(0)
+    app.command(
+      slash(
+        name="limited",
+        description="Shared cooldown",
+        args=@interaction.Args::unit(),
+        handler=Raw(_ => handled.val += 1),
+      ).cooldown(seconds=10, bucket=Global),
+    )
+    let framework = middleware_test_framework(app.build(), client)
+    for _ in 0..<4 {
+      dispatch_guard_interaction(
+        framework,
+        guard_dm_interaction("limited", "500000000000000020"),
+      )
+    }
+    match outage {
+      Allow => {
+        assert_eq(handled.val, 4)
+        assert_eq(refused, [])
+      }
+      Refuse => {
+        assert_eq(handled.val, 1)
+        assert_eq(refused, [10_000L, 10_000L, 10_000L])
+      }
+    }
+    let effect = match outage {
+      Allow => "commands run without cooldowns"
+      Refuse => "commands with a cooldown are refused"
+    }
+    assert_eq(warnings, [
+      "cooldown store unavailable (down): \{effect} until it answers again",
+      "cooldown store unavailable (down again): \{effect} until it answers again",
+    ])
+  }
+}
