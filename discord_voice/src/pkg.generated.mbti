@@ -4,6 +4,7 @@ package "gaato/discord_voice"
 import {
   "gaato/discord/bot",
   "gaato/discord/model",
+  "gaato/http/clock",
   "moonbitlang/async",
   "moonbitlang/async/io",
   "moonbitlang/core/debug",
@@ -96,7 +97,7 @@ pub fn VoiceConnection::latency_ms(Self) -> Int64?
 pub async fn VoiceConnection::next_event(Self) -> VoiceEvent
 pub async fn VoiceConnection::play(Self, &AudioSource) -> Unit
 pub async fn VoiceConnection::set_speaking(Self, Int) -> Unit
-pub fn[X] VoiceConnection::start(@async.TaskGroup[X], VoiceCredentials, user_id~ : String, channel_id~ : UInt64, leave~ : async () -> Unit, rejoin~ : async () -> VoiceCredentials, connector? : async (String) -> &VoiceTransport, udp_opener? : async (String, Int) -> &VoiceUdp, receive? : Bool, event_backlog? : Int, telemetry? : (VoiceTelemetry) -> Unit, sleeper? : async (Int) -> Unit, rand? : @random.Rand) -> Self raise VoiceError
+pub fn[X] VoiceConnection::start(@async.TaskGroup[X], VoiceCredentials, user_id~ : String, channel_id~ : UInt64, leave~ : async () -> Unit, rejoin~ : async () -> VoiceCredentials, connector? : async (String) -> &VoiceTransport, udp_opener? : async (String, Int) -> &VoiceUdp, receive? : Bool, event_backlog? : Int, telemetry? : (VoiceTelemetry) -> Unit, clock? : &@clock.Clock, rand? : @random.Rand) -> Self raise VoiceError
 pub fn VoiceConnection::state(Self) -> VoiceConnectionState
 pub async fn VoiceConnection::stop(Self) -> Unit
 pub fn VoiceConnection::subscribe(Self, user_id~ : String, end_after_silence_ms? : Int?, backlog? : Int) -> VoiceReceiveStream raise VoiceError

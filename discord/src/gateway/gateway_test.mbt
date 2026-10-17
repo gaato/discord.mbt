@@ -20,6 +20,7 @@ async test "typed commands and latest presence survive re-identify" {
     @async.with_task_group(group => {
       let shard = @gateway.Shard::start(
         group,
+        rand=seeded_rand(),
         token="tok",
         intents=@model.Intents::none(),
         presence=initial,
@@ -98,6 +99,7 @@ async test "inflater factory failure is fatal before connecting" {
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
+      rand=seeded_rand(),
       token="tok",
       intents=@model.Intents::none(),
       compress=true,
@@ -127,6 +129,7 @@ async test "shard rejects sends while connecting and cancels the connector" {
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
+      rand=seeded_rand(),
       token="tok",
       intents=@model.Intents::none(),
       connector=_ => {
@@ -159,6 +162,7 @@ async test "shard suppresses connector failure after protected cancellation clea
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
+      rand=seeded_rand(),
       token="tok",
       intents=@model.Intents::none(),
       connector=_ => {
@@ -195,6 +199,7 @@ async test "shard connector failure reports telemetry and cancelled backoff stop
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
+      rand=seeded_rand(),
       token="tok",
       intents=@model.Intents::none(),
       connector=_ => {
@@ -225,6 +230,7 @@ async test "shard rejects malformed Hello and preserves transport close codes" {
     @async.with_task_group(group => {
       let shard = @gateway.Shard::start(
         group,
+        rand=seeded_rand(),
         token="tok",
         intents=@model.Intents::none(),
         connector=_ => (transport : &@gateway.GatewayTransport),
@@ -257,6 +263,7 @@ async test "shard ignores incomplete dispatches and reconnects from a zero seque
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
+      rand=seeded_rand(),
       token="tok",
       intents=@model.Intents::none(),
       connector=_ => (transports.pop().unwrap() : &@gateway.GatewayTransport),
@@ -298,6 +305,7 @@ async test "shard malformed read frames disconnect and tolerate transport close 
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
+      rand=seeded_rand(),
       token="tok",
       intents=@model.Intents::none(),
       connector=_ => (transport : &@gateway.GatewayTransport),
@@ -321,6 +329,7 @@ async test "shard rejects compression frame mismatches" {
     @async.with_task_group(group => {
       let shard = @gateway.Shard::start(
         group,
+        rand=seeded_rand(),
         token="tok",
         intents=@model.Intents::none(),
         compress~,
@@ -348,6 +357,7 @@ async test "shard send failures release the writer gate" {
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
+      rand=seeded_rand(),
       token="tok",
       intents=@model.Intents::none(),
       connector=_ => (transport : &@gateway.GatewayTransport),
@@ -373,9 +383,13 @@ async test "shard send failures release the writer gate" {
 async test "cancelling a shard closes its transport exactly once" {
   let transport = @gatewaysim.FakeTransport()
   @async.with_task_group(group => {
-    @gateway.Shard::start(group, token="tok", intents=@model.Intents::none(), connector=_ => {
-      (transport : &@gateway.GatewayTransport)
-    })
+    @gateway.Shard::start(
+      group,
+      token="tok",
+      intents=@model.Intents::none(),
+      rand=seeded_rand(),
+      connector=_ => (transport : &@gateway.GatewayTransport),
+    )
     |> ignore
     transport.put(HELLO)
     transport.outgoing.get() |> ignore
@@ -407,6 +421,7 @@ async test "shard resumes from a saved session and exposes snapshots" {
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
+      rand=seeded_rand(),
       token="tok",
       intents=@model.Intents::none(),
       gateway_url="wss://gateway.example",
@@ -448,6 +463,7 @@ async test "stale resume url falls back to identify after three connector failur
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
+      rand=seeded_rand(),
       token="tok",
       intents=@model.Intents::none(),
       gateway_url="wss://gateway.example",
@@ -489,6 +505,7 @@ async test "successful connector resets stale-host fallback failure count" {
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
+      rand=seeded_rand(),
       token="tok",
       intents=@model.Intents::none(),
       gateway_url="wss://gateway.example",
@@ -596,6 +613,7 @@ async test "compressed shard buffers suffix fragments and decodes messages" {
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
+      rand=seeded_rand(),
       token="tok",
       intents=@model.Intents::guild_messages(),
       compress=true,
@@ -656,6 +674,7 @@ async test "shard identifies, dispatches, and resumes across a drop" {
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
+      rand=seeded_rand(),
       token="tok-123",
       intents=@model.Intents::guilds() | @model.Intents::guild_messages(),
       connector=_ => {
@@ -756,6 +775,7 @@ async test "cancelled shard send releases the serialized send gate" {
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
+      rand=seeded_rand(),
       token="tok",
       intents=@model.Intents::none(),
       connector=_ => (transport : &@gateway.GatewayTransport),
@@ -801,6 +821,7 @@ async test "closing a shard drains an in-flight writer before transport close" {
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
+      rand=seeded_rand(),
       token="tok",
       intents=@model.Intents::none(),
       connector=_ => (transport : &@gateway.GatewayTransport),
@@ -869,6 +890,7 @@ async test "shard answers heartbeat requests and tracks op9" {
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
+      rand=seeded_rand(),
       token="tok",
       intents=@model.Intents::none(),
       connector=_ => {
@@ -945,6 +967,7 @@ async test "shard backoff, resume url switch, and op9 delay run on the clock" {
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
+      rand=seeded_rand(),
       token="tok-9",
       intents=@model.Intents::none(),
       connector=url => {
@@ -1012,6 +1035,7 @@ async test "connections that reach READY or RESUMED reset the reconnect backoff"
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
+      rand=seeded_rand(),
       token="tok",
       intents=@model.Intents::none(),
       connector=_ => (pending.pop().unwrap() : &@gateway.GatewayTransport),
@@ -1052,6 +1076,7 @@ async test "shard heartbeat loop beats, tracks acks, and zombie-closes" {
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
+      rand=seeded_rand(),
       token="tok",
       intents=@model.Intents::none(),
       connector=_ => {
@@ -1125,4 +1150,24 @@ async test "command limiter admits under the limit immediately" {
     assert_eq(clock.pending(), [])
     sends.wait()
   })
+}
+
+///|
+async test "identify queue lets a fresh bucket identify at once from time zero" {
+  let clock = @simclock.VirtualClock(start_ms=0)
+  let queue = @queue.InMemoryQueue(max_concurrency=1, spacing_ms=5250, clock~)
+  @async.with_task_group(group => {
+    let first = group.spawn(() => queue.wait_for_identify(0))
+    clock.settle()
+    assert_eq(clock.pending(), [])
+    first.wait()
+  })
+}
+
+///|
+/// The shard's random source for tests: a fixed seed, so heartbeat jitter and
+/// backoff are the same on every run. A zero first jitter would beat at once,
+/// before IDENTIFY, with no timer registered.
+fn seeded_rand() -> @random.Rand {
+  @random.Rand::chacha8()
 }

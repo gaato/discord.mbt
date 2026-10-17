@@ -56,10 +56,13 @@ Accepted as uncovered (needs a ledger row):
   (playback + recording, 2026-07-15);
 - timed-wait loops without an injectable clock (`with_typing`,
   shard_manager). The gateway shard, command limiter, and identify queue take
-  a `clock~` (driven by `internal/simclock`'s virtual clock in tests), the
-  voice gateway and voice connection take `sleeper?`, and all of them take
-  `rand?`; their backoff/heartbeat/keepalive cadences are tested
-  deterministically — their rows below now cover only defensive arms;
+  a `clock~`, and the voice gateway and voice connection a `clock?` (a
+  `gaato/http/clock` `Clock`, driven in tests by a virtual clock:
+  `internal/simclock` for the gateway, `gaato/http-async/mock`'s
+  `VirtualClock` for voice), plus `rand?`; their backoff/heartbeat/keepalive
+  cadences, and for voice also playback pacing, receive backoff and
+  reordering, ready and silence timeouts, are tested deterministically —
+  their rows below now cover only defensive arms;
 - defensive arms that are unreachable by construction (`abort`, fallbacks
   behind emitters that always produce the expected shape);
 - error/cancellation plumbing deep inside async dispatch flows.
@@ -94,18 +97,18 @@ ledgered):
 
 | File | Budget | Reason |
 | --- | --- | --- |
-| discord_voice/src/connection.mbt | 16 | Impossible alternate negotiation errors, shim-loader failure while the shim is required, opener/discovery cancellation catches, event-pump and receiver queue teardown, an unemitted `ConnectFailed` case, and unreachable session-state/typed-error fallbacks. Negotiation, discovery, session, DAVE-control, source-replacement, receiver, and lifecycle-recovery failures are tested through the UDP/voice/DAVE seams. |
-| discord_voice/src/gateway.mbt | 8 | Protected-shutdown and event-queue teardown catches, stale-transport and non-returning-loop fallbacks, and read-loop cancellation propagation. Disconnected sends, malformed Hello/frames, the Hello sequence, send failures, and protected connector cleanup are tested; backoff and heartbeat cadence use the injected sleeper. |
+| discord_voice/src/connection.mbt | 14 | Impossible alternate negotiation errors, shim-loader failure while the shim is required, opener/discovery cancellation catches, event-pump and receiver queue teardown, an unemitted `ConnectFailed` case, and unreachable session-state/typed-error fallbacks. Negotiation, discovery, session, DAVE-control, source-replacement, receiver, and lifecycle-recovery failures are tested through the UDP/voice/DAVE seams. |
+| discord_voice/src/gateway.mbt | 8 | Protected-shutdown and event-queue teardown catches, stale-transport and non-returning-loop fallbacks, and read-loop cancellation propagation. Disconnected sends, malformed Hello/frames, the Hello sequence, send failures, and protected connector cleanup are tested; backoff, heartbeat, and ACK-latency timing run on a `VirtualClock`. |
 | discord_voice/src/dave.mbt | 52 | DAVE/MLS transitions that need a second member and real libdave group state. |
-| discord_voice/src/audio.mbt | 6 | Real-time pacing loop (deadline sleeps) and DAVE encrypt-drop telemetry arms. |
-| discord_voice/src/subscribe.mbt | 3 | Silence-timeout stream end arms. |
+| discord_voice/src/audio.mbt | 5 | `DaveUnavailable`/`DaveInternal` encrypt-drop telemetry arms, and the DAVE-less frame arm that only direct `run_send_loop` callers reach (a connection holds a machine once its session is up). Frame and silence pacing, stop, and `DaveInvalid` drops are tested on a `VirtualClock`. |
+| discord_voice/src/subscribe.mbt | 2 | Re-raise arms of the timed and untimed reads for a queue error other than closure, which the stream never raises. Silence end, close during either read, and disconnect are tested. |
 | discord_voice/src/client.mbt | 31 | `from_gateway`, `pending_voice_event`, and `join` adapt a `GatewayCtx`, which only a running bot creates, and the service `attach` registers runs only in one; the new-join/rejoin closures and the ready path cross a live `VoiceConnection::start`; the endpoint fallback contradicts the server predicate; disconnect and cancellation catches. Joins, reuse, eviction, gates, expectations before opcode 4, timeouts, a client that never runs, and the watcher's rejoin are tested through a fake `VoiceGatewayPort`. |
 | discord_voice/src/receive.mbt | 5 | Decrypt arms needing real DAVE frames from a second member. |
 | discord_voice/src/reorder.mbt | 3 | Arrival-time flush arms. |
 | discord_voice/src/ogg_opus.mbt | 4 | Constructor `abort`s (unreachable by construction) and one reader break arm. |
 
 Reconnect/backoff and timed-wait loops (exercised in every live gateway
-run; the gateway/voice loops are additionally tested on injected clocks):
+run; the gateway and voice loops are additionally tested on injected clocks):
 
 | File | Budget | Reason |
 | --- | --- | --- |

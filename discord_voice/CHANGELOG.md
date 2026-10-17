@@ -6,6 +6,21 @@ releases (0.x → 0.y) may contain breaking changes; patch releases do not.
 
 ## [Unreleased]
 
+### Changed
+
+- **`VoiceConnection::start` and `VoiceGateway::start` take a `clock~`
+  instead of a `sleeper~`.** The clock (`gaato/http/clock`'s `Clock`, the
+  trait `gaato/discord`'s `Shard::start` takes) supplies both the current time
+  and the waits, so a test can drive the heartbeat, reconnect backoff, UDP
+  keepalives, and receive backoff, and now also the heartbeat latency,
+  playback pacing, receive reordering, the `wait_ready` timeout, and
+  subscription silence, on virtual time; before, those read the wall clock
+  and the event loop's timers even when the sleeper was replaced.
+  `run_send_loop` takes the same `clock?`. A clock's sleep
+  cannot fail, so a sleeper that raised to stop the reconnect, keepalive, or
+  receive loop has no equivalent: disconnect instead.
+  Migration: drop `sleeper=` or pass `clock=` with your own `Clock`.
+
 ## [0.2.0] - 2026-10-17
 
 ### Changed
