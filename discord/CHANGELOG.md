@@ -23,6 +23,14 @@ breaking change is listed with a migration note.
 - **`InMemoryQueue` takes a `clock~`** for the Identify spacing, defaulting to
   the wall clock.
 
+### Fixed
+
+- **Gateway zlib-stream compression no longer truncates large messages.**
+  A message whose compressed form exceeded 64 KiB was cut off after its
+  first 64 KiB, which failed the JSON parse and left the shared decoder out
+  of step with the stream. This regression arrived with the pure MoonBit
+  inflater in 0.9.0 and affected only `compress=true`.
+
 ## [0.9.0] - 2026-10-17
 
 ### Changed
