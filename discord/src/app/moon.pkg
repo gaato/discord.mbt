@@ -28,6 +28,8 @@ import {
   "hustcer/ed25519",
   "moonbitlang/core/encoding/hex",
   "gaato/discord/internal/simclock",
+  "moonbitlang/core/random",
+  "moonbitlang/core/debug",
 } for "wbtest"
 
 // `moonbitlang/async/js_async` only backs the JavaScript dispatch bridge, so
@@ -41,6 +43,8 @@ options(
   targets: {
     "interaction_http.js.mbt": [ "js" ],
     "interaction_http_js_wbtest.mbt": [ "js" ],
+    "admission_fuzz_seeds_wbtest.mbt": [ "native", "wasm" ],
+    "admission_fuzz_seeds_js_wbtest.mbt": [ "js" ],
     "pkg.generated.mbti": [ "native" ],
   },
 )

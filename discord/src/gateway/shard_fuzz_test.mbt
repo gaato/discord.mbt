@@ -139,6 +139,9 @@ struct FuzzModel {
   mut connector_failures : Int32
   mut delay : FuzzDelay
   mut fatal : Int32?
+  /// A violation seen inside the shard's connector, where raising would only
+  /// look like a failed connect; `observe` raises it.
+  mut flagged : String?
 }
 
 ///|
@@ -207,6 +210,9 @@ fn FuzzModel::observe(
   cause : FuzzEnd?,
   timer : Bool,
 ) -> Unit raise {
+  if self.flagged is Some(message) {
+    self.violation(message)
+  }
   let now = self.clock.now_unix_ms()
   for conn in self.conns {
     let sent = conn.transport.sent
@@ -445,6 +451,7 @@ async fn run_shard_schedule(seed : Int32, steps : Array[FuzzStep]) -> Unit {
     connector_failures: 0,
     delay: NoDelay,
     fatal: None,
+    flagged: None,
   }
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
@@ -454,16 +461,16 @@ async fn run_shard_schedule(seed : Int32, steps : Array[FuzzStep]) -> Unit {
       clock~,
       rand=fuzz_rand(seed, 2),
       connector=url => {
-        if model.fatal is Some(_) {
-          model.violation("reconnected after a fatal close")
+        if model.fatal is Some(_) && model.flagged is None {
+          model.flagged = Some("reconnected after a fatal close")
         }
         let base = if model.session_id is Some(_) {
           "wss://resume.example/"
         } else {
           "wss://gateway.discord.gg/"
         }
-        if !url.has_prefix(base) {
-          model.violation("connected to \{url}, expected \{base}")
+        if !url.has_prefix(base) && model.flagged is None {
+          model.flagged = Some("connected to \{url}, expected \{base}")
         }
         if connector_rand.int(limit=100) < failure_percent {
           model.log.push("  connector failed")
