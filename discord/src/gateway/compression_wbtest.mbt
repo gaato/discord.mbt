@@ -217,3 +217,29 @@ test "zlib-stream reports corrupt streams and invalid UTF-8" {
     }
   }
 }
+
+///|
+test "zlib-stream refuses messages over its limit" {
+  let message = @utf8.encode("{\"op\":0,\"d\":\"" + "a".repeat(5000) + "\"}")
+  // Inflated: 5000 repeated bytes compress to a few dozen, so only the
+  // output check can stop them; the buffer stops growing near the limit.
+  let bomb : ZlibStreamInflater = ZlibStreamInflater(max_bytes=1000)
+  let inflater : &Inflater = bomb
+  try inflater.push(sync_flush(@zlib.Encoder(), message)) catch {
+    TooLarge(limit=1000) => ()
+    error => fail("unexpected \{Repr(error)}")
+  } noraise {
+    _ => fail("an oversized message inflated")
+  }
+  assert_true(bomb.out.length() <= 16384)
+  // Compressed: a message that never reaches its sync-flush suffix stops
+  // accumulating at the limit.
+  let endless : &Inflater = ZlibStreamInflater(max_bytes=1000)
+  assert_true(endless.push(Bytes::make(600, b'\x01')) is None)
+  try endless.push(Bytes::make(600, b'\x01')) catch {
+    TooLarge(limit=1000) => ()
+    error => fail("unexpected \{Repr(error)}")
+  } noraise {
+    _ => fail("compressed bytes accumulated past the limit")
+  }
+}

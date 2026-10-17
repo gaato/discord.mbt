@@ -166,3 +166,15 @@ pub fn Conn::close(self : Conn) -> Unit {
     ws_close(self.handle, -1, "")
   }
 }
+
+///|
+/// The whole message, or `None` when it exceeds `max_bytes`. The platform has
+/// already received it; the limit keeps an oversized one from going further.
+pub async fn read_message(message : Message, max_bytes~ : Int32) -> Bytes? {
+  let data = message.read_all().binary()
+  if data.length() > max_bytes {
+    None
+  } else {
+    Some(data)
+  }
+}

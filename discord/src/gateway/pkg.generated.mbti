@@ -13,14 +13,21 @@ import {
 }
 
 // Values
-pub async fn connect_websocket(String) -> &GatewayTransport
+pub const DEFAULT_MAX_MESSAGE_BYTES : Int = 67_108_864
+
+pub async fn connect_websocket(String, max_message_bytes? : Int) -> &GatewayTransport
 
 pub fn on_close(Int?, Bool) -> ReconnectPolicy
 
 // Errors
+pub(all) suberror GatewayConfigError {
+  InvalidMaxMessageBytes(value~ : Int)
+} derive(@debug.Debug)
+
 pub(all) suberror InflateError {
   Malformed(message~ : String)
   InvalidUtf8
+  TooLarge(limit~ : Int)
 } derive(@debug.Debug)
 
 pub(all) suberror TransportClosed {
@@ -63,7 +70,7 @@ pub async fn Shard::request_guild_members(Self, @model.RequestGuildMembers) -> U
 pub async fn Shard::request_soundboard_sounds(Self, @model.RequestSoundboardSounds) -> Unit
 pub async fn Shard::send(Self, Json) -> Unit
 pub fn Shard::session(Self) -> Session?
-pub fn[X] Shard::start(@async.TaskGroup[X], token~ : String, intents~ : @model.Intents, capabilities? : @model.GatewayCapabilities, gateway_url? : String, shard_id? : Int, shard_count? : Int, identify_queue? : &@queue.IdentifyQueue, event_filter? : (@model.EventKind) -> Bool, connector? : async (String) -> &GatewayTransport, compress? : Bool, inflater_factory? : () -> &Inflater raise, queue_capacity? : Int, telemetry? : (@telemetry.TelemetryEvent) -> Unit, clock? : &@clock.Clock, rand? : @random.Rand, resume? : Session, presence? : @model.UpdatePresence) -> Self
+pub fn[X] Shard::start(@async.TaskGroup[X], token~ : String, intents~ : @model.Intents, capabilities? : @model.GatewayCapabilities, gateway_url? : String, shard_id? : Int, shard_count? : Int, identify_queue? : &@queue.IdentifyQueue, event_filter? : (@model.EventKind) -> Bool, connector? : async (String) -> &GatewayTransport, compress? : Bool, inflater_factory? : () -> &Inflater raise, max_message_bytes? : Int, queue_capacity? : Int, telemetry? : (@telemetry.TelemetryEvent) -> Unit, clock? : &@clock.Clock, rand? : @random.Rand, resume? : Session, presence? : @model.UpdatePresence) -> Self
 pub fn Shard::state(Self) -> ShardState
 pub async fn Shard::update_presence(Self, @model.UpdatePresence) -> Unit
 pub async fn Shard::update_voice_state(Self, @model.UpdateVoiceState) -> Unit

@@ -13,6 +13,8 @@ pub(all) suberror BotConfigError {
   InvalidEventBacklog(value~ : Int32)
   /// `shutdown_grace_ms` must not be negative.
   InvalidShutdownGrace(value~ : Int32)
+  /// `max_message_bytes` must be positive.
+  InvalidMaxMessageBytes(value~ : Int32)
 } derive(Debug)
 
 ///|
@@ -57,7 +59,9 @@ pub struct BotBuilder {
 ///
 /// After a requested shutdown, `run` waits up to `shutdown_grace_ms` for
 /// event and interaction handlers that are still running, then cancels them
-/// with a warning (default `DEFAULT_SHUTDOWN_GRACE_MS`).
+/// with a warning (default `DEFAULT_SHUTDOWN_GRACE_MS`). `max_message_bytes`
+/// bounds one Gateway message, compressed or inflated; a larger one ends the
+/// connection and the shard resumes.
 pub fn BotBuilder::BotBuilder(
   app : @app.App,
   token~ : String,
@@ -73,6 +77,7 @@ pub fn BotBuilder::BotBuilder(
   resume~ : Map[Int32, BotSession] = Map([]),
   event_backlog~ : Int32 = DEFAULT_EVENT_BACKLOG,
   shutdown_grace_ms~ : Int32 = DEFAULT_SHUTDOWN_GRACE_MS,
+  max_message_bytes~ : Int32 = @gateway.DEFAULT_MAX_MESSAGE_BYTES,
 ) -> BotBuilder {
   {
     core: BotCore::new(
@@ -90,6 +95,7 @@ pub fn BotBuilder::BotBuilder(
       resume~,
       event_backlog~,
       shutdown_grace_ms~,
+      max_message_bytes~,
     ),
   }
 }
@@ -193,8 +199,9 @@ pub fn BotBuilder::on_decode_error(
 /// Validate the configuration and freeze the registrations into a `Bot`.
 /// Raises `BotConfigError` for an empty token, a shard selection Discord
 /// cannot represent, a saved session whose ids disagree, an `event_backlog`
-/// below 1, or a negative `shutdown_grace_ms`. Intents are resolved here, so warnings about
-/// subscriptions the intents cannot deliver appear once, at build time.
+/// below 1, a negative `shutdown_grace_ms`, or a `max_message_bytes` below 1.
+/// Intents are resolved here, so warnings about subscriptions the intents
+/// cannot deliver appear once, at build time.
 pub fn BotBuilder::build(self : BotBuilder) -> Bot raise BotConfigError {
   let core = self.core
   if core.token_.is_empty() {
@@ -205,6 +212,9 @@ pub fn BotBuilder::build(self : BotBuilder) -> Bot raise BotConfigError {
   }
   if core.shutdown_grace_ms_ < 0 {
     raise InvalidShutdownGrace(value=core.shutdown_grace_ms_)
+  }
+  if core.max_message_bytes_ < 1 {
+    raise InvalidMaxMessageBytes(value=core.max_message_bytes_)
   }
   if core.shards_.static_layout() is Some((ids, count)) &&
     shard_layout_problem(ids, count) is Some(message) {

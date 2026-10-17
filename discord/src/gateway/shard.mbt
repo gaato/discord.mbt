@@ -206,6 +206,9 @@ async fn Shard::finish_transport(
 /// Spawn a shard into `group` and return its handle. `resume` seeds the
 /// session so the first connection attempts RESUME at its `resume_url`.
 /// The initial presence is retained with a copy of its activities array.
+/// A message larger than `max_message_bytes`, compressed or inflated, ends
+/// the connection and the shard resumes; a limit below 1 closes the shard
+/// fatally with code 0 before it connects.
 pub fn[X] Shard::start(
   group : @async.TaskGroup[X],
   token~ : String,
@@ -216,9 +219,10 @@ pub fn[X] Shard::start(
   shard_count~ : Int32 = 1,
   identify_queue? : &@queue.IdentifyQueue,
   event_filter~ : (@model.EventKind) -> Bool = _ => true,
-  connector~ : async (String) -> &GatewayTransport = connect_websocket,
+  connector? : async (String) -> &GatewayTransport,
   compress~ : Bool = false,
-  inflater_factory~ : () -> &Inflater raise = () => ZlibStreamInflater(),
+  inflater_factory? : () -> &Inflater raise,
+  max_message_bytes~ : Int32 = DEFAULT_MAX_MESSAGE_BYTES,
   queue_capacity~ : Int32 = 256,
   telemetry~ : (@telemetry.TelemetryEvent) -> Unit = _ => (),
   clock~ : &@hclock.Clock = @clock.default_clock(),
@@ -246,7 +250,17 @@ pub fn[X] Shard::start(
     shard_id,
     telemetry_: telemetry,
   }
+  let connector = connector.unwrap_or(url => {
+    connect_websocket(url, max_message_bytes~)
+  })
+  let inflater_factory = inflater_factory.unwrap_or(() => {
+    ZlibStreamInflater(max_bytes=max_message_bytes)
+  })
   let runner = group.spawn(no_wait=true, () => {
+    if max_message_bytes < 1 {
+      shard.close_before_connecting(shard_id~)
+      return
+    }
     shard.run(
       token~,
       intents~,
@@ -273,6 +287,22 @@ fn Shard::emit_telemetry(
   event : @telemetry.TelemetryEvent,
 ) -> Unit {
   (self.telemetry_)(event)
+}
+
+///|
+/// End the shard fatally, with code 0, over a configuration that cannot
+/// connect.
+async fn Shard::close_before_connecting(
+  self : Shard,
+  shard_id~ : Int32,
+) -> Unit noraise {
+  self.state = FatallyClosed(code=0)
+  self.emit_telemetry(
+    ShardDisconnected(shard_id~, code=None, will_resume=false),
+  )
+  self.events.put(FatallyClosed(code=0)) catch {
+    _ => ()
+  }
 }
 
 ///|
@@ -310,13 +340,7 @@ async fn Shard::run(
       Some(inflater_factory()) catch {
         _ if @async.is_being_cancelled() => return
         _ => {
-          self.state = FatallyClosed(code=0)
-          self.emit_telemetry(
-            ShardDisconnected(shard_id~, code=None, will_resume=false),
-          )
-          self.events.put(FatallyClosed(code=0)) catch {
-            _ => ()
-          }
+          self.close_before_connecting(shard_id~)
           break
         }
       }

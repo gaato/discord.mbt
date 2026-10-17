@@ -261,3 +261,19 @@ test "build rejects a negative shutdown grace" {
   }
   BotBuilder(app, token="token", shutdown_grace_ms=0).build() |> ignore
 }
+
+///|
+test "build rejects a message size limit below 1" {
+  let app = @app.AppBuilder().build()
+  for value in [0, -1] {
+    try
+      BotBuilder(app, token="token", max_message_bytes=value).build() |> ignore
+    catch {
+      InvalidMaxMessageBytes(value=got) => assert_eq(got, value)
+      _ => fail("expected InvalidMaxMessageBytes")
+    } noraise {
+      _ => fail("expected InvalidMaxMessageBytes for \{value}")
+    }
+  }
+  BotBuilder(app, token="token", max_message_bytes=1).build() |> ignore
+}

@@ -98,6 +98,7 @@ priv struct BotCore {
   sync_unowned_ : @framework.UnownedCommands
   event_backlog_ : Int32
   shutdown_grace_ms_ : Int32
+  max_message_bytes_ : Int32
   typed_events_ : Array[TypedEventHandler]
   raw_events_ : Array[async (GatewayCtx, @model.Event) -> Unit]
   event_middleware_ : Array[EventMiddleware]
@@ -161,6 +162,7 @@ fn BotCore::new(
   resume~ : Map[Int32, BotSession] = Map([]),
   event_backlog~ : Int32 = DEFAULT_EVENT_BACKLOG,
   shutdown_grace_ms~ : Int32 = DEFAULT_SHUTDOWN_GRACE_MS,
+  max_message_bytes~ : Int32 = @gateway.DEFAULT_MAX_MESSAGE_BYTES,
 ) -> BotCore {
   let clock : Ref[&@hclock.Clock] = Ref(@clock.default_clock())
   {
@@ -187,6 +189,7 @@ fn BotCore::new(
     sync_unowned_: sync_unowned,
     event_backlog_: event_backlog,
     shutdown_grace_ms_: shutdown_grace_ms,
+    max_message_bytes_: max_message_bytes,
     typed_events_: [],
     raw_events_: [],
     event_middleware_: [],

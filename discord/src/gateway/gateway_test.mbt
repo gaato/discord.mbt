@@ -121,6 +121,38 @@ async test "inflater factory failure is fatal before connecting" {
 }
 
 ///|
+async test "a message size limit below 1 is fatal before connecting" {
+  for limit in [0, -1] {
+    let calls = Ref(0)
+    @async.with_task_group(group => {
+      let shard = @gateway.Shard::start(
+        group,
+        rand=seeded_rand(),
+        token="tok",
+        intents=@model.Intents::none(),
+        max_message_bytes=limit,
+        connector=_ => {
+          calls.val += 1
+          (@gatewaysim.FakeTransport() : &@gateway.GatewayTransport)
+        },
+      )
+      guard! shard.next() is FatallyClosed(code=0)
+      assert_eq(shard.state(), FatallyClosed(code=0))
+      assert_eq(calls.val, 0)
+    })
+  }
+  try
+    @gateway.connect_websocket("ws://127.0.0.1:1", max_message_bytes=0)
+    |> ignore
+  catch {
+    @gateway.InvalidMaxMessageBytes(value=0) => ()
+    error => fail("unexpected \{Repr(error)}")
+  } noraise {
+    _ => fail("connect_websocket accepted a limit of 0")
+  }
+}
+
+///|
 async test "shard rejects sends while connecting and cancels the connector" {
   let entered : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   let pending : @aqueue.Queue[&@gateway.GatewayTransport] = Queue(

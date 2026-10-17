@@ -12,6 +12,8 @@ pub fn close_code_to_int(@moonbitlang/async/websocket.CloseCode) -> Int
 
 pub async fn connect(String, headers? : Map[@http.CaseInsensitiveString, String], proxy? : @http.Client) -> @moonbitlang/async/websocket.Conn
 
+pub async fn read_message(@moonbitlang/async/websocket.Message, max_bytes~ : Int) -> Bytes?
+
 // Errors
 
 // Types and methods
