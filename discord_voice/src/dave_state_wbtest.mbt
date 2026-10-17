@@ -676,7 +676,7 @@ fn[X] dave_test_connection(
   transport : DaveConnectionTransport,
   telemetry : Array[VoiceTelemetry],
 ) -> VoiceConnection raise {
-  let parked : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  // virtual time that never advances: heartbeats and keepalives never fire
   VoiceConnection::start(
     group,
     {
@@ -692,7 +692,7 @@ fn[X] dave_test_connection(
     connector=_ => (transport : &VoiceTransport),
     receive=false,
     telemetry=event => telemetry.push(event),
-    sleeper=_ => parked.get(),
+    clock=@simclock.VirtualClock(),
   )
 }
 
@@ -881,7 +881,7 @@ async test "voice playback reports DAVE drops and source failures and replaces s
   let udp = DaveConnectionUdp::{ sent: Queue(kind=Unbounded), }
   let first = DaveConnectionAudio()
   let replacement = DaveConnectionAudio()
-  let parked : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  let clock = @simclock.VirtualClock()
   @async.with_task_group(group => {
     let connection = VoiceConnection::start(
       group,
@@ -897,7 +897,7 @@ async test "voice playback reports DAVE drops and source failures and replaces s
       rejoin=() => fail("unexpected rejoin"),
       connector=_ => (transport : &VoiceTransport),
       receive=false,
-      sleeper=_ => parked.get(),
+      clock~,
       telemetry=event => try! (dropped.try_put(event) |> ignore),
     )
     identify_dave_test_connection(transport)
@@ -917,6 +917,12 @@ async test "voice playback reports DAVE drops and source failures and replaces s
         break
       }
     }
+    // the dropped frame still takes its 20ms slot before the next is read;
+    // behind it wait the UDP keepalive and the gateway heartbeat
+    clock.settle()
+    assert_eq(first.requests.try_get(), None)
+    assert_eq(clock.pending(), [20, 5000, 60000])
+    clock.advance(20)
     first.requests.get()
     let stop = connection.playback_stop.unwrap()
     connection.play(replacement)
