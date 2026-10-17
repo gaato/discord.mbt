@@ -3,5 +3,5 @@ name = "gaato/spin-discord"
 preferred_target = "wasm"
 
 import {
-  "gaato/discord@0.8.0",
+  "gaato/discord@0.9.0",
 }

@@ -7,6 +7,8 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-10-17
+
 ### Changed
 
 - **Gateway zlib-stream compression is pure MoonBit and works on every
