@@ -1,20 +1,19 @@
 ///|
-async test "expired keys are swept lazily" {
-  let clock = Ref(1_000L)
+async test "a long window does not hold back sweeping short ones" {
+  let clock = Ref(0L)
   let store = InMemoryCooldownStore(now=() => clock.val)
-  assert_eq(store.try_acquire("long", window_ms=10_000L), Acquired)
-  assert_eq(store.try_acquire("short", window_ms=1_000L), Acquired)
-  clock.val = 5_000L
-  assert_eq(store.try_acquire("other", window_ms=20_000L), Acquired)
-  assert_true(store.cooldowns_.contains("short"))
-  clock.val = 11_000L
-  assert_true(store.cooldowns_.contains("long"))
-  assert_eq(store.try_acquire("new", window_ms=10_000L), Acquired)
-  assert_false(store.cooldowns_.contains("long"))
-  assert_false(store.cooldowns_.contains("short"))
-  assert_eq(store.cooldowns_.length(), 2)
+  assert_eq(store.try_acquire("daily", window_ms=86_400_000L), Acquired)
+  let mut largest = 0
+  for i in 0..<10_000 {
+    clock.val += 100L
+    assert_eq(store.try_acquire("user:\{i}", window_ms=1_000L), Acquired)
+    largest = largest.max(store.cooldowns_.length())
+  }
+  // About ten short windows are live at any time, plus the daily one.
+  assert_true(largest <= 128, msg="largest=\{largest}")
+  assert_true(store.cooldowns_.contains("daily"))
   assert_eq(
-    store.try_acquire("other", window_ms=20_000L),
-    Active(retry_after_ms=14_000L),
+    store.try_acquire("daily", window_ms=86_400_000L),
+    Active(retry_after_ms=86_400_000L - 1_000_000L),
   )
 }
