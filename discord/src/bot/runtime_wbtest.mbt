@@ -59,54 +59,13 @@ test "bot telemetry hook failures flow to app warnings" {
 }
 
 ///|
-/// Heartbeats (op 1) go to `heartbeats`, every other frame to `outgoing`. The
-/// first heartbeat waits a random fraction of the interval, so it can come
-/// before an identify that is itself waiting; tests that expect a particular
-/// frame must not see it in between.
-struct BotFakeTransport {
-  incoming : @aqueue.Queue[String]
-  outgoing : @aqueue.Queue[Json]
-  heartbeats : @aqueue.Queue[Json]
-}
-
-///|
-fn BotFakeTransport::BotFakeTransport() -> BotFakeTransport {
-  {
-    incoming: Queue(kind=Unbounded),
-    outgoing: Queue(kind=Unbounded),
-    heartbeats: Queue(kind=Unbounded),
-  }
-}
-
-///|
-impl @gateway.GatewayTransport for BotFakeTransport with fn recv(self) {
-  Text(self.incoming.get())
-}
-
-///|
-impl @gateway.GatewayTransport for BotFakeTransport with fn send(self, text) {
-  let frame = @json.parse(text) catch { _ => Json::null() }
-  if frame is { "op": Number(1, ..), .. } {
-    self.heartbeats.put(frame)
-  } else {
-    self.outgoing.put(frame)
-  }
-}
-
-///|
-impl @gateway.GatewayTransport for BotFakeTransport with fn close(self, code~) {
-  self.incoming.close(
-    error=@gateway.TransportClosed(code=Some(code), reason="client closed"),
-  )
-}
-
-///|
 const BOT_HELLO : String =
   #|{"op":10,"d":{"heartbeat_interval":60000}}
 
 ///|
 async test "bot restores context before replay and snapshots live sessions" {
-  let transport = BotFakeTransport()
+  let clock = @simclock.VirtualClock()
+  let transport = @gatewaysim.FakeTransport(clock~)
   let urls : Array[String] = []
   let app = @app.AppBuilder()
   let commands : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
@@ -153,6 +112,7 @@ async test "bot restores context before replay and snapshots live sessions" {
     urls.push(url)
     (transport : &@gateway.GatewayTransport)
   })
+  bot.core.clock_.val = clock
   let ready_calls = Ref(0)
   bot.on(Events::ready(), (_, _) => ready_calls.val += 1)
   let events : @aqueue.Queue[(GatewayCtx, String)] = Queue(kind=Unbounded)
@@ -165,7 +125,7 @@ async test "bot restores context before replay and snapshots live sessions" {
   assert_true(bot_bot.sessions().is_empty())
   @async.with_task_group(group => {
     let running = group.spawn(no_wait=true, () => bot_bot.run())
-    transport.incoming.put(BOT_HELLO)
+    transport.put(BOT_HELLO)
     guard transport.outgoing.get()
       is {
         "op": Number(6, ..),
@@ -175,18 +135,18 @@ async test "bot restores context before replay and snapshots live sessions" {
       fail("expected saved RESUME")
     }
     assert_true(urls[0].has_prefix("wss://resume.example/?v=10"))
-    transport.incoming.put(message_delete_frame(42, "700"))
+    transport.put(message_delete_frame(42, "700"))
     let (ctx, id) = events.get()
     assert_eq(id, "700")
     assert_eq(ctx.ready().session_id, "sess-bot")
     let service_ctx = service_contexts.get()
     assert_true(physical_equal(ctx, service_ctx))
-    transport.incoming.put(command_frame(43, "500000000000000701"))
+    transport.put(command_frame(43, "500000000000000701"))
     commands.get()
     assert_eq(ready_calls.val, 0)
     assert_eq(rest_calls.val, 0)
-    transport.incoming.put("{\"op\":0,\"t\":\"RESUMED\",\"s\":44,\"d\":{}}")
-    transport.incoming.put(message_delete_frame(45, "701"))
+    transport.put("{\"op\":0,\"t\":\"RESUMED\",\"s\":44,\"d\":{}}")
+    transport.put(message_delete_frame(45, "701"))
     let (post_ctx, post_id) = events.get()
     assert_eq(post_id, "701")
     assert_true(physical_equal(ctx, post_ctx))
@@ -221,7 +181,8 @@ async test "bot restores context before replay and snapshots live sessions" {
 
 ///|
 async test "bot reports supplied sessions while resolving shards" {
-  let transport = BotFakeTransport()
+  let clock = @simclock.VirtualClock()
+  let transport = @gatewaysim.FakeTransport(clock~)
   let app = @app.AppBuilder()
   let client = @dhttp.Client("test-token")
   defer client.close()
@@ -253,6 +214,7 @@ async test "bot reports supplied sessions while resolving shards" {
   )
   bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  bot.core.clock_.val = clock
   let events : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::message_delete(), (ctx, _) => events.put(ctx))
   let bot_bot = bot.build()
@@ -268,7 +230,7 @@ async test "bot reports supplied sessions while resolving shards" {
     assert_eq(pending.ready.session_id, "sess-bot")
     pending.gateway.sequence = 999L
     gateway_release.put(())
-    transport.incoming.put(BOT_HELLO)
+    transport.put(BOT_HELLO)
     guard transport.outgoing.get() is { "op": Number(6, ..), .. } else {
       fail("expected saved RESUME")
     }
@@ -276,7 +238,7 @@ async test "bot reports supplied sessions while resolving shards" {
       fail("expected BotSession while connecting")
     }
     assert_eq(connecting.gateway.sequence, 41L)
-    transport.incoming.put(message_delete_frame(42, "700"))
+    transport.put(message_delete_frame(42, "700"))
     let ctx = events.get()
     ctx.shutdown()
     running.wait()
@@ -286,7 +248,8 @@ async test "bot reports supplied sessions while resolving shards" {
 
 ///|
 async test "bot identifies instead of resuming a session from another shard layout" {
-  let transport = BotFakeTransport()
+  let clock = @simclock.VirtualClock()
+  let transport = @gatewaysim.FakeTransport(clock~)
   let app = @app.AppBuilder()
   let warnings : Array[String] = []
   app.on_warn(warning => warnings.push(warning.to_string()))
@@ -322,12 +285,13 @@ async test "bot identifies instead of resuming a session from another shard layo
   )
   bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  bot.core.clock_.val = clock
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
   let bot_bot = bot.build()
   @async.with_task_group(group => {
     let running = group.spawn(no_wait=true, () => bot_bot.run())
-    transport.incoming.put(BOT_HELLO)
+    transport.put(BOT_HELLO)
     guard transport.outgoing.get()
       is {
         "op": Number(2, ..),
@@ -337,7 +301,7 @@ async test "bot identifies instead of resuming a session from another shard layo
       fail("expected IDENTIFY for the resolved layout")
     }
     assert_true(bot_bot.sessions().is_empty())
-    transport.incoming.put(bot_ready_frame())
+    transport.put(bot_ready_frame())
     let ctx = ready_contexts.get()
     assert_eq(ctx.ready().session_id, "sess-bot")
     guard bot_bot.sessions().get(0) is Some(live) else {
@@ -357,9 +321,10 @@ async test "bot identifies instead of resuming a session from another shard layo
 
 ///|
 async test "bot holds a fallback IDENTIFY when the session start limit is exhausted" {
-  let first = BotFakeTransport()
-  let second = BotFakeTransport()
-  let pending : Array[BotFakeTransport] = [second, first]
+  let clock = @simclock.VirtualClock()
+  let first = @gatewaysim.FakeTransport(clock~)
+  let second = @gatewaysim.FakeTransport(clock~)
+  let pending : Array[@gatewaysim.FakeTransport] = [second, first]
   let client = @dhttp.Client("test-token")
   defer client.close()
   client.middleware((_request, _next) => {
@@ -379,16 +344,22 @@ async test "bot holds a fallback IDENTIFY when the session start limit is exhaus
   bot.core.connector_.val = Some(_ => {
     (pending.pop().unwrap() : &@gateway.GatewayTransport)
   })
+  bot.core.clock_.val = clock
   let bot_bot = bot.build()
   try
     @async.with_task_group(group => {
       let running = group.spawn(no_wait=true, () => bot_bot.run())
-      first.incoming.put(BOT_HELLO)
+      first.put(BOT_HELLO)
       guard first.outgoing.get() is { "op": Number(6, ..), .. } else {
         fail("expected saved RESUME")
       }
-      first.incoming.put("{\"op\":9,\"d\":false}")
-      second.incoming.put(BOT_HELLO)
+      first.put("{\"op\":9,\"d\":false}")
+      second.put(BOT_HELLO)
+      // The invalid session's 1-5 s wait is the only timer left; the fallback
+      // IDENTIFY is refused once it fires.
+      clock.settle()
+      guard clock.pending() is [_] else { fail("expected one op9 wait") }
+      assert_true(clock.advance_to_next())
       running.wait()
     })
   catch {
@@ -404,7 +375,8 @@ async test "bot holds a fallback IDENTIFY when the session start limit is exhaus
 
 ///|
 async test "bot identifies with a warning when the session start limit cannot be read" {
-  let transport = BotFakeTransport()
+  let clock = @simclock.VirtualClock()
+  let transport = @gatewaysim.FakeTransport(clock~)
   let app = @app.AppBuilder()
   let warnings : Array[String] = []
   app.on_warn(warning => warnings.push(warning.to_string()))
@@ -422,16 +394,17 @@ async test "bot identifies with a warning when the session start limit cannot be
     gateway_url="wss://gateway.example",
   )
   bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  bot.core.clock_.val = clock
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
   let bot_bot = bot.build()
   @async.with_task_group(group => {
     let running = group.spawn(no_wait=true, () => bot_bot.run())
-    transport.incoming.put(BOT_HELLO)
+    transport.put(BOT_HELLO)
     guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected IDENTIFY")
     }
-    transport.incoming.put(bot_ready_frame())
+    transport.put(bot_ready_frame())
     let ctx = ready_contexts.get()
     ctx.shutdown()
     running.wait()
@@ -469,7 +442,8 @@ fn bot_saved_session() -> BotSession raise {
 
 ///|
 async test "empty Bot replay starts services on RESUMED" {
-  let transport = BotFakeTransport()
+  let clock = @simclock.VirtualClock()
+  let transport = @gatewaysim.FakeTransport(clock~)
   let bot = BotBuilder(
     @app.AppBuilder().build(),
     token="test-token",
@@ -478,6 +452,7 @@ async test "empty Bot replay starts services on RESUMED" {
   )
   bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  bot.core.clock_.val = clock
   let service_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.service(name="empty-replay-service", ctx => service_contexts.put(ctx))
   let ready_calls = Ref(0)
@@ -485,12 +460,12 @@ async test "empty Bot replay starts services on RESUMED" {
   let bot_bot = bot.build()
   @async.with_task_group(group => {
     let running = group.spawn(no_wait=true, () => bot_bot.run())
-    transport.incoming.put(BOT_HELLO)
+    transport.put(BOT_HELLO)
     guard transport.outgoing.get() is { "op": Number(6, ..), .. } else {
       fail("expected RESUME")
     }
     assert_true(service_contexts.try_get() is None)
-    transport.incoming.put("{\"op\":0,\"t\":\"RESUMED\",\"s\":42,\"d\":{}}")
+    transport.put("{\"op\":0,\"t\":\"RESUMED\",\"s\":42,\"d\":{}}")
     let ctx = service_contexts.get()
     assert_eq(ctx.ready().session_id, "sess-bot")
     assert_eq(ready_calls.val, 0)
@@ -542,8 +517,9 @@ async test "build rejects a mismatched saved session before REST or connector" {
 
 ///|
 async test "rejected Bot resume uses the next actual READY" {
-  let first = BotFakeTransport()
-  let second = BotFakeTransport()
+  let clock = @simclock.VirtualClock()
+  let first = @gatewaysim.FakeTransport(clock~)
+  let second = @gatewaysim.FakeTransport(clock~)
   let urls : Array[String] = []
   let connected : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   let app = @app.AppBuilder()
@@ -572,6 +548,7 @@ async test "rejected Bot resume uses the next actual READY" {
       (second : &@gateway.GatewayTransport)
     }
   })
+  bot.core.clock_.val = clock
   let ready_calls = Ref(0)
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => {
@@ -583,23 +560,25 @@ async test "rejected Bot resume uses the next actual READY" {
   let bot_bot = bot.build()
   @async.with_task_group(group => {
     let running = group.spawn(no_wait=true, () => bot_bot.run())
-    first.incoming.put(BOT_HELLO)
+    first.put(BOT_HELLO)
     guard first.outgoing.get() is { "op": Number(6, ..), .. } else {
       fail("expected saved RESUME")
     }
-    first.incoming.put("{\"op\":9,\"d\":false}")
+    first.put("{\"op\":9,\"d\":false}")
+    // The invalid session's 1-5 s wait gates the reconnect.
+    clock.settle()
+    guard clock.pending() is [_] else { fail("expected one op9 wait") }
+    assert_true(clock.advance_to_next())
     connected.get()
     assert_eq(ready_calls.val, 0)
     assert_eq(sync_calls.val, 0)
     assert_true(bot_bot.sessions().is_empty())
     assert_true(urls[1].has_prefix("wss://gateway.example/?v=10"))
-    second.incoming.put(BOT_HELLO)
+    second.put(BOT_HELLO)
     guard second.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected Identify after invalid session")
     }
-    second.incoming.put(
-      bot_ready_frame().replace(old="sess-bot", new="new-session"),
-    )
+    second.put(bot_ready_frame().replace(old="sess-bot", new="new-session"))
     let ctx = ready_contexts.get()
     assert_eq(ctx.ready().session_id, "new-session")
     assert_eq(ready_calls.val, 1)
@@ -675,7 +654,8 @@ fn channel_create_frame(sequence : Int32, id : String) -> String {
 ///|
 fn middleware_runtime_bot(
   app : @app.App,
-  transport : BotFakeTransport,
+  transport : @gatewaysim.FakeTransport,
+  clock : @simclock.VirtualClock,
 ) -> BotBuilder {
   let bot = BotBuilder(
     app,
@@ -686,49 +666,59 @@ fn middleware_runtime_bot(
   )
   bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  bot.core.clock_.val = clock
   bot
 }
 
 ///|
 async test "gateway contexts expose heartbeat latency" {
-  let transport = BotFakeTransport()
+  let clock = @simclock.VirtualClock()
+  let transport = @gatewaysim.FakeTransport(clock~)
   let app = @app.AppBuilder()
-  let bot = middleware_runtime_bot(app.build(), transport)
+  let bot = middleware_runtime_bot(app.build(), transport, clock)
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
   let bot_bot = bot.build()
   @async.with_task_group(group => {
     let running = group.spawn(no_wait=true, () => bot_bot.run())
-    transport.incoming.put(BOT_HELLO)
+    transport.put(BOT_HELLO)
     guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected identify")
     }
-    transport.incoming.put(bot_ready_frame())
+    transport.put(bot_ready_frame())
     let ctx = ready_contexts.get()
     assert_true(ctx.cache() is None)
     debug_inspect(ctx.latency_ms(), content="None")
     debug_inspect(ctx.app().latency_ms(), content="None")
-    // Drop any jittered heartbeat so the one read below answers the request.
-    while transport.heartbeats.try_get() is Some(_) {
-
+    // Fire the jittered first beat, the only timer, so the next beat is a
+    // full interval away.
+    clock.settle()
+    guard clock.pending() is [_] else { fail("expected the first heartbeat") }
+    assert_true(clock.advance_to_next())
+    guard transport.outgoing.get() is { "op": Number(1, ..), .. } else {
+      fail("expected the first heartbeat")
     }
-    transport.incoming.put(
+    // A requested beat restarts the measurement; its ACK 25 ms later sets
+    // the latency.
+    transport.put(
       (
         #|{"op":1,"d":null}
       ),
     )
-    guard transport.heartbeats.get() is { "op": Number(1, ..), .. } else {
+    guard transport.outgoing.get() is { "op": Number(1, ..), .. } else {
       fail("expected heartbeat")
     }
-    transport.incoming.put(
+    clock.advance(25)
+    transport.put(
       (
         #|{"op":11,"d":null}
       ),
     )
-    @async.sleep(1)
+    clock.settle()
     guard ctx.latency_ms() is Some(shard_latency) else {
       fail("expected shard heartbeat latency")
     }
+    assert_eq(shard_latency, 25L)
     assert_eq(ctx.app().latency_ms(), Some(shard_latency))
     ctx.shutdown()
     running.wait()
@@ -737,7 +727,8 @@ async test "gateway contexts expose heartbeat latency" {
 
 ///|
 async test "bot without sync performs no command requests" {
-  let transport = BotFakeTransport()
+  let clock = @simclock.VirtualClock()
+  let transport = @gatewaysim.FakeTransport(clock~)
   let app = @app.AppBuilder()
   let rest_paths : Array[String] = []
   let client = @dhttp.Client("test-token")
@@ -755,16 +746,17 @@ async test "bot without sync performs no command requests" {
   )
   bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  bot.core.clock_.val = clock
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
   let bot_bot = bot.build()
   @async.with_task_group(group => {
     let running = group.spawn(no_wait=true, () => bot_bot.run())
-    transport.incoming.put(BOT_HELLO)
+    transport.put(BOT_HELLO)
     guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected identify")
     }
-    transport.incoming.put(bot_ready_frame())
+    transport.put(bot_ready_frame())
     let ctx = ready_contexts.get()
     assert_false(rest_paths.any(path => path.contains("/commands")))
     ctx.shutdown()
@@ -785,7 +777,8 @@ async test "bot warns when sync deletes undeclared commands" {
       ),
     ] {
     let (scope, targets) = entry
-    let transport = BotFakeTransport()
+    let clock = @simclock.VirtualClock()
+    let transport = @gatewaysim.FakeTransport(clock~)
     let app = @app.AppBuilder()
     let warnings = []
     app.on_warn(warning => warnings.push(warning.to_string()))
@@ -812,15 +805,16 @@ async test "bot warns when sync deletes undeclared commands" {
     )
     bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
     bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+    bot.core.clock_.val = clock
     let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
     bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
     @async.with_task_group(group => {
       let running = group.spawn(no_wait=true, () => bot.build().run())
-      transport.incoming.put(BOT_HELLO)
+      transport.put(BOT_HELLO)
       guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
         fail("expected identify")
       }
-      transport.incoming.put(bot_ready_frame())
+      transport.put(bot_ready_frame())
       let ctx = ready_contexts.get()
       assert_eq(
         warnings,
@@ -836,7 +830,8 @@ async test "bot warns when sync deletes undeclared commands" {
 
 ///|
 async test "bot Keep preserves other owners and emits no deletion warning" {
-  let transport = BotFakeTransport()
+  let clock = @simclock.VirtualClock()
+  let transport = @gatewaysim.FakeTransport(clock~)
   let app = @app.AppBuilder()
   app.command(
     @app.slash(
@@ -876,16 +871,17 @@ async test "bot Keep preserves other owners and emits no deletion warning" {
   )
   bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  bot.core.clock_.val = clock
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
   let bot_bot = bot.build()
   @async.with_task_group(group => {
     let running = group.spawn(no_wait=true, () => bot_bot.run())
-    transport.incoming.put(BOT_HELLO)
+    transport.put(BOT_HELLO)
     guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected identify")
     }
-    transport.incoming.put(bot_ready_frame())
+    transport.put(bot_ready_frame())
     let ctx = ready_contexts.get()
     assert_eq(warnings, [])
     json_inspect(bodies, content=[
@@ -903,7 +899,8 @@ async test "bot Keep preserves other owners and emits no deletion warning" {
 ///|
 async test "bot sync failures stay fail-fast" {
   for fail_get in [true, false] {
-    let transport = BotFakeTransport()
+    let clock = @simclock.VirtualClock()
+    let transport = @gatewaysim.FakeTransport(clock~)
     let app = @app.AppBuilder()
     let warnings = []
     app.on_warn(warning => warnings.push(warning.to_string()))
@@ -929,6 +926,7 @@ async test "bot sync failures stay fail-fast" {
     )
     bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
     bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+    bot.core.clock_.val = clock
     let ready_called = Ref(false)
     bot.on(Events::ready(), (ctx, _) => {
       ready_called.val = true
@@ -937,11 +935,11 @@ async test "bot sync failures stay fail-fast" {
     try
       @async.with_task_group(group => {
         let running = group.spawn(no_wait=true, () => bot.build().run())
-        transport.incoming.put(BOT_HELLO)
+        transport.put(BOT_HELLO)
         guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
           fail("expected identify")
         }
-        transport.incoming.put(bot_ready_frame())
+        transport.put(bot_ready_frame())
         running.wait()
       })
     catch {
@@ -957,7 +955,8 @@ async test "bot sync failures stay fail-fast" {
 
 ///|
 async test "gateway context resolves cached channels and falls back to REST" {
-  let transport = BotFakeTransport()
+  let clock = @simclock.VirtualClock()
+  let transport = @gatewaysim.FakeTransport(clock~)
   let app = @app.AppBuilder()
   let rest_calls = Ref(0)
   let client = @dhttp.Client("test-token")
@@ -984,6 +983,7 @@ async test "gateway context resolves cached channels and falls back to REST" {
   )
   bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  bot.core.clock_.val = clock
   let cache = @cache.InMemoryCache(resources=@cache.CacheResources::default())
   bot.attach_cache(cache)
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
@@ -998,14 +998,14 @@ async test "gateway context resolves cached channels and falls back to REST" {
   let bot_bot = bot.build()
   @async.with_task_group(group => {
     let running = group.spawn(no_wait=true, () => bot_bot.run())
-    transport.incoming.put(BOT_HELLO)
+    transport.put(BOT_HELLO)
     guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected identify")
     }
-    transport.incoming.put(bot_ready_frame())
+    transport.put(bot_ready_frame())
     let ctx = ready_contexts.get()
     assert_true(ctx.cache() is Some(_))
-    transport.incoming.put(channel_create_frame(2, "300"))
+    transport.put(channel_create_frame(2, "300"))
     let (id, typ) = resolved.get()
     inspect(id, content="300")
     debug_inspect(typ, content="PublicThread")
@@ -1022,9 +1022,10 @@ async test "gateway context resolves cached channels and falls back to REST" {
 
 ///|
 async test "event middleware drops handlers after wire-level cache updates" {
-  let transport = BotFakeTransport()
+  let clock = @simclock.VirtualClock()
+  let transport = @gatewaysim.FakeTransport(clock~)
   let app = @app.AppBuilder()
-  let bot = middleware_runtime_bot(app.build(), transport)
+  let bot = middleware_runtime_bot(app.build(), transport, clock)
   let cache = @cache.InMemoryCache(resources=CacheResources(messages=true))
   bot.attach_cache(cache)
   bot.middleware((_, event, next) => {
@@ -1047,28 +1048,21 @@ async test "event middleware drops handlers after wire-level cache updates" {
   let bot_bot = bot.build()
   @async.with_task_group(group => {
     let running = group.spawn(no_wait=true, () => bot_bot.run())
-    transport.incoming.put(BOT_HELLO)
+    transport.put(BOT_HELLO)
     guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected identify")
     }
-    transport.incoming.put(bot_ready_frame())
+    transport.put(bot_ready_frame())
     let ctx = ready_contexts.get()
-    transport.incoming.put(message_create_frame(2, "701"))
+    transport.put(message_create_frame(2, "701"))
     let channel_id : @model.ChannelId = @model.Id::parse("6")
     let message_id : @model.MessageId = @model.Id::parse("701")
-    let cache_updated = Ref(false)
-    for _ in 0..<50 {
-      if cache.message(channel_id, message_id) is Some(message) {
-        inspect(message.content, content="cached")
-        cache_updated.val = true
-        break
-      }
-      @async.sleep(1)
+    clock.settle()
+    guard cache.message(channel_id, message_id) is Some(message) else {
+      fail("expected the cache to be updated")
     }
-    assert_true(cache_updated.val)
-    assert_true(
-      @async.with_timeout_opt(100, () => handler_events.get()) is None,
-    )
+    inspect(message.content, content="cached")
+    assert_true(handler_events.try_get() is None)
     inspect(message_dispatches.val, content="0")
     ctx.shutdown()
     running.wait()
@@ -1077,9 +1071,10 @@ async test "event middleware drops handlers after wire-level cache updates" {
 
 ///|
 async test "event middleware transforms events for typed handlers" {
-  let transport = BotFakeTransport()
+  let clock = @simclock.VirtualClock()
+  let transport = @gatewaysim.FakeTransport(clock~)
   let app = @app.AppBuilder()
-  let bot = middleware_runtime_bot(app.build(), transport)
+  let bot = middleware_runtime_bot(app.build(), transport, clock)
   bot.middleware((_, event, next) => {
     match event {
       MessageCreate(payload) => {
@@ -1098,13 +1093,13 @@ async test "event middleware transforms events for typed handlers" {
   let bot_bot = bot.build()
   @async.with_task_group(group => {
     let running = group.spawn(no_wait=true, () => bot_bot.run())
-    transport.incoming.put(BOT_HELLO)
+    transport.put(BOT_HELLO)
     guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected identify")
     }
-    transport.incoming.put(bot_ready_frame())
+    transport.put(bot_ready_frame())
     let ctx = ready_contexts.get()
-    transport.incoming.put(message_create_frame(2, "702"))
+    transport.put(message_create_frame(2, "702"))
     inspect(contents.get(), content="transformed")
     ctx.shutdown()
     running.wait()
@@ -1113,9 +1108,10 @@ async test "event middleware transforms events for typed handlers" {
 
 ///|
 async test "event middleware order is onion-style" {
-  let transport = BotFakeTransport()
+  let clock = @simclock.VirtualClock()
+  let transport = @gatewaysim.FakeTransport(clock~)
   let app = @app.AppBuilder()
-  let bot = middleware_runtime_bot(app.build(), transport)
+  let bot = middleware_runtime_bot(app.build(), transport, clock)
   let trace : Array[String] = []
   let first : EventMiddleware = (_, event, next) => {
     match event {
@@ -1145,20 +1141,15 @@ async test "event middleware order is onion-style" {
   let bot_bot = bot.build()
   @async.with_task_group(group => {
     let running = group.spawn(no_wait=true, () => bot_bot.run())
-    transport.incoming.put(BOT_HELLO)
+    transport.put(BOT_HELLO)
     guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected identify")
     }
-    transport.incoming.put(bot_ready_frame())
+    transport.put(bot_ready_frame())
     let ctx = ready_contexts.get()
-    transport.incoming.put(message_delete_frame(2, "703"))
+    transport.put(message_delete_frame(2, "703"))
     handled.get()
-    for _ in 0..<50 {
-      if trace.length() == 4 {
-        break
-      }
-      @async.sleep(1)
-    }
+    clock.settle()
     inspect(trace.join(", "), content="a-in, b-in, b-out, a-out")
     ctx.shutdown()
     running.wait()
@@ -1167,7 +1158,8 @@ async test "event middleware order is onion-style" {
 
 ///|
 async test "interaction routing survives dropped gateway events" {
-  let transport = BotFakeTransport()
+  let clock = @simclock.VirtualClock()
+  let transport = @gatewaysim.FakeTransport(clock~)
   let app = @app.AppBuilder()
   let commands : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   app.command(
@@ -1178,21 +1170,22 @@ async test "interaction routing survives dropped gateway events" {
       handler=Raw(_ => commands.put(())),
     ),
   )
-  let bot = middleware_runtime_bot(app.build(), transport)
+  let bot = middleware_runtime_bot(app.build(), transport, clock)
   bot.middleware((_, _, _) => ())
   let service_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.service(name="capture-context", ctx => service_contexts.put(ctx))
   let bot_bot = bot.build()
   @async.with_task_group(group => {
     let running = group.spawn(no_wait=true, () => bot_bot.run())
-    transport.incoming.put(BOT_HELLO)
+    transport.put(BOT_HELLO)
     guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected identify")
     }
-    transport.incoming.put(bot_ready_frame())
+    transport.put(bot_ready_frame())
     let ctx = service_contexts.get()
-    transport.incoming.put(command_frame(2, "500000000000000701"))
-    guard @async.with_timeout_opt(500, () => commands.get()) is Some(_) else {
+    transport.put(command_frame(2, "500000000000000701"))
+    clock.settle()
+    guard commands.try_get() is Some(_) else {
       fail("interaction routing was dropped by event middleware")
     }
     ctx.shutdown()
@@ -1202,11 +1195,12 @@ async test "interaction routing survives dropped gateway events" {
 
 ///|
 async test "event middleware failures warn and preserve later dispatch" {
-  let transport = BotFakeTransport()
+  let clock = @simclock.VirtualClock()
+  let transport = @gatewaysim.FakeTransport(clock~)
   let app = @app.AppBuilder()
   let warnings : Array[String] = []
   app.on_warn(warning => warnings.push(warning.to_string()))
-  let bot = middleware_runtime_bot(app.build(), transport)
+  let bot = middleware_runtime_bot(app.build(), transport, clock)
   let failed = Ref(false)
   bot.middleware((_, event, next) => {
     match event {
@@ -1226,22 +1220,17 @@ async test "event middleware failures warn and preserve later dispatch" {
   let bot_bot = bot.build()
   @async.with_task_group(group => {
     let running = group.spawn(no_wait=true, () => bot_bot.run())
-    transport.incoming.put(BOT_HELLO)
+    transport.put(BOT_HELLO)
     guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected identify")
     }
-    transport.incoming.put(bot_ready_frame())
+    transport.put(bot_ready_frame())
     let ctx = ready_contexts.get()
-    transport.incoming.put(message_delete_frame(2, "704"))
-    for _ in 0..<50 {
-      if warnings.length() == 1 {
-        break
-      }
-      @async.sleep(1)
-    }
+    transport.put(message_delete_frame(2, "704"))
+    clock.settle()
     inspect(warnings.length(), content="1")
     assert_true(warnings[0].contains("event middleware failed"))
-    transport.incoming.put(message_delete_frame(3, "705"))
+    transport.put(message_delete_frame(3, "705"))
     inspect(handled.get(), content="705")
     ctx.shutdown()
     running.wait()
@@ -1250,7 +1239,8 @@ async test "event middleware failures warn and preserve later dispatch" {
 
 ///|
 async test "bot updates cache before typed event handlers" {
-  let transport = BotFakeTransport()
+  let clock = @simclock.VirtualClock()
+  let transport = @gatewaysim.FakeTransport(clock~)
   let app = @app.AppBuilder()
   let bot = BotBuilder(
     app.build(),
@@ -1261,6 +1251,7 @@ async test "bot updates cache before typed event handlers" {
   )
   bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  bot.core.clock_.val = clock
   let cache = @cache.InMemoryCache(resources=CacheResources(messages=true))
   bot.attach_cache(cache)
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
@@ -1274,13 +1265,13 @@ async test "bot updates cache before typed event handlers" {
   let bot_bot = bot.build()
   @async.with_task_group(group => {
     let running = group.spawn(no_wait=true, () => bot_bot.run())
-    transport.incoming.put(BOT_HELLO)
+    transport.put(BOT_HELLO)
     guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected identify")
     }
-    transport.incoming.put(bot_ready_frame())
+    transport.put(bot_ready_frame())
     let ctx = ready_contexts.get()
-    transport.incoming.put(message_create_frame(2, "700"))
+    transport.put(message_create_frame(2, "700"))
     assert_true(observed.get())
     ctx.shutdown()
     running.wait()
@@ -1289,9 +1280,10 @@ async test "bot updates cache before typed event handlers" {
 
 ///|
 async test "message update handlers receive the cached previous revision" {
-  let transport = BotFakeTransport()
+  let clock = @simclock.VirtualClock()
+  let transport = @gatewaysim.FakeTransport(clock~)
   let app = @app.AppBuilder()
-  let bot = middleware_runtime_bot(app.build(), transport)
+  let bot = middleware_runtime_bot(app.build(), transport, clock)
   let cache = @cache.InMemoryCache(resources=CacheResources(messages=true))
   bot.attach_cache(cache)
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
@@ -1305,15 +1297,15 @@ async test "message update handlers receive the cached previous revision" {
   let bot_bot = bot.build()
   @async.with_task_group(group => {
     let running = group.spawn(no_wait=true, () => bot_bot.run())
-    transport.incoming.put(BOT_HELLO)
+    transport.put(BOT_HELLO)
     guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected identify")
     }
-    transport.incoming.put(bot_ready_frame())
+    transport.put(bot_ready_frame())
     let ctx = ready_contexts.get()
-    transport.incoming.put(message_create_frame(2, "706"))
+    transport.put(message_create_frame(2, "706"))
     created.get()
-    transport.incoming.put(message_update_frame(3, "706"))
+    transport.put(message_update_frame(3, "706"))
     inspect(observed.get(), content="cached")
     let channel_id : @model.ChannelId = @model.Id::parse("6")
     let message_id : @model.MessageId = @model.Id::parse("706")
@@ -1328,9 +1320,10 @@ async test "message update handlers receive the cached previous revision" {
 
 ///|
 async test "message update handlers receive no before when messages are disabled" {
-  let transport = BotFakeTransport()
+  let clock = @simclock.VirtualClock()
+  let transport = @gatewaysim.FakeTransport(clock~)
   let app = @app.AppBuilder()
-  let bot = middleware_runtime_bot(app.build(), transport)
+  let bot = middleware_runtime_bot(app.build(), transport, clock)
   bot.attach_cache(InMemoryCache(resources=@cache.CacheResources::default()))
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
@@ -1341,13 +1334,13 @@ async test "message update handlers receive no before when messages are disabled
   let bot_bot = bot.build()
   @async.with_task_group(group => {
     let running = group.spawn(no_wait=true, () => bot_bot.run())
-    transport.incoming.put(BOT_HELLO)
+    transport.put(BOT_HELLO)
     guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected identify")
     }
-    transport.incoming.put(bot_ready_frame())
+    transport.put(bot_ready_frame())
     let ctx = ready_contexts.get()
-    transport.incoming.put(message_update_frame(2, "707"))
+    transport.put(message_update_frame(2, "707"))
     assert_true(observed.get())
     ctx.shutdown()
     running.wait()
@@ -1363,7 +1356,8 @@ async test "bot run dispatches concurrently, survives handlers, and shuts down" 
   } noraise {
     _ => fail("expected empty token error")
   }
-  let transport = BotFakeTransport()
+  let clock = @simclock.VirtualClock()
+  let transport = @gatewaysim.FakeTransport(clock~)
   let app = @app.AppBuilder(max_in_flight=8)
   let command_count = Ref(0)
   let first_started : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
@@ -1404,6 +1398,7 @@ async test "bot run dispatches concurrently, survives handlers, and shuts down" 
   )
   bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  bot.core.clock_.val = clock
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
   let event_calls : @aqueue.Queue[Int32] = Queue(kind=Unbounded)
@@ -1425,29 +1420,30 @@ async test "bot run dispatches concurrently, survives handlers, and shuts down" 
   let bot_bot = bot.build()
   @async.with_task_group(group => {
     let running = group.spawn(no_wait=true, () => bot_bot.run())
-    transport.incoming.put(BOT_HELLO)
+    transport.put(BOT_HELLO)
     guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected identify")
     }
-    transport.incoming.put(bot_ready_frame())
+    transport.put(bot_ready_frame())
     let ctx = ready_contexts.get()
     inspect(ctx.app().application_id().to_string(), content="42")
     inspect(ctx.ready().application.id.to_string(), content="42")
     // The first command blocks. The second must still be pulled and dispatched,
     // otherwise component-waiter style command flows would deadlock.
-    transport.incoming.put(command_frame(2, "500000000000000001"))
+    transport.put(command_frame(2, "500000000000000001"))
     first_started.get()
-    transport.incoming.put(command_frame(3, "500000000000000002"))
-    guard @async.with_timeout_opt(500, () => second_started.get()) is Some(_) else {
+    transport.put(command_frame(3, "500000000000000002"))
+    clock.settle()
+    guard second_started.try_get() is Some(_) else {
       fail("the event loop awaited a command handler")
     }
-    transport.incoming.put(command_frame(4, "500000000000000003", name="fail"))
+    transport.put(command_frame(4, "500000000000000003", name="fail"))
     assert_true(policy_calls.get().contains("Command"))
-    transport.incoming.put(message_delete_frame(5, "700000000000000001"))
+    transport.put(message_delete_frame(5, "700000000000000001"))
     inspect(event_calls.get(), content="1")
     assert_true(policy_calls.get().contains("KMessageDelete"))
     // A second event arriving after the failure proves the loop stayed alive.
-    transport.incoming.put(message_delete_frame(6, "700000000000000002"))
+    transport.put(message_delete_frame(6, "700000000000000002"))
     inspect(event_calls.get(), content="2")
     ctx.shutdown()
     running.wait()
@@ -1467,7 +1463,9 @@ async test "bot reports gateway decode errors and preserves dispatch" {
   assert_false(filter(KMessageDelete))
   assert_false(filter(KInviteDelete))
 
-  let transport = BotFakeTransport()
+  let clock = @simclock.VirtualClock()
+
+  let transport = @gatewaysim.FakeTransport(clock~)
   let app = @app.AppBuilder()
   let warnings : Array[String] = []
   app.on_warn(warning => warnings.push(warning.to_string()))
@@ -1480,6 +1478,7 @@ async test "bot reports gateway decode errors and preserves dispatch" {
   )
   bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  bot.core.clock_.val = clock
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
   let decode_errors : Array[(String, Json)] = []
@@ -1512,13 +1511,13 @@ async test "bot reports gateway decode errors and preserves dispatch" {
   let bot_bot = bot.build()
   @async.with_task_group(group => {
     let running = group.spawn(no_wait=true, () => bot_bot.run())
-    transport.incoming.put(BOT_HELLO)
+    transport.put(BOT_HELLO)
     guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected identify")
     }
-    transport.incoming.put(bot_ready_frame())
+    transport.put(bot_ready_frame())
     let ctx = ready_contexts.get()
-    transport.incoming.put(malformed_interaction_frame(2))
+    transport.put(malformed_interaction_frame(2))
     let (raw_marker, raw_payload) = raw_decode_errors.get()
     assert_true(raw_marker.has_prefix("DECODE_ERROR:INTERACTION_CREATE:"))
     guard raw_payload is { "token": String("payload-must-stay-private"), .. } else {
@@ -1537,7 +1536,7 @@ async test "bot reports gateway decode errors and preserves dispatch" {
 
     // An ordinary dispatch proves the loop continues and does not notify the
     // decode-error observers.
-    transport.incoming.put(message_delete_frame(3, "700000000000000099"))
+    transport.put(message_delete_frame(3, "700000000000000099"))
     normal_events.get()
     inspect(decode_errors.length(), content="1")
     inspect(warnings.length(), content="1")
@@ -1548,7 +1547,8 @@ async test "bot reports gateway decode errors and preserves dispatch" {
 
 ///|
 async test "saturated event handlers never delay interaction routing" {
-  let transport = BotFakeTransport()
+  let clock = @simclock.VirtualClock()
+  let transport = @gatewaysim.FakeTransport(clock~)
   let app = @app.AppBuilder(max_in_flight=1)
   let commands : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   app.command(
@@ -1559,7 +1559,7 @@ async test "saturated event handlers never delay interaction routing" {
       handler=Raw(_ => commands.put(())),
     ),
   )
-  let bot = middleware_runtime_bot(app.build(), transport)
+  let bot = middleware_runtime_bot(app.build(), transport, clock)
   let release : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   let deletes : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   bot.on(Events::message_delete(), (_, _) => {
@@ -1571,23 +1571,25 @@ async test "saturated event handlers never delay interaction routing" {
   let bot_bot = bot.build()
   @async.with_task_group(group => {
     let running = group.spawn(no_wait=true, () => bot_bot.run())
-    transport.incoming.put(BOT_HELLO)
+    transport.put(BOT_HELLO)
     guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected identify")
     }
-    transport.incoming.put(bot_ready_frame())
+    transport.put(bot_ready_frame())
     let ctx = service_contexts.get()
     // The first handler holds the only event permit; the second waits for it.
-    transport.incoming.put(message_delete_frame(2, "700000000000000011"))
+    transport.put(message_delete_frame(2, "700000000000000011"))
     deletes.get()
-    transport.incoming.put(message_delete_frame(3, "700000000000000012"))
-    transport.incoming.put(command_frame(4, "500000000000000711"))
-    guard @async.with_timeout_opt(500, () => commands.get()) is Some(_) else {
+    transport.put(message_delete_frame(3, "700000000000000012"))
+    transport.put(command_frame(4, "500000000000000711"))
+    clock.settle()
+    guard commands.try_get() is Some(_) else {
       fail("event handler capacity blocked interaction routing")
     }
     release.put(())
     release.put(())
-    guard @async.with_timeout_opt(500, () => deletes.get()) is Some(_) else {
+    clock.settle()
+    guard deletes.try_get() is Some(_) else {
       fail("the queued event was lost")
     }
     ctx.shutdown()
@@ -1607,7 +1609,8 @@ fn component_frame(sequence : Int32, id : String, custom_id : String) -> String 
 
 ///|
 async test "a deferred handler waiting at full capacity receives its button" {
-  let transport = BotFakeTransport()
+  let clock = @simclock.VirtualClock()
+  let transport = @gatewaysim.FakeTransport(clock~)
   let app = @app.AppBuilder(max_in_flight=1)
   let woke : @aqueue.Queue[Bool] = Queue(kind=Unbounded)
   app.command(
@@ -1643,26 +1646,24 @@ async test "a deferred handler waiting at full capacity receives its button" {
   )
   bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  bot.core.clock_.val = clock
   let service_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.service(name="capture-context", ctx => service_contexts.put(ctx))
   let bot_bot = bot.build()
   @async.with_task_group(group => {
     let running = group.spawn(no_wait=true, () => bot_bot.run())
-    transport.incoming.put(BOT_HELLO)
+    transport.put(BOT_HELLO)
     guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected identify")
     }
-    transport.incoming.put(bot_ready_frame())
+    transport.put(bot_ready_frame())
     let ctx = service_contexts.get()
-    transport.incoming.put(
-      command_frame(2, "500000000000000721", name="confirm"),
-    )
+    transport.put(command_frame(2, "500000000000000721", name="confirm"))
     // The deferral proves the handler holds the only permit and is waiting.
     assert_true(callbacks.get().has_suffix("/callback"))
-    transport.incoming.put(
-      component_frame(3, "500000000000000722", "confirm-yes"),
-    )
-    assert_eq(@async.with_timeout_opt(1000, () => woke.get()), Some(true))
+    transport.put(component_frame(3, "500000000000000722", "confirm-yes"))
+    clock.settle()
+    assert_eq(woke.try_get(), Some(true))
     ctx.shutdown()
     running.wait()
   })

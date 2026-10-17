@@ -1,9 +1,17 @@
 ///|
 async fn with_command_context(
   shards : ShardConfig,
-  body : async (GatewayCtx, Array[ManagerFakeTransport]) -> Unit,
+  body : async (
+    GatewayCtx,
+    Array[@gatewaysim.FakeTransport],
+    @simclock.VirtualClock,
+  ) -> Unit,
 ) -> Unit {
-  let transports = [ManagerFakeTransport(), ManagerFakeTransport()]
+  let clock = @simclock.VirtualClock()
+  let transports = [
+    @gatewaysim.FakeTransport(clock~),
+    @gatewaysim.FakeTransport(clock~),
+  ]
   let available = [transports[1], transports[0]]
   let builder = BotBuilder(
     @app.AppBuilder().build(),
@@ -16,53 +24,51 @@ async fn with_command_context(
   builder.core.gateway_bot_info_.val = Some(
     manager_gateway_info(max_concurrency=2),
   )
-  builder.core.identify_spacing_ms_.val = 1
   builder.core.connector_.val = Some(_ => {
     guard available.pop() is Some(transport) else {
       raise @gateway.TransportClosed(code=None, reason="no transport")
     }
     (transport : &@gateway.GatewayTransport)
   })
+  builder.core.clock_.val = clock
   let ready : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   builder.on(Events::ready(), (ctx, _) => ready.put(ctx))
   let bot = builder.build()
-  @async.with_timeout(3000, () => {
-    @async.with_task_group(group => {
-      let running = group.spawn(no_wait=true, () => bot.run())
-      let count = match shards {
-        Fixed(count~) => count
-        _ => 1
+  @async.with_task_group(group => {
+    let running = group.spawn(no_wait=true, () => bot.run())
+    let count = match shards {
+      Fixed(count~) => count
+      _ => 1
+    }
+    let by_id : Array[@gatewaysim.FakeTransport] = transports.copy()
+    for index in 0..<count {
+      let transport = transports[index]
+      transport.put(MANAGER_HELLO)
+      let identify = manager_get(clock, transport.outgoing, "identify")
+      guard identify
+        is { "d": { "presence": { "status": "idle", .. }, .. }, .. } else {
+        fail("missing initial presence")
       }
-      let by_id : Array[ManagerFakeTransport] = transports.copy()
-      for index in 0..<count {
-        let transport = transports[index]
-        transport.incoming.put(MANAGER_HELLO)
-        let (_, identify) = manager_get(transport.outgoing, "identify")
-        guard identify
-          is { "d": { "presence": { "status": "idle", .. }, .. }, .. } else {
-          fail("missing initial presence")
-        }
-        let (id, total) = identify_shard(identify)
-        by_id[id] = transport
-        transport.incoming.put(manager_ready_frame(id, total))
-      }
-      let ctx = manager_get(ready, "ready")
-      for _ in 1..<count {
-        manager_get(ready, "ready") |> ignore
-      }
-      body(ctx, by_id)
-      ctx.shutdown()
-      running.wait()
-    })
+      let (id, total) = identify_shard(identify)
+      by_id[id] = transport
+      transport.put(manager_ready_frame(id, total))
+    }
+    let ctx = manager_get(clock, ready, "ready")
+    for _ in 1..<count {
+      manager_get(clock, ready, "ready") |> ignore
+    }
+    body(ctx, by_id, clock)
+    ctx.shutdown()
+    running.wait()
   })
 }
 
 ///|
 async test "typed gateway context broadcasts presence and routes guild commands" {
-  with_command_context(Fixed(count=2), (ctx, transports) => {
+  with_command_context(Fixed(count=2), (ctx, transports, clock) => {
     ctx.update_presence(@model.UpdatePresence(status=Invisible))
     for transport in transports {
-      let (_, frame) = manager_get(transport.outgoing, "presence")
+      let frame = manager_get(clock, transport.outgoing, "presence")
       guard frame
         is { "op": Number(3, ..), "d": { "status": "invisible", .. }, .. } else {
         fail("missing presence")
@@ -74,13 +80,13 @@ async test "typed gateway context broadcasts presence and routes guild commands"
       presences: false,
       nonce: Some("route"),
     })
-    let (_, members) = manager_get(transports[1].outgoing, "members")
+    let members = manager_get(clock, transports[1].outgoing, "members")
     guard members
       is { "op": Number(8, ..), "d": { "guild_id": "4194304", .. }, .. } else {
       fail("wrong member route")
     }
     ctx.request_channel_info({ guild_id: Id(8388608UL), fields: [Status], })
-    let (_, info) = manager_get(transports[0].outgoing, "channel info")
+    let info = manager_get(clock, transports[0].outgoing, "channel info")
     guard info
       is { "op": Number(43, ..), "d": { "guild_id": "8388608", .. }, .. } else {
       fail("wrong channel route")
@@ -88,8 +94,8 @@ async test "typed gateway context broadcasts presence and routes guild commands"
     ctx.request_soundboard_sounds({
       guild_ids: [Id(4194304UL), Id(8388608UL), Id(12582912UL)],
     })
-    let (_, zero) = manager_get(transports[0].outgoing, "sounds zero")
-    let (_, one) = manager_get(transports[1].outgoing, "sounds one")
+    let zero = manager_get(clock, transports[0].outgoing, "sounds zero")
+    let one = manager_get(clock, transports[1].outgoing, "sounds one")
     json_inspect(zero, content={ "op": 31, "d": { "guild_ids": ["8388608"] } })
     json_inspect(one, content={
       "op": 31,
@@ -100,7 +106,7 @@ async test "typed gateway context broadcasts presence and routes guild commands"
 
 ///|
 async test "presence broadcast continues after the first shard fails" {
-  with_command_context(Fixed(count=2), (ctx, transports) => {
+  with_command_context(Fixed(count=2), (ctx, transports, clock) => {
     ctx.shards_[0].close()
     try ctx.update_presence(@model.UpdatePresence(status=Invisible)) catch {
       @gateway.TransportClosed(code=None, reason="shard is not connected") => ()
@@ -108,7 +114,11 @@ async test "presence broadcast continues after the first shard fails" {
     } noraise {
       _ => fail("expected first shard error")
     }
-    let (_, frame) = manager_get(transports[1].outgoing, "later shard presence")
+    let frame = manager_get(
+      clock,
+      transports[1].outgoing,
+      "later shard presence",
+    )
     guard frame
       is { "op": Number(3, ..), "d": { "status": "invisible", .. }, .. } else {
       fail("missing later shard presence")
@@ -118,7 +128,7 @@ async test "presence broadcast continues after the first shard fails" {
 
 ///|
 async test "unmanaged guild commands fail before sending any soundboard group" {
-  with_command_context(Single(id=0, count=2), (ctx, transports) => {
+  with_command_context(Single(id=0, count=2), (ctx, transports, clock) => {
     try
       ctx.request_guild_members({
         guild_id: Id(4194304UL),
@@ -150,9 +160,8 @@ async test "unmanaged guild commands fail before sending any soundboard group" {
     } noraise {
       _ => fail("expected unmanaged shard")
     }
-    assert_true(
-      @async.with_timeout_opt(10, () => transports[0].outgoing.get()) is None,
-    )
+    clock.settle()
+    assert_true(transports[0].outgoing.try_get() is None)
   })
 }
 
@@ -193,12 +202,12 @@ fn chunk_frame(nonce : String, index : Int32, count~ : Int32 = 3) -> String {
 
 ///|
 async test "fetch assembles out-of-order chunks ignores foreign nonces and cleans up" {
-  with_command_context(Single(id=0, count=1), (ctx, transports) => {
+  with_command_context(Single(id=0, count=1), (ctx, transports, clock) => {
     @async.with_task_group(group => {
       let fetching = group.spawn(no_wait=true, () => {
         ctx.fetch_guild_members(Id(1UL), All, presences=true, timeout_ms=500)
       })
-      let (_, request) = manager_get(transports[0].outgoing, "member request")
+      let request = manager_get(clock, transports[0].outgoing, "member request")
       guard request
         is {
           "op": Number(8, ..),
@@ -210,16 +219,16 @@ async test "fetch assembles out-of-order chunks ignores foreign nonces and clean
       assert_true(ctx.collector_.waits_for(KGuildMembersChunk))
       assert_true(ctx.collector_.waits_for(KRateLimited))
       let nonce = nonce.to_string()
-      transports[0].incoming.put(chunk_frame("other", 0))
+      transports[0].put(chunk_frame("other", 0))
       // Chunks with an impossible index or count are dropped.
-      transports[0].incoming.put(chunk_frame(nonce, 3))
-      transports[0].incoming.put(chunk_frame(nonce, 0, count=0))
-      transports[0].incoming.put(chunk_frame(nonce, 2))
+      transports[0].put(chunk_frame(nonce, 3))
+      transports[0].put(chunk_frame(nonce, 0, count=0))
+      transports[0].put(chunk_frame(nonce, 2))
       // A chunk disagreeing with the first chunk's count is dropped too.
-      transports[0].incoming.put(chunk_frame(nonce, 1, count=2))
+      transports[0].put(chunk_frame(nonce, 1, count=2))
       // Back-to-back delivery also verifies that registrations survive a chunk.
       for index in [0, 2, 1] {
-        transports[0].incoming.put(chunk_frame(nonce, index))
+        transports[0].put(chunk_frame(nonce, index))
       }
       let result = fetching.wait()
       assert_eq(result.members.length(), 3)
@@ -233,12 +242,12 @@ async test "fetch assembles out-of-order chunks ignores foreign nonces and clean
 
 ///|
 async test "fetch watches matching rate limits and times out with no leaked expectations" {
-  with_command_context(Single(id=0, count=1), (ctx, transports) => {
+  with_command_context(Single(id=0, count=1), (ctx, transports, clock) => {
     @async.with_task_group(group => {
       let fetching = group.spawn(no_wait=true, allow_failure=true, () => {
         ctx.fetch_guild_members(Id(1UL), All, timeout_ms=500)
       })
-      let (_, request) = manager_get(transports[0].outgoing, "member request")
+      let request = manager_get(clock, transports[0].outgoing, "member request")
       guard request is { "d": { "nonce": String(nonce), .. }, .. } else {
         fail("expected nonce")
       }
@@ -252,7 +261,7 @@ async test "fetch watches matching rate limits and times out with no leaked expe
           "meta": { "guild_id": "1", "nonce": "other" },
         },
       }
-      transports[0].incoming.put(foreign.stringify())
+      transports[0].put(foreign.stringify())
       // Both a foreign nonce and another guild's nonce-less response are ignored.
       let other_guild : Json = {
         "op": 0,
@@ -260,7 +269,7 @@ async test "fetch watches matching rate limits and times out with no leaked expe
         "t": "RATE_LIMITED",
         "d": { "opcode": 8, "retry_after": 0.0011, "meta": { "guild_id": "2" } },
       }
-      transports[0].incoming.put(other_guild.stringify())
+      transports[0].put(other_guild.stringify())
       // So are an unparseable guild id, a non-string nonce, and no guild id.
       for
         meta in [
@@ -274,16 +283,20 @@ async test "fetch watches matching rate limits and times out with no leaked expe
           "t": "RATE_LIMITED",
           "d": { "opcode": 8, "retry_after": 0.0011, "meta": meta },
         }
-        transports[0].incoming.put(malformed.stringify())
+        transports[0].put(malformed.stringify())
       }
-      transports[0].incoming.put(chunk_frame(nonce.to_string(), 0, count=1))
+      transports[0].put(chunk_frame(nonce.to_string(), 0, count=1))
       assert_eq(fetching.wait().members.length(), 1)
     })
     @async.with_task_group(group => {
       let fetching = group.spawn(no_wait=true, allow_failure=true, () => {
         ctx.fetch_guild_members(Id(1UL), All, timeout_ms=500)
       })
-      manager_get(transports[0].outgoing, "nonce-less rate limited request")
+      manager_get(
+        clock,
+        transports[0].outgoing,
+        "nonce-less rate limited request",
+      )
       |> ignore
       let matching : Json = {
         "op": 0,
@@ -291,7 +304,7 @@ async test "fetch watches matching rate limits and times out with no leaked expe
         "t": "RATE_LIMITED",
         "d": { "opcode": 8, "retry_after": 0.0011, "meta": { "guild_id": "1" } },
       }
-      transports[0].incoming.put(matching.stringify())
+      transports[0].put(matching.stringify())
       try fetching.wait() catch {
         GatewayRateLimited(opcode=8, retry_after_ms=2L) => ()
         error => fail("unexpected error: \{error}")
@@ -306,13 +319,13 @@ async test "fetch watches matching rate limits and times out with no leaked expe
     } noraise {
       _ => fail("expected timeout")
     }
-    manager_get(transports[0].outgoing, "timed out request") |> ignore
+    manager_get(clock, transports[0].outgoing, "timed out request") |> ignore
     assert_eq(ctx.collector_.waiters.length(), 0)
     @async.with_task_group(group => {
       let fetching = group.spawn(no_wait=true, allow_failure=true, () => {
         ctx.fetch_guild_members(Id(1UL), All)
       })
-      manager_get(transports[0].outgoing, "cancelled request") |> ignore
+      manager_get(clock, transports[0].outgoing, "cancelled request") |> ignore
       fetching.cancel()
       try fetching.wait() catch {
         _ => ()

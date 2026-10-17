@@ -24,19 +24,15 @@ async fn wait_until_registered(
   kind : @model.EventKind,
   count : Int32,
 ) -> Unit {
-  for _ in 0..<50 {
-    let mut found = 0
-    for waiter in collector.waiters {
-      if waiter.kind == kind {
-        found += 1
-      }
+  // No clock drives the collector; settling only lets the waiters run.
+  @simclock.VirtualClock().settle()
+  let mut found = 0
+  for waiter in collector.waiters {
+    if waiter.kind == kind {
+      found += 1
     }
-    if found == count {
-      return
-    }
-    @async.sleep(1)
   }
-  fail("event collectors were not registered")
+  assert_eq(found, count, msg="event collectors were not registered")
 }
 
 ///|

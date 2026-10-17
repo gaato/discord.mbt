@@ -109,10 +109,9 @@ priv struct BotCore {
   // Production uses Shard::start's WebSocket connector. Whitebox tests inject
   // the same in-memory GatewayTransport seam used by gateway_test.mbt.
   connector_ : Ref[(async (String) -> &@gateway.GatewayTransport)?]
-  // Whitebox seams for `/gateway/bot` and Discord's five-second identify
-  // interval. Production always uses the REST response and 5250ms margin.
+  // Whitebox seam for `/gateway/bot`. Production always uses the REST
+  // response.
   gateway_bot_info_ : Ref[@model.GatewayBotInfo?]
-  identify_spacing_ms_ : Ref[Int32]
   // Whitebox seam for virtual time: shards, the identify queue, interaction
   // timing, and the shutdown grace period all read this clock.
   clock_ : Ref[&@hclock.Clock]
@@ -194,7 +193,6 @@ fn BotCore::new(
     collector_: EventCollector(),
     connector_: Ref(None),
     gateway_bot_info_: Ref(None),
-    identify_spacing_ms_: Ref(5250),
     clock_: Ref(@clock.default_clock()),
     frozen_intents_: None,
   }
@@ -611,7 +609,6 @@ async fn BotCore::run(self : BotCore) -> Unit {
       None =>
         @queue.InMemoryQueue(
           max_concurrency=resolved.max_concurrency,
-          spacing_ms=self.identify_spacing_ms_.val,
           clock=self.clock_.val,
         )
     }

@@ -47,21 +47,26 @@ test "a built bot keeps the registrations it was built with" {
 ///|
 async test "a bot runs once at a time and may run again after it stops" {
   let app = @app.AppBuilder()
-  let builder = middleware_runtime_bot(app.build(), BotFakeTransport())
+  let clock = @simclock.VirtualClock()
+  let builder = middleware_runtime_bot(
+    app.build(),
+    @gatewaysim.FakeTransport(clock~),
+    clock,
+  )
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   builder.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
   let bot = builder.build()
   for round in 0..<2 {
     // Each run opens a fresh connection, as a real restart would.
-    let transport = BotFakeTransport()
+    let transport = @gatewaysim.FakeTransport(clock~)
     bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
     @async.with_task_group(group => {
       let running = group.spawn(no_wait=true, () => bot.run())
-      transport.incoming.put(BOT_HELLO)
+      transport.put(BOT_HELLO)
       guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
         fail("expected identify (round \{round})")
       }
-      transport.incoming.put(bot_ready_frame())
+      transport.put(bot_ready_frame())
       let ctx = ready_contexts.get()
       try bot.run() catch {
         AlreadyRunning => ()
@@ -113,17 +118,19 @@ async test "a supplied client reports to the bot once per call, only while it ru
       http_events.val += 1
     }
   })
+  let clock = @simclock.VirtualClock()
+  builder.core.clock_.val = clock
   let bot = builder.build()
   for _ in 0..<2 {
-    let transport = BotFakeTransport()
+    let transport = @gatewaysim.FakeTransport(clock~)
     bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
     @async.with_task_group(group => {
       let running = group.spawn(no_wait=true, () => bot.run())
-      transport.incoming.put(BOT_HELLO)
+      transport.put(BOT_HELLO)
       guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
         fail("expected identify")
       }
-      transport.incoming.put(bot_ready_frame())
+      transport.put(bot_ready_frame())
       let ctx = ready_contexts.get()
       ctx.shutdown()
       running.wait()
@@ -139,7 +146,8 @@ async test "a supplied client reports to the bot once per call, only while it ru
 
 ///|
 async test "events beyond the backlog skip handlers with telemetry and one warning" {
-  let transport = BotFakeTransport()
+  let clock = @simclock.VirtualClock()
+  let transport = @gatewaysim.FakeTransport(clock~)
   let warnings : Array[String] = []
   let app = @app.AppBuilder()
   app.on_warn(warning => warnings.push(warning.to_string()))
@@ -155,6 +163,7 @@ async test "events beyond the backlog skip handlers with telemetry and one warni
   builder.core.connector_.val = Some(_ => {
     (transport : &@gateway.GatewayTransport)
   })
+  builder.core.clock_.val = clock
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   builder.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
   // Subscribing is what lets MESSAGE_CREATE through the gateway filter;
@@ -183,44 +192,38 @@ async test "events beyond the backlog skip handlers with telemetry and one warni
   })
   let bot = builder.build()
   let send = (id : Int32) => {
-    transport.incoming.put(message_create_frame(id + 2, id.to_string()))
-  }
-  async fn wait_dropped(count : Int32) -> Unit {
-    @async.with_timeout(2000, () => {
-      while dropped.length() < count {
-        @async.sleep(5)
-      }
-    })
+    transport.put(message_create_frame(id + 2, id.to_string()))
   }
   @async.with_task_group(group => {
     let running = group.spawn(no_wait=true, () => bot.run())
-    transport.incoming.put(BOT_HELLO)
+    transport.put(BOT_HELLO)
     guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected identify")
     }
-    transport.incoming.put(bot_ready_frame())
-    let ctx = @async.with_timeout(2000, () => ready_contexts.get())
+    transport.put(bot_ready_frame())
+    let ctx = ready_contexts.get()
     // 1 holds the consumer, 2 and 3 fill the backlog of two, 4 is dropped.
     send(1)
-    assert_eq(@async.with_timeout(2000, () => blocked.get()), "1")
+    clock.settle()
+    assert_eq(blocked.try_get(), Some("1"))
     for id in 2..<=4 {
       send(id)
     }
-    wait_dropped(1)
+    clock.settle()
+    assert_eq(dropped.length(), 1)
     // Releasing 1 lets the consumer take 2, which holds it again: one slot
     // frees but the backlog never drains, so the next overflow must not warn
     // a second time.
     release.put(())
-    assert_eq(@async.with_timeout(2000, () => blocked.get()), "2")
+    clock.settle()
+    assert_eq(blocked.try_get(), Some("2"))
     send(5)
     send(6)
-    wait_dropped(2)
+    clock.settle()
+    assert_eq(dropped.length(), 2)
     release.put(())
-    @async.with_timeout(2000, () => {
-      while handled.length() < 4 {
-        @async.sleep(5)
-      }
-    })
+    clock.settle()
+    assert_eq(handled.length(), 4)
     ctx.shutdown()
     running.wait()
   })

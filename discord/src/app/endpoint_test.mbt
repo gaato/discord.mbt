@@ -129,6 +129,7 @@ async test "timed-out interaction expires its gate" {
   })
   let client = @dhttp.Client("test-token")
   defer client.close()
+  let clock = @simclock.VirtualClock()
   @async.with_task_group(group => {
     let endpoint = app
       .build()
@@ -136,19 +137,19 @@ async test "timed-out interaction expires its gate" {
         group,
         access=Client(client),
         application_id=@model.Id::parse("400000000000000001"),
+        clock~,
       )
-    assert_true(
+    let handling = group.spawn(() => {
       endpoint.handle_interaction(
         app_command("late-response", "500000000000000810"),
         deadline_ms=50,
       )
-      is TimedOut,
-    )
+    })
+    clock.advance(50)
+    assert_true(handling.wait() is TimedOut)
     release.put(())
-    assert_eq(
-      @async.with_timeout_opt(1000, () => failures.get()),
-      Some((Some(Expired), true)),
-    )
+    clock.settle()
+    assert_eq(failures.try_get(), Some((Some(Expired), true)))
     assert_eq(warnings, [
       "cannot respond to an expired interaction: expired reply",
     ])
@@ -417,6 +418,7 @@ async test "interaction endpoint dispatches captured responses and completion ou
     max_connections=1,
   )
   defer client.close()
+  let clock = @simclock.VirtualClock()
   @async.with_task_group(group => {
     // Explicit client/id must perform no startup HTTP.
     let app = app
@@ -425,6 +427,7 @@ async test "interaction endpoint dispatches captured responses and completion ou
         group,
         access=Client(client),
         application_id=@model.Id::parse("400000000000000001"),
+        clock~,
       )
     match app.handle_interaction(app_ping()) {
       Reply(response~, files~) => {
@@ -451,10 +454,12 @@ async test "interaction endpoint dispatches captured responses and completion ou
       NoRoute => ()
       outcome => fail("expected NoRoute, got \{Repr(outcome)}")
     }
-    match
-      @async.with_timeout_opt(250, () => {
-        app.handle_interaction(app_command("silent", "500000000000000103"))
-      }) {
+    // No time passes: the outcome must not wait for the deadline.
+    let silent = group.spawn(() => {
+      app.handle_interaction(app_command("silent", "500000000000000103"))
+    })
+    clock.settle()
+    match silent.try_wait() {
       Some(NoResponse) => ()
       outcome => fail("expected prompt NoResponse, got \{Repr(outcome)}")
     }
@@ -470,18 +475,21 @@ async test "interaction endpoint dispatches captured responses and completion ou
         "component waiting is unavailable without a gateway connection",
       ),
     )
-    match
+    // The handler waits for `slow_release`, so it times out.
+    let slow = group.spawn(() => {
       app.handle_interaction(
         app_command("slow", "500000000000000104"),
-        // Wide enough for the handler to start under load: it waits for
-        // `slow_release`, so it times out either way.
         deadline_ms=100,
-      ) {
+      )
+    })
+    clock.advance(100)
+    match slow.wait() {
       TimedOut => ()
       outcome => fail("expected TimedOut, got \{Repr(outcome)}")
     }
     slow_release.put(())
-    guard @async.with_timeout_opt(500, () => slow_finished.get()) is Some(_) else {
+    clock.settle()
+    guard slow_finished.try_get() is Some(_) else {
       fail("timed-out handler did not continue in the app task group")
     }
     guard app.handle(app_command("immediate", "500000000000000105").to_json())

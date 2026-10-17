@@ -97,7 +97,7 @@ async test "cooldown store is called only after every check passes" {
     )
     .check(_ => true)
     .check(_ => {
-      @async.sleep(1)
+      @async.pause()
       assert_eq(store.calls.length(), 0)
       allowed.val
     })

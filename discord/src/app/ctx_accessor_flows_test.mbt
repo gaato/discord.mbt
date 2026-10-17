@@ -78,6 +78,7 @@ async test "command contexts expose their interaction and REST surfaces" {
       }),
     ),
   )
+  let clock = @simclock.VirtualClock()
   @async.with_task_group(group => {
     let served = app
       .build()
@@ -85,6 +86,7 @@ async test "command contexts expose their interaction and REST surfaces" {
         group,
         access=Client(client),
         application_id=@model.Id::parse("400000000000000001"),
+        clock~,
       )
     match
       served.handle_interaction(app_command("inspect", "500000000000000501")) {
@@ -98,12 +100,7 @@ async test "command contexts expose their interaction and REST surfaces" {
         assert_true(response.typ == DeferredChannelMessageWithSource)
       outcome => fail("expected deferred reply, got \{Repr(outcome)}")
     }
-    for _attempt in 0..<200 {
-      if rest_paths.length() >= 2 {
-        break
-      }
-      @async.sleep(10)
-    }
+    clock.settle()
     inspect(
       rest_paths.join("\n"),
       content=(
