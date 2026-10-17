@@ -66,6 +66,46 @@ test "zlib-stream round-trips split and consecutive messages" {
   )
 }
 
+///|
+/// A message whose compressed form exceeds the 64 KiB that one decoder step
+/// accepts: random base64-alphabet text barely compresses.
+fn incompressible_message(rand : @random.Rand) -> String {
+  let alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+  let builder = StringBuilder()
+  builder.write_string("{\"op\":0,\"s\":2,\"t\":\"BLOB\",\"d\":\"")
+  for _ in 0..<120000 {
+    builder.write_char(alphabet[rand.int(limit=64)].unsafe_to_char())
+  }
+  builder.write_string("\"}")
+  builder.to_string()
+}
+
+///|
+test "zlib-stream inflates messages past one decoder step at any split" {
+  let rand = @random.Rand::chacha8()
+  let inflater : &Inflater = ZlibStreamInflater()
+  let encoder = @zlib.Encoder()
+  for _ in 0..<3 {
+    let message = incompressible_message(rand)
+    let compressed = sync_flush(encoder, @utf8.encode(message))
+    assert_true(compressed.length() > 65536)
+    let mut start = 0
+    let mut result = None
+    while start < compressed.length() {
+      assert_true(result is None)
+      let end = (start + 1 + rand.int(limit=40000)).min(compressed.length())
+      result = inflater.push(compressed[start:end].to_owned())
+      start = end
+    }
+    // Compare without printing 120 KB on failure.
+    let length = result.map(text => text.length()).unwrap_or(-1)
+    assert_true(result == Some(message), msg="inflated \{length} chars")
+  }
+  let ack =
+    #|{"op":11,"d":null}
+  assert_eq(inflater.push(sync_flush(encoder, @utf8.encode(ack))), Some(ack))
+}
+
 // Output of CPython's zlib (compressobj + Z_SYNC_FLUSH after each message),
 // so the decoder is checked against the reference encoder, not only itself.
 // READY inflates past the initial 16 KiB output buffer.
