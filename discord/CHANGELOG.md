@@ -99,9 +99,6 @@ breaking change is listed with a migration note.
   that streamed bytes without a newline made the other side buffer them
   without bound; the coordinator now answers with an error and closes the
   connection, and the client drops it with `InvalidResponse`.
-
-### Fixed
-
 - **REST rate-limit state no longer grows with every interaction.** Discord's
   webhook and interaction buckets include the token, and the limiter kept an
   entry for every bucket it had seen; `gaato/sdk-runtime` 0.2.3 drops idle
@@ -113,6 +110,14 @@ breaking change is listed with a migration note.
   seconds instead of blocking that bucket for every process until the
   operating system gave up on the connection, and a client stops waiting on a
   coordinator host that vanished.
+- **Identify and REST acquisitions stop waiting on a hung coordinator.** A
+  coordinator process that stayed connected but stopped answering held every
+  waiting shard and REST request forever, since TCP keepalive only notices a
+  vanished host. While an acquisition waits, the client now pings the
+  coordinator over a separate connection every 10 seconds; a ping unanswered
+  for 5 seconds abandons the attempt, which reconnects and retries with the
+  usual backoff. Long waits for Identify spacing or a bucket reset continue
+  as long as the coordinator answers.
 - **Refusing deferred interactions as busy is reported.** When
   `max_pending` deferred interactions already wait for a handler, the first
   refusal of each overload now reaches `on_warn` as the new

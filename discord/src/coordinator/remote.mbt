@@ -4,21 +4,57 @@ priv struct CoordinatorClient {
   conn : Ref[@socket.Tcp?]
   gate : @async.Semaphore
   closed : Ref[Bool]
+  liveness : Liveness?
 }
+
+///|
+/// How a client tells a long wait from a hung coordinator: while a request is
+/// unanswered, ping over `probe` every `every_ms`, and give up on the request
+/// when a ping is not answered within `timeout_ms`.
+priv struct Liveness {
+  probe : CoordinatorClient
+  every_ms : Int32
+  timeout_ms : Int32
+}
+
+///|
+/// Identify and HTTP acquisitions legitimately wait for minutes: Identify
+/// spacing grows with the shard count, and some HTTP buckets reset after ten
+/// minutes. A deadline long enough for those would not catch anything, so
+/// these requests check that the coordinator still answers instead.
+const LIVENESS_EVERY_MS : Int32 = 10_000
+
+///|
+const LIVENESS_TIMEOUT_MS : Int32 = 5_000
 
 ///|
 fn CoordinatorClient::CoordinatorClient(
   addr : String,
+  liveness? : (Int32, Int32),
 ) -> CoordinatorClient raise {
   let addr = @socket.Addr::parse(addr) catch {
     error => raise CoordinatorError::Transport(message="\{Repr(error)}")
   }
-  { addr, conn: Ref(None), gate: Semaphore(1), closed: Ref(false), }
+  let liveness = liveness.map(liveness => {
+    let (every_ms, timeout_ms) = liveness
+    let probe = {
+      addr,
+      conn: Ref(None),
+      gate: Semaphore(1),
+      closed: Ref(false),
+      liveness: None,
+    }
+    { probe, every_ms, timeout_ms, }
+  })
+  { addr, conn: Ref(None), gate: Semaphore(1), closed: Ref(false), liveness, }
 }
 
 ///|
-async fn CoordinatorClient::connect(addr : String) -> CoordinatorClient {
-  let client = CoordinatorClient(addr)
+async fn CoordinatorClient::connect(
+  addr : String,
+  liveness~ : (Int32, Int32) = (LIVENESS_EVERY_MS, LIVENESS_TIMEOUT_MS),
+) -> CoordinatorClient {
+  let client = CoordinatorClient(addr, liveness~)
   client.connection() |> ignore
   client
 }
@@ -27,6 +63,9 @@ async fn CoordinatorClient::connect(addr : String) -> CoordinatorClient {
 fn CoordinatorClient::close(self : CoordinatorClient) -> Unit {
   self.closed.val = true
   self.drop_connection()
+  if self.liveness is Some(liveness) {
+    liveness.probe.close()
+  }
 }
 
 ///|
@@ -114,6 +153,41 @@ fn coordinator_fatal(error : Error) -> Bool {
 }
 
 ///|
+/// `request_once`, abandoned with a retryable `Transport` error when the
+/// coordinator stops answering pings while the request waits.
+async fn CoordinatorClient::request_watched(
+  self : CoordinatorClient,
+  request : Json,
+) -> Json {
+  guard self.liveness is Some(liveness) else {
+    return self.request_once(request)
+  }
+  @async.with_task_group(group => {
+    group.spawn_bg(no_wait=true, () => {
+      for ;; {
+        @async.sleep(liveness.every_ms)
+        ignore(
+          liveness.probe.request(
+            { "op": "ping" },
+            max_retry=0,
+            timeout_ms=liveness.timeout_ms,
+          ),
+        ) catch {
+          error if @async.is_being_cancelled() => raise error
+          error => {
+            liveness.probe.drop_connection()
+            raise CoordinatorError::Transport(
+              message="coordinator did not answer a ping within \{liveness.timeout_ms} ms: \{Repr(error)}",
+            )
+          }
+        }
+      }
+    })
+    self.request_once(request)
+  })
+}
+
+///|
 async fn CoordinatorClient::request_once(
   self : CoordinatorClient,
   request : Json,
@@ -179,7 +253,7 @@ async fn CoordinatorClient::request_with_retry(
     max_retry~,
     fatal_error=coordinator_fatal,
     () => {
-      self.request_once(request) catch {
+      self.request_watched(request) catch {
         error if @async.is_being_cancelled() => {
           self.drop_connection()
           raise error

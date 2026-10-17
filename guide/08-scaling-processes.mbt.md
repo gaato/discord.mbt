@@ -77,6 +77,13 @@ bucket during connection cleanup. Connections use TCP keepalive, so a process
 whose host dies without closing its connection is cleaned up the same way
 within about 25 seconds.
 
+Identify and REST acquisitions can wait for minutes, because Identify spacing
+grows with the shard count and some REST buckets reset only after ten minutes,
+so they have no deadline. Instead, while one waits, the client pings the
+coordinator over a separate connection every 10 seconds. If a ping goes
+unanswered for 5 seconds, the client treats the coordinator as hung and
+abandons the attempt, then reconnects and retries as after a transport failure.
+
 The coordinator keeps all of its state in memory. Restarting it forgets the
 REST buckets and their rate-limit windows, the global window, and the Identify
 spacing, as well as cooldown windows. Requests waiting during a restart
