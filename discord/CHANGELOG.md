@@ -56,6 +56,10 @@ breaking change is listed with a migration note.
   header, then one second. It ignored the headers and fell back to one
   second, so `RateLimited` and `HttpRateLimited` reported a different delay
   than the same response would over the network.
+- Errors that wrap another error now keep its details instead of only its
+  type name: a middleware failure surfaced as `DiscordHttpError::Transport`,
+  a coordinator `Transport` error, and the coordinator's "invalid headers"
+  response, which now names the offending header.
 
 ## [0.8.0] - 2026-10-16
 

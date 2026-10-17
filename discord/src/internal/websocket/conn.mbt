@@ -42,7 +42,7 @@ pub async fn connect(
   let handle = ws_open(url, controller.signal()).wait(
     abort_controller=controller,
   ) catch {
-    error => raise WebSocketError::InvalidHandshake("\{error}")
+    error => raise WebSocketError::InvalidHandshake("\{Repr(error)}")
   }
   { handle, closed: None, pending: None, }
 }

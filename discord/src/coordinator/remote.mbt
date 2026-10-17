@@ -11,7 +11,7 @@ fn CoordinatorClient::CoordinatorClient(
   addr : String,
 ) -> CoordinatorClient raise {
   let addr = @socket.Addr::parse(addr) catch {
-    error => raise CoordinatorError::Transport(message="\{error}")
+    error => raise CoordinatorError::Transport(message="\{Repr(error)}")
   }
   { addr, conn: Ref(None), gate: Semaphore(1), closed: Ref(false), }
 }
@@ -33,7 +33,7 @@ fn CoordinatorClient::close(self : CoordinatorClient) -> Unit {
 async fn CoordinatorClient::dial(addr : @socket.Addr) -> @socket.Tcp {
   @socket.Tcp::connect(addr) catch {
     error if @async.is_being_cancelled() => raise error
-    error => raise CoordinatorError::Transport(message="\{error}")
+    error => raise CoordinatorError::Transport(message="\{Repr(error)}")
   }
 }
 
@@ -85,7 +85,7 @@ async fn CoordinatorClient::request_once(
   } catch {
     error if @async.is_being_cancelled() => raise error
     CoordinatorError::Disconnected => raise CoordinatorError::Disconnected
-    error => raise CoordinatorError::Transport(message="\{error}")
+    error => raise CoordinatorError::Transport(message="\{Repr(error)}")
   } noraise {
     line => line
   }

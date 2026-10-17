@@ -2,6 +2,11 @@
 priv suberror MiddlewareFailure derive(Debug)
 
 ///|
+priv suberror QuotaExhausted {
+  QuotaExhausted(remaining~ : Int32)
+} derive(Debug)
+
+///|
 async test "middleware execution order is onion-style" {
   let client = wire_test_client((_path, _headers, _body) => {
     status: 200,
@@ -141,9 +146,10 @@ async test "middleware sees final response after 429 retries" {
 async test "middleware failures surface as transport errors" {
   let client = Client("test-token")
   defer client.close()
-  client.middleware((_request, _next) => raise MiddlewareFailure)
+  client.middleware((_request, _next) => raise QuotaExhausted(remaining=0))
   try client.request(GetGateway) catch {
-    Transport(message~) => assert_true(message.contains("MiddlewareFailure"))
+    // The message keeps the error's payload, not only its type name.
+    Transport(message~) => assert_eq(message, "QuotaExhausted(remaining=0)")
     error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected transport error")

@@ -235,7 +235,7 @@ pub async fn Client::request(
         DiscordHttpError::Transport(message~) => raise Transport(message~)
         DiscordHttpError::Timeout(timeout_ms~) => raise Timeout(timeout_ms~)
         DiscordHttpError::Validation(message~) => raise Validation(message~)
-        error => raise Transport(message="\{error}")
+        error => raise Transport(message="\{Repr(error)}")
       }
     }
   }

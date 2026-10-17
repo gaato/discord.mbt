@@ -372,7 +372,7 @@ async fn Shard::run(
       ConnectionEnded::InvalidSession(resumable~) =>
         ConnectionEnded::InvalidSession(resumable~)
       TransportClosed(code~, reason~) => ConnectionEnded(code~, reason~)
-      e => ConnectionEnded(code=None, reason="\{e}")
+      e => ConnectionEnded(code=None, reason="\{Repr(e)}")
     } noraise {
       ended => ended
     }
@@ -495,7 +495,7 @@ async fn Shard::run_connection(
       let frame = @json.parse(recv_payload(transport, inflater~)) catch {
         error if @async.is_being_cancelled() => raise error
         TransportClosed(code~, reason~) => raise ConnectionEnded(code~, reason~)
-        e => raise ConnectionEnded(code=None, reason="bad frame: \{e}")
+        e => raise ConnectionEnded(code=None, reason="bad frame: \{Repr(e)}")
       }
       match decode_frame(frame) {
         Dispatch(t~, seq~, d~) => {
