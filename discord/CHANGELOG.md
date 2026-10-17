@@ -9,6 +9,11 @@ breaking change is listed with a migration note.
 
 ### Fixed
 
+- **Gateway zlib-stream compression no longer truncates large messages.**
+  A message whose compressed form exceeded 64 KiB was cut off after its
+  first 64 KiB, which failed the JSON parse and left the shared decoder out
+  of step with the stream. This regression arrived with the pure MoonBit
+  inflater in 0.9.0 and affected only `compress=true`.
 - **A coordinator restart no longer lets one process release another's REST
   bucket.** Leases were integers counted from zero by each coordinator
   process, so a release retried against a restarted coordinator could carry
