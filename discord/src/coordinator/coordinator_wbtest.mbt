@@ -193,18 +193,23 @@ async test "a stale HTTP release lease cannot release the current owner" {
     cooldown: @cooldown.InMemoryCooldownStore(),
     owners: Map([]),
     next_connection_id: Ref(2),
+    instance: "test",
     next_lease_id: Ref(0),
   }
   let first = ConnectionState::{ id: 0, held_buckets: Ref(Map([])), }
   let second = ConnectionState::{ id: 1, held_buckets: Ref(Map([])), }
   let bucket = "POST:/channels/lease-test/messages"
   let acquired_first = dispatch_request(
-    { "op": "http_acquire", "bucket": bucket, "global_exempt": false },
+    {
+      "op": "http_acquire",
+      "bucket": bucket,
+      "global_exempt": false,
+      "leases": "string",
+    },
     state,
     first,
   )
-  guard acquired_first is { "lease": first_lease_json, .. } &&
-    json_nonnegative_int(first_lease_json) is Some(first_lease) else {
+  guard acquired_first is { "lease": String(first_lease), .. } else {
     fail("first acquire did not return a lease")
   }
   dispatch_request(
@@ -220,12 +225,16 @@ async test "a stale HTTP release lease cannot release the current owner" {
   )
   |> ignore
   let acquired_second = dispatch_request(
-    { "op": "http_acquire", "bucket": bucket, "global_exempt": false },
+    {
+      "op": "http_acquire",
+      "bucket": bucket,
+      "global_exempt": false,
+      "leases": "string",
+    },
     state,
     second,
   )
-  guard acquired_second is { "lease": second_lease_json, .. } &&
-    json_nonnegative_int(second_lease_json) is Some(second_lease) else {
+  guard acquired_second is { "lease": String(second_lease), .. } else {
     fail("second acquire did not return a lease")
   }
   dispatch_request(
@@ -473,4 +482,123 @@ async test "remote cooldown store rejects a non-positive timeout" {
   } noraise {
     _ => fail("expected an invalid configuration error")
   }
+}
+
+///|
+async test "a lease from before a coordinator restart cannot release a new owner" {
+  let bucket = "POST:/channels/restart-lease/messages"
+  let address : Ref[String?] = Ref(None)
+  let stale : Ref[RemoteRateLimiter?] = Ref(None)
+  @async.with_task_group(first_group => {
+    let first = Coordinator::serve(first_group, addr="127.0.0.1:0")
+    defer first.close()
+    let limiter = RemoteRateLimiter::connect(first.addr())
+    for _ in 0..<2 {
+      limiter.acquire(bucket, global_exempt=true)
+      limiter.release(bucket, status=200, headers=@http.Headers::new())
+    }
+    limiter.acquire(bucket, global_exempt=true)
+    address.val = Some(first.addr())
+    stale.val = Some(limiter)
+  })
+  guard address.val is Some(address) && stale.val is Some(stale) else {
+    fail("coordinator restart fixture did not initialize")
+  }
+  defer stale.close()
+  @async.with_task_group(second_group => {
+    let second = Coordinator::serve(second_group, addr=address)
+    defer second.close()
+    let owner = RemoteRateLimiter::connect(address)
+    let waiter = RemoteRateLimiter::connect(address)
+    defer owner.close()
+    defer waiter.close()
+    // The restarted coordinator counts leases from zero again, so after two
+    // rounds the owner's lease carries the stale client's count.
+    for _ in 0..<2 {
+      owner.acquire(bucket, global_exempt=true)
+      owner.release(bucket, status=200, headers=@http.Headers::new())
+    }
+    owner.acquire(bucket, global_exempt=true)
+    stale.release(bucket, status=200, headers=@http.Headers::new())
+    let acquired = Ref(false)
+    let blocked = second_group.spawn(() => {
+      waiter.acquire(bucket, global_exempt=true)
+      acquired.val = true
+    })
+    @async.sleep(20)
+    assert_false(acquired.val)
+    owner.release(bucket, status=200, headers=@http.Headers::new())
+    blocked.wait()
+    waiter.release(bucket, status=200, headers=@http.Headers::new())
+  })
+}
+
+///|
+async test "a client still works with an older coordinator's integer leases" {
+  @async.with_task_group(group => {
+    let server = @socket.TcpServer(@socket.Addr::parse("127.0.0.1:0"))
+    let released : Array[Json] = []
+    let omit_lease = Ref(false)
+    group.spawn_bg(no_wait=true, () => {
+      server.run_forever(allow_failure=true, (conn, _) => {
+        while conn.read_until("\n") is Some(line) {
+          let request = @json.parse(line)
+          let reply : Json = match request {
+            { "op": "http_acquire", .. } if omit_lease.val => { "ok": true }
+            { "op": "http_acquire", .. } => { "ok": true, "lease": 7 }
+            { "op": "http_release", "lease": lease, .. } => {
+              released.push(lease)
+              { "ok": true }
+            }
+            _ => { "ok": true }
+          }
+          conn.write(reply.stringify() + "\n")
+        }
+      })
+    })
+    let limiter = RemoteRateLimiter::connect(server.addr.to_string())
+    defer limiter.close()
+    let bucket = "POST:/channels/old-coordinator/messages"
+    limiter.acquire(bucket, global_exempt=true)
+    limiter.release(bucket, status=200, headers=@http.Headers::new())
+    // The integer comes back exactly as the older coordinator issued it.
+    assert_eq(released, [7])
+    omit_lease.val = true
+    try limiter.acquire(bucket, global_exempt=true) catch {
+      CoordinatorError::InvalidResponse(message="missing lease") => ()
+      error => fail("unexpected \{Repr(error)}")
+    } noraise {
+      _ => fail("an acquire without a lease was accepted")
+    }
+  })
+}
+
+///|
+async test "a legacy client is refused before it can hold a bucket" {
+  @async.with_task_group(group => {
+    let coordinator = Coordinator::serve(group, addr="127.0.0.1:0")
+    defer coordinator.close()
+    let legacy = CoordinatorClient(coordinator.addr())
+    defer legacy.close()
+    let bucket = "POST:/channels/legacy/messages"
+    try
+      legacy.request({
+        "op": "http_acquire",
+        "bucket": bucket,
+        "global_exempt": false,
+      })
+      |> ignore
+    catch {
+      CoordinatorError::Remote(message~) =>
+        assert_true(message.contains("without string leases"), msg=message)
+      error => fail("unexpected \{Repr(error)}")
+    } noraise {
+      _ => fail("a legacy acquire was granted")
+    }
+    // Nothing was reserved: a current client takes the bucket at once.
+    let current = RemoteRateLimiter::connect(coordinator.addr())
+    defer current.close()
+    @async.with_timeout(1000, () => current.acquire(bucket, global_exempt=false))
+    current.release(bucket, status=200, headers=@http.Headers::new())
+  })
 }

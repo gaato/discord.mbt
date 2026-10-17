@@ -104,7 +104,7 @@ priv enum Request {
   HttpAcquire(bucket~ : String, global_exempt~ : Bool)
   HttpRelease(
     bucket~ : String,
-    lease~ : Int32,
+    lease~ : String,
     status~ : Int32,
     headers~ : @http.Headers
   )
@@ -136,6 +136,13 @@ fn parse_request(request : Json) -> Result[Request, String] {
       Ok(IdentifyAcquire(shard_id~))
     }
     "http_acquire" => {
+      // A client that cannot read string leases would hold the bucket it is
+      // granted; refuse it before anything is reserved.
+      guard request is { "leases": "string", .. } else {
+        return Err(
+          "http_acquire from a client without string leases; upgrade it to match this coordinator",
+        )
+      }
       guard request
         is { "bucket": String(bucket), "global_exempt": exempt_json, .. } &&
         json_bool(exempt_json) is Some(global_exempt) else {
@@ -147,15 +154,14 @@ fn parse_request(request : Json) -> Result[Request, String] {
       guard request
         is {
           "bucket": String(bucket),
-          "lease": lease_json,
+          "lease": String(lease),
           "status": status_json,
           "headers": Object(header_fields),
           ..
         } &&
-        json_nonnegative_int(status_json) is Some(status) &&
-        json_nonnegative_int(lease_json) is Some(lease) else {
+        json_nonnegative_int(status_json) is Some(status) else {
         return Err(
-          "http_release requires bucket, lease, non-negative integer status, and headers object",
+          "http_release requires bucket, string lease, non-negative integer status, and headers object",
         )
       }
       match decode_headers(header_fields) {

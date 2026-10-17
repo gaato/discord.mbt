@@ -11,6 +11,8 @@ pub(all) suberror BotConfigError {
   MismatchedSession(shard_id~ : Int32)
   /// `event_backlog` must allow at least one waiting event.
   InvalidEventBacklog(value~ : Int32)
+  /// `shutdown_grace_ms` must not be negative.
+  InvalidShutdownGrace(value~ : Int32)
 } derive(Debug)
 
 ///|
@@ -190,7 +192,8 @@ pub fn BotBuilder::on_decode_error(
 ///|
 /// Validate the configuration and freeze the registrations into a `Bot`.
 /// Raises `BotConfigError` for an empty token, a shard selection Discord
-/// cannot represent, a saved session whose ids disagree, or an `event_backlog` below 1. Intents are resolved here, so warnings about
+/// cannot represent, a saved session whose ids disagree, an `event_backlog`
+/// below 1, or a negative `shutdown_grace_ms`. Intents are resolved here, so warnings about
 /// subscriptions the intents cannot deliver appear once, at build time.
 pub fn BotBuilder::build(self : BotBuilder) -> Bot raise BotConfigError {
   let core = self.core
@@ -199,6 +202,9 @@ pub fn BotBuilder::build(self : BotBuilder) -> Bot raise BotConfigError {
   }
   if core.event_backlog_ < 1 {
     raise InvalidEventBacklog(value=core.event_backlog_)
+  }
+  if core.shutdown_grace_ms_ < 0 {
+    raise InvalidShutdownGrace(value=core.shutdown_grace_ms_)
   }
   if core.shards_.static_layout() is Some((ids, count)) &&
     shard_layout_problem(ids, count) is Some(message) {

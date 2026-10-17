@@ -24,6 +24,8 @@ pub struct FakeTransport {
   send_started : @aqueue.Queue[Unit]
   /// Makes every close raise `SimFailure` after closing.
   fail_close : Ref[Bool]
+  /// Virtual milliseconds the first close takes, on the transport's clock.
+  close_takes_ms : Ref[Int32]
   close_calls : Ref[Int32]
   close_code : Ref[Int32?]
   close_during_send : Ref[Bool]
@@ -45,6 +47,7 @@ pub fn FakeTransport::FakeTransport(
     block_next_send: Ref(false),
     send_started: Queue(kind=Unbounded),
     fail_close: Ref(false),
+    close_takes_ms: Ref(0),
     close_calls: Ref(0),
     close_code: Ref(None),
     close_during_send: Ref(false),
@@ -122,6 +125,9 @@ pub impl @gateway.GatewayTransport for FakeTransport with fn close(self, code~) 
     return
   }
   self.close_code.val = Some(code)
+  if self.clock is Some(clock) && self.close_takes_ms.val > 0 {
+    (clock : &@hclock.Clock).sleep(self.close_takes_ms.val)
+  }
   self.incoming.close(
     error=@gateway.TransportClosed(code=Some(code), reason="client closed"),
   )
