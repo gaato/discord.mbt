@@ -6,15 +6,20 @@ releases (0.x → 0.y) may contain breaking changes; patch releases do not.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-17
+
 ### Changed
 
+- **Builds against `gaato/discord` 0.9.0**, whose breaking changes are listed
+  in [its changelog](https://github.com/gaato/discord.mbt/blob/main/discord/CHANGELOG.md).
+  Migration: depend on `gaato/discord@0.9.0` alongside this release.
 - The wire-protocol layer is hidden from the generated documentation and the
   package interface with `#doc(hidden)`: the `encode_*` / `parse_*` /
   `build_*` helpers, the socket openers, `run_send_loop`, `VoiceGateway`,
   `DaveMachine`, `TransportCipher`, `RtpPacket`, `ReorderBuffer`,
-  `OggPacketReader`, and their error types, including `DaveError`. They remain callable; the
-  documented surface is `VoiceClient`, `VoiceConnection`, audio sources, and
-  the events they deliver.
+  `OggPacketReader`, and their error types, including `DaveError`. They
+  remain callable; the documented surface is `VoiceClient`,
+  `VoiceConnection`, audio sources, and the events they deliver.
 
 ## [0.1.0] - 2026-10-16
 
