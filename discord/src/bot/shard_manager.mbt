@@ -140,6 +140,7 @@ fn[X] BotCore::start_managed_shard(
     compress=self.compress_,
     telemetry=event => self.emit_telemetry(event),
     clock=self.clock_.val,
+    rand?=self.rand_.val,
     resume?,
   )
 }
