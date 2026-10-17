@@ -1,6 +1,7 @@
 import {
   "gaato/discord/gateway",
   "gaato/http-async/mock" @simclock,
+  "gaato/http/clock" @hclock,
   "moonbitlang/async",
   "moonbitlang/async/aqueue",
   "moonbitlang/core/json",

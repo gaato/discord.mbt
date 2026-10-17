@@ -31,8 +31,9 @@ fn has_sync_flush_suffix(bytes : Array[Byte]) -> Bool {
 }
 
 ///|
-/// Inflate one sync-flushed message. The decoder emits every byte up to the
-/// flush point, so `NeedMoreInput` means the message is complete.
+/// Inflate one sync-flushed message. One decoder step accepts at most 64 KiB
+/// of input and emits every byte up to the flush point, so `NeedMoreInput`
+/// with no input left means the message is complete.
 fn ZlibStreamInflater::inflate(
   self : ZlibStreamInflater,
   compressed : Bytes,
@@ -54,7 +55,7 @@ fn ZlibStreamInflater::inflate(
     }
     input = input[self.decoder.last_consumed():]
     match status {
-      NeedMoreInput => break
+      NeedMoreInput => if input.length() == 0 { break }
       NeedMoreOutput => continue
       Done => raise Malformed(message="zlib-stream ended")
     }

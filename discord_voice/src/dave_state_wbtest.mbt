@@ -557,6 +557,28 @@ test "DAVE tracks multiple pending transitions independently" {
 }
 
 ///|
+test "DAVE keeps only the most recent prepared transitions" {
+  let fake = FakeDaveBackend::new()
+  let machine = fake_machine(fake)
+  for id in 1..<=1000 {
+    machine.handle(DavePrepareTransition(transition_id=id, protocol_version=1))
+    |> ignore
+  }
+  assert_eq(machine.pending.length(), MAX_PENDING_TRANSITIONS)
+  // The oldest were dropped; the latest still execute.
+  assert_eq(machine.handle(DaveExecuteTransition(transition_id=1)), [])
+  assert_eq(machine.handle(DaveExecuteTransition(transition_id=1000)), [
+    SwitchMediaContext(protocol_version=1),
+  ])
+  assert_eq(
+    machine.handle(
+      DaveExecuteTransition(transition_id=1001 - MAX_PENDING_TRANSITIONS),
+    ),
+    [SwitchMediaContext(protocol_version=1)],
+  )
+}
+
+///|
 test "DAVE connected MLS member receives the latest prepared ratchet" {
   let fake = FakeDaveBackend::new()
   let machine = fake_machine(fake)
@@ -676,7 +698,7 @@ fn[X] dave_test_connection(
   transport : DaveConnectionTransport,
   telemetry : Array[VoiceTelemetry],
 ) -> VoiceConnection raise {
-  let parked : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  // virtual time that never advances: heartbeats and keepalives never fire
   VoiceConnection::start(
     group,
     {
@@ -692,7 +714,7 @@ fn[X] dave_test_connection(
     connector=_ => (transport : &VoiceTransport),
     receive=false,
     telemetry=event => telemetry.push(event),
-    sleeper=_ => parked.get(),
+    clock=@simclock.VirtualClock(),
   )
 }
 
@@ -881,7 +903,7 @@ async test "voice playback reports DAVE drops and source failures and replaces s
   let udp = DaveConnectionUdp::{ sent: Queue(kind=Unbounded), }
   let first = DaveConnectionAudio()
   let replacement = DaveConnectionAudio()
-  let parked : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  let clock = @simclock.VirtualClock()
   @async.with_task_group(group => {
     let connection = VoiceConnection::start(
       group,
@@ -897,15 +919,15 @@ async test "voice playback reports DAVE drops and source failures and replaces s
       rejoin=() => fail("unexpected rejoin"),
       connector=_ => (transport : &VoiceTransport),
       receive=false,
-      sleeper=_ => parked.get(),
+      clock~,
       telemetry=event => try! (dropped.try_put(event) |> ignore),
     )
     identify_dave_test_connection(transport)
     connection.dave = Some(fake_machine(fake))
     connection.establish_session("aead_aes256_gcm_rtpsize", Bytes::new(32), 0)
     assert_eq(connection.next_event(), ConnectionReady)
-    connection.udp = Some(udp)
-    connection.ssrc = Some(42U)
+    connection.set_udp(Some(udp))
+    connection.set_ssrc(Some(42U))
     connection.play(first)
     guard! transport.text.get() is { "op": Number(5, ..), .. }
     first.requests.get()
@@ -917,6 +939,12 @@ async test "voice playback reports DAVE drops and source failures and replaces s
         break
       }
     }
+    // the dropped frame still takes its 20ms slot before the next is read;
+    // behind it wait the UDP keepalive and the gateway heartbeat
+    clock.settle()
+    assert_eq(first.requests.try_get(), None)
+    assert_eq(clock.pending(), [20, 5000, 60000])
+    clock.advance(20)
     first.requests.get()
     let stop = connection.playback_stop.unwrap()
     connection.play(replacement)
@@ -961,8 +989,8 @@ async test "voice playback discards sources superseded in the queue and during s
     connection.stop()
     connection.dave = Some(fake_machine(FakeDaveBackend::new()))
     connection.establish_session("aead_aes256_gcm_rtpsize", Bytes::new(32), 0)
-    connection.udp = Some(udp)
-    connection.ssrc = Some(42U)
+    connection.set_udp(Some(udp))
+    connection.set_ssrc(Some(42U))
     connection.play(current)
     current.requests.get()
     assert_eq(discarded.requests.try_get(), None)

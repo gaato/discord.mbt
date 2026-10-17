@@ -400,3 +400,25 @@ test "a sender without a decryptor passes no plaintext while DAVE is active" {
     assert_eq(undecryptable_drop_reason(active_version~, magic~), reason)
   }
 }
+
+///|
+test "a user's new SSRC replaces the old one and its reorder window" {
+  let pipeline = ReceivePipeline::new(_ => ())
+  for ssrc in 1U..<1001U {
+    pipeline.handle_gateway_message(Speaking(ssrc~, user_id="200", flags=1))
+    |> ignore
+    // What a received packet from the SSRC leaves behind.
+    pipeline.reorder_by_ssrc[ssrc] = ReorderBuffer::new()
+  }
+  assert_eq(pipeline.users_by_ssrc.length(), 1)
+  assert_eq(pipeline.reorder_by_ssrc.length(), 1)
+  // Repeating the same mapping keeps the window.
+  pipeline.handle_gateway_message(Speaking(ssrc=1000U, user_id="200", flags=0))
+  |> ignore
+  assert_eq(pipeline.reorder_by_ssrc.length(), 1)
+  // An SSRC that changes hands starts from a clean window.
+  pipeline.handle_gateway_message(Speaking(ssrc=1000U, user_id="300", flags=1))
+  |> ignore
+  assert_eq(pipeline.users_by_ssrc.get(1000U), Some("300"))
+  assert_eq(pipeline.reorder_by_ssrc.length(), 0)
+}
