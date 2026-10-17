@@ -51,7 +51,12 @@ impl GatewayTransport for WsTransport with fn recv(self) {
     e => raise TransportClosed(code=None, reason="\{Repr(e)}")
   }
   guard data is Some(data) else {
-    // 1009: Message Too Big. The session survives, so the shard resumes.
+    // 1009: Message Too Big, sent to the peer too; the shard's own close
+    // that follows is a no-op. The session survives, so the shard resumes.
+    GatewayTransport::close(self, code=1009) catch {
+      error if @async.is_being_cancelled() => raise error
+      _ => ()
+    }
     raise TransportClosed(
       code=Some(1009),
       reason="message larger than \{self.max_message_bytes} bytes",
