@@ -722,8 +722,10 @@ async test "the coordinator answers an over-long request line and hangs up" {
     defer coordinator.close()
     let conn = @socket.Tcp::connect(@socket.Addr::parse(coordinator.addr()))
     defer conn.close()
+    // One byte past the limit and no newline: the coordinator rejects the
+    // line once it has read every byte, so it closes with nothing unread
+    // and the client sees a clean end instead of a reset.
     conn.write(Bytes::make(MAX_LINE_BYTES + 1, b'x'))
-    conn.write(b"\n")
     let reader = LineReader::new()
     guard reader.next(chunk => conn.read(chunk)) is Line(line) else {
       fail("no answer to an over-long line")
