@@ -303,6 +303,7 @@ test "unavailable guilds retain data until a permanent delete" {
     cached_event("GUILD_DELETE", "{\"id\":\"100\",\"unavailable\":true}"),
   )
   assert_true(cache.is_guild_unavailable(guild_id))
+  assert_eq(cache.unavailable_guilds(), [guild_id])
   assert_true(cache.guild(guild_id) is Some(_))
   let detached = cache.guilds()
   detached.push(cache.guild(guild_id).unwrap())
@@ -310,6 +311,7 @@ test "unavailable guilds retain data until a permanent delete" {
 
   cache.update(cached_event("GUILD_CREATE", guild_create_fixture()))
   assert_false(cache.is_guild_unavailable(guild_id))
+  assert_eq(cache.unavailable_guilds(), [])
   cache.update(
     cached_event("GUILD_DELETE", "{\"id\":\"100\",\"unavailable\":false}"),
   )
