@@ -25,6 +25,7 @@ import {
   "gaato/discord/internal/gatewaysim",
   "gaato/http/clock" @hclock,
   "moonbitlang/core/random",
+  "moonbitlang/core/debug",
 } for "test"
 
 import {
@@ -59,6 +60,9 @@ options(
     "reconnect.mbt": [ "js", "native", "wasm" ],
     "reconnect_wbtest.mbt": [ "js", "native", "wasm" ],
     "shard.mbt": [ "js", "native", "wasm" ],
+    "shard_fuzz_test.mbt": [ "js", "native", "wasm" ],
+    "shard_fuzz_seeds_test.mbt": [ "native", "wasm" ],
+    "shard_fuzz_seeds_js_test.mbt": [ "js" ],
     "state.mbt": [ "js", "native", "wasm" ],
     "transport.mbt": [ "js", "native", "wasm" ],
   },

@@ -88,6 +88,15 @@ pub fn VirtualClock::pending(self : VirtualClock) -> Array[Int32] {
 }
 
 ///|
+/// The deadline of the earliest pending timer.
+pub fn VirtualClock::next_deadline(self : VirtualClock) -> Int64? {
+  match self.sorted() {
+    [waiter, ..] => Some(waiter.deadline)
+    [] => None
+  }
+}
+
+///|
 /// Let ready tasks run until the progress count stays unchanged for
 /// `stable_rounds` consecutive scheduler rounds.
 pub async fn VirtualClock::settle(
