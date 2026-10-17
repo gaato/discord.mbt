@@ -224,7 +224,7 @@ pub fn BotBuilder::build(self : BotBuilder) -> Bot raise BotConfigError {
     services_: core.services_.copy(),
     starting_: Ref(false),
     running_shards_: Ref([]),
-    collector_: EventCollector(),
+    collector_: EventCollector(clock=core.clock_),
     frozen_intents_: Some(core.resolved_intents()),
   }
   { core: built, running_: Ref(false), }

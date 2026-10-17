@@ -159,6 +159,7 @@ fn BotCore::new(
   event_backlog~ : Int32 = DEFAULT_EVENT_BACKLOG,
   shutdown_grace_ms~ : Int32 = DEFAULT_SHUTDOWN_GRACE_MS,
 ) -> BotCore {
+  let clock : Ref[&@hclock.Clock] = Ref(@clock.default_clock())
   {
     app_: app,
     token_: token,
@@ -190,10 +191,10 @@ fn BotCore::new(
     decode_errors_: [],
     telemetry_: [],
     services_: [],
-    collector_: EventCollector(),
+    collector_: EventCollector(clock~),
     connector_: Ref(None),
     gateway_bot_info_: Ref(None),
-    clock_: Ref(@clock.default_clock()),
+    clock_: clock,
     frozen_intents_: None,
   }
 }

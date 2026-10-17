@@ -313,13 +313,19 @@ async test "fetch watches matching rate limits and times out with no leaked expe
       }
     })
     assert_eq(ctx.collector_.waiters.length(), 0)
-    try ctx.fetch_guild_members(Id(1UL), All, timeout_ms=10) catch {
-      GatewayRequestTimeout => ()
-      error => fail("unexpected error: \{error}")
-    } noraise {
-      _ => fail("expected timeout")
-    }
-    manager_get(clock, transports[0].outgoing, "timed out request") |> ignore
+    @async.with_task_group(group => {
+      let fetching = group.spawn(no_wait=true, allow_failure=true, () => {
+        ctx.fetch_guild_members(Id(1UL), All, timeout_ms=10)
+      })
+      manager_get(clock, transports[0].outgoing, "timed out request") |> ignore
+      clock.advance(10)
+      try fetching.wait() catch {
+        GatewayRequestTimeout => ()
+        error => fail("unexpected error: \{error}")
+      } noraise {
+        _ => fail("expected timeout")
+      }
+    })
     assert_eq(ctx.collector_.waiters.length(), 0)
     @async.with_task_group(group => {
       let fetching = group.spawn(no_wait=true, allow_failure=true, () => {

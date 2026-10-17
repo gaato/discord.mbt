@@ -24,7 +24,7 @@ async fn wait_until_registered(
   kind : @model.EventKind,
   count : Int32,
 ) -> Unit {
-  // No clock drives the collector; settling only lets the waiters run.
+  // Settling a clock nothing waits on only lets the waiters run.
   @simclock.VirtualClock().settle()
   let mut found = 0
   for waiter in collector.waiters {
@@ -90,11 +90,17 @@ async test "one gateway event resolves every matching collector" {
 
 ///|
 async test "event collector timeout and cancellation remove registrations" {
-  let collector = EventCollector()
-  assert_true(
-    collector.wait_for(Events::message_delete(), _ => true, timeout_ms=10)
-    is None,
-  )
+  let clock = @simclock.VirtualClock()
+  let collector = EventCollector(clock=Ref(clock))
+  @async.with_task_group(group => {
+    let timing_out = group.spawn(() => {
+      collector.wait_for(Events::message_delete(), _ => true, timeout_ms=10)
+    })
+    clock.advance(9)
+    assert_true(collector.waits_for(KMessageDelete))
+    clock.advance(1)
+    assert_true(timing_out.wait() is None)
+  })
   assert_false(collector.waits_for(KMessageDelete))
   @async.with_task_group(group => {
     let pending = group.spawn(no_wait=true, allow_failure=true, () => {

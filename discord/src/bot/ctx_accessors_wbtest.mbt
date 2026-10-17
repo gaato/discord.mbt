@@ -171,11 +171,10 @@ async test "gateway context exposes raw handles, refs, and waiters" {
     let refetched = ctx.ref_of_message(event.message).fetch()
     inspect(refetched.content, content="hello")
 
-    // Waiters time out to None instead of raising. Event waits time out on
-    // real time; component waits on the bot's clock.
-    assert_true(
-      ctx.wait_for(Events::message_create(), _ => false, timeout_ms=1) is None,
-    )
+    // Waiters time out to None instead of raising, on the bot's clock.
+    let unmatched = group.spawn(no_wait=true, () => {
+      ctx.wait_for(Events::message_create(), _ => false, timeout_ms=1)
+    })
     let unclicked = group.spawn(no_wait=true, () => {
       ctx.wait_for_component(
         @app.component_route(
@@ -187,6 +186,7 @@ async test "gateway context exposes raw handles, refs, and waiters" {
       )
     })
     clock.advance(1)
+    assert_true(unmatched.wait() is None)
     assert_true(unclicked.wait() is None)
     ctx.shutdown()
     running.wait()
