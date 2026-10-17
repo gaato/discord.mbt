@@ -42,6 +42,10 @@ async fn LineReader::next(
   for ;; {
     for i in scanned..<self.pending.length() {
       if self.pending[i] == b'\n' {
+        // A read can carry the newline past the limit; the line still is.
+        if i > MAX_LINE_BYTES {
+          return TooLong
+        }
         let line = Bytes::from_array(self.pending[:i])
         let rest = self.pending[i + 1:].to_owned()
         self.pending.clear()

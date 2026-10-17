@@ -35,6 +35,9 @@ async test "line reader refuses a line past the limit" {
     LineReader::new().next(pieces(at_limit, 4096)) is Line(line) &&
     line.length() == MAX_LINE_BYTES,
   )
+  // One byte over, with the newline arriving in a later read.
+  let over = Bytes::make(MAX_LINE_BYTES + 1, b'x') + b"\n"
+  assert_true(LineReader::new().next(pieces(over, 4096)) is TooLong)
   // A peer that streams without a newline is cut off instead of buffered.
   let endless : async (FixedArray[Byte]) -> Int32 = chunk => {
     chunk.fill(b'x')
