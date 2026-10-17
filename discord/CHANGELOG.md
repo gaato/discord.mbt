@@ -28,6 +28,11 @@ breaking change is listed with a migration note.
   exposes it to executors. `ResponseGate`, `ResponseGate::rest`,
   `ResponseGate::capture`, and `App::serve` accept the same `clock?`. Every
   default is the wall clock.
+- **Bot shutdown is bounded.** After `GatewayCtx::shutdown`, `run` waits for
+  event and interaction handlers that are still running for at most
+  `BotBuilder(shutdown_grace_ms~)` (default `DEFAULT_SHUTDOWN_GRACE_MS`,
+  10 seconds), then cancels the rest with a warning. Before, it waited for
+  them without limit, so one hung handler kept the process from stopping.
 
 ## [0.9.0] - 2026-10-17
 

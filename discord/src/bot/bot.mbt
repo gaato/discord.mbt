@@ -97,6 +97,7 @@ priv struct BotCore {
   sync_ : @app.CommandScope?
   sync_unowned_ : @framework.UnownedCommands
   event_backlog_ : Int32
+  shutdown_grace_ms_ : Int32
   typed_events_ : Array[TypedEventHandler]
   raw_events_ : Array[async (GatewayCtx, @model.Event) -> Unit]
   event_middleware_ : Array[EventMiddleware]
@@ -112,6 +113,9 @@ priv struct BotCore {
   // interval. Production always uses the REST response and 5250ms margin.
   gateway_bot_info_ : Ref[@model.GatewayBotInfo?]
   identify_spacing_ms_ : Ref[Int32]
+  // Whitebox seam for virtual time: shards, the identify queue, interaction
+  // timing, and the shutdown grace period all read this clock.
+  clock_ : Ref[&@hclock.Clock]
   // Intents resolved (and warned about) once by `BotBuilder::build`.
   frozen_intents_ : @model.Intents?
 }
@@ -154,6 +158,7 @@ fn BotCore::new(
   sync_unowned~ : @framework.UnownedCommands = Delete,
   resume~ : Map[Int32, BotSession] = Map([]),
   event_backlog~ : Int32 = DEFAULT_EVENT_BACKLOG,
+  shutdown_grace_ms~ : Int32 = DEFAULT_SHUTDOWN_GRACE_MS,
 ) -> BotCore {
   {
     app_: app,
@@ -178,6 +183,7 @@ fn BotCore::new(
     sync_: sync,
     sync_unowned_: sync_unowned,
     event_backlog_: event_backlog,
+    shutdown_grace_ms_: shutdown_grace_ms,
     typed_events_: [],
     raw_events_: [],
     event_middleware_: [],
@@ -189,6 +195,7 @@ fn BotCore::new(
     connector_: Ref(None),
     gateway_bot_info_: Ref(None),
     identify_spacing_ms_: Ref(5250),
+    clock_: Ref(@clock.default_clock()),
     frozen_intents_: None,
   }
 }
@@ -555,12 +562,15 @@ async fn BotCore::spawn_event_handlers(
 fn BotCore::spawn_interaction(
   self : BotCore,
   group : @async.TaskGroup[Unit],
+  handlers : HandlerTracker,
   framework : @framework.Framework,
   interaction : @model.Interaction,
 ) -> Unit {
   // Admission is unbounded and never blocks the dispatch loop: the response
   // deadline starts here, and the app applies its work budget per handler.
+  handlers.enter()
   group.spawn_bg(allow_failure=true, () => {
+    defer handlers.leave()
     ignore(
       framework.process(interaction) catch {
         error if @async.is_being_cancelled() => raise error
@@ -602,6 +612,7 @@ async fn BotCore::run(self : BotCore) -> Unit {
         @queue.InMemoryQueue(
           max_concurrency=resolved.max_concurrency,
           spacing_ms=self.identify_spacing_ms_.val,
+          clock=self.clock_.val,
         )
     }
     let identify_queue : &@queue.IdentifyQueue = (
@@ -643,7 +654,8 @@ async fn BotCore::run(self : BotCore) -> Unit {
         }
       })
     }
-    let spawner = self.app_.spawner(group)
+    let handlers = HandlerTracker::new()
+    let spawner = handlers.spawner(self.app_.spawner(group))
     // Event middleware and handler fan-out run in their own task so the
     // dispatch loop never waits for event handler capacity; interactions,
     // including those that wake component waiters, are always read promptly.
@@ -687,7 +699,11 @@ async fn BotCore::run(self : BotCore) -> Unit {
     let mut framework : @framework.Framework? = None
     let initialize_context = (owner : ManagedShard, ready : @model.Ready) => {
       if framework is None {
-        let router = @framework.Framework(client, ready.application.id)
+        let router = @framework.Framework(
+          client,
+          ready.application.id,
+          clock=self.clock_.val,
+        )
         let waiter : @app.ComponentWaiter = (custom_id, user, timeout_ms) => {
           router.wait_for_component(custom_id~, user?, timeout_ms?)
         }
@@ -813,7 +829,7 @@ async fn BotCore::run(self : BotCore) -> Unit {
               self.collector_.dispatch(event)
               // Processing is another bounded child task. Awaiting it here
               // would deadlock handlers waiting for a later component event.
-              self.spawn_interaction(group, router, interaction)
+              self.spawn_interaction(group, handlers, router, interaction)
               dispatch_event(ctx, event)
             }
             _ =>
@@ -870,6 +886,19 @@ async fn BotCore::run(self : BotCore) -> Unit {
         }
         @gateway.ShardEvent::.. => ()
       }
+    }
+    // Only a requested shutdown ends the loop. Give running handlers the
+    // grace period, then cancel what is left with the rest of the group.
+    let grace_ms = self.shutdown_grace_ms_
+    if @clock.timeout_opt(self.clock_.val, grace_ms, () => handlers.wait_idle())
+      is None {
+      self.app_.warn(
+        @app.Executor(
+          source="gateway",
+          message="\{handlers.active} handlers were still running \{grace_ms} ms after shutdown; cancelling them",
+        ),
+      )
+      group.return_immediately(())
     }
   })
 }

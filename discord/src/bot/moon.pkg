@@ -7,9 +7,12 @@ import {
   "gaato/discord/queue",
   "gaato/discord/framework",
   "gaato/discord/app",
+  "gaato/discord/internal/clock",
+  "gaato/http/clock" @hclock,
   "moonbitlang/core/json",
   "moonbitlang/async",
   "moonbitlang/async/aqueue",
+  "moonbitlang/async/cond_var",
 }
 
 import {
@@ -22,6 +25,8 @@ import {
 import {
   "gaato/discord/interaction",
   "gaato/discord/internal/clock",
+  "gaato/discord/internal/simclock",
+  "gaato/discord/internal/gatewaysim",
   "moonbitlang/core/json",
   "moonbitlang/async/aqueue",
 } for "wbtest"

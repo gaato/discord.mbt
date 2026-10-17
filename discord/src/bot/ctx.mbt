@@ -220,7 +220,8 @@ fn guild_shard_id(
 
 ///|
 /// Request a graceful stop. Closing every managed shard wakes the run loop;
-/// the task group then waits for already-started handlers before returning.
+/// `run` then waits for already-started handlers, for at most the bot's
+/// `shutdown_grace_ms`, and cancels the ones still running after it.
 pub async fn GatewayCtx::shutdown(self : GatewayCtx) -> Unit {
   self.shutdown_requested_.val = true
   close_shards(self.shards_)

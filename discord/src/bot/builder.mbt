@@ -52,6 +52,10 @@ pub struct BotBuilder {
 /// behind, further events skip them — with an `EventDropped` telemetry event
 /// each and one warning per overload — until they catch up. The cache and
 /// interaction routing never wait in this backlog.
+///
+/// After a requested shutdown, `run` waits up to `shutdown_grace_ms` for
+/// event and interaction handlers that are still running, then cancels them
+/// with a warning (default `DEFAULT_SHUTDOWN_GRACE_MS`).
 pub fn BotBuilder::BotBuilder(
   app : @app.App,
   token~ : String,
@@ -66,6 +70,7 @@ pub fn BotBuilder::BotBuilder(
   sync_unowned~ : @framework.UnownedCommands = Delete,
   resume~ : Map[Int32, BotSession] = Map([]),
   event_backlog~ : Int32 = DEFAULT_EVENT_BACKLOG,
+  shutdown_grace_ms~ : Int32 = DEFAULT_SHUTDOWN_GRACE_MS,
 ) -> BotBuilder {
   {
     core: BotCore::new(
@@ -82,6 +87,7 @@ pub fn BotBuilder::BotBuilder(
       sync_unowned~,
       resume~,
       event_backlog~,
+      shutdown_grace_ms~,
     ),
   }
 }
