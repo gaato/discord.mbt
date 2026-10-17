@@ -105,6 +105,18 @@ priv struct Admission {
   wait_limit_ms : Int32
   /// The framework's clock, which also times the gates' windows.
   clock : &@hclock.Clock
+  /// Set from the first refusal until a deferred interaction is admitted
+  /// again, so one overload produces one warning.
+  mut refusing : Bool
+}
+
+///|
+/// A deferred interaction was refused because the waiting budget is full.
+/// Returns `true` for the first refusal of an overload, the one to warn about.
+fn Admission::refused(self : Admission) -> Bool {
+  let first = !self.refusing
+  self.refusing = true
+  first
 }
 
 ///|
@@ -229,11 +241,15 @@ async fn run_admitted(
     )
     match step {
       Refuse => {
+        if admission.refused() {
+          warn(DeferredInteractionsRefused(max_pending=admission.max_pending))
+        }
         // Still pending: the error policy can answer with a message.
         busy()
         return
       }
       Deferred(wait_ms~) => {
+        admission.refusing = false
         admission.pending += 1
         let waiting = Ref(true)
         defer (if waiting.val { admission.pending -= 1 })

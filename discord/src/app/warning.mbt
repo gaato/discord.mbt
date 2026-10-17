@@ -41,6 +41,10 @@ pub(all) enum AppWarning {
   /// A warning raised by an executor about its own transport (for example the
   /// gateway `Bot`), identified by `source`.
   Executor(source~ : String, message~ : String)
+  /// `max_pending` deferred interactions already wait for a handler, so more
+  /// are refused with `HandlerError::Busy` until one starts. Reported once
+  /// per overload.
+  DeferredInteractionsRefused(max_pending~ : Int32)
   /// The cooldown store stopped answering; `outage` is what commands with a
   /// cooldown do until it answers again. Reported once per outage.
   CooldownUnavailable(reason~ : String, outage~ : CooldownOutage)
@@ -94,6 +98,10 @@ pub impl Show for AppWarning with fn output(self, logger) {
     InteractionProcessingFailed(error~) =>
       logger.write_string("interaction processing failed: \{Repr(error)}")
     Executor(message~, ..) => logger.write_string(message)
+    DeferredInteractionsRefused(max_pending~) =>
+      logger.write_string(
+        "\{max_pending} deferred interactions are waiting for a handler; refusing more as busy until one starts",
+      )
     CooldownUnavailable(reason~, outage~) => {
       let effect = match outage {
         Allow => "commands run without cooldowns"

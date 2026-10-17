@@ -677,6 +677,7 @@ pub fn App::attach(
     max_pending: self.max_pending_,
     wait_limit_ms: self.deferred_wait_ms_,
     clock: framework.clock(),
+    refusing: false,
   }
   let warn = self.warn_
   // Refuse one more deferred interaction through the error policy while it is

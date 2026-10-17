@@ -69,6 +69,14 @@ breaking change is listed with a migration note.
   seconds instead of blocking that bucket for every process until the
   operating system gave up on the connection, and a client stops waiting on a
   coordinator host that vanished.
+- **Refusing deferred interactions as busy is reported.** When
+  `max_pending` deferred interactions already wait for a handler, the first
+  refusal of each overload now reaches `on_warn` as the new
+  `AppWarning::DeferredInteractionsRefused`; before, only the end user saw
+  the busy message.
+- **`InMemoryCooldownStore` sweeps expired keys as it grows.** It swept only
+  after the window of the call that last swept had passed, so one command
+  with a long cooldown kept every expired short window in memory until then.
 - **A coordinator response cut off by a closing connection reads as a
   disconnect.** It used to surface as `InvalidResponse`, which is not
   retried, so a coordinator dying mid-response failed the REST request or
