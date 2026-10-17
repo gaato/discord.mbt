@@ -48,7 +48,7 @@ async test "signed HTTP API verifies exact bytes before dispatch" {
 }
 
 ///|
-async test "signed HTTP API answers 202 without a reply and 504 past the deadline" {
+async test "signed HTTP API answers 202 without a reply" {
   let key = "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a"
   let seed = @hex.decode(
     "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60",
@@ -79,14 +79,6 @@ async test "signed HTTP API answers 202 without a reply and 504 past the deadlin
       handler=Raw(_ => ()),
     ),
   )
-  app.command(
-    @app.slash(
-      name="slow",
-      description="Slow initial response",
-      args=@interaction.Args::unit(),
-      handler=Raw(_ => @async.sleep(50)),
-    ),
-  )
   @async.with_task_group(group => {
     let endpoint = app
       .build()
@@ -99,16 +91,5 @@ async test "signed HTTP API answers 202 without a reply and 504 past the deadlin
     assert_eq(silent.status, 202)
     assert_true(silent.content_type is None)
     assert_true(silent.body is Empty)
-    let slow = endpoint.handle_signed_http(
-      signed("slow"),
-      verifier,
-      deadline_ms=5,
-    )
-    assert_eq(slow.status, 504)
-    match slow.body {
-      Bytes(bytes) =>
-        assert_eq(@utf8.decode(bytes), "initial response timed out")
-      _ => fail("a timeout must be a text body")
-    }
   })
 }

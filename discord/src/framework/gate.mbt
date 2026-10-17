@@ -88,13 +88,14 @@ pub fn ResponseGate::ResponseGate(
   classify~ : (Error) -> DeliveryFailure = _ => Uncertain,
   deadline_ms? : Int32,
 ) -> ResponseGate {
+  let now = @clock.now_ms()
   {
     kind,
     state: Pending,
     sink,
     classify,
-    deadline_at: deadline_ms.map(ms => @clock.now_ms() + ms.to_int64()),
-    received_at: @clock.now_ms(),
+    deadline_at: deadline_ms.map(ms => now + ms.to_int64()),
+    received_at: now,
     placeholder_open: false,
     in_flight: false,
     settled: @cond_var.Cond(),
@@ -267,16 +268,24 @@ async fn ResponseGate::wait_settled(self : ResponseGate) -> Unit {
 }
 
 ///|
+/// Milliseconds from `now` until `deadline`: zero once it has passed, and at
+/// most the largest `Int32`.
+fn ms_until(deadline : Int64, now : Int64) -> Int32 {
+  let left = deadline - now
+  if left <= 0L {
+    0
+  } else if left >= 2147483647L {
+    2147483647
+  } else {
+    left.to_int()
+  }
+}
+
+///|
 /// Milliseconds left before the callback window closes, clamped at zero, or
 /// `None` when this gate has no deadline.
 pub fn ResponseGate::remaining_ms(self : ResponseGate) -> Int32? {
-  match self.deadline_at {
-    None => None
-    Some(deadline) => {
-      let left = deadline - @clock.now_ms()
-      Some(if left <= 0L { 0 } else { left.to_int() })
-    }
-  }
+  self.deadline_at.map(deadline => ms_until(deadline, @clock.now_ms()))
 }
 
 ///|
@@ -284,14 +293,10 @@ pub fn ResponseGate::remaining_ms(self : ResponseGate) -> Int32? {
 /// gate's construction (when the executor received the interaction). Zero once
 /// it has expired.
 pub fn ResponseGate::token_remaining_ms(self : ResponseGate) -> Int32 {
-  let left = self.received_at +
-    INTERACTION_TOKEN_LIFETIME_MS.to_int64() -
-    @clock.now_ms()
-  if left <= 0L {
-    0
-  } else {
-    left.to_int()
-  }
+  ms_until(
+    self.received_at + INTERACTION_TOKEN_LIFETIME_MS.to_int64(),
+    @clock.now_ms(),
+  )
 }
 
 ///|

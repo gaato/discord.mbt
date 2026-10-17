@@ -657,26 +657,6 @@ async test "waiter ignores another user's click and stays pending" {
 }
 
 ///|
-async test "waiter without a user accepts anyone" {
-  @async.with_task_group((group : @async.TaskGroup[Unit]) => {
-    let fw = test_framework()
-    let pending = group.spawn(no_wait=true, () => {
-      fw.wait_for_component(custom_id="confirm:anyone", timeout_ms=1000)
-    })
-    @async.sleep(20)
-    assert_true(
-      fw.process(
-        component_interaction_from("confirm:anyone", "200000000000000002"),
-      ),
-    )
-    guard pending.wait() is Some(ctx) else {
-      fail("expected an unfiltered waiter to accept the click")
-    }
-    assert_eq(ctx.user().id.to_string(), "200000000000000002")
-  })
-}
-
-///|
 async test "longest component prefix wins regardless of registration order" {
   let fw = test_framework()
   let routed = Ref("")

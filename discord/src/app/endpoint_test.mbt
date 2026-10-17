@@ -695,8 +695,10 @@ async test "typed autocomplete dispatches partial and nested focused options" {
           // Autocomplete payloads are partial: the other required option is
           // intentionally absent and command decoding must not run.
           assert_false(ctx.options.has("scope"))
+          // One past the limit: the first 25 go out and a warning names the
+          // full count.
           let choices = []
-          for i in 0..<30 {
+          for i in 0..<26 {
             choices.push(
               @interaction.string_choice(
                 name="\{value}-\{i}",
@@ -793,7 +795,7 @@ async test "typed autocomplete dispatches partial and nested focused options" {
         inspect(warnings.length(), content="1")
         assert_true(warnings[0].contains("search"))
         assert_true(warnings[0].contains("query"))
-        assert_true(warnings[0].contains("30"))
+        assert_true(warnings[0].contains("26"))
       }
       outcome => fail("expected top-level autocomplete, got \{Repr(outcome)}")
     }

@@ -72,6 +72,32 @@ async fn Responder::show_modal(
 }
 
 ///|
+/// Which path a reply takes once no callback is in flight.
+priv enum ReplyRoute {
+  /// The initial callback is still unused: reply with it.
+  Initial
+  /// Edit the deferred loading placeholder. With `fallback_on_error`, a failed
+  /// edit falls back to a followup: an unconfirmed deferral may have no
+  /// original message to edit.
+  EditPlaceholder(fallback_on_error~ : Bool)
+  Followup
+  Expired
+}
+
+///|
+fn reply_route(state : ResponseState, placeholder_open : Bool) -> ReplyRoute {
+  match state {
+    Pending => Initial
+    Expired => Expired
+    Sent(DeferredChannelMessageWithSource) if placeholder_open =>
+      EditPlaceholder(fallback_on_error=false)
+    Unconfirmed(DeferredChannelMessageWithSource) if placeholder_open =>
+      EditPlaceholder(fallback_on_error=true)
+    Sent(_) | Unconfirmed(_) => Followup
+  }
+}
+
+///|
 /// Deliver a message through whichever path the gate's state allows:
 /// the initial callback while pending, an edit of a still-loading deferred
 /// placeholder, and a followup otherwise. Editing replaces the deprecated
@@ -95,8 +121,8 @@ async fn Responder::reply(
   let gate = self.gate
   gate.exclusive_reply(() => {
     gate.wait_settled()
-    match gate.state() {
-      Pending =>
+    match reply_route(gate.state(), gate.placeholder_open()) {
+      Initial =>
         self.respond(
           ChannelMessageWithSource,
           content?,
@@ -108,8 +134,7 @@ async fn Responder::reply(
           ephemeral~,
         )
       Expired => raise ResponseGateError::Expired
-      Sent(DeferredChannelMessageWithSource)
-      | Unconfirmed(DeferredChannelMessageWithSource) if gate.placeholder_open() => {
+      EditPlaceholder(fallback_on_error~) => {
         let edited = try {
           self.client.edit_original_response(
             self.application_id,
@@ -125,8 +150,7 @@ async fn Responder::reply(
           true
         } catch {
           error if @async.is_being_cancelled() => raise error
-          // An unconfirmed deferral may have no original message to edit.
-          error if gate.state() is Unconfirmed(_) => {
+          error if fallback_on_error => {
             ignore(error)
             false
           }
@@ -142,7 +166,7 @@ async fn Responder::reply(
         // loading message may still be showing, so a later reply edits again.
         gate.close_placeholder()
       }
-      Sent(_) | Unconfirmed(_) => {
+      Followup => {
         self.send_followup(
           content, embeds, components, files, allowed_mentions, poll, ephemeral,
         )

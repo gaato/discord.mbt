@@ -38,28 +38,24 @@ fn interaction_text_response(
 }
 
 ///|
-/// Verify the raw HTTP body, decode one interaction, and dispatch it.
-///
-/// The caller owns the task group supplied to `App::serve`. Keep that group
-/// alive after this method returns so deferred handlers can finish.
-pub async fn InteractionEndpoint::handle_signed_http(
-  self : InteractionEndpoint,
+/// Verify the raw HTTP body and decode one interaction, or the error response
+/// that refuses it.
+fn decode_signed_request(
   request : InteractionHttpRequest,
   verifier : @verify.InteractionVerifier,
-  deadline_ms~ : Int32 = 2500,
-) -> InteractionHttpResponse {
+) -> Result[@model.Interaction, InteractionHttpResponse] {
   if request.http_method != "POST" {
-    return interaction_text_response(405, "method not allowed")
+    return Err(interaction_text_response(405, "method not allowed"))
   }
   guard request.signature is Some(signature) &&
     request.timestamp is Some(timestamp) else {
-    return interaction_text_response(401, "missing signature")
+    return Err(interaction_text_response(401, "missing signature"))
   }
   if !verifier.verify(signature~, timestamp~, body=request.body) {
-    return interaction_text_response(401, "invalid signature")
+    return Err(interaction_text_response(401, "invalid signature"))
   }
   let body = @utf8.decode(request.body) catch {
-    _ => return interaction_text_response(400, "invalid UTF-8 body")
+    _ => return Err(interaction_text_response(400, "invalid UTF-8 body"))
   }
   let interaction : @model.Interaction? = Some(
     @json.from_json(@json.parse(body)),
@@ -67,9 +63,17 @@ pub async fn InteractionEndpoint::handle_signed_http(
     _ => None
   }
   guard interaction is Some(interaction) else {
-    return interaction_text_response(400, "invalid interaction JSON")
+    return Err(interaction_text_response(400, "invalid interaction JSON"))
   }
-  match self.handle_interaction(interaction, deadline_ms~) {
+  Ok(interaction)
+}
+
+///|
+/// The HTTP response that carries a dispatch outcome.
+fn outcome_http_response(
+  outcome : InteractionOutcome,
+) -> InteractionHttpResponse raise @dhttp.DiscordHttpError {
+  match outcome {
     Reply(response~, files=None) =>
       {
         status: 200,
@@ -86,5 +90,23 @@ pub async fn InteractionEndpoint::handle_signed_http(
     NoRoute => interaction_text_response(404, "not found")
     NoResponse => { status: 202, content_type: None, body: Empty, }
     TimedOut => interaction_text_response(504, "initial response timed out")
+  }
+}
+
+///|
+/// Verify the raw HTTP body, decode one interaction, and dispatch it.
+///
+/// The caller owns the task group supplied to `App::serve`. Keep that group
+/// alive after this method returns so deferred handlers can finish.
+pub async fn InteractionEndpoint::handle_signed_http(
+  self : InteractionEndpoint,
+  request : InteractionHttpRequest,
+  verifier : @verify.InteractionVerifier,
+  deadline_ms~ : Int32 = 2500,
+) -> InteractionHttpResponse {
+  match decode_signed_request(request, verifier) {
+    Ok(interaction) =>
+      outcome_http_response(self.handle_interaction(interaction, deadline_ms~))
+    Err(refusal) => refusal
   }
 }

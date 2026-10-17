@@ -192,44 +192,57 @@ async fn respond_if_interactive(ctx : FailureCtx, message : String) -> Unit {
 }
 
 ///|
+/// How the default error policy answers a failure.
+priv enum DefaultReply {
+  /// Tell the user what went wrong.
+  Tell(String, ephemeral~ : Bool)
+  /// Report a warning, then answer an interactive failure generically.
+  Report(AppWarning, String)
+}
+
+///|
+fn default_reply(error : Error, origin : FailureOrigin) -> DefaultReply {
+  match error {
+    HandlerError::UserMessage(message~, ephemeral~) => Tell(message, ephemeral~)
+    HandlerError::GuildOnly =>
+      Tell("This command can only be used in a server.", ephemeral=true)
+    HandlerError::DmOnly =>
+      Tell("This command can only be used in a direct message.", ephemeral=true)
+    HandlerError::CheckFailed =>
+      Tell("You cannot use this command.", ephemeral=true)
+    HandlerError::MissingPermission(permissions) =>
+      Tell("Missing required permission: \{Repr(permissions)}", ephemeral=true)
+    HandlerError::OnCooldown(retry_after_ms~) =>
+      Tell(
+        "This command is on cooldown. Try again in \{retry_after_ms} ms.",
+        ephemeral=true,
+      )
+    HandlerError::InvalidInput(name=Some(name), message~) =>
+      Tell("Invalid value for \{name}: \{message}", ephemeral=true)
+    HandlerError::InvalidInput(name=None, message~) =>
+      Tell("Invalid input: \{message}", ephemeral=true)
+    HandlerError::Busy =>
+      Tell(
+        "The bot is busy right now. Please try again in a moment.",
+        ephemeral=true,
+      )
+    HandlerError::Malformed(reason~) =>
+      Report(
+        MalformedInteraction(origin~, reason~),
+        "This interaction is out of date. Please try again.",
+      )
+    _ => Report(UnhandledFailure(origin~, error~), "Something went wrong.")
+  }
+}
+
+///|
 fn default_error_policy(warn : (AppWarning) -> Unit) -> ErrorPolicy {
   (ctx, error) => {
-    match error {
-      HandlerError::UserMessage(message~, ephemeral~) =>
-        ctx.respond_error(content=message, ephemeral~)
-      HandlerError::GuildOnly =>
-        ctx.respond_error(content="This command can only be used in a server.")
-      HandlerError::DmOnly =>
-        ctx.respond_error(
-          content="This command can only be used in a direct message.",
-        )
-      HandlerError::CheckFailed =>
-        ctx.respond_error(content="You cannot use this command.")
-      HandlerError::MissingPermission(permissions) =>
-        ctx.respond_error(
-          content="Missing required permission: \{Repr(permissions)}",
-        )
-      HandlerError::OnCooldown(retry_after_ms~) =>
-        ctx.respond_error(
-          content="This command is on cooldown. Try again in \{retry_after_ms} ms.",
-        )
-      HandlerError::InvalidInput(name=Some(name), message~) =>
-        ctx.respond_error(content="Invalid value for \{name}: \{message}")
-      HandlerError::InvalidInput(name=None, message~) =>
-        ctx.respond_error(content="Invalid input: \{message}")
-      HandlerError::Busy =>
-        ctx.respond_error(
-          content="The bot is busy right now. Please try again in a moment.",
-        )
-      HandlerError::Malformed(reason~) => {
-        warn(MalformedInteraction(origin=ctx.origin(), reason~))
-        respond_if_interactive(
-          ctx, "This interaction is out of date. Please try again.",
-        )
-      }
-      _ => {
-        warn(UnhandledFailure(origin=ctx.origin(), error~))
-        respond_if_interactive(ctx, "Something went wrong.")
+    match default_reply(error, ctx.origin()) {
+      Tell(content, ephemeral~) => ctx.respond_error(content~, ephemeral~)
+      Report(warning, message) => {
+        warn(warning)
+        respond_if_interactive(ctx, message)
       }
     }
   }
