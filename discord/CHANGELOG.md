@@ -63,6 +63,11 @@ breaking change is listed with a migration note.
 
 ### Fixed
 
+- **REST rate-limit state no longer grows with every interaction.** Discord's
+  webhook and interaction buckets include the token, and the limiter kept an
+  entry for every bucket it had seen; `gaato/sdk-runtime` 0.2.3 drops idle
+  buckets and sweeps expired ones (this also bounds the coordinator, which
+  hosts the same limiter).
 - **The coordinator notices peers that die without closing their
   connection.** Coordinator connections now use TCP keepalive, so a client
   host that crashes while holding a REST bucket releases it within about 25

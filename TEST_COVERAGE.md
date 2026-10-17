@@ -56,7 +56,7 @@ Accepted as uncovered (needs a ledger row):
   (playback + recording, 2026-07-15);
 - timed-wait loops without an injectable clock (`with_typing`,
   shard_manager). The gateway shard, command limiter, and identify queue take
-  a `clock~` (driven by `internal/simclock`'s virtual clock in tests), the
+  a `clock~` (driven by `gaato/http-async/mock`'s virtual clock in tests), the
   voice gateway and voice connection take `sleeper?`, and all of them take
   `rand?`; their backoff/heartbeat/keepalive cadences are tested
   deterministically — their rows below now cover only defensive arms;

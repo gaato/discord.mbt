@@ -22,13 +22,13 @@ import {
   "gaato/discord/model",
   "hustcer/ed25519",
   "moonbitlang/core/encoding/hex",
-  "gaato/discord/internal/simclock",
+  "gaato/http-async/mock" @simclock,
 } for "test"
 
 import {
   "hustcer/ed25519",
   "moonbitlang/core/encoding/hex",
-  "gaato/discord/internal/simclock",
+  "gaato/http-async/mock" @simclock,
   "moonbitlang/core/random",
   "moonbitlang/core/debug",
 } for "wbtest"

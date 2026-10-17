@@ -25,7 +25,7 @@ import {
 import {
   "gaato/discord/interaction",
   "gaato/discord/internal/clock",
-  "gaato/discord/internal/simclock",
+  "gaato/http-async/mock" @simclock,
   "gaato/discord/internal/gatewaysim",
   "moonbitlang/core/json",
   "moonbitlang/core/random",
