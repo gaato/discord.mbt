@@ -14,15 +14,6 @@ breaking change is listed with a migration note.
   first 64 KiB, which failed the JSON parse and left the shared decoder out
   of step with the stream. This regression arrived with the pure MoonBit
   inflater in 0.9.0 and affected only `compress=true`.
-- **A guild or channel limit in `CacheLimits` now bounds the state that
-  belongs to it.** A guild that left the cache through its entry limit or TTL
-  kept its roles, members, voice states, presences, channels, and the messages
-  of its channels, and a channel that left the same way kept its messages;
-  only GUILD_DELETE and CHANNEL_DELETE released them. Per-guild and
-  per-channel maps emptied by deletes or expiry are now dropped too, and the
-  cache no longer keeps a channel-to-guild entry for every channel it has
-  seen, including threads a THREAD_LIST_SYNC dropped while channels were not
-  retained.
 
 ## [0.9.0] - 2026-10-17
 
