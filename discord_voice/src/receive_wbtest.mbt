@@ -388,37 +388,15 @@ test "RTP extension stripping skips the extension body or reports truncation" {
 }
 
 ///|
-/// `dave_receive_action` as a comparable string.
-fn dave_receive_row(
-  has_decryptor : Bool,
-  active_version : Int32,
-  magic : Bool,
-) -> String {
-  match dave_receive_action(has_decryptor~, active_version~, magic~) {
-    Decrypt => "decrypt"
-    Passthrough => "passthrough"
-    Drop(reason~) => "drop: \{reason}"
+test "a sender without a decryptor passes no plaintext while DAVE is active" {
+  for
+    row in [
+      (0, false, None),
+      (0, true, Some("DAVE frame has no decryptor")),
+      (1, false, Some("DAVE media is active but sender has no decryptor")),
+      (1, true, Some("DAVE frame has no decryptor")),
+    ] {
+    let (active_version, magic, reason) = row
+    assert_eq(undecryptable_drop_reason(active_version~, magic~), reason)
   }
-}
-
-///|
-test "dave_receive_action passes no plaintext while DAVE is active" {
-  for active_version in [0, 1] {
-    for magic in [false, true] {
-      assert_eq(dave_receive_row(true, active_version, magic), "decrypt")
-    }
-  }
-  assert_eq(dave_receive_row(false, 0, false), "passthrough")
-  assert_eq(
-    dave_receive_row(false, 0, true),
-    "drop: DAVE frame has no decryptor",
-  )
-  assert_eq(
-    dave_receive_row(false, 1, false),
-    "drop: DAVE media is active but sender has no decryptor",
-  )
-  assert_eq(
-    dave_receive_row(false, 1, true),
-    "drop: DAVE frame has no decryptor",
-  )
 }
