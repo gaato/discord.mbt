@@ -221,7 +221,7 @@ pub fn[X] Shard::start(
   inflater_factory~ : () -> &Inflater raise = () => ZlibStreamInflater(),
   queue_capacity~ : Int32 = 256,
   telemetry~ : (@telemetry.TelemetryEvent) -> Unit = _ => (),
-  sleeper~ : async (Int32) -> Unit = ms => @async.sleep(ms),
+  clock~ : &@hclock.Clock = @clock.default_clock(),
   rand~ : @random.Rand = @random.Rand(),
   resume? : Session,
   presence? : @model.UpdatePresence,
@@ -229,8 +229,8 @@ pub fn[X] Shard::start(
   let shard = Shard::{
     presence: presence.map(p => { ..p, activities: p.activities.copy(), }),
     events: Queue(kind=Blocking(queue_capacity)),
-    command_limiter: CommandLimiter(sleeper~),
-    presence_limiter: CommandLimiter(limit=5, window_ms=20000, sleeper~),
+    command_limiter: CommandLimiter(clock~),
+    presence_limiter: CommandLimiter(limit=5, window_ms=20000, clock~),
     presence_gate: Semaphore(1),
     send_gate: Semaphore(1),
     transport: None,
@@ -259,7 +259,7 @@ pub fn[X] Shard::start(
       connector~,
       compress~,
       inflater_factory~,
-      sleeper~,
+      clock~,
       rand~,
     )
   })
@@ -291,15 +291,13 @@ async fn Shard::run(
   connector~ : async (String) -> &GatewayTransport,
   compress~ : Bool,
   inflater_factory~ : () -> &Inflater raise,
-  sleeper~ : async (Int32) -> Unit,
+  clock~ : &@hclock.Clock,
   rand~ : @random.Rand,
 ) -> Unit noraise {
   let reconnect = Reconnect::new()
   while !self.closing {
     if reconnect.delay is Some(delay) {
-      sleeper(delay.sample_ms(rand)) catch {
-        _ => return
-      }
+      clock.sleep(delay.sample_ms(rand))
     }
     self.state = Connecting
     self.emit_telemetry(ShardConnecting(shard_id~))
@@ -362,7 +360,7 @@ async fn Shard::run(
         shard_count~,
         identify_queue?,
         event_filter~,
-        sleeper~,
+        clock~,
         rand~,
       )
       ConnectionEnded(code=Some(1000), reason="loop exited")
@@ -436,7 +434,7 @@ async fn Shard::run_connection(
   shard_count~ : Int32,
   identify_queue? : &@queue.IdentifyQueue,
   event_filter~ : (@model.EventKind) -> Bool,
-  sleeper~ : async (Int32) -> Unit,
+  clock~ : &@hclock.Clock,
   rand~ : @random.Rand,
 ) -> Unit {
   // --- Hello ---
@@ -450,7 +448,7 @@ async fn Shard::run_connection(
     // --- heartbeat task (single writer discipline via send_gate) ---
     conn_group.spawn_bg(no_wait=true, () => {
       // jittered first beat per the docs
-      sleeper(rand.int(limit=heartbeat_interval))
+      clock.sleep(rand.int(limit=heartbeat_interval))
       for ;; {
         if heartbeat.awaiting_ack() {
           // previous beat never acked: the connection is a zombie
@@ -459,9 +457,9 @@ async fn Shard::run_connection(
             reason="heartbeat ACK timed out",
           )
         }
-        heartbeat.beat(@clock.now_ms())
+        heartbeat.beat(clock.now_unix_ms())
         self.send_heartbeat(transport)
-        sleeper(heartbeat_interval)
+        clock.sleep(heartbeat_interval)
       }
     })
 
@@ -531,7 +529,7 @@ async fn Shard::run_connection(
           }
         }
         HeartbeatRequest => {
-          heartbeat.beat(@clock.now_ms())
+          heartbeat.beat(clock.now_unix_ms())
           self.send_heartbeat(transport)
         }
         Reconnect =>
@@ -540,7 +538,7 @@ async fn Shard::run_connection(
         InvalidSession(resumable~) =>
           raise ConnectionEnded::InvalidSession(resumable~)
         HeartbeatAck =>
-          if heartbeat.ack(@clock.now_ms()) is Some(latency_ms) {
+          if heartbeat.ack(clock.now_unix_ms()) is Some(latency_ms) {
             self.latency = Some(latency_ms)
             self.emit_telemetry(ShardHeartbeatLatency(shard_id~, latency_ms~))
           }

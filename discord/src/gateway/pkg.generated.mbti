@@ -5,6 +5,7 @@ import {
   "gaato/discord/model",
   "gaato/discord/queue",
   "gaato/discord/telemetry",
+  "gaato/http/clock",
   "moonbitlang/async",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
@@ -30,7 +31,7 @@ pub(all) suberror TransportClosed {
 pub struct CommandLimiter {
   // private fields
 }
-pub fn CommandLimiter::CommandLimiter(limit? : Int, window_ms? : Int, sleeper? : async (Int) -> Unit) -> Self
+pub fn CommandLimiter::CommandLimiter(limit? : Int, window_ms? : Int, clock? : &@clock.Clock) -> Self
 pub async fn CommandLimiter::acquire(Self) -> Unit
 
 pub(all) enum GatewayFrame {
@@ -62,7 +63,7 @@ pub async fn Shard::request_guild_members(Self, @model.RequestGuildMembers) -> U
 pub async fn Shard::request_soundboard_sounds(Self, @model.RequestSoundboardSounds) -> Unit
 pub async fn Shard::send(Self, Json) -> Unit
 pub fn Shard::session(Self) -> Session?
-pub fn[X] Shard::start(@async.TaskGroup[X], token~ : String, intents~ : @model.Intents, capabilities? : @model.GatewayCapabilities, gateway_url? : String, shard_id? : Int, shard_count? : Int, identify_queue? : &@queue.IdentifyQueue, event_filter? : (@model.EventKind) -> Bool, connector? : async (String) -> &GatewayTransport, compress? : Bool, inflater_factory? : () -> &Inflater raise, queue_capacity? : Int, telemetry? : (@telemetry.TelemetryEvent) -> Unit, sleeper? : async (Int) -> Unit, rand? : @random.Rand, resume? : Session, presence? : @model.UpdatePresence) -> Self
+pub fn[X] Shard::start(@async.TaskGroup[X], token~ : String, intents~ : @model.Intents, capabilities? : @model.GatewayCapabilities, gateway_url? : String, shard_id? : Int, shard_count? : Int, identify_queue? : &@queue.IdentifyQueue, event_filter? : (@model.EventKind) -> Bool, connector? : async (String) -> &GatewayTransport, compress? : Bool, inflater_factory? : () -> &Inflater raise, queue_capacity? : Int, telemetry? : (@telemetry.TelemetryEvent) -> Unit, clock? : &@clock.Clock, rand? : @random.Rand, resume? : Session, presence? : @model.UpdatePresence) -> Self
 pub fn Shard::state(Self) -> ShardState
 pub async fn Shard::update_presence(Self, @model.UpdatePresence) -> Unit
 pub async fn Shard::update_voice_state(Self, @model.UpdateVoiceState) -> Unit

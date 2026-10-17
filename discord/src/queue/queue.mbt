@@ -19,6 +19,7 @@ priv struct IdentifyBucket {
 pub struct InMemoryQueue {
   priv buckets : Array[IdentifyBucket]
   priv spacing_ms : Int32
+  priv clock : &@hclock.Clock
 }
 
 ///|
@@ -28,12 +29,13 @@ pub struct InMemoryQueue {
 pub fn InMemoryQueue::InMemoryQueue(
   max_concurrency~ : Int32 = 1,
   spacing_ms~ : Int32 = 5250,
+  clock~ : &@hclock.Clock = @clock.default_clock(),
 ) -> InMemoryQueue {
   let buckets = []
   for _ in 0..<max_concurrency {
     buckets.push({ gate: Semaphore(1), last_identify_ms: 0, })
   }
-  { buckets, spacing_ms, }
+  { buckets, spacing_ms, clock, }
 }
 
 ///|
@@ -68,10 +70,10 @@ pub impl IdentifyQueue for InMemoryQueue with fn wait_for_identify(
   let wait = identify_wait_ms(
     bucket.last_identify_ms,
     self.spacing_ms,
-    @clock.now_ms(),
+    self.clock.now_unix_ms(),
   )
   if wait > 0 {
-    @async.sleep(wait)
+    self.clock.sleep(wait)
   }
-  bucket.last_identify_ms = @clock.now_ms()
+  bucket.last_identify_ms = self.clock.now_unix_ms()
 }
