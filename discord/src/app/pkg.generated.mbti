@@ -95,6 +95,7 @@ pub struct App {
   // private fields
 }
 pub fn App::attach(Self, @framework.Framework, client~ : @http.Client, application_id~ : @model.Id[@model.ApplicationMarker], waiter? : async (String, @model.Id[@model.UserMarker]?, Int?) -> @framework.ComponentCtx?, latency_ms? : () -> Int64?) -> AppCtx
+pub async fn App::plan_commands(Self, @http.Client, @model.Id[@model.ApplicationMarker], scope~ : CommandScope, unowned? : @framework.UnownedCommands) -> CommandPlan
 pub async fn App::report_failure(Self, FailureOrigin, Error) -> Unit
 pub async fn App::serve(Self, @async.TaskGroup[Unit], access~ : RestAccess, application_id? : @model.Id[@model.ApplicationMarker], clock? : &@clock.Clock) -> InteractionEndpoint
 pub fn App::spawner(Self, @async.TaskGroup[Unit]) -> async (async () -> Unit) -> Unit
@@ -168,6 +169,12 @@ pub fn[A] Command::check(Self[A], async (CheckCtx) -> Bool) -> Self[A]
 pub fn[A] Command::cooldown(Self[A], seconds~ : Int, bucket? : CooldownBucket) -> Self[A]
 pub fn[A] Command::erase(Self[A]) -> RegisteredCommand
 pub fn[A] Command::spec(Self[A]) -> @interaction.CommandSpec
+
+pub struct CommandPlan {
+  plans : Array[@framework.CommandSyncPlan]
+}
+pub async fn CommandPlan::apply(Self, @http.Client) -> SyncReport
+pub fn CommandPlan::report(Self) -> SyncReport
 
 pub(all) enum CommandReply {
   Message(InitialResponse)

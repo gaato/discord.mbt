@@ -166,6 +166,8 @@ pub using @app {type Command}
 
 pub type CommandCheck = async (@app.CheckCtx) -> Bool
 
+pub using @app {type CommandPlan}
+
 pub using @app {type CommandReply}
 
 pub using @app {type CommandScope}
