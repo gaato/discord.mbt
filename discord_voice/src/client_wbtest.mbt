@@ -280,14 +280,15 @@ async test "join reuses its per-guild connection and handles a failed server-upd
         connection,
       ),
     )
-    let gate = client.join_gates[guild_id]
+    // The gate leaves with the last join for the guild.
+    assert_true(client.join_gates.is_empty())
     assert_true(
       physical_equal(
         client.join_via(fake.port(), guild_id, Id(200UL)),
         connection,
       ),
     )
-    assert_true(physical_equal(client.join_gates[guild_id], gate))
+    assert_true(client.join_gates.is_empty())
     assert_eq(fake.sent.length(), 0)
     let watching = group.spawn(no_wait=true, () => {
       client.watch_voice_server_updates(
@@ -316,7 +317,7 @@ async test "join reuses its per-guild connection and handles a failed server-upd
 }
 
 ///|
-async test "join evicts closed connections and releases its gate after send failure" {
+async test "join evicts closed connections and drops its gate after send failure" {
   let client = VoiceClient()
   let fake = FakeVoicePort::new()
   with_running_client(client, group => {
@@ -338,9 +339,26 @@ async test "join evicts closed connections and releases its gate after send fail
     assert_eq(client.connections.length(), 0)
     assert_eq(fake.states.length(), 0)
     assert_eq(fake.servers.length(), 0)
-    let gate = client.join_gates[guild_id]
-    gate.acquire()
-    gate.release()
+    // A failed join leaves no gate behind either.
+    assert_true(client.join_gates.is_empty())
+  })
+}
+
+///|
+async test "a session reset forgets the roster" {
+  let client = VoiceClient()
+  with_running_client(client, group => {
+    let connection = pending_connection(
+      group,
+      PendingVoiceTransport::new(),
+      Ref(0),
+    )
+    connection.handle_message(ClientsConnect(user_ids=["1", "2"]))
+    connection.handle_message(ClientDisconnect(user_id="1"))
+    assert_eq(connection.roster.to_array(), ["2"])
+    connection.reset_session()
+    assert_true(connection.roster.is_empty())
+    connection.disconnect()
   })
 }
 

@@ -37,6 +37,11 @@ struct AdmitModel {
   seed : Int32
   mut running : Int32
   mut flagged : String?
+  /// Whether the model is inside an overload: from a refusal until a deferred
+  /// interaction is admitted.
+  mut refusing : Bool
+  mut expected_refusal_warnings : Int32
+  mut refusal_warnings : Int32
 }
 
 ///|
@@ -124,6 +129,12 @@ fn AdmitModel::arrive(
     .filter(other => !(other.plan is Respond) && other.outcome == Waiting)
     .length()
   let refuse = !(plan is Respond) && waiting >= self.admission.max_pending
+  if refuse && !self.refusing {
+    self.expected_refusal_warnings += 1
+  }
+  if !(plan is Respond) {
+    self.refusing = refuse
+  }
   let arrival = Arrival::{
     plan,
     expect_busy: refuse,
@@ -153,7 +164,17 @@ fn AdmitModel::arrive(
       self.admission,
       gate,
       plan,
-      warning => end(Warned(warning.to_string())),
+      warning => {
+        match warning {
+          DeferredInteractionsRefused(..) => {
+            if !refuse {
+              self.flag("\{label} warned of refusals without being refused")
+            }
+            self.refusal_warnings += 1
+          }
+          _ => end(Warned(warning.to_string()))
+        }
+      },
       label,
       () => {
         if !refuse {
@@ -203,6 +224,9 @@ async fn run_admission_schedule(seed : Int32, length : Int32) -> Unit {
     seed,
     running: 0,
     flagged: None,
+    refusing: false,
+    expected_refusal_warnings: 0,
+    refusal_warnings: 0,
   }
   model.log.push(
     "permits=\{permits} max_pending=\{model.admission.max_pending}",
@@ -219,6 +243,11 @@ async fn run_admission_schedule(seed : Int32, length : Int32) -> Unit {
       clock.settle()
       if model.flagged is Some(message) {
         model.violation(message)
+      }
+      if model.refusal_warnings != model.expected_refusal_warnings {
+        model.violation(
+          "\{model.refusal_warnings} refusal warnings for \{model.expected_refusal_warnings} overloads",
+        )
       }
       for i, arrival in model.arrivals {
         if arrival.expect_busy && arrival.outcome != Busy {

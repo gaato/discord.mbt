@@ -85,28 +85,27 @@ fn coordinator_retryable(error : Error) -> Bool {
 
 ///|
 /// One newline-terminated response, or `None` when the connection ends first.
-/// `read_until` hands back an unterminated tail at end of stream, which would
-/// turn a coordinator dying mid-response into a malformed, unretried answer
-/// instead of a disconnect. One request is in flight per connection, so
-/// anything after the newline is a protocol error.
+/// An unterminated tail at end of stream is a coordinator dying mid-response,
+/// so it reads as a disconnect, which is retried, not as a malformed answer.
+/// One request is in flight per connection, so anything after the newline is
+/// a protocol error.
 async fn read_line(conn : @socket.Tcp) -> String? {
-  let line : Array[Byte] = []
-  let chunk = FixedArray::make(4096, b'\x00')
-  while conn.read(chunk) is n && n > 0 {
-    for i in 0..<n {
-      if chunk[i] != b'\n' {
-        line.push(chunk[i])
-        continue
-      }
-      if i + 1 < n {
+  let reader = LineReader::new()
+  match reader.next(chunk => conn.read(chunk)) {
+    Line(line) => {
+      if reader.has_pending() {
         raise CoordinatorError::InvalidResponse(
           message="data after the response line",
         )
       }
-      return Some(@utf8.decode_lossy(Bytes::from_array(line)))
+      Some(line)
     }
+    Ended => None
+    TooLong =>
+      raise CoordinatorError::InvalidResponse(
+        message="response line longer than \{MAX_LINE_BYTES} bytes",
+      )
   }
-  None
 }
 
 ///|

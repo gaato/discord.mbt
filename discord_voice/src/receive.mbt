@@ -102,13 +102,38 @@ fn ReceivePipeline::reset_reorder(
 }
 
 ///|
+/// Record that `ssrc` carries `user_id`'s audio. A user sends audio on one
+/// SSRC at a time, so the user's earlier SSRC is forgotten, and so is the
+/// reorder window of an SSRC that changes hands: both maps hold at most one
+/// entry per user in the channel.
+fn ReceivePipeline::map_ssrc(
+  self : ReceivePipeline,
+  ssrc : UInt32,
+  user_id : String,
+) -> Unit {
+  let stale : Array[UInt32] = []
+  for mapped_ssrc, mapped_user_id in self.users_by_ssrc {
+    // Stale when exactly one side matches: this SSRC with another user, or
+    // this user on another SSRC. The same pair keeps its reorder window.
+    if (mapped_ssrc == ssrc) != (mapped_user_id == user_id) {
+      stale.push(mapped_ssrc)
+    }
+  }
+  for mapped_ssrc in stale {
+    self.users_by_ssrc.remove(mapped_ssrc)
+    self.reorder_by_ssrc.remove(mapped_ssrc)
+  }
+  self.users_by_ssrc[ssrc] = user_id
+}
+
+///|
 fn ReceivePipeline::handle_gateway_message(
   self : ReceivePipeline,
   message : VoiceMessage,
 ) -> Array[VoiceEvent] {
   match message {
     Speaking(ssrc~, user_id~, flags~) => {
-      self.users_by_ssrc[ssrc] = user_id
+      self.map_ssrc(ssrc, user_id)
       [SpeakingChanged(user_id~, ssrc~, flags~)]
     }
     ClientsConnect(user_ids~) =>

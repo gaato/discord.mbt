@@ -20,6 +20,7 @@ fn scripted_admission(
     max_pending: 4,
     wait_limit_ms: 5000,
     clock,
+    refusing: false,
   }
 }
 

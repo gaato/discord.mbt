@@ -432,6 +432,11 @@ fn DaveMachine::prepare_remote_members(
 }
 
 ///|
+/// How many prepared transitions wait for their execute at once. The gateway
+/// executes a transition shortly after preparing it, so a few overlap at most.
+const MAX_PENDING_TRANSITIONS : Int32 = 16
+
+///|
 fn DaveMachine::prepare_transition(
   self : DaveMachine,
   transition_id : Int32,
@@ -448,6 +453,15 @@ fn DaveMachine::prepare_transition(
     }
     [SwitchMediaContext(protocol_version~)]
   } else {
+    if !self.pending.contains(transition_id) &&
+      self.pending.length() >= MAX_PENDING_TRANSITIONS {
+      // The gateway abandoned the oldest prepared transition long ago; drop
+      // it so ids that are never executed cannot accumulate.
+      for oldest, _ in self.pending {
+        self.pending.remove(oldest)
+        break
+      }
+    }
     self.pending[transition_id] = protocol_version
     [SendJson(encode_transition_ready(transition_id~))]
   }

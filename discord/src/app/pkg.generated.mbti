@@ -147,6 +147,7 @@ pub(all) enum AppWarning {
   WaiterUnavailable
   InteractionProcessingFailed(error~ : Error)
   Executor(source~ : String, message~ : String)
+  DeferredInteractionsRefused(max_pending~ : Int)
   CooldownUnavailable(reason~ : String, outage~ : CooldownOutage)
 } derive(@debug.Debug)
 pub fn AppWarning::to_string(Self) -> String

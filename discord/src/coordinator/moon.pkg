@@ -32,6 +32,8 @@ warnings = "-29"
 options(
   targets: {
     "coordinator_wbtest.mbt": [ "native", "wasm" ],
+    "line.mbt": [ "native", "wasm" ],
+    "line_wbtest.mbt": [ "native", "wasm" ],
     "pkg.generated.mbti": [ "native", "wasm" ],
     "protocol.mbt": [ "native", "wasm" ],
     "protocol_wbtest.mbt": [ "native", "wasm" ],
