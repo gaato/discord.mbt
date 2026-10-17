@@ -589,6 +589,105 @@ async test "voice receiver discards empty datagrams and stops after UDP close" {
 }
 
 ///|
+async test "voice receiver backs off through the injected sleeper after a failed receive" {
+  if !@voice.shim_available() {
+    return
+  }
+  let transport = ConnectionTestTransport::new()
+  let udp = ConnectionTestUdp::new()
+  let gate = SleepGate()
+  let parked : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  @async.with_task_group(group => {
+    let connection = ready_receive_connection(group, transport, udp, sleeper=ms => {
+      if ms == 5 {
+        gate.sleep(ms)
+      } else {
+        parked.get()
+      }
+    })
+    map_connection_speaker(connection, transport, "200", 77U, 3)
+    let stream = connection.subscribe(user_id="200")
+    udp.recv_started.get()
+    udp.recv_started.get()
+    udp.fail_recv.val = true
+    udp.incoming.put(b"failed receive")
+    assert_eq(gate.requests.get(), 5)
+    @async.pause()
+    assert_eq(udp.recv_started.try_get(), None)
+    udp.fail_recv.val = false
+    gate.release()
+    udp.recv_started.get()
+    udp.incoming.put(connection_opus_datagram(77U, 1, b"after-backoff"))
+    assert_eq(
+      stream.next_packet(),
+      Some(Opus(sequence=1, timestamp=960U, opus=b"after-backoff")),
+    )
+    connection.disconnect()
+  })
+}
+
+///|
+async test "voice receiver stops when its backoff sleeper fails" {
+  if !@voice.shim_available() {
+    return
+  }
+  let transport = ConnectionTestTransport::new()
+  let udp = ConnectionTestUdp::new()
+  let parked : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  let backoffs = Ref(0)
+  @async.with_task_group(group => {
+    let connection = ready_receive_connection(group, transport, udp, sleeper=ms => {
+      if ms == 5 {
+        backoffs.val += 1
+        raise VoiceTestFailure
+      }
+      parked.get()
+    })
+    udp.recv_started.get()
+    udp.recv_started.get()
+    udp.fail_recv.val = true
+    udp.incoming.put(b"failed receive")
+    udp.incoming.put(b"not received")
+    for _ in 0..<4 {
+      @async.pause()
+    }
+    assert_eq(backoffs.val, 1)
+    assert_eq(udp.recv_started.try_get(), None)
+    assert_eq(connection.state(), Ready)
+    connection.disconnect()
+  })
+}
+
+///|
+async test "disconnect wakes the voice receiver waiting for a session" {
+  let transport = ConnectionTestTransport::new()
+  let udp = ConnectionTestUdp::new()
+  let parked : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  @async.with_task_group(group => {
+    let connection = @voice.VoiceConnection::start(
+      group,
+      connection_credentials(),
+      user_id="100",
+      channel_id=7UL,
+      leave=() => (),
+      rejoin=() => fail("unexpected rejoin"),
+      connector=_ => (transport : &@voice.VoiceTransport),
+      udp_opener=(_, _) => (udp : &@voice.VoiceUdp),
+      sleeper=_ => parked.get(),
+    )
+    connection_finish_protocol_selection(transport, udp)
+    @async.pause()
+    connection.disconnect()
+    for _ in 0..<4 {
+      @async.pause()
+    }
+    assert_eq(udp.recv_started.try_get() is Some(_), true)
+    assert_eq(udp.recv_started.try_get(), None)
+    expect_connection_terminated(connection)
+  })
+}
+
+///|
 async test "voice connection keepalive sleeper failure leaves the connection lifecycle intact" {
   let transport = ConnectionTestTransport::new()
   let slept : @aqueue.Queue[Int32] = Queue(kind=Unbounded)
@@ -1276,6 +1375,7 @@ async fn[X] ready_receive_connection(
   group : @async.TaskGroup[X],
   transport : ConnectionTestTransport,
   udp : ConnectionTestUdp,
+  sleeper~ : async (Int32) -> Unit = ms => @async.sleep(ms),
 ) -> @voice.VoiceConnection {
   let connection = @voice.VoiceConnection::start(
     group,
@@ -1286,6 +1386,7 @@ async fn[X] ready_receive_connection(
     rejoin=() => connection_credentials(),
     connector=_ => (transport : &@voice.VoiceTransport),
     udp_opener=(_, _) => (udp : &@voice.VoiceUdp),
+    sleeper~,
   )
   connection_finish_protocol_selection(transport, udp)
   transport.incoming.put(connection_session_description(2))

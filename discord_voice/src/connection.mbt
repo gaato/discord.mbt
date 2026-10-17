@@ -66,19 +66,124 @@ pub struct VoiceConnection {
   priv rand_ : @random.Rand
   priv receiver : ReceivePipeline
   priv roster : Set[String]
+  priv mut dave : DaveMachine?
+  priv mut pending_dave_external_sender : Bytes?
+  priv mut disconnecting : Bool
+  /// Broadcast after every write to the fields below, which the background
+  /// tasks and `wait_ready`/`stop` wait on. Write them only through the
+  /// setters next to `VoiceConnection::changed` so no change misses a waiter.
+  priv state_changed : @cond_var.Cond
   priv mut gateway : VoiceGateway?
   priv mut udp : &VoiceUdp?
   priv mut cipher : TransportCipher?
-  priv mut dave : DaveMachine?
-  priv mut pending_dave_external_sender : Bytes?
   priv mut ssrc : UInt32?
   priv mut state_ : VoiceConnectionState
   priv mut failure : VoiceError?
   priv mut closing : Bool
-  priv mut disconnecting : Bool
   priv mut session_generation : Int32
   priv mut playback_generation : Int32
   priv mut playback_stop : Ref[Bool]?
+}
+
+///|
+/// Delay before retrying after `VoiceUdp::recv` fails on the live socket.
+const RECV_RETRY_DELAY_MS : Int32 = 5
+
+///|
+/// Wake every task blocked in `wait_until` so it re-checks its condition.
+fn VoiceConnection::changed(self : VoiceConnection) -> Unit {
+  self.state_changed.broadcast()
+}
+
+///|
+/// Block until `ready` holds. The condition is re-checked after every change
+/// to a watched field; cancellation unwinds the wait.
+async fn VoiceConnection::wait_until(
+  self : VoiceConnection,
+  ready : () -> Bool,
+) -> Unit noraise {
+  while !ready() {
+    self.state_changed.wait()
+  }
+}
+
+///|
+fn VoiceConnection::set_gateway(
+  self : VoiceConnection,
+  gateway : VoiceGateway?,
+) -> Unit {
+  self.gateway = gateway
+  self.changed()
+}
+
+///|
+fn VoiceConnection::set_udp(self : VoiceConnection, udp : &VoiceUdp?) -> Unit {
+  self.udp = udp
+  self.changed()
+}
+
+///|
+fn VoiceConnection::set_cipher(
+  self : VoiceConnection,
+  cipher : TransportCipher?,
+) -> Unit {
+  self.cipher = cipher
+  self.changed()
+}
+
+///|
+fn VoiceConnection::set_ssrc(self : VoiceConnection, ssrc : UInt32?) -> Unit {
+  self.ssrc = ssrc
+  self.changed()
+}
+
+///|
+fn VoiceConnection::set_state(
+  self : VoiceConnection,
+  state : VoiceConnectionState,
+) -> Unit {
+  self.state_ = state
+  self.changed()
+}
+
+///|
+fn VoiceConnection::clear_failure(self : VoiceConnection) -> Unit {
+  self.failure = None
+  self.changed()
+}
+
+///|
+fn VoiceConnection::mark_closing(self : VoiceConnection) -> Unit {
+  self.closing = true
+  self.changed()
+}
+
+///|
+fn VoiceConnection::set_playback_stop(
+  self : VoiceConnection,
+  stop : Ref[Bool]?,
+) -> Unit {
+  self.playback_stop = stop
+  self.changed()
+}
+
+///|
+/// Invalidate packets received for the previous media session.
+fn VoiceConnection::next_session_generation(self : VoiceConnection) -> Unit {
+  self.session_generation += 1
+  self.changed()
+}
+
+///|
+/// Supersede the queued and active playback: bump the generation, ask the
+/// running send loop to stop, and return the new generation.
+fn VoiceConnection::supersede_playback(self : VoiceConnection) -> Int32 {
+  self.playback_generation += 1
+  if self.playback_stop is Some(stop) {
+    stop.val = true
+  }
+  self.changed()
+  self.playback_generation
 }
 
 ///|
@@ -98,7 +203,8 @@ fn VoiceConnection::set_failure(
   if self.failure is None {
     self.failure = Some(error)
   }
-  self.state_ = Closed(code~)
+  // `set_state` wakes the waiters for the failure as well.
+  self.set_state(Closed(code~))
 }
 
 ///|
@@ -108,21 +214,18 @@ async fn VoiceConnection::close_udp(self : VoiceConnection) -> Unit noraise {
       _ => ()
     }
   }
-  self.udp = None
+  self.set_udp(None)
 }
 
 ///|
 async fn VoiceConnection::reset_session(self : VoiceConnection) -> Unit noraise {
-  self.session_generation += 1
-  self.playback_generation += 1
-  if self.playback_stop is Some(stop) {
-    stop.val = true
-  }
+  self.next_session_generation()
+  self.supersede_playback() |> ignore
   self.close_udp()
-  self.cipher = None
+  self.set_cipher(None)
   self.dave = None
   self.pending_dave_external_sender = None
-  self.ssrc = None
+  self.set_ssrc(None)
   self.receiver.reset_session()
 }
 
@@ -136,15 +239,12 @@ async fn VoiceConnection::terminal_teardown(
   }
   // Publish the terminal flag before any await so every worker stops even if
   // one of the best-effort transport cleanups stalls or fails.
-  self.closing = true
+  self.mark_closing()
   self.disconnecting = true
   if !(self.state_ is Closed(..)) {
-    self.state_ = Closed(code=None)
+    self.set_state(Closed(code=None))
   }
-  self.playback_generation += 1
-  if self.playback_stop is Some(stop) {
-    stop.val = true
-  }
+  self.supersede_playback() |> ignore
   if notify_leave {
     (self.leave_)() catch {
       _ => ()
@@ -153,7 +253,7 @@ async fn VoiceConnection::terminal_teardown(
   if self.gateway is Some(gateway) {
     gateway.close()
   }
-  self.gateway = None
+  self.set_gateway(None)
   self.close_udp()
   self.close_subscriptions()
   self.playback.close(error=VoiceError::Disconnected)
@@ -195,9 +295,9 @@ async fn VoiceConnection::select_protocol(
     }
   }
   self.close_udp()
-  self.udp = Some(udp)
-  self.ssrc = Some(ssrc)
-  self.session_generation += 1
+  self.set_udp(Some(udp))
+  self.set_ssrc(Some(ssrc))
+  self.next_session_generation()
   let (address, external_port) = discovered
   (address, external_port, mode.wire_name())
 }
@@ -341,10 +441,10 @@ async fn VoiceConnection::establish_session(
         (self.telemetry_)(PacketDropped(reason="DAVE send: \{Repr(error)}"))
     }
   }
-  self.cipher = Some(cipher)
+  self.set_cipher(Some(cipher))
   self.dave = dave
-  self.failure = None
-  self.state_ = Ready
+  self.clear_failure()
+  self.set_state(Ready)
   self.emit(ConnectionReady)
 }
 
@@ -405,13 +505,14 @@ async fn VoiceConnection::handle_message(
 async fn[X] VoiceConnection::run_event_pump(
   self : VoiceConnection,
   group : @async.TaskGroup[X],
+  gateway : VoiceGateway,
 ) -> Unit noraise {
   defer self.terminal_teardown(notify_leave=true)
+  // The pump is the only task that replaces the gateway, and terminal
+  // teardown is the only one that clears it, so it follows its own handle
+  // instead of waiting on `self.gateway`.
+  let mut gateway = gateway
   while !self.closing {
-    guard self.gateway is Some(gateway) else {
-      @async.sleep(5)
-      continue
-    }
     let event = gateway.next() catch {
       _ => {
         if !self.closing {
@@ -434,7 +535,7 @@ async fn[X] VoiceConnection::run_event_pump(
       }
       Message(message) => self.handle_message(message) catch { _ => () }
       Connected(resumed=true) => {
-        self.state_ = Ready
+        self.set_state(Ready)
         self.emit(ConnectionResumed) catch {
           _ => return
         }
@@ -443,7 +544,7 @@ async fn[X] VoiceConnection::run_event_pump(
       ConnectFailed(..) => ()
       Disconnected(code~, resuming=true) => {
         ignore(code)
-        self.state_ = Reconnecting
+        self.set_state(Reconnecting)
       }
       Disconnected(..) => ()
       NeedsRejoin(code~) => {
@@ -452,7 +553,7 @@ async fn[X] VoiceConnection::run_event_pump(
           self.reset_session()
           return
         }
-        self.state_ = Rejoining
+        self.set_state(Rejoining)
         self.reset_session()
         let credentials = (self.rejoin_)() catch {
           _ => {
@@ -463,8 +564,9 @@ async fn[X] VoiceConnection::run_event_pump(
         if self.closing {
           return
         }
-        self.state_ = Connecting
-        self.gateway = Some(self.new_gateway(group, credentials))
+        self.set_state(Connecting)
+        gateway = self.new_gateway(group, credentials)
+        self.set_gateway(Some(gateway))
       }
       FatallyClosed(code~) => {
         self.set_failure(GatewayClosed(code=Some(code)), code=Some(code))
@@ -479,17 +581,23 @@ async fn[X] VoiceConnection::run_event_pump(
 async fn VoiceConnection::run_receiver(self : VoiceConnection) -> Unit noraise {
   let buffer : FixedArray[Byte] = FixedArray::make(65535, 0)
   while !self.closing {
-    guard self.udp is Some(udp) && self.cipher is Some(cipher) else {
-      @async.sleep(5)
-      continue
-    }
+    self.wait_until(() => {
+      self.closing || (self.udp is Some(_) && self.cipher is Some(_))
+    })
+    guard self.udp is Some(udp) && self.cipher is Some(cipher) else { continue }
     let generation = self.session_generation
     let received = udp.recv(buffer) catch {
       _ => {
         if self.closing {
           return
         }
-        @async.sleep(5)
+        // A failure on the socket still in use is an I/O error worth backing
+        // off from; one caused by a session reset just waits for the next.
+        if generation == self.session_generation {
+          (self.sleeper_)(RECV_RETRY_DELAY_MS) catch {
+            _ => return
+          }
+        }
         continue
       }
     }
@@ -536,30 +644,27 @@ async fn VoiceConnection::run_keepalive(self : VoiceConnection) -> Unit noraise 
 async fn VoiceConnection::run_playback(self : VoiceConnection) -> Unit noraise {
   while !self.closing {
     let request = self.playback.get() catch { _ => return }
-    if request.generation != self.playback_generation {
-      continue
-    }
-    while !self.closing &&
-          request.generation == self.playback_generation &&
-          (
-            self.cipher is None ||
-            self.udp is None ||
-            self.gateway is None ||
-            self.ssrc is None
-          ) {
-      @async.sleep(5)
-    }
-    if self.closing || request.generation != self.playback_generation {
-      continue
-    }
-    guard self.cipher is Some(cipher) &&
+    // A superseded or closed request falls through the wait to the guard.
+    self.wait_until(() => {
+      self.closing ||
+      request.generation != self.playback_generation ||
+      (
+        self.cipher is Some(_) &&
+        self.udp is Some(_) &&
+        self.gateway is Some(_) &&
+        self.ssrc is Some(_)
+      )
+    })
+    guard !self.closing &&
+      request.generation == self.playback_generation &&
+      self.cipher is Some(cipher) &&
       self.udp is Some(udp) &&
       self.gateway is Some(gateway) &&
       self.ssrc is Some(ssrc) else {
       continue
     }
     let stop = Ref(false)
-    self.playback_stop = Some(stop)
+    self.set_playback_stop(Some(stop))
     run_send_loop(
       request.source,
       cipher,
@@ -573,7 +678,7 @@ async fn VoiceConnection::run_playback(self : VoiceConnection) -> Unit noraise {
       error =>
         (self.telemetry_)(PacketDropped(reason="send loop: \{Repr(error)}"))
     }
-    self.playback_stop = None
+    self.set_playback_stop(None)
   }
 }
 
@@ -615,6 +720,7 @@ pub fn[X] VoiceConnection::start(
     rand_: rand,
     receiver,
     roster: Set([]),
+    state_changed: @cond_var.Cond(),
     gateway: None,
     udp: None,
     cipher: None,
@@ -629,8 +735,9 @@ pub fn[X] VoiceConnection::start(
     playback_generation: 0,
     playback_stop: None,
   }
-  connection.gateway = Some(connection.new_gateway(group, credentials))
-  group.spawn_bg(no_wait=true, () => connection.run_event_pump(group))
+  let gateway = connection.new_gateway(group, credentials)
+  connection.set_gateway(Some(gateway))
+  group.spawn_bg(no_wait=true, () => connection.run_event_pump(group, gateway))
   if receive {
     group.spawn_bg(no_wait=true, () => connection.run_receiver())
   }
@@ -648,18 +755,16 @@ pub async fn VoiceConnection::wait_ready(
   @async.with_timeout(
     timeout_ms,
     () => {
-      for ;; {
-        if self.state_ is Ready {
-          return
-        }
-        if self.failure is Some(error) {
-          raise error
-        }
-        if self.closing {
-          raise VoiceError::Disconnected
-        }
-        @async.sleep(5)
+      self.wait_until(() => {
+        self.state_ is Ready || self.failure is Some(_) || self.closing
+      })
+      if self.state_ is Ready {
+        return
       }
+      if self.failure is Some(error) {
+        raise error
+      }
+      raise VoiceError::Disconnected
     },
     error=JoinTimeout,
   ) catch {
@@ -680,25 +785,16 @@ pub async fn VoiceConnection::play(
   self : VoiceConnection,
   source : &AudioSource,
 ) -> Unit {
-  self.playback_generation += 1
-  if self.playback_stop is Some(stop) {
-    stop.val = true
-  }
-  self.playback.put({ generation: self.playback_generation, source, })
+  let generation = self.supersede_playback()
+  self.playback.put({ generation, source, })
 }
 
 ///|
 /// Stop the active source; the send loop emits five silence frames and clears
 /// the speaking flag.
-#warnings("-unused_async")
 pub async fn VoiceConnection::stop(self : VoiceConnection) -> Unit {
-  self.playback_generation += 1
-  if self.playback_stop is Some(stop) {
-    stop.val = true
-  }
-  while self.playback_stop is Some(_) && !self.closing {
-    @async.sleep(5)
-  }
+  self.supersede_playback() |> ignore
+  self.wait_until(() => self.playback_stop is None || self.closing)
 }
 
 ///|
