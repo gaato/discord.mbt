@@ -20,16 +20,22 @@ pub(open) trait CooldownStore {
 ///|
 /// In-process fixed windows. Expired keys are swept each time the map has
 /// doubled since the last sweep, so memory follows the live windows however
-/// long or short they are.
+/// long or short they are, and at least once a minute, so a burst's expired
+/// keys do not stay once traffic returns to a few keys.
 pub struct InMemoryCooldownStore {
   priv now_ : () -> Int64
   priv cooldowns_ : Map[String, Int64]
   priv mut sweep_at_ : Int32
+  priv mut swept_at_ms_ : Int64
 }
 
 ///|
 /// The fewest keys at which a sweep runs.
 let cooldown_sweep_floor : Int32 = 64
+
+///|
+/// The longest an expired key stays when the map stops growing.
+let cooldown_sweep_interval_ms : Int64 = 60_000L
 
 ///|
 /// Create an empty store, optionally supplying a clock for deterministic tests.
@@ -47,7 +53,12 @@ let cooldown_sweep_floor : Int32 = 64
 pub fn InMemoryCooldownStore::InMemoryCooldownStore(
   now~ : () -> Int64 = @clock.now_ms,
 ) -> InMemoryCooldownStore {
-  { now_: now, cooldowns_: Map([]), sweep_at_: cooldown_sweep_floor, }
+  {
+    now_: now,
+    cooldowns_: Map([]),
+    sweep_at_: cooldown_sweep_floor,
+    swept_at_ms_: now(),
+  }
 }
 
 ///|
@@ -60,7 +71,8 @@ pub impl CooldownStore for InMemoryCooldownStore with fn try_acquire(
   window_ms~,
 ) {
   let now_ms = (self.now_)()
-  if self.cooldowns_.length() >= self.sweep_at_ {
+  if self.cooldowns_.length() >= self.sweep_at_ ||
+    now_ms - self.swept_at_ms_ >= cooldown_sweep_interval_ms {
     let expired : Array[String] = []
     for pending_key, expires_at in self.cooldowns_ {
       if expires_at <= now_ms {
@@ -71,6 +83,7 @@ pub impl CooldownStore for InMemoryCooldownStore with fn try_acquire(
       self.cooldowns_.remove(pending_key) |> ignore
     }
     self.sweep_at_ = (self.cooldowns_.length() * 2).max(cooldown_sweep_floor)
+    self.swept_at_ms_ = now_ms
   }
   match self.cooldowns_.get(key) {
     Some(expires_at) if expires_at > now_ms =>
