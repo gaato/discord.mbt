@@ -4,6 +4,7 @@ import {
   "gaato/discord/http" @dhttp,
   "gaato/discord/interaction",
   "gaato/discord/internal/clock",
+  "gaato/http/clock" @hclock,
   "moonbitlang/async",
   "moonbitlang/async/aqueue",
   "moonbitlang/async/cond_var",
@@ -12,6 +13,9 @@ import {
 import {
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
+  "gaato/discord/internal/simclock",
+  "moonbitlang/async/aqueue",
+  "moonbitlang/core/random",
 } for "test"
 
 import {
@@ -24,3 +28,10 @@ import {
 warnings = "-35"
 
 supported_targets = "js + native + wasm"
+
+options(
+  targets: {
+    "gate_fuzz_seeds_test.mbt": [ "native", "wasm" ],
+    "gate_fuzz_seeds_js_test.mbt": [ "js" ],
+  },
+)

@@ -103,6 +103,8 @@ priv struct Admission {
   /// An upper bound on how long a deferred interaction may wait for a
   /// permit, on top of its token's remaining lifetime.
   wait_limit_ms : Int32
+  /// The framework's clock, which also times the gates' windows.
+  clock : &@hclock.Clock
 }
 
 ///|
@@ -111,6 +113,7 @@ priv struct Admission {
 /// has closed is handed back: the handler would do its work with no way to
 /// answer.
 async fn acquire_while_open(
+  clock : &@hclock.Clock,
   limiter : @async.Semaphore,
   wait_ms : Int32?,
   open : () -> Bool,
@@ -125,9 +128,9 @@ async fn acquire_while_open(
   if !limiter.try_acquire() {
     // Judge by the flag, not the timeout's result: when a release hands this
     // waiter a permit just as the timeout fires, `acquire` keeps the permit
-    // and returns while `with_timeout_opt` still reports `None`.
+    // and returns while `timeout_opt` still reports `None`.
     let acquired = Ref(false)
-    @async.with_timeout_opt(wait_ms, () => {
+    @clock.timeout_opt(clock, wait_ms, () => {
       limiter.acquire()
       acquired.val = true
     })
@@ -239,7 +242,7 @@ async fn run_admitted(
           // leaves the margin.
           let delay = auto_defer_delay((gate.remaining_ms)())
           if delay > 0 {
-            @async.sleep(delay)
+            admission.clock.sleep(delay)
           }
           if (gate.is_pending)() {
             ensure_acknowledged(gate, plan) catch {
@@ -248,9 +251,12 @@ async fn run_admitted(
             }
           }
         })
-        let acquired = acquire_while_open(limiter, Some(wait_ms), () => {
-          (gate.token_remaining_ms)() > 0
-        })
+        let acquired = acquire_while_open(
+          admission.clock,
+          limiter,
+          Some(wait_ms),
+          () => (gate.token_remaining_ms)() > 0,
+        )
         waiting.val = false
         admission.pending -= 1
         if !acquired {
@@ -259,7 +265,7 @@ async fn run_admitted(
         }
       }
       Direct(wait_ms~) =>
-        if !acquire_while_open(limiter, wait_ms, () => {
+        if !acquire_while_open(admission.clock, limiter, wait_ms, () => {
             !((gate.remaining_ms)() is Some(0))
           }) {
           warn(InteractionDropped(target=label))

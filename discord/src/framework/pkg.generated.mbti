@@ -5,6 +5,7 @@ import {
   "gaato/discord/http",
   "gaato/discord/interaction",
   "gaato/discord/model",
+  "gaato/http/clock",
   "moonbitlang/core/debug",
 }
 
@@ -118,8 +119,9 @@ pub(all) enum DeliveryFailure {
 pub struct Framework {
   // private fields
 }
-pub fn Framework::Framework(@http.Client, @model.Id[@model.ApplicationMarker]) -> Self
+pub fn Framework::Framework(@http.Client, @model.Id[@model.ApplicationMarker], clock? : &@clock.Clock) -> Self
 pub fn Framework::autocomplete(Self, String, async (AutocompleteCtx) -> Unit) -> Self
+pub fn Framework::clock(Self) -> &@clock.Clock
 pub fn Framework::command(Self, @interaction.CommandSpec, async (CommandCtx) -> Unit) -> Self
 pub fn Framework::command_specs(Self) -> Json
 pub fn Framework::component(Self, String, async (ComponentCtx) -> Unit) -> Self
@@ -186,14 +188,14 @@ pub fn ResponseCapture::try_get(Self) -> CapturedResponse? raise
 pub struct ResponseGate {
   // private fields
 }
-pub fn ResponseGate::ResponseGate(@model.InteractionType, async (@model.InteractionResponse, Array[@http.FileUpload]?) -> Unit, classify? : (Error) -> DeliveryFailure, deadline_ms? : Int) -> Self
-pub fn ResponseGate::capture(@model.Interaction, deadline_ms? : Int) -> (Self, ResponseCapture)
+pub fn ResponseGate::ResponseGate(@model.InteractionType, async (@model.InteractionResponse, Array[@http.FileUpload]?) -> Unit, classify? : (Error) -> DeliveryFailure, deadline_ms? : Int, clock? : &@clock.Clock) -> Self
+pub fn ResponseGate::capture(@model.Interaction, deadline_ms? : Int, clock? : &@clock.Clock) -> (Self, ResponseCapture)
 pub fn ResponseGate::close_placeholder(Self) -> Unit
 pub fn ResponseGate::expire(Self) -> Unit
 pub fn ResponseGate::is_pending(Self) -> Bool
 pub fn ResponseGate::placeholder_open(Self) -> Bool
 pub fn ResponseGate::remaining_ms(Self) -> Int?
-pub fn ResponseGate::rest(@http.Client, @model.Interaction, deadline_ms? : Int) -> Self
+pub fn ResponseGate::rest(@http.Client, @model.Interaction, deadline_ms? : Int, clock? : &@clock.Clock) -> Self
 pub async fn ResponseGate::send(Self, @model.InteractionResponse, files? : Array[@http.FileUpload]) -> Unit
 pub fn ResponseGate::state(Self) -> ResponseState
 pub fn ResponseGate::token_remaining_ms(Self) -> Int

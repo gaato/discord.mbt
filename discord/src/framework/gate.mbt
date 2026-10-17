@@ -46,6 +46,7 @@ pub struct ResponseGate {
   priv mut in_flight : Bool
   priv settled : @cond_var.Cond
   priv reply_lock : @async.Mutex
+  priv clock : &@hclock.Clock
 }
 
 ///|
@@ -81,14 +82,15 @@ pub const INTERACTION_TOKEN_LIFETIME_MS : Int32 = 900_000
 /// defaults to `Uncertain`. Cancellation is always `Uncertain`, regardless of
 /// the classifier. With `deadline_ms`, the window closes that many
 /// milliseconds after construction: a later `send` expires the gate instead
-/// of contacting Discord.
+/// of contacting Discord. `clock` times the deadline and the token lifetime.
 pub fn ResponseGate::ResponseGate(
   kind : @model.InteractionType,
   sink : async (@model.InteractionResponse, Array[@dhttp.FileUpload]?) -> Unit,
   classify~ : (Error) -> DeliveryFailure = _ => Uncertain,
   deadline_ms? : Int32,
+  clock~ : &@hclock.Clock = @clock.default_clock(),
 ) -> ResponseGate {
-  let now = @clock.now_ms()
+  let now = clock.now_unix_ms()
   {
     kind,
     state: Pending,
@@ -100,6 +102,7 @@ pub fn ResponseGate::ResponseGate(
     in_flight: false,
     settled: @cond_var.Cond(),
     reply_lock: @async.Mutex(),
+    clock,
   }
 }
 
@@ -135,6 +138,7 @@ pub fn ResponseGate::rest(
   client : @dhttp.Client,
   interaction : @model.Interaction,
   deadline_ms~ : Int32 = DEFAULT_INTERACTION_DEADLINE_MS,
+  clock~ : &@hclock.Clock = @clock.default_clock(),
 ) -> ResponseGate {
   ResponseGate(
     interaction.typ,
@@ -148,6 +152,7 @@ pub fn ResponseGate::rest(
     },
     classify=classify_rest_callback_failure,
     deadline_ms~,
+    clock~,
   )
 }
 
@@ -157,6 +162,7 @@ pub fn ResponseGate::rest(
 pub fn ResponseGate::capture(
   interaction : @model.Interaction,
   deadline_ms~ : Int32 = DEFAULT_INTERACTION_DEADLINE_MS,
+  clock~ : &@hclock.Clock = @clock.default_clock(),
 ) -> (ResponseGate, ResponseCapture) {
   let queue : @aqueue.Queue[CapturedResponse] = Queue(kind=Blocking(1))
   let capture = ResponseCapture::{ queue, }
@@ -164,6 +170,7 @@ pub fn ResponseGate::capture(
     interaction.typ,
     (response, files) => queue.put({ response, files, }),
     deadline_ms~,
+    clock~,
   )
   (gate, capture)
 }
@@ -285,7 +292,7 @@ fn ms_until(deadline : Int64, now : Int64) -> Int32 {
 /// Milliseconds left before the callback window closes, clamped at zero, or
 /// `None` when this gate has no deadline.
 pub fn ResponseGate::remaining_ms(self : ResponseGate) -> Int32? {
-  self.deadline_at.map(deadline => ms_until(deadline, @clock.now_ms()))
+  self.deadline_at.map(deadline => ms_until(deadline, self.clock.now_unix_ms()))
 }
 
 ///|
@@ -295,7 +302,7 @@ pub fn ResponseGate::remaining_ms(self : ResponseGate) -> Int32? {
 pub fn ResponseGate::token_remaining_ms(self : ResponseGate) -> Int32 {
   ms_until(
     self.received_at + INTERACTION_TOKEN_LIFETIME_MS.to_int64(),
-    @clock.now_ms(),
+    self.clock.now_unix_ms(),
   )
 }
 

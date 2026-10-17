@@ -65,15 +65,18 @@ pub struct Framework {
   priv modals : Array[(RoutePattern, async (ModalCtx) -> Unit)]
   priv waiters : Array[ComponentWaiter]
   priv mut error_hook : (async (String, Error) -> Unit)?
+  priv clock : &@hclock.Clock
 }
 
 ///|
 /// Create an empty interaction router bound to a REST client and application
 /// id. Most bots configure routes through `@app.App` and let an executor
-/// call `App::attach` instead of registering here directly.
+/// call `App::attach` instead of registering here directly. `clock` times
+/// callback deadlines, token lifetimes, and component waits.
 pub fn Framework::Framework(
   client : @dhttp.Client,
   application_id : @model.ApplicationId,
+  clock~ : &@hclock.Clock = @clock.default_clock(),
 ) -> Framework {
   {
     client,
@@ -84,7 +87,15 @@ pub fn Framework::Framework(
     modals: [],
     waiters: [],
     error_hook: None,
+    clock,
   }
+}
+
+///|
+/// The clock this router times interactions with, for executors that wait
+/// alongside it.
+pub fn Framework::clock(self : Framework) -> &@hclock.Clock {
+  self.clock
 }
 
 ///|
@@ -243,7 +254,12 @@ pub async fn Framework::process(
   interaction : @model.Interaction,
   deadline_ms~ : Int32 = DEFAULT_INTERACTION_DEADLINE_MS,
 ) -> Bool {
-  let gate = ResponseGate::rest(self.client, interaction, deadline_ms~)
+  let gate = ResponseGate::rest(
+    self.client,
+    interaction,
+    deadline_ms~,
+    clock=self.clock,
+  )
   self.process_with(interaction, gate~)
 }
 
@@ -390,7 +406,7 @@ pub async fn Framework::wait_for_component(
     }
   })
   match timeout_ms {
-    Some(ms) => @async.with_timeout_opt(ms, () => waiter.queue.get())
+    Some(ms) => @clock.timeout_opt(self.clock, ms, () => waiter.queue.get())
     None => Some(waiter.queue.get())
   }
 }

@@ -22,6 +22,12 @@ breaking change is listed with a migration note.
 
 - **`InMemoryQueue` takes a `clock~`** for the Identify spacing, defaulting to
   the wall clock.
+- **Interaction timing takes a `clock`.** `Framework(clock?)` times callback
+  deadlines, token lifetimes, component waits, and the App's handler
+  admission (auto-defer watchdog and capacity waits), and `Framework::clock`
+  exposes it to executors. `ResponseGate`, `ResponseGate::rest`,
+  `ResponseGate::capture`, and `App::serve` accept the same `clock?`. Every
+  default is the wall clock.
 
 ### Fixed
 
