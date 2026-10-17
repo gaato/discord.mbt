@@ -153,7 +153,7 @@ pub async fn VoiceReceiveStream::next_packet(
   guard !self.closed else { return None }
   let next = match (self.started, self.end_after_silence_ms) {
     (true, Some(timeout_ms)) =>
-      @async.with_timeout_opt(timeout_ms, () => self.queue.get()) catch {
+      timeout_opt(self.connection.clock_, timeout_ms, () => self.queue.get()) catch {
         @aqueue.QueueAlreadyClosed => None
         error => raise error
       }

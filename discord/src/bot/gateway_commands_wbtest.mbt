@@ -30,7 +30,7 @@ async fn with_command_context(
     }
     (transport : &@gateway.GatewayTransport)
   })
-  builder.core.clock_.val = clock
+  builder.core.use_test_time(clock)
   let ready : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   builder.on(Events::ready(), (ctx, _) => ready.put(ctx))
   let bot = builder.build()
