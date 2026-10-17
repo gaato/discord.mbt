@@ -1126,3 +1126,15 @@ async test "command limiter admits under the limit immediately" {
     sends.wait()
   })
 }
+
+///|
+async test "identify queue lets a fresh bucket identify at once from time zero" {
+  let clock = @simclock.VirtualClock(start_ms=0)
+  let queue = @queue.InMemoryQueue(max_concurrency=1, spacing_ms=5250, clock~)
+  @async.with_task_group(group => {
+    let first = group.spawn(() => queue.wait_for_identify(0))
+    clock.settle()
+    assert_eq(clock.pending(), [])
+    first.wait()
+  })
+}
