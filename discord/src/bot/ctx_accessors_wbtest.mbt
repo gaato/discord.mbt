@@ -62,7 +62,8 @@ test "shard id validation rejects each invalid selection" {
 
 ///|
 async test "gateway context exposes raw handles, refs, and waiters" {
-  let transport = BotFakeTransport()
+  let clock = @simclock.VirtualClock()
+  let transport = @gatewaysim.FakeTransport(clock~)
   let app = @app.AppBuilder()
   let client = @dhttp.Client("test-token")
   defer client.close()
@@ -115,16 +116,17 @@ async test "gateway context exposes raw handles, refs, and waiters" {
   )
   bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  bot.core.use_test_time(clock)
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
   let bot_bot = bot.build()
   @async.with_task_group(group => {
     let running = group.spawn(no_wait=true, () => bot_bot.run())
-    transport.incoming.put(BOT_HELLO)
+    transport.put(BOT_HELLO)
     guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected identify")
     }
-    transport.incoming.put(bot_ready_frame())
+    transport.put(bot_ready_frame())
     let ctx = ready_contexts.get()
 
     // Raw handles agree with the ctx-level views built on top of them.
@@ -153,8 +155,8 @@ async test "gateway context exposes raw handles, refs, and waiters" {
         timeout_ms=2000,
       )
     })
-    @async.sleep(10)
-    transport.incoming.put(
+    clock.settle()
+    transport.put(
       (
         #|{"op":0,"s":2,"t":"MESSAGE_CREATE","d":{"id":"500","channel_id":"400","author":{"id":"200","username":"nelly","discriminator":"0","avatar":null},"content":"hello","timestamp":"2024-01-02T03:04:05.000000+00:00","edited_timestamp":null,"tts":false,"mention_everyone":false,"mentions":[],"mention_roles":[],"attachments":[],"embeds":[],"pinned":false,"type":0}}
       ),
@@ -169,11 +171,11 @@ async test "gateway context exposes raw handles, refs, and waiters" {
     let refetched = ctx.ref_of_message(event.message).fetch()
     inspect(refetched.content, content="hello")
 
-    // Waiters time out to None instead of raising.
-    assert_true(
-      ctx.wait_for(Events::message_create(), _ => false, timeout_ms=1) is None,
-    )
-    assert_true(
+    // Waiters time out to None instead of raising, on the bot's clock.
+    let unmatched = group.spawn(no_wait=true, () => {
+      ctx.wait_for(Events::message_create(), _ => false, timeout_ms=1)
+    })
+    let unclicked = group.spawn(no_wait=true, () => {
       ctx.wait_for_component(
         @app.component_route(
           id="never-clicked",
@@ -182,8 +184,10 @@ async test "gateway context exposes raw handles, refs, and waiters" {
         (),
         timeout_ms=1,
       )
-      is None,
-    )
+    })
+    clock.advance(1)
+    assert_true(unmatched.wait() is None)
+    assert_true(unclicked.wait() is None)
     ctx.shutdown()
     running.wait()
   })

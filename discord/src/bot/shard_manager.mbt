@@ -125,41 +125,24 @@ fn[X] BotCore::start_managed_shard(
   event_filter~ : (@model.EventKind) -> Bool,
   resume? : @gateway.Session,
 ) -> @gateway.Shard {
-  match self.connector_.val {
-    Some(connector) =>
-      @gateway.Shard::start(
-        group,
-        token~,
-        intents~,
-        capabilities=self.capabilities_,
-        presence?=self.presence_,
-        gateway_url~,
-        shard_id~,
-        shard_count~,
-        identify_queue~,
-        event_filter~,
-        connector~,
-        compress=self.compress_,
-        telemetry=event => self.emit_telemetry(event),
-        resume?,
-      )
-    None =>
-      @gateway.Shard::start(
-        group,
-        token~,
-        intents~,
-        capabilities=self.capabilities_,
-        presence?=self.presence_,
-        gateway_url~,
-        shard_id~,
-        shard_count~,
-        identify_queue~,
-        event_filter~,
-        compress=self.compress_,
-        telemetry=event => self.emit_telemetry(event),
-        resume?,
-      )
-  }
+  @gateway.Shard::start(
+    group,
+    token~,
+    intents~,
+    capabilities=self.capabilities_,
+    presence?=self.presence_,
+    gateway_url~,
+    shard_id~,
+    shard_count~,
+    identify_queue~,
+    event_filter~,
+    connector?=self.connector_.val,
+    compress=self.compress_,
+    telemetry=event => self.emit_telemetry(event),
+    clock=self.clock_.val,
+    rand?=self.rand_.val,
+    resume?,
+  )
 }
 
 ///|

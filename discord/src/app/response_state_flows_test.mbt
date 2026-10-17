@@ -5,9 +5,10 @@ priv suberror ResponseStateFailure derive(Debug)
 fn state_flow_framework(
   app : @app.App,
   client : @dhttp.Client,
+  clock? : &@hclock.Clock,
 ) -> @framework.Framework raise {
   let application_id = @model.Id::parse("400000000000000001")
-  let framework = @framework.Framework(client, application_id)
+  let framework = @framework.Framework(client, application_id, clock?)
   app.attach(framework, client~, application_id~) |> ignore
   framework
 }
@@ -397,12 +398,13 @@ async test "a failed fallback keeps an unconfirmed placeholder open" {
 ///|
 async test "concurrent replies edit the placeholder once, then follow up" {
   let requests : Array[String] = []
+  let clock = @simclock.VirtualClock()
   let client = @dhttp.Client("test-token")
   defer client.close()
   client.middleware((request, _) => {
     requests.push("\{Repr(request.route.method_())} \{request.route.path()}")
     // Keep the edit in flight so the second reply decides while it runs.
-    @async.sleep(50)
+    (clock : &@hclock.Clock).sleep(50)
     { status: 200, headers: Map([]), body: app_test_message().to_json(), }
   })
   let app = @app.AppBuilder()
@@ -420,10 +422,18 @@ async test "concurrent replies edit the placeholder once, then follow up" {
       }),
     ),
   )
-  let framework = state_flow_framework(app.build(), client)
+  let framework = state_flow_framework(app.build(), client, clock~)
   let interaction = app_command("twice", "500000000000000808")
-  let (gate, _) = @framework.ResponseGate::capture(interaction)
-  assert_true(framework.process_with(interaction, gate~))
+  let (gate, _) = @framework.ResponseGate::capture(interaction, clock~)
+  @async.with_task_group(group => {
+    let processing = group.spawn(() => {
+      framework.process_with(interaction, gate~)
+    })
+    while clock.advance_to_next() {
+      ()
+    }
+    assert_true(processing.wait())
+  })
   assert_eq(requests, [
     "Patch /webhooks/400000000000000001/interaction-token/messages/@original", "Post /webhooks/400000000000000001/interaction-token",
   ])

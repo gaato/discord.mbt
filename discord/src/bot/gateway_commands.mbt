@@ -125,7 +125,7 @@ pub async fn GatewayCtx::fetch_guild_members(
     rate_limit_matches(event, guild_id, nonce)
   })
   defer limited.cancel()
-  let result = @async.with_timeout_opt(timeout_ms, () => {
+  let result = @clock.timeout_opt(self.collector_.clock.val, timeout_ms, () => {
     @async.with_task_group(group => {
       group.spawn_bg(no_wait=true, () => {
         if limited.waiter.queue.get() is RateLimited(event) {

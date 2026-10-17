@@ -11,6 +11,8 @@ pub(all) suberror BotConfigError {
   MismatchedSession(shard_id~ : Int32)
   /// `event_backlog` must allow at least one waiting event.
   InvalidEventBacklog(value~ : Int32)
+  /// `shutdown_grace_ms` must not be negative.
+  InvalidShutdownGrace(value~ : Int32)
 } derive(Debug)
 
 ///|
@@ -52,6 +54,10 @@ pub struct BotBuilder {
 /// behind, further events skip them — with an `EventDropped` telemetry event
 /// each and one warning per overload — until they catch up. The cache and
 /// interaction routing never wait in this backlog.
+///
+/// After a requested shutdown, `run` waits up to `shutdown_grace_ms` for
+/// event and interaction handlers that are still running, then cancels them
+/// with a warning (default `DEFAULT_SHUTDOWN_GRACE_MS`).
 pub fn BotBuilder::BotBuilder(
   app : @app.App,
   token~ : String,
@@ -66,6 +72,7 @@ pub fn BotBuilder::BotBuilder(
   sync_unowned~ : @framework.UnownedCommands = Delete,
   resume~ : Map[Int32, BotSession] = Map([]),
   event_backlog~ : Int32 = DEFAULT_EVENT_BACKLOG,
+  shutdown_grace_ms~ : Int32 = DEFAULT_SHUTDOWN_GRACE_MS,
 ) -> BotBuilder {
   {
     core: BotCore::new(
@@ -82,6 +89,7 @@ pub fn BotBuilder::BotBuilder(
       sync_unowned~,
       resume~,
       event_backlog~,
+      shutdown_grace_ms~,
     ),
   }
 }
@@ -184,7 +192,8 @@ pub fn BotBuilder::on_decode_error(
 ///|
 /// Validate the configuration and freeze the registrations into a `Bot`.
 /// Raises `BotConfigError` for an empty token, a shard selection Discord
-/// cannot represent, a saved session whose ids disagree, or an `event_backlog` below 1. Intents are resolved here, so warnings about
+/// cannot represent, a saved session whose ids disagree, an `event_backlog`
+/// below 1, or a negative `shutdown_grace_ms`. Intents are resolved here, so warnings about
 /// subscriptions the intents cannot deliver appear once, at build time.
 pub fn BotBuilder::build(self : BotBuilder) -> Bot raise BotConfigError {
   let core = self.core
@@ -193,6 +202,9 @@ pub fn BotBuilder::build(self : BotBuilder) -> Bot raise BotConfigError {
   }
   if core.event_backlog_ < 1 {
     raise InvalidEventBacklog(value=core.event_backlog_)
+  }
+  if core.shutdown_grace_ms_ < 0 {
+    raise InvalidShutdownGrace(value=core.shutdown_grace_ms_)
   }
   if core.shards_.static_layout() is Some((ids, count)) &&
     shard_layout_problem(ids, count) is Some(message) {
@@ -218,7 +230,7 @@ pub fn BotBuilder::build(self : BotBuilder) -> Bot raise BotConfigError {
     services_: core.services_.copy(),
     starting_: Ref(false),
     running_shards_: Ref([]),
-    collector_: EventCollector(),
+    collector_: EventCollector(clock=core.clock_),
     frozen_intents_: Some(core.resolved_intents()),
   }
   { core: built, running_: Ref(false), }

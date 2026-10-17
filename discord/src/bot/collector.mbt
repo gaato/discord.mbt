@@ -17,6 +17,8 @@ priv struct EventWaiter {
 /// and return response-capable contexts.
 priv struct EventCollector {
   waiters : Array[EventWaiter]
+  // The Bot's clock, which times waits.
+  clock : Ref[&@hclock.Clock]
 }
 
 ///|
@@ -30,8 +32,10 @@ pub struct PendingEvent[T] {
 }
 
 ///|
-fn EventCollector::EventCollector() -> EventCollector {
-  { waiters: [], }
+fn EventCollector::EventCollector(
+  clock~ : Ref[&@hclock.Clock] = Ref(@clock.default_clock()),
+) -> EventCollector {
+  { waiters: [], clock, }
 }
 
 ///|
@@ -109,7 +113,10 @@ pub async fn[T] PendingEvent::wait(
 ) -> T? {
   defer self.cancel()
   let raw = match timeout_ms {
-    Some(ms) => @async.with_timeout_opt(ms, () => self.waiter.queue.get())
+    Some(ms) =>
+      @clock.timeout_opt(self.collector.clock.val, ms, () => {
+        self.waiter.queue.get()
+      })
     None => Some(self.waiter.queue.get())
   }
   raw.bind(raw_event => self.event_type.project(raw_event))

@@ -25,7 +25,8 @@ async test "a handler waiting at full capacity still receives its component" {
   let client = @dhttp.Client("test-token")
   defer client.close()
   let application_id = @model.Id::parse("400000000000000001")
-  let framework = @framework.Framework(client, application_id)
+  let clock = @simclock.VirtualClock()
+  let framework = @framework.Framework(client, application_id, clock~)
   let waiter : @app.ComponentWaiter = (custom_id, user, timeout_ms) => {
     framework.wait_for_component(custom_id~, user?, timeout_ms?)
   }
@@ -33,15 +34,16 @@ async test "a handler waiting at full capacity still receives its component" {
   @async.with_task_group(group => {
     let command = app_command("confirm", "500000000000000900")
     group.spawn_bg(() => {
-      let (gate, _) = @framework.ResponseGate::capture(command)
+      let (gate, _) = @framework.ResponseGate::capture(command, clock~)
       framework.process_with(command, gate~) |> ignore
     })
     waiting.get()
     // The only permit is held by the waiting handler; routing must not need it.
     let component = app_component("confirm-yes", "500000000000000901")
-    let (gate, _) = @framework.ResponseGate::capture(component)
+    let (gate, _) = @framework.ResponseGate::capture(component, clock~)
     assert_true(framework.process_with(component, gate~))
-    assert_eq(@async.with_timeout_opt(1000, () => woke.get()), Some(true))
+    clock.settle()
+    assert_eq(woke.try_get(), Some(true))
   })
 }
 
@@ -77,6 +79,7 @@ async test "handler capacity waits count against the response deadline" {
   )
   let client = @dhttp.Client("test-token")
   defer client.close()
+  let clock = @simclock.VirtualClock()
   @async.with_task_group(group => {
     let endpoint = app
       .build()
@@ -84,6 +87,7 @@ async test "handler capacity waits count against the response deadline" {
         group,
         access=Client(client),
         application_id=@model.Id::parse("400000000000000001"),
+        clock~,
       )
     group.spawn_bg(() => {
       endpoint.handle_interaction(
@@ -93,20 +97,18 @@ async test "handler capacity waits count against the response deadline" {
       |> ignore
     })
     holding.get()
-    let outcome = endpoint.handle_interaction(
-      app_command("quick", "500000000000000903"),
-      deadline_ms=50,
-    )
-    assert_true(outcome is TimedOut)
-    release.put(())
-    // The admission waiter reports the drop when its own capacity wait times
-    // out; under load that can land after the endpoint's timeout, so wait for
-    // it instead of sleeping a fixed time.
-    @async.with_timeout(2000, () => {
-      while warnings.is_empty() {
-        @async.sleep(5)
-      }
+    let quick = group.spawn(() => {
+      endpoint.handle_interaction(
+        app_command("quick", "500000000000000903"),
+        deadline_ms=50,
+      )
     })
+    // The endpoint's timeout and the admission waiter's capacity wait both
+    // end with the window.
+    clock.advance(50)
+    assert_true(quick.wait() is TimedOut)
+    release.put(())
+    clock.settle()
     assert_false(quick_ran.val)
     assert_eq(warnings, [
       "interaction dropped (command:quick): the response deadline passed before the handler could start",
@@ -125,12 +127,13 @@ async test "slow middleware on a deferring route is acknowledged automatically" 
     { status: 200, headers: Map([]), body: app_test_message().to_json(), }
   })
   let handled : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  let clock = @simclock.VirtualClock()
   app.middleware((ctx, next) => {
     if ctx.interaction().data is Some(Command(data)) && data.name == "denied" {
-      @async.sleep(200)
+      (clock : &@hclock.Clock).sleep(200)
       raise @app.HandlerError::CheckFailed
     }
-    @async.sleep(200)
+    (clock : &@hclock.Clock).sleep(200)
     next()
   })
   app.command(
@@ -159,27 +162,37 @@ async test "slow middleware on a deferring route is acknowledged automatically" 
         group,
         access=Client(client),
         application_id=@model.Id::parse("400000000000000001"),
+        clock~,
       )
-    // 1100 ms leaves 100 ms before the watchdog's 1000 ms margin.
-    guard endpoint.handle_interaction(
+    // 1100 ms leaves 100 ms before the watchdog's 1000 ms margin, while the
+    // middleware still has 100 ms to go.
+    let report = group.spawn(() => {
+      endpoint.handle_interaction(
         app_command("report", "500000000000000904"),
         deadline_ms=1100,
       )
-      is Reply(response~, ..) else {
+    })
+    clock.advance(100)
+    guard report.wait() is Reply(response~, ..) else {
       fail("expected an automatic deferral")
     }
     assert_eq(response.typ, DeferredChannelMessageWithSource)
     json_inspect(response.data.unwrap(), content={ "flags": 64 })
-    assert_eq(@async.with_timeout_opt(1000, () => handled.get()), Some(()))
-    guard endpoint.handle_interaction(
+    assert_true(handled.try_get() is None)
+    clock.advance(100)
+    assert_eq(handled.try_get(), Some(()))
+    let denied = group.spawn(() => {
+      endpoint.handle_interaction(
         app_command("denied", "500000000000000905"),
         deadline_ms=1100,
       )
-      is Reply(response~, ..) else {
+    })
+    clock.advance(100)
+    guard denied.wait() is Reply(response~, ..) else {
       fail("expected an automatic deferral")
     }
     assert_eq(response.typ, DeferredChannelMessageWithSource)
-    @async.sleep(300)
+    clock.advance(100)
     assert_eq(requests, [
       "Patch /webhooks/400000000000000001/interaction-token/messages/@original",
       "Patch /webhooks/400000000000000001/interaction-token/messages/@original",
@@ -200,6 +213,7 @@ async test "fast failures on a deferring route stay ephemeral initial responses"
   )
   let client = @dhttp.Client("test-token")
   defer client.close()
+  let clock = @simclock.VirtualClock()
   @async.with_task_group(group => {
     let endpoint = app
       .build()
@@ -207,6 +221,7 @@ async test "fast failures on a deferring route stay ephemeral initial responses"
         group,
         access=Client(client),
         application_id=@model.Id::parse("400000000000000001"),
+        clock~,
       )
     guard endpoint.handle_interaction(
         app_command("refused", "500000000000000906"),
@@ -257,6 +272,7 @@ async test "a deferred interaction beyond max_pending is refused before it is ac
     headers: Map([]),
     body: app_test_message().to_json(),
   })
+  let clock = @simclock.VirtualClock()
   @async.with_task_group(group => {
     let endpoint = app
       .build()
@@ -264,6 +280,7 @@ async test "a deferred interaction beyond max_pending is refused before it is ac
         group,
         access=Client(client),
         application_id=@model.Id::parse("400000000000000001"),
+        clock~,
       )
     group.spawn_bg(() => {
       endpoint.handle_interaction(
@@ -272,7 +289,7 @@ async test "a deferred interaction beyond max_pending is refused before it is ac
       )
       |> ignore
     })
-    @async.with_timeout(2000, () => holding.get())
+    holding.get()
     // The first deferred interaction waits for the permit (and is deferred on
     // time by the watchdog); it fills max_pending.
     let first = group.spawn(() => {
@@ -281,7 +298,7 @@ async test "a deferred interaction beyond max_pending is refused before it is ac
         deadline_ms=1200,
       )
     })
-    @async.sleep(50)
+    clock.advance(50)
     let refused = endpoint.handle_interaction(
       app_command("later", "500000000000000972"),
       deadline_ms=1200,
@@ -296,16 +313,14 @@ async test "a deferred interaction beyond max_pending is refused before it is ac
         "flags": 64,
       },
     })
-    guard first.wait() is Reply(response~, ..) else {
+    // The watchdog defers the first one 200 ms after it arrived.
+    clock.advance(150)
+    guard first.try_wait() is Some(Reply(response~, ..)) else {
       fail("expected the first interaction to be deferred")
     }
     assert_eq(response.typ, DeferredChannelMessageWithSource)
     release.put(())
-    @async.with_timeout(2000, () => {
-      while ran.is_empty() {
-        @async.sleep(5)
-      }
-    })
+    clock.settle()
     assert_eq(ran, ["500000000000000971"])
   })
 }

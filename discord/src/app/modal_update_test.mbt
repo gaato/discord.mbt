@@ -180,6 +180,7 @@ async test "a rejected modal update is answered even when every handler slot is 
   )
   let client = @dhttp.Client("test-token")
   defer client.close()
+  let clock = @simclock.VirtualClock()
   @async.with_task_group(group => {
     let endpoint = app
       .build()
@@ -187,6 +188,7 @@ async test "a rejected modal update is answered even when every handler slot is 
         group,
         access=Client(client),
         application_id=@model.Id::parse("400000000000000001"),
+        clock~,
       )
     group.spawn_bg(() => {
       endpoint.handle_interaction(

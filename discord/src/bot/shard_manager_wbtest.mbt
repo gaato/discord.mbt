@@ -1,61 +1,4 @@
 ///|
-/// Like `BotFakeTransport`, keeps heartbeats (op 1) out of `outgoing`: a
-/// jittered first heartbeat can come before an identify that waits for the
-/// identify queue.
-struct ManagerFakeTransport {
-  incoming : @aqueue.Queue[String]
-  outgoing : @aqueue.Queue[(Int64, Json)]
-  heartbeats : @aqueue.Queue[Json]
-  closed : Ref[Bool]
-}
-
-///|
-fn ManagerFakeTransport::ManagerFakeTransport() -> ManagerFakeTransport {
-  {
-    incoming: Queue(kind=Unbounded),
-    outgoing: Queue(kind=Unbounded),
-    heartbeats: Queue(kind=Unbounded),
-    closed: Ref(false),
-  }
-}
-
-///|
-fn ManagerFakeTransport::server_close(
-  self : ManagerFakeTransport,
-  code : Int32,
-) -> Unit {
-  self.incoming.close(
-    error=@gateway.TransportClosed(code=Some(code), reason="server closed"),
-  )
-}
-
-///|
-impl @gateway.GatewayTransport for ManagerFakeTransport with fn recv(self) {
-  Text(self.incoming.get())
-}
-
-///|
-impl @gateway.GatewayTransport for ManagerFakeTransport with fn send(self, text) {
-  let frame = @json.parse(text)
-  if frame is { "op": Number(1, ..), .. } {
-    self.heartbeats.put(frame)
-  } else {
-    self.outgoing.put((@clock.now_ms(), frame))
-  }
-}
-
-///|
-impl @gateway.GatewayTransport for ManagerFakeTransport with fn close(
-  self,
-  code~,
-) {
-  self.closed.val = true
-  self.incoming.close(
-    error=@gateway.TransportClosed(code=Some(code), reason="client closed"),
-  )
-}
-
-///|
 const MANAGER_HELLO : String =
   #|{"op":10,"d":{"heartbeat_interval":60000}}
 
@@ -116,11 +59,51 @@ fn ready_shard(ready : @model.Ready) -> Int32 raise {
 }
 
 ///|
-async fn[T] manager_get(queue : @aqueue.Queue[T], stage : String) -> T {
-  match @async.with_timeout_opt(1000, () => queue.get()) {
+/// Take what `stage` should have produced once the tasks have gone idle.
+async fn[T] manager_get(
+  clock : @simclock.VirtualClock,
+  queue : @aqueue.Queue[T],
+  stage : String,
+) -> T {
+  clock.settle()
+  match queue.try_get() {
     Some(value) => value
-    None => fail("timed out waiting for \{stage}")
+    None => fail("\{stage} did not happen")
   }
+}
+
+///|
+/// The IDENTIFY `transport` has sent, if any.
+fn sent_identify(transport : @gatewaysim.FakeTransport) -> Json? {
+  for frame in transport.sent {
+    if frame is { "op": Number(2, ..), .. } {
+      return Some(frame)
+    }
+  }
+  None
+}
+
+///|
+/// Fire timers in deadline order until every transport has sent an IDENTIFY,
+/// and return the virtual time each one was sent at.
+async fn identify_times(
+  clock : @simclock.VirtualClock,
+  transports : Array[@gatewaysim.FakeTransport],
+) -> Array[Int64] {
+  let times : Array[Int64?] = transports.map(_ => None)
+  clock.settle()
+  while true {
+    for index, transport in transports {
+      if times[index] is None && sent_identify(transport) is Some(_) {
+        times[index] = Some(clock.now_unix_ms())
+      }
+    }
+    if times.iter().all(time => time is Some(_)) {
+      break
+    }
+    guard clock.advance_to_next() else { fail("an IDENTIFY was never sent") }
+  }
+  times.map(time => time.unwrap())
 }
 
 ///|
@@ -255,9 +238,10 @@ fn manager_bot_session(
 
 ///|
 async test "fixed shards share identify queue and dispatch path" {
-  let first = ManagerFakeTransport()
-  let second = ManagerFakeTransport()
-  let pending : Array[ManagerFakeTransport] = [second, first]
+  let clock = @simclock.VirtualClock()
+  let first = @gatewaysim.FakeTransport(clock~)
+  let second = @gatewaysim.FakeTransport(clock~)
+  let pending : Array[@gatewaysim.FakeTransport] = [second, first]
   let app = @app.AppBuilder()
   let bot = BotBuilder(
     app.build(),
@@ -267,13 +251,13 @@ async test "fixed shards share identify queue and dispatch path" {
     shards=Fixed(count=2),
   )
   bot.core.gateway_bot_info_.val = Some(manager_gateway_info(max_concurrency=1))
-  bot.core.identify_spacing_ms_.val = 60
   bot.core.connector_.val = Some(_ => {
     match pending.pop() {
       Some(transport) => (transport : &@gateway.GatewayTransport)
       None => raise @gateway.TransportClosed(code=None, reason="no transport")
     }
   })
+  bot.core.use_test_time(clock)
   let ready_contexts : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready_contexts.put(ctx))
   let deleted : @aqueue.Queue[(String, Int32)] = Queue(kind=Unbounded)
@@ -292,40 +276,38 @@ async test "fixed shards share identify queue and dispatch path" {
     let running = group.spawn(no_wait=true, allow_failure=true, () => {
       bot_bot.run()
     })
-    first.incoming.put(MANAGER_HELLO)
-    second.incoming.put(MANAGER_HELLO)
-    let (first_at, first_identify) = manager_get(
-      first.outgoing,
-      "first identify",
-    )
-    let (second_at, second_identify) = manager_get(
-      second.outgoing,
-      "second identify",
-    )
+    let started_at = clock.now_unix_ms()
+    first.put(MANAGER_HELLO)
+    second.put(MANAGER_HELLO)
+    // One bucket: one shard identifies at once, the other a full spacing
+    // later.
+    let times = identify_times(clock, [first, second])
+    times.sort()
+    assert_eq(times, [started_at, started_at + 5250L])
+    guard sent_identify(first) is Some(first_identify) else {
+      fail("expected first identify")
+    }
+    guard sent_identify(second) is Some(second_identify) else {
+      fail("expected second identify")
+    }
     let (first_id, first_count) = identify_shard(first_identify)
     let (second_id, second_count) = identify_shard(second_identify)
     assert_eq(first_count, 2)
     assert_eq(second_count, 2)
     assert_true(first_id != second_id)
-    let identify_gap = if first_at > second_at {
-      first_at - second_at
-    } else {
-      second_at - first_at
-    }
-    assert_true(identify_gap >= 50L)
 
-    first.incoming.put(manager_ready_frame(first_id, 2))
-    second.incoming.put(manager_ready_frame(second_id, 2))
-    let first_ctx = manager_get(ready_contexts, "first READY handler")
-    let second_ctx = manager_get(ready_contexts, "second READY handler")
+    first.put(manager_ready_frame(first_id, 2))
+    second.put(manager_ready_frame(second_id, 2))
+    let first_ctx = manager_get(clock, ready_contexts, "first READY handler")
+    let second_ctx = manager_get(clock, ready_contexts, "second READY handler")
     assert_true(
       ready_shard(first_ctx.ready()) != ready_shard(second_ctx.ready()),
     )
 
-    first.incoming.put(manager_message_delete_frame("700"))
-    second.incoming.put(manager_message_delete_frame("701"))
-    let first_delete = manager_get(deleted, "first message handler")
-    let second_delete = manager_get(deleted, "second message handler")
+    first.put(manager_message_delete_frame("700"))
+    second.put(manager_message_delete_frame("701"))
+    let first_delete = manager_get(clock, deleted, "first message handler")
+    let second_delete = manager_get(clock, deleted, "second message handler")
     assert_true(first_delete.0 != second_delete.0)
     assert_true(first_delete.1 != second_delete.1)
     assert_eq(identified.length(), 2)
@@ -333,19 +315,18 @@ async test "fixed shards share identify queue and dispatch path" {
     assert_true(identified.contains(1))
 
     first_ctx.shutdown()
-    guard @async.with_timeout_opt(1000, () => running.wait()) is Some(_) else {
-      fail("timed out stopping shards")
-    }
+    running.wait()
   })
-  assert_true(first.closed.val)
-  assert_true(second.closed.val)
+  assert_eq(first.close_calls.val, 1)
+  assert_eq(second.close_calls.val, 1)
 }
 
 ///|
 async test "fatal close fails the manager and closes sibling shards" {
-  let first = ManagerFakeTransport()
-  let second = ManagerFakeTransport()
-  let pending : Array[ManagerFakeTransport] = [second, first]
+  let clock = @simclock.VirtualClock()
+  let first = @gatewaysim.FakeTransport(clock~)
+  let second = @gatewaysim.FakeTransport(clock~)
+  let pending : Array[@gatewaysim.FakeTransport] = [second, first]
   let app = @app.AppBuilder()
   let bot = BotBuilder(
     app.build(),
@@ -354,13 +335,13 @@ async test "fatal close fails the manager and closes sibling shards" {
     shards=Fixed(count=2),
   )
   bot.core.gateway_bot_info_.val = Some(manager_gateway_info(max_concurrency=2))
-  bot.core.identify_spacing_ms_.val = 1
   bot.core.connector_.val = Some(_ => {
     match pending.pop() {
       Some(transport) => (transport : &@gateway.GatewayTransport)
       None => raise @gateway.TransportClosed(code=None, reason="no transport")
     }
   })
+  bot.core.use_test_time(clock)
   let ready : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (_, _) => ready.put(()))
 
@@ -369,18 +350,18 @@ async test "fatal close fails the manager and closes sibling shards" {
     let running = group.spawn(no_wait=true, allow_failure=true, () => {
       bot_bot.run()
     })
-    first.incoming.put(MANAGER_HELLO)
-    second.incoming.put(MANAGER_HELLO)
-    let (_, first_identify) = first.outgoing.get()
-    let (_, second_identify) = second.outgoing.get()
+    first.put(MANAGER_HELLO)
+    second.put(MANAGER_HELLO)
+    let first_identify = first.outgoing.get()
+    let second_identify = second.outgoing.get()
     let (first_id, _) = identify_shard(first_identify)
     let (second_id, _) = identify_shard(second_identify)
-    first.incoming.put(manager_ready_frame(first_id, 2))
-    second.incoming.put(manager_ready_frame(second_id, 2))
+    first.put(manager_ready_frame(first_id, 2))
+    second.put(manager_ready_frame(second_id, 2))
     ready.get()
     ready.get()
 
-    first.server_close(4014)
+    first.server_close(Some(4014))
     try running.wait() catch {
       BotError::FatallyClosed(code=4014) => ()
       error => fail("unexpected error: \{error}")
@@ -388,14 +369,15 @@ async test "fatal close fails the manager and closes sibling shards" {
       _ => fail("expected fatal close")
     }
   })
-  assert_true(second.closed.val)
+  assert_eq(second.close_calls.val, 1)
 }
 
 ///|
 async test "voice state updates go to the shard that owns the guild" {
-  let first = ManagerFakeTransport()
-  let second = ManagerFakeTransport()
-  let pending : Array[ManagerFakeTransport] = [second, first]
+  let clock = @simclock.VirtualClock()
+  let first = @gatewaysim.FakeTransport(clock~)
+  let second = @gatewaysim.FakeTransport(clock~)
+  let pending : Array[@gatewaysim.FakeTransport] = [second, first]
   let app = @app.AppBuilder()
   let bot = BotBuilder(
     app.build(),
@@ -404,13 +386,13 @@ async test "voice state updates go to the shard that owns the guild" {
     shards=Fixed(count=2),
   )
   bot.core.gateway_bot_info_.val = Some(manager_gateway_info(max_concurrency=2))
-  bot.core.identify_spacing_ms_.val = 1
   bot.core.connector_.val = Some(_ => {
     match pending.pop() {
       Some(transport) => (transport : &@gateway.GatewayTransport)
       None => raise @gateway.TransportClosed(code=None, reason="no transport")
     }
   })
+  bot.core.use_test_time(clock)
   let ready : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready.put(ctx))
   let bot_bot = bot.build()
@@ -418,16 +400,16 @@ async test "voice state updates go to the shard that owns the guild" {
     let running = group.spawn(no_wait=true, allow_failure=true, () => {
       bot_bot.run()
     })
-    first.incoming.put(MANAGER_HELLO)
-    second.incoming.put(MANAGER_HELLO)
-    let (_, first_identify) = manager_get(first.outgoing, "first identify")
-    let (_, second_identify) = manager_get(second.outgoing, "second identify")
+    first.put(MANAGER_HELLO)
+    second.put(MANAGER_HELLO)
+    let first_identify = manager_get(clock, first.outgoing, "first identify")
+    let second_identify = manager_get(clock, second.outgoing, "second identify")
     let (first_id, _) = identify_shard(first_identify)
     let (second_id, _) = identify_shard(second_identify)
-    first.incoming.put(manager_ready_frame(first_id, 2))
-    second.incoming.put(manager_ready_frame(second_id, 2))
-    let ctx = manager_get(ready, "first READY handler")
-    manager_get(ready, "second READY handler") |> ignore
+    first.put(manager_ready_frame(first_id, 2))
+    second.put(manager_ready_frame(second_id, 2))
+    let ctx = manager_get(clock, ready, "first READY handler")
+    manager_get(clock, ready, "second READY handler") |> ignore
     // (guild_id >> 22) % 2: 1 << 22 is on shard 1 and 2 << 22 on shard 0,
     // whichever shard's context sends the command.
     let on_shard_one : @model.Id[@model.GuildMarker] = Id(4194304UL)
@@ -449,8 +431,8 @@ async test "voice state updates go to the shard that owns the guild" {
     } else {
       (second, first)
     }
-    let (_, sent_one) = manager_get(one.outgoing, "shard 1 voice state")
-    let (_, sent_zero) = manager_get(zero.outgoing, "shard 0 voice state")
+    let sent_one = manager_get(clock, one.outgoing, "shard 1 voice state")
+    let sent_zero = manager_get(clock, zero.outgoing, "shard 0 voice state")
     guard sent_one
       is { "op": Number(4, ..), "d": { "guild_id": "4194304", .. }, .. } else {
       fail("shard 1 got \{sent_one.stringify()}")
@@ -460,15 +442,14 @@ async test "voice state updates go to the shard that owns the guild" {
       fail("shard 0 got \{sent_zero.stringify()}")
     }
     ctx.shutdown()
-    guard @async.with_timeout_opt(1000, () => running.wait()) is Some(_) else {
-      fail("timed out stopping shards")
-    }
+    running.wait()
   })
 }
 
 ///|
 async test "a voice state update for a shard run elsewhere raises" {
-  let transport = ManagerFakeTransport()
+  let clock = @simclock.VirtualClock()
+  let transport = @gatewaysim.FakeTransport(clock~)
   let app = @app.AppBuilder()
   let bot = BotBuilder(
     app.build(),
@@ -479,6 +460,7 @@ async test "a voice state update for a shard run elsewhere raises" {
   )
   bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
+  bot.core.use_test_time(clock)
   let ready : @aqueue.Queue[GatewayCtx] = Queue(kind=Unbounded)
   bot.on(Events::ready(), (ctx, _) => ready.put(ctx))
   let bot_bot = bot.build()
@@ -486,10 +468,10 @@ async test "a voice state update for a shard run elsewhere raises" {
     let running = group.spawn(no_wait=true, allow_failure=true, () => {
       bot_bot.run()
     })
-    transport.incoming.put(MANAGER_HELLO)
-    manager_get(transport.outgoing, "identify") |> ignore
-    transport.incoming.put(manager_ready_frame(0, 2))
-    let ctx = manager_get(ready, "READY handler")
+    transport.put(MANAGER_HELLO)
+    manager_get(clock, transport.outgoing, "identify") |> ignore
+    transport.put(manager_ready_frame(0, 2))
+    let ctx = manager_get(clock, ready, "READY handler")
     try
       ctx.update_voice_state({
         guild_id: Id(4194304UL),
@@ -505,9 +487,7 @@ async test "a voice state update for a shard run elsewhere raises" {
       _ => fail("expected ShardNotManaged")
     }
     ctx.shutdown()
-    guard @async.with_timeout_opt(1000, () => running.wait()) is Some(_) else {
-      fail("timed out stopping the shard")
-    }
+    running.wait()
   })
 }
 

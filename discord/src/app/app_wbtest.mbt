@@ -931,11 +931,13 @@ async test "a deferred interaction still waiting when its token expires is dropp
   let app = { ..builder.build(), deferred_wait_ms_: 100, }
   let client = @dhttp.Client("test-token")
   defer client.close()
+  let clock = @simclock.VirtualClock()
   @async.with_task_group(group => {
     let endpoint = app.serve(
       group,
       access=Client(client),
       application_id=@model.Id::parse("400000000000000001"),
+      clock~,
     )
     group.spawn_bg(() => {
       endpoint.handle_interaction(
@@ -944,19 +946,19 @@ async test "a deferred interaction still waiting when its token expires is dropp
       )
       |> ignore
     })
-    @async.with_timeout(2000, () => holding.get())
-    endpoint.handle_interaction(
-      wbtest_command("later", "500000000000000974"),
-      deadline_ms=50,
-    )
-    |> ignore
-    @async.with_timeout(2000, () => {
-      while warnings.is_empty() {
-        @async.sleep(5)
-      }
+    holding.get()
+    let later = group.spawn(() => {
+      endpoint.handle_interaction(
+        wbtest_command("later", "500000000000000974"),
+        deadline_ms=50,
+      )
     })
+    // The permit wait gives up when the stand-in token lifetime runs out.
+    clock.advance(100)
+    later.wait() |> ignore
+    assert_eq(warnings.length(), 1)
     release.put(())
-    @async.sleep(20)
+    clock.settle()
   })
   assert_false(ran.val)
   assert_eq(warnings, [
