@@ -3,7 +3,7 @@ package "gaato/discord/internal/gatewaysim"
 
 import {
   "gaato/discord/gateway",
-  "gaato/discord/internal/simclock",
+  "gaato/http-async/mock",
   "moonbitlang/async/aqueue",
   "moonbitlang/core/debug",
   "moonbitlang/core/ref",
@@ -34,7 +34,7 @@ pub struct FakeTransport {
   recv_in_flight : @ref.Ref[Bool]
   // private fields
 }
-pub fn FakeTransport::FakeTransport(clock? : @simclock.VirtualClock) -> Self
+pub fn FakeTransport::FakeTransport(clock? : @mock.VirtualClock) -> Self
 pub async fn FakeTransport::put(Self, String) -> Unit
 pub fn FakeTransport::server_close(Self, Int?) -> Unit
 pub impl @gateway.GatewayTransport for FakeTransport

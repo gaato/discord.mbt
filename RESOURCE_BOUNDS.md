@@ -26,7 +26,7 @@ kind say what that product is.
 | Cache entries (`cache/cache.mbt`) | `CacheLimits` per resource, and everything keyed by a guild or channel leaves with it. The defaults limit only messages (100 per channel); see the known gaps for what that leaves unbounded | Oldest entry evicted |
 | Cache unavailable-guild flags (`cache/cache.mbt`) | Guilds the bot is in | — |
 | Cooldown windows (`cooldown/cooldown.mbt`) | Live windows: expired keys are swept whenever the map doubles, and at least once a minute | — |
-| REST rate-limit buckets (`gaato/sdk-runtime` `WindowLimiter`, also inside the coordinator) | Buckets in use: idle gates are dropped, expired states swept whenever the map doubles (needs the sdk-runtime release with that fix; until then a bucket per interaction token stays) | — |
+| REST rate-limit buckets (`gaato/sdk-runtime` `WindowLimiter`, also inside the coordinator) | Buckets in use: idle gates are dropped, expired states swept whenever the map doubles, and at least once a minute | — |
 | Inbound interaction request body (`endpoint_http/endpoint_http.mbt`) | `max_body_bytes`, default 1 MiB | 413 and the connection closes |
 | Voice receive stream (`discord_voice/src/subscribe.mbt`) | 250 frames | Newest frames dropped, then a `Lost(count)` marker; `ReceiveDropped` telemetry |
 | Voice event queue (`discord_voice/src/connection.mbt`) | 256 events | Oldest dropped; `EventDropped` telemetry |

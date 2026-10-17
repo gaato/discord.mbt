@@ -13,7 +13,7 @@ import {
 import {
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
-  "gaato/discord/internal/simclock",
+  "gaato/http-async/mock" @simclock,
   "moonbitlang/async/aqueue",
   "moonbitlang/core/random",
 } for "test"

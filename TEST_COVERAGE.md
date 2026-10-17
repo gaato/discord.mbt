@@ -57,9 +57,8 @@ Accepted as uncovered (needs a ledger row):
 - timed-wait loops without an injectable clock (`with_typing`,
   shard_manager). The gateway shard, command limiter, and identify queue take
   a `clock~`, and the voice gateway and voice connection a `clock?` (a
-  `gaato/http/clock` `Clock`, driven in tests by a virtual clock:
-  `internal/simclock` for the gateway, `gaato/http-async/mock`'s
-  `VirtualClock` for voice), plus `rand?`; their backoff/heartbeat/keepalive
+  `gaato/http/clock` `Clock`, driven in tests by `gaato/http-async/mock`'s
+  `VirtualClock`), plus `rand?`; their backoff/heartbeat/keepalive
   cadences, and for voice also playback pacing, receive backoff and
   reordering, ready and silence timeouts, are tested deterministically —
   their rows below now cover only defensive arms;

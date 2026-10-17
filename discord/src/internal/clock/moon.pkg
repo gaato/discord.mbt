@@ -5,7 +5,7 @@ import {
 }
 
 import {
-  "gaato/discord/internal/simclock",
+  "gaato/http-async/mock" @simclock,
   "moonbitlang/async",
   "moonbitlang/async/aqueue",
 } for "test"
