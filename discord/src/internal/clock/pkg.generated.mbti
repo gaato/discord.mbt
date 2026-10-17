@@ -2,6 +2,8 @@
 package "gaato/discord/internal/clock"
 
 // Values
+pub fn default_clock() -> &@gaato/http/clock.Clock
+
 pub fn now_ms() -> Int64
 
 // Errors

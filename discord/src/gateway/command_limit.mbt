@@ -6,7 +6,7 @@ pub struct CommandLimiter {
   priv timestamps : Array[Int64]
   priv limit : Int32
   priv window_ms : Int64
-  priv sleeper_ : async (Int32) -> Unit
+  priv clock_ : &@hclock.Clock
 }
 
 ///|
@@ -14,9 +14,9 @@ pub struct CommandLimiter {
 pub fn CommandLimiter::CommandLimiter(
   limit~ : Int32 = 115,
   window_ms~ : Int32 = 60000,
-  sleeper~ : async (Int32) -> Unit = ms => @async.sleep(ms),
+  clock~ : &@hclock.Clock = @clock.default_clock(),
 ) -> CommandLimiter {
-  { timestamps: [], limit, window_ms: window_ms.to_int64(), sleeper_: sleeper, }
+  { timestamps: [], limit, window_ms: window_ms.to_int64(), clock_: clock, }
 }
 
 ///|
@@ -45,12 +45,12 @@ fn CommandLimiter::slot_wait_ms(self : CommandLimiter, now : Int64) -> Int32? {
 ///|
 // Callers must serialize waiting, sending, and recording to avoid oversubscription.
 async fn CommandLimiter::wait_for_slot(self : CommandLimiter) -> Unit {
-  while self.slot_wait_ms(@clock.now_ms()) is Some(ms) {
-    (self.sleeper_)(ms)
+  while self.slot_wait_ms(self.clock_.now_unix_ms()) is Some(ms) {
+    self.clock_.sleep(ms)
   }
 }
 
 ///|
 fn CommandLimiter::record(self : CommandLimiter) -> Unit {
-  self.timestamps.push(@clock.now_ms())
+  self.timestamps.push(self.clock_.now_unix_ms())
 }

@@ -54,14 +54,15 @@ Accepted as uncovered (needs a ledger row):
   behavior is exercised by the live probe sweeps recorded in COVERAGE.md
   (run 11: 242 PASS / 0 FAIL, 2026-07-16) and the live voice session checks
   (playback + recording, 2026-07-15);
-- timed-wait loops without an injectable sleeper (ratelimit, queue,
-  `with_typing`, shard_manager). The gateway shard and command limiter loops
-  take `sleeper?`/`rand?` since 2026-07-18, and the voice gateway and voice
-  connection take `clock?` (a `gaato/http/clock` `Clock`, driven in tests by
-  `gaato/http-async/mock`'s `VirtualClock`) and `rand?` since 2026-10-17, so
-  their backoff/heartbeat/keepalive cadences, and for voice also playback
-  pacing, receive backoff and reordering, ready and silence timeouts, are
-  tested deterministically — their rows below now cover only defensive arms;
+- timed-wait loops without an injectable clock (`with_typing`,
+  shard_manager). The gateway shard, command limiter, and identify queue take
+  a `clock~`, and the voice gateway and voice connection a `clock?` (a
+  `gaato/http/clock` `Clock`, driven in tests by a virtual clock:
+  `internal/simclock` for the gateway, `gaato/http-async/mock`'s
+  `VirtualClock` for voice), plus `rand?`; their backoff/heartbeat/keepalive
+  cadences, and for voice also playback pacing, receive backoff and
+  reordering, ready and silence timeouts, are tested deterministically —
+  their rows below now cover only defensive arms;
 - defensive arms that are unreachable by construction (`abort`, fallbacks
   behind emitters that always produce the expected shape);
 - error/cancellation plumbing deep inside async dispatch flows.
@@ -107,8 +108,7 @@ ledgered):
 | discord_voice/src/ogg_opus.mbt | 4 | Constructor `abort`s (unreachable by construction) and one reader break arm. |
 
 Reconnect/backoff and timed-wait loops (exercised in every live gateway
-run; the gateway loops are additionally tested via injected sleepers, the
-voice loops on a `VirtualClock`):
+run; the gateway and voice loops are additionally tested on injected clocks):
 
 | File | Budget | Reason |
 | --- | --- | --- |

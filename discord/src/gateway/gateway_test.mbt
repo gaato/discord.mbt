@@ -1,96 +1,12 @@
 ///|
-/// In-memory transport: `incoming` feeds `recv`, `outgoing` captures `send`.
-struct FakeTransport {
-  incoming : @aqueue.Queue[String]
-  outgoing : @aqueue.Queue[Json]
-  block_next_send : Ref[Bool]
-  send_started : @aqueue.Queue[Unit]
-  send_in_flight : Ref[Bool]
-  recv_in_flight : Ref[Bool]
-  close_during_send : Ref[Bool]
-  close_during_recv : Ref[Bool]
-  close_calls : Ref[Int32]
-  close_code : Ref[Int32?]
-  fail_close : Ref[Bool]
-}
-
-///|
-fn FakeTransport::FakeTransport() -> FakeTransport {
-  {
-    incoming: Queue(kind=Unbounded),
-    outgoing: Queue(kind=Unbounded),
-    block_next_send: Ref(false),
-    send_started: Queue(kind=Unbounded),
-    send_in_flight: Ref(false),
-    recv_in_flight: Ref(false),
-    close_during_send: Ref(false),
-    close_during_recv: Ref(false),
-    close_calls: Ref(0),
-    close_code: Ref(None),
-    fail_close: Ref(false),
-  }
-}
-
-///|
-fn FakeTransport::server_close(self : FakeTransport, code : Int32?) -> Unit {
-  self.incoming.close(
-    error=@gateway.TransportClosed(code~, reason="server closed"),
-  )
-}
-
-///|
-impl @gateway.GatewayTransport for FakeTransport with fn recv(self) {
-  self.recv_in_flight.val = true
-  defer {
-    self.recv_in_flight.val = false
-  }
-  Text(self.incoming.get())
-}
-
-///|
-impl @gateway.GatewayTransport for FakeTransport with fn send(self, text) {
-  self.send_in_flight.val = true
-  defer {
-    self.send_in_flight.val = false
-  }
-  if self.block_next_send.val {
-    self.block_next_send.val = false
-    self.send_started.put(())
-    @async.sleep(3_600_000)
-  }
-  self.outgoing.put(@json.parse(text) catch { _ => Json::null() })
-}
-
-///|
-impl @gateway.GatewayTransport for FakeTransport with fn close(self, code~) {
-  if self.send_in_flight.val {
-    self.close_during_send.val = true
-  }
-  if self.recv_in_flight.val {
-    self.close_during_recv.val = true
-  }
-  if self.close_calls.val > 0 {
-    return
-  }
-  self.close_calls.val += 1
-  self.close_code.val = Some(code)
-  self.incoming.close(
-    error=@gateway.TransportClosed(code=Some(code), reason="client closed"),
-  )
-  if self.fail_close.val {
-    raise GatewayTestFailure
-  }
-}
-
-///|
 suberror GatewayTestFailure {
   GatewayTestFailure
 }
 
 ///|
 async test "typed commands and latest presence survive re-identify" {
-  let first = FakeTransport()
-  let second = FakeTransport()
+  let first = @gatewaysim.FakeTransport()
+  let second = @gatewaysim.FakeTransport()
   let pending = [second, first]
   let initial = @model.UpdatePresence(status=Idle, activities=[
     @model.BotActivity::custom("initial"),
@@ -99,10 +15,12 @@ async test "typed commands and latest presence survive re-identify" {
   let latest = @model.UpdatePresence(status=Invisible, activities=[
     @model.BotActivity::custom("busy"),
   ])
+  let clock = @simclock.VirtualClock()
   @async.with_timeout(5000, () => {
     @async.with_task_group(group => {
       let shard = @gateway.Shard::start(
         group,
+        rand=seeded_rand(),
         token="tok",
         intents=@model.Intents::none(),
         presence=initial,
@@ -113,17 +31,11 @@ async test "typed commands and latest presence survive re-identify" {
               raise @gateway.TransportClosed(code=None, reason="no transport")
           }
         },
-        sleeper=ms => {
-          if ms >= 60000 {
-            @async.sleep(ms)
-          } else {
-            @async.sleep(1)
-          }
-        },
+        clock~,
       )
       initial.activities.clear()
       initial.activities.push(@model.BotActivity::custom("changed after start"))
-      first.incoming.put(HELLO)
+      first.put(HELLO)
       // Ignore the heartbeat if jitter schedules it ahead of Identify.
       for ;; {
         if first.outgoing.get()
@@ -132,7 +44,7 @@ async test "typed commands and latest presence survive re-identify" {
           break
         }
       }
-      first.incoming.put(ready_frame())
+      first.put(ready_frame())
       guard! shard.next() is Connected(resumed=false)
       guard! shard.next() is Dispatch(Ready(_))
       shard.update_presence(latest)
@@ -163,9 +75,11 @@ async test "typed commands and latest presence survive re-identify" {
           break
         }
       }
-      first.incoming.put("{\"op\":9,\"d\":false}")
+      first.put("{\"op\":9,\"d\":false}")
       guard! shard.next() is Disconnected(..)
-      second.incoming.put(HELLO)
+      // the documented 1-5 s wait before identifying again
+      clock.advance(5000)
+      second.put(HELLO)
       for ;; {
         if second.outgoing.get()
           is { "op": Number(2, ..), "d": { "presence": presence, .. }, .. } {
@@ -185,13 +99,14 @@ async test "inflater factory failure is fatal before connecting" {
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
+      rand=seeded_rand(),
       token="tok",
       intents=@model.Intents::none(),
       compress=true,
       inflater_factory=() => raise GatewayTestFailure,
       connector=_ => {
         calls.val += 1
-        (FakeTransport() : &@gateway.GatewayTransport)
+        (@gatewaysim.FakeTransport() : &@gateway.GatewayTransport)
       },
       telemetry=event => telemetry.push(event),
     )
@@ -214,6 +129,7 @@ async test "shard rejects sends while connecting and cancels the connector" {
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
+      rand=seeded_rand(),
       token="tok",
       intents=@model.Intents::none(),
       connector=_ => {
@@ -246,6 +162,7 @@ async test "shard suppresses connector failure after protected cancellation clea
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
+      rand=seeded_rand(),
       token="tok",
       intents=@model.Intents::none(),
       connector=_ => {
@@ -276,22 +193,24 @@ async test "shard suppresses connector failure after protected cancellation clea
 
 ///|
 async test "shard connector failure reports telemetry and cancelled backoff stops retrying" {
-  let gate = SleepGate()
+  let clock = @simclock.VirtualClock()
   let attempts = Ref(0)
   let telemetry : Array[@telemetry.TelemetryEvent] = []
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
+      rand=seeded_rand(),
       token="tok",
       intents=@model.Intents::none(),
       connector=_ => {
         attempts.val += 1
         raise GatewayTestFailure
       },
-      sleeper=ms => gate.sleep(ms),
+      clock~,
       telemetry=event => telemetry.push(event),
     )
-    let delay = gate.requests.get()
+    clock.settle()
+    guard clock.pending() is [delay] else { fail("expected one backoff") }
     assert_true(delay >= 250 && delay < 2250)
     assert_eq(shard.state(), Disconnected(reconnect_attempts=1))
     assert_true(telemetry[0] is ShardConnecting(shard_id=0))
@@ -305,46 +224,20 @@ async test "shard connector failure reports telemetry and cancelled backoff stop
 }
 
 ///|
-async test "shard backoff sleeper failure ends the retry loop" {
-  let attempts = Ref(0)
-  let slept : @aqueue.Queue[Int32] = Queue(kind=Unbounded)
-  @async.with_task_group(group => {
-    let shard = @gateway.Shard::start(
-      group,
-      token="tok",
-      intents=@model.Intents::none(),
-      connector=_ => {
-        attempts.val += 1
-        raise GatewayTestFailure
-      },
-      sleeper=ms => {
-        slept.put(ms)
-        raise GatewayTestFailure
-      },
-    )
-    assert_true(slept.get() >= 250)
-    @async.pause()
-    assert_eq(attempts.val, 1)
-    assert_eq(shard.state(), Disconnected(reconnect_attempts=1))
-    shard.close()
-  })
-}
-
-///|
 async test "shard rejects malformed Hello and preserves transport close codes" {
   for failure in 0..<3 {
-    let transport = FakeTransport()
-    let gate = SleepGate()
+    let transport = @gatewaysim.FakeTransport()
     @async.with_task_group(group => {
       let shard = @gateway.Shard::start(
         group,
+        rand=seeded_rand(),
         token="tok",
         intents=@model.Intents::none(),
         connector=_ => (transport : &@gateway.GatewayTransport),
-        sleeper=ms => gate.sleep(ms),
+        clock=@simclock.VirtualClock(),
       )
       match failure {
-        0 => transport.incoming.put("{\"op\":10,\"d\":{}}")
+        0 => transport.put("{\"op\":10,\"d\":{}}")
         1 => transport.server_close(Some(4004))
         _ => transport.incoming.close(error=GatewayTestFailure)
       }
@@ -363,42 +256,41 @@ async test "shard rejects malformed Hello and preserves transport close codes" {
 
 ///|
 async test "shard ignores incomplete dispatches and reconnects from a zero sequence" {
-  let first = FakeTransport()
-  let second = FakeTransport()
+  let first = @gatewaysim.FakeTransport()
+  let second = @gatewaysim.FakeTransport()
   let transports = [second, first]
-  let gate = SleepGate()
-  let parked : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  let clock = @simclock.VirtualClock()
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
+      rand=seeded_rand(),
       token="tok",
       intents=@model.Intents::none(),
       connector=_ => (transports.pop().unwrap() : &@gateway.GatewayTransport),
-      sleeper=ms => if ms <= 1 { parked.get() } else { gate.sleep(ms) },
+      clock~,
     )
-    first.incoming.put(HELLO_FAST)
+    first.put(HELLO)
     guard! first.outgoing.get() is { "op": Number(2, ..), .. }
     for
       frame in [
         "{}", "{\"op\":0}", "{\"op\":0,\"t\":\"READY\",\"s\":1,\"d\":{}}", "{\"op\":255}",
       ] {
-      first.incoming.put(frame)
+      first.put(frame)
     }
-    first.incoming.put("{\"op\":1,\"d\":null}")
+    first.put("{\"op\":1,\"d\":null}")
     assert_eq(first.outgoing.get(), { "op": 1, "d": null })
     let ready = @json.parse(ready_frame())
     guard! ready is Object(fields)
     fields["s"] = Json::null()
-    first.incoming.put(ready.stringify())
+    first.put(ready.stringify())
     guard! shard.next() is Connected(resumed=false)
     guard! shard.next() is Dispatch(Ready(_))
-    first.incoming.put("{\"op\":7,\"d\":null}")
+    first.put("{\"op\":7,\"d\":null}")
     guard! shard.next() is Disconnected(code=None, resuming=true)
     // a 1000 close would invalidate the session we are about to resume
     assert_eq(first.close_code.val, Some(4000))
-    gate.requests.get() |> ignore
-    gate.release()
-    second.incoming.put(HELLO_FAST)
+    assert_true(clock.advance_to_next())
+    second.put(HELLO)
     guard second.outgoing.get()
       is { "op": Number(6, ..), "d": { "seq": Number(0, ..), .. }, .. } else {
       fail("expected resume from sequence zero")
@@ -409,20 +301,20 @@ async test "shard ignores incomplete dispatches and reconnects from a zero seque
 
 ///|
 async test "shard malformed read frames disconnect and tolerate transport close failure" {
-  let transport = FakeTransport()
-  let parked : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  let transport = @gatewaysim.FakeTransport()
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
+      rand=seeded_rand(),
       token="tok",
       intents=@model.Intents::none(),
       connector=_ => (transport : &@gateway.GatewayTransport),
-      sleeper=_ => parked.get(),
+      clock=@simclock.VirtualClock(),
     )
-    transport.incoming.put(HELLO)
+    transport.put(HELLO)
     transport.outgoing.get() |> ignore
     transport.fail_close.val = true
-    transport.incoming.put("{")
+    transport.put("{")
     guard! shard.next() is Disconnected(code=None, resuming=false)
     assert_eq(transport.close_calls.val, 1)
     shard.close()
@@ -432,18 +324,18 @@ async test "shard malformed read frames disconnect and tolerate transport close 
 ///|
 async test "shard rejects compression frame mismatches" {
   for compress in [false, true] {
-    let transport = BinaryFakeTransport()
+    let transport = @gatewaysim.FakeTransport()
     let inflater = FakeInflater::{ messages: [], chunks: [], pending: [], }
-    let parked : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
     @async.with_task_group(group => {
       let shard = @gateway.Shard::start(
         group,
+        rand=seeded_rand(),
         token="tok",
         intents=@model.Intents::none(),
         compress~,
         connector=_ => (transport : &@gateway.GatewayTransport),
         inflater_factory=() => (inflater : &@gateway.Inflater),
-        sleeper=_ => parked.get(),
+        clock=@simclock.VirtualClock(),
       )
       transport.incoming.put(
         if compress {
@@ -461,17 +353,17 @@ async test "shard rejects compression frame mismatches" {
 
 ///|
 async test "shard send failures release the writer gate" {
-  let transport = FakeTransport()
-  let parked : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  let transport = @gatewaysim.FakeTransport()
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
+      rand=seeded_rand(),
       token="tok",
       intents=@model.Intents::none(),
       connector=_ => (transport : &@gateway.GatewayTransport),
-      sleeper=_ => parked.get(),
+      clock=@simclock.VirtualClock(),
     )
-    transport.incoming.put(HELLO)
+    transport.put(HELLO)
     transport.outgoing.get() |> ignore
     transport.outgoing.close(error=GatewayTestFailure)
     for _ in 0..<2 {
@@ -489,13 +381,17 @@ async test "shard send failures release the writer gate" {
 
 ///|
 async test "cancelling a shard closes its transport exactly once" {
-  let transport = FakeTransport()
+  let transport = @gatewaysim.FakeTransport()
   @async.with_task_group(group => {
-    @gateway.Shard::start(group, token="tok", intents=@model.Intents::none(), connector=_ => {
-      (transport : &@gateway.GatewayTransport)
-    })
+    @gateway.Shard::start(
+      group,
+      token="tok",
+      intents=@model.Intents::none(),
+      rand=seeded_rand(),
+      connector=_ => (transport : &@gateway.GatewayTransport),
+    )
     |> ignore
-    transport.incoming.put(HELLO)
+    transport.put(HELLO)
     transport.outgoing.get() |> ignore
   })
   assert_eq(transport.close_calls.val, 1)
@@ -515,7 +411,7 @@ fn ready_frame() -> String {
 
 ///|
 async test "shard resumes from a saved session and exposes snapshots" {
-  let transport = FakeTransport()
+  let transport = @gatewaysim.FakeTransport()
   let urls : Array[String] = []
   let saved : @gateway.Session = {
     id: "sess",
@@ -525,6 +421,7 @@ async test "shard resumes from a saved session and exposes snapshots" {
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
+      rand=seeded_rand(),
       token="tok",
       intents=@model.Intents::none(),
       gateway_url="wss://gateway.example",
@@ -535,7 +432,7 @@ async test "shard resumes from a saved session and exposes snapshots" {
       },
     )
     saved.sequence = 99L
-    transport.incoming.put(HELLO)
+    transport.put(HELLO)
     guard transport.outgoing.get()
       is {
         "op": Number(6, ..),
@@ -545,7 +442,7 @@ async test "shard resumes from a saved session and exposes snapshots" {
       fail("expected saved session resume")
     }
     assert_true(urls[0].has_prefix("wss://resume.example/?v=10"))
-    transport.incoming.put("{\"op\":0,\"t\":\"RESUMED\",\"s\":42,\"d\":{}}")
+    transport.put("{\"op\":0,\"t\":\"RESUMED\",\"s\":42,\"d\":{}}")
     guard! shard.next() is Connected(resumed=true)
     guard shard.session() is Some(snapshot) else { fail("expected session") }
     assert_eq(snapshot.sequence, 42L)
@@ -559,12 +456,14 @@ async test "shard resumes from a saved session and exposes snapshots" {
 
 ///|
 async test "stale resume url falls back to identify after three connector failures" {
-  let transport = FakeTransport()
+  let transport = @gatewaysim.FakeTransport()
   let urls : Array[String] = []
   let connected : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  let clock = @simclock.VirtualClock()
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
+      rand=seeded_rand(),
       token="tok",
       intents=@model.Intents::none(),
       gateway_url="wss://gateway.example",
@@ -577,15 +476,19 @@ async test "stale resume url falls back to identify after three connector failur
         connected.put(())
         (transport : &@gateway.GatewayTransport)
       },
-      sleeper=_ => (),
+      clock~,
     )
+    clock.settle()
+    while urls.length() < 4 {
+      assert_true(clock.advance_to_next())
+    }
     connected.get()
     assert_eq(urls.length(), 4)
     for i in 0..<3 {
       assert_true(urls[i].has_prefix("wss://resume.example/?v=10"))
     }
     assert_true(urls[3].has_prefix("wss://gateway.example/?v=10"))
-    transport.incoming.put(HELLO)
+    transport.put(HELLO)
     guard! transport.outgoing.get() is { "op": Number(2, ..), .. }
     shard.close()
   })
@@ -593,14 +496,16 @@ async test "stale resume url falls back to identify after three connector failur
 
 ///|
 async test "successful connector resets stale-host fallback failure count" {
-  let first = FakeTransport()
-  let fallback = FakeTransport()
+  let first = @gatewaysim.FakeTransport()
+  let fallback = @gatewaysim.FakeTransport()
   let urls : Array[String] = []
   let first_connected : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   let fallback_connected : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  let clock = @simclock.VirtualClock()
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
+      rand=seeded_rand(),
       token="tok",
       intents=@model.Intents::none(),
       gateway_url="wss://gateway.example",
@@ -619,19 +524,26 @@ async test "successful connector resets stale-host fallback failure count" {
           _ => raise GatewayTestFailure
         }
       },
-      sleeper=_ => (),
+      clock~,
     )
+    assert_true(clock.advance_to_next())
     first_connected.get()
-    first.incoming.put(HELLO)
+    first.put(HELLO)
     guard! first.outgoing.get() is { "op": Number(6, ..), .. }
-    first.server_close(Some(1001))
+    // a resumable drop: the stale-host count restarts, so the resume url gets
+    // three more tries before the fallback
+    first.server_close(Some(4000))
+    clock.settle()
+    while urls.length() < 6 {
+      assert_true(clock.advance_to_next())
+    }
     fallback_connected.get()
     assert_eq(urls.length(), 6)
     for i in 0..<5 {
       assert_true(urls[i].has_prefix("wss://resume.example/?v=10"))
     }
     assert_true(urls[5].has_prefix("wss://gateway.example/?v=10"))
-    fallback.incoming.put(HELLO)
+    fallback.put(HELLO)
     guard! fallback.outgoing.get() is { "op": Number(2, ..), .. }
     shard.close()
   })
@@ -682,39 +594,8 @@ impl @gateway.Inflater for FakeInflater with fn push(self, bytes) {
 }
 
 ///|
-struct BinaryFakeTransport {
-  incoming : @aqueue.Queue[@gateway.GatewayFrame]
-  outgoing : @aqueue.Queue[Json]
-}
-
-///|
-fn BinaryFakeTransport::BinaryFakeTransport() -> BinaryFakeTransport {
-  { incoming: Queue(kind=Unbounded), outgoing: Queue(kind=Unbounded), }
-}
-
-///|
-impl @gateway.GatewayTransport for BinaryFakeTransport with fn recv(self) {
-  self.incoming.get()
-}
-
-///|
-impl @gateway.GatewayTransport for BinaryFakeTransport with fn send(self, text) {
-  self.outgoing.put(@json.parse(text))
-}
-
-///|
-impl @gateway.GatewayTransport for BinaryFakeTransport with fn close(
-  self,
-  code~,
-) {
-  self.incoming.close(
-    error=@gateway.TransportClosed(code=Some(code), reason="client closed"),
-  )
-}
-
-///|
 async test "compressed shard buffers suffix fragments and decodes messages" {
-  let transport = BinaryFakeTransport()
+  let transport = @gatewaysim.FakeTransport()
   let inflater = FakeInflater::{
     // pop() consumes from the end: Hello, Ready, then dispatch.
     messages: [
@@ -732,6 +613,7 @@ async test "compressed shard buffers suffix fragments and decodes messages" {
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
+      rand=seeded_rand(),
       token="tok",
       intents=@model.Intents::guild_messages(),
       compress=true,
@@ -785,13 +667,14 @@ test "on_close classifies discord codes" {
 
 ///|
 async test "shard identifies, dispatches, and resumes across a drop" {
-  let first = FakeTransport()
-  let second = FakeTransport()
-  let pending : Array[FakeTransport] = [second, first]
+  let first = @gatewaysim.FakeTransport()
+  let second = @gatewaysim.FakeTransport()
+  let pending : Array[@gatewaysim.FakeTransport] = [second, first]
   let telemetry : Array[@telemetry.TelemetryEvent] = []
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
+      rand=seeded_rand(),
       token="tok-123",
       intents=@model.Intents::guilds() | @model.Intents::guild_messages(),
       connector=_ => {
@@ -803,7 +686,7 @@ async test "shard identifies, dispatches, and resumes across a drop" {
       telemetry=event => telemetry.push(event),
     )
     // --- connection 1: identify ---
-    first.incoming.put(HELLO)
+    first.put(HELLO)
     let identify = first.outgoing.get()
     guard identify
       is {
@@ -817,7 +700,7 @@ async test "shard identifies, dispatches, and resumes across a drop" {
       } else {
       fail("expected identify, got \{identify.stringify()}")
     }
-    first.incoming.put(ready_frame())
+    first.put(ready_frame())
     guard! shard.next() is Connected(resumed=false)
     debug_inspect(shard.state(), content="Active")
     guard shard.next() is Dispatch(Ready(ready)) else {
@@ -825,7 +708,7 @@ async test "shard identifies, dispatches, and resumes across a drop" {
     }
     inspect(ready.session_id, content="sess-1")
     // --- dispatch flows through ---
-    first.incoming.put(
+    first.put(
       (
         #|{"op":0,"s":2,"t":"MESSAGE_DELETE","d":{"id":"5","channel_id":"6"}}
       ),
@@ -835,7 +718,7 @@ async test "shard identifies, dispatches, and resumes across a drop" {
     }
     inspect(deleted.id, content="5")
     // --- unknown event types are surfaced, not dropped ---
-    first.incoming.put(
+    first.put(
       (
         #|{"op":0,"s":3,"t":"SOME_FUTURE_EVENT","d":{"x":1}}
       ),
@@ -848,7 +731,7 @@ async test "shard identifies, dispatches, and resumes across a drop" {
     first.server_close(Some(4000))
     guard! shard.next() is Disconnected(code=Some(4000), resuming=true)
     // --- connection 2: resume with the stored session and sequence ---
-    second.incoming.put(HELLO)
+    second.put(HELLO)
     let resume_payload = second.outgoing.get()
     guard resume_payload
       is {
@@ -863,7 +746,7 @@ async test "shard identifies, dispatches, and resumes across a drop" {
       } else {
       fail("expected resume, got \{resume_payload.stringify()}")
     }
-    second.incoming.put(
+    second.put(
       (
         #|{"op":0,"s":4,"t":"RESUMED","d":null}
       ),
@@ -888,19 +771,20 @@ async test "shard identifies, dispatches, and resumes across a drop" {
 
 ///|
 async test "cancelled shard send releases the serialized send gate" {
-  let transport = FakeTransport()
+  let transport = @gatewaysim.FakeTransport()
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
+      rand=seeded_rand(),
       token="tok",
       intents=@model.Intents::none(),
       connector=_ => (transport : &@gateway.GatewayTransport),
     )
-    transport.incoming.put(HELLO)
+    transport.put(HELLO)
     guard transport.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected identify")
     }
-    transport.incoming.put(ready_frame())
+    transport.put(ready_frame())
     guard shard.next() is Connected(resumed=false) else {
       fail("expected a fresh gateway connection")
     }
@@ -933,17 +817,18 @@ async test "cancelled shard send releases the serialized send gate" {
 
 ///|
 async test "closing a shard drains an in-flight writer before transport close" {
-  let transport = FakeTransport()
+  let transport = @gatewaysim.FakeTransport()
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
+      rand=seeded_rand(),
       token="tok",
       intents=@model.Intents::none(),
       connector=_ => (transport : &@gateway.GatewayTransport),
     )
-    transport.incoming.put(HELLO)
+    transport.put(HELLO)
     transport.outgoing.get() |> ignore
-    transport.incoming.put(ready_frame())
+    transport.put(ready_frame())
     guard! shard.next() is Connected(resumed=false)
     guard! shard.next() is Dispatch(Ready(_))
     @async.with_timeout(100, () => {
@@ -998,13 +883,14 @@ async test "closing a shard drains an in-flight writer before transport close" {
 
 ///|
 async test "shard answers heartbeat requests and tracks op9" {
-  let first = FakeTransport()
-  let second = FakeTransport()
-  let pending : Array[FakeTransport] = [second, first]
+  let first = @gatewaysim.FakeTransport()
+  let second = @gatewaysim.FakeTransport()
+  let pending : Array[@gatewaysim.FakeTransport] = [second, first]
   let latencies : Array[Int64] = []
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
+      rand=seeded_rand(),
       token="tok",
       intents=@model.Intents::none(),
       connector=_ => {
@@ -1019,13 +905,13 @@ async test "shard answers heartbeat requests and tracks op9" {
         }
       },
     )
-    first.incoming.put(HELLO)
+    first.put(HELLO)
     first.outgoing.get() |> ignore // identify
-    first.incoming.put(ready_frame())
+    first.put(ready_frame())
     guard! shard.next() is Connected(resumed=false)
     guard! shard.next() is Dispatch(Ready(_))
     // op 1 from the server must be answered immediately with a heartbeat
-    first.incoming.put(
+    first.put(
       (
         #|{"op":1,"d":null}
       ),
@@ -1034,20 +920,20 @@ async test "shard answers heartbeat requests and tracks op9" {
     guard beat is { "op": Number(1, ..), "d": Number(1, ..), .. } else {
       fail("expected heartbeat with seq 1, got \{beat.stringify()}")
     }
-    first.incoming.put("{\"op\":11,\"d\":null}")
+    first.put("{\"op\":11,\"d\":null}")
     @async.sleep(1)
     guard latencies.get(0) is Some(latency) else {
       fail("expected heartbeat latency telemetry")
     }
     assert_true(latency >= 0L)
     // op 9 non-resumable clears the session -> next connection identifies
-    first.incoming.put(
+    first.put(
       (
         #|{"op":9,"d":false}
       ),
     )
     guard! shard.next() is Disconnected(..)
-    second.incoming.put(HELLO)
+    second.put(HELLO)
     let second_payload = second.outgoing.get()
     guard second_payload is { "op": Number(2, ..), .. } else {
       fail("expected re-identify, got \{second_payload.stringify()}")
@@ -1058,55 +944,30 @@ async test "shard answers heartbeat requests and tracks op9" {
 
 ///|
 async test "identify queue spaces buckets" {
-  let queue = @queue.InMemoryQueue(max_concurrency=1, spacing_ms=60)
-  let start = @clock.now_ms()
-  queue.wait_for_identify(0)
-  queue.wait_for_identify(1)
-  assert_true(@clock.now_ms() - start >= 50L)
+  let clock = @simclock.VirtualClock()
+  let queue = @queue.InMemoryQueue(max_concurrency=1, spacing_ms=60, clock~)
+  @async.with_task_group(group => {
+    queue.wait_for_identify(0)
+    let second = group.spawn(() => queue.wait_for_identify(1))
+    clock.settle()
+    assert_eq(clock.pending(), [60])
+    clock.advance(60)
+    second.wait()
+  })
 }
 
 ///|
-/// Hello with a 1ms heartbeat interval: the heartbeat task's sleeps are
-/// always <= 1ms, so a test sleeper can tell them apart from reconnect
-/// backoff (>= 250ms) and the op9 re-identify delay (>= 1000ms).
-const HELLO_FAST : String =
-  #|{"op":10,"d":{"heartbeat_interval":1}}
-
-///|
-/// Gated sleeper: every requested delay is observed on `requests` and only
-/// completes when the test calls `release`.
-struct SleepGate {
-  requests : @aqueue.Queue[Int32]
-  releases : @aqueue.Queue[Unit]
-}
-
-///|
-fn SleepGate::SleepGate() -> SleepGate {
-  { requests: Queue(kind=Unbounded), releases: Queue(kind=Unbounded), }
-}
-
-///|
-async fn SleepGate::sleep(self : SleepGate, ms : Int32) -> Unit {
-  self.requests.put(ms)
-  self.releases.get()
-}
-
-///|
-async fn SleepGate::release(self : SleepGate) -> Unit {
-  self.releases.put(())
-}
-
-///|
-async test "shard backoff, resume url switch, and op9 delay run through the sleeper" {
-  let first = FakeTransport()
-  let second = FakeTransport()
-  let third = FakeTransport()
-  let pending : Array[FakeTransport] = [third, second, first]
+async test "shard backoff, resume url switch, and op9 delay run on the clock" {
+  let first = @gatewaysim.FakeTransport()
+  let second = @gatewaysim.FakeTransport()
+  let third = @gatewaysim.FakeTransport()
+  let pending : Array[@gatewaysim.FakeTransport] = [third, second, first]
   let urls : Array[String] = []
-  let gate = SleepGate()
+  let clock = @simclock.VirtualClock()
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
+      rand=seeded_rand(),
       token="tok-9",
       intents=@model.Intents::none(),
       connector=url => {
@@ -1116,50 +977,46 @@ async test "shard backoff, resume url switch, and op9 delay run through the slee
           None => raise @gateway.TransportClosed(code=None, reason="no more")
         }
       },
-      sleeper=ms => {
-        if ms <= 1 {
-          // park the heartbeat task; cancelled with the connection group
-          @async.sleep(3_600_000)
-        } else {
-          gate.sleep(ms)
-        }
-      },
+      clock~,
     )
     // --- connection 1: identify, ready ---
-    first.incoming.put(HELLO_FAST)
+    first.put(HELLO)
     guard first.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected identify")
     }
-    first.incoming.put(ready_frame())
+    first.put(ready_frame())
     guard! shard.next() is Connected(resumed=false)
     guard! shard.next() is Dispatch(Ready(_))
     // --- resumable drop: the reconnect is gated on the backoff sleep ---
     first.server_close(Some(4000))
     guard! shard.next() is Disconnected(code=Some(4000), resuming=true)
-    let backoff1 = gate.requests.get()
+    // the heartbeat timer went with the connection; only the backoff is left
+    clock.settle()
+    guard clock.pending() is [backoff1] else { fail("expected one backoff") }
     // attempts=1: full jitter over 2000ms plus the 250ms floor
     assert_true(backoff1 >= 250 && backoff1 < 2250)
     assert_eq(urls.length(), 1)
-    gate.release()
+    assert_true(clock.advance_to_next())
     // --- connection 2: switches to the resume url and resumes ---
-    second.incoming.put(HELLO_FAST)
+    second.put(HELLO)
     guard second.outgoing.get() is { "op": Number(6, ..), .. } else {
       fail("expected resume")
     }
     assert_eq(urls.length(), 2)
     assert_true(urls[1].has_prefix("wss://resume.example/"))
     // --- op9 non-resumable: the documented 1-5s wait replaces the backoff ---
-    second.incoming.put(
+    second.put(
       (
         #|{"op":9,"d":false}
       ),
     )
     guard! shard.next() is Disconnected(code=None, resuming=false)
-    let op9_wait = gate.requests.get()
+    clock.settle()
+    guard clock.pending() is [op9_wait] else { fail("expected one op9 wait") }
     assert_true(op9_wait >= 1000 && op9_wait < 5000)
-    gate.release()
+    assert_true(clock.advance_to_next())
     // --- connection 3: session was cleared, back to the configured url ---
-    third.incoming.put(HELLO_FAST)
+    third.put(HELLO)
     guard third.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected re-identify")
     }
@@ -1171,27 +1028,22 @@ async test "shard backoff, resume url switch, and op9 delay run through the slee
 
 ///|
 async test "connections that reach READY or RESUMED reset the reconnect backoff" {
-  let transports = Array::makei(6, _ => FakeTransport())
+  let transports = Array::makei(6, _ => @gatewaysim.FakeTransport())
   let pending = transports.copy()
   pending.rev_in_place()
-  let gate = SleepGate()
+  let clock = @simclock.VirtualClock()
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
+      rand=seeded_rand(),
       token="tok",
       intents=@model.Intents::none(),
       connector=_ => (pending.pop().unwrap() : &@gateway.GatewayTransport),
-      sleeper=ms => {
-        if ms <= 1 {
-          @async.sleep(3_600_000)
-        } else {
-          gate.sleep(ms)
-        }
-      },
+      clock~,
     )
-    transports[0].incoming.put(HELLO_FAST)
+    transports[0].put(HELLO)
     transports[0].outgoing.get() |> ignore
-    transports[0].incoming.put(ready_frame())
+    transports[0].put(ready_frame())
     guard! shard.next() is Connected(resumed=false)
     guard! shard.next() is Dispatch(Ready(_))
     for i in 0..<5 {
@@ -1199,13 +1051,14 @@ async test "connections that reach READY or RESUMED reset the reconnect backoff"
       guard! shard.next() is Disconnected(code=Some(4000), resuming=true)
       // every drop follows a healthy connection, so the backoff stays at
       // its first step (2000ms jitter plus the 250ms floor)
-      let backoff = gate.requests.get()
+      clock.settle()
+      guard clock.pending() is [backoff] else { fail("expected one backoff") }
       assert_true(backoff >= 250 && backoff < 2250)
-      gate.release()
+      assert_true(clock.advance_to_next())
       let next = transports[i + 1]
-      next.incoming.put(HELLO_FAST)
+      next.put(HELLO)
       guard! next.outgoing.get() is { "op": Number(6, ..), .. }
-      next.incoming.put("{\"op\":0,\"t\":\"RESUMED\",\"s\":2,\"d\":{}}")
+      next.put("{\"op\":0,\"t\":\"RESUMED\",\"s\":2,\"d\":{}}")
       guard! shard.next() is Connected(resumed=true)
       guard! shard.next() is Dispatch(_)
     }
@@ -1215,14 +1068,15 @@ async test "connections that reach READY or RESUMED reset the reconnect backoff"
 
 ///|
 async test "shard heartbeat loop beats, tracks acks, and zombie-closes" {
-  let first = FakeTransport()
-  let second = FakeTransport()
-  let pending : Array[FakeTransport] = [second, first]
+  let first = @gatewaysim.FakeTransport()
+  let second = @gatewaysim.FakeTransport()
+  let pending : Array[@gatewaysim.FakeTransport] = [second, first]
   let latencies : Array[Int64] = []
-  let gate = SleepGate()
+  let clock = @simclock.VirtualClock()
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
+      rand=seeded_rand(),
       token="tok",
       intents=@model.Intents::none(),
       connector=_ => {
@@ -1236,47 +1090,44 @@ async test "shard heartbeat loop beats, tracks acks, and zombie-closes" {
           latencies.push(latency_ms)
         }
       },
-      sleeper=ms => gate.sleep(ms),
+      clock~,
     )
-    first.incoming.put(HELLO)
+    first.put(HELLO)
     guard first.outgoing.get() is { "op": Number(2, ..), .. } else {
       fail("expected identify")
     }
-    first.incoming.put(ready_frame())
+    first.put(ready_frame())
     guard! shard.next() is Connected(resumed=false)
     guard! shard.next() is Dispatch(Ready(_))
     // the first beat waits out the documented jitter
-    let jitter = gate.requests.get()
+    clock.settle()
+    guard clock.pending() is [jitter] else { fail("expected the jitter wait") }
     assert_true(jitter >= 0 && jitter < 60000)
-    gate.release()
+    assert_true(clock.advance_to_next())
     let beat = first.outgoing.get()
     guard beat is { "op": Number(1, ..), "d": Number(1, ..), .. } else {
       fail("expected heartbeat with seq 1, got \{beat.stringify()}")
     }
-    first.incoming.put("{\"op\":11,\"d\":null}")
-    @async.sleep(1) // let the read loop process the ack
-    guard latencies.get(0) is Some(latency) else {
-      fail("expected heartbeat latency telemetry")
-    }
-    assert_true(latency >= 0L)
+    first.put("{\"op\":11,\"d\":null}")
+    clock.settle()
+    // acked at the same virtual instant the beat went out
+    assert_eq(latencies, [0L])
     // acked: the steady-state interval elapses and the next beat goes out
-    let steady = gate.requests.get()
-    assert_eq(steady, 60000)
-    gate.release()
+    assert_eq(clock.pending(), [60000])
+    assert_true(clock.advance_to_next())
     guard first.outgoing.get() is { "op": Number(1, ..), .. } else {
       fail("expected second heartbeat")
     }
     // not acked this time: the loop declares a zombie and closes with 4000
-    let steady2 = gate.requests.get()
-    assert_eq(steady2, 60000)
-    gate.release()
+    assert_eq(clock.pending(), [60000])
+    assert_true(clock.advance_to_next())
     guard! shard.next() is Disconnected(code=Some(4000), resuming=true)
     assert_eq(first.close_code.val, Some(4000))
     // and the reconnect resumes after the gated backoff
-    let backoff = gate.requests.get()
+    guard clock.pending() is [backoff] else { fail("expected one backoff") }
     assert_true(backoff >= 250 && backoff < 2250)
-    gate.release()
-    second.incoming.put(HELLO)
+    assert_true(clock.advance_to_next())
+    second.put(HELLO)
     guard second.outgoing.get() is { "op": Number(6, ..), .. } else {
       fail("expected resume after the zombie close")
     }
@@ -1287,10 +1138,36 @@ async test "shard heartbeat loop beats, tracks acks, and zombie-closes" {
 
 ///|
 async test "command limiter admits under the limit immediately" {
-  let limiter = @gateway.CommandLimiter(limit=5)
-  let start = @clock.now_ms()
-  for _ in 0..<5 {
-    limiter.acquire()
-  }
-  assert_true(@clock.now_ms() - start < 100L)
+  let clock = @simclock.VirtualClock()
+  let limiter = @gateway.CommandLimiter(limit=5, clock~)
+  @async.with_task_group(group => {
+    let sends = group.spawn(() => {
+      for _ in 0..<5 {
+        limiter.acquire()
+      }
+    })
+    clock.settle()
+    assert_eq(clock.pending(), [])
+    sends.wait()
+  })
+}
+
+///|
+async test "identify queue lets a fresh bucket identify at once from time zero" {
+  let clock = @simclock.VirtualClock(start_ms=0)
+  let queue = @queue.InMemoryQueue(max_concurrency=1, spacing_ms=5250, clock~)
+  @async.with_task_group(group => {
+    let first = group.spawn(() => queue.wait_for_identify(0))
+    clock.settle()
+    assert_eq(clock.pending(), [])
+    first.wait()
+  })
+}
+
+///|
+/// The shard's random source for tests: a fixed seed, so heartbeat jitter and
+/// backoff are the same on every run. A zero first jitter would beat at once,
+/// before IDENTIFY, with no timer registered.
+fn seeded_rand() -> @random.Rand {
+  @random.Rand::chacha8()
 }

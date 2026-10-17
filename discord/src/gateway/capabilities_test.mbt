@@ -5,16 +5,17 @@ async test "identify sends capabilities only when opted in" {
       None,
       Some(@model.GatewayCapabilities::channel_obfuscation()),
     ] {
-    let transport = FakeTransport()
+    let transport = @gatewaysim.FakeTransport()
     @async.with_task_group(group => {
       let shard = @gateway.Shard::start(
         group,
+        rand=seeded_rand(),
         token="tok",
         intents=@model.Intents::none(),
         capabilities?,
         connector=_ => (transport : &@gateway.GatewayTransport),
       )
-      transport.incoming.put(HELLO)
+      transport.put(HELLO)
       let identify : Json = transport.outgoing.get()
       guard identify is { "op": Number(2, ..), "d": data, .. } else {
         fail("unexpected identify: \{identify.stringify()}")

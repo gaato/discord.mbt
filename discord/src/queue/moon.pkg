@@ -1,4 +1,5 @@
 import {
   "gaato/discord/internal/clock",
+  "gaato/http/clock" @hclock,
   "moonbitlang/async",
 }

@@ -7,6 +7,22 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+### Changed
+
+- **`Shard::start` and `CommandLimiter` take a `clock~` instead of a
+  `sleeper~`.** The clock (`gaato/http/clock`'s `Clock`, the same trait
+  `@ratelimit.rate_limiter` takes) supplies both the current time and the
+  waits, so a test can drive heartbeats, backoff, and the command window on
+  virtual time; before, the limiter read the wall clock even when the sleeper
+  was replaced. A clock's sleep cannot fail, so a sleeper that raised to stop
+  the reconnect loop has no equivalent: close the shard instead.
+  Migration: drop `sleeper=` or pass `clock=` with your own `Clock`.
+
+### Added
+
+- **`InMemoryQueue` takes a `clock~`** for the Identify spacing, defaulting to
+  the wall clock.
+
 ### Fixed
 
 - **Gateway zlib-stream compression no longer truncates large messages.**
