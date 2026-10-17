@@ -95,6 +95,10 @@ breaking change is listed with a migration note.
   cache no longer keeps a channel-to-guild entry for every channel it has
   seen, including threads a THREAD_LIST_SYNC dropped while channels were not
   retained.
+- **Coordinator request and response lines are limited to 64 KiB.** A peer
+  that streamed bytes without a newline made the other side buffer them
+  without bound; the coordinator now answers with an error and closes the
+  connection, and the client drops it with `InvalidResponse`.
 
 ### Fixed
 

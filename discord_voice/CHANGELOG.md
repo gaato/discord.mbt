@@ -28,6 +28,17 @@ releases (0.x → 0.y) may contain breaking changes; patch releases do not.
   passes to another user loses its reorder window, so the receive maps hold
   one entry per user in the channel. Before, each SSRC a user ever spoke on
   kept a mapping and a reorder buffer until the user disconnected.
+- **A voice gateway message is limited to 4 MiB.** A larger one ends the
+  connection with 1009 and the connection resumes; before, any message was
+  read whole into memory.
+- **Join gates and the roster no longer outlive their use.** The last join for
+  a guild, finished or failed, removes its gate, and a new session starts with
+  an empty roster; before, every guild ever joined kept a gate, and a user
+  whose disconnect was lost with an old session stayed in the roster and was
+  handed to each new DAVE session.
+- **`OggPacketReader` keeps only the unparsed tail of its input**, so a long
+  stream no longer stays in memory whole when pages do not end on a read
+  boundary, and one packet is limited to 16 MiB (`InvalidOggPage`).
 - **DAVE keeps at most 16 prepared transitions.** Preparing another forgets
   the oldest; before, a transition the gateway never executed stayed for the
   rest of the session.
