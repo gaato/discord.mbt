@@ -41,6 +41,13 @@ breaking change is listed with a migration note.
   exposes it to executors. `ResponseGate`, `ResponseGate::rest`,
   `ResponseGate::capture`, and `App::serve` accept the same `clock?`. Every
   default is the wall clock.
+- **A received Gateway message has a size limit.** `Shard::start` and
+  `BotBuilder` take `max_message_bytes` (default `DEFAULT_MAX_MESSAGE_BYTES`,
+  64 MiB), which bounds a message as received, its compressed bytes while they
+  accumulate, and its inflated size. A larger message ends the connection
+  (code 1009 for an oversized frame) and the shard resumes; `InflateError`
+  gains `TooLarge(limit~)`, and `connect_websocket` takes the same limit.
+  Before, one message could make the process allocate without bound.
 - **Command sync can be planned before it is applied.**
   `App::plan_commands` fetches each scope and returns a `CommandPlan` whose
   `report()` lists the commands a sync would create, update, and delete,

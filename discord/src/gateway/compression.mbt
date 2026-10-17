@@ -4,11 +4,20 @@ priv struct ZlibStreamInflater {
   pending : Array[Byte]
   // Reused across messages; grows to the largest message seen.
   mut out : FixedArray[Byte]
+  // The most bytes one message may take, compressed or inflated.
+  max_bytes : Int32
 }
 
 ///|
-fn ZlibStreamInflater::ZlibStreamInflater() -> ZlibStreamInflater {
-  { decoder: @zlib.Decoder(), pending: [], out: FixedArray::make(16384, 0), }
+fn ZlibStreamInflater::ZlibStreamInflater(
+  max_bytes~ : Int32 = DEFAULT_MAX_MESSAGE_BYTES,
+) -> ZlibStreamInflater {
+  {
+    decoder: @zlib.Decoder(),
+    pending: [],
+    out: FixedArray::make(16384, 0),
+    max_bytes,
+  }
 }
 
 ///|
@@ -40,6 +49,9 @@ fn ZlibStreamInflater::inflate(
       ZlibError(_, message) => raise Malformed(message~)
     }
     len += self.decoder.last_produced()
+    if len > self.max_bytes {
+      raise TooLarge(limit=self.max_bytes)
+    }
     input = input[self.decoder.last_consumed():]
     match status {
       NeedMoreInput => break
@@ -52,6 +64,10 @@ fn ZlibStreamInflater::inflate(
 
 ///|
 impl Inflater for ZlibStreamInflater with fn push(self, bytes) {
+  if self.pending.length() + bytes.length() > self.max_bytes {
+    self.pending.clear()
+    raise TooLarge(limit=self.max_bytes)
+  }
   for byte in bytes {
     self.pending.push(byte)
   }

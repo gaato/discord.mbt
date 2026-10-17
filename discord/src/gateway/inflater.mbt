@@ -4,6 +4,8 @@ pub(all) suberror InflateError {
   /// The zlib-stream bytes are corrupt or end the stream early.
   Malformed(message~ : String)
   InvalidUtf8
+  /// One message, compressed or inflated, exceeded `limit` bytes.
+  TooLarge(limit~ : Int32)
 } derive(Debug)
 
 ///|

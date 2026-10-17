@@ -26,7 +26,14 @@ pub(all) suberror TransportClosed {
 priv struct WsTransport {
   conn : @websocket.Conn
   closed : Ref[Bool]
+  max_message_bytes : Int32
 }
+
+///|
+/// The largest Gateway message a shard accepts by default, compressed or
+/// not: far above anything Discord sends, but a bound on what one message can
+/// make the process allocate.
+pub const DEFAULT_MAX_MESSAGE_BYTES : Int32 = 67_108_864
 
 ///|
 impl GatewayTransport for WsTransport with fn recv(self) {
@@ -39,19 +46,25 @@ impl GatewayTransport for WsTransport with fn recv(self) {
       )
     e => raise TransportClosed(code=None, reason="\{Repr(e)}")
   }
-  let data = message.read_all() catch {
+  let data = @websocket.read_message(message, max_bytes=self.max_message_bytes) catch {
     error if @async.is_being_cancelled() => raise error
     e => raise TransportClosed(code=None, reason="\{Repr(e)}")
+  }
+  guard data is Some(data) else {
+    // 1009: Message Too Big. The session survives, so the shard resumes.
+    raise TransportClosed(
+      code=Some(1009),
+      reason="message larger than \{self.max_message_bytes} bytes",
+    )
   }
   match message.kind {
     Text =>
       Text(
-        data.text() catch {
-          error if @async.is_being_cancelled() => raise error
+        @utf8.decode(data) catch {
           e => raise TransportClosed(code=None, reason="\{Repr(e)}")
         },
       )
-    Binary => Binary(data.binary())
+    Binary => Binary(data)
   }
 }
 
@@ -75,8 +88,12 @@ impl GatewayTransport for WsTransport with fn close(self, code~) {
 }
 
 ///|
-/// Connect to the gateway over WebSocket (the default connector).
-pub async fn connect_websocket(url : String) -> &GatewayTransport {
+/// Connect to the gateway over WebSocket (the default connector). A message
+/// larger than `max_message_bytes` ends the connection with code 1009.
+pub async fn connect_websocket(
+  url : String,
+  max_message_bytes~ : Int32 = DEFAULT_MAX_MESSAGE_BYTES,
+) -> &GatewayTransport {
   let conn = @websocket.connect(url)
-  WsTransport::{ conn, closed: Ref(false), }
+  WsTransport::{ conn, closed: Ref(false), max_message_bytes, }
 }

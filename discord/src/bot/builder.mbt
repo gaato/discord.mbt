@@ -55,7 +55,9 @@ pub struct BotBuilder {
 ///
 /// After a requested shutdown, `run` waits up to `shutdown_grace_ms` for
 /// event and interaction handlers that are still running, then cancels them
-/// with a warning (default `DEFAULT_SHUTDOWN_GRACE_MS`).
+/// with a warning (default `DEFAULT_SHUTDOWN_GRACE_MS`). `max_message_bytes`
+/// bounds one Gateway message, compressed or inflated; a larger one ends the
+/// connection and the shard resumes.
 pub fn BotBuilder::BotBuilder(
   app : @app.App,
   token~ : String,
@@ -71,6 +73,7 @@ pub fn BotBuilder::BotBuilder(
   resume~ : Map[Int32, BotSession] = Map([]),
   event_backlog~ : Int32 = DEFAULT_EVENT_BACKLOG,
   shutdown_grace_ms~ : Int32 = DEFAULT_SHUTDOWN_GRACE_MS,
+  max_message_bytes~ : Int32 = @gateway.DEFAULT_MAX_MESSAGE_BYTES,
 ) -> BotBuilder {
   {
     core: BotCore::new(
@@ -88,6 +91,7 @@ pub fn BotBuilder::BotBuilder(
       resume~,
       event_backlog~,
       shutdown_grace_ms~,
+      max_message_bytes~,
     ),
   }
 }
