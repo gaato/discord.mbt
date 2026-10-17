@@ -102,7 +102,7 @@ priv enum Request {
   HttpAcquire(bucket~ : String, global_exempt~ : Bool)
   HttpRelease(
     bucket~ : String,
-    lease~ : Int32,
+    lease~ : String,
     status~ : Int32,
     headers~ : @http.Headers
   )
@@ -145,15 +145,14 @@ fn parse_request(request : Json) -> Result[Request, String] {
       guard request
         is {
           "bucket": String(bucket),
-          "lease": lease_json,
+          "lease": String(lease),
           "status": status_json,
           "headers": Object(header_fields),
           ..
         } &&
-        json_nonnegative_int(status_json) is Some(status) &&
-        json_nonnegative_int(lease_json) is Some(lease) else {
+        json_nonnegative_int(status_json) is Some(status) else {
         return Err(
-          "http_release requires bucket, lease, non-negative integer status, and headers object",
+          "http_release requires bucket, string lease, non-negative integer status, and headers object",
         )
       }
       match decode_headers(header_fields) {

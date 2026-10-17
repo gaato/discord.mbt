@@ -7,6 +7,19 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A coordinator restart no longer lets one process release another's REST
+  bucket.** Leases were integers counted from zero by each coordinator
+  process, so a release retried against a restarted coordinator could carry
+  a lease number that now belonged to another process and free its bucket,
+  breaking per-bucket serialization. The coordinator now issues leases as
+  opaque strings unique to each coordinator process. This changes the
+  coordinator wire protocol: `RemoteRateLimiter` still accepts the integer
+  leases of an older coordinator, but an older client fails every
+  `http_acquire` against the new coordinator with `InvalidResponse`.
+  Migration: upgrade bot processes before or together with the coordinator.
+
 ## [0.9.0] - 2026-10-17
 
 ### Changed

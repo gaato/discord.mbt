@@ -190,7 +190,7 @@ pub impl @queue.IdentifyQueue for RemoteIdentifyQueue with fn wait_for_identify(
 pub struct RemoteRateLimiter {
   priv acquire_client : CoordinatorClient
   priv release_client : CoordinatorClient
-  priv leases : Map[String, Int32]
+  priv leases : Map[String, Json]
 }
 
 ///|
@@ -241,9 +241,10 @@ pub impl @runtime.RateLimiter for RemoteRateLimiter with fn acquire(
     "bucket": Json::string(bucket_key),
     "global_exempt": global_exempt,
   })
-  guard response is { "lease": lease_json, .. } &&
-    json_nonnegative_int(lease_json) is Some(lease) else {
-    raise CoordinatorError::InvalidResponse(message="missing integer lease")
+  // The lease is opaque; an older coordinator sends an integer.
+  guard response is { "lease": lease, .. } &&
+    (lease is String(_) || json_nonnegative_int(lease) is Some(_)) else {
+    raise CoordinatorError::InvalidResponse(message="missing lease")
   }
   self.leases[bucket_key] = lease
 }

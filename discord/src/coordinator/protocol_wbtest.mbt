@@ -60,8 +60,8 @@ test "parse_request validates each op" {
       "error: http_acquire requires bucket and boolean global_exempt",
     ),
     (
-      { "op": "http_release", "bucket": "b", "lease": 1, "status": 200 },
-      "error: http_release requires bucket, lease, non-negative integer status, and headers object",
+      { "op": "http_release", "bucket": "b", "lease": "a-1", "status": 200 },
+      "error: http_release requires bucket, string lease, non-negative integer status, and headers object",
     ),
     (
       {
@@ -69,9 +69,19 @@ test "parse_request validates each op" {
         "bucket": "b",
         "lease": 1,
         "status": 200,
+        "headers": {},
+      },
+      "error: http_release requires bucket, string lease, non-negative integer status, and headers object",
+    ),
+    (
+      {
+        "op": "http_release",
+        "bucket": "b",
+        "lease": "a-1",
+        "status": 200,
         "headers": { "X-RateLimit-Remaining": "0" },
       },
-      "http release b, lease=1, status=200, headers=[x-ratelimit-remaining: 0]",
+      "http release b, lease=a-1, status=200, headers=[x-ratelimit-remaining: 0]",
     ),
     ({ "op": "shutdown" }, "error: unknown op: shutdown"),
   ]
@@ -86,7 +96,7 @@ test "parse_request validates each op" {
   let bad_header = parse_request({
     "op": "http_release",
     "bucket": "b",
-    "lease": 1,
+    "lease": "a-1",
     "status": 200,
     "headers": { "Retry-After": 1 },
   })
@@ -98,9 +108,9 @@ test "parse_request validates each op" {
 
 ///|
 test "decode_response returns ok responses and raises the rest" {
-  json_inspect(decode_response("{\"ok\":true,\"lease\":3}"), content={
+  json_inspect(decode_response("{\"ok\":true,\"lease\":\"a-3\"}"), content={
     "ok": true,
-    "lease": 3,
+    "lease": "a-3",
   })
   let failures = [
     "{\"ok\":false,\"error\":\"unknown op: x\"}", "{\"ok\":false}", "not json", "{\"ok\":1}",

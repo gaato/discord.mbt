@@ -12,19 +12,22 @@ priv struct CoordinatorState {
   cooldown : @cooldown.InMemoryCooldownStore
   owners : Map[String, BucketOwner]
   next_connection_id : Ref[Int32]
+  // Prefixes every lease, so a lease from before a restart never names one
+  // granted by this process.
+  instance : String
   next_lease_id : Ref[Int32]
 }
 
 ///|
 priv struct ConnectionState {
   id : Int32
-  held_buckets : Ref[Map[String, Int32]]
+  held_buckets : Ref[Map[String, String]]
 }
 
 ///|
 priv struct BucketOwner {
   connection : ConnectionState
-  lease : Int32
+  lease : String
 }
 
 ///|
@@ -61,6 +64,7 @@ pub async fn[X] Coordinator::serve(
     cooldown: @cooldown.InMemoryCooldownStore(),
     owners: Map([]),
     next_connection_id: Ref(0),
+    instance: coordinator_instance_id(),
     next_lease_id: Ref(0),
   }
   let runner : Ref[@async.TaskGroup[Unit]?] = Ref(None)
@@ -78,6 +82,14 @@ pub async fn[X] Coordinator::serve(
   })
   started.acquire()
   { address: server.addr.to_string(), runner, }
+}
+
+///|
+/// Platform entropy seeds `Rand` where available; the clock still separates
+/// restarts where it falls back to a fixed seed.
+fn coordinator_instance_id() -> String {
+  let id = @random.Rand().uint64() ^ @clock.now_ms().reinterpret_as_uint64()
+  id.to_string(radix=16)
 }
 
 ///|
@@ -159,7 +171,7 @@ async fn dispatch_request(
     }
     HttpAcquire(bucket~, global_exempt~) => {
       state.limiter.acquire(bucket, global_exempt~)
-      let lease = state.next_lease_id.val
+      let lease = "\{state.instance}-\{state.next_lease_id.val}"
       state.next_lease_id.val += 1
       state.owners[bucket] = BucketOwner::{ connection, lease, }
       connection.held_buckets.val[bucket] = lease
