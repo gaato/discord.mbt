@@ -21,9 +21,10 @@ breaking change is listed with a migration note.
   breaking per-bucket serialization. The coordinator now issues leases as
   opaque strings unique to each coordinator process. This changes the
   coordinator wire protocol: `RemoteRateLimiter` still accepts the integer
-  leases of an older coordinator, but an older client fails every
-  `http_acquire` against the new coordinator with `InvalidResponse`.
-  Migration: upgrade bot processes before or together with the coordinator.
+  leases of an older coordinator, but the new coordinator refuses every
+  `http_acquire` from an older client (before reserving its bucket, so the
+  refusal blocks no one else). Migration: upgrade bot processes before the
+  coordinator.
 
 ## [0.9.0] - 2026-10-17
 

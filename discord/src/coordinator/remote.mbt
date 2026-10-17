@@ -240,6 +240,9 @@ pub impl @runtime.RateLimiter for RemoteRateLimiter with fn acquire(
     "op": "http_acquire",
     "bucket": Json::string(bucket_key),
     "global_exempt": global_exempt,
+    // Lets the coordinator refuse clients that predate string leases; an
+    // older coordinator ignores it.
+    "leases": "string",
   })
   // The lease is opaque; an older coordinator sends an integer.
   guard response is { "lease": lease, .. } &&

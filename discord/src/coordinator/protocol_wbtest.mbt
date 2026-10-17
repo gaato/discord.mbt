@@ -52,12 +52,26 @@ test "parse_request validates each op" {
       "error: identify_acquire requires a non-negative integer shard_id",
     ),
     (
-      { "op": "http_acquire", "bucket": "b", "global_exempt": true },
+      {
+        "op": "http_acquire",
+        "bucket": "b",
+        "global_exempt": true,
+        "leases": "string",
+      },
       "http acquire b, global_exempt=true",
     ),
     (
-      { "op": "http_acquire", "bucket": "b", "global_exempt": "true" },
+      {
+        "op": "http_acquire",
+        "bucket": "b",
+        "global_exempt": "true",
+        "leases": "string",
+      },
       "error: http_acquire requires bucket and boolean global_exempt",
+    ),
+    (
+      { "op": "http_acquire", "bucket": "b", "global_exempt": true },
+      "error: http_acquire from a client without string leases; upgrade it to match this coordinator",
     ),
     (
       { "op": "http_release", "bucket": "b", "lease": "a-1", "status": 200 },

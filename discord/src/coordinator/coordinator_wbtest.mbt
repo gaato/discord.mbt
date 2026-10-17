@@ -200,7 +200,12 @@ async test "a stale HTTP release lease cannot release the current owner" {
   let second = ConnectionState::{ id: 1, held_buckets: Ref(Map([])), }
   let bucket = "POST:/channels/lease-test/messages"
   let acquired_first = dispatch_request(
-    { "op": "http_acquire", "bucket": bucket, "global_exempt": false },
+    {
+      "op": "http_acquire",
+      "bucket": bucket,
+      "global_exempt": false,
+      "leases": "string",
+    },
     state,
     first,
   )
@@ -220,7 +225,12 @@ async test "a stale HTTP release lease cannot release the current owner" {
   )
   |> ignore
   let acquired_second = dispatch_request(
-    { "op": "http_acquire", "bucket": bucket, "global_exempt": false },
+    {
+      "op": "http_acquire",
+      "bucket": bucket,
+      "global_exempt": false,
+      "leases": "string",
+    },
     state,
     second,
   )
@@ -609,5 +619,35 @@ async test "a client still works with an older coordinator's integer leases" {
     } noraise {
       _ => fail("an acquire without a lease was accepted")
     }
+  })
+}
+
+///|
+async test "a legacy client is refused before it can hold a bucket" {
+  @async.with_task_group(group => {
+    let coordinator = Coordinator::serve(group, addr="127.0.0.1:0")
+    defer coordinator.close()
+    let legacy = CoordinatorClient(coordinator.addr())
+    defer legacy.close()
+    let bucket = "POST:/channels/legacy/messages"
+    try
+      legacy.request({
+        "op": "http_acquire",
+        "bucket": bucket,
+        "global_exempt": false,
+      })
+      |> ignore
+    catch {
+      CoordinatorError::Remote(message~) =>
+        assert_true(message.contains("without string leases"), msg=message)
+      error => fail("unexpected \{Repr(error)}")
+    } noraise {
+      _ => fail("a legacy acquire was granted")
+    }
+    // Nothing was reserved: a current client takes the bucket at once.
+    let current = RemoteRateLimiter::connect(coordinator.addr())
+    defer current.close()
+    @async.with_timeout(1000, () => current.acquire(bucket, global_exempt=false))
+    current.release(bucket, status=200, headers=@http.Headers::new())
   })
 }

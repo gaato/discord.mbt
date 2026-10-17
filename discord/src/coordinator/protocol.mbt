@@ -134,6 +134,13 @@ fn parse_request(request : Json) -> Result[Request, String] {
       Ok(IdentifyAcquire(shard_id~))
     }
     "http_acquire" => {
+      // A client that cannot read string leases would hold the bucket it is
+      // granted; refuse it before anything is reserved.
+      guard request is { "leases": "string", .. } else {
+        return Err(
+          "http_acquire from a client without string leases; upgrade it to match this coordinator",
+        )
+      }
       guard request
         is { "bucket": String(bucket), "global_exempt": exempt_json, .. } &&
         json_bool(exempt_json) is Some(global_exempt) else {

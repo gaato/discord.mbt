@@ -147,7 +147,7 @@ line. A client sends only one in-flight request per connection.
 |---|---|
 | `{"op":"ping"}` | Immediately returns `{"ok":true}`. |
 | `{"op":"identify_acquire","shard_id":N}` | Returns success after the shard's Identify bucket and spacing permit it. |
-| `{"op":"http_acquire","bucket":"...","global_exempt":false}` | Returns `{"ok":true,"lease":"..."}` when the REST request may start. The lease is an opaque string. |
+| `{"op":"http_acquire","bucket":"...","global_exempt":false,"leases":"string"}` | Returns `{"ok":true,"lease":"..."}` when the REST request may start. The lease is an opaque string. A request without `"leases":"string"` comes from a client that predates string leases and is refused before any bucket is reserved. |
 | `{"op":"http_release","bucket":"...","lease":"...","status":N,"headers":{...}}` | Applies lowercase Discord rate-limit headers and releases the bucket if `lease` still owns it, then returns success. A stale lease changes nothing. |
 | `{"op":"cooldown_acquire","key":"...","window_ms":"10000"}` | Immediately returns `{"ok":true,"retry_after_ms":"0"}` when acquired, or the remaining window in milliseconds. |
 
