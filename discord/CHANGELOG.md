@@ -51,6 +51,11 @@ breaking change is listed with a migration note.
   1-5 s once before identifying. It waited 1-5 s with the connection still
   open and then also took a reconnect backoff. The shard now closes the
   connection and emits `Disconnected` before the wait.
+- A 429 from an offline handler now reads its delay the way a network 429
+  does: the body's `retry_after`, then the `Retry-After-Ms` or `Retry-After`
+  header, then one second. It ignored the headers and fell back to one
+  second, so `RateLimited` and `HttpRateLimited` reported a different delay
+  than the same response would over the network.
 
 ## [0.8.0] - 2026-10-16
 

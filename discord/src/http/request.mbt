@@ -2,8 +2,8 @@
 /// The headers every call to `route` carries before the caller's own.
 ///
 /// Discord reads `X-Audit-Log-Reason` as URL-encoded UTF-8, so the reason
-/// (validated in `execute`) is percent-encoded here. A reason set directly
-/// through the caller's `headers` is sent as is.
+/// (validated in `validate_request`) is percent-encoded here. A reason set
+/// directly through the caller's `headers` is sent as is.
 fn base_headers(
   token : String,
   route : Route,
@@ -73,27 +73,28 @@ impl @runtime.RetryDecider for DiscordRetry with fn next_delay_ms(
 
 ///|
 /// Retry delay and scope of a 429 response: the body's `retry_after` (in
-/// seconds, the more precise source), then the `Retry-After` header, then one
-/// second; `global` when the response says the whole account is limited.
-fn rate_limit_details(headers : @ghttp.Headers, body : Bytes) -> (Int64, Bool) {
+/// seconds, the more precise source), then the `Retry-After-Ms` or
+/// `Retry-After` header, then one second; `global` when the
+/// `X-RateLimit-Global` header says the whole account is limited.
+fn rate_limit_from_json(headers : @ghttp.Headers, body : Json) -> (Int64, Bool) {
   let global = headers.get("x-ratelimit-global") is Some(_)
-  let parsed : Json? = Some(@json.parse(@utf8.decode_lossy(body))) catch {
-    _ => None
-  }
-  let from_body : Int64? = match parsed {
-    Some({ "retry_after": Number(seconds, ..), .. }) =>
-      Some((seconds * 1000.0).to_int64())
-    _ => None
-  }
-  let retry_after_ms : Int64 = match from_body {
-    Some(ms) => ms
-    None =>
+  let retry_after_ms : Int64 = match body {
+    { "retry_after": Number(seconds, ..), .. } => (seconds * 1000.0).to_int64()
+    _ =>
       match @runtime.retry_after_ms(headers) {
         Some(ms) => ms.to_int64()
         None => 1000L
       }
   }
   (retry_after_ms, global)
+}
+
+///|
+/// `rate_limit_from_json` for a wire body; one that is not JSON counts as no
+/// body.
+fn rate_limit_details(headers : @ghttp.Headers, body : Bytes) -> (Int64, Bool) {
+  let parsed = @json.parse(@utf8.decode_lossy(body)) catch { _ => Json::null() }
+  rate_limit_from_json(headers, parsed)
 }
 
 ///|
@@ -176,6 +177,23 @@ fn decode_response(
 }
 
 ///|
+/// The `ApiError` an error response carries: its decoded body, or a message
+/// holding the status and the body as received.
+fn api_error_of(response : HttpResponse) -> ApiError {
+  @json.from_json(response.body) catch {
+    _ => {
+      // Non-JSON bodies (proxy HTML, empty strings) surface verbatim so
+      // the user-visible error keeps whatever the server actually said.
+      let detail = match response.body {
+        String(text) => text
+        body => body.stringify()
+      }
+      { code: 0, message: "HTTP \{response.status}: \{detail}", errors: None, }
+    }
+  }
+}
+
+///|
 /// Send a request through the rate limiter, retrying on 429 (bounded).
 ///
 /// This is also the raw escape hatch: typed endpoint wrappers build a `Route`
@@ -222,24 +240,39 @@ pub async fn Client::request(
     }
   }
   if response.status >= 400 {
-    let error : ApiError = @json.from_json(response.body) catch {
-      _ => {
-        // Non-JSON bodies (proxy HTML, empty strings) surface verbatim so
-        // the user-visible error keeps whatever the server actually said.
-        let detail = match response.body {
-          String(text) => text
-          body => body.stringify()
-        }
-        {
-          code: 0,
-          message: "HTTP \{response.status}: \{detail}",
-          errors: None,
-        }
-      }
-    }
-    raise Api(status=response.status, error~)
+    raise Api(status=response.status, error=api_error_of(response))
   }
   response.body
+}
+
+///|
+/// Client-side checks on a request about to be sent: file names, the audit
+/// reason's length (Discord accepts 1-512 characters), and the file and body
+/// shape of the routes that upload in a fixed form.
+fn validate_request(request : HttpRequest) -> Unit raise DiscordHttpError {
+  if request.files is Some(files) {
+    validate_files(files)
+  }
+  validate_length("audit_reason", request.audit_reason, min=1, max=512)
+  match (request.route, request.files, request.body) {
+    (CreateGuildSticker(..), Some([_]), Some(body)) =>
+      ignore(sticker_form_fields(body))
+    (CreateGuildSticker(..), _, _) =>
+      raise Validation(
+        message="create guild sticker requires exactly one file and form fields",
+      )
+    (UpdateInviteTargetUsers(..), Some([_]), None) => ()
+    (UpdateInviteTargetUsers(..), _, _) =>
+      raise Validation(
+        message="update invite target users requires exactly one file and no JSON body",
+      )
+    (CreateChannelInvite(..), Some([_]), Some(_)) => ()
+    (CreateChannelInvite(..), Some(_), _) =>
+      raise Validation(
+        message="create channel invite accepts exactly one target-users file next to its JSON params",
+      )
+    _ => ()
+  }
 }
 
 ///|
@@ -247,34 +280,8 @@ async fn Client::execute(self : Client, request : HttpRequest) -> HttpResponse {
   if self.closed_ {
     raise DiscordHttpError::Transport(message="client is closed")
   }
-  if request.files is Some(files) {
-    validate_files(files)
-  }
-  // Discord accepts 1-512 characters; checked after middleware, which may
-  // rewrite the reason.
-  validate_length("audit_reason", request.audit_reason, min=1, max=512)
-  if request.route is CreateGuildSticker(..) &&
-    !(request.files is Some([_]) && request.body is Some(_)) {
-    raise DiscordHttpError::Validation(
-      message="create guild sticker requires exactly one file and form fields",
-    )
-  }
-  if request.route is UpdateInviteTargetUsers(..) &&
-    !(request.files is Some([_]) && request.body is None) {
-    raise DiscordHttpError::Validation(
-      message="update invite target users requires exactly one file and no JSON body",
-    )
-  }
-  if request.route is CreateGuildSticker(..) && request.body is Some(body) {
-    ignore(sticker_form_fields(body))
-  }
-  if request.route is CreateChannelInvite(..) &&
-    request.files is Some(files) &&
-    !(files is [_] && request.body is Some(_)) {
-    raise DiscordHttpError::Validation(
-      message="create channel invite accepts exactly one target-users file next to its JSON params",
-    )
-  }
+  // Checked after middleware, which may rewrite the request.
+  validate_request(request)
   match self.backend {
     Offline(handler) => self.answer_offline(handler, request)
     Online(runtime) => self.request_online(runtime, request)
@@ -315,7 +322,10 @@ async fn Client::answer_offline(
     ),
   )
   if response.status == 429 {
-    let (retry_after_ms, global) = offline_rate_limit_details(response)
+    let (retry_after_ms, global) = rate_limit_from_json(
+      @ghttp.Headers::from_array(response.headers.to_array()),
+      response.body,
+    )
     self.emit_telemetry(
       HttpRateLimited(route_bucket=bucket, global~, retry_after_ms~),
     )
@@ -325,14 +335,26 @@ async fn Client::answer_offline(
 }
 
 ///|
-/// `rate_limit_details` for a response an offline handler produced.
-fn offline_rate_limit_details(response : HttpResponse) -> (Int64, Bool) {
-  let global = response.headers.get("x-ratelimit-global") is Some(_)
-  let retry_after_ms : Int64 = match response.body {
-    { "retry_after": Number(seconds, ..), .. } => (seconds * 1000.0).to_int64()
-    _ => 1000L
+/// What a failed runtime send means to the client: a status error is a
+/// response for middleware to see, and the rest raise. A 429 here has
+/// outlived its retries.
+fn settle_runtime_error(
+  error : @runtime.SdkError,
+  timeout_ms~ : Int32,
+) -> HttpResponse raise DiscordHttpError {
+  match error {
+    Status(status~, headers~, body~) => decode_response(status, headers, body)
+    RateLimited(headers~, body~, ..) => {
+      let (retry_after_ms, global) = rate_limit_details(headers, body)
+      raise DiscordHttpError::RateLimited(retry_after_ms~, global~)
+    }
+    Transport(@ghttp.HttpError::Timeout(_)) =>
+      raise DiscordHttpError::Timeout(timeout_ms~)
+    Transport(error) =>
+      raise DiscordHttpError::Transport(message=@debug.to_string(error))
+    Decode(message~, ..) | Config(message) =>
+      raise DiscordHttpError::Transport(message~)
   }
-  (retry_after_ms, global)
 }
 
 ///|
@@ -353,18 +375,8 @@ async fn Client::request_online(
     global_exempt=request.route.is_interaction(),
     body?=wire.body,
   ) catch {
-    @runtime.Status(status~, headers~, body~) =>
-      return decode_response(status, headers, body)
-    @runtime.RateLimited(headers~, body~, ..) => {
-      let (retry_after_ms, global) = rate_limit_details(headers, body)
-      raise DiscordHttpError::RateLimited(retry_after_ms~, global~)
-    }
-    @runtime.Transport(@ghttp.HttpError::Timeout(_)) =>
-      raise DiscordHttpError::Timeout(timeout_ms=self.request_timeout_ms_)
-    @runtime.Transport(error) =>
-      raise DiscordHttpError::Transport(message=@debug.to_string(error))
-    @runtime.Decode(message~, ..) | @runtime.Config(message) =>
-      raise DiscordHttpError::Transport(message~)
+    error =>
+      return settle_runtime_error(error, timeout_ms=self.request_timeout_ms_)
   }
   decode_response(response.status, response.headers, response.body)
 }
