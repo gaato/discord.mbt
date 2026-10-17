@@ -30,17 +30,8 @@ impl @queue.IdentifyQueue for IdentifyGuard with fn wait_for_identify(
       return
     }
   }
-  let limit = info.session_start_limit
-  if limit.remaining <= 0 {
-    self.refusals.put(
-      IdentifyRefused(
-        BotError::SessionStartLimitExceeded(
-          required=1,
-          remaining=limit.remaining,
-          reset_after_ms=limit.reset_after,
-        ),
-      ),
-    )
+  if session_start_refusal(info.session_start_limit, required=1) is Some(error) {
+    self.refusals.put(IdentifyRefused(error))
     // Hold the shard here; `Bot::run` raises the error and cancels the task
     // group, which tears this shard down without sending IDENTIFY.
     let parked : @async.Semaphore = Semaphore(1, initial_value=0)

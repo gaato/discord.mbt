@@ -34,7 +34,7 @@ impl GatewayTransport for WsTransport with fn recv(self) {
     error if @async.is_being_cancelled() => raise error
     @websocket.WebSocketError::ConnectionClosed(code, reason) =>
       raise TransportClosed(
-        code=Some(close_code_to_int(code)),
+        code=Some(@websocket.close_code_to_int(code)),
         reason=reason.unwrap_or(""),
       )
     e => raise TransportClosed(code=None, reason="\{e}")
@@ -69,29 +69,9 @@ impl GatewayTransport for WsTransport with fn close(self, code~) {
   // `send_close` only writes the WebSocket close frame. The underlying
   // transport must be closed even when that write fails or is cancelled.
   defer self.conn.close()
-  let ws_code : @websocket.CloseCode = match code {
-    1000 => Normal
-    1001 => GoingAway
-    other => Other(other.to_uint16())
-  }
-  @async.with_timeout(1000, () => self.conn.send_close(code=ws_code))
-}
-
-///|
-fn close_code_to_int(code : @websocket.CloseCode) -> Int32 {
-  match code {
-    Normal => 1000
-    GoingAway => 1001
-    ProtocolError => 1002
-    UnsupportedData => 1003
-    Abnormal => 1006
-    InvalidFramePayload => 1007
-    PolicyViolation => 1008
-    MessageTooBig => 1009
-    MissingExtension => 1010
-    InternalError => 1011
-    Other(v) => v.to_int()
-  }
+  @async.with_timeout(1000, () => {
+    self.conn.send_close(code=@websocket.close_code_from_int(code))
+  })
 }
 
 ///|

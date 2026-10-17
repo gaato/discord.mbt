@@ -510,3 +510,75 @@ async test "a voice state update for a shard run elsewhere raises" {
     }
   })
 }
+
+///|
+test "static_layout names every selection except Auto" {
+  debug_inspect(
+    ShardConfig::Auto.static_layout(),
+    content=(
+      #|None
+    ),
+  )
+  debug_inspect(
+    Single(id=2, count=4).static_layout(),
+    content=(
+      #|Some(([2], 4))
+    ),
+  )
+  debug_inspect(
+    Fixed(count=3).static_layout(),
+    content=(
+      #|Some(([0, 1, 2], 3))
+    ),
+  )
+  debug_inspect(
+    Fixed(count=-1).static_layout(),
+    content=(
+      #|Some(([], -1))
+    ),
+  )
+  debug_inspect(
+    Range(ids=[1, 3], count=4).static_layout(),
+    content=(
+      #|Some(([1, 3], 4))
+    ),
+  )
+}
+
+///|
+test "session_start_refusal refuses more sessions than remain" {
+  let limit = (remaining : Int32) => @model.SessionStartLimit::{
+    total: 1000,
+    remaining,
+    reset_after: 60000L,
+    max_concurrency: 1,
+  }
+  let rows : Array[(Int32, Int32)] = [(0, 1), (1, 1), (1, 2), (0, 0)]
+  let refusals = rows.map(row => {
+    let (remaining, required) = row
+    session_start_refusal(limit(remaining), required~)
+  })
+  debug_inspect(
+    refusals,
+    content=(
+      #|[
+      #|  Some(
+      #|    SessionStartLimitExceeded(
+      #|      required=1,
+      #|      remaining=0,
+      #|      reset_after_ms=60000,
+      #|    ),
+      #|  ),
+      #|  None,
+      #|  Some(
+      #|    SessionStartLimitExceeded(
+      #|      required=2,
+      #|      remaining=1,
+      #|      reset_after_ms=60000,
+      #|    ),
+      #|  ),
+      #|  None,
+      #|]
+    ),
+  )
+}

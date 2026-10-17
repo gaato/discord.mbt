@@ -194,13 +194,7 @@ pub fn BotBuilder::build(self : BotBuilder) -> Bot raise BotConfigError {
   if core.event_backlog_ < 1 {
     raise InvalidEventBacklog(value=core.event_backlog_)
   }
-  let static_layout = match core.shards_ {
-    Auto => None
-    Single(id~, count~) => Some(([id], count))
-    Fixed(count~) => Some((Array::makei(count.max(0), id => id), count))
-    Range(ids~, count~) => Some((ids, count))
-  }
-  if static_layout is Some((ids, count)) &&
+  if core.shards_.static_layout() is Some((ids, count)) &&
     shard_layout_problem(ids, count) is Some(message) {
     raise InvalidShardConfig(message~)
   }

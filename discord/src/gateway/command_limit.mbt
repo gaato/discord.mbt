@@ -27,19 +27,26 @@ pub async fn CommandLimiter::acquire(self : CommandLimiter) -> Unit {
 }
 
 ///|
+/// Drop timestamps that left the window at `now`, then return how long to wait
+/// for a free slot: `None` when one is free, otherwise until the oldest send
+/// leaves the window, plus a 1 ms nudge.
+fn CommandLimiter::slot_wait_ms(self : CommandLimiter, now : Int64) -> Int32? {
+  while self.timestamps.length() > 0 &&
+        now - self.timestamps[0] >= self.window_ms {
+    self.timestamps.remove(0) |> ignore
+  }
+  if self.timestamps.length() < self.limit {
+    None
+  } else {
+    Some((self.timestamps[0] + self.window_ms - now).to_int() + 1)
+  }
+}
+
+///|
 // Callers must serialize waiting, sending, and recording to avoid oversubscription.
 async fn CommandLimiter::wait_for_slot(self : CommandLimiter) -> Unit {
-  for ;; {
-    let now = @clock.now_ms()
-    while self.timestamps.length() > 0 &&
-          now - self.timestamps[0] >= self.window_ms {
-      self.timestamps.remove(0) |> ignore
-    }
-    if self.timestamps.length() < self.limit {
-      break
-    }
-    let wait = self.timestamps[0] + self.window_ms - now
-    (self.sleeper_)(wait.to_int() + 1)
+  while self.slot_wait_ms(@clock.now_ms()) is Some(ms) {
+    (self.sleeper_)(ms)
   }
 }
 

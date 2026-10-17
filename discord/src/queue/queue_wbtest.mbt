@@ -35,3 +35,23 @@ async test "a cancelled identify wait releases its bucket gate" {
     @async.with_timeout(100, () => IdentifyQueue::wait_for_identify(queue, 0))
   })
 }
+
+///|
+test "identify_wait_ms waits out the rest of the spacing" {
+  let now = 1_700_000_000_000L
+  let rows : Array[(Int64, Int32, Int32)] = [
+    (0L, 5250, 0), // never identified
+    (now, 5250, 5250),
+    (now - 5000L, 5250, 250),
+    (now - 5250L, 5250, 0),
+    (now, 0, 0),
+  ]
+  for row in rows {
+    let (last, spacing, wait) = row
+    assert_eq(
+      identify_wait_ms(last, spacing, now),
+      wait,
+      msg="last=\{last} spacing=\{spacing}",
+    )
+  }
+}

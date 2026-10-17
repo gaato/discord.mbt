@@ -59,6 +59,38 @@ fn shard_layout_problem(ids : Array[Int32], count : Int32) -> String? {
 }
 
 ///|
+/// The shard ids and count a selection names without asking Discord, or
+/// `None` for `Auto`. A negative `Fixed` count selects no shards.
+fn ShardConfig::static_layout(self : ShardConfig) -> (Array[Int32], Int32)? {
+  match self {
+    Auto => None
+    Single(id~, count~) => Some(([id], count))
+    Fixed(count~) => Some((Array::makei(count.max(0), id => id), count))
+    Range(ids~, count~) => Some((ids.copy(), count))
+  }
+}
+
+///|
+/// The error for starting `required` new sessions under `limit`, or `None`
+/// when the limit allows them. Exceeding it resets the bot token.
+fn session_start_refusal(
+  limit : @model.SessionStartLimit,
+  required~ : Int32,
+) -> BotError? {
+  if required > limit.remaining {
+    Some(
+      SessionStartLimitExceeded(
+        required~,
+        remaining=limit.remaining,
+        reset_after_ms=limit.reset_after,
+      ),
+    )
+  } else {
+    None
+  }
+}
+
+///|
 /// Check a layout Discord supplied at run time (`Auto` shard counts).
 fn validate_gateway_layout(
   ids : Array[Int32],
@@ -153,23 +185,9 @@ async fn BotCore::resolve_shards(
     }
     Auto | Fixed(_) | Range(..) => {
       let info = self.gateway_bot_info(client)
-      let (ids, count) = match self.shards_ {
-        Auto => {
-          let ids = []
-          for id in 0..<info.shards {
-            ids.push(id)
-          }
-          (ids, info.shards)
-        }
-        Fixed(count~) => {
-          let ids = []
-          for id in 0..<count {
-            ids.push(id)
-          }
-          (ids, count)
-        }
-        Range(ids~, count~) => (ids.copy(), count)
-        Single(..) => abort("handled above")
+      let (ids, count) = match self.shards_.static_layout() {
+        Some(layout) => layout
+        None => (Array::makei(info.shards.max(0), id => id), info.shards)
       }
       validate_gateway_layout(ids, count)
       if info.session_start_limit.max_concurrency <= 0 {
@@ -181,12 +199,9 @@ async fn BotCore::resolve_shards(
       // A shard with a saved session sends RESUME, which does not consume the
       // identify allowance; only a rejected RESUME falls back to IDENTIFY.
       let required = ids.filter(id => !resume.contains(id)).length()
-      if required > info.session_start_limit.remaining {
-        raise BotError::SessionStartLimitExceeded(
-          required~,
-          remaining=info.session_start_limit.remaining,
-          reset_after_ms=info.session_start_limit.reset_after,
-        )
+      if session_start_refusal(info.session_start_limit, required~)
+        is Some(error) {
+        raise error
       }
       {
         ids,

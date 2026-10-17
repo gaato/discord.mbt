@@ -1148,19 +1148,15 @@ async test "shard backoff, resume url switch, and op9 delay run through the slee
     }
     assert_eq(urls.length(), 2)
     assert_true(urls[1].has_prefix("wss://resume.example/"))
-    // --- op9 non-resumable: documented 1-5s wait, then re-identify ---
+    // --- op9 non-resumable: the documented 1-5s wait replaces the backoff ---
     second.incoming.put(
       (
         #|{"op":9,"d":false}
       ),
     )
+    guard! shard.next() is Disconnected(code=None, resuming=false)
     let op9_wait = gate.requests.get()
     assert_true(op9_wait >= 1000 && op9_wait < 5000)
-    gate.release()
-    guard! shard.next() is Disconnected(code=None, resuming=false)
-    let backoff2 = gate.requests.get()
-    // attempts=2: full jitter over 4000ms plus the 250ms floor
-    assert_true(backoff2 >= 250 && backoff2 < 4250)
     gate.release()
     // --- connection 3: session was cleared, back to the configured url ---
     third.incoming.put(HELLO_FAST)
