@@ -182,6 +182,20 @@ fn[T] ReceivePipeline::drop_dave_packet(
 }
 
 ///|
+/// Why a frame from a sender without a DAVE decryptor is dropped, or `None`
+/// when it may pass as plaintext: only while DAVE is inactive and the frame
+/// carries no DAVE marker.
+fn undecryptable_drop_reason(active_version~ : Int32, magic~ : Bool) -> String? {
+  if active_version == 0 && !magic {
+    None
+  } else if magic {
+    Some("DAVE frame has no decryptor")
+  } else {
+    Some("DAVE media is active but sender has no decryptor")
+  }
+}
+
+///|
 /// Decrypt one media datagram for a subscribed sender and restore RTP order.
 /// Packets from SSRCs that are unmapped or that `wants` declines are dropped
 /// before decryption, and their reorder state is discarded so a later
@@ -228,15 +242,14 @@ fn ReceivePipeline::process_udp_packet(
           error =>
             return self.drop_dave_packet(user_id, rtp.ssrc, "\{Repr(error)}")
         }
-      } else if machine.active_protocol_version() == 0 && !dave_magic {
-        payload
-      } else {
-        let reason = if dave_magic {
-          "DAVE frame has no decryptor"
-        } else {
-          "DAVE media is active but sender has no decryptor"
-        }
+      } else if undecryptable_drop_reason(
+          active_version=machine.active_protocol_version(),
+          magic=dave_magic,
+        )
+        is Some(reason) {
         return self.drop_dave_packet(user_id, rtp.ssrc, reason)
+      } else {
+        payload
       }
     }
     None =>

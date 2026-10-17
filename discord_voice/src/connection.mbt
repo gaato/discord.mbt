@@ -290,13 +290,11 @@ async fn VoiceConnection::establish_session(
     }
   }
   let mut dave = self.dave
-  let max_dave_protocol_version = @dave.max_supported_protocol_version().to_int()
-  if dave_protocol_version >= 1 || max_dave_protocol_version >= 1 {
-    let session_protocol_version = if dave_protocol_version >= 1 {
-      dave_protocol_version
-    } else {
-      max_dave_protocol_version
-    }
+  if dave_session_version(
+      dave_protocol_version,
+      @dave.max_supported_protocol_version().to_int(),
+    )
+    is Some(session_protocol_version) {
     let machine = match dave {
       Some(machine) => machine
       None =>

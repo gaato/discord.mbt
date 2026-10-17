@@ -72,3 +72,75 @@ pub fn voice_on_close(
     policy
   }
 }
+
+///|
+/// Exclusive upper bound of the full-jitter delay before reconnect attempt
+/// `attempts`: one second doubled per consecutive failure, capped at 30 s.
+fn reconnect_delay_limit(attempts : Int32) -> Int32 {
+  let exponent = if attempts > 5 { 5 } else { attempts }
+  let max_delay = 1000 * (1 << exponent)
+  if max_delay > 30000 {
+    30000
+  } else {
+    max_delay
+  }
+}
+
+///|
+/// What the gateway loop does after a voice connection ends.
+priv struct CloseOutcome {
+  state : VoiceGatewayState
+  event : VoiceGatewayEvent
+  attempts : Int32
+  stop : Bool
+}
+
+///|
+/// Decide the next state, the event to surface, the consecutive-failure count,
+/// and whether the loop stops after a connection ends with close `code`. A
+/// local shutdown (`closing`) always stops with a non-resuming disconnect.
+fn close_outcome(
+  code : Int32?,
+  closing~ : Bool,
+  has_session~ : Bool,
+  attempts~ : Int32,
+) -> CloseOutcome {
+  if closing {
+    return {
+      state: Disconnected(reconnect_attempts=0),
+      event: Disconnected(code~, resuming=false),
+      attempts,
+      stop: true,
+    }
+  }
+  match voice_on_close(code, has_session) {
+    Fatal => {
+      // Unreachable default: a missing close code never classifies as fatal.
+      let code = code.unwrap_or(0)
+      {
+        state: FatallyClosed(code~),
+        event: FatallyClosed(code~),
+        attempts,
+        stop: true,
+      }
+    }
+    Rejoin => {
+      let attempts = attempts + 1
+      {
+        state: Disconnected(reconnect_attempts=attempts),
+        event: NeedsRejoin(code~),
+        attempts,
+        stop: true,
+      }
+    }
+    Resume => {
+      let attempts = attempts + 1
+      {
+        state: Disconnected(reconnect_attempts=attempts),
+        event: Disconnected(code~, resuming=true),
+        attempts,
+        stop: false,
+      }
+    }
+  }
+}

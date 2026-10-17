@@ -386,3 +386,17 @@ test "RTP extension stripping skips the extension body or reports truncation" {
     b"\xBE\xDE\x00\x02\x12\x34\x56\x78"
   assert_eq(rtp_payload_without_extension(parse_rtp_packet(truncated)), None)
 }
+
+///|
+test "a sender without a decryptor passes no plaintext while DAVE is active" {
+  for
+    row in [
+      (0, false, None),
+      (0, true, Some("DAVE frame has no decryptor")),
+      (1, false, Some("DAVE media is active but sender has no decryptor")),
+      (1, true, Some("DAVE frame has no decryptor")),
+    ] {
+    let (active_version, magic, reason) = row
+    assert_eq(undecryptable_drop_reason(active_version~, magic~), reason)
+  }
+}

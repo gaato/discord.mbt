@@ -101,6 +101,20 @@ fn checked_protocol_version(
 }
 
 ///|
+/// DAVE protocol version for a new session: the version the server announced,
+/// otherwise the highest version libdave supports locally. `None` when
+/// neither side supports DAVE.
+fn dave_session_version(server : Int32, local_max : Int32) -> Int32? {
+  if server >= 1 {
+    Some(server)
+  } else if local_max >= 1 {
+    Some(local_max)
+  } else {
+    None
+  }
+}
+
+///|
 fn LibdaveBackend::new(
   protocol_version~ : Int32,
   self_user_id~ : UInt64,

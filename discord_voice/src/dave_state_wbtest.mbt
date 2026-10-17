@@ -970,3 +970,20 @@ async test "voice playback discards sources superseded in the queue and during s
     connection.disconnect()
   })
 }
+
+///|
+test "dave_session_version prefers the server version, then the local one" {
+  let table : Array[(Int32, Int32, Int32?)] = [
+    (0, 0, None),
+    (0, 1, Some(1)),
+    (1, 0, Some(1)),
+    (1, 1, Some(1)),
+    (2, 1, Some(2)),
+    (-1, 0, None),
+    (-1, 1, Some(1)),
+  ]
+  for row in table {
+    let (server, local_max, expected) = row
+    assert_eq(dave_session_version(server, local_max), expected)
+  }
+}
