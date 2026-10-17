@@ -145,38 +145,19 @@ async fn dispatch_request(
   state : CoordinatorState,
   connection : ConnectionState,
 ) -> Json {
-  guard request is { "op": String(op), .. } else {
-    return error_response("missing string op")
+  let request = match parse_request(request) {
+    Ok(request) => request
+    Err(message) => return error_response(message)
   }
-  match op {
-    "ping" => ok_response()
-    "cooldown_acquire" => {
-      guard request is { "key": String(key), "window_ms": window_json, .. } &&
-        json_nonnegative_int64(window_json) is Some(window_ms) else {
-        return error_response(
-          "cooldown_acquire requires key and non-negative decimal string window_ms",
-        )
-      }
+  match request {
+    Ping => ok_response()
+    CooldownAcquire(key~, window_ms~) =>
       cooldown_response(state.cooldown.try_acquire(key, window_ms~))
-    }
-    "identify_acquire" => {
-      guard request is { "shard_id": shard_json, .. } &&
-        json_nonnegative_int(shard_json) is Some(shard_id) else {
-        return error_response(
-          "identify_acquire requires a non-negative integer shard_id",
-        )
-      }
+    IdentifyAcquire(shard_id~) => {
       state.identify.wait_for_identify(shard_id)
       ok_response()
     }
-    "http_acquire" => {
-      guard request
-        is { "bucket": String(bucket), "global_exempt": exempt_json, .. } &&
-        json_bool(exempt_json) is Some(global_exempt) else {
-        return error_response(
-          "http_acquire requires bucket and boolean global_exempt",
-        )
-      }
+    HttpAcquire(bucket~, global_exempt~) => {
       state.limiter.acquire(bucket, global_exempt~)
       let lease = state.next_lease_id.val
       state.next_lease_id.val += 1
@@ -184,24 +165,7 @@ async fn dispatch_request(
       connection.held_buckets.val[bucket] = lease
       { "ok": true, "lease": lease }
     }
-    "http_release" => {
-      guard request
-        is {
-          "bucket": String(bucket),
-          "lease": lease_json,
-          "status": status_json,
-          "headers": Object(header_fields),
-          ..
-        } &&
-        json_nonnegative_int(status_json) is Some(status) &&
-        json_nonnegative_int(lease_json) is Some(lease) else {
-        return error_response(
-          "http_release requires bucket, lease, non-negative integer status, and headers object",
-        )
-      }
-      let headers = decode_headers(header_fields) catch {
-        error => return error_response("invalid headers: \{error}")
-      }
+    HttpRelease(bucket~, lease~, status~, headers~) => {
       if state.owners.get(bucket) is Some(owner) && owner.lease == lease {
         state.limiter.release(bucket, status~, headers~)
         owner.connection.held_buckets.val.remove(bucket)
@@ -209,6 +173,5 @@ async fn dispatch_request(
       }
       ok_response()
     }
-    unknown => error_response("unknown op: \{unknown}")
   }
 }

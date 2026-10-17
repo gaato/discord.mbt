@@ -32,6 +32,7 @@ options(
     "coordinator_wbtest.mbt": [ "native", "wasm" ],
     "pkg.generated.mbti": [ "native", "wasm" ],
     "protocol.mbt": [ "native", "wasm" ],
+    "protocol_wbtest.mbt": [ "native", "wasm" ],
     "remote.mbt": [ "native", "wasm" ],
     "server.mbt": [ "native", "wasm" ],
   },

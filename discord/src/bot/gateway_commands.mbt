@@ -79,6 +79,28 @@ pub async fn GatewayCtx::request_channel_info(
 let member_request_nonce : Ref[UInt64] = Ref(0)
 
 ///|
+/// Whether a RATE_LIMITED event answers this member request: opcode 8 for
+/// the guild, with this nonce or none at all.
+fn rate_limit_matches(
+  event : @model.GatewayRateLimitedEvent,
+  guild_id : @model.GuildId,
+  nonce : String,
+) -> Bool {
+  guard event.opcode == 8 && event.meta is { "guild_id": value, .. } else {
+    return false
+  }
+  let matched = (@json.from_json(value) : @model.GuildId) catch {
+    _ => return false
+  }
+  matched == guild_id &&
+  (match event.meta {
+    { "nonce": String(value), .. } => value == nonce
+    { "nonce": _, .. } => false
+    _ => true
+  })
+}
+
+///|
 /// Fetch every matching member chunk with a process-unique nonce. Requires
 /// GUILD_MEMBERS for `All` and GUILD_PRESENCES when requesting presences.
 /// The deadline includes sending; raises `GatewayRequestTimeout` on timeout,
@@ -100,21 +122,7 @@ pub async fn GatewayCtx::fetch_guild_members(
   )
   defer chunks.cancel()
   let limited = self.expect_event(Events::rate_limited(), event => {
-    event.opcode == 8 &&
-    (match event.meta {
-      { "guild_id": value, .. } => {
-        let matched = (@json.from_json(value) : @model.GuildId) catch {
-          _ => return false
-        }
-        matched == guild_id &&
-        (match event.meta {
-          { "nonce": String(value), .. } => value == nonce
-          { "nonce": _, .. } => false
-          _ => true
-        })
-      }
-      _ => false
-    })
+    rate_limit_matches(event, guild_id, nonce)
   })
   defer limited.cancel()
   let result = @async.with_timeout_opt(timeout_ms, () => {
@@ -133,45 +141,11 @@ pub async fn GatewayCtx::fetch_guild_members(
         presences,
         nonce: Some(nonce),
       })
-      let received : Map[Int32, @model.GuildMembersChunkEvent] = Map([])
-      let mut count : Int32? = None
+      let collected = MemberChunks::new()
       for ;; {
-        match chunks.waiter.queue.get() {
-          GuildMembersChunk(chunk) => {
-            if chunk.chunk_count <= 0 ||
-              chunk.chunk_index < 0 ||
-              chunk.chunk_index >= chunk.chunk_count {
-              continue
-            }
-            if count is None {
-              count = Some(chunk.chunk_count)
-            }
-            if count != Some(chunk.chunk_count) {
-              continue
-            }
-            received[chunk.chunk_index] = chunk
-            if received.length() == chunk.chunk_count {
-              let members = []
-              let presence_events = []
-              let not_found = []
-              for index in 0..<chunk.chunk_count {
-                let part = received[index]
-                members.append(part.members)
-                if part.presences is Some(values) {
-                  presence_events.append(values)
-                }
-                if part.not_found is Some(values) {
-                  not_found.append(values)
-                }
-              }
-              group.return_immediately(FetchedMembers::{
-                members,
-                presences: presence_events,
-                not_found,
-              })
-            }
-          }
-          _ => ()
+        if chunks.waiter.queue.get() is GuildMembersChunk(chunk) &&
+          collected.add(chunk) is Some(fetched) {
+          group.return_immediately(fetched)
         }
       }
     })

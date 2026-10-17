@@ -194,3 +194,20 @@ async test "concurrent presence updates wait for general slots before presence s
     shard.close()
   })
 }
+
+///|
+test "slot_wait_ms prunes the window and waits for the oldest send" {
+  let limiter = CommandLimiter(limit=2, window_ms=1000)
+  assert_eq(limiter.slot_wait_ms(100), None)
+  limiter.timestamps.append([0L, 50L])
+  // full: the oldest send leaves the window at 1000, plus the 1 ms nudge
+  assert_eq(limiter.slot_wait_ms(100), Some(901))
+  // a send exactly one window old has left it
+  assert_eq(limiter.slot_wait_ms(1000), None)
+  assert_eq(limiter.timestamps, [50L])
+  limiter.timestamps.push(1000L)
+  assert_eq(limiter.slot_wait_ms(1049), Some(2))
+  // partial prune: only the expired send goes
+  assert_eq(limiter.slot_wait_ms(1050), None)
+  assert_eq(limiter.timestamps, [1000L])
+}

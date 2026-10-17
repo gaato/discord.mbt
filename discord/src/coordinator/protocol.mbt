@@ -93,3 +93,109 @@ fn cooldown_response(decision : @cooldown.CooldownDecision) -> Json {
   }
   { "ok": true, "retry_after_ms": Json::string(retry_after_ms.to_string()) }
 }
+
+///|
+/// A coordinator request after validation.
+priv enum Request {
+  Ping
+  CooldownAcquire(key~ : String, window_ms~ : Int64)
+  IdentifyAcquire(shard_id~ : Int32)
+  HttpAcquire(bucket~ : String, global_exempt~ : Bool)
+  HttpRelease(
+    bucket~ : String,
+    lease~ : Int32,
+    status~ : Int32,
+    headers~ : @http.Headers
+  )
+}
+
+///|
+/// Validate a request line's JSON. `Err` carries the message the server
+/// answers with.
+fn parse_request(request : Json) -> Result[Request, String] {
+  guard request is { "op": String(op), .. } else {
+    return Err("missing string op")
+  }
+  match op {
+    "ping" => Ok(Ping)
+    "cooldown_acquire" => {
+      guard request is { "key": String(key), "window_ms": window_json, .. } &&
+        json_nonnegative_int64(window_json) is Some(window_ms) else {
+        return Err(
+          "cooldown_acquire requires key and non-negative decimal string window_ms",
+        )
+      }
+      Ok(CooldownAcquire(key~, window_ms~))
+    }
+    "identify_acquire" => {
+      guard request is { "shard_id": shard_json, .. } &&
+        json_nonnegative_int(shard_json) is Some(shard_id) else {
+        return Err("identify_acquire requires a non-negative integer shard_id")
+      }
+      Ok(IdentifyAcquire(shard_id~))
+    }
+    "http_acquire" => {
+      guard request
+        is { "bucket": String(bucket), "global_exempt": exempt_json, .. } &&
+        json_bool(exempt_json) is Some(global_exempt) else {
+        return Err("http_acquire requires bucket and boolean global_exempt")
+      }
+      Ok(HttpAcquire(bucket~, global_exempt~))
+    }
+    "http_release" => {
+      guard request
+        is {
+          "bucket": String(bucket),
+          "lease": lease_json,
+          "status": status_json,
+          "headers": Object(header_fields),
+          ..
+        } &&
+        json_nonnegative_int(status_json) is Some(status) &&
+        json_nonnegative_int(lease_json) is Some(lease) else {
+        return Err(
+          "http_release requires bucket, lease, non-negative integer status, and headers object",
+        )
+      }
+      let headers = decode_headers(header_fields) catch {
+        error => return Err("invalid headers: \{error}")
+      }
+      Ok(HttpRelease(bucket~, lease~, status~, headers~))
+    }
+    unknown => Err("unknown op: \{unknown}")
+  }
+}
+
+///|
+/// Decode a response line, raising the server's error message as `Remote`.
+fn decode_response(line : String) -> Json raise CoordinatorError {
+  let response = @json.parse(line) catch {
+    error =>
+      raise CoordinatorError::InvalidResponse(message="invalid JSON: \{error}")
+  }
+  match response {
+    { "ok": True, .. } => response
+    { "ok": False, "error": String(message), .. } =>
+      raise CoordinatorError::Remote(message~)
+    _ =>
+      raise CoordinatorError::InvalidResponse(message="expected an ok response")
+  }
+}
+
+///|
+/// The inverse of `cooldown_response`.
+fn decode_cooldown(
+  response : Json,
+) -> @cooldown.CooldownDecision raise CoordinatorError {
+  guard response is { "retry_after_ms": retry_json, .. } &&
+    json_nonnegative_int64(retry_json) is Some(retry_after_ms) else {
+    raise CoordinatorError::InvalidResponse(
+      message="missing non-negative decimal string retry_after_ms",
+    )
+  }
+  if retry_after_ms == 0L {
+    Acquired
+  } else {
+    Active(retry_after_ms~)
+  }
+}

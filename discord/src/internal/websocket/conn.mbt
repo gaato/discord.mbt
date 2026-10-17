@@ -66,7 +66,7 @@ pub async fn Conn::recv(self : Conn) -> Message {
     2 => {
       let reason = if event.reason == "" { None } else { Some(event.reason) }
       let error = WebSocketError::ConnectionClosed(
-        CloseCode::from_int(event.code),
+        close_code_from_int(event.code),
         reason,
       )
       self.closed = Some(error)
@@ -156,7 +156,7 @@ pub async fn Conn::send_close(
   }
   let code = code.unwrap_or(Normal)
   self.closed = Some(WebSocketError::ConnectionClosed(code, reason))
-  ws_close(self.handle, code.to_int(), reason.unwrap_or(""))
+  ws_close(self.handle, close_code_to_int(code), reason.unwrap_or(""))
 }
 
 ///|

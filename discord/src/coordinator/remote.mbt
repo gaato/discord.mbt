@@ -89,17 +89,7 @@ async fn CoordinatorClient::request_once(
   } noraise {
     line => line
   }
-  let response = @json.parse(response_line) catch {
-    error =>
-      raise CoordinatorError::InvalidResponse(message="invalid JSON: \{error}")
-  }
-  match response {
-    { "ok": True, .. } => response
-    { "ok": False, "error": String(message), .. } =>
-      raise CoordinatorError::Remote(message~)
-    _ =>
-      raise CoordinatorError::InvalidResponse(message="expected an ok response")
-  }
+  decode_response(response_line)
 }
 
 ///|
@@ -252,7 +242,7 @@ pub impl @runtime.RateLimiter for RemoteRateLimiter with fn acquire(
     "global_exempt": global_exempt,
   })
   guard response is { "lease": lease_json, .. } &&
-    coordinator_nonnegative_int(lease_json) is Some(lease) else {
+    json_nonnegative_int(lease_json) is Some(lease) else {
     raise CoordinatorError::InvalidResponse(message="missing integer lease")
   }
   self.leases[bucket_key] = lease
@@ -287,17 +277,6 @@ pub impl @runtime.RateLimiter for RemoteRateLimiter with fn release(
     }),
   )
   self.leases.remove(bucket_key)
-}
-
-///|
-fn coordinator_nonnegative_int(value : Json) -> Int32? {
-  guard value is Number(number, ..) else { return None }
-  let integer = number.to_int()
-  if integer >= 0 && integer.to_double() == number {
-    Some(integer)
-  } else {
-    None
-  }
 }
 
 ///|
@@ -395,15 +374,5 @@ pub impl @cooldown.CooldownStore for RemoteCooldownStore with fn try_acquire(
     }
     error => raise error
   }
-  guard response is { "retry_after_ms": retry_json, .. } &&
-    json_nonnegative_int64(retry_json) is Some(retry_after_ms) else {
-    raise CoordinatorError::InvalidResponse(
-      message="missing non-negative decimal string retry_after_ms",
-    )
-  }
-  if retry_after_ms == 0L {
-    Acquired
-  } else {
-    Active(retry_after_ms~)
-  }
+  decode_cooldown(response)
 }

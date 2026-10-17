@@ -653,17 +653,11 @@ async fn BotCore::run(self : BotCore) -> Unit {
     let event_jobs : @aqueue.Queue[async () -> Unit] = Queue(
       kind=Blocking(self.event_backlog_),
     )
-    // `dropping` stays set from the first dropped event until handlers have
-    // drained the backlog, so one overload produces one warning.
-    let dropping = Ref(false)
-    let queued = Ref(0)
+    let backlog = Backlog::new()
     group.spawn_bg(no_wait=true, () => {
       for ;; {
         let job = event_jobs.get()
-        queued.val -= 1
-        if queued.val == 0 {
-          dropping.val = false
-        }
+        backlog.taken()
         job()
       }
     })
@@ -674,13 +668,11 @@ async fn BotCore::run(self : BotCore) -> Unit {
         _ => false
       }
       if queued_now {
-        queued.val += 1
+        backlog.queued()
       } else {
         let kind = "\{Repr(event_kind(event))}"
         self.emit_telemetry(EventDropped(kind~, backlog=self.event_backlog_))
-        // Warn once per overload, not once per dropped event.
-        if !dropping.val {
-          dropping.val = true
+        if backlog.dropped() {
           self.app_.warn(
             @app.Executor(
               source="gateway",
