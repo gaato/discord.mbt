@@ -33,6 +33,12 @@ fn ogg_page_crc(page : ArrayView[Byte]) -> UInt32 {
 }
 
 ///|
+/// The largest packet the reader reassembles. Opus audio packets are a few
+/// kilobytes; the bound leaves room for an `OpusTags` header carrying cover
+/// art while stopping a stream of continued pages from growing one forever.
+const MAX_OGG_PACKET_BYTES : Int32 = 16_777_216
+
+///|
 /// Streaming Ogg packet reassembler. Feed arbitrary chunks with `push`, then
 /// pull complete packets with `next_packet`.
 #doc(hidden)
@@ -160,6 +166,11 @@ fn OggPacketReader::parse_page(
   let mut body_cursor = start + 27 + segment_count
   for index in 0..<segment_count {
     let lace = self.buffer[start + 27 + index].to_int()
+    if self.partial_packet.length() + lace > MAX_OGG_PACKET_BYTES {
+      raise InvalidOggPage(
+        reason="packet larger than \{MAX_OGG_PACKET_BYTES} bytes",
+      )
+    }
     for offset in 0..<lace {
       self.partial_packet.push(self.buffer[body_cursor + offset])
     }
@@ -170,8 +181,12 @@ fn OggPacketReader::parse_page(
     }
   }
   self.cursor += page_length
-  if self.cursor == self.buffer.length() {
+  // Drop parsed pages once they are at least half the buffer, so a long
+  // stream keeps only its unparsed tail (amortized O(1) per byte).
+  if self.cursor * 2 >= self.buffer.length() {
+    let rest = self.buffer[self.cursor:].to_owned()
     self.buffer.clear()
+    self.buffer.append(rest)
     self.cursor = 0
   }
   true

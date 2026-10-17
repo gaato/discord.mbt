@@ -60,9 +60,17 @@ fn[T] pending_voice_event(event : @bot.PendingEvent[T]) -> PendingVoiceEvent[T] 
 /// as long as `run` (the service that `attach` registers).
 pub struct VoiceClient {
   priv connections : Map[@model.GuildId, VoiceConnection]
-  priv join_gates : Map[@model.GuildId, @async.Semaphore]
+  priv join_gates : Map[@model.GuildId, JoinGate]
   priv mut group : @async.TaskGroup[Unit]?
   priv started : @cond_var.Cond
+}
+
+///|
+/// Serializes joins for one guild. `users` counts the joins holding or
+/// waiting on `gate`, so the entry can go when the last one finishes.
+priv struct JoinGate {
+  gate : @async.Semaphore
+  mut users : Int32
 }
 
 ///|
@@ -163,16 +171,21 @@ pub async fn VoiceClient::join_via(
     raise VoiceError::MissingIntent(intent="GUILD_VOICE_STATES")
   }
   let group = self.running_group(timeout_ms)
-  let join_gate = match self.join_gates.get(guild_id) {
-    Some(gate) => gate
-    None => {
-      let gate = @async.Semaphore(1)
-      self.join_gates[guild_id] = gate
-      gate
+  let join_gate = self.join_gates.get_or_init(guild_id, () => {
+    gate: @async.Semaphore(1),
+    users: 0,
+  })
+  join_gate.users += 1
+  defer {
+    // The last join for the guild, finished or failed, takes the gate along:
+    // one nobody holds or waits on is the same as a new one.
+    join_gate.users -= 1
+    if join_gate.users == 0 {
+      self.join_gates.remove(guild_id)
     }
   }
-  join_gate.acquire()
-  defer join_gate.release()
+  join_gate.gate.acquire()
+  defer join_gate.gate.release()
   if self.connections.get(guild_id) is Some(existing) {
     if existing.state() is Closed(..) {
       self.connections.remove(guild_id)

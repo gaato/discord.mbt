@@ -9,10 +9,10 @@ pub(open) trait AudioSource {
 pub const SILENCE_FRAME : Bytes = b"\xF8\xFF\xFE"
 
 ///|
-async fn pace_until(deadline : Int64) -> Unit {
-  let remaining = deadline - now_ms()
+async fn pace_until(clock : &@hclock.Clock, deadline : Int64) -> Unit {
+  let remaining = deadline - clock.now_unix_ms()
   if remaining > 0L {
-    @async.sleep(remaining.to_int())
+    clock.sleep(remaining.to_int())
   }
 }
 
@@ -86,6 +86,7 @@ fn SendLoopState::advance(
 /// Internal paced sender used by the M4 connection driver.
 /// `frame_duration_ms` is only the pacing interval between packets: every
 /// `AudioSource` frame is 20 ms, so RTP timestamps always advance by 960.
+/// `clock` supplies the pacing deadlines and waits.
 #doc(hidden)
 pub async fn run_send_loop(
   source : &AudioSource,
@@ -99,11 +100,12 @@ pub async fn run_send_loop(
   frame_duration_ms~ : Int32 = 20,
   dave? : DaveMachine,
   on_dave_error~ : (String) -> Unit = _ => (),
+  clock~ : &@hclock.Clock = default_clock(),
 ) -> Unit {
   let mut state = SendLoopState::{
     sequence: initial_sequence,
     timestamp: initial_timestamp,
-    deadline: now_ms(),
+    deadline: clock.now_unix_ms(),
   }
   // Send one frame (counting it only if it went out), then wait out its slot.
   async fn send_paced(frame : Bytes) -> Unit {
@@ -118,7 +120,7 @@ pub async fn run_send_loop(
       on_dave_error,
     )
     state = state.advance(sent~, pace_ms=frame_duration_ms)
-    pace_until(state.deadline)
+    pace_until(clock, state.deadline)
   }
 
   gateway.send_json(encode_speaking(ssrc~, flags=1))

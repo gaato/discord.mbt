@@ -9,6 +9,7 @@ async test "identify sends capabilities only when opted in" {
     @async.with_task_group(group => {
       let shard = @gateway.Shard::start(
         group,
+        rand=seeded_rand(),
         token="tok",
         intents=@model.Intents::none(),
         capabilities?,

@@ -40,6 +40,7 @@ async test "presence records only after a successful write" {
   @async.with_task_group(group => {
     let shard = Shard::start(
       group,
+      rand=seeded_rand(),
       token="test-token",
       intents=@model.Intents::none(),
       clock~,
@@ -100,6 +101,7 @@ async test "presence allows five updates and waits on the sixth" {
   @async.with_task_group(group => {
     let shard = Shard::start(
       group,
+      rand=seeded_rand(),
       token="test-token",
       intents=@model.Intents::none(),
       presence=@model.UpdatePresence(status=Idle),
@@ -135,6 +137,7 @@ async test "concurrent presence updates wait for general slots before presence s
   @async.with_task_group(group => {
     let shard = Shard::start(
       group,
+      rand=seeded_rand(),
       token="test-token",
       intents=@model.Intents::none(),
       clock~,
@@ -186,4 +189,9 @@ test "slot_wait_ms prunes the window and waits for the oldest send" {
   // partial prune: only the expired send goes
   assert_eq(limiter.slot_wait_ms(1050), None)
   assert_eq(limiter.timestamps, [1000L])
+}
+
+///|
+fn seeded_rand() -> @random.Rand {
+  @random.Rand::chacha8()
 }

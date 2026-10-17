@@ -45,9 +45,14 @@ breaking change is listed with a migration note.
   `BotBuilder` take `max_message_bytes` (default `DEFAULT_MAX_MESSAGE_BYTES`,
   64 MiB), which bounds a message as received, its compressed bytes while they
   accumulate, and its inflated size. A larger message ends the connection
-  (code 1009 for an oversized frame) and the shard resumes; `InflateError`
-  gains `TooLarge(limit~)`, and `connect_websocket` takes the same limit.
-  Before, one message could make the process allocate without bound.
+  (code 1009 for an oversized frame, 4000 on JavaScript, whose WebSocket API
+  cannot send 1009) and the shard resumes; `InflateError` gains
+  `TooLarge(limit~)`, and `connect_websocket` takes the same limit. A limit
+  below 1 is refused: `BotBuilder::build` raises
+  `BotConfigError::InvalidMaxMessageBytes`, `Shard::start` closes the shard
+  fatally with code 0 before connecting, and `connect_websocket` raises the
+  new `GatewayConfigError::InvalidMaxMessageBytes`. Before, one message could
+  make the process allocate without bound.
 - **Command sync can be planned before it is applied.**
   `App::plan_commands` fetches each scope and returns a `CommandPlan` whose
   `report()` lists the commands a sync would create, update, and delete,
@@ -58,8 +63,42 @@ breaking change is listed with a migration note.
 - **Bot shutdown is bounded.** After `GatewayCtx::shutdown`, `run` waits for
   event and interaction handlers that are still running for at most
   `BotBuilder(shutdown_grace_ms~)` (default `DEFAULT_SHUTDOWN_GRACE_MS`,
-  10 seconds), then cancels the rest with a warning. Before, it waited for
-  them without limit, so one hung handler kept the process from stopping.
+  10 seconds), then cancels the rest with a warning; `build` rejects a
+  negative grace with the new `BotConfigError::InvalidShutdownGrace`. Before,
+  it waited for them without limit, so one hung handler kept the process from
+  stopping.
+
+### Fixed
+
+- **Gateway zlib-stream compression no longer truncates large messages.**
+  A message whose compressed form exceeded 64 KiB was cut off after its
+  first 64 KiB, which failed the JSON parse and left the shared decoder out
+  of step with the stream. This regression arrived with the pure MoonBit
+  inflater in 0.9.0 and affected only `compress=true`.
+- **A coordinator restart no longer lets one process release another's REST
+  bucket.** Leases were integers counted from zero by each coordinator
+  process, so a release retried against a restarted coordinator could carry
+  a lease number that now belonged to another process and free its bucket,
+  breaking per-bucket serialization. The coordinator now issues leases as
+  opaque strings unique to each coordinator process. This changes the
+  coordinator wire protocol: `RemoteRateLimiter` still accepts the integer
+  leases of an older coordinator, but the new coordinator refuses every
+  `http_acquire` from an older client (before reserving its bucket, so the
+  refusal blocks no one else). Migration: upgrade bot processes before the
+  coordinator.
+- **A guild or channel limit in `CacheLimits` now bounds the state that
+  belongs to it.** A guild that left the cache through its entry limit or TTL
+  kept its roles, members, voice states, presences, channels, and the messages
+  of its channels, and a channel that left the same way kept its messages;
+  only GUILD_DELETE and CHANNEL_DELETE released them. Per-guild and
+  per-channel maps emptied by deletes or expiry are now dropped too, and the
+  cache no longer keeps a channel-to-guild entry for every channel it has
+  seen, including threads a THREAD_LIST_SYNC dropped while channels were not
+  retained.
+- **Coordinator request and response lines are limited to 64 KiB.** A peer
+  that streamed bytes without a newline made the other side buffer them
+  without bound; the coordinator now answers with an error and closes the
+  connection, and the client drops it with `InvalidResponse`.
 
 ### Fixed
 

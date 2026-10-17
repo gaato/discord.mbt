@@ -13,6 +13,7 @@ import {
   "moonbitlang/async",
   "moonbitlang/async/aqueue",
   "moonbitlang/async/cond_var",
+  "moonbitlang/core/random",
 }
 
 import {

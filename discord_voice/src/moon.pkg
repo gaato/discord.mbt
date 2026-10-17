@@ -4,12 +4,14 @@ import {
   "gaato/dave",
   "gaato/discord/bot",
   "gaato/discord/model",
+  "gaato/http/clock" @hclock,
   "moonbitlang/async",
   "moonbitlang/async/aqueue",
   "moonbitlang/async/cond_var",
   "moonbitlang/async/io",
   "moonbitlang/async/websocket",
   "moonbitlang/async/socket",
+  "moonbitlang/core/buffer",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/env",
   "moonbitlang/core/json",
@@ -19,16 +21,19 @@ import {
 
 import {
   "gaato/discord_voice" @voice,
+  "gaato/http-async/mock" @simclock,
   "moonbitlang/async",
   "moonbitlang/async/aqueue",
   "moonbitlang/async/pipe",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/env",
   "moonbitlang/core/json",
+  "moonbitlang/core/random",
 } for "test"
 
 import {
   "gaato/discord/app",
+  "gaato/http-async/mock" @simclock,
   "moonbitlang/core/encoding/hex",
 } for "wbtest"
 
