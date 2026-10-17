@@ -3,3 +3,9 @@ import {
   "moonbitlang/async",
   "moonbitlang/core/env",
 }
+
+import {
+  "gaato/discord/internal/simclock",
+  "moonbitlang/async",
+  "moonbitlang/async/aqueue",
+} for "test"

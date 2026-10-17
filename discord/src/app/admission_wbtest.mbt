@@ -10,12 +10,16 @@ fn scripted_gate(remaining : Ref[Int32?], token : Ref[Int32]) -> AdmissionGate {
 }
 
 ///|
-fn scripted_admission(permits : Int32) -> Admission {
+fn scripted_admission(
+  permits : Int32,
+  clock~ : @simclock.VirtualClock = @simclock.VirtualClock(),
+) -> Admission {
   {
     limiter: @async.Semaphore(permits),
     pending: 0,
     max_pending: 4,
     wait_limit_ms: 5000,
+    clock,
   }
 }
 
@@ -78,7 +82,8 @@ async test "an expired token is not run even with a free permit" {
 ///|
 async test "a permit handed over after the window closed is given back" {
   for plan in [Respond, DeferMessage(ephemeral=false)] {
-    let admission = scripted_admission(1)
+    let clock = @simclock.VirtualClock()
+    let admission = scripted_admission(1, clock~)
     admission.limiter.acquire()
     let remaining = Ref(Some(5000))
     let token = Ref(60000)
@@ -94,7 +99,7 @@ async test "a permit handed over after the window closed is given back" {
           ran,
         )
       })
-      @async.sleep(10)
+      clock.settle()
       // Both windows close while the interaction waits; then the permit it
       // was waiting for is released to it.
       remaining.val = Some(0)

@@ -6,6 +6,8 @@ pub fn default_clock() -> &@gaato/http/clock.Clock
 
 pub fn now_ms() -> Int64
 
+pub async fn[X] timeout_opt(&@gaato/http/clock.Clock, Int, async () -> X) -> X?
+
 // Errors
 
 // Types and methods

@@ -184,15 +184,19 @@ async test "response gate remains terminal after sink cancellation" {
 
 ///|
 async test "a pending gate expires at its deadline" {
+  let clock = @simclock.VirtualClock()
   let sent = Ref(0)
   let gate = @framework.ResponseGate(
     ApplicationCommand,
     (_, _) => sent.val += 1,
     deadline_ms=20,
+    clock~,
   )
-  assert_true(gate.remaining_ms() is Some(left) && left > 0 && left <= 20)
+  assert_eq(gate.remaining_ms(), Some(20))
+  clock.advance(19)
+  assert_eq(gate.remaining_ms(), Some(1))
   assert_true(gate.is_pending())
-  @async.sleep(40)
+  clock.advance(1)
   assert_eq(gate.remaining_ms(), Some(0))
   assert_eq(gate.state(), Expired)
   try gate.send({ typ: ChannelMessageWithSource, data: None, }) catch {
