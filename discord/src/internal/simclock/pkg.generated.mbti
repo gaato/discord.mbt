@@ -1,0 +1,30 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "gaato/discord/internal/simclock"
+
+import {
+  "gaato/http/clock",
+  "moonbitlang/core/debug",
+}
+
+// Values
+
+// Errors
+pub suberror NoQuiescence {
+  NoQuiescence(rounds~ : Int)
+} derive(@debug.Debug)
+
+// Types and methods
+pub struct VirtualClock {
+  // private fields
+}
+pub fn VirtualClock::VirtualClock(start_ms? : Int64) -> Self
+pub async fn VirtualClock::advance(Self, Int) -> Unit raise NoQuiescence
+pub async fn VirtualClock::advance_to_next(Self) -> Bool raise NoQuiescence
+pub fn VirtualClock::pending(Self) -> Array[Int]
+pub async fn VirtualClock::settle(Self, stable_rounds? : Int, max_rounds? : Int) -> Unit raise NoQuiescence
+pub fn VirtualClock::touch(Self) -> Unit
+pub impl @clock.Clock for VirtualClock
+
+// Type aliases
+
+// Traits
