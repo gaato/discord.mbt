@@ -280,14 +280,14 @@ async fn Client::answer_offline(
 ) -> HttpResponse {
   let bucket = request.route.bucket()
   let method_name = @debug.to_string(request.route.method_())
-  let started_at = @clock.now_ms()
+  let started_at = self.clock_.now_unix_ms()
   let response = {
     errdefer self.emit_telemetry(
       HttpRequest(
         route_bucket=bucket,
         method_name~,
         status=0,
-        duration_ms=@clock.now_ms() - started_at,
+        duration_ms=self.clock_.now_unix_ms() - started_at,
         retries=0,
       ),
     )
@@ -298,7 +298,7 @@ async fn Client::answer_offline(
       route_bucket=bucket,
       method_name~,
       status=response.status,
-      duration_ms=@clock.now_ms() - started_at,
+      duration_ms=self.clock_.now_unix_ms() - started_at,
       retries=0,
     ),
   )

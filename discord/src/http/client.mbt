@@ -11,6 +11,7 @@ pub struct Client {
   priv middleware_ : Array[HttpMiddleware]
   priv telemetry_ : Array[(@telemetry.TelemetryEvent) -> Unit raise]
   priv warn_ : Ref[(String) -> Unit]
+  priv clock_ : &@hclock.Clock
   // Shared with the runtime's retry rule, which resends nothing once set.
   priv closed_ : Ref[Bool]
 }
@@ -63,6 +64,12 @@ const MAX_RESPONSE_BODY_BYTES : Int32 = 67_108_864
 ///
 /// `limiter` is a `gaato/sdk-runtime` `RateLimiter`; the default is an
 /// `@ratelimit.rate_limiter()` with Discord's per-bucket and global accounting.
+///
+/// `clock` (default: the wall clock) drives the client's time: 429 and
+/// resend back-off, the default rate limiter's windows, the attempt deadline
+/// around a supplied transport, telemetry durations, and the typing
+/// keepalive of `ChannelRef::with_typing`. The default transport times its
+/// own phases on the wall clock.
 pub fn Client::Client(
   token : String,
   base_url~ : String = "https://discord.com",
@@ -73,20 +80,29 @@ pub fn Client::Client(
   request_timeout_ms~ : Int32 = 30000,
   max_retries~ : Int32 = 4,
   default_allowed_mentions? : @model.AllowedMentions,
+  clock? : &@hclock.Clock,
 ) -> Client {
+  let clock : &@hclock.Clock = match clock {
+    Some(clock) => clock
+    None => @transport.AsyncClock::new()
+  }
   let limiter : &@runtime.RateLimiter = match limiter {
     Some(l) => l
-    None => @ratelimit.rate_limiter()
+    None => @ratelimit.rate_limiter(clock~)
   }
   let (transport, owned_transport) : (
     &@ghttp.Transport,
     @transport.AsyncTransport?,
   ) = match transport {
-    // The default transport bounds each exchange itself; a shared one gets
-    // the same deadline from the outside.
+    // The default transport bounds each exchange itself, phase by phase; a
+    // shared one gets the same deadline from the outside.
     Some(shared) =>
       (
-        @transport.DeadlineTransport::new(shared, timeout_ms=request_timeout_ms),
+        AttemptDeadline::{
+          inner: shared,
+          clock,
+          timeout_ms: request_timeout_ms,
+        },
         None,
       )
     None => {
@@ -103,7 +119,7 @@ pub fn Client::Client(
   let closed_ = Ref(false)
   let runtime = @runtime.Client::new(
     transport,
-    @transport.AsyncClock::new(),
+    clock,
     base_url~,
     retry=DiscordRetry::{ max_retries, closed: closed_, },
     limiter~,
@@ -121,6 +137,7 @@ pub fn Client::Client(
     middleware_: [],
     telemetry_,
     warn_,
+    clock_: clock,
     closed_,
   }
 }
@@ -138,7 +155,8 @@ pub fn Client::Client(
 /// `handler` propagates as itself when it is a `DiscordHttpError` and as
 /// `DiscordHttpError::Transport(phase=Unknown, ..)` otherwise. Each call
 /// emits the same `HttpRequest` and `HttpRateLimited` telemetry as a single
-/// network attempt.
+/// network attempt, its duration read from `clock` (default: the wall
+/// clock), which also drives `ChannelRef::with_typing`.
 ///
 /// # Example
 /// ```mbt check
@@ -158,7 +176,12 @@ pub fn Client::Client(
 pub fn Client::offline(
   handler : async (HttpRequest) -> HttpResponse,
   default_allowed_mentions? : @model.AllowedMentions,
+  clock? : &@hclock.Clock,
 ) -> Client {
+  let clock : &@hclock.Clock = match clock {
+    Some(clock) => clock
+    None => @transport.AsyncClock::new()
+  }
   {
     token: "",
     owned_transport: None,
@@ -171,6 +194,7 @@ pub fn Client::offline(
     middleware_: [],
     telemetry_: [],
     warn_: Ref(message => println(message)),
+    clock_: clock,
     closed_: Ref(false),
   }
 }

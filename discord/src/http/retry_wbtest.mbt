@@ -133,11 +133,13 @@ impl @ghttp.Transport for FlakyWire with fn send_stream(_self, _request) {
 }
 
 ///|
-/// A `test-token` client over a `FlakyWire` whose answers count in `answered`.
+/// A `test-token` client over a `FlakyWire` whose answers count in
+/// `answered`, on a virtual clock.
 fn flaky_client(
   failures : Array[@ghttp.HttpError],
   limiter : TimeoutTestLimiter,
   answered : Ref[Int32],
+  clock~ : @simclock.VirtualClock = @simclock.VirtualClock(),
 ) -> (Client, FlakyWire) {
   let wire = FlakyWire::{
     failures,
@@ -149,25 +151,41 @@ fn flaky_client(
     },
     failed: 0,
   }
-  (Client("test-token", transport=wire, limiter~), wire)
+  (Client("test-token", transport=wire, limiter~, clock~), wire)
 }
 
 ///|
 async test "a POST that never reached Discord is sent again through the limiter" {
   let limiter = TimeoutTestLimiter(() => ())
   let answered = Ref(0)
+  let clock = @simclock.VirtualClock()
   let (client, wire) = flaky_client(
     [@ghttp.HttpError::Connect("refused")],
     limiter,
     answered,
+    clock~,
   )
   defer client.close()
   let events : Array[@telemetry.TelemetryEvent] = []
   client.on_telemetry(event => events.push(event))
   let route = Route::custom(request_method=Post, path="/channels/1/messages")
-  json_inspect(client.request(route, body={ "content": "once" }), content={
-    "ok": true,
+  let started_at = clock.now_unix_ms()
+  @async.with_task_group(group => {
+    let sending = group.spawn(() => {
+      client.request(route, body={ "content": "once" })
+    })
+    clock.settle()
+    // Refused once, now waiting out the backoff on the client's clock.
+    assert_eq(wire.failed, 1)
+    assert_eq(answered.val, 0)
+    while sending.try_wait() is None {
+      guard clock.advance_to_next() else { fail("nothing left to wait for") }
+    }
+    json_inspect(sending.wait(), content={ "ok": true })
   })
+  // The runtime's default backoff: 500 ms with 20% jitter.
+  let waited = clock.now_unix_ms() - started_at
+  assert_true(waited >= 400L && waited <= 600L)
   assert_eq(wire.failed, 1)
   assert_eq(answered.val, 1)
   assert_eq(limiter.acquires, 2)

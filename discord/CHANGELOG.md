@@ -78,6 +78,14 @@ breaking change is listed with a migration note.
 
 ### Added
 
+- **The REST client takes a `clock`.** `Client(clock?)` and
+  `Client::offline(clock?)` (`gaato/http/clock`'s `Clock`, defaulting to the
+  wall clock) drive 429 and resend back-off, the default rate limiter's
+  windows, the attempt deadline around a supplied transport, telemetry
+  durations, and the `ChannelRef::with_typing` keepalive, so a test can run
+  them on virtual time. `App::serve(access=Token(..), clock?)` and the bot's
+  own client pass their clock on. The default transport still times its own
+  phases on the wall clock.
 - **`DeliveryFailure::Unsent`**: the callback never reached Discord, so the
   window is still unused. `classify_rest_callback_failure` returns it for a
   `Transport` or `Timeout` for which `is_unsent()` holds, and `ResponseGate`
