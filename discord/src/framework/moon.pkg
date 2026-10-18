@@ -17,6 +17,7 @@ import {
   "gaato/http" @ghttp,
   "moonbitlang/async/aqueue",
   "moonbitlang/core/random",
+  "gaato/discord/internal/fuzz",
 } for "test"
 
 import {

@@ -31,6 +31,7 @@ import {
   "moonbitlang/core/random",
   "moonbitlang/core/debug",
   "moonbitlang/async/aqueue",
+  "gaato/discord/internal/fuzz",
 } for "wbtest"
 
 // The gateway executor runs on native, JavaScript, and moonrun Wasm.

@@ -28,6 +28,7 @@ import {
   "moonbitlang/async/http" @ahttp,
   "moonbitlang/async/socket",
   "moonbitlang/async/websocket" @asyncws,
+  "gaato/discord/internal/fuzz",
 } for "test"
 
 import {

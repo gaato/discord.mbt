@@ -1,0 +1,14 @@
+// Test support: shrinking failed randomized schedules. Imported only by
+// tests, so it stays out of the library's dependency graph.
+
+import {
+  "moonbitlang/async",
+  "moonbitlang/core/debug",
+}
+
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/aqueue",
+} for "wbtest"
+
+supported_targets = "js + native + wasm"

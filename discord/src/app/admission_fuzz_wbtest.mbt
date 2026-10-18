@@ -4,6 +4,22 @@
 // exactly one outcome, handlers must never exceed the permits or start after
 // their window closed, the auto-defer watchdog must acknowledge at most once
 // and only an unanswered interaction, and the budget must drain completely.
+// A failing schedule is shrunk to a minimal step list.
+
+///|
+/// One interaction as a schedule draws it.
+priv struct ArrivalSpec {
+  defers : Bool
+  deadline_ms : Int32?
+  token_ms : Int32
+  duration : Int32
+} derive(Debug)
+
+///|
+enum AdmitStep {
+  Arrive(ArrivalSpec)
+  Advance(Int32)
+} derive(Debug)
 
 ///|
 enum AdmitOutcome {
@@ -113,16 +129,16 @@ fn admit_rand(seed : Int32, stream : Int32) -> @random.Rand {
 }
 
 ///|
-/// Route one random interaction into `group`.
+/// Route one interaction into `group`.
 fn AdmitModel::arrive(
   self : AdmitModel,
   group : @async.TaskGroup[Unit],
-  rand : @random.Rand,
+  spec : ArrivalSpec,
 ) -> Unit {
-  let plan : AckPlan = if rand.int(limit=2) == 0 {
-    Respond
-  } else {
+  let plan : AckPlan = if spec.defers {
     DeferMessage(ephemeral=false)
+  } else {
+    Respond
   }
   // A deferring route is refused exactly when the waiting budget is full.
   let waiting = self.arrivals
@@ -139,9 +155,9 @@ fn AdmitModel::arrive(
     plan,
     expect_busy: refuse,
     arrived_at: self.clock.now_unix_ms(),
-    deadline_ms: [Some(2500), Some(1500), Some(800), None][rand.int(limit=4)],
-    token_ms: [3000, 8000, 900_000][rand.int(limit=3)],
-    duration: [0, 400, 2000, 6000][rand.int(limit=4)],
+    deadline_ms: spec.deadline_ms,
+    token_ms: spec.token_ms,
+    duration: spec.duration,
     answered: false,
     defers: 0,
     outcome: Waiting,
@@ -210,14 +226,41 @@ fn AdmitModel::arrive(
 }
 
 ///|
-async fn run_admission_schedule(seed : Int32, length : Int32) -> Unit {
+/// A seed's handler permits, waiting budget, and steps.
+fn admission_schedule(
+  seed : Int32,
+  length : Int32,
+) -> (Int32, Int32, Array[AdmitStep]) {
   let rand = admit_rand(seed, 0)
-  let clock = @simclock.VirtualClock()
   let permits = 1 + rand.int(limit=3)
+  let max_pending = 1 + rand.int(limit=3)
+  let steps = Array::makei(length, _ => {
+    if rand.int(limit=100) < 55 {
+      Arrive({
+        defers: rand.int(limit=2) != 0,
+        deadline_ms: [Some(2500), Some(1500), Some(800), None][rand.int(limit=4)],
+        token_ms: [3000, 8000, 900_000][rand.int(limit=3)],
+        duration: [0, 400, 2000, 6000][rand.int(limit=4)],
+      })
+    } else {
+      Advance([100, 500, 1000, 3000][rand.int(limit=4)])
+    }
+  })
+  (permits, max_pending, steps)
+}
+
+///|
+async fn run_admission_schedule(
+  seed : Int32,
+  permits : Int32,
+  max_pending : Int32,
+  steps : Array[AdmitStep],
+) -> Unit {
+  let clock = @simclock.VirtualClock()
   let admission = scripted_admission(permits, clock~)
   let model = AdmitModel::{
     clock,
-    admission: { ..admission, max_pending: 1 + rand.int(limit=3), },
+    admission: { ..admission, max_pending, },
     permits,
     arrivals: [],
     log: [],
@@ -232,13 +275,13 @@ async fn run_admission_schedule(seed : Int32, length : Int32) -> Unit {
     "permits=\{permits} max_pending=\{model.admission.max_pending}",
   )
   @async.with_task_group(group => {
-    for _ in 0..<length {
-      if rand.int(limit=100) < 55 {
-        model.arrive(group, rand)
-      } else {
-        let ms = [100, 500, 1000, 3000][rand.int(limit=4)]
-        model.log.push("advance \{ms}")
-        clock.advance(ms)
+    for step in steps {
+      match step {
+        Arrive(spec) => model.arrive(group, spec)
+        Advance(ms) => {
+          model.log.push("advance \{ms}")
+          clock.advance(ms)
+        }
       }
       clock.settle()
       if model.flagged is Some(message) {
@@ -294,6 +337,9 @@ async fn run_admission_schedule(seed : Int32, length : Int32) -> Unit {
 ///|
 async test "admission keeps its budget under random arrivals" {
   for seed in 0..<ADMIT_FUZZ_SEEDS {
-    run_admission_schedule(seed, 40)
+    let (permits, max_pending, steps) = admission_schedule(seed, 40)
+    @fuzz.check_schedule(steps, steps => {
+      run_admission_schedule(seed, permits, max_pending, steps)
+    })
   }
 }

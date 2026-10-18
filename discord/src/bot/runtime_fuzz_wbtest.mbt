@@ -7,7 +7,8 @@
 // `run`. After every step and every timer a model checks which handlers
 // started, which events were dropped, and how each connection was closed; at
 // the end it checks that `run` honoured the grace period and left nothing
-// running, open, or pending.
+// running, open, or pending. A failing schedule is shrunk to a minimal step
+// list.
 
 ///|
 enum BotFuzzStep {
@@ -20,6 +21,8 @@ enum BotFuzzStep {
   ServerClose(Int32?)
   Fatal
   Advance(Int32)
+  /// End the schedule the way the seed says (see `BotFuzzEnding`).
+  End
 } derive(Debug)
 
 ///|
@@ -507,14 +510,14 @@ fn bot_fuzz_resuming(conn : BotFuzzConn) -> Bool {
 ///|
 fn BotFuzzModel::pick(
   self : BotFuzzModel,
-  rand : @random.Rand,
+  pick : Int32,
   ok : (BotFuzzConn) -> Bool,
 ) -> BotFuzzConn? {
   let candidates = self.conns.filter(conn => self.live(conn) && ok(conn))
   if candidates.is_empty() {
     None
   } else {
-    Some(candidates[rand.int(limit=candidates.length())])
+    Some(candidates[pick % candidates.length()])
   }
 }
 
@@ -533,11 +536,11 @@ fn bot_fuzz_ready(
 async fn BotFuzzModel::apply(
   self : BotFuzzModel,
   step : BotFuzzStep,
-  rand : @random.Rand,
+  pick : Int32,
 ) -> Bool {
   match step {
     Hello =>
-      match self.pick(rand, conn => !conn.hello) {
+      match self.pick(pick, conn => !conn.hello) {
         Some(conn) => {
           conn.hello = true
           conn.transport.put(BOT_HELLO)
@@ -546,7 +549,7 @@ async fn BotFuzzModel::apply(
       }
     Ready =>
       match
-        self.pick(rand, conn => {
+        self.pick(pick, conn => {
           conn.hello && !conn.active && bot_fuzz_identified(conn) is Some(_)
         }) {
         Some(conn) => {
@@ -568,7 +571,7 @@ async fn BotFuzzModel::apply(
       }
     Resumed =>
       match
-        self.pick(rand, conn => {
+        self.pick(pick, conn => {
           conn.hello && !conn.active && bot_fuzz_resuming(conn)
         }) {
         Some(conn) => {
@@ -581,7 +584,7 @@ async fn BotFuzzModel::apply(
         None => return false
       }
     Command =>
-      match self.pick(rand, conn => conn.active) {
+      match self.pick(pick, conn => conn.active) {
         Some(conn) => {
           self.next_seq += 1
           self.next_id += 1
@@ -602,7 +605,7 @@ async fn BotFuzzModel::apply(
         None => return false
       }
     Message =>
-      match self.pick(rand, conn => conn.active) {
+      match self.pick(pick, conn => conn.active) {
         Some(conn) => {
           self.next_seq += 1
           self.next_id += 1
@@ -615,12 +618,12 @@ async fn BotFuzzModel::apply(
         None => return false
       }
     Ack =>
-      match self.pick(rand, conn => conn.hello) {
+      match self.pick(pick, conn => conn.hello) {
         Some(conn) => conn.transport.put("{\"op\":11}")
         None => return false
       }
     ServerClose(code) =>
-      match self.pick(rand, _ => true) {
+      match self.pick(pick, _ => true) {
         Some(conn) => {
           conn.server_closed = true
           conn.transport.server_close(code)
@@ -631,7 +634,7 @@ async fn BotFuzzModel::apply(
       // Only a connection the shard is reading from sees the close at once;
       // one held in the identify queue notices it only after identifying.
       match
-        self.pick(rand, conn => {
+        self.pick(pick, conn => {
           !conn.hello ||
           bot_fuzz_identified(conn) is Some(_) ||
           bot_fuzz_resuming(conn)
@@ -643,7 +646,7 @@ async fn BotFuzzModel::apply(
         }
         None => return false
       }
-    Advance(_) => return false
+    Advance(_) | End => return false
   }
   self.note(bot_fuzz_dbg(step))
   true
@@ -917,14 +920,30 @@ fn BotFuzzModel::toward_ready(self : BotFuzzModel) -> BotFuzzStep {
 }
 
 ///|
-async fn run_bot_schedule(seed : Int32, length : Int32) -> Unit {
+/// A seed's steps, each with the number that picks its connection: twice
+/// `length`, as about half of them find no connection their precondition
+/// holds for, with an `End` from a third of the way in.
+fn bot_fuzz_steps(seed : Int32, length : Int32) -> Array[(BotFuzzStep, Int32)] {
+  let rand = bot_fuzz_rand(seed, 1)
+  let end_at = 2 * (length / 3 + rand.int(limit=length - length / 3))
+  let steps = Array::makei(2 * length, _ => {
+    (bot_fuzz_step(rand), rand.int(limit=1 << 16))
+  })
+  steps.insert(end_at, (End, 0))
+  steps
+}
+
+///|
+async fn run_bot_schedule(
+  seed : Int32,
+  steps : Array[(BotFuzzStep, Int32)],
+) -> Unit {
   let rand = bot_fuzz_rand(seed, 0)
   let shard_count = 1 + rand.int(limit=3)
   let permits = 1 + rand.int(limit=3)
   let backlog = 1 + rand.int(limit=3)
   let grace = bot_fuzz_graces[rand.int(limit=bot_fuzz_graces.length())]
   let max_concurrency = 1 + rand.int(limit=shard_count)
-  let end_at = length / 3 + rand.int(limit=length - length / 3)
   let ending : BotFuzzEnding = if rand.int(limit=6) == 0 {
     Cancel
   } else {
@@ -979,7 +998,7 @@ async fn run_bot_schedule(seed : Int32, length : Int32) -> Unit {
     flagged: None,
   }
   model.log.push(
-    "shards=\{shard_count} permits=\{permits} backlog=\{backlog} grace=\{grace} max_concurrency=\{max_concurrency} \{bot_fuzz_dbg(ending)} at step \{end_at}",
+    "shards=\{shard_count} permits=\{permits} backlog=\{backlog} grace=\{grace} max_concurrency=\{max_concurrency} \{bot_fuzz_dbg(ending)}",
   )
   let app = @app.AppBuilder(max_in_flight=permits)
   app.on_warn(warning => model.warn(warning))
@@ -1017,7 +1036,6 @@ async fn run_bot_schedule(seed : Int32, length : Int32) -> Unit {
   })
   builder.on_telemetry(event => model.telemetry(event))
   let bot = builder.build()
-  let steps = bot_fuzz_rand(seed, 1)
   @async.with_task_group(group => {
     let run = group.spawn(no_wait=true, allow_failure=true, () => {
       defer model.on_return()
@@ -1028,26 +1046,27 @@ async fn run_bot_schedule(seed : Int32, length : Int32) -> Unit {
     })
     clock.settle()
     model.observe(bot)
-    // Count only steps whose precondition held, so every schedule does
-    // `length` things whatever its draws.
+    // After `End`, an ending that cannot happen yet (no READY context to ask
+    // for a shutdown) is retried before every later step.
     let mut ended = false
-    let mut applied = 0
-    for _ in 0..<(length * 4) {
-      if applied >= length {
-        break
-      }
-      if applied >= end_at && model.end(bot, run, ending) {
+    let mut ending_due = false
+    for entry in steps {
+      let (step, pick) = entry
+      if ending_due && model.end(bot, run, ending) {
         ended = true
         break
       }
-      match bot_fuzz_step(steps) {
-        Advance(ms) => {
-          model.advance(bot, ms)
-          applied += 1
-        }
+      match step {
+        End =>
+          if model.end(bot, run, ending) {
+            ended = true
+            break
+          } else {
+            ending_due = true
+          }
+        Advance(ms) => model.advance(bot, ms)
         step =>
-          if model.apply(step, steps) {
-            applied += 1
+          if model.apply(step, pick) {
             clock.settle()
             model.observe(bot)
           }
@@ -1067,7 +1086,7 @@ async fn run_bot_schedule(seed : Int32, length : Int32) -> Unit {
         match model.toward_ready() {
           Advance(ms) => model.advance(bot, ms)
           step =>
-            if model.apply(step, steps) {
+            if model.apply(step, 0) {
               clock.settle()
               model.observe(bot)
             }
@@ -1092,6 +1111,8 @@ async fn run_bot_schedule(seed : Int32, length : Int32) -> Unit {
 ///|
 async test "the bot runtime follows the model under random fault schedules" {
   for seed in 0..<BOT_FUZZ_SEEDS {
-    run_bot_schedule(seed, 60)
+    @fuzz.check_schedule(bot_fuzz_steps(seed, 60), steps => {
+      run_bot_schedule(seed, steps)
+    })
   }
 }
