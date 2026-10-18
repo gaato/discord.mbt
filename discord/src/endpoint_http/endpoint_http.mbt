@@ -18,6 +18,8 @@ fn text_response(status : Int32, body : String) -> @app.InteractionHttpResponse 
 pub(all) suberror ServerConfigError {
   InvalidMaxBodyBytes(value~ : Int32)
   InvalidBodyTimeoutMs(value~ : Int32)
+  InvalidHeaderTimeoutMs(value~ : Int32)
+  InvalidMaxConnections(value~ : Int32)
 } derive(@debug.Debug)
 
 ///|
@@ -188,7 +190,7 @@ async fn handle_request(
   max_body_bytes : Int32,
   body_timeout_ms : Int32,
   warn : (@app.AppWarning) -> Unit,
-) -> Unit {
+) -> Bool {
   let (response, close) = try
     route_request(
       request, body_reader, endpoint, verifier, path, deadline_ms, max_body_bytes,
@@ -217,11 +219,28 @@ async fn handle_request(
           message="interaction HTTP response failed: \{Repr(error)}",
         ),
       )
-      conn.close()
+      return false
     }
   }
-  if close {
-    conn.close()
+  !close
+}
+
+///|
+/// Serves the requests of one connection in turn. Each request head, and
+/// the wait for it on a kept-alive connection, must arrive within
+/// `header_timeout_ms`, so an idle or trickling client cannot hold one of
+/// the server's `max_connections` slots for long.
+async fn serve_connection(
+  conn : @ahttp.ServerConnection,
+  header_timeout_ms : Int32,
+  handle : async (@ahttp.Request) -> Bool,
+) -> Unit {
+  defer conn.close()
+  for ;; {
+    let request = @async.with_timeout_opt(header_timeout_ms, () => {
+      conn.read_request()
+    })
+    guard request is Some(request) && handle(request) else { return }
   }
 }
 
@@ -256,8 +275,11 @@ pub async fn InteractionsServer::close(
 ///
 /// A request body larger than `max_body_bytes` gets 413, and one not received
 /// within `body_timeout_ms` gets 408; both close the connection. Discord's
-/// interaction payloads are far below the 1 MiB default. Non-positive limits
-/// raise `ServerConfigError` before the server listens.
+/// interaction payloads are far below the 1 MiB default. A connection whose
+/// next request head does not arrive within `header_timeout_ms`, idle
+/// keep-alive time included, is closed. At most `max_connections` clients
+/// are served at once; more wait to be accepted. Non-positive limits raise
+/// `ServerConfigError` before the server listens.
 pub async fn[X] serve_interactions(
   group : @async.TaskGroup[X],
   app : @app.App,
@@ -269,6 +291,8 @@ pub async fn[X] serve_interactions(
   deadline_ms~ : Int32 = 2500,
   max_body_bytes~ : Int32 = 1048576,
   body_timeout_ms~ : Int32 = 5000,
+  header_timeout_ms~ : Int32 = 5000,
+  max_connections~ : Int32 = 256,
 ) -> InteractionsServer {
   guard max_body_bytes > 0 else {
     raise InvalidMaxBodyBytes(value=max_body_bytes)
@@ -276,8 +300,14 @@ pub async fn[X] serve_interactions(
   guard body_timeout_ms > 0 else {
     raise InvalidBodyTimeoutMs(value=body_timeout_ms)
   }
+  guard header_timeout_ms > 0 else {
+    raise InvalidHeaderTimeoutMs(value=header_timeout_ms)
+  }
+  guard max_connections > 0 else {
+    raise InvalidMaxConnections(value=max_connections)
+  }
   let verifier = @verify.InteractionVerifier::new(public_key)
-  let server = @ahttp.Server(@socket.Addr::parse(addr))
+  let server = @socket.TcpServer(@socket.Addr::parse(addr))
   let address = server.addr.to_string()
   let runner : Ref[@async.TaskGroup[Unit]?] = Ref(None)
   let startup : @aqueue.Queue[ServerStartup] = Queue(kind=Unbounded)
@@ -288,11 +318,14 @@ pub async fn[X] serve_interactions(
       runner.val = Some(inner)
       let endpoint = app.serve(inner, access~, application_id?)
       inner.spawn_bg(() => {
-        server.run_forever(allow_failure=true, (request, body_reader, conn) => {
-          handle_request(
-            request, body_reader, conn, endpoint, verifier, path, deadline_ms, max_body_bytes,
-            body_timeout_ms, warn,
-          )
+        server.run_forever(allow_failure=true, max_connections~, (tcp, _) => {
+          let conn = @ahttp.ServerConnection::new(tcp)
+          serve_connection(conn, header_timeout_ms, request => {
+            handle_request(
+              request, conn, conn, endpoint, verifier, path, deadline_ms, max_body_bytes,
+              body_timeout_ms, warn,
+            )
+          })
         })
       })
       startup.put(Ready)

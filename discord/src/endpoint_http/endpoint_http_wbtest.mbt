@@ -551,3 +551,86 @@ test "settle_body keeps the connection only for a body read to its end" {
     assert_eq(settled, expected)
   }
 }
+
+///|
+async test "interactions server closes idle connections and serves at most max_connections" {
+  let private_seed = @hex.decode(
+    "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60",
+  )
+  let public_key = "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a"
+  let timestamp = "1720951200"
+  let ping = ping_body()
+  let app = @app.AppBuilder()
+  @async.with_task_group(group => {
+    let server = serve_interactions(
+      group,
+      app.build(),
+      access=Token("test-token"),
+      addr="127.0.0.1:0",
+      public_key~,
+      application_id=@model.Id::parse("400000000000000001"),
+      header_timeout_ms=200,
+      max_connections=1,
+    )
+    defer server.close()
+    // A connection that sends nothing, or a head that never ends, is closed
+    // once the header timeout passes.
+    assert_eq(raw_exchange(server.addr(), "", ""), "")
+    assert_eq(
+      raw_exchange(server.addr(), "POST / HTTP/1.1\r\nHost: localhost\r\n", ""),
+      "",
+    )
+    // With one slot, a second client is served only after the idle first
+    // one has been closed.
+    let order = []
+    @async.with_task_group(clients => {
+      clients.spawn_bg(() => {
+        ignore(raw_exchange(server.addr(), "", ""))
+        order.push("idle client closed")
+      })
+      @async.pause()
+      clients.spawn_bg(() => {
+        let (response, _) = http_request(
+          server.addr(),
+          Post,
+          "/",
+          ping,
+          signed_headers(private_seed, timestamp, ping),
+        )
+        order.push("second client answered \{response.code}")
+      })
+    })
+    assert_eq(order, ["idle client closed", "second client answered 200"])
+  })
+}
+
+///|
+async test "interactions server rejects non-positive connection limits" {
+  let app = @app.AppBuilder()
+  let public_key = "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a"
+  @async.with_task_group(group => {
+    let outcomes = []
+    for limits in [(0, 1), (1, 0)] {
+      let outcome = try {
+        ignore(
+          serve_interactions(
+            group,
+            app.build(),
+            access=Token("test-token"),
+            addr="127.0.0.1:0",
+            public_key~,
+            header_timeout_ms=limits.0,
+            max_connections=limits.1,
+          ),
+        )
+        "started"
+      } catch {
+        InvalidHeaderTimeoutMs(value~) => "header timeout \{value}"
+        InvalidMaxConnections(value~) => "max connections \{value}"
+        error => "unexpected \{Repr(error)}"
+      }
+      outcomes.push(outcome)
+    }
+    assert_eq(outcomes, ["header timeout 0", "max connections 0"])
+  })
+}
