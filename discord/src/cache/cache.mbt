@@ -93,23 +93,43 @@ pub fn CacheLimit::CacheLimit(
 ///|
 /// Per-resource bounds for an in-memory cache.
 ///
-/// Guild, channel, and user limits are global. Role, member, voice-state, and
-/// presence limits apply independently per guild; message limits apply
-/// independently per channel. Everything keyed by a guild or channel leaves
-/// with it: when a cached guild or channel is deleted, evicted by its entry
-/// limit, or expires, its roles, members, voice states, presences, channels,
-/// and messages go too, and per-guild and per-channel maps are dropped once
-/// empty. All structures are therefore bounded by the configured limits,
-/// except the unavailable-guild flags, which are bounded by the number of
-/// guilds the bot is in. State for a guild or channel the cache does not hold
-/// (its retention is off, or the event arrived after it left) still obeys its
-/// per-guild or per-channel limit and goes when the guild or channel is
-/// deleted. TTLs use fixed, non-sliding deadlines set at write time and are
-/// enforced lazily without background timers.
+/// Guild, channel, DM-channel, user, and recent-user limits are global. Role,
+/// member, voice-state, and presence limits apply independently per guild;
+/// message limits apply independently per channel. Everything keyed by a
+/// guild or channel leaves with it: when a cached guild or channel is
+/// deleted, evicted by its limit, or expires, its roles, members, voice
+/// states, presences, channels, threads, and messages go too, and per-guild
+/// and per-channel maps are dropped once empty. State for a guild or channel
+/// the cache does not hold (its retention is off, or the event arrived after
+/// it left) still obeys its per-guild or per-channel limit and goes when the
+/// guild or channel is deleted.
+///
+/// Under the defaults every structure is bounded:
+/// - guilds and unavailable-guild flags by the guilds the bot is in (a new
+///   session's `READY` also drops the guilds it no longer lists);
+/// - a guild's channels, roles, members, voice states, and presences by what
+///   Discord holds per guild, times those guilds (a fresh `GUILD_CREATE`
+///   drops the channels and threads it no longer lists);
+/// - threads by the active threads of those guilds: a thread leaves when it
+///   is deleted, archived, replaced by a thread list sync, or (private) when
+///   the bot is removed from it;
+/// - channels without a guild (DMs and group DMs) by `dm_channels`, 128,
+///   evicting the least recently written with its messages;
+/// - messages by `messages`, 100 per channel, times the channels above;
+/// - users by the entries that hold them (members, the authors of cached
+///   messages, and the current user), plus `recent_users`, the 128 most
+///   recently seen users nothing holds.
+///
+/// Passing `CacheLimit()` for `dm_channels`, `recent_users`, or `messages`
+/// lifts that bound. TTLs use fixed, non-sliding deadlines set at write time
+/// (re-storing an entry sets a new one) and are enforced lazily without
+/// background timers.
 pub struct CacheLimits {
   priv guilds_ : CacheLimit
   priv channels_ : CacheLimit
+  priv dm_channels_ : CacheLimit
   priv users_ : CacheLimit
+  priv recent_users_ : CacheLimit
   priv roles_ : CacheLimit
   priv members_ : CacheLimit
   priv voice_states_ : CacheLimit
@@ -119,11 +139,15 @@ pub struct CacheLimits {
 
 ///|
 /// Configure limits for each resource. Messages retain at most 100 entries
-/// per channel by default; other resources are unbounded by default.
+/// per channel, DM channels and recent users at most 128 each; other
+/// resources have no limit beyond what keeps them bounded (see
+/// `CacheLimits`). The `users` limit applies to held users only.
 pub fn CacheLimits::CacheLimits(
   guilds~ : CacheLimit = CacheLimit(),
   channels~ : CacheLimit = CacheLimit(),
+  dm_channels~ : CacheLimit = CacheLimit(max_entries=128),
   users~ : CacheLimit = CacheLimit(),
+  recent_users~ : CacheLimit = CacheLimit(max_entries=128),
   roles~ : CacheLimit = CacheLimit(),
   members~ : CacheLimit = CacheLimit(),
   voice_states~ : CacheLimit = CacheLimit(),
@@ -133,7 +157,9 @@ pub fn CacheLimits::CacheLimits(
   {
     guilds_: guilds,
     channels_: channels,
+    dm_channels_: dm_channels,
     users_: users,
+    recent_users_: recent_users,
     roles_: roles,
     members_: members,
     voice_states_: voice_states,
@@ -157,11 +183,22 @@ priv struct Timed[V] {
 ///|
 /// Entries the map drops on its own, because they expired or exceed the entry
 /// limit, are reported to the `evicted` callback of the operation that
-/// dropped them. A map whose keys own other cached state must pass one.
+/// dropped them. A map whose entries own or hold other cached state must pass
+/// one.
 priv struct TimedMap[K, V] {
   entries_ : Map[K, Timed[V]]
   limit_ : CacheLimit
   now_ : () -> Int64
+}
+
+///|
+/// What `TimedMap::put` did with the new value.
+priv enum Put[V] {
+  /// A zero entry limit: nothing was stored.
+  Refused
+  Inserted
+  /// The value replaced the key's previous one.
+  Replaced(V)
 }
 
 ///|
@@ -181,10 +218,11 @@ fn[K, V] TimedMap::is_expired(self : TimedMap[K, V], timed : Timed[V]) -> Bool {
 fn[K : Hash + Eq, V] TimedMap::evict(
   self : TimedMap[K, V],
   key : K,
-  evicted : (K) -> Unit,
+  timed : Timed[V],
+  evicted : (K, V) -> Unit,
 ) -> Unit {
-  self.entries_.remove(key) |> ignore
-  evicted(key)
+  self.entries_.remove(key)
+  evicted(key, timed.value)
 }
 
 ///|
@@ -193,11 +231,11 @@ fn[K : Hash + Eq, V] TimedMap::evict(
 /// expired insertion-order prefix removes every expired entry.
 fn[K : Hash + Eq, V] TimedMap::sweep(
   self : TimedMap[K, V],
-  evicted~ : (K) -> Unit = _ => (),
+  evicted~ : (K, V) -> Unit = (_, _) => (),
 ) -> Unit {
   while self.entries_.iter().head() is Some((expired_key, timed)) &&
         self.is_expired(timed) {
-    self.evict(expired_key, evicted)
+    self.evict(expired_key, timed, evicted)
   }
 }
 
@@ -206,61 +244,69 @@ fn[K : Hash + Eq, V] TimedMap::put(
   self : TimedMap[K, V],
   key : K,
   value : V,
-  evicted~ : (K) -> Unit = _ => (),
-) -> Unit {
+  evicted~ : (K, V) -> Unit = (_, _) => (),
+) -> Put[V] {
   self.sweep(evicted~)
-  guard self.limit_.max_entries_ != Some(0) else { return }
-  self.entries_.remove(key) |> ignore
+  guard self.limit_.max_entries_ != Some(0) else { return Refused }
+  let previous = self.entries_.remove_and_get(key)
   self.entries_[key] = {
     value,
     deadline: self.limit_.ttl_ms_.map(ttl => (self.now_)() + ttl),
   }
   if self.limit_.max_entries_ is Some(max_entries) {
     while self.entries_.length() > max_entries {
-      let (oldest_key, _) = self.entries_.iter().head().unwrap()
-      self.evict(oldest_key, evicted)
+      let (oldest_key, oldest) = self.entries_.iter().head().unwrap()
+      self.evict(oldest_key, oldest, evicted)
     }
+  }
+  match previous {
+    Some(timed) => Replaced(timed.value)
+    None => Inserted
   }
 }
 
 ///|
+/// Replaces a live entry in place, returning the value it replaced; a missing
+/// or expired key stores nothing.
 fn[K : Hash + Eq, V] TimedMap::replace_existing(
   self : TimedMap[K, V],
   key : K,
   value : V,
-  evicted~ : (K) -> Unit = _ => (),
-) -> Unit {
-  guard self.entries_.get(key) is Some(timed) else { return }
+  evicted~ : (K, V) -> Unit = (_, _) => (),
+) -> V? {
+  guard self.entries_.get(key) is Some(timed) else { return None }
   if self.is_expired(timed) {
-    self.evict(key, evicted)
-    return
+    self.evict(key, timed, evicted)
+    return None
   }
   self.entries_[key] = { value, deadline: timed.deadline, }
+  Some(timed.value)
 }
 
 ///|
 fn[K : Hash + Eq, V] TimedMap::get(
   self : TimedMap[K, V],
   key : K,
-  evicted~ : (K) -> Unit = _ => (),
+  evicted~ : (K, V) -> Unit = (_, _) => (),
 ) -> V? {
   guard self.entries_.get(key) is Some(timed) else { return None }
   if self.is_expired(timed) {
-    self.evict(key, evicted)
+    self.evict(key, timed, evicted)
     return None
   }
   Some(timed.value)
 }
 
 ///|
-fn[K : Hash + Eq, V] TimedMap::remove(self : TimedMap[K, V], key : K) -> Unit {
-  self.entries_.remove(key) |> ignore
+/// Removes the entry, expired or not, returning its value.
+fn[K : Hash + Eq, V] TimedMap::remove(self : TimedMap[K, V], key : K) -> V? {
+  self.entries_.remove_and_get(key).map(timed => timed.value)
 }
 
 ///|
 fn[K : Hash + Eq, V] TimedMap::values(
   self : TimedMap[K, V],
-  evicted~ : (K) -> Unit = _ => (),
+  evicted~ : (K, V) -> Unit = (_, _) => (),
 ) -> Array[V] {
   self.sweep(evicted~)
   [
@@ -272,11 +318,11 @@ fn[K : Hash + Eq, V] TimedMap::values(
 /// Keys of every stored entry matching `pred`, expired or not.
 fn[K, V] TimedMap::keys_where(
   self : TimedMap[K, V],
-  pred : (V) -> Bool,
+  pred : (K, V) -> Bool,
 ) -> Array[K] {
   let keys = []
   for key, timed in self.entries_ {
-    if pred(timed.value) {
+    if pred(key, timed.value) {
       keys.push(key)
     }
   }
@@ -296,18 +342,33 @@ priv struct Bucket[K, V] {
 /// A resource kept in one bounded map per owner (guild or channel). Every
 /// operation drops the bucket it leaves empty, so the outer map holds only
 /// owners with retained entries.
+///
+/// `entered_` sees every value that starts being stored and `left_` every
+/// value that stops, whichever path removes it (replacement, removal, a
+/// dropped bucket, the limit, or expiry), so a resource whose entries hold
+/// users keeps the holder counts exact.
 priv struct Buckets[O, K, V] {
   buckets_ : Map[O, Bucket[K, V]]
   limit_ : CacheLimit
   now_ : () -> Int64
+  entered_ : (V) -> Unit
+  left_ : (V) -> Unit
 }
 
 ///|
 fn[O : Hash + Eq, K, V] Buckets::new(
   limit : CacheLimit,
   now : () -> Int64,
+  entered~ : (V) -> Unit = _ => (),
+  left~ : (V) -> Unit = _ => (),
 ) -> Buckets[O, K, V] {
-  { buckets_: Map([]), limit_: limit, now_: now, }
+  {
+    buckets_: Map([]),
+    limit_: limit,
+    now_: now,
+    entered_: entered,
+    left_: left,
+  }
 }
 
 ///|
@@ -317,7 +378,17 @@ fn[O : Hash + Eq, K, V] Buckets::drop_if_empty(
   bucket : Bucket[K, V],
 ) -> Unit {
   if bucket.entries.entries_.is_empty() {
-    self.buckets_.remove(owner) |> ignore
+    self.buckets_.remove(owner)
+  }
+}
+
+///|
+fn[O, K, V] Buckets::release(
+  self : Buckets[O, K, V],
+  bucket : Bucket[K, V],
+) -> Unit {
+  for _, timed in bucket.entries.entries_ {
+    (self.left_)(timed.value)
   }
 }
 
@@ -328,7 +399,7 @@ fn[O : Hash + Eq, K : Hash + Eq, V] Buckets::get(
   key : K,
 ) -> V? {
   guard self.buckets_.get(owner) is Some(bucket) else { return None }
-  let value = bucket.entries.get(key)
+  let value = bucket.entries.get(key, evicted=(_, old) => (self.left_)(old))
   self.drop_if_empty(owner, bucket)
   value
 }
@@ -339,19 +410,20 @@ fn[O : Hash + Eq, K : Hash + Eq, V] Buckets::values(
   owner : O,
 ) -> Array[V] {
   guard self.buckets_.get(owner) is Some(bucket) else { return [] }
-  let values = bucket.entries.values()
+  let values = bucket.entries.values(evicted=(_, old) => (self.left_)(old))
   self.drop_if_empty(owner, bucket)
   values
 }
 
 ///|
+/// Stores the value, reporting whether it was kept.
 fn[O : Hash + Eq, K : Hash + Eq, V] Buckets::put(
   self : Buckets[O, K, V],
   owner : O,
   key : K,
   value : V,
   guild_id? : @model.GuildId,
-) -> Unit {
+) -> Bool {
   let bucket = match self.buckets_.get(owner) {
     Some(bucket) => bucket
     None => {
@@ -364,22 +436,43 @@ fn[O : Hash + Eq, K : Hash + Eq, V] Buckets::put(
     }
   }
   bucket.guild_id = prefer_update(guild_id, bucket.guild_id)
-  bucket.entries.put(key, value)
+  let stored = match
+    bucket.entries.put(key, value, evicted=(_, old) => (self.left_)(old)) {
+    Refused => false
+    Inserted => {
+      (self.entered_)(value)
+      true
+    }
+    Replaced(old) => {
+      (self.entered_)(value)
+      (self.left_)(old)
+      true
+    }
+  }
   self.drop_if_empty(owner, bucket)
+  stored
 }
 
 ///|
+/// Replaces a retained value, reporting whether there was one.
 fn[O : Hash + Eq, K : Hash + Eq, V] Buckets::replace_existing(
   self : Buckets[O, K, V],
   owner : O,
   key : K,
   value : V,
   guild_id? : @model.GuildId,
-) -> Unit {
-  guard self.buckets_.get(owner) is Some(bucket) else { return }
+) -> Bool {
+  guard self.buckets_.get(owner) is Some(bucket) else { return false }
   bucket.guild_id = prefer_update(guild_id, bucket.guild_id)
-  bucket.entries.replace_existing(key, value)
+  let replaced = bucket.entries.replace_existing(key, value, evicted=(_, old) => {
+    (self.left_)(old)
+  })
+  if replaced is Some(old) {
+    (self.entered_)(value)
+    (self.left_)(old)
+  }
   self.drop_if_empty(owner, bucket)
+  replaced is Some(_)
 }
 
 ///|
@@ -389,7 +482,9 @@ fn[O : Hash + Eq, K : Hash + Eq, V] Buckets::remove(
   key : K,
 ) -> Unit {
   guard self.buckets_.get(owner) is Some(bucket) else { return }
-  bucket.entries.remove(key)
+  if bucket.entries.remove(key) is Some(old) {
+    (self.left_)(old)
+  }
   self.drop_if_empty(owner, bucket)
 }
 
@@ -398,23 +493,27 @@ fn[O : Hash + Eq, K, V] Buckets::drop(
   self : Buckets[O, K, V],
   owner : O,
 ) -> Unit {
-  self.buckets_.remove(owner) |> ignore
+  if self.buckets_.remove_and_get(owner) is Some(bucket) {
+    self.release(bucket)
+  }
 }
 
 ///|
-/// Drops every bucket recorded as belonging to `guild_id`.
+/// Drops every bucket recorded as belonging to `guild_id` whose owner is not
+/// kept by `keep`.
 fn[O : Hash + Eq, K, V] Buckets::drop_guild(
   self : Buckets[O, K, V],
   guild_id : @model.GuildId,
+  keep~ : (O) -> Bool = _ => false,
 ) -> Unit {
   let owners = []
   for owner, bucket in self.buckets_ {
-    if bucket.guild_id == Some(guild_id) {
+    if bucket.guild_id == Some(guild_id) && !keep(owner) {
       owners.push(owner)
     }
   }
   for owner in owners {
-    self.buckets_.remove(owner) |> ignore
+    self.drop(owner)
   }
 }
 
@@ -423,14 +522,6 @@ fn[T] prefer_update(value : T?, previous : T?) -> T? {
   match value {
     Some(_) => value
     None => previous
-  }
-}
-
-///|
-fn is_thread(channel : @model.Channel) -> Bool {
-  match channel.typ {
-    AnnouncementThread | PublicThread | PrivateThread => true
-    _ => false
   }
 }
 
@@ -448,15 +539,21 @@ priv struct CachedChannel {
 /// `update` is the only mutation entry point. Entity getters return the model
 /// value retained by the cache; callers should treat it as immutable. List
 /// getters always allocate a new outer array so callers cannot mutate the
-/// cache's collections.
+/// cache's collections. Archived threads are not served: Discord stops
+/// sending their events, so the cache drops them when they are archived;
+/// fetch them over REST.
 pub struct InMemoryCache {
   priv resources_ : CacheResources
   priv guilds_ : TimedMap[@model.GuildId, @model.Guild]
   priv unavailable_guilds_ : Map[@model.GuildId, Bool]
   priv channels_ : TimedMap[@model.ChannelId, CachedChannel]
+  // Active threads, kept while channels or messages are retained.
+  priv threads_ : Map[@model.ChannelId, ThreadEntry]
+  // Channels without a guild holding cached state, in write order.
+  priv dm_channels_ : TimedMap[@model.ChannelId, Unit]
   priv roles_ : Buckets[@model.GuildId, @model.RoleId, @model.Role]
   priv members_ : Buckets[@model.GuildId, @model.UserId, @model.GuildMember]
-  priv users_ : TimedMap[@model.UserId, @model.User]
+  priv users_ : UserStore
   priv voice_states_ : Buckets[@model.GuildId, @model.UserId, @model.VoiceState]
   priv presences_ : Buckets[
     @model.GuildId,
@@ -464,6 +561,7 @@ pub struct InMemoryCache {
     @model.PresenceUpdateEvent,
   ]
   priv messages_ : Buckets[@model.ChannelId, @model.MessageId, @model.Message]
+  priv mut current_user_ : @model.UserId?
 }
 
 ///|
@@ -476,25 +574,53 @@ pub fn InMemoryCache::InMemoryCache(
   limits~ : CacheLimits = CacheLimits(),
   now~ : () -> Int64 = @clock.now_ms,
 ) -> InMemoryCache {
+  let users = UserStore::new(
+    enabled=resources.users_,
+    held=limits.users_,
+    recent=limits.recent_users_,
+    now~,
+  )
   {
     resources_: resources,
     guilds_: TimedMap::new(limits.guilds_, now),
     unavailable_guilds_: Map([]),
     channels_: TimedMap::new(limits.channels_, now),
+    threads_: Map([]),
+    dm_channels_: TimedMap::new(limits.dm_channels_, now),
     roles_: Buckets::new(limits.roles_, now),
-    members_: Buckets::new(limits.members_, now),
-    users_: TimedMap::new(limits.users_, now),
+    members_: Buckets::new(
+      limits.members_,
+      now,
+      entered=cached_member => {
+        if cached_member.user is Some(user) {
+          users.hold(user)
+        }
+      },
+      left=cached_member => {
+        if cached_member.user is Some(user) {
+          users.release(user.id)
+        }
+      },
+    ),
+    users_: users,
     voice_states_: Buckets::new(limits.voice_states_, now),
     presences_: Buckets::new(limits.presences_, now),
-    messages_: Buckets::new(limits.messages_, now),
+    messages_: Buckets::new(
+      limits.messages_,
+      now,
+      entered=message => users.hold(message.author),
+      left=message => users.release(message.author.id),
+    ),
+    current_user_: None,
   }
 }
 
 ///|
 /// Releases everything keyed by a guild that left the cache: its per-guild
-/// buckets, its channels, and the messages of its channels, cached or not.
-/// The guild entry itself is the caller's: `remove_guild` deletes it, and the
-/// guild map has already dropped it when it reports an eviction.
+/// buckets, its channels and threads, and the messages of its channels,
+/// cached or not. The guild entry itself is the caller's: `remove_guild`
+/// deletes it, and the guild map has already dropped it when it reports an
+/// eviction.
 fn InMemoryCache::release_guild(
   self : InMemoryCache,
   guild_id : @model.GuildId,
@@ -504,9 +630,25 @@ fn InMemoryCache::release_guild(
   self.voice_states_.drop(guild_id)
   self.presences_.drop(guild_id)
   self.messages_.drop_guild(guild_id)
-  let channel_ids = self.channels_.keys_where(cached => {
-    cached.guild_id == Some(guild_id)
+  self.forget_channels(guild_id, _ => false)
+}
+
+///|
+/// Removes every cached channel and known thread of `guild_id` that `keep`
+/// does not keep.
+fn InMemoryCache::forget_channels(
+  self : InMemoryCache,
+  guild_id : @model.GuildId,
+  keep : (@model.ChannelId) -> Bool,
+) -> Unit {
+  let channel_ids = self.channels_.keys_where((channel_id, cached) => {
+    cached.guild_id == Some(guild_id) && !keep(channel_id)
   })
+  for thread_id, entry in self.threads_ {
+    if entry.guild_id == guild_id && !keep(thread_id) {
+      channel_ids.push(thread_id)
+    }
+  }
   for channel_id in channel_ids {
     self.remove_channel(channel_id)
   }
@@ -520,6 +662,36 @@ fn InMemoryCache::release_channel(
   channel_id : @model.ChannelId,
 ) -> Unit {
   self.messages_.drop(channel_id)
+  self.dm_channels_.remove(channel_id) |> ignore
+}
+
+///|
+/// Releases a channel without a guild that fell out of the DM limit: its
+/// channel entry and its messages.
+fn InMemoryCache::release_dm(
+  self : InMemoryCache,
+  channel_id : @model.ChannelId,
+) -> Unit {
+  self.channels_.remove(channel_id) |> ignore
+  self.release_channel(channel_id)
+}
+
+///|
+/// Marks a channel without a guild as the most recently written, evicting
+/// the least recently written beyond the DM limit. Reports whether the
+/// channel's state is kept: a zero limit releases it at once.
+fn InMemoryCache::touch_dm(
+  self : InMemoryCache,
+  channel_id : @model.ChannelId,
+) -> Bool {
+  let evicted = (dm_id, _) => self.release_dm(dm_id)
+  match self.dm_channels_.put(channel_id, (), evicted~) {
+    Refused => {
+      self.release_dm(channel_id)
+      false
+    }
+    Inserted | Replaced(_) => true
+  }
 }
 
 ///|
@@ -527,24 +699,35 @@ fn InMemoryCache::cached_channel(
   self : InMemoryCache,
   channel_id : @model.ChannelId,
 ) -> CachedChannel? {
-  self.channels_.get(channel_id, evicted=evicted_id => {
+  self.channels_.get(channel_id, evicted=(evicted_id, _) => {
     self.release_channel(evicted_id)
   })
 }
 
 ///|
-/// Releases the state of guilds and channels whose TTL has passed, so it does
-/// not outlive them while nothing reads the guild or channel. Every public
-/// read calls it first, so an expired owner's state is never served.
+/// Releases the state of guilds, channels, and DM channels whose TTL has
+/// passed, so it does not outlive them while nothing reads the guild or
+/// channel. Every public read calls it first, so an expired owner's state is
+/// never served.
 fn InMemoryCache::expire_owners(self : InMemoryCache) -> Unit {
-  self.guilds_.sweep(evicted=guild_id => self.release_guild(guild_id))
-  self.channels_.sweep(evicted=channel_id => self.release_channel(channel_id))
+  self.guilds_.sweep(evicted=(guild_id, _) => self.release_guild(guild_id))
+  self.channels_.sweep(evicted=(channel_id, _) => {
+    self.release_channel(channel_id)
+  })
+  self.dm_channels_.sweep(evicted=(channel_id, _) => self.release_dm(channel_id))
 }
 
 ///|
-fn InMemoryCache::store_user(self : InMemoryCache, user : @model.User) -> Unit {
-  if self.resources_.users_ {
-    self.users_.put(user.id, user)
+/// Records the current user, which the cache holds while it is current.
+fn InMemoryCache::set_current_user(
+  self : InMemoryCache,
+  user : @model.User,
+) -> Unit {
+  let previous = self.current_user_
+  self.current_user_ = Some(user.id)
+  self.users_.hold(user)
+  if previous is Some(previous_id) {
+    self.users_.release(previous_id)
   }
 }
 
@@ -553,26 +736,29 @@ fn InMemoryCache::store_guild(
   self : InMemoryCache,
   guild : @model.Guild,
 ) -> Unit {
-  self.unavailable_guilds_.remove(guild.id) |> ignore
+  self.unavailable_guilds_.remove(guild.id)
   if self.resources_.guilds_ {
-    self.guilds_.put(guild.id, guild, evicted=guild_id => {
+    self.guilds_.put(guild.id, guild, evicted=(guild_id, _) => {
       self.release_guild(guild_id)
     })
+    |> ignore
   }
   self.store_roles(guild.id, guild.roles)
 }
 
 ///|
+/// Stores a member; a member the cache does not keep is a passing sighting
+/// of its user.
 fn InMemoryCache::store_member(
   self : InMemoryCache,
   guild_id : @model.GuildId,
   cached_member : @model.GuildMember,
 ) -> Unit {
-  if cached_member.user is Some(user) {
-    self.store_user(user)
-    if self.resources_.members_ {
-      self.members_.put(guild_id, user.id, cached_member)
-    }
+  guard cached_member.user is Some(user) else { return }
+  let stored = self.resources_.members_ &&
+    self.members_.put(guild_id, user.id, cached_member)
+  if !stored {
+    self.users_.see(user)
   }
 }
 
@@ -585,9 +771,14 @@ fn InMemoryCache::store_roles(
   if self.resources_.roles_ {
     self.roles_.drop(guild_id)
     for role in roles {
-      self.roles_.put(guild_id, role.id, role)
+      self.roles_.put(guild_id, role.id, role) |> ignore
     }
   }
+}
+
+///|
+fn InMemoryCache::tracks_threads(self : InMemoryCache) -> Bool {
+  self.resources_.channels_ || self.resources_.messages_
 }
 
 ///|
@@ -596,19 +787,29 @@ fn InMemoryCache::store_channel(
   channel : @model.Channel,
   guild_id? : @model.GuildId,
 ) -> Unit {
-  guard self.resources_.channels_ else { return }
+  guard keeps_channel(channel) else {
+    self.remove_channel(channel.id)
+    return
+  }
   let previous = self.cached_channel(channel.id)
-  self.channels_.put(
-    channel.id,
-    {
-      channel,
-      guild_id: prefer_update(
-        channel.guild_id,
-        prefer_update(guild_id, previous.bind(cached => cached.guild_id)),
-      ),
-    },
-    evicted=channel_id => self.release_channel(channel_id),
+  let resolved_guild_id = prefer_update(
+    channel.guild_id,
+    prefer_update(guild_id, previous.bind(cached => cached.guild_id)),
   )
+  if is_thread(channel) &&
+    resolved_guild_id is Some(thread_guild_id) &&
+    self.tracks_threads() {
+    self.threads_[channel.id] = ThreadEntry::of(channel, thread_guild_id)
+  }
+  guard self.resources_.channels_ else { return }
+  self.channels_.put(channel.id, { channel, guild_id: resolved_guild_id, }, evicted=(
+    channel_id,
+    _,
+  ) => self.release_channel(channel_id))
+  |> ignore
+  if resolved_guild_id is None {
+    self.touch_dm(channel.id) |> ignore
+  }
 }
 
 ///|
@@ -636,6 +837,7 @@ fn InMemoryCache::store_presence(
       previous.bind(value => value.client_status),
     ),
   })
+  |> ignore
 }
 
 ///|
@@ -662,18 +864,30 @@ fn InMemoryCache::store_voice_state(
         voice_state.user_id,
         voice_state,
       )
+      |> ignore
   }
 }
 
 ///|
+/// Stores a message. One the cache does not keep is a passing sighting of
+/// its author; one in a channel without a guild counts against the DM limit.
 fn InMemoryCache::store_message(
   self : InMemoryCache,
   message : @model.Message,
   guild_id : @model.GuildId?,
 ) -> Unit {
-  self.store_user(message.author)
-  guard self.resources_.messages_ else { return }
-  self.messages_.put(message.channel_id, message.id, message, guild_id?)
+  let guild_id = prefer_update(
+    guild_id,
+    self.cached_channel(message.channel_id).bind(cached => cached.guild_id),
+  )
+  let stored = self.resources_.messages_ &&
+    self.messages_.put(message.channel_id, message.id, message, guild_id?)
+  let guildless = self.messages_.buckets_.get(message.channel_id)
+    is Some({ guild_id: None, .. })
+  let kept = stored && (!guildless || self.touch_dm(message.channel_id))
+  if !kept {
+    self.users_.see(message.author)
+  }
 }
 
 ///|
@@ -685,14 +899,16 @@ fn InMemoryCache::update_message(
   message : @model.Message,
   guild_id : @model.GuildId?,
 ) -> Unit {
-  self.store_user(message.author)
-  guard self.resources_.messages_ else { return }
-  self.messages_.replace_existing(
-    message.channel_id,
-    message.id,
-    message,
-    guild_id?,
-  )
+  let replaced = self.resources_.messages_ &&
+    self.messages_.replace_existing(
+      message.channel_id,
+      message.id,
+      message,
+      guild_id?,
+    )
+  if !replaced {
+    self.users_.see(message.author)
+  }
 }
 
 ///|
@@ -705,11 +921,13 @@ fn InMemoryCache::delete_message(
 }
 
 ///|
+/// Removes a channel or thread with everything keyed by it.
 fn InMemoryCache::remove_channel(
   self : InMemoryCache,
   channel_id : @model.ChannelId,
 ) -> Unit {
-  self.channels_.remove(channel_id)
+  self.channels_.remove(channel_id) |> ignore
+  self.threads_.remove(channel_id)
   self.release_channel(channel_id)
 }
 
@@ -718,18 +936,33 @@ fn InMemoryCache::remove_guild(
   self : InMemoryCache,
   guild_id : @model.GuildId,
 ) -> Unit {
-  self.guilds_.remove(guild_id)
-  self.unavailable_guilds_.remove(guild_id) |> ignore
+  self.guilds_.remove(guild_id) |> ignore
+  self.unavailable_guilds_.remove(guild_id)
   self.release_guild(guild_id)
 }
 
 ///|
+/// Replaces everything the cache holds for a guild with a fresh
+/// `GUILD_CREATE`, which lists all its channels, active threads, and members
+/// the bot can see: channels and threads it no longer lists (deleted or
+/// archived while the guild was unavailable) go with their messages.
 fn InMemoryCache::seed_available_guild(
   self : InMemoryCache,
   available : @model.AvailableGuildCreateEvent,
 ) -> Unit {
   let guild_id = available.guild.id
   self.store_guild(available.guild)
+  let listed : Map[@model.ChannelId, Unit] = Map([])
+  for channel in available.channels {
+    listed[channel.id] = ()
+  }
+  for thread in available.threads {
+    listed[thread.id] = ()
+  }
+  self.forget_channels(guild_id, channel_id => listed.contains(channel_id))
+  self.messages_.drop_guild(guild_id, keep=channel_id => {
+    listed.contains(channel_id)
+  })
   self.members_.drop(guild_id)
   for cached_member in available.members {
     self.store_member(guild_id, cached_member)
@@ -755,8 +988,10 @@ fn InMemoryCache::update_member(
   self : InMemoryCache,
   update : @model.GuildMemberUpdateEvent,
 ) -> Unit {
-  self.store_user(update.user)
-  guard self.resources_.members_ else { return }
+  guard self.resources_.members_ else {
+    self.users_.see(update.user)
+    return
+  }
   let previous = self.member(update.guild_id, update.user.id)
   let cached_member = @model.GuildMember::{
     user: Some(update.user),
@@ -791,29 +1026,92 @@ fn InMemoryCache::update_member(
 }
 
 ///|
-/// Without retained channels the cache holds nothing keyed by a thread
-/// except its messages, which a sync cannot attribute to a parent channel.
+/// A sync lists every active thread under the parents it covers, so the
+/// known threads it does not list are gone, with their messages, whether or
+/// not channels are retained.
 fn InMemoryCache::sync_threads(
   self : InMemoryCache,
   sync : @model.ThreadListSyncEvent,
 ) -> Unit {
-  guard self.resources_.channels_ else { return }
-  let removed = self.channels_.keys_where(cached => {
-    guard cached.guild_id == Some(sync.guild_id) && is_thread(cached.channel) else {
-      return false
+  let removed = []
+  for thread_id, entry in self.threads_ {
+    if synced_away(entry, sync.guild_id, sync.channel_ids) {
+      removed.push(thread_id)
     }
-    match sync.channel_ids {
-      None => true
-      Some(parent_ids) =>
-        cached.channel.parent_id is Some(Value(parent_id)) &&
-        parent_ids.contains(parent_id)
-    }
-  })
-  for channel_id in removed {
-    self.remove_channel(channel_id)
+  }
+  for thread_id in removed {
+    self.remove_channel(thread_id)
   }
   for thread in sync.threads {
     self.store_channel(thread, guild_id=sync.guild_id)
+  }
+}
+
+///|
+fn InMemoryCache::update_thread_members(
+  self : InMemoryCache,
+  update : @model.ThreadMembersUpdateEvent,
+) -> Unit {
+  let private_ = self.threads_.get(update.id) is Some(entry) && entry.private_
+  if loses_thread(update.removed_member_ids, self.current_user_, private_) {
+    self.remove_channel(update.id)
+  }
+}
+
+///|
+/// Every guild the cache holds anything for.
+fn InMemoryCache::known_guilds(
+  self : InMemoryCache,
+) -> Map[@model.GuildId, Unit] {
+  let known : Map[@model.GuildId, Unit] = Map([])
+  for guild_id, _ in self.guilds_.entries_ {
+    known[guild_id] = ()
+  }
+  for guild_id, _ in self.unavailable_guilds_ {
+    known[guild_id] = ()
+  }
+  for
+    owners in [
+      self.roles_.buckets_.keys(),
+      self.members_.buckets_.keys(),
+      self.voice_states_.buckets_.keys(),
+      self.presences_.buckets_.keys(),
+    ] {
+    for guild_id in owners {
+      known[guild_id] = ()
+    }
+  }
+  for _, timed in self.channels_.entries_ {
+    if timed.value.guild_id is Some(guild_id) {
+      known[guild_id] = ()
+    }
+  }
+  for _, entry in self.threads_ {
+    known[entry.guild_id] = ()
+  }
+  for _, bucket in self.messages_.buckets_ {
+    if bucket.guild_id is Some(guild_id) {
+      known[guild_id] = ()
+    }
+  }
+  known
+}
+
+///|
+/// A new session's `READY` lists every guild of its shard: the guilds of
+/// that shard it does not list were left while the bot was disconnected.
+fn InMemoryCache::forget_unlisted_guilds(
+  self : InMemoryCache,
+  ready : @model.Ready,
+) -> Unit {
+  let listed : Map[@model.GuildId, Unit] = Map([])
+  for guild in ready.guilds {
+    listed[guild.id] = ()
+  }
+  for guild_id, _ in self.known_guilds() {
+    if ready_covers(guild_id, ready.shard) && !listed.contains(guild_id) {
+      self.remove_guild(guild_id)
+    }
   }
 }
 
@@ -846,18 +1144,19 @@ pub fn InMemoryCache::update(
     ThreadCreate(create) => self.store_channel(create.channel)
     ThreadDelete(delete) => self.remove_channel(delete.id)
     ThreadListSync(sync) => self.sync_threads(sync)
+    ThreadMembersUpdate(update) => self.update_thread_members(update)
     GuildRoleCreate(event) | GuildRoleUpdate(event) => {
       guard self.resources_.roles_ else { return }
-      self.roles_.put(event.guild_id, event.role.id, event.role)
+      self.roles_.put(event.guild_id, event.role.id, event.role) |> ignore
     }
     GuildRoleDelete(event) => self.roles_.remove(event.guild_id, event.role_id)
     GuildMemberAdd(event) =>
       self.store_member(event.guild_id, event.guild_member)
     GuildMemberRemove(event) => {
-      self.store_user(event.user)
       self.members_.remove(event.guild_id, event.user.id)
       self.voice_states_.remove(event.guild_id, event.user.id)
       self.presences_.remove(event.guild_id, event.user.id)
+      self.users_.see(event.user)
     }
     GuildMemberUpdate(event) => self.update_member(event)
     GuildMembersChunk(event) => {
@@ -872,20 +1171,29 @@ pub fn InMemoryCache::update(
     }
     // A ban does not imply that Discord sent GUILD_MEMBER_REMOVE. Keep member
     // state until that authoritative event arrives.
-    GuildBanAdd(event) | GuildBanRemove(event) => self.store_user(event.user)
+    GuildBanAdd(event) | GuildBanRemove(event) => self.users_.see(event.user)
     Ready(ready) => {
-      self.store_user(ready.user)
+      self.set_current_user(ready.user)
+      self.forget_unlisted_guilds(ready)
       if self.resources_.guilds_ {
         for guild in ready.guilds {
           if guild.unavailable {
             self.unavailable_guilds_[guild.id] = true
           } else {
-            self.unavailable_guilds_.remove(guild.id) |> ignore
+            self.unavailable_guilds_.remove(guild.id)
           }
         }
       }
     }
-    UserUpdate(user) => self.store_user(user)
+    UserUpdate(user) => self.set_current_user(user)
+    InteractionCreate(interaction) =>
+      if prefer_update(
+          interaction.user,
+          interaction.guild_member.bind(cached_member => cached_member.user),
+        )
+        is Some(user) {
+        self.users_.see(user)
+      }
     VoiceStateUpdate(voice_state) => self.store_voice_state(voice_state)
     PresenceUpdate(presence) => self.store_presence(presence)
     MessageCreate(event) => self.store_message(event.message, event.guild_id)
@@ -906,14 +1214,14 @@ pub fn InMemoryCache::guild(
   id : @model.GuildId,
 ) -> @model.Guild? {
   self.expire_owners()
-  self.guilds_.get(id, evicted=guild_id => self.release_guild(guild_id))
+  self.guilds_.get(id, evicted=(guild_id, _) => self.release_guild(guild_id))
 }
 
 ///|
 /// All cached guilds.
 pub fn InMemoryCache::guilds(self : InMemoryCache) -> Array[@model.Guild] {
   self.expire_owners()
-  self.guilds_.values(evicted=guild_id => self.release_guild(guild_id))
+  self.guilds_.values(evicted=(guild_id, _) => self.release_guild(guild_id))
 }
 
 ///|
@@ -951,7 +1259,7 @@ pub fn InMemoryCache::channel(
 pub fn InMemoryCache::channels(self : InMemoryCache) -> Array[@model.Channel] {
   self.expire_owners()
   self.channels_
-  .values(evicted=channel_id => self.release_channel(channel_id))
+  .values(evicted=(channel_id, _) => self.release_channel(channel_id))
   .map(cached => cached.channel)
 }
 
@@ -999,7 +1307,7 @@ pub fn InMemoryCache::members(
 }
 
 ///|
-/// The cached user, if retained.
+/// The cached user, if held by a cached entry or recently seen.
 pub fn InMemoryCache::user(
   self : InMemoryCache,
   id : @model.UserId,
@@ -1009,7 +1317,7 @@ pub fn InMemoryCache::user(
 }
 
 ///|
-/// All cached users.
+/// All cached users: those held by cached entries, then the recently seen.
 pub fn InMemoryCache::users(self : InMemoryCache) -> Array[@model.User] {
   self.expire_owners()
   self.users_.values()
