@@ -14,7 +14,7 @@ pub struct CommandLimiter {
 pub fn CommandLimiter::CommandLimiter(
   limit~ : Int32 = 115,
   window_ms~ : Int32 = 60000,
-  clock~ : &@hclock.Clock = @clock.default_clock(),
+  clock~ : &@hclock.Clock = @transport.AsyncClock::new(),
 ) -> CommandLimiter {
   { timestamps: [], limit, window_ms: window_ms.to_int64(), clock_: clock, }
 }

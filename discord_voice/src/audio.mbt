@@ -100,7 +100,7 @@ pub async fn run_send_loop(
   frame_duration_ms~ : Int32 = 20,
   dave? : DaveMachine,
   on_dave_error~ : (String) -> Unit = _ => (),
-  clock~ : &@hclock.Clock = default_clock(),
+  clock~ : &@hclock.Clock = @transport.AsyncClock::new(),
 ) -> Unit {
   let mut state = SendLoopState::{
     sequence: initial_sequence,

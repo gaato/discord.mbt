@@ -9,6 +9,14 @@ breaking change is listed with a migration note.
 
 ### Changed
 
+- **Depends on `gaato/http` 0.2.0, `gaato/http-async` 0.2.0, and
+  `gaato/sdk-runtime` 0.3.0.** The clock helpers the library kept for itself
+  (the wall clock behind every `clock?` default, and the clock-driven
+  timeout) now come from `gaato/http-async`'s `AsyncClock` and
+  `with_timeout_opt`, and the REST client uses http-async's new response body
+  bound (see Fixed). Migration: a project that also lists any of these
+  modules in its `moon.mod` must move it to the same version; their only
+  breaking change is in `gaato/http/sse`, which this library does not use.
 - **The App, not the store, decides what an unreachable cooldown store
   means, and reports it.** `CooldownDecision` gains `Unavailable(reason~)`,
   which `RemoteCooldownStore` now returns when the coordinator times out or
@@ -70,6 +78,12 @@ breaking change is listed with a migration note.
 
 ### Fixed
 
+- **A REST response body is limited to 64 MiB.** The transport the client
+  creates fails an attempt whose body would exceed it with
+  `DiscordHttpError::Transport`; before, any body was read whole into memory.
+  A transport passed as `transport=` keeps its own policy. The limit matches
+  the Gateway's `DEFAULT_MAX_MESSAGE_BYTES`, far above any response Discord
+  documents.
 - **Gateway zlib-stream compression no longer truncates large messages.**
   A message whose compressed form exceeded 64 KiB was cut off after its
   first 64 KiB, which failed the JSON parse and left the shared decoder out

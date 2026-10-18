@@ -1,11 +1,3 @@
 import {
-  "gaato/http/clock" @hclock,
-  "moonbitlang/async",
   "moonbitlang/core/env",
 }
-
-import {
-  "gaato/http-async/mock" @simclock,
-  "moonbitlang/async",
-  "moonbitlang/async/aqueue",
-} for "test"

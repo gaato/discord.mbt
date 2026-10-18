@@ -8,6 +8,11 @@ releases (0.x → 0.y) may contain breaking changes; patch releases do not.
 
 ### Changed
 
+- **Depends on `gaato/http` 0.2.0 and `gaato/http-async` 0.2.0.** The
+  wall clock behind the `clock?` defaults and the clock-driven timeouts now
+  come from `gaato/http-async`'s `AsyncClock` and `with_timeout_opt` instead
+  of a private copy. Migration: a project that also lists either module in
+  its `moon.mod` must move it to the same version.
 - **`VoiceConnection::start` and `VoiceGateway::start` take a `clock~`
   instead of a `sleeper~`.** The clock (`gaato/http/clock`'s `Clock`, the
   trait `gaato/discord`'s `Shard::start` takes) supplies both the current time

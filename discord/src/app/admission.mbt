@@ -142,7 +142,7 @@ async fn acquire_while_open(
     // waiter a permit just as the timeout fires, `acquire` keeps the permit
     // and returns while `timeout_opt` still reports `None`.
     let acquired = Ref(false)
-    @clock.timeout_opt(clock, wait_ms, () => {
+    @transport.with_timeout_opt(clock, wait_ms, () => {
       limiter.acquire()
       acquired.val = true
     })

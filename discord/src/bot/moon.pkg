@@ -7,7 +7,7 @@ import {
   "gaato/discord/queue",
   "gaato/discord/framework",
   "gaato/discord/app",
-  "gaato/discord/internal/clock",
+  "gaato/http-async" @transport,
   "gaato/http/clock" @hclock,
   "moonbitlang/core/json",
   "moonbitlang/async",
@@ -25,7 +25,6 @@ import {
 
 import {
   "gaato/discord/interaction",
-  "gaato/discord/internal/clock",
   "gaato/http-async/mock" @simclock,
   "gaato/discord/internal/gatewaysim",
   "moonbitlang/core/json",

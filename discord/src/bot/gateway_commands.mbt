@@ -125,31 +125,35 @@ pub async fn GatewayCtx::fetch_guild_members(
     rate_limit_matches(event, guild_id, nonce)
   })
   defer limited.cancel()
-  let result = @clock.timeout_opt(self.collector_.clock.val, timeout_ms, () => {
-    @async.with_task_group(group => {
-      group.spawn_bg(no_wait=true, () => {
-        if limited.waiter.queue.get() is RateLimited(event) {
-          raise GatewayRateLimited(
-            opcode=event.opcode,
-            retry_after_ms=(event.retry_after * 1000.0).ceil().to_int64(),
-          )
+  let result = @transport.with_timeout_opt(
+    self.collector_.clock.val,
+    timeout_ms,
+    () => {
+      @async.with_task_group(group => {
+        group.spawn_bg(no_wait=true, () => {
+          if limited.waiter.queue.get() is RateLimited(event) {
+            raise GatewayRateLimited(
+              opcode=event.opcode,
+              retry_after_ms=(event.retry_after * 1000.0).ceil().to_int64(),
+            )
+          }
+        })
+        self.request_guild_members({
+          guild_id,
+          select,
+          presences,
+          nonce: Some(nonce),
+        })
+        let collected = MemberChunks::new()
+        for ;; {
+          if chunks.waiter.queue.get() is GuildMembersChunk(chunk) &&
+            collected.add(chunk) is Some(fetched) {
+            group.return_immediately(fetched)
+          }
         }
       })
-      self.request_guild_members({
-        guild_id,
-        select,
-        presences,
-        nonce: Some(nonce),
-      })
-      let collected = MemberChunks::new()
-      for ;; {
-        if chunks.waiter.queue.get() is GuildMembersChunk(chunk) &&
-          collected.add(chunk) is Some(fetched) {
-          group.return_immediately(fetched)
-        }
-      }
-    })
-  })
+    },
+  )
   guard result is Some(result) else { raise GatewayRequestTimeout }
   result
 }

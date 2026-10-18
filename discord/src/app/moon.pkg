@@ -5,7 +5,7 @@ import {
   "gaato/discord/interaction",
   "gaato/discord/framework",
   "gaato/discord/verify",
-  "gaato/discord/internal/clock",
+  "gaato/http-async" @transport,
   "gaato/http/clock" @hclock,
   "moonbitlang/async",
   "moonbitlang/async/aqueue",

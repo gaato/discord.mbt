@@ -88,7 +88,7 @@ pub fn ResponseGate::ResponseGate(
   sink : async (@model.InteractionResponse, Array[@dhttp.FileUpload]?) -> Unit,
   classify~ : (Error) -> DeliveryFailure = _ => Uncertain,
   deadline_ms? : Int32,
-  clock~ : &@hclock.Clock = @clock.default_clock(),
+  clock~ : &@hclock.Clock = @transport.AsyncClock::new(),
 ) -> ResponseGate {
   let now = clock.now_unix_ms()
   {
@@ -138,7 +138,7 @@ pub fn ResponseGate::rest(
   client : @dhttp.Client,
   interaction : @model.Interaction,
   deadline_ms~ : Int32 = DEFAULT_INTERACTION_DEADLINE_MS,
-  clock~ : &@hclock.Clock = @clock.default_clock(),
+  clock~ : &@hclock.Clock = @transport.AsyncClock::new(),
 ) -> ResponseGate {
   ResponseGate(
     interaction.typ,
@@ -162,7 +162,7 @@ pub fn ResponseGate::rest(
 pub fn ResponseGate::capture(
   interaction : @model.Interaction,
   deadline_ms~ : Int32 = DEFAULT_INTERACTION_DEADLINE_MS,
-  clock~ : &@hclock.Clock = @clock.default_clock(),
+  clock~ : &@hclock.Clock = @transport.AsyncClock::new(),
 ) -> (ResponseGate, ResponseCapture) {
   let queue : @aqueue.Queue[CapturedResponse] = Queue(kind=Blocking(1))
   let capture = ResponseCapture::{ queue, }

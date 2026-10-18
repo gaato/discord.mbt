@@ -30,6 +30,12 @@ priv enum Backend {
 pub const VERSION : String = "0.9.0"
 
 ///|
+/// The largest response body the default transport buffers, the same 64 MiB
+/// as the Gateway's `DEFAULT_MAX_MESSAGE_BYTES`. A longer body fails the
+/// attempt instead of growing without bound.
+const MAX_RESPONSE_BODY_BYTES : Int32 = 67_108_864
+
+///|
 /// Create a client. `token` is the raw bot token (without the `Bot ` prefix).
 ///
 /// `request_timeout_ms` (default 30000) bounds each network attempt, including
@@ -40,11 +46,12 @@ pub const VERSION : String = "0.9.0"
 /// `transport` is the `gaato/http` `Transport` that performs the wire
 /// exchange, below request validation, middleware, rate limiting, 429
 /// retries, status mapping, and decoding. By default the client creates a
-/// `gaato/http-async` `AsyncTransport` with `request_timeout_ms` and a
-/// keep-alive pool of up to `max_connections` parked connections, and closes
-/// it in `close`. A supplied transport is shared: the client never closes it,
-/// `max_connections` does not apply to it, and each attempt through it is
-/// still bounded by `request_timeout_ms`.
+/// `gaato/http-async` `AsyncTransport` with `request_timeout_ms`, a
+/// keep-alive pool of up to `max_connections` parked connections, and a
+/// 64 MiB bound on each buffered response body, and closes it in `close`. A
+/// supplied transport is shared: the client never closes it,
+/// `max_connections` and the body bound do not apply to it, and each attempt
+/// through it is still bounded by `request_timeout_ms`.
 ///
 /// `limiter` is a `gaato/sdk-runtime` `RateLimiter`; the default is an
 /// `@ratelimit.rate_limiter()` with Discord's per-bucket and global accounting.
@@ -78,6 +85,7 @@ pub fn Client::Client(
       let owned = @transport.AsyncTransport::new(
         timeout_ms=request_timeout_ms,
         max_idle_per_origin=max_connections,
+        max_body_bytes=MAX_RESPONSE_BODY_BYTES,
       )
       (owned, Some(owned))
     }
