@@ -252,7 +252,7 @@ async test "a supplied transport keeps its errors and gets the attempt deadline"
         ignore(@ghttp.Transport::send(stalled, request))
       }
     } catch {
-      @ghttp.HttpError::Timeout(ms) => inspect(ms, content="10")
+      @ghttp.HttpError::Timeout(ms~, ..) => inspect(ms, content="10")
       error => fail("unexpected error: \{Repr(error)}")
     } noraise {
       _ => fail("expected the deadline")
@@ -301,7 +301,7 @@ async test "an upload's multipart body is joined only once the limiter admits it
     headers: Map([]),
   })
   // The head goes to the limiter queue without the encoded body.
-  assert_true(wire.head.body.is_empty())
+  assert_true(wire.head.body.length() is Some(0L))
   guard wire.head.headers.get("content-type") is Some(content_type) &&
     content_type.has_prefix("multipart/form-data; boundary=") else {
     fail("expected a multipart content-type")

@@ -180,7 +180,7 @@ fn payload_part(payload_json : String) -> @multipart.Part {
     name: "payload_json",
     filename: None,
     content_type: Some("application/json"),
-    body: @utf8.encode(payload_json),
+    body: Bytes(@utf8.encode(payload_json)),
   }
 }
 

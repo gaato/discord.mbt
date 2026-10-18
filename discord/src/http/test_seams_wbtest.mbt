@@ -60,11 +60,12 @@ impl @ghttp.Transport for FakeWire with fn send(self, request) {
   for pair in request.headers.iter() {
     headers[pair.0.to_lower()] = pair.1
   }
-  let body : Json? = if request.body.is_empty() {
+  let bytes = request.body.as_bytes().unwrap()
+  let body : Json? = if bytes.is_empty() {
     None
   } else {
-    Some(@json.parse(@utf8.decode_lossy(request.body))) catch {
-      _ => Some(Json::string(@utf8.decode_lossy(request.body)))
+    Some(@json.parse(@utf8.decode_lossy(bytes))) catch {
+      _ => Some(Json::string(@utf8.decode_lossy(bytes)))
     }
   }
   let response = (self.answer)(path, headers, body) catch {

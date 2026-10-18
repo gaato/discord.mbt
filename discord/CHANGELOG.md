@@ -9,16 +9,22 @@ breaking change is listed with a migration note.
 
 ### Changed
 
-- **Depends on `gaato/http` 0.2.1, `gaato/http-async` 0.2.1, and
-  `gaato/sdk-runtime` 0.3.1.** The clock helpers the library kept for itself
+- **Depends on `gaato/http` 0.3.0, `gaato/http-async` 0.3.0, and
+  `gaato/sdk-runtime` 0.4.0.** The clock helpers the library kept for itself
   (the wall clock behind every `clock?` default, and the clock-driven
   timeout) now come from `gaato/http-async`'s `AsyncClock` and
   `with_timeout_opt`, and the REST client uses http-async's new response body
   bound (see Fixed). The REST rate limiter now holds a bucket for at most an
   hour whatever reset or `Retry-After` a response sends, and an error keeps
-  at most 1 MiB of its body. Migration: a project that also lists any of these
-  modules in its `moon.mod` must move it to the same version; their only
-  breaking change is in `gaato/http/sse`, which this library does not use.
+  at most 1 MiB of its body. The default REST transport now goes through the
+  proxy named by `HTTPS_PROXY`, `ALL_PROXY` and `NO_PROXY`, as curl does; to
+  connect directly, pass `transport=@transport.AsyncTransport::new(trust_env=false)`.
+  The Gateway WebSocket still connects directly. The message of a
+  `DiscordHttpError::Transport` now names the phase that failed (a reset
+  after connecting reads `Network(phase=..)` where it read `Protocol`).
+  Migration: a project that also lists any of these modules in its
+  `moon.mod` must move it to the same version and follow their changelogs
+  where it matches `@http.HttpError` or reads `Request.body`.
 - **The App, not the store, decides what an unreachable cooldown store
   means, and reports it.** `CooldownDecision` gains `Unavailable(reason~)`,
   which `RemoteCooldownStore` now returns when the coordinator times out or

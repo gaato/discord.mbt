@@ -348,7 +348,7 @@ fn settle_runtime_error(
       let (retry_after_ms, global) = rate_limit_details(headers, body)
       raise DiscordHttpError::RateLimited(retry_after_ms~, global~)
     }
-    Transport(@ghttp.HttpError::Timeout(_)) =>
+    Transport(@ghttp.HttpError::Timeout(..)) =>
       raise DiscordHttpError::Timeout(timeout_ms~)
     Transport(error) =>
       raise DiscordHttpError::Transport(message=@debug.to_string(error))

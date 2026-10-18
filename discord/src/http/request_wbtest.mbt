@@ -62,7 +62,12 @@ test "DiscordRetry resends only a 429, after its delay plus one millisecond" {
       Some(2001),
     ),
     (1, @runtime.Status(status=500, headers=headers_of([]), body=b""), 0, None),
-    (1, @runtime.Transport(@ghttp.HttpError::Timeout(5)), 0, None),
+    (
+      1,
+      @runtime.Transport(@ghttp.HttpError::Timeout(phase=Head, ms=5)),
+      0,
+      None,
+    ),
   ]
   for case in cases {
     let (max_retries, error, attempt, expected) = case
@@ -230,7 +235,7 @@ test "settle_runtime_error turns a status into a response and raises the rest" {
       "raise RateLimited(retry_after_ms=2000, global=true)",
     ),
     (
-      @runtime.Transport(@ghttp.HttpError::Timeout(5)),
+      @runtime.Transport(@ghttp.HttpError::Timeout(phase=Head, ms=5)),
       "raise Timeout(timeout_ms=7)",
     ),
     (
