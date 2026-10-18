@@ -29,6 +29,8 @@ kind say what that product is.
 | REST rate-limit buckets (`gaato/sdk-runtime` `WindowLimiter`, also inside the coordinator) | Buckets in use: idle gates are dropped, expired states swept whenever the map doubles, and at least once a minute | — |
 | REST response body (`http/client.mbt`, the transport the client creates) | 64 MiB, the same as the Gateway default | The attempt fails with `DiscordHttpError::Transport` and the connection closes; a supplied `transport=` keeps its own policy |
 | Inbound interaction request body (`endpoint_http/endpoint_http.mbt`) | `max_body_bytes`, default 1 MiB | 413 and the connection closes |
+| Interaction HTTP connections (`endpoint_http/endpoint_http.mbt`, `serve_interactions`) | `max_connections`, default 256, served at once | Further clients wait to be accepted |
+| Time to the next request head on an interaction HTTP connection (`endpoint_http/endpoint_http.mbt`, `serve_connection`) | `header_timeout_ms`, default 5 s, idle keep-alive time included | The connection closes, freeing its slot |
 | Voice receive stream (`discord_voice/src/subscribe.mbt`) | 250 frames | Newest frames dropped, then a `Lost(count)` marker; `ReceiveDropped` telemetry |
 | Voice event queue (`discord_voice/src/connection.mbt`) | 256 events | Oldest dropped; `EventDropped` telemetry |
 | Voice reorder buffer (`discord_voice/src/reorder.mbt`) | 8 packets or 60 ms | Flushed as `Lost` |
@@ -45,7 +47,6 @@ kind say what that product is.
 | Bot shard event forwarding queue (`bot/bot.mbt`, `shard_events`) | Gateway events not yet routed | Discord's event rate times the routing loop's latency. The loop only updates the cache, routes interactions, and queues handler work; bounding the queue would stall the shards' read loops, leave heartbeat ACKs unread, and trigger false zombie reconnects. The one slow step is the command sync after the first READY. |
 | Interaction tasks (`bot/bot.mbt`, `spawn_interaction`) | `INTERACTION_CREATE` events | Each waits at most its callback window (2.5 s) or, deferred, joins the `max_pending` budget |
 | Interaction capture races (`app/endpoint.mbt`) | Interactions handled by the HTTP endpoint | One per request, finished within its deadline |
-| Interaction HTTP connections (`endpoint_http/endpoint_http.mbt`) | Inbound connections | The body is read under `body_timeout_ms`; the request head is not, see the known gaps |
 | JavaScript interaction responses (`app/interaction_http.js.mbt`) | Requests on the JavaScript adapter | One per request, delivered when its handler answers |
 | Event and component waiters (`bot/collector.mbt`, `framework/framework.mbt`) | Calls to `wait_for`, `expect_event`, `wait_for_component` | Removed when matched, timed out, or cancelled; each buffers only the events it matches. Waits without a timeout last as long as the caller keeps them. |
 | Coordinator connections and bucket owners (`coordinator/server.mbt`) | Connected processes and the buckets they hold | Released on EOF; TCP keepalive notices a dead peer in about 25 s |
@@ -64,6 +65,6 @@ Growth the library does not bound yet, with what limits it in practice.
 | Structure | Grows with | What limits it |
 |---|---|---|
 | REST response heads (`moonbitlang/async` HTTP client under the `gaato/http-async` transport) | Status line and header size | Parsed with no byte limit; only `request_timeout_ms` times bandwidth, from Discord over TLS |
-| Interaction HTTP request heads (`moonbitlang/async` HTTP server under `endpoint_http`) | Request line and header size, idle keep-alive connections | No timeout or size limit before the body; put the server behind a proxy that limits connections, header size, and idle time when it is exposed beyond Discord |
+| Interaction HTTP request heads (`moonbitlang/async` HTTP server under `endpoint_http`) | Request line and header size | No byte limit: only `header_timeout_ms` times the client's bandwidth, per connection, for `max_connections` connections. A client holding every slot delays Discord's requests until its heads time out; put the server behind a proxy that limits header size and connections per client when it is exposed beyond Discord |
 | Cached users (`cache/cache.mbt`, `users_`) | Every distinct user seen in members, messages, bans, and presences | Unlimited by default and not keyed by guild, so leaving a guild keeps them; set `CacheLimits(users=...)` for a long-running bot |
 | Cached DM message buckets and archived threads (`cache/cache.mbt`) | DM channels with messages, when message caching is on (`CacheResources(messages=true)`); threads that are archived instead of deleted | DM buckets are never dropped (bots get no `CHANNEL_DELETE` for DMs); archived threads stay until their guild leaves or a thread list sync. Set a `channels` limit, and keep message caching off where DMs are many |

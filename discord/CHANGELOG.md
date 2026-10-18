@@ -86,6 +86,17 @@ breaking change is listed with a migration note.
 
 ### Fixed
 
+- **The interaction HTTP server bounds its connections.** `serve_interactions`
+  served any number of connections at once and waited for a request head, or
+  for the next request on a kept-alive connection, without end, so idle
+  clients held memory and file descriptors indefinitely. It now serves at
+  most `max_connections` clients at once (256 by default) and closes a
+  connection whose next request head does not arrive within
+  `header_timeout_ms` (5 s by default). `ServerConfigError` gains
+  `InvalidHeaderTimeoutMs` and `InvalidMaxConnections` for non-positive
+  values. Migration: add arms for them where you match `ServerConfigError`
+  exhaustively.
+
 - **A REST response body is limited to 64 MiB.** The transport the client
   creates fails an attempt whose body would exceed it with
   `DiscordHttpError::Transport`; before, any body was read whole into memory.
