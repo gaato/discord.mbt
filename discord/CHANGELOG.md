@@ -7,6 +7,8 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+## [0.10.1] - 2026-10-19
+
 ### Changed
 
 - Built on `gaato/http` 0.3.1 and `gaato/sdk-runtime` 0.5.0: multipart bodies,
