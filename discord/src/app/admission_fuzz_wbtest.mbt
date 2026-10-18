@@ -255,7 +255,7 @@ async fn run_admission_schedule(
   permits : Int32,
   max_pending : Int32,
   steps : Array[AdmitStep],
-) -> Unit {
+) -> String {
   let clock = @simclock.VirtualClock()
   let admission = scripted_admission(permits, clock~)
   let model = AdmitModel::{
@@ -332,6 +332,7 @@ async fn run_admission_schedule(
       model.violation("a permit was never returned")
     }
   }
+  "seed \{seed}\n" + model.log.join("\n")
 }
 
 ///|

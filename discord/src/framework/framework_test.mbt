@@ -779,3 +779,53 @@ async test "command context edit followup delegates token id and clear body" {
   )
   json_inspect(captured_body.val, content={ "content": null })
 }
+
+///|
+/// A clock whose `tick` wakes every sleeper it makes due in one scheduler
+/// round, in the order they went to sleep, so two timers can fire together.
+struct TickClock {
+  mut now : Int64
+  due : @cond_var.Cond
+}
+
+///|
+impl @hclock.Clock for TickClock with fn sleep(self, milliseconds) {
+  let deadline = self.now + milliseconds.to_int64()
+  while self.now < deadline {
+    self.due.wait()
+  }
+}
+
+///|
+impl @hclock.Clock for TickClock with fn now_unix_ms(self) {
+  self.now
+}
+
+///|
+async test "a click that arrives as the waiter times out reaches the waiter" {
+  let clock = TickClock::{ now: 0L, due: @cond_var.Cond(), }
+  let fw = test_framework(clock~)
+  let routed = Ref(false)
+  @async.with_task_group(group => {
+    let waiter = group.spawn(() => {
+      fw.wait_for_component(custom_id="confirm:1", timeout_ms=20)
+    })
+    // Sleeps after the waiter's timeout, so it wakes in the same round, right
+    // after the timeout has fired and before the waiter has unwound.
+    group.spawn_bg(() => {
+      (clock : &@hclock.Clock).sleep(20)
+      routed.val = fw.process(component_interaction("confirm:1"))
+    })
+    for _ in 0..<4 {
+      @async.pause()
+    }
+    clock.now = 20L
+    clock.due.broadcast()
+    // The framework reported the click as routed, so the waiter must get it.
+    guard waiter.wait() is Some(ctx) else {
+      fail("the waiter lost a click the framework routed to it")
+    }
+    assert_true(routed.val)
+    assert_eq(ctx.data.custom_id, "confirm:1")
+  })
+}

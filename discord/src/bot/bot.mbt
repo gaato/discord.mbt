@@ -538,6 +538,12 @@ async fn BotCore::spawn_event_handlers(
   event : @model.Event,
 ) -> Unit {
   let kind = event_kind(event)
+  // Middleware that was running when the shutdown was requested can still
+  // pass the event on; its handlers would not start.
+  if !gateway.intake_.is_open() {
+    self.emit_telemetry(EventDiscarded(kind="\{Repr(kind)}"))
+    return
+  }
   let mut handler_count = self.raw_events_.length()
   for subscription in self.typed_events_ {
     if subscription.kind == kind {
@@ -662,31 +668,44 @@ async fn BotCore::run(self : BotCore) -> Unit {
         }
       })
     }
+    // Closed by `GatewayCtx::shutdown`: from then on no event middleware,
+    // event handler, or interaction handler starts, and what waits to start
+    // is dropped; the tracker counts what has started, for the grace period.
+    let intake = @app.HandlerIntake()
     let handlers = HandlerTracker::new()
-    let spawner = handlers.spawner(self.app_.spawner(group))
+    let spawner = handlers.spawner(self.app_.spawner(group, intake~))
     // Event middleware and handler fan-out run in their own task so the
     // dispatch loop never waits for event handler capacity; interactions,
     // including those that wake component waiters, are always read promptly.
     // Bounded: when handlers fall behind for long, later events are dropped
     // for handlers (not for the cache or interactions, which ran already)
     // instead of queueing without limit.
-    let event_jobs : @aqueue.Queue[async () -> Unit] = Queue(
+    let event_jobs : @aqueue.Queue[(GatewayCtx, @model.Event)] = Queue(
       kind=Blocking(self.event_backlog_),
     )
     let backlog = Backlog::new()
+    let discard = (event : @model.Event) => {
+      self.emit_telemetry(EventDiscarded(kind="\{Repr(event_kind(event))}"))
+    }
     group.spawn_bg(no_wait=true, () => {
       for ;; {
-        let job = event_jobs.get()
+        let (ctx, event) = event_jobs.get()
         backlog.taken()
-        job()
+        // Judged as the job is taken, with nothing to wait for before the
+        // middleware starts.
+        if intake.is_open() {
+          handlers.track(() => self.dispatch_event(spawner, ctx, event))
+        } else {
+          discard(event)
+        }
       }
     })
     let dispatch_event = (ctx : GatewayCtx, event : @model.Event) => {
-      let queued_now = event_jobs.try_put(() => {
-        self.dispatch_event(spawner, ctx, event)
-      }) catch {
-        _ => false
+      if !intake.is_open() {
+        discard(event)
+        return
       }
+      let queued_now = event_jobs.try_put((ctx, event)) catch { _ => false }
       if queued_now {
         backlog.queued()
       } else {
@@ -702,7 +721,6 @@ async fn BotCore::run(self : BotCore) -> Unit {
         }
       }
     }
-    let shutdown_requested = Ref(false)
     let mut app_ctx : @app.AppCtx? = None
     let mut framework : @framework.Framework? = None
     let initialize_context = (owner : ManagedShard, ready : @model.Ready) => {
@@ -736,6 +754,7 @@ async fn BotCore::run(self : BotCore) -> Unit {
           application_id=ready.application.id,
           waiter~,
           latency_ms~,
+          intake~,
         )
         app_ctx = Some(attached)
         framework = Some(router)
@@ -760,7 +779,7 @@ async fn BotCore::run(self : BotCore) -> Unit {
             cache_: self.cache_,
             framework_: router,
             collector_: self.collector_,
-            shutdown_requested_: shutdown_requested,
+            intake_: intake,
           }
           owner.context = Some(created)
           created
@@ -884,9 +903,9 @@ async fn BotCore::run(self : BotCore) -> Unit {
           if resumed && owner.context is Some(ctx) {
             start_services(ctx)
           }
-        Disconnected(..) => if shutdown_requested.val { break }
+        Disconnected(..) => if !intake.is_open() { break }
         FatallyClosed(code~) => {
-          if shutdown_requested.val {
+          if !intake.is_open() {
             break
           }
           close_shards(shard_handles)
@@ -896,9 +915,14 @@ async fn BotCore::run(self : BotCore) -> Unit {
       }
     }
     // Only a requested shutdown ends the loop, at the first shard to go; the
-    // handler that asked may still be closing the others. Finish closing them
-    // all, then give running handlers the grace period and cancel what is
-    // left with the rest of the group.
+    // handler that asked may still be closing the others. Discard the events
+    // still waiting for handlers, finish closing the shards, then give
+    // running handlers the grace period and cancel what is left with the
+    // rest of the group.
+    while event_jobs.try_get() is Some((_, event)) {
+      backlog.taken()
+      discard(event)
+    }
     close_shards(shard_handles)
     let grace_ms = self.shutdown_grace_ms_
     if @transport.with_timeout_opt(self.clock_.val, grace_ms, () => {

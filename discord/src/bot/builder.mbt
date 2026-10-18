@@ -59,7 +59,8 @@ pub struct BotBuilder {
 ///
 /// After a requested shutdown, `run` waits up to `shutdown_grace_ms` for
 /// event and interaction handlers that are still running, then cancels them
-/// with a warning (default `DEFAULT_SHUTDOWN_GRACE_MS`). `max_message_bytes`
+/// with a warning (default `DEFAULT_SHUTDOWN_GRACE_MS`); handlers that had
+/// not started by the request never do (see `GatewayCtx::shutdown`). `max_message_bytes`
 /// bounds one Gateway message, compressed or inflated; a larger one ends the
 /// connection and the shard resumes.
 pub fn BotBuilder::BotBuilder(

@@ -21,6 +21,7 @@ fn scripted_admission(
     wait_limit_ms: 5000,
     clock,
     refusing: false,
+    intake: HandlerIntake(),
   }
 }
 
@@ -143,6 +144,7 @@ async test "an open window runs on a free permit and returns it" {
 ///|
 fn step_label(step : AdmissionStep) -> String {
   match step {
+    Stopping => "stopping"
     Refuse => "refuse"
     Deferred(wait_ms~) => "deferred: wait \{wait_ms}"
     Direct(wait_ms=Some(ms)) => "direct: wait \{ms}"
@@ -156,26 +158,32 @@ test "admission step for each plan and budget" {
   for
     row in [
       // Responding routes are never refused and wait while the window is open.
-      (Respond, 0, 4, Some(2000), 900000, "direct: wait 2000"),
-      (Respond, 0, 4, None, 900000, "direct: unbounded"),
-      (Respond, 4, 4, Some(2000), 900000, "direct: wait 2000"),
+      (false, Respond, 0, 4, Some(2000), 900000, "direct: wait 2000"),
+      (false, Respond, 0, 4, None, 900000, "direct: unbounded"),
+      (false, Respond, 4, 4, Some(2000), 900000, "direct: wait 2000"),
       // Deferring routes are refused once `max_pending` already wait.
-      (defer_message, 4, 4, Some(2500), 900000, "refuse"),
-      (defer_message, 5, 4, Some(2500), 900000, "refuse"),
-      (defer_message, 0, 0, Some(2500), 900000, "refuse"),
-      (DeferUpdate, 4, 4, Some(2500), 900000, "refuse"),
+      (false, defer_message, 4, 4, Some(2500), 900000, "refuse"),
+      (false, defer_message, 5, 4, Some(2500), 900000, "refuse"),
+      (false, defer_message, 0, 0, Some(2500), 900000, "refuse"),
+      (false, DeferUpdate, 4, 4, Some(2500), 900000, "refuse"),
       // Deferring routes under the limit are admitted with a bounded wait.
-      (defer_message, 0, 4, Some(2500), 900000, "deferred: wait 5000"),
-      (DeferUpdate, 0, 4, None, 900000, "deferred: wait 5000"),
+      (false, defer_message, 0, 4, Some(2500), 900000, "deferred: wait 5000"),
+      (false, DeferUpdate, 0, 4, None, 900000, "deferred: wait 5000"),
       // The permit wait never outlives the token.
-      (defer_message, 0, 4, Some(2500), 3000, "deferred: wait 3000"),
-      (defer_message, 0, 4, Some(2500), 0, "deferred: wait 0"),
+      (false, defer_message, 0, 4, Some(2500), 3000, "deferred: wait 3000"),
+      (false, defer_message, 0, 4, Some(2500), 0, "deferred: wait 0"),
+      // Nothing starts once the intake has closed, whatever the budget.
+      (true, Respond, 0, 4, Some(2000), 900000, "stopping"),
+      (true, defer_message, 4, 4, Some(2500), 900000, "stopping"),
+      (true, DeferUpdate, 0, 4, None, 0, "stopping"),
     ] {
-    let (plan, pending, max_pending, remaining_ms, token_left_ms, step) = row
+    let (stopping, plan, pending, max_pending, remaining_ms, token_left_ms, step
+    ) = row
     assert_eq(
       step_label(
         admission_step(
           plan,
+          stopping~,
           pending~,
           max_pending~,
           wait_limit_ms=5000,
@@ -200,5 +208,86 @@ test "auto-defer waits until the margin of the window is left" {
     ] {
     let (remaining_ms, delay) = row
     assert_eq(auto_defer_delay(remaining_ms), delay)
+  }
+}
+
+///|
+test "an interaction that did not start is reported by why" {
+  for
+    row in [
+      (false, false, "dropped"),
+      (false, true, "expired"),
+      (true, false, "stopping"),
+      (true, true, "stopping"),
+    ] {
+    let (stopping, deferred, expected) = row
+    let label = match not_started_warning("command:x", stopping~, deferred~) {
+      InteractionDropped(target="command:x") => "dropped"
+      DeferredInteractionExpired(target="command:x") => "expired"
+      InteractionDroppedWhileStopping(target="command:x") => "stopping"
+      _ => "other"
+    }
+    assert_eq(label, expected)
+  }
+}
+
+///|
+async test "nothing starts once the intake has closed" {
+  for plan in [Respond, DeferMessage(ephemeral=false)] {
+    let admission = scripted_admission(1)
+    admission.intake.close()
+    let warnings = []
+    let ran = Ref(false)
+    admit_scripted(
+      admission,
+      scripted_gate(Ref(Some(5000)), Ref(60000)),
+      plan,
+      warnings,
+      ran,
+    )
+    assert_false(ran.val)
+    assert_true(
+      warnings is [InteractionDroppedWhileStopping(target="command:scripted")],
+    )
+    assert_eq(admission.pending, 0)
+    assert_true(admission.limiter.try_acquire())
+  }
+}
+
+///|
+async test "closing the intake drops waiting interactions at once" {
+  for plan in [Respond, DeferMessage(ephemeral=false)] {
+    let clock = @simclock.VirtualClock()
+    let admission = scripted_admission(1, clock~)
+    admission.limiter.acquire()
+    let warnings = []
+    let ran = Ref(false)
+    let at = Ref(0L)
+    @async.with_task_group(group => {
+      group.spawn_bg(() => {
+        admit_scripted(
+          admission,
+          scripted_gate(Ref(Some(5000)), Ref(60000)),
+          plan,
+          warnings,
+          ran,
+        )
+        at.val = clock.now_unix_ms()
+      })
+      clock.settle()
+      clock.advance(100)
+      admission.intake.close()
+      clock.settle()
+      // The permit it waited for comes free only now.
+      admission.limiter.release()
+    })
+    assert_false(ran.val)
+    assert_eq(at.val, clock.now_unix_ms())
+    assert_true(
+      warnings is [InteractionDroppedWhileStopping(target="command:scripted")],
+    )
+    assert_eq(admission.pending, 0)
+    assert_true(admission.limiter.try_acquire())
+    assert_eq(clock.pending(), [])
   }
 }

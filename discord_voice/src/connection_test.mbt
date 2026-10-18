@@ -500,6 +500,45 @@ async test "voice connection ignores credentials returned after disconnect" {
 }
 
 ///|
+async test "voice events arriving while disconnect leaves the channel are ignored" {
+  let transport = ConnectionTestTransport::new()
+  let leaving : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  let left : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  let rejoins = Ref(0)
+  let clock = @simclock.VirtualClock()
+  @async.with_task_group(group => {
+    let connection = @voice.VoiceConnection::start(
+      group,
+      connection_credentials(),
+      user_id="100",
+      channel_id=7UL,
+      leave=() => {
+        leaving.put(())
+        left.get()
+      },
+      rejoin=() => {
+        rejoins.val += 1
+        connection_credentials(session_id="late")
+      },
+      connector=_ => (transport : &@voice.VoiceTransport),
+      receive=false,
+      clock~,
+    )
+    transport.incoming.put(connection_hello())
+    transport.outgoing_text.get() |> ignore
+    group.spawn_bg(() => connection.disconnect())
+    // The leave is still on its way to the main gateway when the voice
+    // server asks for a rejoin.
+    leaving.get()
+    transport.server_close(4006)
+    clock.settle()
+    assert_eq(rejoins.val, 0)
+    assert_eq(connection.state(), Closed(code=None))
+    left.put(())
+  })
+}
+
+///|
 async test "voice connection resumes its existing session after a transient close" {
   if !@voice.shim_available() {
     return

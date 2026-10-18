@@ -23,6 +23,7 @@ pub(all) enum TelemetryEvent {
   HttpRateLimited(route_bucket~ : String, global~ : Bool, retry_after_ms~ : Int64)
   EventDispatched(kind~ : String, handler_count~ : Int)
   EventDropped(kind~ : String, backlog~ : Int)
+  EventDiscarded(kind~ : String)
   DecodeError(marker~ : String)
 } derive(@debug.Debug)
 

@@ -162,10 +162,15 @@ fn VoiceConnection::set_ssrc(self : VoiceConnection, ssrc : UInt32?) -> Unit {
 }
 
 ///|
+/// Once the connection is closing, only `Closed` is recorded: a worker that
+/// was waiting when teardown began cannot bring a closed connection back.
 fn VoiceConnection::set_state(
   self : VoiceConnection,
   state : VoiceConnectionState,
 ) -> Unit {
+  if self.closing && !(state is Closed(..)) {
+    return
+  }
   self.state_ = state
   self.changed()
 }
@@ -609,6 +614,10 @@ async fn VoiceConnection::establish_session(
         (self.telemetry_)(PacketDropped(reason="DAVE send: \{Repr(error)}"))
     }
   }
+  // The DAVE sends wait; a disconnect meanwhile leaves nothing to establish.
+  if self.closing {
+    return
+  }
   self.set_cipher(Some(cipher))
   self.dave = dave
   self.clear_failure()
@@ -690,9 +699,14 @@ async fn[X] VoiceConnection::run_event_pump(
         return
       }
     }
+    // Teardown began while the pump waited (it may still be sending the
+    // leave): the event is moot, and acting on it could rejoin the channel.
+    if self.closing {
+      return
+    }
     // `follow_server` closed the old gateway, so its remaining events are
     // moot.
-    if self.server_change is Some(change) && !self.closing {
+    if self.server_change is Some(change) {
       self.server_change = None
       self.reset_session()
       match change {

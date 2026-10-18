@@ -108,6 +108,8 @@ priv struct Admission {
   /// Set from the first refusal until a deferred interaction is admitted
   /// again, so one overload produces one warning.
   mut refusing : Bool
+  /// Closed when the executor stops: no handler starts after that.
+  intake : HandlerIntake
 }
 
 ///|
@@ -121,37 +123,31 @@ fn Admission::refused(self : Admission) -> Bool {
 
 ///|
 /// Take a permit from `limiter`, waiting at most `wait_ms` (`None`: as long as
-/// it takes), while `open` holds. A permit that only arrives once the window
-/// has closed is handed back: the handler would do its work with no way to
-/// answer.
+/// it takes), while `open` holds and `intake` is open. A permit that only
+/// arrives once the window or the intake has closed is handed back: the
+/// handler would do its work with no way to answer, or after the executor
+/// stopped.
 async fn acquire_while_open(
   clock : &@hclock.Clock,
   limiter : @async.Semaphore,
+  intake : HandlerIntake,
   wait_ms : Int32?,
   open : () -> Bool,
 ) -> Bool {
-  guard wait_ms is Some(wait_ms) else {
-    limiter.acquire()
-    return true
-  }
   if !open() {
     return false
   }
-  if !limiter.try_acquire() {
-    // Judge by the flag, not the timeout's result: when a release hands this
-    // waiter a permit just as the timeout fires, `acquire` keeps the permit
-    // and returns while `timeout_opt` still reports `None`.
-    let acquired = Ref(false)
-    @transport.with_timeout_opt(clock, wait_ms, () => {
-      limiter.acquire()
-      acquired.val = true
-    })
-    |> ignore
-    if !acquired.val {
-      return false
+  let acquired = intake.acquire(limiter, limit=wait => {
+    match wait_ms {
+      Some(wait_ms) =>
+        @transport.with_timeout_opt(clock, wait_ms, wait) |> ignore
+      None => wait()
     }
+  })
+  if !acquired {
+    return false
   }
-  if !open() {
+  if !open() || !intake.is_open() {
     limiter.release()
     return false
   }
@@ -161,6 +157,8 @@ async fn acquire_while_open(
 ///|
 /// What admission does with one routed interaction.
 priv enum AdmissionStep {
+  /// The executor is stopping: drop the interaction without starting it.
+  Stopping
   /// Too many deferred interactions already wait: refuse through `busy`.
   Refuse
   /// Acknowledge through the auto-defer watchdog unless already answered,
@@ -184,12 +182,16 @@ fn auto_defer_delay(remaining_ms : Int32?) -> Int32 {
 ///|
 fn admission_step(
   plan : AckPlan,
+  stopping~ : Bool,
   pending~ : Int32,
   max_pending~ : Int32,
   wait_limit_ms~ : Int32,
   remaining_ms~ : Int32?,
   token_left_ms~ : Int32,
 ) -> AdmissionStep {
+  if stopping {
+    return Stopping
+  }
   if plan is Respond {
     return Direct(wait_ms=remaining_ms)
   }
@@ -207,6 +209,23 @@ fn admission_step(
 }
 
 ///|
+/// The warning for an interaction whose wait for a permit ended without one:
+/// the executor stopped, or its window (`deferred`: its token) ran out.
+fn not_started_warning(
+  label : String,
+  stopping~ : Bool,
+  deferred~ : Bool,
+) -> AppWarning {
+  if stopping {
+    InteractionDroppedWhileStopping(target=label)
+  } else if deferred {
+    DeferredInteractionExpired(target=label)
+  } else {
+    InteractionDropped(target=label)
+  }
+}
+
+///|
 /// Run one routed interaction handler under the executor's work budget.
 ///
 /// Routing and component waiters never hold a permit, so a handler waiting
@@ -219,7 +238,8 @@ fn admission_step(
 /// window is open. Either way the window is checked again once the permit is
 /// taken, so a handler never starts after its token (deferring routes) or its
 /// callback window (other routes) has run out; such an interaction is dropped
-/// with a warning.
+/// with a warning. Nor does one start once the intake has closed: a waiting
+/// interaction gives up as it closes.
 async fn run_admitted(
   admission : Admission,
   gate : AdmissionGate,
@@ -233,6 +253,7 @@ async fn run_admitted(
   @async.with_task_group(group => {
     let step = admission_step(
       plan,
+      stopping=!admission.intake.is_open(),
       pending=admission.pending,
       max_pending=admission.max_pending,
       wait_limit_ms=admission.wait_limit_ms,
@@ -240,6 +261,10 @@ async fn run_admitted(
       token_left_ms=(gate.token_remaining_ms)(),
     )
     match step {
+      Stopping => {
+        warn(InteractionDroppedWhileStopping(target=label))
+        return
+      }
       Refuse => {
         if admission.refused() {
           warn(DeferredInteractionsRefused(max_pending=admission.max_pending))
@@ -270,21 +295,38 @@ async fn run_admitted(
         let acquired = acquire_while_open(
           admission.clock,
           limiter,
+          admission.intake,
           Some(wait_ms),
           () => (gate.token_remaining_ms)() > 0,
         )
         waiting.val = false
         admission.pending -= 1
         if !acquired {
-          warn(DeferredInteractionExpired(target=label))
+          warn(
+            not_started_warning(
+              label,
+              stopping=!admission.intake.is_open(),
+              deferred=true,
+            ),
+          )
           return
         }
       }
       Direct(wait_ms~) =>
-        if !acquire_while_open(admission.clock, limiter, wait_ms, () => {
-            !((gate.remaining_ms)() is Some(0))
-          }) {
-          warn(InteractionDropped(target=label))
+        if !acquire_while_open(
+            admission.clock,
+            limiter,
+            admission.intake,
+            wait_ms,
+            () => !((gate.remaining_ms)() is Some(0)),
+          ) {
+          warn(
+            not_started_warning(
+              label,
+              stopping=!admission.intake.is_open(),
+              deferred=false,
+            ),
+          )
           return
         }
     }

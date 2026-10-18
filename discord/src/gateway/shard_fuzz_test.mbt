@@ -435,7 +435,7 @@ async fn FuzzModel::apply(
 }
 
 ///|
-async fn run_shard_schedule(seed : Int32, steps : Array[FuzzStep]) -> Unit {
+async fn run_shard_schedule(seed : Int32, steps : Array[FuzzStep]) -> String {
   let clock = @simclock.VirtualClock()
   let connector_rand = fuzz_rand(seed, 1)
   // some schedules fail most connects, to reach the stale-host fallback
@@ -549,6 +549,7 @@ async fn run_shard_schedule(seed : Int32, steps : Array[FuzzStep]) -> Unit {
       }
     }
   })
+  "seed \{seed}\n" + model.log.join("\n")
 }
 
 ///|

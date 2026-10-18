@@ -88,7 +88,7 @@ Live socket, websocket, and FFI adapters (live-verified; no unit seam):
 | discord/src/http/client.mbt | 2 | Default warning sinks (`println`) of the online and offline constructors. |
 | discord/src/http/request.mbt | 1 | The `Api` re-raise for middleware that raises it itself; the send loop, its retry rule, request validation, and every error mapping are covered by table and fake-wire contract tests. |
 | discord/src/endpoint_http/endpoint_http.mbt | 6 | Arms that need a broken connection or a cancellation mid-failure: a response write that fails because the peer is gone, cancellation of a failed request or write, and a server that stops after startup. Startup failure, 202/504 replies, and a request whose body fails mid-read are tested. |
-| discord/src/internal/fuzz/schedule.mbt | 3 | The shrinker's cancellation re-raise arms around the first run, the shrinking runs, and the final re-run: async 0.22 cancellation does not pass through ordinary catches, so they only catch an error raised while being cancelled; a test cancels each stage. |
+| discord/src/internal/fuzz/schedule.mbt | 1 | The cancellation re-raise arm of the one helper every run goes through: async 0.22 cancellation does not pass through ordinary catches, so it only catches an error raised while being cancelled; a test cancels each stage (both full runs, shrinking, and the final re-run). |
 | discord/src/internal/gatewaysim/fake_transport.mbt | 2 | The test fake's flags recording a close during a send or receive, which a correct shard never triggers; tests assert they stay false. |
 | discord/src/coordinator/remote.mbt | 17 | Reconnecting remote clients against a real coordinator socket; for the cooldown store, the cancellation-during-connect arms (its outage, deadline, gate-wait, and malformed-response paths are covered); the cancellation arm of the ping watchdog, which runs only when a request completes while its ping is in flight. |
 | discord/src/coordinator/server.mbt | 6 | Config validation arms, and per-connection cleanup on real disconnects (the existing socket test is retry-flaky; see project notes). |
@@ -101,7 +101,7 @@ ledgered):
 
 | File | Budget | Reason |
 | --- | --- | --- |
-| discord_voice/src/connection.mbt | 16 | Impossible alternate negotiation errors, shim-loader failure while the shim is required, opener/discovery cancellation catches, the cancellation catches of `while_open` and of the wait for a new voice server, event-pump and receiver queue teardown, an unemitted `ConnectFailed` case, and unreachable session-state/typed-error fallbacks. Negotiation, discovery, session, DAVE-control, source-replacement, receiver, and lifecycle-recovery failures are tested through the UDP/voice/DAVE seams. |
+| discord_voice/src/connection.mbt | 18 | Impossible alternate negotiation errors, shim-loader failure while the shim is required, opener/discovery cancellation catches, the cancellation catches of `while_open` and of the wait for a new voice server, event-pump and receiver queue teardown, an unemitted `ConnectFailed` case, the pump's non-resuming `Disconnected` arm (the voice gateway reports one only as it is closed, after the pump has stopped for the teardown), the teardown check after session establishment's DAVE sends, and unreachable session-state/typed-error fallbacks. Negotiation, discovery, session, DAVE-control, source-replacement, receiver, and lifecycle-recovery failures are tested through the UDP/voice/DAVE seams. |
 | discord_voice/src/gateway.mbt | 8 | Protected-shutdown and event-queue teardown catches, stale-transport and non-returning-loop fallbacks, and read-loop cancellation propagation. Disconnected sends, malformed Hello/frames, the Hello sequence, send failures, and protected connector cleanup are tested; backoff, heartbeat, and ACK-latency timing run on a `VirtualClock`. |
 | discord_voice/src/dave.mbt | 52 | DAVE/MLS transitions that need a second member and real libdave group state. |
 | discord_voice/src/audio.mbt | 5 | `DaveUnavailable`/`DaveInternal` encrypt-drop telemetry arms, and the DAVE-less frame arm that only direct `run_send_loop` callers reach (a connection holds a machine once its session is up). Frame and silence pacing, stop, and `DaveInvalid` drops are tested on a `VirtualClock`. |
@@ -121,7 +121,7 @@ run; the gateway and voice loops are additionally tested on injected clocks):
 | discord/src/http/handles_channel.mbt | 3 | `with_typing` refresh-failure arm sits behind the real 8-second cadence. |
 | discord/src/bot/middleware.mbt | 1 | Middleware chain cancellation arm. |
 | discord/src/bot/shard_manager.mbt | 1 | Live gateway discovery's invalid-info arm; fake-connector startup and resume are tested. |
-| discord/src/bot/bot.mbt | 17 | Gateway run-loop teardown/cancellation arms; startup, intents, telemetry, and event routing are covered. The event-backlog put fails only on a queue closed by shutdown, and the `ShardEvent::..` arm that `#non_exhaustive` requires outside `@gateway` matches no current event. |
+| discord/src/bot/bot.mbt | 16 | Gateway run-loop teardown/cancellation arms; startup, intents, telemetry, and event routing are covered. The event-backlog put fails only on a queue closed by shutdown, and the `ShardEvent::..` arm that `#non_exhaustive` requires outside `@gateway` matches no current event. |
 
 Defensive arms unreachable by construction:
 

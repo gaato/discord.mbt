@@ -14,6 +14,9 @@ pub(all) enum AppWarning {
   /// A deferred interaction's token expired before its handler could start
   /// (usually while waiting for handler capacity), so its handler never ran.
   DeferredInteractionExpired(target~ : String)
+  /// The executor was stopping (its `HandlerIntake` closed) before the
+  /// handler could start, so its handler never ran.
+  InteractionDroppedWhileStopping(target~ : String)
   /// An error policy tried to respond to a failure that has no interaction
   /// (an event or a service). `summary` describes the discarded response.
   ErrorResponseWithoutInteraction(summary~ : String)
@@ -66,6 +69,10 @@ pub impl Show for AppWarning with fn output(self, logger) {
     DeferredInteractionExpired(target~) =>
       logger.write_string(
         "deferred interaction expired (\{target}): the interaction token expired before the handler could start",
+      )
+    InteractionDroppedWhileStopping(target~) =>
+      logger.write_string(
+        "interaction dropped (\{target}): the executor was stopping before the handler could start",
       )
     ErrorResponseWithoutInteraction(summary~) =>
       logger.write_string(

@@ -503,14 +503,19 @@ fn AppBuilder::validate(self : AppBuilder) -> Unit raise AppConfigError {
 async fn spawn_limited(
   group : @async.TaskGroup[Unit],
   limiter : @async.Semaphore,
+  intake : HandlerIntake,
   body : async () -> Unit,
 ) -> Unit {
   // Acquire before spawning: at capacity, the executor applies bounded
   // backpressure instead of allocating an unbounded list of pending tasks.
-  limiter.acquire()
+  guard intake.acquire(limiter) else { return }
   group.spawn_bg(allow_failure=true, () => {
     defer limiter.release()
-    body()
+    // Judged as the task starts, with nothing to wait for before `body`: the
+    // intake may have closed since the permit was taken.
+    if intake.is_open() {
+      body()
+    }
   })
 }
 
@@ -518,16 +523,23 @@ async fn spawn_limited(
 fn bounded_spawner(
   group : @async.TaskGroup[Unit],
   limiter : @async.Semaphore,
+  intake : HandlerIntake,
 ) -> Spawner {
-  body => spawn_limited(group, limiter, body)
+  body => spawn_limited(group, limiter, intake, body)
 }
 
 ///|
 /// Create a bounded task spawner for an executor-owned task group. Executors
 /// use it for non-interaction work such as event handlers; interaction
-/// handlers get their own budget inside `attach`.
-pub fn App::spawner(self : App, group : @async.TaskGroup[Unit]) -> Spawner {
-  bounded_spawner(group, Semaphore(self.max_in_flight_))
+/// handlers get their own budget inside `attach`. Once `intake` closes, a
+/// call returns without spawning, a call waiting for capacity gives up, and a
+/// task spawned but not yet started does not run its body.
+pub fn App::spawner(
+  self : App,
+  group : @async.TaskGroup[Unit],
+  intake~ : HandlerIntake = HandlerIntake(),
+) -> Spawner {
+  bounded_spawner(group, Semaphore(self.max_in_flight_), intake)
 }
 
 ///|
@@ -663,7 +675,9 @@ async fn App::run_registered_autocomplete(
 /// route into `framework` and return the `AppCtx` shared by handlers.
 /// Called by the built-in executors (`Bot`, the HTTP endpoint); only
 /// custom executors need it directly. Each call gets its own handler budget
-/// of `max_in_flight`.
+/// of `max_in_flight`. Once `intake` closes, no interaction handler starts:
+/// one waiting for capacity, or arriving later, is dropped with
+/// `AppWarning::InteractionDroppedWhileStopping`.
 pub fn App::attach(
   self : App,
   framework : @framework.Framework,
@@ -671,6 +685,7 @@ pub fn App::attach(
   application_id~ : @model.ApplicationId,
   waiter? : ComponentWaiter,
   latency_ms? : () -> Int64?,
+  intake~ : HandlerIntake = HandlerIntake(),
 ) -> AppCtx {
   let app_ctx = AppCtx::{
     client_: client,
@@ -685,6 +700,7 @@ pub fn App::attach(
     wait_limit_ms: self.deferred_wait_ms_,
     clock: framework.clock(),
     refusing: false,
+    intake,
   }
   let warn = self.warn_
   // Refuse one more deferred interaction through the error policy while it is
@@ -749,7 +765,15 @@ pub fn App::attach(
     }
   }
   for entry in self.modals_ {
-    let dispatch = raw => {
+    let dispatch = (raw : @framework.ModalCtx) => {
+      // The preflight runs before admission, so it checks the intake first:
+      // after shutdown, not even its error policy may answer.
+      if !intake.is_open() {
+        warn(
+          InteractionDroppedWhileStopping(target="modal:\{raw.data.custom_id}"),
+        )
+        return
+      }
       (entry.preflight)(raw) catch {
         error => {
           invoke_error_policy(

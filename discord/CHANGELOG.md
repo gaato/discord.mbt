@@ -156,8 +156,36 @@ breaking change is listed with a migration note.
   negative grace with the new `BotConfigError::InvalidShutdownGrace`. Before,
   it waited for them without limit, so one hung handler kept the process from
   stopping.
+  No handler starts once the shutdown is requested: events still waiting in
+  the backlog, or passed on by event middleware that was already running
+  (which gets the grace too), are discarded with the new `EventDiscarded`
+  telemetry event, event handlers waiting for capacity are dropped, and
+  interactions waiting for capacity, or arriving later, are dropped with the
+  new `AppWarning::InteractionDroppedWhileStopping`. Before, a handler queued at
+  the request started as soon as a running one finished, inside the grace
+  meant for the running ones.
+- **Executors can stop the App's handlers from starting.** A
+  `HandlerIntake` passed to `App::spawner(intake?)` and
+  `App::attach(intake?)` keeps handlers from starting once it is closed:
+  callers waiting for capacity give up at once, and a task spawned but not
+  yet started does not run. The Bot closes its intake on shutdown; a custom
+  executor can do the same for a graceful stop.
 
 ### Fixed
+
+- **A member fetch whose last chunk arrives as it times out completes.**
+  `GatewayCtx::fetch_guild_members` raised `GatewayRequestTimeout` when the
+  final `GUILD_MEMBERS_CHUNK`, or a matching `RATE_LIMITED`, arrived in the
+  same scheduler step as the deadline. It now returns the members, or raises
+  `GatewayRateLimited`; a fetch still missing chunks at the deadline times
+  out as before.
+
+- **A component click or an awaited event that arrives as its wait times out
+  is no longer lost.** `wait_for_component` and `PendingEvent::wait`
+  (`GatewayCtx::wait_for`) returned `None` when the delivery and the timeout
+  landed in the same scheduler step, although the framework had already
+  routed the click to the waiter, so no handler answered it. They now return
+  what was delivered.
 
 - **The interaction HTTP server bounds its connections.** `serve_interactions`
   served any number of connections at once and waited for a request head, or

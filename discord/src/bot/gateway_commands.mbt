@@ -125,17 +125,19 @@ pub async fn GatewayCtx::fetch_guild_members(
     rate_limit_matches(event, guild_id, nonce)
   })
   defer limited.cancel()
+  let collected = MemberChunks::new()
+  // The members, recorded as the last chunk completes them: the timeout can
+  // cancel the wait just as that chunk reaches it. (A refusal received that
+  // way still raises out of the timeout.)
+  let fetched : Ref[FetchedMembers?] = Ref(None)
   let result = @transport.with_timeout_opt(
     self.collector_.clock.val,
     timeout_ms,
     () => {
       @async.with_task_group(group => {
         group.spawn_bg(no_wait=true, () => {
-          if limited.waiter.queue.get() is RateLimited(event) {
-            raise GatewayRateLimited(
-              opcode=event.opcode,
-              retry_after_ms=(event.retry_after * 1000.0).ceil().to_int64(),
-            )
+          if member_rate_limit(limited.waiter.queue.get()) is Some(error) {
+            raise error
           }
         })
         self.request_guild_members({
@@ -144,16 +146,44 @@ pub async fn GatewayCtx::fetch_guild_members(
           presences,
           nonce: Some(nonce),
         })
-        let collected = MemberChunks::new()
         for ;; {
           if chunks.waiter.queue.get() is GuildMembersChunk(chunk) &&
-            collected.add(chunk) is Some(fetched) {
-            group.return_immediately(fetched)
+            collected.add(chunk) is Some(members) {
+            fetched.val = Some(members)
+            group.return_immediately(members)
           }
         }
       })
     },
   )
-  guard result is Some(result) else { raise GatewayRequestTimeout }
-  result
+  if result is Some(members) {
+    return members
+  }
+  // Judge by what was delivered, not by the timeout's result: the last chunk
+  // or the refusal may have arrived in the same step as the timeout.
+  if fetched.val is Some(members) {
+    return members
+  }
+  while chunks.waiter.queue.try_get() is Some(raw) {
+    if raw is GuildMembersChunk(chunk) && collected.add(chunk) is Some(members) {
+      return members
+    }
+  }
+  if limited.waiter.queue.try_get() is Some(raw) &&
+    member_rate_limit(raw) is Some(error) {
+    raise error
+  }
+  raise GatewayRequestTimeout
+}
+
+///|
+/// The error for a RATE_LIMITED response to a member request.
+fn member_rate_limit(event : @model.Event) -> BotError? {
+  guard event is RateLimited(event) else { return None }
+  Some(
+    GatewayRateLimited(
+      opcode=event.opcode,
+      retry_after_ms=(event.retry_after * 1000.0).ceil().to_int64(),
+    ),
+  )
 }

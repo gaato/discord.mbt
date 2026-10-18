@@ -371,3 +371,165 @@ test "rate_limit_matches requires opcode 8, the guild, and this nonce or none" {
     )
   }
 }
+
+///|
+/// A clock that runs `hook` in the same scheduler step as the first sleep of
+/// `ms` wakes, before the sleeper resumes: an event that arrives as a timeout
+/// fires.
+priv struct HookedClock {
+  inner : @simclock.VirtualClock
+  ms : Int32
+  mut hook : (async () -> Unit noraise)?
+}
+
+///|
+impl @hclock.Clock for HookedClock with fn sleep(self, milliseconds) {
+  (self.inner : &@hclock.Clock).sleep(milliseconds)
+  if milliseconds == self.ms && self.hook is Some(hook) {
+    self.hook = None
+    hook()
+  }
+}
+
+///|
+impl @hclock.Clock for HookedClock with fn now_unix_ms(self) {
+  self.inner.now_unix_ms()
+}
+
+///|
+fn chunk_event(nonce : String, index : Int32) -> @model.Event raise {
+  guard @json.parse(chunk_frame(nonce, index)) is { "d": data, .. } else {
+    fail("expected a chunk payload")
+  }
+  GuildMembersChunk(@json.from_json(data))
+}
+
+///|
+/// Fetch members with a 50 ms timeout after chunks 0 and 1 of 3 arrived, and
+/// dispatch `late(nonce)` as the timeout fires (`delay` 0) or `delay`
+/// scheduler rounds later while the fetch unwinds. Returns whether the event
+/// still reached the fetch's expectations, and how the fetch ended.
+async fn fetch_with_late_event(
+  delay : Int32,
+  late : (String) -> @model.Event raise,
+) -> (Bool, String) {
+  let reached = Ref(false)
+  let outcome = Ref("")
+  with_command_context(Single(id=0, count=1), (ctx, transports, clock) => {
+    let hooked = HookedClock::{ inner: clock, ms: 50, hook: None, }
+    let previous = ctx.collector_.clock.val
+    ctx.collector_.clock.val = hooked
+    defer {
+      ctx.collector_.clock.val = previous
+    }
+    @async.with_task_group(group => {
+      let fetching = group.spawn(no_wait=true, allow_failure=true, () => {
+        ctx.fetch_guild_members(Id(1UL), All, timeout_ms=50)
+      })
+      guard manager_get(clock, transports[0].outgoing, "member request")
+        is { "d": { "nonce": String(nonce), .. }, .. } else {
+        fail("expected nonce")
+      }
+      let nonce = nonce.to_string()
+      transports[0].put(chunk_frame(nonce, 0))
+      transports[0].put(chunk_frame(nonce, 1))
+      clock.settle()
+      let event = late(nonce)
+      let deliver = async fn() noraise {
+        reached.val = ctx.collector_.waits_for(KGuildMembersChunk)
+        ctx.collector_.dispatch(event) catch {
+          _ => abort("dispatch failed")
+        }
+      }
+      hooked.hook = Some(() => {
+        if delay == 0 {
+          deliver()
+        } else {
+          group.spawn_bg(() => {
+            for _ in 0..<delay {
+              @async.pause()
+            }
+            deliver()
+          })
+        }
+      })
+      clock.advance(50)
+      outcome.val = try fetching.wait() catch {
+        GatewayRequestTimeout => "timeout"
+        error => "\{error}"
+      } noraise {
+        members => "\{members.members.length()} members"
+      }
+    })
+    assert_eq(ctx.collector_.waiters.length(), 0)
+  })
+  (reached.val, outcome.val)
+}
+
+///|
+async test "a member chunk that arrives as the fetch times out completes it" {
+  // Whenever the last chunk still reaches the fetch, the fetch returns the
+  // members; once the fetch has stopped listening, it timed out.
+  for delay in 0..<8 {
+    let (reached, outcome) = fetch_with_late_event(delay, nonce => {
+      chunk_event(nonce, 2)
+    })
+    assert_eq(
+      outcome,
+      if reached {
+        "3 members"
+      } else {
+        "timeout"
+      },
+      msg="delay \{delay}",
+    )
+  }
+}
+
+///|
+async test "a rate limit that arrives as the fetch times out is reported" {
+  for delay in 0..<8 {
+    let (reached, outcome) = fetch_with_late_event(delay, nonce => {
+      let data : Json = {
+        "opcode": 8,
+        "retry_after": 0.0011,
+        "meta": { "guild_id": "1", "nonce": Json::string(nonce) },
+      }
+      RateLimited(@json.from_json(data))
+    })
+    assert_eq(
+      outcome,
+      if reached {
+        "\{BotError::GatewayRateLimited(opcode=8, retry_after_ms=2L)}"
+      } else {
+        "timeout"
+      },
+      msg="delay \{delay}",
+    )
+  }
+}
+
+///|
+async test "a partial fetch that times out still raises" {
+  with_command_context(Single(id=0, count=1), (ctx, transports, clock) => {
+    @async.with_task_group(group => {
+      let fetching = group.spawn(no_wait=true, allow_failure=true, () => {
+        ctx.fetch_guild_members(Id(1UL), All, timeout_ms=50)
+      })
+      guard manager_get(clock, transports[0].outgoing, "member request")
+        is { "d": { "nonce": String(nonce), .. }, .. } else {
+        fail("expected nonce")
+      }
+      transports[0].put(chunk_frame(nonce.to_string(), 0))
+      transports[0].put(chunk_frame(nonce.to_string(), 2))
+      clock.settle()
+      clock.advance(50)
+      try fetching.wait() catch {
+        GatewayRequestTimeout => ()
+        error => fail("unexpected error: \{error}")
+      } noraise {
+        _ => fail("expected timeout")
+      }
+    })
+  })
+}

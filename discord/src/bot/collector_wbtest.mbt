@@ -117,3 +117,47 @@ async test "event collector timeout and cancellation remove registrations" {
     assert_false(collector.waits_for(KMessageDelete))
   })
 }
+
+///|
+/// A clock whose `tick` wakes every sleeper it makes due in one scheduler
+/// round, in the order they went to sleep, so two timers can fire together.
+priv struct TickClock {
+  mut now : Int64
+  due : @cond_var.Cond
+}
+
+///|
+impl @hclock.Clock for TickClock with fn sleep(self, milliseconds) {
+  let deadline = self.now + milliseconds.to_int64()
+  while self.now < deadline {
+    self.due.wait()
+  }
+}
+
+///|
+impl @hclock.Clock for TickClock with fn now_unix_ms(self) {
+  self.now
+}
+
+///|
+async test "an event dispatched as the wait times out is returned" {
+  let clock = TickClock::{ now: 0L, due: @cond_var.Cond(), }
+  let collector = EventCollector(clock=Ref(clock))
+  @async.with_task_group(group => {
+    let waiting = group.spawn(() => {
+      collector.wait_for(Events::message_delete(), _ => true, timeout_ms=20)
+    })
+    // Wakes in the same round as the wait's timeout, right after it.
+    group.spawn_bg(() => {
+      (clock : &@hclock.Clock).sleep(20)
+      collector.dispatch(message_delete_event("100"))
+    })
+    wait_until_registered(collector, KMessageDelete, 1)
+    clock.now = 20L
+    clock.due.broadcast()
+    guard waiting.wait() is Some(event) else {
+      fail("the wait lost an event dispatched to it")
+    }
+    assert_eq(event.id.to_string(), "100")
+  })
+}

@@ -94,11 +94,11 @@ pub(all) suberror ModalShowError {
 pub struct App {
   // private fields
 }
-pub fn App::attach(Self, @framework.Framework, client~ : @http.Client, application_id~ : @model.Id[@model.ApplicationMarker], waiter? : async (String, @model.Id[@model.UserMarker]?, Int?) -> @framework.ComponentCtx?, latency_ms? : () -> Int64?) -> AppCtx
+pub fn App::attach(Self, @framework.Framework, client~ : @http.Client, application_id~ : @model.Id[@model.ApplicationMarker], waiter? : async (String, @model.Id[@model.UserMarker]?, Int?) -> @framework.ComponentCtx?, latency_ms? : () -> Int64?, intake? : HandlerIntake) -> AppCtx
 pub async fn App::plan_commands(Self, @http.Client, @model.Id[@model.ApplicationMarker], scope~ : CommandScope, unowned? : @framework.UnownedCommands) -> CommandPlan
 pub async fn App::report_failure(Self, FailureOrigin, Error) -> Unit
 pub async fn App::serve(Self, @async.TaskGroup[Unit], access~ : RestAccess, application_id? : @model.Id[@model.ApplicationMarker], clock? : &@clock.Clock) -> InteractionEndpoint
-pub fn App::spawner(Self, @async.TaskGroup[Unit]) -> async (async () -> Unit) -> Unit
+pub fn App::spawner(Self, @async.TaskGroup[Unit], intake? : HandlerIntake) -> async (async () -> Unit) -> Unit
 pub async fn App::sync_commands(Self, @http.Client, @model.Id[@model.ApplicationMarker], scope~ : CommandScope, unowned? : @framework.UnownedCommands) -> SyncReport
 pub fn App::warn(Self, AppWarning) -> Unit
 
@@ -137,6 +137,7 @@ pub(all) enum AppWarning {
   AutoDeferFailed(target~ : String, error~ : Error)
   InteractionDropped(target~ : String)
   DeferredInteractionExpired(target~ : String)
+  InteractionDroppedWhileStopping(target~ : String)
   ErrorResponseWithoutInteraction(summary~ : String)
   ErrorResponseExpired(summary~ : String)
   MalformedInteraction(origin~ : FailureOrigin, reason~ : String)
@@ -321,6 +322,13 @@ pub(all) enum FailureRaw {
   RawComponent(@framework.ComponentCtx)
   RawModal(@framework.ModalCtx)
 }
+
+pub struct HandlerIntake {
+  // private fields
+}
+pub fn HandlerIntake::HandlerIntake() -> Self
+pub fn HandlerIntake::close(Self) -> Unit
+pub fn HandlerIntake::is_open(Self) -> Bool
 
 pub struct ImmediateCtx {
   // private fields
