@@ -456,6 +456,14 @@ fn fuzz_configurations() -> Array[(String, CacheResources, CacheLimits)] {
         users=CacheLimit(max_entries=0),
       ),
     ),
+    (
+      "channels refused, DMs kept by their messages",
+      CacheResources::all(),
+      CacheLimits(
+        channels=CacheLimit(max_entries=0),
+        dm_channels=CacheLimit(max_entries=2),
+      ),
+    ),
     ("defaults", CacheResources::all(), CacheLimits()),
     (
       "no members, no users",

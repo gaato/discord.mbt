@@ -291,6 +291,27 @@ test "an edited DM message counts as a write to its DM" {
 }
 
 ///|
+test "a DM channel the channel limit refuses takes no DM slot" {
+  let cache = @cache.InMemoryCache(
+    resources=@cache.CacheResources::all(),
+    limits=@cache.CacheLimits(
+      channels=@cache.CacheLimit(max_entries=0),
+      dm_channels=@cache.CacheLimit(max_entries=1),
+    ),
+  )
+  cache.update(bound_message("1", channel_id="3000", author_id="1"))
+  cache.update(
+    bound_event(
+      "CHANNEL_CREATE",
+      "{\"id\":\"3001\",\"type\":1,\"recipients\":[\{bound_user_json("2")}]}",
+    ),
+  )
+  // 3001 is not kept, so the messages of 3000 keep the only slot.
+  assert_true(cache.channel(@model.Id::parse("3001")) is None)
+  assert_eq(dm_retained(cache, ["3000"]), ["3000"])
+}
+
+///|
 test "DM channel entries share the DM limit with their messages" {
   let cache = @cache.InMemoryCache(
     resources=@cache.CacheResources::all(),

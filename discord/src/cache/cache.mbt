@@ -891,12 +891,15 @@ fn InMemoryCache::store_channel(
     self.threads_[channel.id] = ThreadEntry::of(channel, thread_guild_id)
   }
   guard self.resources_.channels_ else { return }
-  self.channels_.put(channel.id, { channel, guild_id: resolved_guild_id, }, evicted=(
-    channel_id,
-    _,
-  ) => self.release_channel(channel_id))
-  |> ignore
-  if resolved_guild_id is None {
+  let stored = self.channels_.put(
+    channel.id,
+    { channel, guild_id: resolved_guild_id, },
+    evicted=(channel_id, _) => self.release_channel(channel_id),
+  )
+  // A DM takes a slot of the DM limit only while something of it is kept.
+  let kept = !(stored is Refused) ||
+    self.messages_.buckets_.contains(channel.id)
+  if resolved_guild_id is None && kept {
     self.touch_dm(channel.id) |> ignore
   }
 }
