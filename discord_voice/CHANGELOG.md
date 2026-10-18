@@ -49,6 +49,20 @@ releases (0.x → 0.y) may contain breaking changes; patch releases do not.
   connection closes. Migration: code that re-fetched
   `VoiceClient::connection` after a region move can keep its handle; callers
   of `VoiceConnection::start` that see server updates pass `next_server`.
+- **A voice server that went away is dropped, not resumed against.** A
+  `VOICE_SERVER_UPDATE` with a null endpoint now closes the voice WebSocket
+  and leaves the connection `Reconnecting` until the next update names a
+  server, as Discord documents; if none comes within `server_timeout_ms` (the
+  join's `timeout_ms` for `VoiceClient`), the connection rejoins. Before, the
+  update was ignored and the gateway kept resuming against the old server.
+  `VoiceServer::endpoint` is a `String?` for this.
+- **A channel move made outside this API reaches DAVE and the rejoin.** The
+  connection follows the bot's own `VOICE_STATE_UPDATE` through the new
+  `next_channel` argument of `VoiceConnection::start`, and the new
+  `VoiceConnection::channel_id` reports it; a new DAVE session and a rejoin
+  use that channel. Before, both kept the channel of the original join, so a
+  bot dragged to another channel built its DAVE group for the old one and a
+  rejoin took it back.
 - **No connection task outlives its connection.** The receiver, the UDP
   keepalive, and playback are cancelled when the connection closes; before,
   the keepalive held it until its next 5-second tick and playback until its

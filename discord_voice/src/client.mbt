@@ -207,6 +207,8 @@ pub async fn VoiceClient::join_via(
     port, guild_id, channel_id, self_mute, self_deaf, timeout_ms,
   )
   let rejoin_in_progress = Ref(false)
+  // Where the bot is, which a move made outside this API changes.
+  let current_channel = Ref(channel_id)
   let leave = () => {
     defer self.connections.remove(guild_id)
     (port.update_voice_state)({
@@ -222,21 +224,40 @@ pub async fn VoiceClient::join_via(
       rejoin_in_progress.val = false
     }
     request_voice_credentials(
-      port, guild_id, channel_id, self_mute, self_deaf, timeout_ms,
+      port,
+      guild_id,
+      current_channel.val,
+      self_mute,
+      self_deaf,
+      timeout_ms,
     )
   }
   let next_server = () => {
     let pending = (port.expect_voice_server)(event => {
-      event.guild_id == guild_id &&
-      event.endpoint is Value(_) &&
-      !rejoin_in_progress.val
+      event.guild_id == guild_id && !rejoin_in_progress.val
+    })
+    defer (pending.cancel)()
+    guard (pending.wait)(None) is Some(update) else { return None }
+    let endpoint = match update.endpoint {
+      Value(endpoint) => Some(endpoint)
+      Null => None
+    }
+    Some(VoiceServer::{ token: update.token, endpoint, })
+  }
+  let next_channel = () => {
+    let user_id = port.user_id
+    let pending = (port.expect_voice_state)(update => {
+      update.user_id == user_id &&
+      update.guild_id == Some(guild_id) &&
+      update.channel_id is Value(_)
     })
     defer (pending.cancel)()
     guard (pending.wait)(None) is Some(update) &&
-      update.endpoint is Value(endpoint) else {
+      update.channel_id is Value(moved_to) else {
       return None
     }
-    Some(VoiceServer::{ token: update.token, endpoint, })
+    current_channel.val = moved_to
+    Some(moved_to.value())
   }
   let connection = VoiceConnection::start(
     group,
@@ -246,6 +267,8 @@ pub async fn VoiceClient::join_via(
     leave~,
     rejoin~,
     next_server~,
+    next_channel~,
+    server_timeout_ms=timeout_ms,
     connector=self.connector_.val,
     telemetry~,
     clock=self.clock_.val,

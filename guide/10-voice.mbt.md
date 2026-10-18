@@ -202,7 +202,11 @@ credentials when Discord requires a fresh session. When Discord moves the
 session to another voice server (a later `VOICE_SERVER_UPDATE` for the guild),
 the connection identifies on the new server with the session it has: the
 handle, its subscriptions, and the bot's place in the channel stay. An update
-with a null endpoint does not move it; the next update says where to go.
+with a null endpoint means the server went away: the connection drops it, shows
+`Reconnecting`, and waits for the next update, rejoining if none comes within
+the join's `timeout_ms`. When something else moves the bot to another channel,
+`VoiceConnection::channel_id` follows, and DAVE and a rejoin use the new
+channel.
 
 See `examples/voice_player` for an executable that reads configuration
 from `DISCORD_TOKEN`, `GUILD_ID`, `CHANNEL_ID`, and `AUDIO_FILE`.

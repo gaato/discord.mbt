@@ -37,12 +37,20 @@ pub(all) struct VoiceCredentials {
 } derive(Debug, Eq)
 
 ///|
-/// The voice server Discord moved a session to: the token and endpoint of a
-/// VOICE_SERVER_UPDATE that arrived after the session started.
+/// A voice server change Discord reported after the session started: the
+/// token and endpoint of a VOICE_SERVER_UPDATE. A `None` endpoint means the
+/// server went away and another is being allocated.
 pub(all) struct VoiceServer {
   token : String
-  endpoint : String
+  endpoint : String?
 } derive(Debug, Eq)
+
+///|
+/// A server change the event pump has yet to act on.
+priv enum ServerChange {
+  MoveTo(VoiceCredentials)
+  Lost
+}
 
 ///|
 priv struct PlaybackRequest {
@@ -65,10 +73,12 @@ pub struct VoiceConnection {
   priv playback : @aqueue.Queue[PlaybackRequest]
   priv subscriptions : Array[VoiceReceiveStream]
   priv user_id : String
-  priv channel_id : UInt64
+  priv mut channel_id : UInt64
   priv leave_ : async () -> Unit
   priv rejoin_ : async () -> VoiceCredentials
   priv next_server_ : async () -> VoiceServer?
+  priv next_channel_ : async () -> UInt64?
+  priv server_timeout_ms : Int32
   priv connector_ : async (String) -> &VoiceTransport
   priv udp_opener_ : async (String, Int32) -> &VoiceUdp
   priv telemetry_ : (VoiceTelemetry) -> Unit
@@ -78,10 +88,10 @@ pub struct VoiceConnection {
   priv roster : Set[String]
   priv mut dave : DaveMachine?
   priv mut pending_dave_external_sender : Bytes?
-  /// The credentials of the current gateway, and those of a server Discord
-  /// moved the session to, which the event pump switches to next.
+  /// The credentials of the current gateway, and the server change the event
+  /// pump acts on next.
   priv mut credentials : VoiceCredentials
-  priv mut moving_to : VoiceCredentials?
+  priv mut server_change : ServerChange?
   /// Broadcast after every write to the fields below, which the background
   /// tasks and `wait_ready`/`stop` wait on. Write them only through the
   /// setters next to `VoiceConnection::changed` so no change misses a waiter.
@@ -386,32 +396,98 @@ fn[X] VoiceConnection::switch_gateway(
 }
 
 ///|
-/// Follow the session to `server`. Closing the current gateway wakes the
-/// event pump, the one task that replaces gateways, which then identifies on
-/// the new server with the session it already has.
-async fn VoiceConnection::move_to(
+/// Ask the main gateway for a fresh session and connect to it. `None` when
+/// that fails, which closes the connection, or when it closed meanwhile.
+async fn[X] VoiceConnection::rejoin_session(
+  self : VoiceConnection,
+  group : @async.TaskGroup[X],
+) -> VoiceGateway? noraise {
+  self.set_state(Rejoining)
+  self.reset_session()
+  let credentials = (self.rejoin_)() catch {
+    _ => {
+      self.set_failure(Disconnected, code=None)
+      return None
+    }
+  }
+  if self.closing {
+    return None
+  }
+  // The rejoin's server is newer than any change reported meanwhile.
+  self.server_change = None
+  Some(self.connect_to(group, credentials))
+}
+
+///|
+/// Connect a new session to `credentials`, replacing the current gateway.
+fn[X] VoiceConnection::connect_to(
+  self : VoiceConnection,
+  group : @async.TaskGroup[X],
+  credentials : VoiceCredentials,
+) -> VoiceGateway {
+  self.set_state(Connecting)
+  self.switch_gateway(group, credentials)
+}
+
+///|
+/// Follow a server change. Closing the current gateway wakes the event pump,
+/// the one task that replaces gateways: for a new server it identifies there
+/// with the session it already has; for one that went away it waits for the
+/// next, as Discord asks, instead of resuming against the old one.
+async fn VoiceConnection::follow_server(
   self : VoiceConnection,
   server : VoiceServer,
 ) -> Unit noraise {
-  self.moving_to = Some({
-    ..self.credentials,
-    token: server.token,
-    endpoint: server.endpoint,
-  })
+  self.server_change = Some(
+    match server.endpoint {
+      Some(endpoint) =>
+        MoveTo({ ..self.credentials, token: server.token, endpoint, })
+      None => Lost
+    },
+  )
+  self.changed()
   if self.gateway is Some(gateway) {
     gateway.close()
   }
 }
 
 ///|
-/// Move to each voice server `next_server_` reports until it reports none.
-async fn VoiceConnection::run_server_watch(
+/// Wait without a voice server for Discord to name the next one, for at most
+/// `server_timeout_ms`, and connect to it; rejoin when none came. `None` when
+/// the connection closed or the rejoin failed.
+async fn[X] VoiceConnection::replace_lost_server(
   self : VoiceConnection,
+  group : @async.TaskGroup[X],
+) -> VoiceGateway? noraise {
+  self.set_state(Reconnecting)
+  self.set_gateway(None)
+  let moved = () => self.server_change is Some(MoveTo(_))
+  let _ = @transport.with_timeout_opt(self.clock_, self.server_timeout_ms, () => {
+    self.wait_until(() => self.closing || moved())
+  }) catch {
+    _ => None
+  }
+  if self.closing {
+    return None
+  }
+  if self.server_change is Some(MoveTo(credentials)) {
+    self.server_change = None
+    return Some(self.connect_to(group, credentials))
+  }
+  // No server in time: ask the main gateway for one.
+  self.rejoin_session(group)
+}
+
+///|
+/// Apply each value `next` reports until it reports none or fails.
+async fn[T] watch_updates(
+  next : async () -> T?,
+  apply : async (T) -> Unit noraise,
 ) -> Unit noraise {
   for ;; {
-    let server = (self.next_server_)() catch { _ => return }
-    guard server is Some(server) else { return }
-    self.move_to(server)
+    let update = next() catch { _ => return }
+    guard update is Some(update) else { return }
+    apply(update)
   }
 }
 
@@ -611,12 +687,20 @@ async fn[X] VoiceConnection::run_event_pump(
         return
       }
     }
-    // `move_to` closed the old gateway, so its remaining events are moot.
-    if self.moving_to is Some(credentials) && !self.closing {
-      self.moving_to = None
+    // `follow_server` closed the old gateway, so its remaining events are
+    // moot.
+    if self.server_change is Some(change) && !self.closing {
+      self.server_change = None
       self.reset_session()
-      self.set_state(Connecting)
-      gateway = self.switch_gateway(group, credentials)
+      match change {
+        MoveTo(credentials) => gateway = self.connect_to(group, credentials)
+        Lost => {
+          guard self.replace_lost_server(group) is Some(replaced) else {
+            return
+          }
+          gateway = replaced
+        }
+      }
       continue
     }
     match event {
@@ -650,21 +734,8 @@ async fn[X] VoiceConnection::run_event_pump(
           self.reset_session()
           return
         }
-        self.set_state(Rejoining)
-        self.reset_session()
-        let credentials = (self.rejoin_)() catch {
-          _ => {
-            self.set_failure(Disconnected, code=None)
-            return
-          }
-        }
-        if self.closing {
-          return
-        }
-        // The rejoin's server is newer than any move asked for meanwhile.
-        self.moving_to = None
-        self.set_state(Connecting)
-        gateway = self.switch_gateway(group, credentials)
+        guard self.rejoin_session(group) is Some(rejoined) else { return }
+        gateway = rejoined
       }
       FatallyClosed(code~) => {
         self.set_failure(GatewayClosed(code=Some(code)), code=Some(code))
@@ -782,12 +853,15 @@ async fn VoiceConnection::run_playback(self : VoiceConnection) -> Unit noraise {
 /// reconnect backoff, UDP keepalives, playback pacing, receive backoff and
 /// reordering, `wait_ready`, and subscription silence.
 ///
-/// `next_server` waits for the next voice server Discord moves the session to
-/// (a later VOICE_SERVER_UPDATE for the guild) and returns `None` when there
-/// will be none; the connection then identifies on that server with the same
-/// session. It is called again after each move, in a task that ends with the
-/// connection, so whatever it registers to wait should be released when the
-/// call is cancelled.
+/// `next_server` waits for the next server change (a later
+/// VOICE_SERVER_UPDATE for the guild) and returns `None` when there will be
+/// none. On a new endpoint the connection identifies there with the same
+/// session; on a null one it drops the current server and waits up to
+/// `server_timeout_ms` for the next, then calls `rejoin`. `next_channel` waits
+/// for the channel the bot's own VOICE_STATE_UPDATE puts it in, which DAVE
+/// uses from the next session on. Each is called again after every update, in
+/// a task that ends with the connection, so whatever it registers to wait
+/// should be released when the call is cancelled.
 pub fn[X] VoiceConnection::start(
   group : @async.TaskGroup[X],
   credentials : VoiceCredentials,
@@ -796,6 +870,8 @@ pub fn[X] VoiceConnection::start(
   leave~ : async () -> Unit,
   rejoin~ : async () -> VoiceCredentials,
   next_server~ : async () -> VoiceServer? = () => None,
+  next_channel~ : async () -> UInt64? = () => None,
+  server_timeout_ms~ : Int32 = 10000,
   connector~ : async (String) -> &VoiceTransport = connect_voice_websocket,
   udp_opener~ : async (String, Int32) -> &VoiceUdp = open_voice_udp,
   receive~ : Bool = true,
@@ -819,6 +895,8 @@ pub fn[X] VoiceConnection::start(
     leave_: leave,
     rejoin_: rejoin,
     next_server_: next_server,
+    next_channel_: next_channel,
+    server_timeout_ms,
     connector_: connector,
     udp_opener_: udp_opener,
     telemetry_: telemetry,
@@ -833,7 +911,7 @@ pub fn[X] VoiceConnection::start(
     dave: None,
     pending_dave_external_sender: None,
     credentials,
-    moving_to: None,
+    server_change: None,
     ssrc: None,
     state_: Connecting,
     failure: None,
@@ -852,7 +930,16 @@ pub fn[X] VoiceConnection::start(
   }
   workers.push(() => connection.run_keepalive())
   workers.push(() => connection.run_playback())
-  workers.push(() => connection.run_server_watch())
+  workers.push(() => {
+    watch_updates(connection.next_server_, server => {
+      connection.follow_server(server)
+    })
+  })
+  workers.push(() => {
+    watch_updates(connection.next_channel_, channel_id => {
+      connection.channel_id = channel_id
+    })
+  })
   for worker in workers {
     group.spawn_bg(no_wait=true, () => connection.while_open(worker))
   }
@@ -921,6 +1008,12 @@ pub async fn VoiceConnection::set_speaking(
 /// read through `subscribe`.
 pub async fn VoiceConnection::next_event(self : VoiceConnection) -> VoiceEvent {
   self.events.get()
+}
+
+///|
+/// The voice channel the bot is in, following moves made outside this API.
+pub fn VoiceConnection::channel_id(self : VoiceConnection) -> UInt64 {
+  self.channel_id
 }
 
 ///|
