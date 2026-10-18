@@ -72,7 +72,8 @@ pub fn CacheResources::default() -> CacheResources {
 /// Negative limits clamp to zero. A `max_entries` of zero retains nothing,
 /// while a `ttl_ms` of zero makes entries expire immediately. TTL deadlines
 /// are fixed when an entry is written and are never extended by reads; expiry
-/// is enforced lazily without background timers.
+/// is enforced lazily, without background timers: every read and event first
+/// releases whatever has expired, with what it owns or holds.
 pub struct CacheLimit {
   priv max_entries_ : Int32?
   priv ttl_ms_ : Int64?
@@ -346,13 +347,24 @@ priv struct Bucket[K, V] {
 /// `entered_` sees every value that starts being stored and `left_` every
 /// value that stops, whichever path removes it (replacement, removal, a
 /// dropped bucket, the limit, or expiry), so a resource whose entries hold
-/// users keeps the holder counts exact.
+/// users keeps the holder counts exact. `emptied_` sees each owner whose
+/// bucket the removal of its last entry dropped.
+///
+/// With a TTL, `due_` indexes each bucket's earliest deadline, so `expire`
+/// releases every expired entry while touching only the buckets that hold
+/// one. Every non-empty bucket has an item no later than its earliest
+/// deadline: one is pushed when a bucket gains its first entry and after each
+/// pop, and removals only make a bucket's earliest deadline later. Items left
+/// by dropped buckets are skipped when popped, and the heap is rebuilt from
+/// the live buckets once such items outnumber them.
 priv struct Buckets[O, K, V] {
   buckets_ : Map[O, Bucket[K, V]]
   limit_ : CacheLimit
   now_ : () -> Int64
   entered_ : (V) -> Unit
   left_ : (V) -> Unit
+  emptied_ : (O) -> Unit
+  due_ : DeadlineHeap[O]
 }
 
 ///|
@@ -361,6 +373,7 @@ fn[O : Hash + Eq, K, V] Buckets::new(
   now : () -> Int64,
   entered~ : (V) -> Unit = _ => (),
   left~ : (V) -> Unit = _ => (),
+  emptied~ : (O) -> Unit = _ => (),
 ) -> Buckets[O, K, V] {
   {
     buckets_: Map([]),
@@ -368,6 +381,8 @@ fn[O : Hash + Eq, K, V] Buckets::new(
     now_: now,
     entered_: entered,
     left_: left,
+    emptied_: emptied,
+    due_: DeadlineHeap::new(),
   }
 }
 
@@ -379,6 +394,50 @@ fn[O : Hash + Eq, K, V] Buckets::drop_if_empty(
 ) -> Unit {
   if bucket.entries.entries_.is_empty() {
     self.buckets_.remove(owner)
+    (self.emptied_)(owner)
+  }
+}
+
+///|
+fn[K, V] Bucket::earliest_deadline(self : Bucket[K, V]) -> Int64? {
+  match self.entries.entries_.iter().head() {
+    Some((_, timed)) => timed.deadline
+    None => None
+  }
+}
+
+///|
+/// Indexes the earliest deadline of `owner`'s bucket, rebuilding the index
+/// from every live bucket instead when stale items have piled up.
+fn[O, K, V] Buckets::index_earliest(
+  self : Buckets[O, K, V],
+  owner : O,
+  bucket : Bucket[K, V],
+) -> Unit {
+  guard bucket.earliest_deadline() is Some(deadline) else { return }
+  if self.due_.length() < 2 * self.buckets_.length() + 16 {
+    self.due_.push(deadline, owner)
+    return
+  }
+  self.due_.clear()
+  for live_owner, live in self.buckets_ {
+    if live.earliest_deadline() is Some(live_deadline) {
+      self.due_.push(live_deadline, live_owner)
+    }
+  }
+}
+
+///|
+/// Releases every expired entry, visiting only buckets that hold one.
+fn[O : Hash + Eq, K : Hash + Eq, V] Buckets::expire(
+  self : Buckets[O, K, V],
+) -> Unit {
+  let now = (self.now_)()
+  while self.due_.pop_due(now) is Some(owner) {
+    guard self.buckets_.get(owner) is Some(bucket) else { continue }
+    bucket.entries.sweep(evicted=(_, old) => (self.left_)(old))
+    self.drop_if_empty(owner, bucket)
+    self.index_earliest(owner, bucket)
   }
 }
 
@@ -436,6 +495,7 @@ fn[O : Hash + Eq, K : Hash + Eq, V] Buckets::put(
     }
   }
   bucket.guild_id = prefer_update(guild_id, bucket.guild_id)
+  let was_empty = bucket.entries.entries_.is_empty()
   let stored = match
     bucket.entries.put(key, value, evicted=(_, old) => (self.left_)(old)) {
     Refused => false
@@ -448,6 +508,9 @@ fn[O : Hash + Eq, K : Hash + Eq, V] Buckets::put(
       (self.left_)(old)
       true
     }
+  }
+  if was_empty {
+    self.index_earliest(owner, bucket)
   }
   self.drop_if_empty(owner, bucket)
   stored
@@ -574,6 +637,8 @@ pub fn InMemoryCache::InMemoryCache(
   limits~ : CacheLimits = CacheLimits(),
   now~ : () -> Int64 = @clock.now_ms,
 ) -> InMemoryCache {
+  let channels = TimedMap::new(limits.channels_, now)
+  let dm_channels = TimedMap::new(limits.dm_channels_, now)
   let users = UserStore::new(
     enabled=resources.users_,
     held=limits.users_,
@@ -584,9 +649,9 @@ pub fn InMemoryCache::InMemoryCache(
     resources_: resources,
     guilds_: TimedMap::new(limits.guilds_, now),
     unavailable_guilds_: Map([]),
-    channels_: TimedMap::new(limits.channels_, now),
+    channels_: channels,
     threads_: Map([]),
-    dm_channels_: TimedMap::new(limits.dm_channels_, now),
+    dm_channels_: dm_channels,
     roles_: Buckets::new(limits.roles_, now),
     members_: Buckets::new(
       limits.members_,
@@ -610,6 +675,13 @@ pub fn InMemoryCache::InMemoryCache(
       now,
       entered=message => users.hold(message.author),
       left=message => users.release(message.author.id),
+      // A DM whose last message went holds nothing unless its channel is
+      // cached, and gives up its place in the DM limit.
+      emptied=channel_id => {
+        if !channels.entries_.contains(channel_id) {
+          dm_channels.remove(channel_id) |> ignore
+        }
+      },
     ),
     current_user_: None,
   }
@@ -705,16 +777,25 @@ fn InMemoryCache::cached_channel(
 }
 
 ///|
-/// Releases the state of guilds, channels, and DM channels whose TTL has
-/// passed, so it does not outlive them while nothing reads the guild or
-/// channel. Every public read calls it first, so an expired owner's state is
-/// never served.
-fn InMemoryCache::expire_owners(self : InMemoryCache) -> Unit {
+/// Releases every entry whose TTL has passed, with what it owns or holds:
+/// expired guilds, channels, and DM channels take their state with them, and
+/// expired members and messages release their users. Every public read and
+/// `update` calls it first, so nothing expired is served or keeps anything
+/// else cached, whichever structure the read looks at. It costs only the
+/// expired entries: owner maps expire in insertion order, and buckets through
+/// their deadline index.
+fn InMemoryCache::expire(self : InMemoryCache) -> Unit {
   self.guilds_.sweep(evicted=(guild_id, _) => self.release_guild(guild_id))
   self.channels_.sweep(evicted=(channel_id, _) => {
     self.release_channel(channel_id)
   })
   self.dm_channels_.sweep(evicted=(channel_id, _) => self.release_dm(channel_id))
+  self.roles_.expire()
+  self.members_.expire()
+  self.voice_states_.expire()
+  self.presences_.expire()
+  self.messages_.expire()
+  self.users_.expire()
 }
 
 ///|
@@ -1122,7 +1203,7 @@ pub fn InMemoryCache::update(
   self : InMemoryCache,
   event : @model.Event,
 ) -> Unit {
-  self.expire_owners()
+  self.expire()
   match event {
     GuildCreate(Available(available)) => self.seed_available_guild(available)
     GuildCreate(Unavailable(guild)) =>
@@ -1213,14 +1294,14 @@ pub fn InMemoryCache::guild(
   self : InMemoryCache,
   id : @model.GuildId,
 ) -> @model.Guild? {
-  self.expire_owners()
+  self.expire()
   self.guilds_.get(id, evicted=(guild_id, _) => self.release_guild(guild_id))
 }
 
 ///|
 /// All cached guilds.
 pub fn InMemoryCache::guilds(self : InMemoryCache) -> Array[@model.Guild] {
-  self.expire_owners()
+  self.expire()
   self.guilds_.values(evicted=(guild_id, _) => self.release_guild(guild_id))
 }
 
@@ -1231,7 +1312,7 @@ pub fn InMemoryCache::is_guild_unavailable(
   self : InMemoryCache,
   id : @model.GuildId,
 ) -> Bool {
-  self.expire_owners()
+  self.expire()
   self.unavailable_guilds_.get(id) == Some(true)
 }
 
@@ -1240,7 +1321,7 @@ pub fn InMemoryCache::is_guild_unavailable(
 pub fn InMemoryCache::unavailable_guilds(
   self : InMemoryCache,
 ) -> Array[@model.GuildId] {
-  self.expire_owners()
+  self.expire()
   self.unavailable_guilds_.keys().to_array()
 }
 
@@ -1250,14 +1331,14 @@ pub fn InMemoryCache::channel(
   self : InMemoryCache,
   id : @model.ChannelId,
 ) -> @model.Channel? {
-  self.expire_owners()
+  self.expire()
   self.cached_channel(id).map(cached => cached.channel)
 }
 
 ///|
 /// All cached channels and threads.
 pub fn InMemoryCache::channels(self : InMemoryCache) -> Array[@model.Channel] {
-  self.expire_owners()
+  self.expire()
   self.channels_
   .values(evicted=(channel_id, _) => self.release_channel(channel_id))
   .map(cached => cached.channel)
@@ -1270,7 +1351,7 @@ pub fn InMemoryCache::role(
   guild_id : @model.GuildId,
   role_id : @model.RoleId,
 ) -> @model.Role? {
-  self.expire_owners()
+  self.expire()
   self.roles_.get(guild_id, role_id)
 }
 
@@ -1280,7 +1361,7 @@ pub fn InMemoryCache::roles(
   self : InMemoryCache,
   guild_id : @model.GuildId,
 ) -> Array[@model.Role] {
-  self.expire_owners()
+  self.expire()
   self.roles_.values(guild_id)
 }
 
@@ -1291,7 +1372,7 @@ pub fn InMemoryCache::member(
   guild_id : @model.GuildId,
   user_id : @model.UserId,
 ) -> @model.GuildMember? {
-  self.expire_owners()
+  self.expire()
   self.members_.get(guild_id, user_id)
 }
 
@@ -1302,7 +1383,7 @@ pub fn InMemoryCache::members(
   self : InMemoryCache,
   guild_id : @model.GuildId,
 ) -> Array[@model.GuildMember] {
-  self.expire_owners()
+  self.expire()
   self.members_.values(guild_id)
 }
 
@@ -1312,14 +1393,14 @@ pub fn InMemoryCache::user(
   self : InMemoryCache,
   id : @model.UserId,
 ) -> @model.User? {
-  self.expire_owners()
+  self.expire()
   self.users_.get(id)
 }
 
 ///|
 /// All cached users: those held by cached entries, then the recently seen.
 pub fn InMemoryCache::users(self : InMemoryCache) -> Array[@model.User] {
-  self.expire_owners()
+  self.expire()
   self.users_.values()
 }
 
@@ -1330,7 +1411,7 @@ pub fn InMemoryCache::voice_state(
   guild_id : @model.GuildId,
   user_id : @model.UserId,
 ) -> @model.VoiceState? {
-  self.expire_owners()
+  self.expire()
   self.voice_states_.get(guild_id, user_id)
 }
 
@@ -1340,7 +1421,7 @@ pub fn InMemoryCache::voice_states(
   self : InMemoryCache,
   guild_id : @model.GuildId,
 ) -> Array[@model.VoiceState] {
-  self.expire_owners()
+  self.expire()
   self.voice_states_.values(guild_id)
 }
 
@@ -1351,7 +1432,7 @@ pub fn InMemoryCache::presence(
   guild_id : @model.GuildId,
   user_id : @model.UserId,
 ) -> @model.PresenceUpdateEvent? {
-  self.expire_owners()
+  self.expire()
   self.presences_.get(guild_id, user_id)
 }
 
@@ -1361,7 +1442,7 @@ pub fn InMemoryCache::presences(
   self : InMemoryCache,
   guild_id : @model.GuildId,
 ) -> Array[@model.PresenceUpdateEvent] {
-  self.expire_owners()
+  self.expire()
   self.presences_.values(guild_id)
 }
 
@@ -1372,7 +1453,7 @@ pub fn InMemoryCache::message(
   channel_id : @model.ChannelId,
   message_id : @model.MessageId,
 ) -> @model.Message? {
-  self.expire_owners()
+  self.expire()
   self.messages_.get(channel_id, message_id)
 }
 
@@ -1382,7 +1463,7 @@ pub fn InMemoryCache::messages(
   self : InMemoryCache,
   channel_id : @model.ChannelId,
 ) -> Array[@model.Message] {
-  self.expire_owners()
+  self.expire()
   self.messages_.values(channel_id)
 }
 
@@ -1393,7 +1474,7 @@ pub fn InMemoryCache::permissions(
   guild_id : @model.GuildId,
   user_id : @model.UserId,
 ) -> @model.Permissions? {
-  self.expire_owners()
+  self.expire()
   guard self.resources_.guilds_ &&
     self.resources_.members_ &&
     self.resources_.roles_ else {
@@ -1432,7 +1513,7 @@ pub fn InMemoryCache::permissions_in(
   channel_id : @model.ChannelId,
   user_id : @model.UserId,
 ) -> @model.Permissions? {
-  self.expire_owners()
+  self.expire()
   guard self.resources_.channels_ else { return None }
   guard self.permissions(guild_id, user_id) is Some(base) &&
     self.member(guild_id, user_id) is Some(cached_member) &&

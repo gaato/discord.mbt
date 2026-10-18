@@ -179,7 +179,7 @@ show-flows beyond the covered happy and failing paths):
 | discord/src/framework/gate.mbt | 2 | The callback rule for an unknown interaction type and the cancellation re-raise during delivery. |
 | discord/src/interaction/args.mbt | 8 | Suggest-handler closures that only run inside a live autocomplete dispatch. |
 | discord/src/interaction/options.mbt | 8 | Focused-option accessors for kinds not used by any covered command shape. |
-| discord/src/cache/cache.mbt | 14 | Defensive arms (10): payloads without a guild id for presences and voice states, an unavailable `GUILD_CREATE`, role events with roles off, a READY marking a guild available, unhandled events, and `permissions_in` guards; and the eviction callbacks of reads (4), which run only when time passes between a read's sweep of expired owners and its lookup. |
+| discord/src/cache/cache.mbt | 17 | Defensive arms (10): payloads without a guild id for presences and voice states, an unavailable `GUILD_CREATE`, role events with roles off, a READY marking a guild available, unhandled events, and `permissions_in` guards; and the expiry arms of lookups and in-place replacements (7), which run only when time passes between the expiry every read and event starts with and the lookup itself. |
 | discord/src/http/api_application.mbt | 2 | Emit arms of optional request fields not exercised by the pinned shapes. |
 | discord/src/http/api_guild.mbt | 4 | Remaining optional-parameter emit arms. |
 | discord/src/http/api_interaction.mbt | 3 | Callback-with-files arms needing a live token. |

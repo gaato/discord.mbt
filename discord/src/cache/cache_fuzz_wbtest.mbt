@@ -38,6 +38,16 @@ fn[O, K, V] has_empty_bucket(buckets : Buckets[O, K, V]) -> Bool {
 }
 
 ///|
+fn[K, V] holds_expired(map : TimedMap[K, V]) -> Bool {
+  map.entries_.values().any(timed => map.is_expired(timed))
+}
+
+///|
+fn[O, K, V] buckets_hold_expired(buckets : Buckets[O, K, V]) -> Bool {
+  buckets.buckets_.values().any(bucket => holds_expired(bucket.entries))
+}
+
+///|
 fn within(length : Int32, limit : CacheLimit) -> Bool {
   match limit.max_entries_ {
     Some(max_entries) => length <= max_entries
@@ -103,6 +113,26 @@ fn cache_violations(
     has_empty_bucket(cache.presences_) ||
     has_empty_bucket(cache.messages_) {
     violations.push("an empty bucket")
+  }
+  // Every read and update expires everything due first, so nothing expired
+  // is left to hold a user or a DM slot.
+  if holds_expired(cache.guilds_) ||
+    holds_expired(cache.channels_) ||
+    holds_expired(cache.dm_channels_) ||
+    holds_expired(users.held_) ||
+    holds_expired(users.recent_) ||
+    buckets_hold_expired(cache.roles_) ||
+    buckets_hold_expired(cache.members_) ||
+    buckets_hold_expired(cache.voice_states_) ||
+    buckets_hold_expired(cache.presences_) ||
+    buckets_hold_expired(cache.messages_) {
+    violations.push("an expired entry retained")
+  }
+  for channel_id, _ in cache.dm_channels_.entries_ {
+    if !cache.messages_.buckets_.contains(channel_id) &&
+      !cache.channels_.entries_.contains(channel_id) {
+      violations.push("DM slot \{channel_id} holds nothing")
+    }
   }
   violations
 }
@@ -386,6 +416,17 @@ fn fuzz_configurations() -> Array[(String, CacheResources, CacheLimits)] {
   [
     ("all, small limits", CacheResources::all(), small),
     (
+      "holder TTLs only",
+      CacheResources::all(),
+      CacheLimits(
+        roles=CacheLimit(ttl_ms=25L),
+        members=CacheLimit(ttl_ms=30L),
+        voice_states=CacheLimit(ttl_ms=20L),
+        presences=CacheLimit(ttl_ms=20L),
+        messages=CacheLimit(ttl_ms=20L),
+      ),
+    ),
+    (
       "all, owner limits and TTLs",
       CacheResources::all(),
       CacheLimits(
@@ -436,6 +477,14 @@ test "random event sequences keep holder counts exact and every structure bounde
       for step in 0..<400 {
         if rng.below(8) == 0 {
           now.val += rng.below(12).to_int64()
+          // A read alone, with no event, must already see the expiry.
+          ignore(cache.user(@model.Id::parse(rng.pick(fuzz_users))))
+          let violations = cache_violations(cache, limits)
+          if !violations.is_empty() {
+            fail(
+              "\{name}, seed \{seed}, step \{step} (read at \{now.val}): \{violations.join("; ")}",
+            )
+          }
         }
         let (event_name, fixture) = fuzz_event(rng, message_id)
         cache.update(@model.dispatch_event(event_name, @json.parse(fixture)))

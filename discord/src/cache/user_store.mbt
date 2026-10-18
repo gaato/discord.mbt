@@ -106,6 +106,13 @@ fn UserStore::see(self : UserStore, user : @model.User) -> Unit {
 }
 
 ///|
+/// Drops the records whose own `users` or `recent_users` TTL has passed.
+fn UserStore::expire(self : UserStore) -> Unit {
+  self.held_.sweep()
+  self.recent_.sweep()
+}
+
+///|
 fn UserStore::get(self : UserStore, id : @model.UserId) -> @model.User? {
   match self.held_.get(id) {
     Some(user) => Some(user)

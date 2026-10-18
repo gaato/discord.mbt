@@ -92,8 +92,13 @@ breaking change is listed with a migration note.
   `THREAD_LIST_SYNC` replaces it, also with channels not retained. A new
   session's `READY` drops the guilds of its shard it no longer lists (left
   while disconnected), and a fresh `GUILD_CREATE` drops the channels and
-  threads it no longer lists. The `users` limit now applies to held users
-  only, and `USER_UPDATE` only updates the current user. Migration: fetch
+  threads it no longer lists. Expiry reaches across structures: every read
+  and event first releases whatever has expired, so a member or message past
+  its TTL releases its user, and a DM whose messages are gone its DM slot,
+  without its own bucket being read (each TTL'd resource indexes its
+  buckets' earliest deadlines, so this costs only the expired entries). The
+  `users` limit now applies to held users only, and `USER_UPDATE` only
+  updates the current user. Migration: fetch
   archived threads over REST (`channel_ref(id).fetch()` or the archived
   thread listings) instead of reading them from the cache; a bot that relied
   on `user()` finding any user ever seen should fetch misses over REST or

@@ -408,3 +408,36 @@ test "a new session forgets the guilds the bot left while disconnected" {
     )
   }
 }
+
+///|
+test "users leave when their last holder expires, without reading its bucket" {
+  let cases : Array[(String, @cache.CacheLimits, @model.Event)] = [
+    (
+      "member",
+      @cache.CacheLimits(members=@cache.CacheLimit(ttl_ms=1000L)),
+      bound_event(
+        "GUILD_MEMBER_ADD",
+        "{\"guild_id\":\"100\",\"user\":\{bound_user_json("201")},\"roles\":[],\"joined_at\":\"2025-06-01T10:00:00Z\"}",
+      ),
+    ),
+    (
+      "message author",
+      @cache.CacheLimits(messages=@cache.CacheLimit(ttl_ms=1000L)),
+      bound_message("900", channel_id="400", author_id="201", guild_id="100"),
+    ),
+  ]
+  for case in cases {
+    let (name, limits, event) = case
+    let now = Ref(0L)
+    let cache = @cache.InMemoryCache(
+      resources=@cache.CacheResources(messages=true),
+      limits~,
+      now=() => now.val,
+    )
+    cache.update(event)
+    assert_true(cache.user(@model.Id::parse("201")) is Some(_), msg=name)
+    now.val = 1000L
+    assert_eq((name, cache.user(@model.Id::parse("201")) is None), (name, true))
+    assert_eq((name, cache.users().length()), (name, 0))
+  }
+}
