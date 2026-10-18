@@ -152,13 +152,24 @@ pub async fn VoiceReceiveStream::next_packet(
 ) -> ReceivedAudio? {
   guard !self.closed else { return None }
   let next = match (self.started, self.end_after_silence_ms) {
-    (true, Some(timeout_ms)) =>
-      @transport.with_timeout_opt(self.connection.clock_, timeout_ms, () => {
-        self.queue.get()
-      }) catch {
+    (true, Some(timeout_ms)) => {
+      // Judge by what was delivered, not by the timeout's result: a frame
+      // that arrives as the silence timer fires is still the user's audio,
+      // whether `get` took it as it was cancelled or it is still queued.
+      let delivered : Ref[ReceivedAudio?] = Ref(None)
+      let _ : Unit? = @transport.with_timeout_opt(
+        self.connection.clock_,
+        timeout_ms,
+        () => delivered.val = Some(self.queue.get()),
+      ) catch {
         @aqueue.QueueAlreadyClosed => None
         error => raise error
       }
+      match delivered.val {
+        Some(audio) => Some(audio)
+        None => self.queue.try_get() catch { _ => None }
+      }
+    }
     _ =>
       Some(self.queue.get()) catch {
         @aqueue.QueueAlreadyClosed => None

@@ -35,6 +35,12 @@ releases (0.x → 0.y) may contain breaking changes; patch releases do not.
 
 ### Fixed
 
+- **A received frame that arrives as the trailing silence elapses is
+  delivered.** `VoiceReceiveStream::next_packet` with `end_after_silence_ms`
+  dropped a frame that reached the stream in the same scheduler step as the
+  silence timer and ended the stream; it now returns the frame and keeps the
+  stream open. Silence with no frame still ends it.
+
 - **A voice connection stays closed once `disconnect` begins.** While
   `disconnect` was still sending the leave to the main gateway, a voice event
   could still be handled: a resume set the state back to `Ready` (so
