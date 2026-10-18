@@ -173,6 +173,13 @@ breaking change is listed with a migration note.
 
 ### Fixed
 
+- **A member fetch whose last chunk arrives as it times out completes.**
+  `GatewayCtx::fetch_guild_members` raised `GatewayRequestTimeout` when the
+  final `GUILD_MEMBERS_CHUNK`, or a matching `RATE_LIMITED`, arrived in the
+  same scheduler step as the deadline. It now returns the members, or raises
+  `GatewayRateLimited`; a fetch still missing chunks at the deadline times
+  out as before.
+
 - **A component click or an awaited event that arrives as its wait times out
   is no longer lost.** `wait_for_component` and `PendingEvent::wait`
   (`GatewayCtx::wait_for`) returned `None` when the delivery and the timeout
