@@ -107,15 +107,17 @@ async test "shutdown cancels handlers still running after the grace period" {
 }
 
 ///|
-/// Run a bot on `clock` with a fixed-seed shard randomness, so heartbeat jitter
-/// and backoff are the same on every run (a zero first jitter would beat
-/// before IDENTIFY with no timer).
+/// Run a bot on `clock` with seeded shard randomness, so heartbeat jitter and
+/// backoff are the same on every run (a zero first jitter would beat before
+/// IDENTIFY with no timer). Virtual time alone is not enough: the shards'
+/// default randomness is seeded from the system.
 fn BotCore::use_test_time(
   self : BotCore,
   clock : @simclock.VirtualClock,
+  rand~ : @random.Rand = @random.Rand::chacha8(),
 ) -> Unit {
   self.clock_.val = clock
-  self.rand_.val = Some(@random.Rand::chacha8())
+  self.rand_.val = Some(rand)
 }
 
 ///|

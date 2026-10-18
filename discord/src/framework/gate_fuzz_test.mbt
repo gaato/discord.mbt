@@ -160,7 +160,7 @@ fn gate_steps(seed : Int32, length : Int32) -> Array[GateStep] {
 }
 
 ///|
-async fn run_gate_schedule(seed : Int32, steps : Array[GateStep]) -> Unit {
+async fn run_gate_schedule(seed : Int32, steps : Array[GateStep]) -> String {
   let clock = @simclock.VirtualClock()
   let plans = gate_rand(seed, 1)
   let model = GateModel::{
@@ -298,6 +298,7 @@ async fn run_gate_schedule(seed : Int32, steps : Array[GateStep]) -> Unit {
     }
     clock.settle()
   })
+  "seed \{seed}\n" + model.log.join("\n")
 }
 
 ///|

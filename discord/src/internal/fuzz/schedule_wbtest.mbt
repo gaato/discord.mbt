@@ -1,8 +1,11 @@
 ///|
-async test "a passing schedule runs once" {
+async test "a passing schedule runs twice" {
   let runs = Ref(0)
-  check_schedule([1, 2, 3], _ => runs.val += 1)
-  assert_eq(runs.val, 1)
+  check_schedule([1, 2, 3], steps => {
+    runs.val += 1
+    "ran \{steps.length()}"
+  })
+  assert_eq(runs.val, 2)
 }
 
 ///|
@@ -12,6 +15,7 @@ async test "a failing schedule reports the original and the shrunk steps" {
       if steps.contains(4) && steps.contains(13) {
         fail("boom after \{steps.length()} steps")
       }
+      ""
     })
   catch {
     Failure(message) => message
@@ -76,8 +80,37 @@ async test "a schedule that fails only once is reported as not deterministic" {
     check_schedule([1, 2], _ => {
       runs.val += 1
       if runs.val == 1 {
-        fail("flaky")
+        raise ScheduleBroke(2)
       }
+      "fine"
+    })
+  catch {
+    Failure(message) => message
+    error => fail("unexpected \{Repr(error)}")
+  } noraise {
+    _ => fail("expected the schedule to fail")
+  }
+  assert_eq(runs.val, 2)
+  guard report.find("FAILED: ") is Some(at) else { fail(report) }
+  inspect(
+    report[at + "FAILED: ".length():],
+    content=(
+      #|the schedule is not deterministic: two runs of the same 2 steps failed and passed, parting at line 1:
+      #|first run:
+      #|  ScheduleBroke(2)
+      #|second run:
+      #|  fine
+    ),
+  )
+}
+
+///|
+async test "passing runs whose traces differ are reported as not deterministic" {
+  let runs = Ref(0)
+  let report = try
+    check_schedule([1], _ => {
+      runs.val += 1
+      "start\ntimer at \{runs.val}"
     })
   catch {
     Failure(message) => message
@@ -86,15 +119,71 @@ async test "a schedule that fails only once is reported as not deterministic" {
     _ => fail("expected the schedule to fail")
   }
   assert_true(
+    report.contains(
+      "two runs of the same 1 steps passed and passed, parting at line 2:",
+    ),
+  )
+  assert_true(
+    report.has_suffix("first run:\n  timer at 1\nsecond run:\n  timer at 2"),
+  )
+}
+
+///|
+async test "a shrunk schedule that passes when re-run is marked" {
+  // The first three runs fail: both full runs and ddmin's probe of the empty
+  // list, which it keeps; the final re-run of that list passes.
+  let runs = Ref(0)
+  let report = try
+    check_schedule([1, 2], _ => {
+      runs.val += 1
+      if runs.val <= 3 {
+        fail("broken")
+      }
+      ""
+    })
+  catch {
+    Failure(message) => message
+    error => fail("unexpected \{Repr(error)}")
+  } noraise {
+    _ => fail("expected the schedule to fail")
+  }
+  assert_eq(runs.val, 4)
+  assert_true(
     report.has_suffix("(passed when re-run: the schedule is not deterministic)"),
   )
 }
 
 ///|
+test "the nondeterminism report shows where two outcomes part" {
+  inspect(
+    nondeterminism_report(3, Passed("a\nb"), Passed("a\nb\nc")),
+    content=(
+      #|the schedule is not deterministic: two runs of the same 3 steps passed and passed, parting at line 3:
+      #|  first line: a
+      #|  last shared line: b
+      #|first run:
+      #|  (ended)
+      #|second run:
+      #|  c
+    ),
+  )
+  inspect(
+    nondeterminism_report(1, Failed("x"), Passed("y")),
+    content=(
+      #|the schedule is not deterministic: two runs of the same 1 steps failed and passed, parting at line 1:
+      #|first run:
+      #|  x
+      #|second run:
+      #|  y
+    ),
+  )
+}
+
+///|
 async test "cancelling a schedule cancels it at any stage" {
-  // Which run blocks: the first, one while shrinking, or the final re-run
-  // (the first two runs fail, and ddmin then keeps the empty list).
-  for blocking in [1, 2, 3] {
+  // Which run blocks: either of the two full runs, the one shrinking run
+  // (ddmin keeps the empty list it tries first), or the final re-run.
+  for blocking in [1, 2, 3, 4] {
     let runs = Ref(0)
     let reached : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
     let finished = Ref(false)
@@ -131,6 +220,7 @@ async test "an error other than a failure is reported by its debug form" {
       if steps.contains(8) {
         raise ScheduleBroke(steps.length())
       }
+      ""
     })
   catch {
     Failure(message) => message

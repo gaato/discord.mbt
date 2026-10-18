@@ -937,7 +937,7 @@ fn bot_fuzz_steps(seed : Int32, length : Int32) -> Array[(BotFuzzStep, Int32)] {
 async fn run_bot_schedule(
   seed : Int32,
   steps : Array[(BotFuzzStep, Int32)],
-) -> Unit {
+) -> String {
   let rand = bot_fuzz_rand(seed, 0)
   let shard_count = 1 + rand.int(limit=3)
   let permits = 1 + rand.int(limit=3)
@@ -1030,7 +1030,7 @@ async fn run_bot_schedule(
     manager_gateway_info(shards=shard_count, max_concurrency~),
   )
   builder.core.connector_.val = Some(_ => model.connect())
-  builder.core.clock_.val = clock
+  builder.core.use_test_time(clock, rand=bot_fuzz_rand(seed, 3))
   builder.on(Events::message_delete(), (_, event) => {
     model.hold(model.message_started(event.id.to_string()))
   })
@@ -1106,6 +1106,7 @@ async fn run_bot_schedule(
     model.observe(bot)
   })
   model.finish()
+  "seed \{seed}\n" + model.log.join("\n")
 }
 
 ///|
