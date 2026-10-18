@@ -12,7 +12,7 @@ pub(all) struct HttpRequest {
 }
 
 ///|
-/// Final wire response for one logical call (after internal 429 retries),
+/// Final wire response for one logical call (after internal retries),
 /// before status-code-to-error mapping. An offline handler produces it
 /// directly.
 pub(all) struct HttpResponse {

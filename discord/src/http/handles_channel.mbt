@@ -93,7 +93,7 @@ pub async fn[T] ChannelRef::with_typing(
   @async.with_task_group(group => {
     group.spawn_bg(no_wait=true, () => {
       for ;; {
-        @async.sleep(8000)
+        self.client.clock_.sleep(8000)
         self.typing() catch {
           _ => break
         }

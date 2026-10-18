@@ -110,11 +110,12 @@ let gate_fuzz_types : Array[@model.InteractionResponseType] = [
 
 ///|
 fn sink_plan(rand : @random.Rand) -> SinkPlan {
-  match rand.int(limit=6) {
+  match rand.int(limit=7) {
     0 | 1 => Succeed
     2 => Fail(Rejected)
     3 => Fail(Expired)
     4 => Fail(Uncertain)
+    5 => Fail(Unsent)
     _ => Block
   }
 }
@@ -126,10 +127,11 @@ fn gate_step(rand : @random.Rand) -> GateStep {
     Send(gate_fuzz_types[rand.int(limit=gate_fuzz_types.length())])
   } else if roll < 60 {
     Release(
-      match rand.int(limit=4) {
+      match rand.int(limit=5) {
         0 => Fail(Rejected)
         1 => Fail(Uncertain)
         2 => Fail(Expired)
+        3 => Fail(Unsent)
         _ => Succeed
       },
     )
@@ -199,7 +201,8 @@ async fn run_gate_schedule(seed : Int32, length : Int32) -> Unit {
       }
       Fail(kind) => {
         model.state = match kind {
-          Rejected => Pending
+          // nothing reached Discord: the window is still unused
+          Rejected | Unsent => Pending
           Expired => Expired
           _ => {
             model.reached += 1

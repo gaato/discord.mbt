@@ -230,8 +230,9 @@ fn encode_parts(
   random~ : () -> Double = @runtime.default_random,
 ) -> (String, Array[Bytes]) raise DiscordHttpError {
   @multipart.encode_segments_fresh(parts, random~) catch {
+    // Only a broken random source gets here, before any I/O.
     @multipart.BoundaryCollision =>
-      raise Transport(message="could not choose a multipart boundary")
+      raise Validation(message="could not choose a multipart boundary")
     error => raise Validation(message=@debug.to_string(error))
   }
 }

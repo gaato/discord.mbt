@@ -114,7 +114,8 @@ priv struct BotCore {
   // response.
   gateway_bot_info_ : Ref[@model.GatewayBotInfo?]
   // Whitebox seam for virtual time: shards, the identify queue, interaction
-  // timing, and the shutdown grace period all read this clock.
+  // timing, the shutdown grace period, and the REST client the bot builds
+  // from its token all read this clock.
   clock_ : Ref[&@hclock.Clock]
   // Whitebox seam for the shards' heartbeat jitter and backoff; `None` lets
   // each shard seed its own.
@@ -596,7 +597,9 @@ async fn BotCore::run(self : BotCore) -> Unit {
     self.resolved_intents()
   })
   let owns_client = self.client_ is None
-  let client = self.client_.unwrap_or_else(() => Client(self.token_))
+  let client = self.client_.unwrap_or_else(() => {
+    Client(self.token_, clock=self.clock_.val)
+  })
   defer (if owns_client { client.close() })
   // Forward REST telemetry only while this run lasts: a caller-owned client
   // outlives the bot and must neither keep it alive nor call it afterwards.

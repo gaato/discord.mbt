@@ -43,7 +43,7 @@ pub(all) enum RestAccess {
 /// the caller's client. When `application_id` is omitted, this method resolves
 /// it through `GET /applications/@me`. Supplying a client and the id avoids
 /// startup HTTP requests. `clock` times callback deadlines and handler
-/// admission. Raises `AppConfigError::EmptyToken` for an empty token.
+/// admission, and drives the client built from a token. Raises `AppConfigError::EmptyToken` for an empty token.
 ///
 /// Command registration is a deploy-time step. Call `app.sync_commands(...)`
 /// from a one-shot program (see `examples/workers_echo/register`), never
@@ -59,7 +59,7 @@ pub async fn App::serve(
     Client(client) => (client, false)
     Token(token) => {
       guard !token.is_empty() else { raise AppConfigError::EmptyToken }
-      (@dhttp.Client(token), true)
+      (@dhttp.Client(token, clock?), true)
     }
   }
   let application_id = match application_id {

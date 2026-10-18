@@ -9,6 +9,36 @@ breaking change is listed with a migration note.
 
 ### Changed
 
+- **`DiscordHttpError::Transport` and `Timeout` say where the exchange
+  failed, and whether the request can have reached Discord.** Both carry a
+  `phase~ : @http.Phase` (from `gaato/http`): `Pool` (waiting for a
+  connection, or a closed client) and `Dial` (connecting, TLS, or a proxy
+  tunnel) mean no byte was sent, and the new `DiscordHttpError::is_unsent()`
+  says so; `Write`, `Head`, `Body`, and `Unknown` mean Discord may have acted
+  on it. Before, every failure was a `Transport(message~)` holding the
+  transport error's debug text, or a `Timeout(timeout_ms~)`, so a caller could
+  not tell "never sent" from "maybe sent". `Timeout.timeout_ms` is now the
+  limit that ran out rather than the configured `request_timeout_ms` (the
+  same for the default transport), and a multipart boundary that cannot be
+  chosen is a `Validation` failure, since it happens before any I/O.
+  Migration: add `..` (or `phase~`) to patterns on `Transport(message~)` and
+  `Timeout(timeout_ms~)`, and pass `phase=` where you construct them
+  (`Unknown` when you cannot tell). Code that parsed the transport's debug
+  text out of `message` should read `phase` instead; `message` is now the
+  failure's description alone (`could not connect: refused`).
+- **The REST client resends a call that never reached Discord.** A transient
+  transport failure or timeout that proves no byte was sent (a refused or
+  failed connection, a proxy that could not reach Discord with 502-504, or a
+  timeout waiting for a connection or connecting) is sent again with the
+  runtime's default backoff, up to `max_retries` times together with 429
+  retries, for every method including `POST`: Discord never saw the first
+  attempt, so nothing can be duplicated. Each resend is admitted and released
+  by the rate limiter like any attempt and reported to telemetry. A failure
+  after connecting, or a timed-out exchange, is still raised at once, and a
+  closed client resends nothing, not even a 429. Before, only a 429 was
+  resent. Migration: none; pass `max_retries=0` to raise every failure at
+  once.
+
 - **Depends on `gaato/http` 0.3.0, `gaato/http-async` 0.3.0, and
   `gaato/sdk-runtime` 0.4.0.** The clock helpers the library kept for itself
   (the wall clock behind every `clock?` default, and the clock-driven
@@ -19,9 +49,8 @@ breaking change is listed with a migration note.
   at most 1 MiB of its body. The default REST transport now goes through the
   proxy named by `HTTPS_PROXY`, `ALL_PROXY` and `NO_PROXY`, as curl does; to
   connect directly, pass `transport=@transport.AsyncTransport::new(trust_env=false)`.
-  The Gateway WebSocket still connects directly. The message of a
-  `DiscordHttpError::Transport` now names the phase that failed (a reset
-  after connecting reads `Network(phase=..)` where it read `Protocol`).
+  The Gateway WebSocket still connects directly. A REST transport failure
+  now keeps the phase it failed in (see below).
   Migration: a project that also lists any of these modules in its
   `moon.mod` must move it to the same version and follow their changelogs
   where it matches `@http.HttpError` or reads `Request.body`.
@@ -48,6 +77,21 @@ breaking change is listed with a migration note.
   Migration: drop `sleeper=` or pass `clock=` with your own `Clock`.
 
 ### Added
+
+- **The REST client takes a `clock`.** `Client(clock?)` and
+  `Client::offline(clock?)` (`gaato/http/clock`'s `Clock`, defaulting to the
+  wall clock) drive 429 and resend back-off, the default rate limiter's
+  windows, the attempt deadline around a supplied transport, telemetry
+  durations, and the `ChannelRef::with_typing` keepalive, so a test can run
+  them on virtual time. `App::serve(access=Token(..), clock?)` and the bot's
+  own client pass their clock on. The default transport still times its own
+  phases on the wall clock.
+- **`DeliveryFailure::Unsent`**: the callback never reached Discord, so the
+  window is still unused. `classify_rest_callback_failure` returns it for a
+  `Transport` or `Timeout` for which `is_unsent()` holds, and `ResponseGate`
+  returns to `Pending` on it, as on `Rejected`. Migration: a match on
+  `DeliveryFailure` with a `..` arm needs an `Unsent` arm (warning 11 under
+  `--deny-warn`).
 
 - **`InMemoryQueue` takes a `clock~`** for the Identify spacing, defaulting to
   the wall clock.
@@ -96,6 +140,14 @@ breaking change is listed with a migration note.
   `InvalidHeaderTimeoutMs` and `InvalidMaxConnections` for non-positive
   values. Migration: add arms for them where you match `ServerConfigError`
   exhaustively.
+
+- **A REST interaction callback that never reached Discord no longer closes
+  the callback window.** `classify_rest_callback_failure` treated every
+  transport failure as `Uncertain`, so a refused connection left the gate
+  `Unconfirmed`: the handler's next reply went out as a followup to a
+  callback Discord had never received, and failed, while the auto-defer
+  watchdog and the error policy saw no window left to answer in. It is now
+  `Unsent`, and the gate stays `Pending`.
 
 - **A REST response body is limited to 64 MiB.** The transport the client
   creates fails an attempt whose body would exceed it with

@@ -373,13 +373,19 @@ budget left, and the contexts expose the same value through
   raises `ResponseGateError::Expired`.
 
 If the sink raises, `classify(error)` returns a `DeliveryFailure`. `Rejected`
-returns the gate to `Pending`, so a different initial callback may be sent;
-`Expired` closes the window; `Uncertain` leaves it `Unconfirmed`. The REST
-classifier (`classify_rest_callback_failure`) treats JSON error code 10062
-(Unknown Interaction) as `Expired`. Client-side `DiscordHttpError::Validation`
-and other HTTP 4xx API errors are `Rejected`, except status 429 and error code
-40060 (already acknowledged). Server errors, transport errors, and timeouts are
-`Uncertain`. Cancellation always becomes `Unconfirmed` and never calls the
+(the callback was refused) and `Unsent` (it never reached Discord) return the
+gate to `Pending`, so an initial callback may still be sent; `Expired` closes
+the window; `Uncertain` leaves it `Unconfirmed`. The REST classifier
+(`classify_rest_callback_failure`) treats JSON error code 10062 (Unknown
+Interaction) as `Expired`. Client-side `DiscordHttpError::Validation` and
+other HTTP 4xx API errors are `Rejected`, except status 429 and error code
+40060 (already acknowledged). A transport failure or timeout for which
+`is_unsent()` holds is `Unsent`: Discord accepts one initial callback, and one
+that never arrived cannot be a second. The client has already resent it as
+often as `max_retries` allows, so the gate does not retry it again; the window
+stays open for the next callback the handler, the error policy, or the
+auto-defer watchdog sends. Server errors and other transport errors and
+timeouts are `Uncertain`. Cancellation always becomes `Unconfirmed` and never calls the
 classifier. A `send` made while another callback is in flight waits for that
 delivery to finish, then sees its result.
 

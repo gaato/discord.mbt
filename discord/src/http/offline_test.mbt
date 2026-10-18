@@ -98,18 +98,18 @@ async test "offline handler errors propagate through the typed boundary" {
   let client = @http.Client::offline(request => {
     match request.route {
       GetGateway => fail("handler broke")
-      _ => raise @http.DiscordHttpError::Timeout(timeout_ms=1)
+      _ => raise @http.DiscordHttpError::Timeout(phase=Head, timeout_ms=1)
     }
   })
   try client.get_gateway() catch {
-    @http.DiscordHttpError::Transport(message~) =>
+    @http.DiscordHttpError::Transport(phase=Unknown, message~) =>
       assert_true(message.contains("handler broke"))
     error => raise error
   } noraise {
     _ => fail("expected Transport")
   }
   try client.get_channel(Id(1UL)) catch {
-    @http.DiscordHttpError::Timeout(timeout_ms=1) => ()
+    @http.DiscordHttpError::Timeout(phase=Head, timeout_ms=1) => ()
     error => raise error
   } noraise {
     _ => fail("expected Timeout")
@@ -133,7 +133,9 @@ async test "offline client still validates and can be closed" {
   assert_eq(client.to_string(), "discord.Client")
   client.close()
   try client.get_gateway() catch {
-    @http.DiscordHttpError::Transport(..) => ()
+    // Refused before anything was sent.
+    @http.DiscordHttpError::Transport(phase=Pool, message="client is closed") as error =>
+      assert_true(error.is_unsent())
     error => raise error
   } noraise {
     _ => fail("a closed client must fail")

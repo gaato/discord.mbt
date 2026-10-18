@@ -39,52 +39,6 @@ test "rate_limit_details reads a body that is not JSON as no body" {
 }
 
 ///|
-test "DiscordRetry resends only a 429, after its delay plus one millisecond" {
-  let request = @ghttp.Request::new("GET", "https://discord.test/api")
-  let limited = @runtime.RateLimited(
-    retry_after_ms=None,
-    headers=headers_of([]),
-    body=@utf8.encode("{\"retry_after\":1.5}"),
-  )
-  let cases : Array[(Int32, @runtime.SdkError, Int32, Int32?)] = [
-    (1, limited, 0, Some(1501)),
-    (1, limited, 1, None),
-    (0, limited, 0, None),
-    // the runtime's own retry_after_ms is not consulted
-    (
-      1,
-      @runtime.RateLimited(
-        retry_after_ms=Some(9),
-        headers=headers_of([("retry-after", "2")]),
-        body=b"",
-      ),
-      0,
-      Some(2001),
-    ),
-    (1, @runtime.Status(status=500, headers=headers_of([]), body=b""), 0, None),
-    (
-      1,
-      @runtime.Transport(@ghttp.HttpError::Timeout(phase=Head, ms=5)),
-      0,
-      None,
-    ),
-  ]
-  for case in cases {
-    let (max_retries, error, attempt, expected) = case
-    assert_eq(
-      @runtime.RetryDecider::next_delay_ms(
-        DiscordRetry::{ max_retries, },
-        error,
-        request,
-        attempt,
-        0.0,
-      ),
-      expected,
-    )
-  }
-}
-
-///|
 /// The message `validate_request` rejects a request with, or `None`.
 fn validation_failure(
   route : Route,
@@ -204,11 +158,31 @@ test "api_error_of decodes Discord errors and keeps any other body verbatim" {
 ///|
 /// What `settle_runtime_error` makes of a runtime error, as text.
 fn settled(error : @runtime.SdkError) -> String {
-  try settle_runtime_error(error, timeout_ms=7) catch {
+  try settle_runtime_error(error) catch {
     error => "raise \{Repr(error)}"
   } noraise {
     response => "status \{response.status} \{response.body.stringify()}"
   }
+}
+
+///|
+test "the closed gate's refusal is reported as the client's closure" {
+  let settle = (error : @ghttp.HttpError) => {
+    try settle_runtime_error(@runtime.Transport(error)) catch {
+      error => Repr(error).to_string()
+    } noraise {
+      _ => "response"
+    }
+  }
+  assert_eq(
+    settle(Connect(CLOSED_MESSAGE)),
+    "Transport(phase=Pool, message=\"client is closed\")",
+  )
+  // A real refusal keeps its own report.
+  assert_eq(
+    settle(Connect("refused")),
+    "Transport(phase=Dial, message=\"could not connect: refused\")",
+  )
 }
 
 ///|
@@ -236,17 +210,17 @@ test "settle_runtime_error turns a status into a response and raises the rest" {
     ),
     (
       @runtime.Transport(@ghttp.HttpError::Timeout(phase=Head, ms=5)),
-      "raise Timeout(timeout_ms=7)",
+      "raise Timeout(phase=Head, timeout_ms=5)",
     ),
     (
       @runtime.Transport(@ghttp.HttpError::Connect("refused")),
-      "raise Transport(message=\"Connect(\\\"refused\\\")\")",
+      "raise Transport(phase=Dial, message=\"could not connect: refused\")",
     ),
     (
       @runtime.Decode(message="bad json", body=b"{"),
-      "raise Transport(message=\"bad json\")",
+      "raise Transport(phase=Unknown, message=\"bad json\")",
     ),
-    (@runtime.Config("bad"), "raise Transport(message=\"bad\")"),
+    (@runtime.Config("bad"), "raise Transport(phase=Unknown, message=\"bad\")"),
   ]
   for case in cases {
     let (error, expected) = case

@@ -3,7 +3,7 @@ import {
   "gaato/discord/model",
   "gaato/discord/telemetry",
   "gaato/discord/ratelimit",
-  "gaato/discord/internal/clock",
+  "gaato/http/clock" @hclock,
   "gaato/http" @ghttp,
   "gaato/http-async" @transport,
   "gaato/sdk-runtime" @runtime,
@@ -22,6 +22,7 @@ import {
 } for "test"
 
 import {
+  "gaato/http-async/mock" @simclock,
   "moonbitlang/async/socket",
   "moonbitlang/core/json",
 } for "wbtest"
