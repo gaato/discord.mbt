@@ -118,7 +118,7 @@ pub fn Client::Client(
   let warn_ : Ref[(String) -> Unit] = Ref(message => println(message))
   let closed_ = Ref(false)
   let runtime = @runtime.Client::new(
-    transport,
+    ClosedGate::{ inner: transport, closed: closed_, },
     clock,
     base_url~,
     retry=DiscordRetry::{ max_retries, closed: closed_, },

@@ -252,3 +252,35 @@ async test "a closed client does not resend a call that never reached Discord" {
   assert_eq(answered.val, 0)
   assert_eq(limiter.acquires, 1)
 }
+
+///|
+async test "a client closed during the backoff does not send the resend" {
+  let limiter = TimeoutTestLimiter(() => ())
+  let answered = Ref(0)
+  let clock = @simclock.VirtualClock()
+  let (client, wire) = flaky_client(
+    [@ghttp.HttpError::Connect("refused")],
+    limiter,
+    answered,
+    clock~,
+  )
+  let route = Route::custom(request_method=Post, path="/channels/1/messages")
+  @async.with_task_group(group => {
+    let sending = group.spawn(() => {
+      try client.request(route, body={ "content": "once" }) catch {
+        error => Some(error)
+      } noraise {
+        _ => None
+      }
+    })
+    clock.settle()
+    assert_eq(wire.failed, 1, msg="refused once, now in the backoff")
+    client.close()
+    while sending.try_wait() is None {
+      guard clock.advance_to_next() else { fail("nothing left to wait for") }
+    }
+    guard sending.wait() is Some(error) else { fail("the resend went out") }
+    assert_true(error.is_unsent(), msg=@debug.to_string(error))
+  })
+  assert_eq(answered.val, 0, msg="the transport never got the resend")
+}
