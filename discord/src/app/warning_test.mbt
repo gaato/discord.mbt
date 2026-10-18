@@ -15,6 +15,12 @@ test "AppWarning renders stable operator messages" {
     ),
   )
   inspect(
+    @app.AppWarning::InteractionDroppedWhileStopping(target="command:echo").to_string(),
+    content=(
+      #|interaction dropped (command:echo): the executor was stopping before the handler could start
+    ),
+  )
+  inspect(
     @app.AppWarning::ErrorResponseWithoutInteraction(summary="plain failure").to_string(),
     content=(
       #|cannot respond to a non-interaction failure: plain failure

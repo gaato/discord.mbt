@@ -70,6 +70,7 @@ pub using @app {
   type AppWarning,
   type CooldownOutage,
   type AppCtx,
+  type HandlerIntake,
   type InteractionEndpoint,
   type InteractionCtx,
   type InteractionTarget,

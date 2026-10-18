@@ -222,6 +222,8 @@ pub using @http {type GuildRef}
 
 pub using @app {type HandlerError}
 
+pub using @app {type HandlerIntake}
+
 pub using @app {type ImmediateCtx}
 
 pub using @cache {type InMemoryCache}

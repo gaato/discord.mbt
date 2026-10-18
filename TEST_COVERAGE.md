@@ -121,7 +121,7 @@ run; the gateway and voice loops are additionally tested on injected clocks):
 | discord/src/http/handles_channel.mbt | 3 | `with_typing` refresh-failure arm sits behind the real 8-second cadence. |
 | discord/src/bot/middleware.mbt | 1 | Middleware chain cancellation arm. |
 | discord/src/bot/shard_manager.mbt | 1 | Live gateway discovery's invalid-info arm; fake-connector startup and resume are tested. |
-| discord/src/bot/bot.mbt | 17 | Gateway run-loop teardown/cancellation arms; startup, intents, telemetry, and event routing are covered. The event-backlog put fails only on a queue closed by shutdown, and the `ShardEvent::..` arm that `#non_exhaustive` requires outside `@gateway` matches no current event. |
+| discord/src/bot/bot.mbt | 16 | Gateway run-loop teardown/cancellation arms; startup, intents, telemetry, and event routing are covered. The event-backlog put fails only on a queue closed by shutdown, and the `ShardEvent::..` arm that `#non_exhaustive` requires outside `@gateway` matches no current event. |
 
 Defensive arms unreachable by construction:
 

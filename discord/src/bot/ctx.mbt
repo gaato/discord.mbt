@@ -12,7 +12,7 @@ pub struct GatewayCtx {
   priv cache_ : @cache.InMemoryCache?
   priv framework_ : @framework.Framework
   priv collector_ : EventCollector
-  priv shutdown_requested_ : Ref[Bool]
+  priv intake_ : @app.HandlerIntake
 }
 
 ///|
@@ -219,10 +219,15 @@ fn guild_shard_id(
 }
 
 ///|
-/// Request a graceful stop. Closing every managed shard wakes the run loop;
-/// `run` then waits for already-started handlers, for at most the bot's
-/// `shutdown_grace_ms`, and cancels the ones still running after it.
+/// Request a graceful stop. From the request on, no event middleware, event
+/// handler, or interaction handler starts: events still waiting for handlers
+/// are discarded (`EventDiscarded` telemetry), event handlers waiting for
+/// capacity are dropped, and interactions waiting for capacity are dropped
+/// with `AppWarning::InteractionDroppedWhileStopping`. Closing every managed
+/// shard wakes the run loop; `run` then waits for the handlers that had
+/// started, for at most the bot's `shutdown_grace_ms`, and cancels the ones
+/// still running after it.
 pub async fn GatewayCtx::shutdown(self : GatewayCtx) -> Unit {
-  self.shutdown_requested_.val = true
+  self.intake_.close()
   close_shards(self.shards_)
 }

@@ -9,6 +9,7 @@ import {
   "gaato/http/clock" @hclock,
   "moonbitlang/async",
   "moonbitlang/async/aqueue",
+  "moonbitlang/async/cond_var",
   "moonbitlang/async/js_async",
   "moonbitlang/core/json",
   "moonbitlang/core/string",

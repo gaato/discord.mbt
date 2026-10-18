@@ -28,5 +28,11 @@ pub(all) enum TelemetryEvent {
   /// events were already waiting (see `BotBuilder`'s `event_backlog`). Cache
   /// updates and interaction routing had already run for it.
   EventDropped(kind~ : String, backlog~ : Int32)
+  /// A gateway event was not handed to event handlers because the bot's
+  /// shutdown was requested first (see `GatewayCtx::shutdown`): it was still
+  /// waiting in the backlog, arrived later, or left event middleware after
+  /// the request. Cache updates and interaction routing had already run for
+  /// it.
+  EventDiscarded(kind~ : String)
   DecodeError(marker~ : String)
 } derive(Debug)

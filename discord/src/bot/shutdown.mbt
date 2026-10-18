@@ -4,8 +4,9 @@
 pub const DEFAULT_SHUTDOWN_GRACE_MS : Int32 = 10000
 
 ///|
-/// Counts handlers that are running or spawned but not yet started, so a
-/// shutdown can wait for them within its grace period.
+/// Counts the handlers that have started and not yet ended (event middleware
+/// runs, event handlers, and interaction tasks), so a shutdown can wait for
+/// them within its grace period.
 priv struct HandlerTracker {
   mut active : Int32
   idle : @cond_var.Cond
@@ -37,19 +38,23 @@ async fn HandlerTracker::wait_idle(self : HandlerTracker) -> Unit {
 }
 
 ///|
-/// Wrap `spawner` so every task it starts is tracked from the call until the
-/// task ends. A call that fails before spawning, such as one cancelled while
-/// waiting for capacity, leaves nothing tracked.
+/// Run `body`, tracked while it runs.
+async fn HandlerTracker::track(
+  self : HandlerTracker,
+  body : async () -> Unit,
+) -> Unit {
+  self.enter()
+  defer self.leave()
+  body()
+}
+
+///|
+/// Wrap `spawner` so every task it starts is tracked while its body runs. A
+/// task that never starts its body, as `App::spawner` does once its intake has
+/// closed, is never tracked.
 fn HandlerTracker::spawner(
   self : HandlerTracker,
   spawner : @app.Spawner,
 ) -> @app.Spawner {
-  body => {
-    self.enter()
-    errdefer self.leave()
-    spawner(() => {
-      defer self.leave()
-      body()
-    })
-  }
+  body => spawner(() => self.track(body))
 }

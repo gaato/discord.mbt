@@ -189,6 +189,10 @@ priv struct BotFuzzModel {
   mut message_jobs : Int32
   mut expected_drops : Int32
   mut drops : Int32
+  /// Events still waiting for handlers when shutdown was requested.
+  mut expected_discards : Int32
+  /// `EventDiscarded` telemetry.
+  mut discards : Int32
   mut expected_backlog_warnings : Int32
   mut backlog_warnings : Int32
   shutdown_warnings : Array[String]
@@ -236,14 +240,18 @@ fn BotFuzzModel::note(self : BotFuzzModel, line : String) -> Unit {
 }
 
 ///|
-/// Tracked work still alive, as handlers and hooks recorded it: commands
-/// waiting for a permit or running, a message handler waiting for an event
-/// permit, and message handlers running.
+/// Tracked work still alive, as handlers and hooks recorded it: handlers
+/// running, and until a shutdown is requested (when the rest is dropped)
+/// commands waiting for a permit and a message handler waiting for an event
+/// permit.
 fn BotFuzzModel::alive(self : BotFuzzModel) -> Int32 {
-  let mut alive = self.message_jobs - self.messages.length()
-  for command in self.commands {
-    if command.state == Waiting {
-      alive += 1
+  let mut alive = 0
+  if self.shutdown_at is None {
+    alive += self.message_jobs - self.messages.length()
+    for command in self.commands {
+      if command.state == Waiting {
+        alive += 1
+      }
     }
   }
   for run in self.runs {
@@ -269,6 +277,8 @@ fn BotFuzzModel::start(
 ) -> BotFuzzRun {
   if self.returned_at is Some(_) {
     self.flag("\{label} started after run returned")
+  } else if self.shutdown_at is Some(_) {
+    self.flag("\{label} started after shutdown was requested")
   }
   let now = self.now()
   let duration = bot_fuzz_durations[self.durations.int(
@@ -381,6 +391,23 @@ fn BotFuzzModel::warn(self : BotFuzzModel, warning : @app.AppWarning) -> Unit {
       }
       self.flag("an interaction was dropped while none waited")
     }
+    InteractionDroppedWhileStopping(target~) => {
+      if target != "command:raw" {
+        self.flag("dropped unexpected interaction \{target}")
+      }
+      // Every waiting command gives up as the shutdown is requested.
+      if self.shutdown_at != Some(self.now()) {
+        self.flag("an interaction was dropped as stopping without a shutdown")
+      }
+      for command in self.commands {
+        if command.state == Waiting {
+          self.note("  dropped command \{command.id} at shutdown")
+          command.state = Dropped
+          return
+        }
+      }
+      self.flag("an interaction was dropped as stopping while none waited")
+    }
     Executor(source~, message~) if source == "gateway" &&
       message.contains(" events behind; dropping ") => {
       self.note("  backlog warning")
@@ -408,6 +435,10 @@ fn BotFuzzModel::telemetry(
       if backlog != self.backlog {
         self.flag("EventDropped reported backlog \{backlog}")
       }
+    }
+    EventDiscarded(kind~) => {
+      self.note("  discarded \{kind}")
+      self.discards += 1
     }
     EventDispatched(handler_count~, ..) => {
       self.taken += 1
@@ -661,7 +692,8 @@ fn BotFuzzModel::observe(self : BotFuzzModel, bot : Bot) -> Unit raise {
   if self.shards.is_empty() {
     self.shards = bot.core.running_shards_.val.map(owner => owner.shard)
   }
-  if self.returned_at is None {
+  // Nothing starts once a shutdown is requested.
+  if self.returned_at is None && self.shutdown_at is None {
     self.pump()
   }
   if self.messages != self.expected_messages {
@@ -672,6 +704,11 @@ fn BotFuzzModel::observe(self : BotFuzzModel, bot : Bot) -> Unit raise {
   if self.taken != self.expected_taken {
     self.violation(
       "the runner took \{self.taken} event jobs, expected \{self.expected_taken}",
+    )
+  }
+  if self.discards != self.expected_discards {
+    self.violation(
+      "\{self.discards} events discarded, expected \{self.expected_discards}",
     )
   }
   if self.drops != self.expected_drops {
@@ -715,6 +752,13 @@ fn BotFuzzModel::observe(self : BotFuzzModel, bot : Bot) -> Unit raise {
       }
       if self.alive() == 0 {
         self.violation("every handler is done but run has not returned")
+      }
+      for command in self.commands {
+        if command.state == Waiting {
+          self.violation(
+            "command \{command.id} still waits after shutdown was requested",
+          )
+        }
       }
     }
     (None, Some(_)) =>
@@ -886,6 +930,12 @@ async fn BotFuzzModel::end(
       guard contexts is [ctx, ..] else { return false }
       self.note("shutdown")
       self.shutdown_at = Some(self.now())
+      // What waits to start is dropped: the events in the backlog with
+      // telemetry, and the message handler waiting for a permit silently
+      // (its event was dispatched already).
+      self.expected_discards = self.queue.length()
+      self.queue.clear()
+      self.blocked = None
       ctx.shutdown()
     }
     Cancel => {
@@ -980,6 +1030,8 @@ async fn run_bot_schedule(
     message_jobs: 0,
     expected_drops: 0,
     drops: 0,
+    expected_discards: 0,
+    discards: 0,
     expected_backlog_warnings: 0,
     backlog_warnings: 0,
     shutdown_warnings: [],
@@ -1116,4 +1168,44 @@ async test "the bot runtime follows the model under random fault schedules" {
       run_bot_schedule(seed, steps)
     })
   }
+}
+
+///|
+async test "a message handler waiting for a permit at shutdown never starts" {
+  // The schedule the fuzz shrank a nondeterministic failure to (seed 80:
+  // one handler permit, a backlog of two, a 1 s grace): the last message's
+  // handler waits for the permit the one before it holds when the shutdown
+  // comes, and must not start once that one finishes within the grace.
+  let trace = run_bot_schedule(80, [
+    (Hello, 0),
+    (Ready, 0),
+    (Message, 0),
+    (Message, 0),
+    (Command, 0),
+    (Advance(61007), 0),
+    (Message, 0),
+    (Message, 0),
+    (End, 0),
+  ])
+  inspect(
+    trace,
+    content=(
+      #|seed 80
+      #|shards=2 permits=1 backlog=2 grace=1000 max_concurrency=2 Shutdown
+      #|t=0 Hello
+      #|t=0 Ready
+      #|t=0 message 700000000000000001
+      #|t=0   start message 700000000000000001 for Some(23017)
+      #|t=0 message 700000000000000002
+      #|t=0 command 500000000000000003
+      #|t=0   start command 500000000000000003 for Some(41)
+      #|t=0 advance 61007
+      #|t=23017   start message 700000000000000002 for Some(0)
+      #|t=61007 message 700000000000000004
+      #|t=61007   start message 700000000000000004 for Some(41)
+      #|t=61007 message 700000000000000005
+      #|t=61007 shutdown
+      #|t=61048 run returned
+    ),
+  )
 }
