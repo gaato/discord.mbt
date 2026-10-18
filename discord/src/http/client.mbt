@@ -28,7 +28,7 @@ priv enum Backend {
 
 ///|
 /// Library version, sent in the User-Agent header.
-pub const VERSION : String = "0.9.0"
+pub const VERSION : String = "0.10.0"
 
 ///|
 /// The largest response body the default transport buffers, the same 64 MiB

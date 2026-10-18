@@ -7,6 +7,8 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-10-18
+
 ### Changed
 
 - **`DiscordHttpError::Transport` and `Timeout` say where the exchange
