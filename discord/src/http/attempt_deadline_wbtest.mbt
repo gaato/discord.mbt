@@ -72,8 +72,9 @@ async test "the attempt deadline runs on the client's clock" {
     deadline_outcome(60000, 1000, streaming=true),
     ("Timeout(phase=Unknown, ms=1000)", 1000L),
   )
-  // a nonpositive deadline expires before the exchange starts
-  assert_eq(deadline_outcome(100, 0), ("Timeout(phase=Unknown, ms=0)", 0L))
+  // a nonpositive deadline expires before the exchange starts: unsent
+  assert_eq(deadline_outcome(100, 0), ("Timeout(phase=Pool, ms=0)", 0L))
+  assert_eq(deadline_outcome(100, -5), ("Timeout(phase=Pool, ms=-5)", 0L))
   // the inner transport's own failure passes through
   assert_eq(
     deadline_outcome(10, 1000, fail_with=Connect("refused")),
