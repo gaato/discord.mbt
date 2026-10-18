@@ -15,11 +15,6 @@ pub(all) suberror VoiceUdpError {
 } derive(Debug, Eq)
 
 ///|
-priv suberror VoiceDiscoveryTimeout {
-  VoiceDiscoveryTimeout
-} derive(Debug)
-
-///|
 priv struct SocketVoiceUdp {
   client : @socket.UdpClient
 }
@@ -105,13 +100,15 @@ pub fn parse_ip_discovery_response(
 }
 
 ///|
-/// Run voice IP discovery, retrying only receive timeouts.
+/// Run voice IP discovery, retrying only receive timeouts, each timed on
+/// `clock`.
 #doc(hidden)
 pub async fn discover_external_address(
   udp : &VoiceUdp,
   ssrc : UInt32,
   retries~ : Int32 = 3,
   timeout_ms~ : Int32 = 1000,
+  clock~ : &@hclock.Clock = @transport.AsyncClock::new(),
 ) -> (String, Int32) {
   if retries <= 0 || timeout_ms <= 0 {
     raise VoiceUdpError::IpDiscoveryFailed(
@@ -123,15 +120,10 @@ pub async fn discover_external_address(
   for attempt in 0..<retries {
     udp.send(request)
     let buffer : FixedArray[Byte] = FixedArray::make(74, 0)
-    let received = @async.with_timeout(
-      timeout_ms,
-      () => udp.recv(buffer),
-      error=VoiceDiscoveryTimeout,
-    ) catch {
-      VoiceDiscoveryTimeout => -1
-      error => raise error
-    }
-    if received < 0 {
+    let received = @transport.with_timeout_opt(clock, timeout_ms, () => {
+      udp.recv(buffer)
+    })
+    guard received is Some(received) else {
       if attempt + 1 == retries {
         raise VoiceUdpError::IpDiscoveryFailed(
           attempts=retries,

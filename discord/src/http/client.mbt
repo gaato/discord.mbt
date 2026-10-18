@@ -80,12 +80,8 @@ pub fn Client::Client(
   request_timeout_ms~ : Int32 = 30000,
   max_retries~ : Int32 = 4,
   default_allowed_mentions? : @model.AllowedMentions,
-  clock? : &@hclock.Clock,
+  clock~ : &@hclock.Clock = @transport.AsyncClock::new(),
 ) -> Client {
-  let clock : &@hclock.Clock = match clock {
-    Some(clock) => clock
-    None => @transport.AsyncClock::new()
-  }
   let limiter : &@runtime.RateLimiter = match limiter {
     Some(l) => l
     None => @ratelimit.rate_limiter(clock~)
@@ -176,12 +172,8 @@ pub fn Client::Client(
 pub fn Client::offline(
   handler : async (HttpRequest) -> HttpResponse,
   default_allowed_mentions? : @model.AllowedMentions,
-  clock? : &@hclock.Clock,
+  clock~ : &@hclock.Clock = @transport.AsyncClock::new(),
 ) -> Client {
-  let clock : &@hclock.Clock = match clock {
-    Some(clock) => clock
-    None => @transport.AsyncClock::new()
-  }
   {
     token: "",
     owned_transport: None,

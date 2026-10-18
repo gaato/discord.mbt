@@ -134,21 +134,31 @@ impl @voice.VoiceUdp for SilentVoiceUdp with fn close(_self) {
 }
 
 ///|
-async test "IP discovery retries receive timeouts and then raises" {
+async test "IP discovery retries receive timeouts on its clock and then raises" {
   let udp = SilentVoiceUdp::{ sends: [], }
-  try
-    @voice.discover_external_address(udp, 42U, retries=2, timeout_ms=5)
-  catch {
-    @voice.VoiceUdpError::IpDiscoveryFailed(attempts~, reason~) => {
-      assert_eq(attempts, 2)
-      assert_true(reason.contains("timed out"))
+  let clock = @simclock.VirtualClock()
+  @async.with_task_group(group => {
+    let discovery = group.spawn(no_wait=true, allow_failure=true, () => {
+      @voice.discover_external_address(udp, 42U, retries=2, clock~)
+    })
+    clock.settle()
+    // one request per attempt goes out before each timeout
+    assert_eq(udp.sends.length(), 1)
+    assert_eq(clock.pending(), [1000])
+    clock.advance(1000)
+    assert_eq(udp.sends.length(), 2)
+    clock.advance(1000)
+    try discovery.wait() catch {
+      @voice.VoiceUdpError::IpDiscoveryFailed(attempts~, reason~) => {
+        assert_eq(attempts, 2)
+        assert_true(reason.contains("timed out"))
+      }
+      error => fail("unexpected discovery error: \{Repr(error)}")
+    } noraise {
+      _ => fail("expected discovery to fail")
     }
-    error => fail("unexpected discovery error: \{Repr(error)}")
-  } noraise {
-    _ => fail("expected discovery to fail")
-  }
-  // one request per attempt went out before each timeout
-  assert_eq(udp.sends.length(), 2)
+  })
+  assert_eq(clock.pending(), [])
 }
 
 ///|

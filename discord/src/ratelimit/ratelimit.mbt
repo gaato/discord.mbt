@@ -12,12 +12,8 @@
 /// blocking every bucket, and one second of backoff for a 429 without Retry-After.
 pub fn rate_limiter(
   global_limit~ : Int32 = 50,
-  clock? : &@clock.Clock,
+  clock~ : &@clock.Clock = @transport.AsyncClock::new(),
 ) -> @runtime.WindowLimiter {
-  let clock : &@clock.Clock = match clock {
-    Some(clock) => clock
-    None => @transport.AsyncClock::new()
-  }
   @runtime.WindowLimiter::new(
     clock,
     @runtime.rate_limit_headers(

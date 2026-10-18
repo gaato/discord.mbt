@@ -1,0 +1,307 @@
+///|
+/// Guard the injected clock: library code (tests excluded) must wait and read
+/// time through a `gaato/http/clock` `Clock` it was given, so a test can drive
+/// it with a virtual clock. This audit fails on any direct use of a real-time
+/// entry point in the library sources of every module.
+///
+/// A real clock as a labelled argument's default (`clock~ : &@hclock.Clock =
+/// @transport.AsyncClock::new()`, `now~ : () -> Int64 = @clock.now_ms`) is the
+/// injection point itself and passes. Every other call site needs an entry in
+/// `scripts/clock_guard.allow`: `<file> <function> <entry point> # reason`,
+/// one line per use. Unknown or stale entries fail the audit.
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/fs",
+  "moonbitlang/core/env",
+}
+
+///|
+/// The library source roots, one per module.
+let roots : Array[String] = ["discord/src", "discord_voice/src", "dave/src"]
+
+///|
+/// Real-time entry points, by the text that calls them.
+let entry_points : Array[String] = [
+  "@async.sleep(", "@async.with_timeout(", "@async.with_timeout_opt(", "@async.now(",
+  "@async.retry(", "@async.Timer", "FixedDelay(", "ExponentialDelay(", "@env.now(",
+  "@clock.now_ms", "AsyncClock::new(", "AsyncClock::{",
+]
+
+///|
+/// The entry point's name as allow entries spell it.
+fn entry_name(entry : String) -> String {
+  entry.strip_suffix("(").unwrap_or(entry[:]).to_owned()
+}
+
+///|
+/// Whether `path` is a library source rather than a test: `x.mbt` or a
+/// target-specific `x.js.mbt`, but not `x_test.mbt` or `x_wbtest.native.mbt`.
+fn is_library_source(path : String) -> Bool {
+  guard path.strip_suffix(".mbt") is Some(stem) else { return false }
+  let stem = stem.to_owned()
+  let base = match stem.rev_find(".") {
+    Some(dot) if stem.rev_find("/").unwrap_or(-1) < dot => stem[:dot].to_owned()
+    _ => stem
+  }
+  !base.has_suffix("_test") && !base.has_suffix("_wbtest")
+}
+
+///|
+/// The column of the `fn` keyword on `line`, if it has one.
+fn fn_keyword(line : String) -> Int32? {
+  for candidate in ["fn ", "fn["] {
+    if line.has_prefix(candidate) {
+      return Some(0)
+    }
+    if line.find(" " + candidate) is Some(at) {
+      return Some(at + 1)
+    }
+  }
+  None
+}
+
+///|
+/// The declaration a top-level line starts, as allow entries name it:
+/// `Type::method` or `function`, and `Type::method` for the trait method of
+/// an `impl Trait for Type with fn method`. A top-level `let` is named by
+/// its binding.
+fn declaration(line : String) -> String? {
+  guard line.length() > 0 && line[0] != ' ' && line[0] != '/' else {
+    return None
+  }
+  guard fn_keyword(line) is Some(at) else {
+    let words = line.split(" ").map(word => word.to_owned()).to_array()
+    let names = words.filter(word => !(word is ("pub" | "priv" | "let")))
+    if words.search("let") is Some(_) && names is [name, ..] {
+      return Some(name.strip_suffix(":").unwrap_or(name[:]).to_owned())
+    }
+    return None
+  }
+  let mut rest = line[at + 2:].to_owned()
+  if rest.has_prefix("[") {
+    rest = match rest.find("]") {
+      Some(close) => rest[close + 1:].to_owned()
+      None => rest
+    }
+  }
+  let rest = rest.trim_start().to_owned()
+  let name = match rest.find("(") {
+    Some(open) => rest[:open].to_owned()
+    None => rest
+  }
+  let head = line[:at].to_owned()
+  match (head.find("impl "), head.find(" for ")) {
+    (Some(_), Some(for_at)) => {
+      let after = head[for_at + 5:].to_owned()
+      let target = match after.find(" ") {
+        Some(space) => after[:space].to_owned()
+        None => after
+      }
+      Some("\{target}::\{name}")
+    }
+    _ => Some(name)
+  }
+}
+
+///|
+/// Whether the use at `column` is a labelled argument's default value.
+fn is_injection_default(line : String, column : Int32) -> Bool {
+  let mut before = line[:column].to_owned()
+  // Drop the package qualifier of `@transport.AsyncClock::new()`.
+  if before.has_suffix(".") && before.rev_find("@") is Some(at) {
+    before = before[:at].to_owned()
+  }
+  let before = before.trim_end().to_owned()
+  before.contains("~ :") &&
+  (before.has_suffix("=") || before.has_suffix("= Ref("))
+}
+
+///|
+/// Every unsanctioned real-time use in the library sources among `files`
+/// (path, text), keyed `<path> <function> <entry point>`, with its lines.
+fn scan(files : Array[(String, String)]) -> Map[String, Array[Int32]] {
+  let found : Map[String, Array[Int32]] = Map([])
+  for file in files {
+    let (path, text) = file
+    if !is_library_source(path) {
+      continue
+    }
+    let mut current = "<top>"
+    for index, raw in text.split("\n").to_array() {
+      let line = raw.to_owned()
+      if declaration(line) is Some(name) {
+        current = name
+      }
+      if line.trim_start().has_prefix("//") {
+        continue
+      }
+      for entry in entry_points {
+        // Every occurrence counts, two on one line included.
+        let mut from = 0
+        while line[from:].find(entry) is Some(offset) {
+          let column = from + offset
+          from = column + entry.length()
+          if is_injection_default(line, column) {
+            continue
+          }
+          let key = "\{path} \{current} \{entry_name(entry)}"
+          found.get_or_init(key, () => []).push(index + 1)
+        }
+      }
+    }
+  }
+  found
+}
+
+///|
+/// The allowed uses, keyed as `scan` keys them, with how many each key
+/// allows: every use needs its own entry, so a second use of the same entry
+/// point in an allowed function needs a second line and its own reason.
+fn parse_allow(text : String) -> Map[String, Int] raise {
+  let allowed : Map[String, Int] = Map([])
+  for raw in text.split("\n") {
+    let line = raw.trim().to_owned()
+    if line.is_empty() || line.has_prefix("#") {
+      continue
+    }
+    guard line.find("#") is Some(hash) && !line[hash + 1:].trim().is_empty() else {
+      fail("allow entry requires a reason: \{line}")
+    }
+    let fields = line[:hash]
+      .split(" ")
+      .filter(field => !field.is_empty())
+      .map(field => field.to_owned())
+      .to_array()
+    guard fields.length() == 3 else {
+      fail("allow entry needs <file> <function> <entry point>: \{line}")
+    }
+    let key = fields.join(" ")
+    allowed[key] = allowed.get(key).unwrap_or(0) + 1
+  }
+  allowed
+}
+
+///|
+fn audit(files : Array[(String, String)], allow : String) -> Unit raise {
+  let allowed = parse_allow(allow)
+  let found = scan(files)
+  let problems : Array[String] = []
+  for key, lines in found {
+    let permitted = allowed.get(key).unwrap_or(0)
+    if lines.length() > permitted {
+      let at = lines.map(line => line.to_string()).join(", ")
+      problems.push(
+        "real clock in library code: \{key} (line \{at}), \{lines.length()} uses for \{permitted} allow entries; take the injected clock or add one allow entry with a reason per use",
+      )
+    }
+  }
+  for key, permitted in allowed {
+    let uses = found.get(key).map(lines => lines.length()).unwrap_or(0)
+    if uses < permitted {
+      problems.push(
+        "stale allow entry: \{key} (\{permitted} entries for \{uses} uses)",
+      )
+    }
+  }
+  if !problems.is_empty() {
+    problems.sort()
+    fail(problems.join("\n"))
+  }
+}
+
+///|
+fn must_fail(run : () -> Unit raise) -> Unit raise {
+  try run() catch {
+    _ => ()
+  } noraise {
+    _ => fail("negative clock guard self-test unexpectedly passed")
+  }
+}
+
+///|
+async fn library_files() -> Array[(String, String)] {
+  let paths : Array[String] = []
+  for root in roots {
+    @fs.walk(
+      root,
+      (dir, entries) => {
+        for entry in entries {
+          if entry.has_suffix(".mbt") {
+            paths.push("\{dir}/\{entry}")
+          }
+        }
+      },
+      max_concurrency=1,
+    )
+  }
+  paths.sort()
+  let files : Array[(String, String)] = []
+  for path in paths {
+    files.push((path, @fs.read_file(path).text()))
+  }
+  files
+}
+
+///|
+async fn main {
+  let args = @env.args()
+  let self_test = args.length() == 2 && args[1] == "--self-test"
+  if args.length() > 2 || (args.length() == 2 && !self_test) {
+    fail("usage: moon run scripts/clock_guard.mbtx [--self-test]")
+  }
+  let files = library_files()
+  let allow = @fs.read_file("scripts/clock_guard.allow").text()
+  audit(files, allow)
+  if self_test {
+    let with_file = (path : String, text : String) => {
+      files.copy()..push((path, text))
+    }
+    let body = "///|\nasync fn wait() -> Unit {\n  @async.sleep(10)\n}\n"
+    // A real sleep in library code fails, in a test file it passes.
+    must_fail(() => audit(with_file("discord/src/x/x.mbt", body), allow))
+    must_fail(() => audit(with_file("discord/src/x/x.js.mbt", body), allow))
+    audit(with_file("discord/src/x/x_test.mbt", body), allow)
+    audit(with_file("discord/src/x/x_wbtest.native.mbt", body), allow)
+    // Comments pass; a real clock is fine as a default, not in a body.
+    audit(with_file("discord/src/x/x.mbt", "/// @async.sleep(10)\n"), allow)
+    let default = "///|\npub fn make(\n  clock~ : &@hclock.Clock = @transport.AsyncClock::new(),\n) -> Unit {\n}\n"
+    audit(with_file("discord/src/x/x.mbt", default), allow)
+    let made = "///|\npub fn make() -> Unit {\n  let clock = @transport.AsyncClock::new()\n}\n"
+    must_fail(() => audit(with_file("discord/src/x/x.mbt", made), allow))
+    // The entry names its function, so an allowed use elsewhere fails.
+    let allowed = allow +
+      "\ndiscord/src/x/x.mbt wait @async.sleep # self-test\n"
+    audit(with_file("discord/src/x/x.mbt", body), allowed)
+    let moved = body.replace(old="fn wait()", new="fn other()")
+    must_fail(() => audit(with_file("discord/src/x/x.mbt", moved), allowed))
+    // Each use needs its own entry: a second use under one entry fails,
+    // and an entry left over after a use goes away is stale.
+    let twice = body.replace(
+      old="  @async.sleep(10)\n",
+      new="  @async.sleep(10)\n  @async.sleep(20)\n",
+    )
+    must_fail(() => audit(with_file("discord/src/x/x.mbt", twice), allowed))
+    let allowed_twice = allowed +
+      "\ndiscord/src/x/x.mbt wait @async.sleep # self-test, second use\n"
+    audit(with_file("discord/src/x/x.mbt", twice), allowed_twice)
+    must_fail(() => audit(with_file("discord/src/x/x.mbt", body), allowed_twice))
+    // Two uses on one line are two uses.
+    let one_line = body.replace(
+      old="  @async.sleep(10)\n",
+      new="  @async.sleep(10); @async.sleep(20)\n",
+    )
+    must_fail(() => audit(with_file("discord/src/x/x.mbt", one_line), allowed))
+    audit(with_file("discord/src/x/x.mbt", one_line), allowed_twice)
+    // Missing, stale, and unexplained entries fail.
+    must_fail(() => audit(files, ""))
+    must_fail(() => audit(files, allowed))
+    must_fail(() => {
+      audit(
+        with_file("discord/src/x/x.mbt", body),
+        allow + "\ndiscord/src/x/x.mbt wait @async.sleep\n",
+      )
+    })
+    println("Clock guard self-tests: OK")
+  }
+  println("Clock guard: OK")
+}

@@ -82,7 +82,7 @@ pub(all) enum ReceivedAudio {
 pub struct VoiceClient {
   // private fields
 }
-pub fn VoiceClient::VoiceClient() -> Self
+pub fn VoiceClient::VoiceClient(clock? : &@clock.Clock) -> Self
 pub fn VoiceClient::attach(Self, @bot.BotBuilder) -> Unit
 pub fn VoiceClient::connection(Self, @model.Id[@model.GuildMarker]) -> VoiceConnection?
 pub async fn VoiceClient::join(Self, @bot.GatewayCtx, @model.Id[@model.GuildMarker], @model.Id[@model.ChannelMarker], self_mute? : Bool, self_deaf? : Bool, timeout_ms? : Int, telemetry? : (VoiceTelemetry) -> Unit) -> VoiceConnection

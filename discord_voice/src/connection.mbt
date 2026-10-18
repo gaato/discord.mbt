@@ -286,7 +286,7 @@ async fn VoiceConnection::select_protocol(
     }
   }
   errdefer @async.protect_from_cancel(() => udp.close() catch { _ => () })
-  let discovered = discover_external_address(udp, ssrc) catch {
+  let discovered = discover_external_address(udp, ssrc, clock=self.clock_) catch {
     error if @async.is_being_cancelled() => raise error
     VoiceUdpError::IpDiscoveryFailed(reason~, ..) => {
       self.set_failure(IpDiscoveryFailed(reason~), code=None)

@@ -2,7 +2,8 @@
 // whose frames, closes, and timing are drawn from a seed, on virtual time.
 // After every step a reference model, written from the Gateway docs and the
 // public `on_close` policy, checks what the shard sent, how it closed each
-// connection, which timers it left pending, and the state it reports.
+// connection, which timers it left pending, and the state it reports. A
+// failing schedule is shrunk to a minimal step list.
 
 ///|
 const FUZZ_INTERVAL : Int32 = 45000
@@ -559,6 +560,8 @@ fn fuzz_steps(seed : Int32, length : Int32) -> Array[FuzzStep] {
 ///|
 async test "shard follows the reference model under random fault schedules" {
   for seed in 0..<FUZZ_SEED_COUNT {
-    run_shard_schedule(seed, fuzz_steps(seed, 80))
+    @fuzz.check_schedule(fuzz_steps(seed, 80), steps => {
+      run_shard_schedule(seed, steps)
+    })
   }
 }

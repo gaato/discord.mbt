@@ -31,6 +31,7 @@ import {
   "gaato/http-async/mock" @simclock,
   "moonbitlang/core/random",
   "moonbitlang/core/debug",
+  "gaato/discord/internal/fuzz",
 } for "wbtest"
 
 // `moonbitlang/async/js_async` only backs the JavaScript dispatch bridge, so

@@ -3,7 +3,8 @@
 // callers are cancelled mid-delivery, and the deadline passes. The model below
 // tracks what may have reached Discord and checks the gate never delivers a
 // second initial callback, never starts one it should refuse, and reports the
-// state the deliveries so far imply.
+// state the deliveries so far imply. A failing schedule is shrunk to a
+// minimal step list.
 
 ///|
 const GATE_FUZZ_DEADLINE : Int32 = 2500
@@ -25,7 +26,8 @@ enum SinkPlan {
 enum GateStep {
   Send(@model.InteractionResponseType)
   Release(SinkPlan)
-  Cancel
+  /// Cancel the caller at this index, modulo the callers still running.
+  Cancel(Int32)
   Expire
   Advance(Int32)
 } derive(Debug)
@@ -136,7 +138,7 @@ fn gate_step(rand : @random.Rand) -> GateStep {
       },
     )
   } else if roll < 72 {
-    Cancel
+    Cancel(rand.int(limit=1 << 16))
   } else if roll < 78 {
     Expire
   } else {
@@ -152,10 +154,15 @@ fn gate_refusal(error : Error) -> Bool {
 }
 
 ///|
-async fn run_gate_schedule(seed : Int32, length : Int32) -> Unit {
+fn gate_steps(seed : Int32, length : Int32) -> Array[GateStep] {
+  let rand = gate_rand(seed, 0)
+  Array::makei(length, _ => gate_step(rand))
+}
+
+///|
+async fn run_gate_schedule(seed : Int32, steps : Array[GateStep]) -> Unit {
   let clock = @simclock.VirtualClock()
   let plans = gate_rand(seed, 1)
-  let steps = gate_rand(seed, 0)
   let model = GateModel::{
     clock,
     deadline_at: clock.now_unix_ms() + GATE_FUZZ_DEADLINE.to_int64(),
@@ -228,8 +235,7 @@ async fn run_gate_schedule(seed : Int32, length : Int32) -> Unit {
   )
   @async.with_task_group(group => {
     let tasks : Array[@async.Task[Unit]] = []
-    for _ in 0..<length {
-      let step = gate_step(steps)
+    for step in steps {
       match step {
         Send(typ) => {
           model.log.push(@debug.to_string(step))
@@ -251,10 +257,10 @@ async fn run_gate_schedule(seed : Int32, length : Int32) -> Unit {
             model.log.push(@debug.to_string(step))
             blocked[0].put(plan)
           }
-        Cancel =>
+        Cancel(pick) =>
           if tasks.length() > 0 {
             model.log.push(@debug.to_string(step))
-            tasks.remove(steps.int(limit=tasks.length())).cancel()
+            tasks.remove(pick % tasks.length()).cancel()
           }
         Expire => {
           model.log.push(@debug.to_string(step))
@@ -297,6 +303,8 @@ async fn run_gate_schedule(seed : Int32, length : Int32) -> Unit {
 ///|
 async test "the response gate delivers at most once under random races" {
   for seed in 0..<GATE_FUZZ_SEEDS {
-    run_gate_schedule(seed, 40)
+    @fuzz.check_schedule(gate_steps(seed, 40), steps => {
+      run_gate_schedule(seed, steps)
+    })
   }
 }
