@@ -92,12 +92,13 @@ pub async fn VoiceClient::run(Self) -> Unit
 pub struct VoiceConnection {
   // private fields
 }
+pub fn VoiceConnection::channel_id(Self) -> UInt64
 pub async fn VoiceConnection::disconnect(Self) -> Unit
 pub fn VoiceConnection::latency_ms(Self) -> Int64?
 pub async fn VoiceConnection::next_event(Self) -> VoiceEvent
 pub async fn VoiceConnection::play(Self, &AudioSource) -> Unit
 pub async fn VoiceConnection::set_speaking(Self, Int) -> Unit
-pub fn[X] VoiceConnection::start(@async.TaskGroup[X], VoiceCredentials, user_id~ : String, channel_id~ : UInt64, leave~ : async () -> Unit, rejoin~ : async () -> VoiceCredentials, connector? : async (String) -> &VoiceTransport, udp_opener? : async (String, Int) -> &VoiceUdp, receive? : Bool, event_backlog? : Int, telemetry? : (VoiceTelemetry) -> Unit, clock? : &@clock.Clock, rand? : @random.Rand) -> Self raise VoiceError
+pub fn[X] VoiceConnection::start(@async.TaskGroup[X], VoiceCredentials, user_id~ : String, channel_id~ : UInt64, leave~ : async () -> Unit, rejoin~ : async () -> VoiceCredentials, next_server? : async () -> VoiceServer?, next_channel? : async () -> UInt64?, server_timeout_ms? : Int, connector? : async (String) -> &VoiceTransport, udp_opener? : async (String, Int) -> &VoiceUdp, receive? : Bool, event_backlog? : Int, telemetry? : (VoiceTelemetry) -> Unit, clock? : &@clock.Clock, rand? : @random.Rand) -> Self raise VoiceError
 pub fn VoiceConnection::state(Self) -> VoiceConnectionState
 pub async fn VoiceConnection::stop(Self) -> Unit
 pub fn VoiceConnection::subscribe(Self, user_id~ : String, end_after_silence_ms? : Int?, backlog? : Int) -> VoiceReceiveStream raise VoiceError
@@ -180,6 +181,11 @@ pub fn VoiceReceiveStream::close(Self) -> Unit
 pub async fn VoiceReceiveStream::next_frame(Self) -> Bytes?
 pub async fn VoiceReceiveStream::next_packet(Self) -> ReceivedAudio?
 pub impl AudioSource for VoiceReceiveStream
+
+pub(all) struct VoiceServer {
+  token : String
+  endpoint : String?
+} derive(Eq, @debug.Debug)
 
 #non_exhaustive
 pub(all) enum VoiceTelemetry {

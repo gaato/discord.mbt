@@ -4,6 +4,9 @@ priv struct PendingVoiceTransport {
   outgoing : @aqueue.Queue[Json]
   recv_started : @aqueue.Queue[Unit]
   close_calls : Ref[Int32]
+  /// While set, `close` waits on it before closing, as a close frame that
+  /// takes its time to send.
+  close_held : Ref[@aqueue.Queue[Unit]?]
 }
 
 ///|
@@ -13,6 +16,7 @@ fn PendingVoiceTransport::new() -> PendingVoiceTransport {
     outgoing: Queue(kind=Unbounded),
     recv_started: Queue(kind=Unbounded),
     close_calls: Ref(0),
+    close_held: Ref(None),
   }
 }
 
@@ -35,6 +39,9 @@ impl VoiceTransport for PendingVoiceTransport with fn send_binary(_self, _bytes)
 ///|
 impl VoiceTransport for PendingVoiceTransport with fn close(self, code~) {
   self.close_calls.val += 1
+  if self.close_held.val is Some(held) {
+    held.get()
+  }
   self.incoming.close(
     error=VoiceTransportClosed(code=Some(code), reason="client close"),
   )
@@ -134,6 +141,8 @@ priv struct FakeVoicePort {
   fail_send : Ref[Bool]
   // Expectations registered when the last opcode 4 was sent.
   expected_at_send : Ref[(Int32, Int32)]
+  // While set, an opcode 4 that leaves waits for a value from it.
+  leave_gate : Ref[@aqueue.Queue[Unit]?]
 }
 
 ///|
@@ -147,6 +156,7 @@ fn FakeVoicePort::new(
     sent: [],
     fail_send: Ref(false),
     expected_at_send: Ref((0, 0)),
+    leave_gate: Ref(None),
   }
 }
 
@@ -206,18 +216,26 @@ fn FakeVoicePort::port(self : FakeVoicePort) -> VoiceGatewayPort {
       if self.fail_send.val {
         raise FakeSendFailed
       }
+      if state.channel_id is None && self.leave_gate.val is Some(gate) {
+        gate.get()
+      }
       self.sent.push(state)
     },
   }
 }
 
 ///|
-fn voice_state(session_id : String) -> @model.VoiceState raise {
+fn voice_state(
+  session_id : String,
+  channel~ : String = "200",
+) -> @model.VoiceState raise {
   @json.from_json(
     @json.parse(
       (
-        #|{"guild_id":"100","channel_id":"200","user_id":"1","session_id":"SESSION","deaf":false,"mute":false,"self_deaf":false,"self_mute":false,"suppress":false,"request_to_speak_timestamp":null}
-      ).replace(old="SESSION", new=session_id),
+        #|{"guild_id":"100","channel_id":"CHANNEL","user_id":"1","session_id":"SESSION","deaf":false,"mute":false,"self_deaf":false,"self_mute":false,"suppress":false,"request_to_speak_timestamp":null}
+      )
+      .replace(old="SESSION", new=session_id)
+      .replace(old="CHANNEL", new=channel),
     ),
   )
 }
@@ -253,7 +271,7 @@ async fn with_running_client(
 }
 
 ///|
-async test "join reuses its per-guild connection and handles a failed server-update rejoin" {
+async test "join reuses its per-guild connection" {
   if !shim_available() {
     return
   }
@@ -290,29 +308,7 @@ async test "join reuses its per-guild connection and handles a failed server-upd
     )
     assert_true(client.join_gates.is_empty())
     assert_eq(fake.sent.length(), 0)
-    let watching = group.spawn(no_wait=true, () => {
-      client.watch_voice_server_updates(
-        fake.port(),
-        guild_id,
-        Id(200UL),
-        false,
-        true,
-        1000,
-        connection,
-        Ref(false),
-      )
-    })
-    @async.pause()
-    assert_eq(fake.servers.length(), 1)
-    fake.fail_send.val = true
-    deliver_to(
-      fake.servers,
-      voice_server(Some("voice-new.example"), "new-token"),
-    )
-    watching.wait()
-    assert_eq(connection.state(), Closed(code=None))
-    assert_eq(client.connections.length(), 0)
-    assert_eq(fake.servers.length(), 0)
+    connection.disconnect()
   })
 }
 
@@ -363,44 +359,23 @@ async test "a session reset forgets the roster" {
 }
 
 ///|
-async test "voice server watcher unregisters after a failed wait or a nonready update" {
-  for fail_wait in [false, true] {
-    let client = VoiceClient()
-    let fake = FakeVoicePort::new()
-    with_running_client(client, group => {
-      let connection = pending_connection(
-        group,
-        PendingVoiceTransport::new(),
-        Ref(0),
-      )
-      let watching = group.spawn(no_wait=true, () => {
-        client.watch_voice_server_updates(
-          fake.port(),
-          Id(100UL),
-          Id(200UL),
-          false,
-          true,
-          1000,
-          connection,
-          Ref(false),
-        )
-      })
-      @async.pause()
-      assert_eq(fake.servers.length(), 1)
-      if fail_wait {
-        fake.servers[0].queue.close(error=VoiceError::Disconnected)
-      } else {
-        deliver_to(
-          fake.servers,
-          voice_server(Some("voice.example"), "voice-token"),
-        )
-      }
-      watching.wait()
-      assert_eq(fake.servers.length(), 0)
-      assert_eq(connection.state(), Connecting)
-      connection.disconnect()
-    })
+async test "a failed voice server watch stops watching and keeps the connection" {
+  if !shim_available() {
+    return
   }
+  let client = VoiceClient()
+  let fake = FakeVoicePort::new()
+  let clock = @simclock.VirtualClock()
+  fake_connects(client, clock) |> ignore
+  with_running_client(client, group => {
+    let connection = join_ready(client, fake, clock, group)
+    assert_eq(fake.servers.length(), 1)
+    fake.servers[0].queue.close(error=VoiceError::Disconnected)
+    clock.settle()
+    assert_eq(fake.servers.length(), 0)
+    assert_eq(connection.state(), Ready)
+    connection.disconnect()
+  })
 }
 
 ///|
@@ -557,4 +532,337 @@ test "a client holds no connection until a join and attaches as a service" {
   assert_true(client.connection(Id(100UL)) is None)
   let builder = @bot.BotBuilder(@app.AppBuilder().build(), token="test-token")
   client.attach(builder)
+}
+
+///|
+/// The voice transports a client's connections opened, in order.
+priv struct FakeConnects {
+  urls : Array[String]
+  transports : Array[PendingVoiceTransport]
+}
+
+///|
+/// Give `client` a virtual clock and a connector whose every transport says
+/// Hello and describes a session, so each voice connection reaches Ready.
+fn fake_connects(
+  client : VoiceClient,
+  clock : @simclock.VirtualClock,
+) -> FakeConnects {
+  let connects = { urls: [], transports: [], }
+  client.clock_.val = clock
+  client.connector_.val = url => {
+    let transport = PendingVoiceTransport::new()
+    transport.incoming.put(
+      Text("{\"op\":8,\"d\":{\"heartbeat_interval\":60000}}"),
+    )
+    transport.incoming.put(
+      Text(
+        "{\"op\":4,\"d\":{\"mode\":\"aead_aes256_gcm_rtpsize\",\"secret_key\":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],\"dave_protocol_version\":0}}",
+      ),
+    )
+    connects.urls.push(url)
+    connects.transports.push(transport)
+    transport
+  }
+  connects
+}
+
+///|
+/// Join guild 100 through `fake`, answering opcode 4 with both voice events.
+async fn join_ready(
+  client : VoiceClient,
+  fake : FakeVoicePort,
+  clock : @simclock.VirtualClock,
+  group : @async.TaskGroup[Unit],
+) -> VoiceConnection {
+  let joining = group.spawn(no_wait=true, () => {
+    client.join_via(fake.port(), Id(100UL), Id(200UL))
+  })
+  clock.settle()
+  deliver_to(fake.states, voice_state("voice-session"))
+  deliver_to(fake.servers, voice_server(Some("voice.example"), "voice-token"))
+  joining.wait()
+}
+
+///|
+async test "a connection's voice server watch ends with the connection" {
+  if !shim_available() {
+    return
+  }
+  for ending in ["disconnect", "fatal close"] {
+    let client = VoiceClient()
+    let fake = FakeVoicePort::new()
+    let clock = @simclock.VirtualClock()
+    let connects = fake_connects(client, clock)
+    with_running_client(client, group => {
+      let connection = join_ready(client, fake, clock, group)
+      assert_eq(connection.state(), Ready)
+      assert_eq(fake.servers.length(), 1)
+      assert_eq(fake.states.length(), 1)
+      match ending {
+        "disconnect" => connection.disconnect()
+        _ =>
+          connects.transports[0].incoming.close(
+            error=VoiceTransportClosed(code=Some(4014), reason="disconnected"),
+          )
+      }
+      clock.settle()
+      assert_true(connection.state() is Closed(..))
+      assert_true(client.connection(Id(100UL)) is None)
+      // Nothing waits for a voice server or state update on behalf of the
+      // old connection, so nothing holds it.
+      assert_eq(fake.servers.length(), 0)
+      assert_eq(fake.states.length(), 0)
+    })
+  }
+}
+
+///|
+async test "a rejoin starts with no watch left from the previous connection" {
+  if !shim_available() {
+    return
+  }
+  let client = VoiceClient()
+  let fake = FakeVoicePort::new()
+  let clock = @simclock.VirtualClock()
+  fake_connects(client, clock) |> ignore
+  with_running_client(client, group => {
+    let first = join_ready(client, fake, clock, group)
+    first.disconnect()
+    clock.settle()
+    let second = join_ready(client, fake, clock, group)
+    // The rejoin's opcode 4 went out with only its own two expectations.
+    assert_eq(fake.expected_at_send.val, (1, 1))
+    assert_true(!physical_equal(first, second))
+    assert_eq(fake.servers.length(), 1)
+  })
+}
+
+///|
+async test "a voice server update moves the connection in place" {
+  if !shim_available() {
+    return
+  }
+  let client = VoiceClient()
+  let fake = FakeVoicePort::new()
+  let clock = @simclock.VirtualClock()
+  let connects = fake_connects(client, clock)
+  with_running_client(client, group => {
+    let connection = join_ready(client, fake, clock, group)
+    deliver_to(
+      fake.servers,
+      voice_server(Some("voice-new.example"), "new-token"),
+    )
+    clock.settle()
+    assert_eq(connects.urls, [
+      "wss://voice.example/?v=8", "wss://voice-new.example/?v=8",
+    ])
+    // The same connection identifies on the new server with the new token
+    // and the session it already has; the bot never leaves the channel.
+    let identify = connects.transports[1].outgoing.get()
+    assert_true(
+      identify
+      is {
+        "op": 0,
+        "d": { "token": "new-token", "session_id": "voice-session", .. },
+        ..
+      },
+    )
+    assert_eq(connection.state(), Ready)
+    assert_true(
+      client.connection(Id(100UL)) is Some(current) &&
+      physical_equal(current, connection),
+    )
+    assert_eq(fake.sent.length(), 1)
+    // It keeps watching for the next move.
+    assert_eq(fake.servers.length(), 1)
+    connection.disconnect()
+  })
+}
+
+///|
+async test "a rejoin waits for the closed connection's leave" {
+  if !shim_available() {
+    return
+  }
+  let client = VoiceClient()
+  let fake = FakeVoicePort::new()
+  let clock = @simclock.VirtualClock()
+  let connects = fake_connects(client, clock)
+  with_running_client(client, group => {
+    let first = join_ready(client, fake, clock, group)
+    let gate : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+    fake.leave_gate.val = Some(gate)
+    connects.transports[0].incoming.close(
+      error=VoiceTransportClosed(code=Some(4014), reason="disconnected"),
+    )
+    clock.settle()
+    assert_true(first.state() is Closed(..))
+    let joining = group.spawn(no_wait=true, () => {
+      client.join_via(fake.port(), Id(100UL), Id(200UL))
+    })
+    clock.settle()
+    fake.leave_gate.val = None
+    gate.put(())
+    clock.settle()
+    deliver_to(fake.states, voice_state("voice-session-2"))
+    deliver_to(fake.servers, voice_server(Some("voice.example"), "voice-token"))
+    let second = joining.wait()
+    // The old connection's leave went out before the new join, not after it,
+    // where it would take the bot out of the channel it just joined.
+    assert_eq(fake.sent.map(state => state.channel_id), [
+      Some(Id(200UL)),
+      None,
+      Some(Id(200UL)),
+    ])
+    assert_true(
+      client.connection(Id(100UL)) is Some(current) &&
+      physical_equal(current, second),
+    )
+    second.disconnect()
+  })
+}
+
+///|
+async test "a voice server that went away is dropped until the next move" {
+  if !shim_available() {
+    return
+  }
+  let client = VoiceClient()
+  let fake = FakeVoicePort::new()
+  let clock = @simclock.VirtualClock()
+  let connects = fake_connects(client, clock)
+  with_running_client(client, group => {
+    let connection = join_ready(client, fake, clock, group)
+    deliver_to(fake.servers, voice_server(None, "gone"))
+    clock.settle()
+    // The connection to the old server closes and is not resumed.
+    assert_eq(connects.transports[0].close_calls.val, 1)
+    assert_eq(connection.state(), Reconnecting)
+    clock.advance(9999)
+    assert_eq(connects.urls.length(), 1)
+    deliver_to(
+      fake.servers,
+      voice_server(Some("voice-new.example"), "new-token"),
+    )
+    clock.settle()
+    assert_eq(connects.urls, [
+      "wss://voice.example/?v=8", "wss://voice-new.example/?v=8",
+    ])
+    assert_eq(connection.state(), Ready)
+    assert_eq(fake.sent.length(), 1)
+    connection.disconnect()
+  })
+}
+
+///|
+async test "a replacement server sent while the lost one closes is followed" {
+  if !shim_available() {
+    return
+  }
+  let client = VoiceClient()
+  let fake = FakeVoicePort::new()
+  let clock = @simclock.VirtualClock()
+  let connects = fake_connects(client, clock)
+  with_running_client(client, group => {
+    let connection = join_ready(client, fake, clock, group)
+    let held : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+    connects.transports[0].close_held.val = Some(held)
+    deliver_to(fake.servers, voice_server(None, "gone"))
+    clock.settle()
+    // The old connection is still closing when the replacement arrives.
+    deliver_to(
+      fake.servers,
+      voice_server(Some("voice-new.example"), "new-token"),
+    )
+    held.put(())
+    clock.settle()
+    assert_eq(connects.urls, [
+      "wss://voice.example/?v=8", "wss://voice-new.example/?v=8",
+    ])
+    assert_eq(connection.state(), Ready)
+    assert_eq(fake.sent.length(), 1, msg="no rejoin")
+    connection.disconnect()
+  })
+}
+
+///|
+async test "a voice server that went away and is not replaced in time rejoins" {
+  if !shim_available() {
+    return
+  }
+  let client = VoiceClient()
+  let fake = FakeVoicePort::new()
+  let clock = @simclock.VirtualClock()
+  let connects = fake_connects(client, clock)
+  with_running_client(client, group => {
+    let connection = join_ready(client, fake, clock, group)
+    deliver_to(fake.servers, voice_server(None, "gone"))
+    clock.settle()
+    clock.advance(10000)
+    // The join's timeout passed without a new server: ask for one.
+    assert_eq(fake.sent.length(), 2)
+    assert_eq(connection.state(), Rejoining)
+    deliver_to(fake.states, voice_state("voice-session-2"))
+    deliver_to(fake.servers, voice_server(Some("voice-3.example"), "token-3"))
+    clock.settle()
+    assert_eq(connects.urls.length(), 2)
+    assert_eq(connects.urls[1], "wss://voice-3.example/?v=8")
+    assert_eq(connection.state(), Ready)
+    connection.disconnect()
+  })
+}
+
+///|
+async test "a channel move from outside reaches DAVE and the rejoin" {
+  if !shim_available() {
+    return
+  }
+  let client = VoiceClient()
+  let fake = FakeVoicePort::new()
+  let clock = @simclock.VirtualClock()
+  let connects = fake_connects(client, clock)
+  with_running_client(client, group => {
+    let connection = join_ready(client, fake, clock, group)
+    deliver_to(fake.states, voice_state("voice-session", channel="300"))
+    clock.settle()
+    // A new DAVE machine is built for the channel the bot is in now.
+    assert_eq(connection.channel_id(), 300UL)
+    // A close that needs a fresh session rejoins that channel too.
+    connects.transports[0].incoming.close(
+      error=VoiceTransportClosed(code=Some(4006), reason="session invalid"),
+    )
+    clock.settle()
+    assert_eq(fake.sent.map(state => state.channel_id), [
+      Some(Id(200UL)),
+      Some(Id(300UL)),
+    ])
+    deliver_to(fake.states, voice_state("voice-session-2", channel="300"))
+    deliver_to(fake.servers, voice_server(Some("voice.example"), "token-2"))
+    clock.settle()
+    assert_eq(connection.state(), Ready)
+    connection.disconnect()
+  })
+}
+
+///|
+async test "a disconnect while waiting for a new voice server ends the wait" {
+  if !shim_available() {
+    return
+  }
+  let client = VoiceClient()
+  let fake = FakeVoicePort::new()
+  let clock = @simclock.VirtualClock()
+  fake_connects(client, clock) |> ignore
+  with_running_client(client, group => {
+    let connection = join_ready(client, fake, clock, group)
+    deliver_to(fake.servers, voice_server(None, "gone"))
+    clock.settle()
+    assert_eq(clock.pending(), [5000, 10000])
+    connection.disconnect()
+    clock.settle()
+    assert_eq(connection.state(), Closed(code=None))
+    assert_eq(clock.pending(), [])
+    assert_eq(fake.sent.map(state => state.channel_id), [Some(Id(200UL)), None])
+  })
 }

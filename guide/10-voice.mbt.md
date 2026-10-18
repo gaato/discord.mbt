@@ -198,12 +198,15 @@ with `OggOpusWriter`. Unread events are bounded the same way: past
 ## Region changes and reconnects
 
 `VoiceConnection` resumes its voice WebSocket when possible and requests new
-credentials when Discord requires a fresh session. The `VoiceClient` also
-watches for a guild `VOICE_SERVER_UPDATE`. The current public voice API cannot
-inject new credentials into an active connection, so the watcher disconnects
-and joins the same channel again; callers holding the old handle should fetch
-the guild connection again with `VoiceClient::connection` after a region
-move.
+credentials when Discord requires a fresh session. When Discord moves the
+session to another voice server (a later `VOICE_SERVER_UPDATE` for the guild),
+the connection identifies on the new server with the session it has: the
+handle, its subscriptions, and the bot's place in the channel stay. An update
+with a null endpoint means the server went away: the connection drops it, shows
+`Reconnecting`, and waits for the next update, rejoining if none comes within
+the join's `timeout_ms`. When something else moves the bot to another channel,
+`VoiceConnection::channel_id` follows, and DAVE and a rejoin use the new
+channel.
 
 See `examples/voice_player` for an executable that reads configuration
 from `DISCORD_TOKEN`, `GUILD_ID`, `CHANNEL_ID`, and `AUDIO_FILE`.
