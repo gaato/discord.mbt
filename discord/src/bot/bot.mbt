@@ -164,7 +164,7 @@ fn BotCore::new(
   shutdown_grace_ms~ : Int32 = DEFAULT_SHUTDOWN_GRACE_MS,
   max_message_bytes~ : Int32 = @gateway.DEFAULT_MAX_MESSAGE_BYTES,
 ) -> BotCore {
-  let clock : Ref[&@hclock.Clock] = Ref(@clock.default_clock())
+  let clock : Ref[&@hclock.Clock] = Ref(@transport.AsyncClock::new())
   {
     app_: app,
     token_: token,
@@ -898,7 +898,9 @@ async fn BotCore::run(self : BotCore) -> Unit {
     // left with the rest of the group.
     close_shards(shard_handles)
     let grace_ms = self.shutdown_grace_ms_
-    if @clock.timeout_opt(self.clock_.val, grace_ms, () => handlers.wait_idle())
+    if @transport.with_timeout_opt(self.clock_.val, grace_ms, () => {
+        handlers.wait_idle()
+      })
       is None {
       self.app_.warn(
         @app.Executor(

@@ -76,7 +76,7 @@ pub struct Framework {
 pub fn Framework::Framework(
   client : @dhttp.Client,
   application_id : @model.ApplicationId,
-  clock~ : &@hclock.Clock = @clock.default_clock(),
+  clock~ : &@hclock.Clock = @transport.AsyncClock::new(),
 ) -> Framework {
   {
     client,
@@ -436,7 +436,8 @@ pub async fn Framework::wait_for_component(
     }
   })
   match timeout_ms {
-    Some(ms) => @clock.timeout_opt(self.clock, ms, () => waiter.queue.get())
+    Some(ms) =>
+      @transport.with_timeout_opt(self.clock, ms, () => waiter.queue.get())
     None => Some(waiter.queue.get())
   }
 }

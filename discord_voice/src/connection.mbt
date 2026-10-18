@@ -699,7 +699,7 @@ pub fn[X] VoiceConnection::start(
   receive~ : Bool = true,
   event_backlog~ : Int32 = DEFAULT_VOICE_EVENT_BACKLOG,
   telemetry~ : (VoiceTelemetry) -> Unit = _ => (),
-  clock~ : &@hclock.Clock = default_clock(),
+  clock~ : &@hclock.Clock = @transport.AsyncClock::new(),
   rand~ : @random.Rand = @random.Rand(),
 ) -> VoiceConnection raise VoiceError {
   if event_backlog < 1 {
@@ -755,7 +755,7 @@ pub async fn VoiceConnection::wait_ready(
   self : VoiceConnection,
   timeout_ms~ : Int32 = 10000,
 ) -> Unit raise VoiceError {
-  let settled = timeout_opt(self.clock_, timeout_ms, () => {
+  let settled = @transport.with_timeout_opt(self.clock_, timeout_ms, () => {
     self.wait_until(() => {
       self.state_ is Ready || self.failure is Some(_) || self.closing
     })

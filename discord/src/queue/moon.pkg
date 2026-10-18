@@ -1,5 +1,11 @@
 import {
-  "gaato/discord/internal/clock",
+  "gaato/http-async" @transport,
   "gaato/http/clock" @hclock,
   "moonbitlang/async",
 }
+
+import {
+  "gaato/discord/internal/clock",
+} for "wbtest"
+
+supported_targets = "js + native + wasm"

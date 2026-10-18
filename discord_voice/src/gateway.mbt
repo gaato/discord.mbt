@@ -173,7 +173,7 @@ pub fn[X] VoiceGateway::start(
   connector~ : async (String) -> &VoiceTransport = connect_voice_websocket,
   queue_capacity~ : Int32 = 256,
   telemetry~ : (VoiceGatewayEvent) -> Unit = _ => (),
-  clock~ : &@hclock.Clock = default_clock(),
+  clock~ : &@hclock.Clock = @transport.AsyncClock::new(),
   rand~ : @random.Rand = @random.Rand(),
 ) -> VoiceGateway {
   let gateway = VoiceGateway::{

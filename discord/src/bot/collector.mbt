@@ -33,7 +33,7 @@ pub struct PendingEvent[T] {
 
 ///|
 fn EventCollector::EventCollector(
-  clock~ : Ref[&@hclock.Clock] = Ref(@clock.default_clock()),
+  clock~ : Ref[&@hclock.Clock] = Ref(@transport.AsyncClock::new()),
 ) -> EventCollector {
   { waiters: [], clock, }
 }
@@ -114,7 +114,7 @@ pub async fn[T] PendingEvent::wait(
   defer self.cancel()
   let raw = match timeout_ms {
     Some(ms) =>
-      @clock.timeout_opt(self.collector.clock.val, ms, () => {
+      @transport.with_timeout_opt(self.collector.clock.val, ms, () => {
         self.waiter.queue.get()
       })
     None => Some(self.waiter.queue.get())
