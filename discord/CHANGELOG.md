@@ -75,6 +75,30 @@ breaking change is listed with a migration note.
   was replaced. A clock's sleep cannot fail, so a sleeper that raised to stop
   the reconnect loop has no equivalent: close the shard instead.
   Migration: drop `sleeper=` or pass `clock=` with your own `Clock`.
+- **The cache is bounded under its defaults; archived threads are no longer
+  served from it.** Before, a long-running bot's cache grew without limit:
+  every distinct user ever seen stayed in `users`, a DM channel's messages
+  were never released (Discord sends bots no `CHANNEL_DELETE` for DMs), and
+  archived threads kept their channel entry and messages until their guild
+  left. Now a user stays only while a cached entry holds it (a member entry,
+  a cached message it wrote, or the current user) and leaves with the last
+  one, by whatever path; users seen without a holder (bans, departed members,
+  interaction users, authors of messages the cache does not keep) go to an
+  LRU of the 128 most recent, `CacheLimits(recent_users=)`, which `user()`
+  and `users()` also read. Channels without a guild share an LRU of 128,
+  `CacheLimits(dm_channels=)`, evicting the least recently written with its
+  messages. A thread leaves with its messages when `THREAD_UPDATE` reports it
+  archived, when the bot is removed from it if it is private, and when a
+  `THREAD_LIST_SYNC` replaces it, also with channels not retained. A new
+  session's `READY` drops the guilds of its shard it no longer lists (left
+  while disconnected), and a fresh `GUILD_CREATE` drops the channels and
+  threads it no longer lists. The `users` limit now applies to held users
+  only, and `USER_UPDATE` only updates the current user. Migration: fetch
+  archived threads over REST (`channel_ref(id).fetch()` or the archived
+  thread listings) instead of reading them from the cache; a bot that relied
+  on `user()` finding any user ever seen should fetch misses over REST or
+  raise `recent_users`; pass `CacheLimit()` for `dm_channels` or
+  `recent_users` to restore the unbounded behaviour.
 
 ### Added
 

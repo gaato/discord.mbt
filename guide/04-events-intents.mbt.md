@@ -449,12 +449,27 @@ by the bot's configured intents. Entity getters return shared read-only model
 values, while list getters return fresh outer arrays.
 
 `CacheLimits` can set an entry cap, TTL, or both for each resource. Guild,
-channel, and user limits are global; role, member, voice-state, and presence
-limits are per guild; message limits are per channel. Entry caps evict in
-FIFO insertion order, and re-storing an entity refreshes its position. TTLs
-use fixed, non-sliding deadlines set at write time: reads do not extend them,
-and lazy expiry requires no background timer. Messages default to 100 entries
-per channel when enabled.
+channel, DM-channel, user, and recent-user limits are global; role, member,
+voice-state, and presence limits are per guild; message limits are per
+channel. Entry caps evict in FIFO insertion order, and re-storing an entity
+refreshes its position. TTLs use fixed, non-sliding deadlines set at write
+time: reads do not extend them, and lazy expiry requires no background timer.
+
+The defaults keep a long-running bot's cache bounded. Guild-scoped state
+(channels, threads, roles, members, voice states, presences, and their
+messages) leaves with its guild, so it is bounded by what Discord holds per
+guild times the guilds the bot is in. Messages, when enabled, keep the
+newest 100 per channel. Channels without a guild (DMs) share an LRU of 128, `dm_channels`,
+and leave with their messages. A user stays only while something cached
+holds it: a member entry, a cached message it wrote, or being the current
+user. Users seen without a holder (a ban, a member who left, an interaction,
+the author of a message the cache does not keep) go to an LRU of the 128
+most recent, `recent_users`, which `user()` also reads. Pass `CacheLimit()`
+for `messages`, `dm_channels`, or `recent_users` to lift that bound.
+
+Archived threads are not served from the cache: Discord stops sending their
+events, so a thread leaves when it is archived, and a private one when the
+bot is removed from it. Fetch archived threads over REST.
 
 Limit guilds, roles, or voice states only when degraded derived-state accuracy
 is acceptable. Missing required guild or role data makes `permissions()`
