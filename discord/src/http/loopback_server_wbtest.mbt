@@ -259,3 +259,47 @@ async test "plain json requests round-trip and non-json error bodies surface" {
     },
   )
 }
+
+///|
+async test "the default transport times its phases on the client's clock" {
+  let server = @ahttp.Server(@socket.Addr::parse("127.0.0.1:0"))
+  defer server.close()
+  let clock = @simclock.VirtualClock()
+  let client = Client(
+    "test-token",
+    base_url="http://\{server.addr}",
+    request_timeout_ms=30000,
+    clock~,
+  )
+  defer client.close()
+  let received : @async.Queue[Unit] = @async.Queue(kind=Unbounded)
+  let release : @async.Queue[Unit] = @async.Queue(kind=Unbounded)
+  @async.with_task_group(group => {
+    group.spawn_bg(no_wait=true, () => {
+      server.run_forever(allow_failure=true, (_, _, _) => {
+        received.put(())
+        release.get()
+      })
+    })
+    let outcome : Ref[String?] = Ref(None)
+    group.spawn_bg(() => {
+      outcome.val = Some(
+        try client.request(GetGateway) catch {
+          Timeout(phase~, timeout_ms~) =>
+            "Timeout \{@debug.to_string(phase)} \{timeout_ms}"
+          error => "unexpected \{Repr(error)}"
+        } noraise {
+          _ => "answered"
+        },
+      )
+    })
+    // The server has the request; from here only the virtual clock moves.
+    received.get()
+    clock.settle()
+    clock.advance(29_999)
+    assert_eq(outcome.val, None)
+    clock.advance(1)
+    assert_eq(outcome.val, Some("Timeout Head 30000"))
+    release.put(())
+  })
+}

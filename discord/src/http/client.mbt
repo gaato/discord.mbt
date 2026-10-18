@@ -68,8 +68,8 @@ const MAX_RESPONSE_BODY_BYTES : Int32 = 67_108_864
 /// `clock` (default: the wall clock) drives the client's time: 429 and
 /// resend back-off, the default rate limiter's windows, the attempt deadline
 /// around a supplied transport, telemetry durations, and the typing
-/// keepalive of `ChannelRef::with_typing`. The default transport times its
-/// own phases on the wall clock.
+/// keepalive of `ChannelRef::with_typing`, and the default transport's phase
+/// limits and idle connections.
 pub fn Client::Client(
   token : String,
   base_url~ : String = "https://discord.com",
@@ -106,6 +106,7 @@ pub fn Client::Client(
         timeout_ms=request_timeout_ms,
         max_idle_per_origin=max_connections,
         max_body_bytes=MAX_RESPONSE_BODY_BYTES,
+        clock~,
       )
       (owned, Some(owned))
     }

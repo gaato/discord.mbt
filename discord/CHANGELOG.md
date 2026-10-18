@@ -39,7 +39,7 @@ breaking change is listed with a migration note.
   resent. Migration: none; pass `max_retries=0` to raise every failure at
   once.
 
-- **Depends on `gaato/http` 0.3.0, `gaato/http-async` 0.3.0, and
+- **Depends on `gaato/http` 0.3.0, `gaato/http-async` 0.3.1, and
   `gaato/sdk-runtime` 0.4.0.** The clock helpers the library kept for itself
   (the wall clock behind every `clock?` default, and the clock-driven
   timeout) now come from `gaato/http-async`'s `AsyncClock` and
@@ -84,8 +84,8 @@ breaking change is listed with a migration note.
   windows, the attempt deadline around a supplied transport, telemetry
   durations, and the `ChannelRef::with_typing` keepalive, so a test can run
   them on virtual time. `App::serve(access=Token(..), clock?)` and the bot's
-  own client pass their clock on. The default transport still times its own
-  phases on the wall clock.
+  own client pass their clock on, and the default transport times its phase
+  limits and idle connections on it too.
 - **`DeliveryFailure::Unsent`**: the callback never reached Discord, so the
   window is still unused. `classify_rest_callback_failure` returns it for a
   `Transport` or `Timeout` for which `is_unsent()` holds, and `ResponseGate`
