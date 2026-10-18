@@ -84,6 +84,9 @@ fn remnants(cache : InMemoryCache, id : String) -> Array[String] raise {
   if channel_ids.any(channel_id => cache.messages_.buckets_.contains(channel_id)) {
     found.push("messages")
   }
+  if channel_ids.any(channel_id => cache.threads_.contains(channel_id)) {
+    found.push("threads")
+  }
   found
 }
 
@@ -130,6 +133,7 @@ test "a departed guild leaves nothing keyed by it or its channels" {
       now.val = 1000L
       cache.update(event)
       assert_eq((name, remnants(cache, "100")), (name, []))
+      assert_eq((name, cache_violations(cache, limits)), (name, []))
     }
   }
 }
