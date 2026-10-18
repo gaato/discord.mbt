@@ -6,8 +6,13 @@ releases (0.x → 0.y) may contain breaking changes; patch releases do not.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-18
+
 ### Changed
 
+- **Builds against `gaato/discord` 0.10.0**, whose breaking changes are listed
+  in [its changelog](https://github.com/gaato/discord.mbt/blob/main/discord/CHANGELOG.md).
+  Migration: depend on `gaato/discord@0.10.0` alongside this release.
 - **Depends on `gaato/http` 0.3.0 and `gaato/http-async` 0.3.1.** The
   wall clock behind the `clock?` defaults and the clock-driven timeouts now
   come from `gaato/http-async`'s `AsyncClock` and `with_timeout_opt` instead

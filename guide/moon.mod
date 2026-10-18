@@ -15,7 +15,7 @@ warnings = "-implicit_impl_as_method"
 
 import {
   "gaato/discord@0.10.0",
-  "gaato/discord_voice@0.2.0",
+  "gaato/discord_voice@0.3.0",
   "gaato/sdk-runtime@0.4.0",
   "moonbitlang/async@0.22.5",
 }
