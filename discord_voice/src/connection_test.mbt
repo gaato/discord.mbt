@@ -1661,3 +1661,47 @@ async test "closing a voice subscription ends a read waiting out its silence" {
     connection.disconnect()
   })
 }
+
+///|
+/// A live source with nothing to send yet: a read waits for the next frame
+/// handed to `frames`, and `reading` says whether one is waiting.
+struct WaitingSource {
+  frames : @aqueue.Queue[Bytes]
+  reading : Ref[Bool]
+}
+
+///|
+impl @voice.AudioSource for WaitingSource with fn next_frame(self) {
+  self.reading.val = true
+  defer {
+    self.reading.val = false
+  }
+  Some(self.frames.get())
+}
+
+///|
+async test "no background task outlives its voice connection" {
+  if !@voice.shim_available() {
+    return
+  }
+  let transport = ConnectionTestTransport::new()
+  let udp = ConnectionTestUdp::new()
+  let clock = @simclock.VirtualClock()
+  @async.with_task_group(group => {
+    let connection = ready_receive_connection(group, transport, udp, clock~)
+    let source = WaitingSource::{
+      frames: Queue(kind=Unbounded),
+      reading: Ref(false),
+    }
+    connection.play(source)
+    clock.settle()
+    assert_true(source.reading.val)
+    assert_eq(clock.pending(), [5000, 60000])
+    connection.disconnect()
+    clock.settle()
+    // The playback waiting on its source and the keepalive waiting for its
+    // next tick end with the connection instead of holding it.
+    assert_false(source.reading.val)
+    assert_eq(clock.pending(), [])
+  })
+}

@@ -51,7 +51,15 @@ and the official https://github.com/discord/libdave implementation.
 
 Voice WebSocket reconnects use resume where Discord permits it. A close code
 that requires a fresh main-Gateway handshake invokes the `rejoin` closure
-owned by `VoiceConnection`.
+owned by `VoiceConnection`. A later `VOICE_SERVER_UPDATE` (a server failover)
+comes through the `next_server` closure: the event pump closes the old gateway
+and identifies on the new endpoint with the new token and the same session.
+
+Every background task of a connection ends when it closes. The event pump
+runs the teardown; the receiver, keepalive, playback, and server watch are
+cancelled by it, so none waits on a timer, a source, or the main gateway past
+the connection's end. `disconnect` returns once the teardown is done, which
+`VoiceClient::join` waits for before rejoining a guild.
 
 Media E2EE is supported, but pairwise identity verification is intentionally
 not exposed. The official prebuilt libdave v1.2.0 C ABI rotates its ephemeral

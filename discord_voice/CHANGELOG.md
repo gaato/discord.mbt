@@ -35,6 +35,29 @@ releases (0.x → 0.y) may contain breaking changes; patch releases do not.
 
 ### Fixed
 
+- **A voice server move keeps the connection, and nothing waits for one after
+  the connection ends.** A `VOICE_SERVER_UPDATE` for a joined guild now makes
+  the same `VoiceConnection` identify on the new server with its session,
+  through the new `next_server` argument of `VoiceConnection::start` (it
+  returns a `VoiceServer`, the update's token and endpoint). Before,
+  `VoiceClient` ran a watcher per join that disconnected the connection,
+  making the bot leave the channel, and joined again with a new handle; and
+  when the connection ended first, the watcher, its expectation on the main
+  gateway, and the closed connection stayed until the guild's next server
+  update, possibly forever, with a rejoin adding another. The watch is now a
+  task of the connection and ends, unregistering its expectation, when the
+  connection closes. Migration: code that re-fetched
+  `VoiceClient::connection` after a region move can keep its handle; callers
+  of `VoiceConnection::start` that see server updates pass `next_server`.
+- **No connection task outlives its connection.** The receiver, the UDP
+  keepalive, and playback are cancelled when the connection closes; before,
+  the keepalive held it until its next 5-second tick and playback until its
+  source returned a frame, forever for a live source with nothing to send.
+- **`VoiceConnection::disconnect` returns once the teardown is done**, also
+  when the connection started it after a fatal close, and `VoiceClient::join`
+  waits for that before joining the guild again. Before, it returned at once
+  in that case, and the old connection's leave (opcode 4 without a channel)
+  could go out after the new join and take the bot out of the channel.
 - **Receive state no longer grows as users change SSRCs.** A `Speaking`
   message for a user now replaces the user's earlier SSRC, and an SSRC that
   passes to another user loses its reorder window, so the receive maps hold

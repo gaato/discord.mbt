@@ -63,7 +63,10 @@ pub struct VoiceClient {
   priv join_gates : Map[@model.GuildId, JoinGate]
   priv mut group : @async.TaskGroup[Unit]?
   priv started : @cond_var.Cond
-  priv clock : &@hclock.Clock
+  // What the connections open, and the clock they and the joins use; a
+  // test replaces them.
+  priv connector_ : Ref[async (String) -> &VoiceTransport]
+  priv clock_ : Ref[&@hclock.Clock]
 }
 
 ///|
@@ -85,7 +88,8 @@ pub fn VoiceClient::VoiceClient(
     join_gates: Map([]),
     group: None,
     started: @cond_var.Cond(),
-    clock,
+    connector_: Ref(connect_voice_websocket),
+    clock_: Ref(clock),
   }
 }
 
@@ -193,11 +197,11 @@ pub async fn VoiceClient::join_via(
   join_gate.gate.acquire()
   defer join_gate.gate.release()
   if self.connections.get(guild_id) is Some(existing) {
-    if existing.state() is Closed(..) {
-      self.connections.remove(guild_id)
-    } else {
-      return existing
-    }
+    guard existing.state() is Closed(..) else { return existing }
+    // Wait out its teardown: a leave sent after the new join would take the
+    // bot out of the channel it just joined.
+    existing.disconnect()
+    self.connections.remove(guild_id)
   }
   let credentials = request_voice_credentials(
     port, guild_id, channel_id, self_mute, self_deaf, timeout_ms,
@@ -221,6 +225,19 @@ pub async fn VoiceClient::join_via(
       port, guild_id, channel_id, self_mute, self_deaf, timeout_ms,
     )
   }
+  let next_server = () => {
+    let pending = (port.expect_voice_server)(event => {
+      event.guild_id == guild_id &&
+      event.endpoint is Value(_) &&
+      !rejoin_in_progress.val
+    })
+    defer (pending.cancel)()
+    guard (pending.wait)(None) is Some(update) &&
+      update.endpoint is Value(endpoint) else {
+      return None
+    }
+    Some(VoiceServer::{ token: update.token, endpoint, })
+  }
   let connection = VoiceConnection::start(
     group,
     credentials,
@@ -228,16 +245,13 @@ pub async fn VoiceClient::join_via(
     channel_id=channel_id.value(),
     leave~,
     rejoin~,
+    next_server~,
+    connector=self.connector_.val,
     telemetry~,
-    clock=self.clock,
+    clock=self.clock_.val,
   )
   wait_ready_or_disconnect(connection, timeout_ms)
   self.connections[guild_id] = connection
-  group.spawn_bg(no_wait=true, allow_failure=true, () => {
-    self.watch_voice_server_updates(
-      port, guild_id, channel_id, self_mute, self_deaf, timeout_ms, connection, rejoin_in_progress,
-    )
-  })
   connection
 }
 
@@ -251,7 +265,7 @@ async fn VoiceClient::running_group(
   if self.group is Some(group) {
     return group
   }
-  @transport.with_timeout_opt(self.clock, timeout_ms, () => {
+  @transport.with_timeout_opt(self.clock_.val, timeout_ms, () => {
     while self.group is None {
       self.started.wait()
     }
@@ -309,44 +323,6 @@ async fn request_voice_credentials(
       endpoint,
     }
   })
-}
-
-///|
-async fn VoiceClient::watch_voice_server_updates(
-  self : VoiceClient,
-  port : VoiceGatewayPort,
-  guild_id : @model.GuildId,
-  channel_id : @model.ChannelId,
-  self_mute : Bool,
-  self_deaf : Bool,
-  timeout_ms : Int32,
-  connection : VoiceConnection,
-  rejoin_in_progress : Ref[Bool],
-) -> Unit noraise {
-  let pending = (port.expect_voice_server)(event => {
-    event.guild_id == guild_id &&
-    event.endpoint is Value(_) &&
-    !rejoin_in_progress.val
-  })
-  let update = (pending.wait)(None) catch { _ => None }
-  guard update is Some(_) && connection.state() is Ready else { return }
-  connection.disconnect() catch {
-    _ => return
-  }
-  try
-    self.join_via(
-      port,
-      guild_id,
-      channel_id,
-      self_mute~,
-      self_deaf~,
-      timeout_ms~,
-    )
-  catch {
-    _ => ()
-  } noraise {
-    _ => ()
-  }
 }
 
 ///|
