@@ -7,8 +7,8 @@
 /// A real clock as a labelled argument's default (`clock~ : &@hclock.Clock =
 /// @transport.AsyncClock::new()`, `now~ : () -> Int64 = @clock.now_ms`) is the
 /// injection point itself and passes. Every other call site needs an entry in
-/// `scripts/clock_guard.allow`: `<file> <function> <entry point> # reason`.
-/// Unknown or stale entries fail the audit.
+/// `scripts/clock_guard.allow`: `<file> <function> <entry point> # reason`,
+/// one line per use. Unknown or stale entries fail the audit.
 import {
   "moonbitlang/async",
   "moonbitlang/async/fs",
@@ -149,9 +149,11 @@ fn scan(files : Array[(String, String)]) -> Map[String, Array[Int32]] {
 }
 
 ///|
-/// The allowed uses, keyed as `scan` keys them.
-fn parse_allow(text : String) -> Set[String] raise {
-  let allowed : Set[String] = Set([])
+/// The allowed uses, keyed as `scan` keys them, with how many each key
+/// allows: every use needs its own entry, so a second use of the same entry
+/// point in an allowed function needs a second line and its own reason.
+fn parse_allow(text : String) -> Map[String, Int] raise {
+  let allowed : Map[String, Int] = Map([])
   for raw in text.split("\n") {
     let line = raw.trim().to_owned()
     if line.is_empty() || line.has_prefix("#") {
@@ -169,10 +171,7 @@ fn parse_allow(text : String) -> Set[String] raise {
       fail("allow entry needs <file> <function> <entry point>: \{line}")
     }
     let key = fields.join(" ")
-    if allowed.contains(key) {
-      fail("duplicate allow entry: \{key}")
-    }
-    allowed.add(key)
+    allowed[key] = allowed.get(key).unwrap_or(0) + 1
   }
   allowed
 }
@@ -183,16 +182,20 @@ fn audit(files : Array[(String, String)], allow : String) -> Unit raise {
   let found = scan(files)
   let problems : Array[String] = []
   for key, lines in found {
-    if !allowed.contains(key) {
+    let permitted = allowed.get(key).unwrap_or(0)
+    if lines.length() > permitted {
       let at = lines.map(line => line.to_string()).join(", ")
       problems.push(
-        "real clock in library code: \{key} (line \{at}); take the injected clock or add an allow entry with a reason",
+        "real clock in library code: \{key} (line \{at}), \{lines.length()} uses for \{permitted} allow entries; take the injected clock or add one allow entry with a reason per use",
       )
     }
   }
-  for key in allowed {
-    if !found.contains(key) {
-      problems.push("stale allow entry: \{key}")
+  for key, permitted in allowed {
+    let uses = found.get(key).map(lines => lines.length()).unwrap_or(0)
+    if uses < permitted {
+      problems.push(
+        "stale allow entry: \{key} (\{permitted} entries for \{uses} uses)",
+      )
     }
   }
   if !problems.is_empty() {
@@ -266,6 +269,17 @@ async fn main {
     audit(with_file("discord/src/x/x.mbt", body), allowed)
     let moved = body.replace(old="fn wait()", new="fn other()")
     must_fail(() => audit(with_file("discord/src/x/x.mbt", moved), allowed))
+    // Each use needs its own entry: a second use under one entry fails,
+    // and an entry left over after a use goes away is stale.
+    let twice = body.replace(
+      old="  @async.sleep(10)\n",
+      new="  @async.sleep(10)\n  @async.sleep(20)\n",
+    )
+    must_fail(() => audit(with_file("discord/src/x/x.mbt", twice), allowed))
+    let allowed_twice = allowed +
+      "\ndiscord/src/x/x.mbt wait @async.sleep # self-test, second use\n"
+    audit(with_file("discord/src/x/x.mbt", twice), allowed_twice)
+    must_fail(() => audit(with_file("discord/src/x/x.mbt", body), allowed_twice))
     // Missing, stale, and unexplained entries fail.
     must_fail(() => audit(files, ""))
     must_fail(() => audit(files, allowed))

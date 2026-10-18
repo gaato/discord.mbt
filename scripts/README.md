@@ -55,10 +55,10 @@ instead of sleeping. The guard scans the library sources of every module
 `AsyncClock::new`. A real clock as a labelled argument's default
 (`clock~ : &@hclock.Clock = @transport.AsyncClock::new()`) is the injection
 point and passes. Any other use needs an entry in `clock_guard.allow`, one
-`<file> <function> <entry point>` per line with a reason; today these are
-deadlines on live sockets, the coordinator's TCP client, and the REST
-client's sites until it takes a clock. Unknown or stale
-entries fail the guard.
+`<file> <function> <entry point>` line with a reason per use, so a second
+use in an allowed function needs its own line; today these are deadlines on
+live sockets and the coordinator's TCP client. Uses without an entry and
+entries without a use fail the guard.
 
 # Interaction message field audit
 
