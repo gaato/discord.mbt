@@ -971,16 +971,14 @@ fn InMemoryCache::store_message(
   )
   let stored = self.resources_.messages_ &&
     self.messages_.put(message.channel_id, message.id, message, guild_id?)
-  let guildless = self.messages_.buckets_.get(message.channel_id)
-    is Some({ guild_id: None, .. })
-  let kept = stored && (!guildless || self.touch_dm(message.channel_id))
-  if !kept {
+  if !(stored && self.keep_dm_write(message.channel_id)) {
     self.users_.see(message.author)
   }
 }
 
 ///|
-/// Replace a retained message without changing its eviction position.
+/// Replace a retained message without changing its eviction position in its
+/// channel; a DM's channel counts as written to.
 /// A cache miss is intentionally left unfilled: an update does not establish
 /// that an older message is among the channel's most recent messages.
 fn InMemoryCache::update_message(
@@ -995,9 +993,22 @@ fn InMemoryCache::update_message(
       message,
       guild_id?,
     )
-  if !replaced {
+  if !(replaced && self.keep_dm_write(message.channel_id)) {
     self.users_.see(message.author)
   }
+}
+
+///|
+/// After a write to `channel_id`'s messages: a channel without a guild moves
+/// to the front of the DM limit, which may refuse it and drop its messages.
+/// Whether the messages are still kept.
+fn InMemoryCache::keep_dm_write(
+  self : InMemoryCache,
+  channel_id : @model.ChannelId,
+) -> Bool {
+  let guildless = self.messages_.buckets_.get(channel_id)
+    is Some({ guild_id: None, .. })
+  !guildless || self.touch_dm(channel_id)
 }
 
 ///|

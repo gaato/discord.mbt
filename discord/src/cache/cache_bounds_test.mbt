@@ -14,13 +14,14 @@ fn bound_message(
   channel_id~ : String,
   author_id~ : String,
   guild_id? : String,
+  event~ : String = "MESSAGE_CREATE",
 ) -> @model.Event raise {
   let guild = match guild_id {
     Some(guild_id) => "\"guild_id\":\"\{guild_id}\","
     None => ""
   }
   bound_event(
-    "MESSAGE_CREATE",
+    event,
     "{\"id\":\"\{id}\",\"channel_id\":\"\{channel_id}\",\{guild}\"author\":\{bound_user_json(author_id)},\"content\":\"hi\",\"timestamp\":\"2025-06-01T10:00:00Z\",\"edited_timestamp\":null,\"tts\":false,\"mention_everyone\":false,\"mentions\":[],\"mention_roles\":[],\"attachments\":[],\"embeds\":[],\"pinned\":false,\"type\":0}",
   )
 }
@@ -271,6 +272,22 @@ test "the DM limit is configurable and evicts the least recently written" {
     bound_message("5", channel_id="400", author_id="4", guild_id="100"),
   )
   assert_eq(dm_retained(cache, ["3000", "3002", "400"]), ["3000", "3002", "400"])
+}
+
+///|
+test "an edited DM message counts as a write to its DM" {
+  let cache = @cache.InMemoryCache(
+    resources=@cache.CacheResources(messages=true),
+    limits=@cache.CacheLimits(dm_channels=@cache.CacheLimit(max_entries=2)),
+  )
+  cache.update(bound_message("1", channel_id="3000", author_id="1"))
+  cache.update(bound_message("2", channel_id="3001", author_id="2"))
+  // Editing the message in 3000 makes 3001 the least recently written.
+  cache.update(
+    bound_message("1", channel_id="3000", author_id="1", event="MESSAGE_UPDATE"),
+  )
+  cache.update(bound_message("3", channel_id="3002", author_id="3"))
+  assert_eq(dm_retained(cache, ["3000", "3001", "3002"]), ["3000", "3002"])
 }
 
 ///|
