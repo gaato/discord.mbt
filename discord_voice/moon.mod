@@ -26,8 +26,8 @@ warnings = "-implicit_impl_as_method"
 import {
   "gaato/discord@0.9.0",
   "gaato/dave@0.1.1",
-  "gaato/http@0.2.0",
-  "gaato/http-async@0.2.0",
+  "gaato/http@0.2.1",
+  "gaato/http-async@0.2.1",
   "moonbitlang/async@0.22.5",
 }
 
