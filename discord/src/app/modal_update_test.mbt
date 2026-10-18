@@ -214,3 +214,37 @@ async test "a rejected modal update is answered even when every handler slot is 
     release.put(())
   })
 }
+
+///|
+async test "a modal arriving after shutdown runs neither its preflight nor the error policy" {
+  let client = @dhttp.Client("test-token")
+  defer client.close()
+  let errors : Array[String] = []
+  let warnings : Array[String] = []
+  let app = @app.AppBuilder()
+  app.on_modal(
+    ticket_modal(),
+    DeferredUpdate((_, _, _) => fail("handler must not run")),
+  )
+  app.error_policy((ctx, error) => {
+    errors.push("\{Repr(error)}")
+    ctx.respond_error(content="failed")
+  })
+  app.on_warn(warning => warnings.push("\{Repr(warning)}"))
+  let application_id = @model.Id::parse("400000000000000001")
+  let framework = @framework.Framework(client, application_id)
+  let intake = @app.HandlerIntake()
+  app.build().attach(framework, client~, application_id~, intake~) |> ignore
+  intake.close()
+  // A command-opened modal whose DeferredUpdate the preflight refuses.
+  let interaction = app_modal_submit(
+    "ticket-note:9", "done", "500000000000000955",
+  )
+  let (gate, _) = @framework.ResponseGate::capture(interaction)
+  framework.process_with(interaction, gate~) |> ignore
+  assert_eq(errors, [])
+  assert_true(
+    warnings.iter().any(w => w.contains("InteractionDroppedWhileStopping")),
+    msg=warnings.join(", "),
+  )
+}

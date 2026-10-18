@@ -765,7 +765,15 @@ pub fn App::attach(
     }
   }
   for entry in self.modals_ {
-    let dispatch = raw => {
+    let dispatch = (raw : @framework.ModalCtx) => {
+      // The preflight runs before admission, so it checks the intake first:
+      // after shutdown, not even its error policy may answer.
+      if !intake.is_open() {
+        warn(
+          InteractionDroppedWhileStopping(target="modal:\{raw.data.custom_id}"),
+        )
+        return
+      }
       (entry.preflight)(raw) catch {
         error => {
           invoke_error_policy(
