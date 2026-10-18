@@ -84,7 +84,10 @@ async test "a stalled response body times out and releases the bucket once" {
       })
     })
     try client.request(GetGateway) catch {
-      Timeout(timeout_ms~) => assert_eq(timeout_ms, 200)
+      Timeout(phase~, timeout_ms~) => {
+        assert_eq(phase, Body)
+        assert_eq(timeout_ms, 200)
+      }
       error => fail("unexpected error: \{Repr(error)}")
     } noraise {
       _ => fail("expected timeout while reading the response body")

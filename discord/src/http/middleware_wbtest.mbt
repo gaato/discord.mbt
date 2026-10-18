@@ -149,7 +149,10 @@ async test "middleware failures surface as transport errors" {
   client.middleware((_request, _next) => raise QuotaExhausted(remaining=0))
   try client.request(GetGateway) catch {
     // The message keeps the error's payload, not only its type name.
-    Transport(message~) => assert_eq(message, "QuotaExhausted(remaining=0)")
+    Transport(phase~, message~) => {
+      assert_eq(phase, Unknown)
+      assert_eq(message, "QuotaExhausted(remaining=0)")
+    }
     error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected transport error")

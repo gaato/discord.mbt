@@ -144,7 +144,7 @@ async test "a rate limiter whose release fails surfaces as a transport error" {
   )
   defer client.close()
   try client.request(GetGateway) catch {
-    Transport(message~) => {
+    Transport(phase=Unknown, message~) => {
       assert_true(message.contains("rate limiter release failed"))
       assert_true(message.contains("ReleaseRejected"))
     }

@@ -8,18 +8,18 @@ pub struct Client {
   priv base_url : String
   priv base_path : String
   priv default_allowed_mentions : @model.AllowedMentions
-  priv request_timeout_ms_ : Int32
   priv middleware_ : Array[HttpMiddleware]
   priv telemetry_ : Array[(@telemetry.TelemetryEvent) -> Unit raise]
   priv warn_ : Ref[(String) -> Unit]
-  priv mut closed_ : Bool
+  // Shared with the runtime's retry rule, which resends nothing once set.
+  priv closed_ : Ref[Bool]
 }
 
 ///|
 /// What answers a validated logical call, below the middleware.
 priv enum Backend {
   // The `gaato/sdk-runtime` client: rate limiting, the wire exchange, and
-  // 429 retries, above which status mapping and decoding happen.
+  // retries, above which status mapping and decoding happen.
   Online(@runtime.Client)
   // A handler that answers in place of all of that.
   Offline(async (HttpRequest) -> HttpResponse)
@@ -39,13 +39,21 @@ const MAX_RESPONSE_BODY_BYTES : Int32 = 67_108_864
 /// Create a client. `token` is the raw bot token (without the `Bot ` prefix).
 ///
 /// `request_timeout_ms` (default 30000) bounds each network attempt, including
-/// reading its response body. Rate-limit waits, 429 back-off, and user HTTP
-/// middleware are outside it. Timed-out attempts are not retried. For a
-/// whole-operation deadline, compose `@async.with_timeout` around the call.
+/// reading its response body. Rate-limit waits, retry back-off, and user HTTP
+/// middleware are outside it. For a whole-operation deadline, compose
+/// `@async.with_timeout` around the call.
+///
+/// `max_retries` (default 4) bounds how often one call is sent again. Only a
+/// call Discord cannot have acted on is resent: after a 429, once the delay
+/// it asks for has passed, and after a transport failure or timeout that
+/// proves no byte was sent (`DiscordHttpError::is_unsent`), with backoff.
+/// Every resend goes through the rate limiter again. A failure after
+/// connecting, or a timed-out exchange, may have reached Discord and is
+/// raised at once.
 ///
 /// `transport` is the `gaato/http` `Transport` that performs the wire
-/// exchange, below request validation, middleware, rate limiting, 429
-/// retries, status mapping, and decoding. By default the client creates a
+/// exchange, below request validation, middleware, rate limiting, retries,
+/// status mapping, and decoding. By default the client creates a
 /// `gaato/http-async` `AsyncTransport` with `request_timeout_ms`, a
 /// keep-alive pool of up to `max_connections` parked connections, and a
 /// 64 MiB bound on each buffered response body, and closes it in `close`. A
@@ -92,11 +100,12 @@ pub fn Client::Client(
   }
   let telemetry_ : Array[(@telemetry.TelemetryEvent) -> Unit raise] = []
   let warn_ : Ref[(String) -> Unit] = Ref(message => println(message))
+  let closed_ = Ref(false)
   let runtime = @runtime.Client::new(
     transport,
     @transport.AsyncClock::new(),
     base_url~,
-    retry=DiscordRetry::{ max_retries, },
+    retry=DiscordRetry::{ max_retries, closed: closed_, },
     limiter~,
     observer=attempt => emit_attempt(telemetry_, warn_, attempt),
   )
@@ -109,17 +118,16 @@ pub fn Client::Client(
     default_allowed_mentions: default_allowed_mentions.unwrap_or_else(
       @model.AllowedMentions::safe_default,
     ),
-    request_timeout_ms_: request_timeout_ms,
     middleware_: [],
     telemetry_,
     warn_,
-    closed_: false,
+    closed_,
   }
 }
 
 ///|
 /// Create a client with no network. `handler` answers every logical REST
-/// call in place of the rate limiter, the wire exchange, and 429 retries; it
+/// call in place of the rate limiter, the wire exchange, and retries; it
 /// has the same shape as the `next` continuation of `HttpMiddleware`, so an
 /// offline client is the innermost step of the same chain. Request validation,
 /// installed middleware, status-code-to-error mapping, and typed decoding run
@@ -128,8 +136,9 @@ pub fn Client::Client(
 /// There is no token, base URL, timeout, or retry: a 429 from `handler`
 /// surfaces as `DiscordHttpError::RateLimited` at once. An error raised by
 /// `handler` propagates as itself when it is a `DiscordHttpError` and as
-/// `DiscordHttpError::Transport` otherwise. Each call emits the same
-/// `HttpRequest` and `HttpRateLimited` telemetry as a single network attempt.
+/// `DiscordHttpError::Transport(phase=Unknown, ..)` otherwise. Each call
+/// emits the same `HttpRequest` and `HttpRateLimited` telemetry as a single
+/// network attempt.
 ///
 /// # Example
 /// ```mbt check
@@ -159,18 +168,17 @@ pub fn Client::offline(
     default_allowed_mentions: default_allowed_mentions.unwrap_or_else(
       @model.AllowedMentions::safe_default,
     ),
-    request_timeout_ms_: 0,
     middleware_: [],
     telemetry_: [],
     warn_: Ref(message => println(message)),
-    closed_: false,
+    closed_: Ref(false),
   }
 }
 
 ///|
 /// Install middleware around each logical REST call. The first installed
 /// middleware is outermost. `next` performs rate limiting, the wire
-/// exchange, and bounded 429 retries.
+/// exchange, and bounded retries.
 pub fn Client::middleware(self : Client, middleware : HttpMiddleware) -> Unit {
   self.middleware_.push(middleware)
 }
@@ -272,7 +280,7 @@ fn emit_attempt(
 /// transport is left open. A request already inside an offline handler is not
 /// cancelled by this method.
 pub fn Client::close(self : Client) -> Unit {
-  self.closed_ = true
+  self.closed_.val = true
   if self.owned_transport is Some(transport) {
     transport.close()
   }

@@ -383,12 +383,14 @@ fn simulate_unconfirmed(
         next(request) |> ignore
         println("[unconfirmed] defer delivered; reporting a transport failure")
         raise @dhttp.DiscordHttpError::Transport(
+          phase=Head,
           message="gate_probe: simulated lost callback response",
         )
       }
       if edit_fails && path.contains("/messages/@original") {
         println("[unconfirmed] failing the placeholder edit before sending it")
         raise @dhttp.DiscordHttpError::Transport(
+          phase=Dial,
           message="gate_probe: simulated failed edit",
         )
       }

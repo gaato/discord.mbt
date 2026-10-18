@@ -121,6 +121,7 @@ pub fn ComponentCtx::user(Self) -> @model.User
 #non_exhaustive
 pub(all) enum DeliveryFailure {
   Rejected
+  Unsent
   Expired
   Uncertain
 } derive(Eq, @debug.Debug)

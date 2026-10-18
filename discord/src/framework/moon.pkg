@@ -14,6 +14,7 @@ import {
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
   "gaato/http-async/mock" @simclock,
+  "gaato/http" @ghttp,
   "moonbitlang/async/aqueue",
   "moonbitlang/core/random",
 } for "test"

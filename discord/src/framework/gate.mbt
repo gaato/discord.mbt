@@ -24,8 +24,13 @@ pub(all) enum ResponseState {
 /// How a failed callback delivery left the interaction's callback window.
 #non_exhaustive
 pub(all) enum DeliveryFailure {
-  /// Discord definitively refused the callback; the window is still unused.
+  /// The callback was definitively refused, by Discord or by client-side
+  /// validation; the window is still unused.
   Rejected
+  /// The callback never reached Discord, so Discord cannot have accepted
+  /// it; the window is still unused and the same callback may be sent again
+  /// while it is open.
+  Unsent
   /// Discord no longer accepts any initial callback for this interaction.
   Expired
   /// Discord may or may not have accepted the callback.
@@ -109,12 +114,19 @@ pub fn ResponseGate::ResponseGate(
 ///|
 /// Classify a failed `POST /interactions/{id}/{token}/callback`.
 ///
-/// Unknown Interaction (10062) closes the window. Already Acknowledged (40060),
-/// rate limits, server errors, and transport failures are uncertain. Other
-/// client errors are definitive refusals of that payload.
+/// Unknown Interaction (10062) closes the window. A transport failure or
+/// timeout that proves nothing was sent (`DiscordHttpError::is_unsent`) is
+/// `Unsent`; the client has already resent it as often as `max_retries`
+/// allows. Already Acknowledged (40060), rate limits, server errors, and
+/// other transport failures and timeouts are uncertain. Other client errors
+/// are definitive refusals of that payload.
 pub fn classify_rest_callback_failure(error : Error) -> DeliveryFailure {
   match error {
     @dhttp.DiscordHttpError::Validation(..) => Rejected
+    // `DiscordHttpError::is_unsent` for the failures it covers beyond
+    // `Validation`.
+    @dhttp.DiscordHttpError::Transport(phase=Pool | Dial, ..)
+    | @dhttp.DiscordHttpError::Timeout(phase=Pool | Dial, ..) => Unsent
     @dhttp.DiscordHttpError::Api(status~, error~) =>
       if error.code == 10062 {
         Expired
@@ -236,7 +248,7 @@ pub async fn ResponseGate::send(
     error if @async.is_being_cancelled() => raise error
     error => {
       match (self.classify)(error) {
-        Rejected => {
+        Rejected | Unsent => {
           self.state = Pending
           self.placeholder_open = false
         }

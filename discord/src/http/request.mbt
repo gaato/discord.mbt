@@ -47,31 +47,6 @@ fn method_name(wire : String) -> String {
 }
 
 ///|
-/// Discord's retry rule: only a 429 is sent again, after the delay the
-/// response asked for, and at most `max_retries` times. A timed-out or
-/// otherwise failed attempt is never resent because it may already have
-/// reached Discord; a status error is final.
-priv struct DiscordRetry {
-  max_retries : Int32
-}
-
-///|
-impl @runtime.RetryDecider for DiscordRetry with fn next_delay_ms(
-  self,
-  error,
-  _request,
-  attempt,
-  _random,
-) {
-  guard error is @runtime.RateLimited(headers~, body~, ..) else { return None }
-  if attempt >= self.max_retries {
-    return None
-  }
-  let (retry_after_ms, _) = rate_limit_details(headers, body)
-  Some(retry_after_ms.to_int() + 1)
-}
-
-///|
 /// Retry delay and scope of a 429 response: the body's `retry_after` (in
 /// seconds, the more precise source), then the `Retry-After-Ms` or
 /// `Retry-After` header, then one second; `global` when the
@@ -202,10 +177,12 @@ fn api_error_of(response : HttpResponse) -> ApiError {
 /// headers, so caller-supplied values such as `authorization` take precedence.
 ///
 /// `request_timeout_ms` bounds each network attempt, including reading its
-/// response body. Rate-limit waits, 429 back-off, and user middleware are
-/// outside it. A timed-out attempt raises `Timeout` and is not retried because
-/// it may already have reached Discord. For a whole-operation deadline,
-/// compose `@async.with_timeout` around the call.
+/// response body. Rate-limit waits, retry back-off, and user middleware are
+/// outside it. A failed or timed-out attempt is resent only when it proves
+/// nothing reached Discord (`DiscordHttpError::is_unsent`); otherwise it
+/// raises `Transport` or `Timeout` at once, because Discord may already have
+/// acted on it. For a whole-operation deadline, compose `@async.with_timeout`
+/// around the call.
 pub async fn Client::request(
   self : Client,
   route : Route,
@@ -232,10 +209,14 @@ pub async fn Client::request(
         DiscordHttpError::RateLimited(retry_after_ms~, global~) =>
           raise RateLimited(retry_after_ms~, global~)
         DiscordHttpError::Deserialize(message~) => raise Deserialize(message~)
-        DiscordHttpError::Transport(message~) => raise Transport(message~)
-        DiscordHttpError::Timeout(timeout_ms~) => raise Timeout(timeout_ms~)
+        DiscordHttpError::Transport(phase~, message~) =>
+          raise Transport(phase~, message~)
+        DiscordHttpError::Timeout(phase~, timeout_ms~) =>
+          raise Timeout(phase~, timeout_ms~)
         DiscordHttpError::Validation(message~) => raise Validation(message~)
-        error => raise Transport(message="\{Repr(error)}")
+        // Middleware or an offline handler raised something else: nothing
+        // says whether the request had gone out.
+        error => raise Transport(phase=Unknown, message="\{Repr(error)}")
       }
     }
   }
@@ -277,8 +258,8 @@ fn validate_request(request : HttpRequest) -> Unit raise DiscordHttpError {
 
 ///|
 async fn Client::execute(self : Client, request : HttpRequest) -> HttpResponse {
-  if self.closed_ {
-    raise DiscordHttpError::Transport(message="client is closed")
+  if self.closed_.val {
+    raise DiscordHttpError::Transport(phase=Pool, message="client is closed")
   }
   // Checked after middleware, which may rewrite the request.
   validate_request(request)
@@ -337,10 +318,11 @@ async fn Client::answer_offline(
 ///|
 /// What a failed runtime send means to the client: a status error is a
 /// response for middleware to see, and the rest raise. A 429 here has
-/// outlived its retries.
+/// outlived its retries. A transport failure keeps its phase; a decoding or
+/// rate-limiter failure (`Config`) may come after the exchange, so it may
+/// have reached Discord (`Unknown`).
 fn settle_runtime_error(
   error : @runtime.SdkError,
-  timeout_ms~ : Int32,
 ) -> HttpResponse raise DiscordHttpError {
   match error {
     Status(status~, headers~, body~) => decode_response(status, headers, body)
@@ -348,21 +330,19 @@ fn settle_runtime_error(
       let (retry_after_ms, global) = rate_limit_details(headers, body)
       raise DiscordHttpError::RateLimited(retry_after_ms~, global~)
     }
-    Transport(@ghttp.HttpError::Timeout(..)) =>
-      raise DiscordHttpError::Timeout(timeout_ms~)
-    Transport(error) =>
-      raise DiscordHttpError::Transport(message=@debug.to_string(error))
+    Transport(error) => raise transport_failure(error)
     Decode(message~, ..) | Config(message) =>
-      raise DiscordHttpError::Transport(message~)
+      raise DiscordHttpError::Transport(phase=Unknown, message~)
   }
 }
 
 ///|
 /// One logical call on the wire: the runtime admits it through the rate
 /// limiter, sends it, releases the bucket, reports the attempt to telemetry,
-/// and resends a 429 as `DiscordRetry` directs. Every status comes back as a
-/// response so middleware sees it raw; a 429 that outlived its retries, a
-/// transport failure, and a timed-out attempt come back as errors.
+/// and resends a 429 or an unsent attempt as `resend_delay_ms` directs. Every
+/// status comes back as a response so middleware sees it raw; a 429 that
+/// outlived its retries, a transport failure, and a timed-out attempt come
+/// back as errors.
 async fn Client::request_online(
   self : Client,
   runtime : @runtime.Client,
@@ -375,8 +355,7 @@ async fn Client::request_online(
     global_exempt=request.route.is_interaction(),
     body?=wire.body,
   ) catch {
-    error =>
-      return settle_runtime_error(error, timeout_ms=self.request_timeout_ms_)
+    error => return settle_runtime_error(error)
   }
   decode_response(response.status, response.headers, response.body)
 }

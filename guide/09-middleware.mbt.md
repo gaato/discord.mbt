@@ -35,20 +35,21 @@ order is `a-in`, `b-in`, `b-out`, `a-out`.
 
 | Chain | What `next` wraps | What stays outside |
 |---|---|---|
-| `Client::middleware` | One logical REST call, including rate-limit acquisition, the wire exchange, and bounded 429 retries | Status-code mapping, typed response decoding, and the caller's code |
+| `Client::middleware` | One logical REST call, including rate-limit acquisition, the wire exchange, and bounded retries | Status-code mapping, typed response decoding, and the caller's code |
 | `App::middleware` | Checks, command cooldowns, and command, component, or modal handler dispatch, inside the `ErrorPolicy` boundary | Autocomplete, Gateway events, and services |
 | `BotBuilder::middleware` | Typed and raw Gateway handler fan-out for one decoded event | Cache updates, decode-error observation, collectors, and interaction routing |
 
 ## HTTP middleware
 
 An HTTP middleware receives `HttpRequest` before transport encoding. `next`
-returns the final `HttpResponse` after any internal 429 retries and before a
+returns the final `HttpResponse` after any internal retries and before a
 Discord error status becomes `DiscordHttpError::Api`.
 
 `request_timeout_ms` bounds each network attempt inside `next`, including
 reading its response body. User middleware before and after `next`, rate-limit
-waits, and 429 back-off are outside that timeout. Timed-out attempts raise
-`DiscordHttpError::Timeout` without retrying. For a whole-operation deadline,
+waits, and retry back-off are outside that timeout. A timed-out attempt
+raises `DiscordHttpError::Timeout` without retrying unless it timed out before
+anything was sent. For a whole-operation deadline,
 compose `@async.with_timeout` around the call; see the tested example in
 [REST client](05-rest.mbt.md#rate-limit-behavior). Allow for legitimate waits:
 command sync may wait about a minute for the bulk-overwrite-commands bucket.

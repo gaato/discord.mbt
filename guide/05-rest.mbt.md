@@ -329,11 +329,19 @@ trait and is passed through `Client(limiter=...)`. The client calls its
 status and headers, or with status 0 when no response arrived.
 
 `Client(request_timeout_ms=30000)` bounds each single network attempt,
-including reading its response body. Rate-limit waits, 429 back-off, and user
-HTTP middleware are not bounded by it. Command sync can legitimately wait
-about a minute for the bulk-overwrite-commands bucket. A timed-out attempt
-raises `DiscordHttpError::Timeout` and is not retried: Discord may already
-have received it, so retrying a non-idempotent POST could duplicate it.
+including reading its response body. Rate-limit waits, retry back-off, and
+user HTTP middleware are not bounded by it. Command sync can legitimately wait
+about a minute for the bulk-overwrite-commands bucket.
+
+`DiscordHttpError::Transport` and `DiscordHttpError::Timeout` carry the
+`phase` of the exchange that failed. In `Pool` (waiting for a connection, or
+a closed client) and `Dial` (connecting, TLS, or a proxy tunnel) no byte of
+the request was sent, and `error.is_unsent()` is true. The client resends
+such a failure itself, with backoff and through the rate limiter, up to
+`Client(max_retries=4)` times, for every method: Discord never saw it, so a
+`POST` cannot be duplicated. A failure or timeout in any later phase (`Write`,
+`Head`, `Body`, or `Unknown`) is raised at once, because Discord may already
+have acted on it.
 
 For a whole-operation deadline, compose `@async.with_timeout` around the
 call. This also bounds middleware and rate-limit waiting. The example uses a
@@ -368,7 +376,7 @@ async test "an overall REST deadline includes middleware" {
 ## Request middleware
 
 `Client::middleware` wraps each logical REST call, outside the per-attempt
-timeout. The rate limiter, wire exchange, and bounded 429 retries all run
+timeout. The rate limiter, wire exchange, and bounded retries all run
 inside `next`:
 
 ```mbt check

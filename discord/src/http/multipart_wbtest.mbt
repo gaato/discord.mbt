@@ -77,7 +77,7 @@ test "encode_parts draws another boundary when a part contains the first" {
   )
   // A source that never escapes the collision gives up instead of looping.
   try encode_parts(upload_parts("{}", [file]), random=() => 0.0) catch {
-    Transport(message~) =>
+    Validation(message~) =>
       inspect(message, content="could not choose a multipart boundary")
     error => fail("unexpected error: \{Repr(error)}")
   } noraise {

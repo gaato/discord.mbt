@@ -26,10 +26,11 @@ pub(all) suberror DiscordHttpError {
   Api(status~ : Int, error~ : ApiError)
   RateLimited(retry_after_ms~ : Int64, global~ : Bool)
   Deserialize(message~ : String)
-  Transport(message~ : String)
-  Timeout(timeout_ms~ : Int)
+  Transport(phase~ : @gaato/http.Phase, message~ : String)
+  Timeout(phase~ : @gaato/http.Phase, timeout_ms~ : Int)
   Validation(message~ : String)
 } derive(@debug.Debug)
+pub fn DiscordHttpError::is_unsent(Self) -> Bool
 
 // Types and methods
 pub(all) struct ApiError {

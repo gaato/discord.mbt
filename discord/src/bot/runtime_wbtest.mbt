@@ -908,7 +908,10 @@ async test "bot sync failures stay fail-fast" {
     defer client.close()
     client.middleware((request, _next) => {
       if (request.route.method_() is Get) == fail_get {
-        raise @dhttp.DiscordHttpError::Transport(message="sync failed")
+        raise @dhttp.DiscordHttpError::Transport(
+          phase=Unknown,
+          message="sync failed",
+        )
       }
       {
         status: 200,
@@ -943,7 +946,8 @@ async test "bot sync failures stay fail-fast" {
         running.wait()
       })
     catch {
-      @dhttp.DiscordHttpError::Transport(message="sync failed") => ()
+      @dhttp.DiscordHttpError::Transport(phase=Unknown, message="sync failed") =>
+        ()
       error => fail("unexpected sync error: \{Repr(error)}")
     } noraise {
       _ => fail("expected sync failure")

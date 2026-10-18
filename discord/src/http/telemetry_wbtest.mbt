@@ -65,7 +65,7 @@ async test "a timed-out attempt releases its bucket and emits telemetry without 
   client.on_telemetry(event => events.push(event))
   let route = Route::custom(request_method=Post, path="/channels/1/messages")
   try client.request(route, body={ "content": "send once" }) catch {
-    Timeout(timeout_ms~) => inspect(timeout_ms, content="10")
+    Timeout(phase=Unknown, timeout_ms~) => inspect(timeout_ms, content="10")
     error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected timeout")

@@ -36,10 +36,13 @@ async test "component and modal failures flow through the error policy" {
     boom_form,
     Immediate((_, _, _) => raise @app.HandlerError::GuildOnly),
   )
+  // Nothing listens there; with no resends the refusal reaches the policy
+  // at once.
   let client = @dhttp.Client(
     "test-token",
     base_url="http://127.0.0.1:1",
     max_connections=1,
+    max_retries=0,
   )
   defer client.close()
   @async.with_task_group(group => {

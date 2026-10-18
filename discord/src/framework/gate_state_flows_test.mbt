@@ -1,5 +1,5 @@
 ///|
-async test "REST gate classifies callback failures three ways" {
+async test "REST gate classifies callback failures four ways" {
   let cases : Array[(@dhttp.DiscordHttpError, @framework.DeliveryFailure)] = [
     (
       Api(status=404, error={
@@ -43,8 +43,18 @@ async test "REST gate classifies callback failures three ways" {
       Uncertain,
     ),
     (RateLimited(retry_after_ms=1000, global=false), Uncertain),
-    (Transport(message="connection lost"), Uncertain),
-    (Timeout(timeout_ms=100), Uncertain),
+    (Transport(phase=Pool, message="client is closed"), Unsent),
+    (Transport(phase=Dial, message="refused"), Unsent),
+    (Timeout(phase=Pool, timeout_ms=100), Unsent),
+    (Timeout(phase=Dial, timeout_ms=100), Unsent),
+    (Transport(phase=Write, message="connection lost"), Uncertain),
+    (Transport(phase=Head, message="connection lost"), Uncertain),
+    (Transport(phase=Body, message="connection lost"), Uncertain),
+    (Transport(phase=Unknown, message="connection lost"), Uncertain),
+    (Timeout(phase=Write, timeout_ms=100), Uncertain),
+    (Timeout(phase=Head, timeout_ms=100), Uncertain),
+    (Timeout(phase=Body, timeout_ms=100), Uncertain),
+    (Timeout(phase=Unknown, timeout_ms=100), Uncertain),
     (Deserialize(message="invalid response"), Uncertain),
   ]
   for (error, expected) in cases {
@@ -70,14 +80,18 @@ async test "REST gate classifies callback failures three ways" {
       _ => fail("expected sink failure")
     }
     assert_eq(@framework.classify_rest_callback_failure(error), expected)
+    // A transport failure is `Unsent` exactly when the error proves it.
+    if error is (Transport(..) | Timeout(..)) {
+      assert_eq(error.is_unsent(), expected == Unsent)
+    }
     let state : @framework.ResponseState = match expected {
-      Rejected => Pending
+      Rejected | Unsent => Pending
       Expired => Expired
       Uncertain => Unconfirmed(ChannelMessageWithSource)
       @framework.DeliveryFailure::.. => fail("unexpected delivery failure")
     }
     assert_eq(gate.state(), state)
-    assert_eq(gate.is_pending(), expected == Rejected)
+    assert_eq(gate.is_pending(), expected is (Rejected | Unsent))
     gate.expire()
     if expected == Uncertain {
       assert_eq(gate.state(), Unconfirmed(ChannelMessageWithSource))
@@ -115,4 +129,40 @@ async test "cancellation bypasses the rejection classifier" {
   })
   assert_false(classified.val)
   assert_eq(gate.state(), Unconfirmed(DeferredChannelMessageWithSource))
+}
+
+///|
+/// A wire on which every connection is refused, so no callback reaches
+/// Discord.
+struct RefusingTransport {
+  mut attempts : Int32
+}
+
+///|
+impl @ghttp.Transport for RefusingTransport with fn send(self, _request) {
+  self.attempts += 1
+  raise @ghttp.HttpError::Connect("refused")
+}
+
+///|
+impl @ghttp.Transport for RefusingTransport with fn send_stream(self, _request) {
+  self.attempts += 1
+  raise @ghttp.HttpError::Connect("refused")
+}
+
+///|
+async test "a callback that never reached Discord leaves the window open" {
+  let transport = RefusingTransport::{ attempts: 0, }
+  let client = @dhttp.Client("test-token", transport~, max_retries=0)
+  defer client.close()
+  let gate = @framework.ResponseGate::rest(client, gate_interaction(2))
+  try gate.send({ typ: DeferredChannelMessageWithSource, data: None, }) catch {
+    @dhttp.DiscordHttpError::Transport(phase=Dial, ..) => ()
+    error => fail("unexpected error: \{Repr(error)}")
+  } noraise {
+    _ => fail("expected the refused connection")
+  }
+  assert_eq(transport.attempts, 1)
+  assert_eq(gate.state(), Pending)
+  assert_false(gate.placeholder_open())
 }
