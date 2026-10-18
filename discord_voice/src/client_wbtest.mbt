@@ -4,6 +4,9 @@ priv struct PendingVoiceTransport {
   outgoing : @aqueue.Queue[Json]
   recv_started : @aqueue.Queue[Unit]
   close_calls : Ref[Int32]
+  /// While set, `close` waits on it before closing, as a close frame that
+  /// takes its time to send.
+  close_held : Ref[@aqueue.Queue[Unit]?]
 }
 
 ///|
@@ -13,6 +16,7 @@ fn PendingVoiceTransport::new() -> PendingVoiceTransport {
     outgoing: Queue(kind=Unbounded),
     recv_started: Queue(kind=Unbounded),
     close_calls: Ref(0),
+    close_held: Ref(None),
   }
 }
 
@@ -35,6 +39,9 @@ impl VoiceTransport for PendingVoiceTransport with fn send_binary(_self, _bytes)
 ///|
 impl VoiceTransport for PendingVoiceTransport with fn close(self, code~) {
   self.close_calls.val += 1
+  if self.close_held.val is Some(held) {
+    held.get()
+  }
   self.incoming.close(
     error=VoiceTransportClosed(code=Some(code), reason="client close"),
   )
@@ -744,6 +751,37 @@ async test "a voice server that went away is dropped until the next move" {
     ])
     assert_eq(connection.state(), Ready)
     assert_eq(fake.sent.length(), 1)
+    connection.disconnect()
+  })
+}
+
+///|
+async test "a replacement server sent while the lost one closes is followed" {
+  if !shim_available() {
+    return
+  }
+  let client = VoiceClient()
+  let fake = FakeVoicePort::new()
+  let clock = @simclock.VirtualClock()
+  let connects = fake_connects(client, clock)
+  with_running_client(client, group => {
+    let connection = join_ready(client, fake, clock, group)
+    let held : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+    connects.transports[0].close_held.val = Some(held)
+    deliver_to(fake.servers, voice_server(None, "gone"))
+    clock.settle()
+    // The old connection is still closing when the replacement arrives.
+    deliver_to(
+      fake.servers,
+      voice_server(Some("voice-new.example"), "new-token"),
+    )
+    held.put(())
+    clock.settle()
+    assert_eq(connects.urls, [
+      "wss://voice.example/?v=8", "wss://voice-new.example/?v=8",
+    ])
+    assert_eq(connection.state(), Ready)
+    assert_eq(fake.sent.length(), 1, msg="no rejoin")
     connection.disconnect()
   })
 }

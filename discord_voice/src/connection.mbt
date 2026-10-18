@@ -433,11 +433,14 @@ fn[X] VoiceConnection::connect_to(
 /// Follow a server change. Closing the current gateway wakes the event pump,
 /// the one task that replaces gateways: for a new server it identifies there
 /// with the session it already has; for one that went away it waits for the
-/// next, as Discord asks, instead of resuming against the old one.
-async fn VoiceConnection::follow_server(
+/// next, as Discord asks, instead of resuming against the old one. The close
+/// runs in `group`, so the watch is listening for the next change while the
+/// old gateway's close frame goes out.
+fn[X] VoiceConnection::follow_server(
   self : VoiceConnection,
+  group : @async.TaskGroup[X],
   server : VoiceServer,
-) -> Unit noraise {
+) -> Unit {
   self.server_change = Some(
     match server.endpoint {
       Some(endpoint) =>
@@ -447,7 +450,7 @@ async fn VoiceConnection::follow_server(
   )
   self.changed()
   if self.gateway is Some(gateway) {
-    gateway.close()
+    group.spawn_bg(no_wait=true, () => gateway.close())
   }
 }
 
@@ -932,7 +935,7 @@ pub fn[X] VoiceConnection::start(
   workers.push(() => connection.run_playback())
   workers.push(() => {
     watch_updates(connection.next_server_, server => {
-      connection.follow_server(server)
+      connection.follow_server(group, server)
     })
   })
   workers.push(() => {
