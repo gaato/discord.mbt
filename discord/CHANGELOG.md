@@ -7,6 +7,13 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+### Changed
+
+- Built on `gaato/http` 0.3.1 and `gaato/sdk-runtime` 0.5.0: multipart bodies,
+  the boundary's random source, and `Retry-After` parsing now come from
+  `gaato/http` (`gaato/http/multipart`, `gaato/http/random`), where they moved
+  from `gaato/sdk-runtime`. The public API is unchanged.
+
 ## [0.10.0] - 2026-10-18
 
 ### Changed

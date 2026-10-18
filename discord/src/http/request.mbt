@@ -56,7 +56,7 @@ fn rate_limit_from_json(headers : @ghttp.Headers, body : Json) -> (Int64, Bool) 
   let retry_after_ms : Int64 = match body {
     { "retry_after": Number(seconds, ..), .. } => (seconds * 1000.0).to_int64()
     _ =>
-      match @runtime.retry_after_ms(headers) {
+      match @ghttp.retry_after_ms(headers) {
         Some(ms) => ms.to_int64()
         None => 1000L
       }

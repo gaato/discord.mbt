@@ -227,7 +227,7 @@ fn form_parts(
 /// the caller's, so nothing is copied until the segments are joined.
 fn encode_parts(
   parts : Array[@multipart.Part],
-  random~ : () -> Double = @runtime.default_random,
+  random~ : () -> Double = @random.default_random,
 ) -> (String, Array[Bytes]) raise DiscordHttpError {
   @multipart.encode_segments_fresh(parts, random~) catch {
     // Only a broken random source gets here, before any I/O.
