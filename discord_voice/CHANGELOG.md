@@ -35,6 +35,14 @@ releases (0.x → 0.y) may contain breaking changes; patch releases do not.
 
 ### Fixed
 
+- **A voice connection stays closed once `disconnect` begins.** While
+  `disconnect` was still sending the leave to the main gateway, a voice event
+  could still be handled: a resume set the state back to `Ready` (so
+  `wait_ready` succeeded on a closing connection), and a 4006 or 4014 close
+  rejoined the channel after the leave. Events that arrive once teardown has
+  begun are now ignored, a session that finishes establishing during it is
+  not installed, and the state never leaves `Closed`.
+
 - **A voice server move keeps the connection, and nothing waits for one after
   the connection ends.** A `VOICE_SERVER_UPDATE` for a joined guild now makes
   the same `VoiceConnection` identify on the new server with its session,
