@@ -207,6 +207,28 @@ test "a thread list sync clears stale thread messages without retained channels"
 }
 
 ///|
+test "a thread list sync keeps the messages of the threads it lists" {
+  let cache = @cache.InMemoryCache(
+    resources=@cache.CacheResources(channels=false, messages=true),
+  )
+  cache.update(bound_event("THREAD_CREATE", bound_thread_json("401")))
+  cache.update(bound_event("THREAD_CREATE", bound_thread_json("402")))
+  for id in ["401", "402"] {
+    cache.update(
+      bound_message("9\{id}", channel_id=id, author_id="202", guild_id="100"),
+    )
+  }
+  cache.update(
+    bound_event(
+      "THREAD_LIST_SYNC",
+      "{\"guild_id\":\"100\",\"channel_ids\":[\"400\"],\"threads\":[\{bound_thread_json("401")}],\"members\":[]}",
+    ),
+  )
+  assert_eq(cache.messages(@model.Id::parse("401")).length(), 1)
+  assert_eq(cache.messages(@model.Id::parse("402")).length(), 0)
+}
+
+///|
 test "a fresh guild create forgets the threads it no longer lists" {
   let cache = @cache.InMemoryCache(resources=@cache.CacheResources::all())
   cache.update(bound_guild_create(members=[], threads=["401", "402"]))

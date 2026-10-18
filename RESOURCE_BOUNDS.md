@@ -26,7 +26,7 @@ kind say what that product is.
 | Cache entries (`cache/cache.mbt`) | `CacheLimits` per resource, and everything keyed by a guild or channel leaves with it | Oldest entry evicted |
 | Cached messages (`cache/cache.mbt`), when enabled | `messages`, default 100 per channel, times the channels holding them (rows below) | Oldest message evicted |
 | Cached DM and group DM channels and their messages (`cache/cache.mbt`, `dm_channels_`) | `dm_channels`, default 128 channels without a guild | Least recently written channel evicted with its messages and their authors' holds |
-| Cache deadline indexes (`cache/deadline_heap.mbt`, `Buckets.due_`), per resource with a TTL | 2 × its non-empty buckets + 16 items | Rebuilt from the live buckets, one item each |
+| Cache deadline indexes (`cache/deadline_heap.mbt`, `Buckets.due_`), per resource with a TTL | 2 × its non-empty buckets + 16 items, checked whenever an item is added or a bucket goes | Rebuilt from the live buckets, one item each |
 | Cached users seen without a holder (`cache/user_store.mbt`, `recent_`) | `recent_users`, default 128: bans, departed members, interaction users, authors of messages the cache does not keep | Least recently seen evicted |
 | Cooldown windows (`cooldown/cooldown.mbt`) | Live windows: expired keys are swept whenever the map doubles, and at least once a minute | — |
 | REST rate-limit buckets (`gaato/sdk-runtime` `WindowLimiter`, also inside the coordinator) | Buckets in use: idle gates are dropped, expired states swept whenever the map doubles, and at least once a minute | — |

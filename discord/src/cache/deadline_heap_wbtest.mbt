@@ -35,3 +35,27 @@ test "a churning bucket keeps the deadline index bounded" {
   buckets.expire()
   assert_eq(buckets.buckets_.length(), 0)
 }
+
+///|
+test "dropping buckets in bulk shrinks the deadline index" {
+  let buckets : Buckets[Int32, Int32, Int32] = Buckets::new(
+    CacheLimit(ttl_ms=1_000_000L),
+    () => 0L,
+  )
+  for owner in 0..<1000 {
+    buckets.put(owner, 0, owner, guild_id=@model.Id::parse("1")) |> ignore
+  }
+  assert_eq(buckets.due_.length(), 1000)
+  // A guild leaving drops every bucket at once, long before any deadline.
+  buckets.drop_guild(@model.Id::parse("1"))
+  assert_eq(buckets.buckets_.length(), 0)
+  assert_true(buckets.due_.length() <= 16, msg="\{buckets.due_.length()}")
+  // Emptying buckets one entry at a time shrinks it the same way.
+  for owner in 0..<1000 {
+    buckets.put(owner, 0, owner) |> ignore
+  }
+  for owner in 0..<1000 {
+    buckets.remove(owner, 0)
+  }
+  assert_true(buckets.due_.length() <= 16, msg="\{buckets.due_.length()}")
+}

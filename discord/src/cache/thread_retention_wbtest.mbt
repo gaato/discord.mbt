@@ -64,7 +64,7 @@ test "loses_thread needs the current user removed from a private thread" {
 }
 
 ///|
-test "synced_away matches the synced guild and parents" {
+test "synced_away drops unlisted threads of the synced guild and parents" {
   let guild : @model.GuildId = @model.Id::parse("100")
   let other_guild : @model.GuildId = @model.Id::parse("101")
   let parent : @model.ChannelId = @model.Id::parse("400")
@@ -72,19 +72,21 @@ test "synced_away matches the synced guild and parents" {
   let entry = { guild_id: guild, parent_id: Some(parent), private_: false, }
   let orphan = { guild_id: guild, parent_id: None, private_: false, }
   let cases : Array[
-    (String, ThreadEntry, @model.GuildId, Array[@model.ChannelId]?, Bool),
+    (String, ThreadEntry, Bool, @model.GuildId, Array[@model.ChannelId]?, Bool),
   ] = [
-    ("whole guild", entry, guild, None, true),
-    ("its parent", entry, guild, Some([other_parent, parent]), true),
-    ("other parents", entry, guild, Some([other_parent]), false),
-    ("other guild", entry, other_guild, None, false),
-    ("no parent, whole guild", orphan, guild, None, true),
-    ("no parent, some parents", orphan, guild, Some([parent]), false),
+    ("whole guild", entry, false, guild, None, true),
+    ("whole guild, listed", entry, true, guild, None, false),
+    ("its parent", entry, false, guild, Some([other_parent, parent]), true),
+    ("its parent, listed", entry, true, guild, Some([parent]), false),
+    ("other parents", entry, false, guild, Some([other_parent]), false),
+    ("other guild", entry, false, other_guild, None, false),
+    ("no parent, whole guild", orphan, false, guild, None, true),
+    ("no parent, some parents", orphan, false, guild, Some([parent]), false),
   ]
   for case in cases {
-    let (name, entry, guild_id, channel_ids, expected) = case
+    let (name, entry, listed, guild_id, channel_ids, expected) = case
     assert_eq(
-      (name, synced_away(entry, guild_id, channel_ids)),
+      (name, synced_away(entry, listed, guild_id, channel_ids)),
       (name, expected),
     )
   }

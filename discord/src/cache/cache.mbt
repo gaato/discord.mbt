@@ -395,6 +395,7 @@ fn[O : Hash + Eq, K, V] Buckets::drop_if_empty(
   if bucket.entries.entries_.is_empty() {
     self.buckets_.remove(owner)
     (self.emptied_)(owner)
+    self.compact_due()
   }
 }
 
@@ -407,18 +408,24 @@ fn[K, V] Bucket::earliest_deadline(self : Bucket[K, V]) -> Int64? {
 }
 
 ///|
-/// Indexes the earliest deadline of `owner`'s bucket, rebuilding the index
-/// from every live bucket instead when stale items have piled up.
+/// Indexes the earliest deadline of `owner`'s bucket.
 fn[O, K, V] Buckets::index_earliest(
   self : Buckets[O, K, V],
   owner : O,
   bucket : Bucket[K, V],
 ) -> Unit {
   guard bucket.earliest_deadline() is Some(deadline) else { return }
-  if self.due_.length() < 2 * self.buckets_.length() + 16 {
-    self.due_.push(deadline, owner)
-    return
-  }
+  self.due_.push(deadline, owner)
+  self.compact_due()
+}
+
+///|
+/// Rebuilds the deadline index from the live buckets once stale items, left
+/// by refreshed or removed buckets, outnumber the bound: `2 × buckets + 16`.
+/// Run wherever the index grows or a bucket goes, so an emptied cache does
+/// not keep an index the size of its past peak.
+fn[O, K, V] Buckets::compact_due(self : Buckets[O, K, V]) -> Unit {
+  guard self.due_.length() > 2 * self.buckets_.length() + 16 else { return }
   self.due_.clear()
   for live_owner, live in self.buckets_ {
     if live.earliest_deadline() is Some(live_deadline) {
@@ -558,6 +565,7 @@ fn[O : Hash + Eq, K, V] Buckets::drop(
 ) -> Unit {
   if self.buckets_.remove_and_get(owner) is Some(bucket) {
     self.release(bucket)
+    self.compact_due()
   }
 }
 
@@ -1109,14 +1117,22 @@ fn InMemoryCache::update_member(
 ///|
 /// A sync lists every active thread under the parents it covers, so the
 /// known threads it does not list are gone, with their messages, whether or
-/// not channels are retained.
+/// not channels are retained; the ones it lists keep theirs.
 fn InMemoryCache::sync_threads(
   self : InMemoryCache,
   sync : @model.ThreadListSyncEvent,
 ) -> Unit {
+  let listed : Set[@model.ChannelId] = Set::from_array(
+    sync.threads.map(thread => thread.id),
+  )
   let removed = []
   for thread_id, entry in self.threads_ {
-    if synced_away(entry, sync.guild_id, sync.channel_ids) {
+    if synced_away(
+        entry,
+        listed.contains(thread_id),
+        sync.guild_id,
+        sync.channel_ids,
+      ) {
       removed.push(thread_id)
     }
   }

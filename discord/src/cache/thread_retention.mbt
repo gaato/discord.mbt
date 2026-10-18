@@ -57,12 +57,16 @@ fn loses_thread(
 
 ///|
 /// Whether a `THREAD_LIST_SYNC` for `guild_id` covering the parents
-/// `channel_ids` (the whole guild when absent) replaces `entry`.
+/// `channel_ids` (the whole guild when absent) and listing `listed` drops
+/// `entry`: a thread in its scope that it does not list is gone; one it
+/// lists stays, with its messages.
 fn synced_away(
   entry : ThreadEntry,
+  listed : Bool,
   guild_id : @model.GuildId,
   channel_ids : Array[@model.ChannelId]?,
 ) -> Bool {
+  !listed &&
   entry.guild_id == guild_id &&
   (match channel_ids {
     None => true
