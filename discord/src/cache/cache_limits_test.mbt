@@ -122,10 +122,15 @@ test "FIFO limits refresh position when an entity is re-stored" {
     resources=@cache.CacheResources::default(),
     limits=CacheLimits(users=CacheLimit(max_entries=2)),
   )
-  cache.update(limit_cached_event("USER_UPDATE", limit_user_fixture("1", "a")))
-  cache.update(limit_cached_event("USER_UPDATE", limit_user_fixture("2", "b")))
-  cache.update(limit_cached_event("USER_UPDATE", limit_user_fixture("1", "a2")))
-  cache.update(limit_cached_event("USER_UPDATE", limit_user_fixture("3", "c")))
+  // Members hold their users; `USER_UPDATE` concerns only the current user.
+  for user_id in ["1", "2", "1", "3"] {
+    cache.update(
+      limit_cached_event(
+        "GUILD_MEMBER_ADD",
+        limit_member_fixture("100", user_id),
+      ),
+    )
+  }
   assert_true(cache.user(@model.Id::parse("1")) is Some(_))
   assert_true(cache.user(@model.Id::parse("2")) is None)
   assert_true(cache.user(@model.Id::parse("3")) is Some(_))
