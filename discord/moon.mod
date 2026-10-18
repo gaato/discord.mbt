@@ -22,9 +22,9 @@ preferred_target = "native"
 warnings = "-implicit_impl_as_method"
 
 import {
-  "gaato/http@0.2.0",
-  "gaato/http-async@0.2.0",
-  "gaato/sdk-runtime@0.3.0",
+  "gaato/http@0.2.1",
+  "gaato/http-async@0.2.1",
+  "gaato/sdk-runtime@0.3.1",
   "moonbitlang/async@0.22.5",
   "hustcer/ed25519@0.6.0",
   "moonbit-community/flate@0.9.0",

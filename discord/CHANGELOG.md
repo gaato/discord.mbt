@@ -9,12 +9,14 @@ breaking change is listed with a migration note.
 
 ### Changed
 
-- **Depends on `gaato/http` 0.2.0, `gaato/http-async` 0.2.0, and
-  `gaato/sdk-runtime` 0.3.0.** The clock helpers the library kept for itself
+- **Depends on `gaato/http` 0.2.1, `gaato/http-async` 0.2.1, and
+  `gaato/sdk-runtime` 0.3.1.** The clock helpers the library kept for itself
   (the wall clock behind every `clock?` default, and the clock-driven
   timeout) now come from `gaato/http-async`'s `AsyncClock` and
   `with_timeout_opt`, and the REST client uses http-async's new response body
-  bound (see Fixed). Migration: a project that also lists any of these
+  bound (see Fixed). The REST rate limiter now holds a bucket for at most an
+  hour whatever reset or `Retry-After` a response sends, and an error keeps
+  at most 1 MiB of its body. Migration: a project that also lists any of these
   modules in its `moon.mod` must move it to the same version; their only
   breaking change is in `gaato/http/sse`, which this library does not use.
 - **The App, not the store, decides what an unreachable cooldown store
