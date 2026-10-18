@@ -136,12 +136,17 @@ fn scan(files : Array[(String, String)]) -> Map[String, Array[Int32]] {
         continue
       }
       for entry in entry_points {
-        guard line.find(entry) is Some(column) else { continue }
-        if is_injection_default(line, column) {
-          continue
+        // Every occurrence counts, two on one line included.
+        let mut from = 0
+        while line[from:].find(entry) is Some(offset) {
+          let column = from + offset
+          from = column + entry.length()
+          if is_injection_default(line, column) {
+            continue
+          }
+          let key = "\{path} \{current} \{entry_name(entry)}"
+          found.get_or_init(key, () => []).push(index + 1)
         }
-        let key = "\{path} \{current} \{entry_name(entry)}"
-        found.get_or_init(key, () => []).push(index + 1)
       }
     }
   }
@@ -280,6 +285,13 @@ async fn main {
       "\ndiscord/src/x/x.mbt wait @async.sleep # self-test, second use\n"
     audit(with_file("discord/src/x/x.mbt", twice), allowed_twice)
     must_fail(() => audit(with_file("discord/src/x/x.mbt", body), allowed_twice))
+    // Two uses on one line are two uses.
+    let one_line = body.replace(
+      old="  @async.sleep(10)\n",
+      new="  @async.sleep(10); @async.sleep(20)\n",
+    )
+    must_fail(() => audit(with_file("discord/src/x/x.mbt", one_line), allowed))
+    audit(with_file("discord/src/x/x.mbt", one_line), allowed_twice)
     // Missing, stale, and unexplained entries fail.
     must_fail(() => audit(files, ""))
     must_fail(() => audit(files, allowed))
