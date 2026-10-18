@@ -113,10 +113,20 @@ pub async fn[T] PendingEvent::wait(
 ) -> T? {
   defer self.cancel()
   let raw = match timeout_ms {
-    Some(ms) =>
+    Some(ms) => {
+      // Judge by what was delivered, not by the timeout's result: an event
+      // dispatched here as the timer fires is this wait's, whether `get`
+      // took it as it was cancelled or it is still queued.
+      let delivered : Ref[@model.Event?] = Ref(None)
       @transport.with_timeout_opt(self.collector.clock.val, ms, () => {
-        self.waiter.queue.get()
+        delivered.val = Some(self.waiter.queue.get())
       })
+      |> ignore
+      match delivered.val {
+        Some(event) => Some(event)
+        None => self.waiter.queue.try_get()
+      }
+    }
     None => Some(self.waiter.queue.get())
   }
   raw.bind(raw_event => self.event_type.project(raw_event))

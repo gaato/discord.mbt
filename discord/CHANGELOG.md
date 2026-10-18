@@ -173,6 +173,13 @@ breaking change is listed with a migration note.
 
 ### Fixed
 
+- **A component click or an awaited event that arrives as its wait times out
+  is no longer lost.** `wait_for_component` and `PendingEvent::wait`
+  (`GatewayCtx::wait_for`) returned `None` when the delivery and the timeout
+  landed in the same scheduler step, although the framework had already
+  routed the click to the waiter, so no handler answered it. They now return
+  what was delivered.
+
 - **The interaction HTTP server bounds its connections.** `serve_interactions`
   served any number of connections at once and waited for a request head, or
   for the next request on a kept-alive connection, without end, so idle

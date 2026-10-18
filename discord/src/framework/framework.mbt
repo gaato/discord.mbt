@@ -436,8 +436,21 @@ pub async fn Framework::wait_for_component(
     }
   })
   match timeout_ms {
-    Some(ms) =>
-      @transport.with_timeout_opt(self.clock, ms, () => waiter.queue.get())
+    Some(ms) => {
+      // Judge by what was delivered, not by the timeout's result: a click
+      // routed here as the timer fires is this waiter's (`process` reported
+      // it handled), whether `get` took it as it was cancelled or it is
+      // still queued.
+      let delivered : Ref[ComponentCtx?] = Ref(None)
+      @transport.with_timeout_opt(self.clock, ms, () => {
+        delivered.val = Some(waiter.queue.get())
+      })
+      |> ignore
+      match delivered.val {
+        Some(ctx) => Some(ctx)
+        None => waiter.queue.try_get()
+      }
+    }
     None => Some(waiter.queue.get())
   }
 }
