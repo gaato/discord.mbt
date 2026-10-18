@@ -745,3 +745,83 @@ fn decode_error_message(line : String) -> String raise {
   }
   message
 }
+
+///|
+/// A coordinator stand-in that records each request's op. It answers pings
+/// when `answer_pings` is set, and other requests after `stall_ms`, or never.
+async fn with_stalling_coordinator(
+  answer_pings~ : Bool,
+  stall_ms? : Int32,
+  run : async (String, Array[String]) -> Unit,
+) -> Unit {
+  @async.with_task_group(group => {
+    let server = @socket.TcpServer(@socket.Addr::parse("127.0.0.1:0"))
+    let ops : Array[String] = []
+    group.spawn_bg(no_wait=true, () => {
+      server.run_forever(allow_failure=true, (conn, _) => {
+        while conn.read_until("\n") is Some(line) {
+          guard @json.parse(line) is { "op": String(op), .. } else { break }
+          ops.push(op)
+          if op == "ping" {
+            if answer_pings {
+              conn.write("{\"ok\":true}\n")
+            }
+          } else if stall_ms is Some(stall_ms) {
+            @async.sleep(stall_ms)
+            conn.write("{\"ok\":true,\"lease\":\"l-1\"}\n")
+          }
+        }
+      })
+    })
+    run(server.addr.to_string(), ops)
+  })
+}
+
+///|
+fn count_ops(ops : Array[String], op : String) -> Int32 {
+  ops.iter().filter(seen => seen == op).count()
+}
+
+///|
+async test "a long acquisition survives while the coordinator answers pings" {
+  with_stalling_coordinator(answer_pings=true, stall_ms=400, (addr, ops) => {
+    let identify = RemoteIdentifyQueue::{
+      client: CoordinatorClient::connect(addr, liveness=(50, 200)),
+    }
+    defer identify.close()
+    identify.wait_for_identify(0)
+    let limiter = RemoteRateLimiter::connect_with(addr, addr => {
+      CoordinatorClient::connect(addr, liveness=(50, 200))
+    })
+    defer limiter.close()
+    limiter.acquire("GET:/gateway", global_exempt=false)
+    // Each request was sent once, and the pings in between were answered.
+    assert_eq(count_ops(ops, "identify_acquire"), 1)
+    assert_eq(count_ops(ops, "http_acquire"), 1)
+    assert_true(count_ops(ops, "ping") >= 4, msg=ops.join(","))
+  })
+}
+
+///|
+async test "an acquisition gives up on a coordinator that stops answering" {
+  with_stalling_coordinator(answer_pings=false, (addr, ops) => {
+    let client = CoordinatorClient::connect(addr, liveness=(50, 50))
+    defer client.close()
+    try
+      client.request({ "op": "identify_acquire", "shard_id": 0 }, max_retry=1)
+      |> ignore
+    catch {
+      CoordinatorError::Transport(message~) =>
+        assert_true(
+          message.has_prefix("coordinator did not answer a ping within 50 ms"),
+          msg=message,
+        )
+      error => fail("unexpected \{Repr(error)}")
+    } noraise {
+      _ => fail("a hung coordinator answered")
+    }
+    // The first attempt was abandoned and retried on a fresh connection.
+    assert_eq(count_ops(ops, "identify_acquire"), 2)
+    assert_true(client.conn.val is None)
+  })
+}
