@@ -259,7 +259,7 @@ fn validate_request(request : HttpRequest) -> Unit raise DiscordHttpError {
 ///|
 async fn Client::execute(self : Client, request : HttpRequest) -> HttpResponse {
   if self.closed_.val {
-    raise DiscordHttpError::Transport(phase=Pool, message="client is closed")
+    raise DiscordHttpError::Transport(phase=Pool, message=CLOSED_MESSAGE)
   }
   // Checked after middleware, which may rewrite the request.
   validate_request(request)
@@ -320,11 +320,14 @@ async fn Client::answer_offline(
 /// response for middleware to see, and the rest raise. A 429 here has
 /// outlived its retries. A transport failure keeps its phase; a decoding or
 /// rate-limiter failure (`Config`) may come after the exchange, so it may
-/// have reached Discord (`Unknown`).
+/// have reached Discord (`Unknown`). `ClosedGate`'s refusal is the client's
+/// closure, reported as the check before the call reports it.
 fn settle_runtime_error(
   error : @runtime.SdkError,
 ) -> HttpResponse raise DiscordHttpError {
   match error {
+    Transport(Connect(message)) if message == CLOSED_MESSAGE =>
+      raise DiscordHttpError::Transport(phase=Pool, message=CLOSED_MESSAGE)
     Status(status~, headers~, body~) => decode_response(status, headers, body)
     RateLimited(headers~, body~, ..) => {
       let (retry_after_ms, global) = rate_limit_details(headers, body)

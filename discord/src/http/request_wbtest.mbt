@@ -166,6 +166,26 @@ fn settled(error : @runtime.SdkError) -> String {
 }
 
 ///|
+test "the closed gate's refusal is reported as the client's closure" {
+  let settle = (error : @ghttp.HttpError) => {
+    try settle_runtime_error(@runtime.Transport(error)) catch {
+      error => Repr(error).to_string()
+    } noraise {
+      _ => "response"
+    }
+  }
+  assert_eq(
+    settle(Connect(CLOSED_MESSAGE)),
+    "Transport(phase=Pool, message=\"client is closed\")",
+  )
+  // A real refusal keeps its own report.
+  assert_eq(
+    settle(Connect("refused")),
+    "Transport(phase=Dial, message=\"could not connect: refused\")",
+  )
+}
+
+///|
 test "settle_runtime_error turns a status into a response and raises the rest" {
   let no_headers = @ghttp.Headers::from_array([])
   let cases : Array[(@runtime.SdkError, String)] = [
