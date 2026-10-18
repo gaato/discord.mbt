@@ -40,6 +40,26 @@ Deliberate exceptions are listed in `api_surface_audit.allow`, one type
 so every new gap needs its own decision. Unknown or stale entries fail the
 audit.
 
+# Clock guard
+
+```fish
+moon run scripts/clock_guard.mbtx --self-test
+```
+
+Library code waits and reads time through an injected `gaato/http/clock`
+`Clock`, so tests can drive it with `VirtualClock` from `gaato/http-async/mock`
+instead of sleeping. The guard scans the library sources of every module
+(tests excluded) for real-time entry points: `@async.sleep`,
+`@async.with_timeout(_opt)`, `@async.now`, `@async.retry` and its delays,
+`@async.Timer`, `@env.now`, the internal `@clock.now_ms`, and
+`AsyncClock::new`. A real clock as a labelled argument's default
+(`clock~ : &@hclock.Clock = @transport.AsyncClock::new()`) is the injection
+point and passes. Any other use needs an entry in `clock_guard.allow`, one
+`<file> <function> <entry point>` per line with a reason; today these are
+deadlines on live sockets, the coordinator's TCP client, and the REST
+client's sites until it takes a clock. Unknown or stale
+entries fail the guard.
+
 # Interaction message field audit
 
 ```fish

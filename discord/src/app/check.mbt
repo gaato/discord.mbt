@@ -138,10 +138,29 @@ pub(all) enum CooldownOutage {
 ///|
 /// The App's cooldown store, its outage policy, and whether the store is
 /// currently failing, so an outage is reported once rather than per command.
+/// `store` is `None` until the first `attach` when no store was supplied.
 priv struct Cooldowns {
-  store : &@cooldown.CooldownStore
+  mut store : &@cooldown.CooldownStore?
   outage : CooldownOutage
   mut down : Bool
+}
+
+///|
+/// The store an executor's commands use: the supplied one, or else the App's
+/// own in-memory store, made at the first `attach` on that executor's clock
+/// so its windows follow the time everything else there reads.
+fn Cooldowns::bind(
+  self : Cooldowns,
+  clock : &@hclock.Clock,
+) -> &@cooldown.CooldownStore {
+  match self.store {
+    Some(store) => store
+    None => {
+      let store = @cooldown.InMemoryCooldownStore(now=() => clock.now_unix_ms())
+      self.store = Some(store)
+      store
+    }
+  }
 }
 
 ///|
@@ -157,6 +176,7 @@ async fn RegisteredCommand::run_checks_and_cooldown(
   self : RegisteredCommand,
   bot : AppCtx,
   raw : @framework.CommandCtx,
+  store : &@cooldown.CooldownStore,
   cooldowns : Cooldowns,
   warn : (AppWarning) -> Unit,
 ) -> Unit {
@@ -169,7 +189,7 @@ async fn RegisteredCommand::run_checks_and_cooldown(
   guard self.cooldown_ is Some(config) else { return }
   let key = self.key() + "|" + cooldown_key(config, ctx)
   let duration_ms = config.seconds.to_int64() * 1000L
-  let decision = cooldowns.store.try_acquire(key, window_ms=duration_ms)
+  let decision = store.try_acquire(key, window_ms=duration_ms)
   if cooldowns.observe(answered=!(decision is Unavailable(_))) &&
     decision is Unavailable(reason~) {
     warn(CooldownUnavailable(reason~, outage=cooldowns.outage))

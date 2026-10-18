@@ -102,7 +102,7 @@ pub struct AppBuilder {
   priv middleware_ : Array[InteractionMiddleware]
   priv mut policy_ : ErrorPolicy?
   priv mut warn_ : (AppWarning) -> Unit
-  priv cooldown_store_ : &@cooldown.CooldownStore
+  priv cooldown_store_ : &@cooldown.CooldownStore?
   priv cooldown_outage_ : CooldownOutage
 }
 
@@ -136,8 +136,9 @@ pub struct App {
 /// `HandlerError::Busy` before it is acknowledged, and a deferred interaction
 /// still waiting when its token expires (15 minutes after the executor
 /// received it) is dropped with a warning. Cooldowns use a fresh in-memory
-/// store unless a shared `cooldown_store` is supplied; when that store cannot
-/// answer, `cooldown_outage` decides whether commands run, and the first
+/// store for each built App, timed by the clock of the executor it is first
+/// attached to, unless a shared `cooldown_store` is supplied; when that store
+/// cannot answer, `cooldown_outage` decides whether commands run, and the first
 /// failure of each outage is reported as `AppWarning::CooldownUnavailable`.
 pub fn AppBuilder::AppBuilder(
   max_in_flight~ : Int32 = 64,
@@ -155,9 +156,7 @@ pub fn AppBuilder::AppBuilder(
     middleware_: [],
     policy_: None,
     warn_: warning => println(warning.to_string()),
-    cooldown_store_: cooldown_store.unwrap_or_else(() => {
-      @cooldown.InMemoryCooldownStore()
-    }),
+    cooldown_store_: cooldown_store,
     cooldown_outage_: cooldown_outage,
   }
 }
@@ -547,6 +546,7 @@ async fn App::run_registered_command(
   waiter : ComponentWaiter?,
   command : RegisteredCommand,
   raw : @framework.CommandCtx,
+  cooldown_store : &@cooldown.CooldownStore,
 ) -> Unit {
   let failure_raw = RawCommand(raw)
   let ctx = InteractionCtx::{
@@ -554,7 +554,13 @@ async fn App::run_registered_command(
     raw_: failure_raw,
   }
   self.run_middleware(ctx, 0, () => {
-    command.run_checks_and_cooldown(bot, raw, self.cooldowns_, self.warn_)
+    command.run_checks_and_cooldown(
+      bot,
+      raw,
+      cooldown_store,
+      self.cooldowns_,
+      self.warn_,
+    )
     (command.dispatch)(bot, waiter, self.warn_, raw)
   }) catch {
     error if @async.is_being_cancelled() => raise error
@@ -671,6 +677,7 @@ pub fn App::attach(
     application_id_: application_id,
     latency_ms_: latency_ms,
   }
+  let cooldown_store = self.cooldowns_.bind(framework.clock())
   let admission : Admission = {
     limiter: @async.Semaphore(self.max_in_flight_),
     pending: 0,
@@ -700,7 +707,11 @@ pub fn App::attach(
         warn,
         "command:\{command.name_}",
         busy(Command(name=command.name_), Some(RawCommand(raw))),
-        () => self.run_registered_command(app_ctx, waiter, command, raw),
+        () => {
+          self.run_registered_command(
+            app_ctx, waiter, command, raw, cooldown_store,
+          )
+        },
       )
     })
     |> ignore

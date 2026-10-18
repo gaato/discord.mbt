@@ -149,6 +149,13 @@ breaking change is listed with a migration note.
   watchdog and the error policy saw no window left to answer in. It is now
   `Unsent`, and the gate stays `Pending`.
 
+- **The App's default cooldown store follows the executor's clock.**
+  Without a `cooldown_store`, each built App now makes its in-memory store at
+  its first `attach`, timed by that executor's clock (`App::serve(clock~)`,
+  the Bot's clock), so a window ends when the rest of the executor's time
+  says it does; before, the store always read the wall clock. Apps built
+  separately from one `AppBuilder` no longer share the default store's
+  windows; pass one `cooldown_store` to share them.
 - **A REST response body is limited to 64 MiB.** The transport the client
   creates fails an attempt whose body would exceed it with
   `DiscordHttpError::Transport`; before, any body was read whole into memory.

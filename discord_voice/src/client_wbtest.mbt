@@ -468,15 +468,22 @@ async test "join fails before opcode 4 without the guild voice states intent" {
 ///|
 async test "join waits for run and reports a client that never runs" {
   let fake = FakeVoicePort::new()
-  let idle = VoiceClient()
-  try
-    idle.join_via(fake.port(), Id(100UL), Id(200UL), timeout_ms=10) |> ignore
-  catch {
-    ClientNotRunning => ()
-    error => fail("unexpected voice join error: \{Repr(error)}")
-  } noraise {
-    _ => fail("join unexpectedly succeeded")
-  }
+  let clock = @simclock.VirtualClock()
+  let idle = VoiceClient(clock~)
+  @async.with_task_group(group => {
+    let joining = group.spawn(no_wait=true, allow_failure=true, () => {
+      idle.join_via(fake.port(), Id(100UL), Id(200UL), timeout_ms=10000)
+    })
+    clock.settle()
+    assert_eq(clock.pending(), [10000])
+    clock.advance(10000)
+    try joining.wait() |> ignore catch {
+      ClientNotRunning => ()
+      error => fail("unexpected voice join error: \{Repr(error)}")
+    } noraise {
+      _ => fail("join unexpectedly succeeded")
+    }
+  })
   assert_eq(fake.sent.length(), 0)
   let client = VoiceClient()
   @async.with_task_group(group => {

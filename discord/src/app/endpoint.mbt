@@ -42,8 +42,9 @@ pub(all) enum RestAccess {
 /// and closes it when `group` finishes; with `access=Client(client)` it uses
 /// the caller's client. When `application_id` is omitted, this method resolves
 /// it through `GET /applications/@me`. Supplying a client and the id avoids
-/// startup HTTP requests. `clock` times callback deadlines and handler
-/// admission, and drives the client built from a token. Raises `AppConfigError::EmptyToken` for an empty token.
+/// startup HTTP requests. `clock` times callback deadlines, handler
+/// admission and the App's default cooldown store, and drives the client
+/// built from a token. Raises `AppConfigError::EmptyToken` for an empty token.
 ///
 /// Command registration is a deploy-time step. Call `app.sync_commands(...)`
 /// from a one-shot program (see `examples/workers_echo/register`), never

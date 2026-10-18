@@ -1,0 +1,27 @@
+# Library call sites that may use real time directly. Everything else waits
+# and reads time through an injected `gaato/http/clock` `Clock`. Each entry is
+# `<file> <function> <entry point> # reason`, so a new call site always needs
+# its own decision.
+
+# The wall clock itself, behind the `now~` defaults of the cache and cooldown store
+discord/src/internal/clock/clock.mbt now_ms @env.now  # the wall-clock source that `now~` defaults read
+
+# The Bot's whitebox clock seam starts on wall time; only whitebox tests replace it
+discord/src/bot/bot.mbt BotCore::new AsyncClock::new  # default of the Bot's whitebox clock seam
+
+# Closing a real WebSocket: a virtual clock never drives a live socket, and tests use fake transports
+discord/src/gateway/transport.mbt WsTransport::close @async.with_timeout  # bounds a close frame on a live WebSocket
+discord_voice/src/transport.mbt VoiceWsTransport::close @async.with_timeout  # bounds a close frame on a live WebSocket
+
+# Reading a request body from a real HTTP peer
+discord/src/endpoint_http/endpoint_http.mbt read_body @async.with_timeout_opt  # stops a slow client on a live socket
+discord/src/endpoint_http/endpoint_http.mbt serve_connection @async.with_timeout_opt  # closes an idle or trickling connection on a live socket
+
+# The coordinator client talks TCP to a real coordinator process; its tests run a loopback one
+discord/src/coordinator/remote.mbt CoordinatorClient::request @async.with_timeout  # deadline on a live coordinator connection
+discord/src/coordinator/remote.mbt CoordinatorClient::request_watched @async.sleep  # liveness pings to a live coordinator
+discord/src/coordinator/remote.mbt CoordinatorClient::request_with_retry @async.retry  # reconnect backoff to a live coordinator
+discord/src/coordinator/remote.mbt CoordinatorClient::request_with_retry ExponentialDelay  # reconnect backoff to a live coordinator
+discord/src/coordinator/remote.mbt RemoteCooldownStore::connect @async.with_timeout  # connect deadline to a live coordinator
+
+# The REST client does not take a clock yet; injecting one is in progress

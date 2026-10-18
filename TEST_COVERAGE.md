@@ -56,10 +56,12 @@ Accepted as uncovered (needs a ledger row):
   (run 11: 242 PASS / 0 FAIL, 2026-07-16) and the live voice session checks
   (playback + recording, 2026-07-15);
 - timed-wait loops without an injectable clock (`with_typing`,
-  shard_manager). The gateway shard, command limiter, and identify queue take
-  a `clock~`, and the voice gateway and voice connection a `clock?` (a
+  shard_manager). The gateway shard, command limiter, and identify queue
+  take a `clock~`, and the voice gateway, voice connection, and voice client
+  a `clock?` (a
   `gaato/http/clock` `Clock`, driven in tests by `gaato/http-async/mock`'s
-  `VirtualClock`), plus `rand?`; their backoff/heartbeat/keepalive
+  `VirtualClock`; `scripts/clock_guard.mbtx` keeps library code off the real
+  clock), plus `rand?`; their backoff/heartbeat/keepalive
   cadences, and for voice also playback pacing, receive backoff and
   reordering, ready and silence timeouts, are tested deterministically —
   their rows below now cover only defensive arms;

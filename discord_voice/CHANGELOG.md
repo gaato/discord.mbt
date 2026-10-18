@@ -26,6 +26,13 @@ releases (0.x → 0.y) may contain breaking changes; patch releases do not.
   receive loop has no equivalent: disconnect instead.
   Migration: drop `sleeper=` or pass `clock=` with your own `Clock`.
 
+### Added
+
+- **`VoiceClient` takes a `clock?`.** It times `join`'s wait for `run` and
+  every connection the client starts, and voice IP discovery's receive
+  timeouts now run on the connection's clock. Before, both read the event
+  loop's timers even when the connection had been given a virtual clock.
+
 ### Fixed
 
 - **Receive state no longer grows as users change SSRCs.** A `Speaking`

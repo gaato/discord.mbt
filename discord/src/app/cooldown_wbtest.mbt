@@ -207,11 +207,7 @@ async test "command type separates cooldown keys even with the same name" {
 
 ///|
 test "an outage starts on the first unanswered attempt and ends on an answer" {
-  let cooldowns : Cooldowns = {
-    store: @cooldown.InMemoryCooldownStore(),
-    outage: Allow,
-    down: false,
-  }
+  let cooldowns : Cooldowns = { store: None, outage: Allow, down: false, }
   let rows : Array[(Bool, Bool)] = [
     (true, false),
     (false, true),
@@ -304,4 +300,50 @@ async test "cooldown outages follow the App's policy and warn once each" {
       "cooldown store unavailable (down again): \{effect} until it answers again",
     ])
   }
+}
+
+///|
+async test "the default cooldown store runs on the executor's clock" {
+  let client = @dhttp.Client("test-token")
+  defer client.close()
+  let app = AppBuilder()
+  let handled = Ref(0)
+  let retries : Array[Int64] = []
+  app.error_policy((_, error) => {
+    match error {
+      HandlerError::OnCooldown(retry_after_ms~) => retries.push(retry_after_ms)
+      _ => fail("unexpected error: \{Repr(error)}")
+    }
+  })
+  app.command(
+    slash(
+      name="ping",
+      description="Cooled command",
+      args=@interaction.Args::unit(),
+      handler=Raw(_ => handled.val += 1),
+    ).cooldown(seconds=10, bucket=Global),
+  )
+  let clock = @simclock.VirtualClock()
+  @async.with_task_group(group => {
+    let endpoint = app
+      .build()
+      .serve(
+        group,
+        access=Client(client),
+        application_id=@model.Id::parse("400000000000000001"),
+        clock~,
+      )
+    let ping = (id : String) => {
+      endpoint.handle_interaction(wbtest_command("ping", id), deadline_ms=3000)
+      |> ignore
+      clock.settle()
+    }
+    ping("500000000000000981")
+    clock.advance(4_000)
+    ping("500000000000000982")
+    clock.advance(6_000)
+    ping("500000000000000983")
+  })
+  assert_eq(handled.val, 2)
+  assert_eq(retries, [6_000L])
 }

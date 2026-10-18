@@ -19,7 +19,7 @@ pub struct FakeTransport {
   incoming : @aqueue.Queue[@gateway.GatewayFrame]
   outgoing : @aqueue.Queue[Json]
   sent : Array[Json]
-  /// Makes the next send signal `send_started` and then hang.
+  /// Makes the next send signal `send_started` and then hang until cancelled.
   block_next_send : Ref[Bool]
   send_started : @aqueue.Queue[Unit]
   /// Makes every close raise `SimFailure` after closing.
@@ -100,7 +100,9 @@ pub impl @gateway.GatewayTransport for FakeTransport with fn send(self, text) {
   if self.block_next_send.val {
     self.block_next_send.val = false
     self.send_started.put(())
-    @async.sleep(3_600_000)
+    // Hang until cancelled, with no timer for a virtual clock to count.
+    let never : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+    never.get()
   }
   if self.close_calls.val > 0 {
     self.sends_after_close.val += 1

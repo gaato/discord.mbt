@@ -63,6 +63,7 @@ pub struct VoiceClient {
   priv join_gates : Map[@model.GuildId, JoinGate]
   priv mut group : @async.TaskGroup[Unit]?
   priv started : @cond_var.Cond
+  priv clock : &@hclock.Clock
 }
 
 ///|
@@ -74,12 +75,17 @@ priv struct JoinGate {
 }
 
 ///|
-pub fn VoiceClient::VoiceClient() -> VoiceClient {
+/// Create a client. `clock` times the joins' waits and every connection the
+/// client starts (see `VoiceConnection::start`).
+pub fn VoiceClient::VoiceClient(
+  clock~ : &@hclock.Clock = @transport.AsyncClock::new(),
+) -> VoiceClient {
   {
     connections: Map([]),
     join_gates: Map([]),
     group: None,
     started: @cond_var.Cond(),
+    clock,
   }
 }
 
@@ -223,6 +229,7 @@ pub async fn VoiceClient::join_via(
     leave~,
     rejoin~,
     telemetry~,
+    clock=self.clock,
   )
   wait_ready_or_disconnect(connection, timeout_ms)
   self.connections[guild_id] = connection
@@ -244,7 +251,7 @@ async fn VoiceClient::running_group(
   if self.group is Some(group) {
     return group
   }
-  @async.with_timeout_opt(timeout_ms, () => {
+  @transport.with_timeout_opt(self.clock, timeout_ms, () => {
     while self.group is None {
       self.started.wait()
     }
