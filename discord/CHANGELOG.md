@@ -7,6 +7,75 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+### Changed
+
+- **REST resends follow Discord's documentation
+  ([behaviour notes](https://github.com/gaato/discord.mbt/blob/main/docs/behavior.md)).**
+  - A 502 is resent for every method, `POST` and `PATCH` included, with
+    backoff: Discord documents it as "wait a bit and retry".
+  - Another 5xx, and a transport failure or timeout after the request may
+    have been sent, is resent with backoff for an idempotent call: `GET`,
+    `HEAD`, `PUT`, `DELETE`, `OPTIONS`, or a message create with a `nonce`
+    and `enforce_nonce: true` (see Added). Before, only a 429 and a failure
+    that sent nothing were resent. A `POST` or `PATCH` that may have reached
+    Discord is still raised at once.
+  - A 429 with neither a JSON body nor an `X-RateLimit-Scope` or
+    `X-RateLimit-Global` header is Cloudflare's, not Discord's, and is raised
+    at once instead of resent: every resend counts towards the address's
+    10,000 invalid requests per ten minutes. Discord's own 429s carry both,
+    and are still resent after their `retry_after`, however long.
+  - 401 and 403 stay final; the backoff is `gaato/sdk-runtime`'s
+    conservative one (500 ms doubling up to 30 s, within ±20 %), as before.
+
+  Migration: a call that used to fail at once on a 5xx or a timed-out
+  exchange may now take up to `max_retries` resends; pass
+  `Client(max_retries=0)` for the old single attempt of those calls, or bound
+  the call with `@async.with_timeout`. A `POST` that answered 502 is now
+  sent again, so an endpoint whose repeat has a second effect (other than a
+  message create with an enforced nonce) can act twice.
+- **The default rate limiter follows Discord's `X-RateLimit-Bucket` and
+  `X-RateLimit-Scope`.** Routes answered with the same bucket hash for the
+  same channel, guild, or webhook now share one bucket state. A 429 with
+  `X-RateLimit-Scope: shared` no longer holds its bucket (Discord does not
+  hold a shared limit against the bot); one with `X-RateLimit-Scope: global`
+  now holds every non-interaction route, as `X-RateLimit-Global` already
+  did; and a 429 with no `X-RateLimit-Scope` and no JSON content type,
+  Cloudflare's, holds every non-interaction route for its `Retry-After`, or
+  one second. `DiscordHttpError::RateLimited` and the `HttpRateLimited`
+  telemetry event report `global=true` for `X-RateLimit-Scope: global` too.
+  Migration: a test server that answers 429 without these headers now
+  blocks every route; send `X-RateLimit-Scope: user` (or a JSON
+  `Content-Type`) to keep the old per-bucket hold.
+- **The attempt timeout around a supplied `transport=` is
+  `gaato/sdk-runtime`'s `Timeouts`**, timed by a `gaato/http-async`
+  `ClockTimer` on the client's clock, in place of this library's own wrapper.
+  Expiry still raises `Timeout(phase=Unknown)`. Through a supplied
+  `transport=`, a `request_timeout_ms` of zero or less now fails each attempt
+  with `Timeout(phase=Unknown)` instead of `Timeout(phase=Pool)`, so it is no
+  longer `is_unsent()` and is resent only for an idempotent call. Migration:
+  none, unless you matched that phase. The client's own transport keeps its
+  per-phase limits, unchanged.
+- **Built on `gaato/http` 0.4.1, `gaato/http-async` 0.4.2 and
+  `gaato/sdk-runtime` 0.7.0**, whose retry rules (`gaato/http/retry`) and
+  timeouts this release uses. Migration: a project that also lists one of
+  them in its `moon.mod` moves it to that version; code that implements
+  `@runtime.RetryDecider` or builds a `RetryPolicy` follows
+  [sdk-runtime's changelog](https://github.com/gaato/mbt-sdk/blob/main/sdk-runtime/CHANGELOG.md).
+
+### Added
+
+- **`Client::invalid_requests()`: the invalid requests of the past ten
+  minutes.** Discord bans an address for a while after 10,000 responses of
+  401, 403 or 429 (not counting a 429 with `X-RateLimit-Scope: shared`) in
+  ten minutes. The client counts every such attempt, resends included, in a
+  fixed ring of ten-second steps, so a bot can watch the count and slow down.
+  It covers one client; an offline client reports 0.
+- **A message create with a `nonce` and `enforce_nonce: true` is resent like
+  an idempotent call.** Discord returns the message it already created for
+  that nonce instead of creating another, so a create whose answer was lost
+  to a 5xx or a broken connection can safely be sent again. The client marks
+  such a request with an internal header, which never leaves the client.
+
 ## [0.11.0] - 2026-10-19
 
 ### Added

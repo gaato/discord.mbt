@@ -1,17 +1,16 @@
 import {
+  "gaato/http",
   "gaato/http/clock",
   "gaato/http-async" @transport,
   "gaato/sdk-runtime" @runtime,
 }
 
 import {
-  "gaato/http",
   "gaato/http/mock",
   "moonbitlang/async",
 } for "test"
 
 import {
-  "gaato/http",
   "moonbitlang/async",
 } for "wbtest"
 

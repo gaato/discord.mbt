@@ -64,7 +64,8 @@ async test "a stalled response body times out and releases the bucket once" {
     base_url="http://\{server.addr}",
     limiter~,
     request_timeout_ms=200,
-    max_retries=3,
+    // A timed-out GET may be sent again; this test is about one attempt.
+    max_retries=0,
   )
   defer client.close()
   let attempts = Ref(0)
@@ -231,7 +232,8 @@ async test "plain json requests round-trip and non-json error bodies surface" {
           ),
         )
       } else {
-        (502, "<html>bad gateway</html>")
+        // A status that is not resent, so the one answer surfaces.
+        (404, "<html>not found</html>")
       }
     },
     (client, exchanges) => {
@@ -245,11 +247,11 @@ async test "plain json requests round-trip and non-json error bodies surface" {
       // Body-less arm plus the non-JSON error body fallback: the HTML page
       // must survive into the Api error message instead of collapsing to null.
       try client.get_channel(@model.Id::parse("400")) catch {
-        Api(status=502, error~) =>
-          inspect(error.message, content="HTTP 502: <html>bad gateway</html>")
+        Api(status=404, error~) =>
+          inspect(error.message, content="HTTP 404: <html>not found</html>")
         other => fail("unexpected error \{other}")
       } noraise {
-        _ => fail("expected a 502 Api error")
+        _ => fail("expected a 404 Api error")
       }
       guard exchanges is [_, fetched] else {
         fail("expected a second exchange")
@@ -269,6 +271,8 @@ async test "the default transport times its phases on the client's clock" {
     "test-token",
     base_url="http://\{server.addr}",
     request_timeout_ms=30000,
+    // A timed-out GET may be sent again; this test is about one attempt.
+    max_retries=0,
     clock~,
   )
   defer client.close()

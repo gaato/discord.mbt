@@ -5,6 +5,7 @@ import {
   "gaato/discord/ratelimit",
   "gaato/http/clock" @hclock,
   "gaato/http" @ghttp,
+  "gaato/http/retry",
   "gaato/http-async" @transport,
   "gaato/sdk-runtime" @runtime,
   "gaato/http/multipart",

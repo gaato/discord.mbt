@@ -84,7 +84,6 @@ Live socket, websocket, and FFI adapters (live-verified; no unit seam):
 | discord_voice/src/udp.mbt | 4 | SocketVoiceUdp impls and `open_voice_udp` over a real UDP socket; parse and retry logic is covered via fakes. |
 | discord_voice/src/shim_ffi.mbt | 3 | Extern-C glue whose arms depend on host library state. |
 | discord_voice/src/crypto.mbt | 5 | Shim error-status translation paths; round-trips and geometry checks are covered with the shim loaded. |
-| discord/src/http/attempt_deadline.mbt | 1 | The arm for a failure of `with_timeout_opt` itself, which neither the wall clock nor a virtual one raises; expiry, pass-through failures, and both methods are covered on virtual time. |
 | discord/src/http/client.mbt | 2 | Default warning sinks (`println`) of the online and offline constructors. |
 | discord/src/http/request.mbt | 1 | The `Api` re-raise for middleware that raises it itself; the send loop, its retry rule, request validation, and every error mapping are covered by table and fake-wire contract tests. |
 | discord/src/endpoint_http/endpoint_http.mbt | 6 | Arms that need a broken connection or a cancellation mid-failure: a response write that fails because the peer is gone, cancellation of a failed request or write, and a server that stops after startup. Startup failure, 202/504 replies, and a request whose body fails mid-read are tested. |
@@ -127,6 +126,7 @@ Defensive arms unreachable by construction:
 
 | File | Budget | Reason |
 | --- | --- | --- |
+| discord/src/gateway/compression.mbt | 1 | The `Done` arm of the zstd-stream loop: `gaato/zstd` reports `Done` only for a step taken with `end=true`, which the inflater never passes (Discord never ends its frame, and consecutive frames decode as one stream). |
 | discord/src/util/cdn.mbt | 1 | The `StickerFormatType::..` arm that `#non_exhaustive` requires outside `@model`; every current format is matched by name. |
 | discord/src/bot/session.mbt | 1 | Abort if an already decoded READY fails its own JSON round trip; snapshot independence and serialization are tested. |
 | discord/src/http/multipart.mbt | 2 | `attachments_json` always returns an array, and encoder errors other than a boundary collision, which `validate_files` rules out before encoding. |

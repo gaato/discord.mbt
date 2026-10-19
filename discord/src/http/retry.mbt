@@ -1,5 +1,5 @@
 ///|
-/// Discord's retry rule for one logical call, as `resend_delay_ms` decides.
+/// Discord's retry rule for one logical call, as `resend_decision` decides.
 /// `closed` is the client's own flag, so a closed client sends nothing more.
 priv struct DiscordRetry {
   max_retries : Int32
@@ -7,55 +7,131 @@ priv struct DiscordRetry {
 }
 
 ///|
-impl @runtime.RetryDecider for DiscordRetry with fn next_delay_ms(
-  self,
-  error,
-  _request,
-  attempt,
-  random,
-) {
-  resend_delay_ms(
+impl @runtime.RetryDecider for DiscordRetry with fn decide(self, error, context) {
+  resend_decision(
     error,
-    attempt~,
+    context,
     max_retries=self.max_retries,
     closed=self.closed.val,
-    random~,
   )
 }
 
 ///|
-/// How long to wait before sending a call again after the failed attempt
-/// numbered `attempt` (from `0`), or `None` to raise the failure. Only a
-/// call Discord cannot have acted on is resent, at most `max_retries` times
-/// in all and never once the client is `closed`:
+/// The request header that marks a call as safe to send again although its
+/// method is not idempotent: a message create with a `nonce` and
+/// `enforce_nonce: true`, which Discord answers with the message it already
+/// created instead of creating another (`wire_request` sets it). It lives
+/// only between the client and its transport: `ClosedGate` removes it from
+/// every attempt before the transport sees the request, so it never reaches
+/// Discord. The runtime's observer, and so telemetry, sees the request with
+/// it.
+const REPLAY_SAFE_HEADER : String = "x-discord-mbt-replay-safe"
+
+///|
+/// Discord's resend rule as a `gaato/http/retry` rule, up to `max_retries`
+/// resends:
 ///
-/// - a 429, after the delay the response asked for plus one millisecond;
-/// - a transient transport failure that proves no byte was sent (a failed
-///   connection, a proxy that could not reach Discord, or a timeout while
-///   waiting for a connection slot or connecting), after the runtime's
-///   default backoff. Nothing reached Discord, so this holds for every
-///   method, `POST` included.
+/// - a 429 for any method, after the delay Discord asked for (supplied by
+///   `resend_decision`, uncapped: the caller's deadline bounds it);
+/// - a 502 for any method: Discord documents it as "wait a bit and retry";
+/// - any other 5xx only for an idempotent request, since Discord does not
+///   promise that a failed `POST` or `PATCH` did nothing;
+/// - a transport failure that proves nothing was sent, for any method, and
+///   one after sending only for an idempotent request.
 ///
-/// Anything else is final: a failure after connecting or a timed-out
-/// exchange may already have reached Discord, and a status error is
-/// Discord's answer.
-fn resend_delay_ms(
+/// Other statuses, 401 and 403 among them, are Discord's answer. Retries
+/// that the response does not time back off as the runtime's conservative
+/// preset does: 500 ms doubling to 30 s, within ±20 %.
+fn discord_retry_rule(max_retries : Int32) -> @retry.RetryRule {
+  {
+    max_retries,
+    // First match wins: 502 before the idempotent-only 5xx range.
+    statuses: [
+      { statuses: [Code(429), Code(502)], methods: Any, },
+      { statuses: [Range(500, 599)], methods: Idempotent, },
+    ],
+    sent_failures: Idempotent,
+    unsent_failures: true,
+    override_header: None,
+    retry_after: {
+      source: MsThenHeader,
+      cap: NoCap,
+      zero_means_backoff: false,
+    },
+    backoff: @runtime.RetryPolicy::conservative().rule.backoff,
+  }
+}
+
+///|
+/// Whether to send a call again after a failed attempt, and after how long.
+/// Nothing is resent once the client is `closed`. Otherwise
+/// `discord_retry_rule(max_retries)` decides, with two Discord-specific
+/// inputs:
+///
+/// - a 429's delay is the body's `retry_after` (fractional seconds), then
+///   `Retry-After-Ms` or `Retry-After`, then one second, plus one
+///   millisecond; but a 429 with neither a JSON body nor a Discord rate-limit
+///   header (`X-RateLimit-Scope`, `X-RateLimit-Global`) is not Discord's
+///   rate limit but Cloudflare's, which bans an address that keeps sending,
+///   and fails at once;
+/// - a call is idempotent when its method is (`GET`, `HEAD`, `PUT`,
+///   `DELETE`, `OPTIONS`) or when it carries `REPLAY_SAFE_HEADER`.
+fn resend_decision(
   error : @runtime.SdkError,
-  attempt~ : Int32,
+  context : @runtime.RetryContext,
   max_retries~ : Int32,
   closed~ : Bool,
-  random~ : Double,
-) -> Int32? {
-  if closed || attempt >= max_retries {
+) -> @retry.Decision {
+  if closed {
+    return Stop(NotRetryable)
+  }
+  guard error.outcome() is Some(outcome) else { return Stop(NotRetryable) }
+  let server_delay_ms = match error {
+    RateLimited(headers~, body~, ..) => {
+      let json = json_body(body)
+      if !is_discord_rate_limit(headers, json) {
+        return Stop(NotRetryable)
+      }
+      let (retry_after_ms, _) = rate_limit_from_json(
+        headers,
+        json.unwrap_or(Json::null()),
+      )
+      Some(retry_after_ms.max(0L).min(2147483646L).to_int() + 1)
+    }
+    _ => None
+  }
+  let request = context.request
+  discord_retry_rule(max_retries).decide(
+    outcome,
+    request,
+    attempt=context.attempt,
+    random=context.random,
+    now_unix_ms=context.now_unix_ms,
+    remaining_ms?=context.remaining_ms,
+    server_delay_ms?,
+    idempotent=@ghttp.is_idempotent(request) ||
+      request.headers.contains(REPLAY_SAFE_HEADER),
+    replayable=context.replayable,
+  )
+}
+
+///|
+/// Whether a 429 is Discord's own rate limit: Discord's 429s carry a JSON
+/// body and `X-RateLimit-Scope` (or `X-RateLimit-Global`), and a 429 with
+/// none of them comes from Cloudflare in front of Discord.
+fn is_discord_rate_limit(headers : @ghttp.Headers, json : Json?) -> Bool {
+  json is Some(Object(_)) ||
+  headers.contains("x-ratelimit-scope") ||
+  headers.contains("x-ratelimit-global")
+}
+
+///|
+/// A response body as JSON, or `None` when it is not JSON.
+fn json_body(body : Bytes) -> Json? {
+  if body.is_empty() {
     return None
   }
-  match error {
-    RateLimited(headers~, body~, ..) => {
-      let (retry_after_ms, _) = rate_limit_details(headers, body)
-      Some(retry_after_ms.to_int() + 1)
-    }
-    Transport(failure) if failure.is_unsent() && error.is_retryable() =>
-      Some(@runtime.Backoff::default().delay_ms(attempt, random))
+  Some(@json.parse(@utf8.decode_lossy(body))) catch {
     _ => None
   }
 }

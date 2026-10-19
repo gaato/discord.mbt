@@ -23,3 +23,60 @@ async test "Discord allows only one request in flight per bucket" {
     assert_true(admitted.val)
   })
 }
+
+///|
+test "major_parameter reads the route's channel, guild or webhook" {
+  let cases : Array[(String, String?)] = [
+    ("GET:/channels/1/messages", Some("channels/1")),
+    ("POST:/channels/1/messages/{}/reactions/{}", Some("channels/1")),
+    ("PATCH:/guilds/9/members/{}", Some("guilds/9")),
+    ("POST:/webhooks/5/tok", Some("webhooks/5/tok")),
+    ("PATCH:/webhooks/5/tok/messages/{}", Some("webhooks/5/tok")),
+    ("GET:/webhooks/5", Some("webhooks/5")),
+    ("POST:/interactions/7/tok/callback", Some("interactions/7/tok")),
+    ("GET:/users/@me", Some("")),
+    ("GET:/gateway/bot", Some("")),
+    ("GET:/channels/{}/messages", None),
+    // Route::bucket squashes an interaction's id and token.
+    ("POST:/interactions/{}/{}/callback", None),
+    ("my-own-key", None),
+  ]
+  for case in cases {
+    let (bucket, expected) = case
+    assert_eq(major_parameter(bucket), expected, msg=bucket)
+  }
+}
+
+///|
+test "discord_server_key joins the bucket hash and the major parameter" {
+  let headers = (pairs : Array[(String, String)]) => {
+    @http.Headers::from_array(pairs)
+  }
+  assert_eq(
+    discord_server_key(
+      "GET:/channels/1/messages",
+      headers([("x-ratelimit-bucket", "abc")]),
+    ),
+    Some("x-ratelimit-bucket:abc:channels/1"),
+  )
+  assert_eq(
+    discord_server_key(
+      "GET:/users/@me",
+      headers([("x-ratelimit-bucket", "abc")]),
+    ),
+    Some("x-ratelimit-bucket:abc:"),
+  )
+  // A name without a readable major parameter is merged with no other route.
+  assert_eq(
+    discord_server_key("my-own-key", headers([("x-ratelimit-bucket", "abc")])),
+    Some("x-ratelimit-bucket:abc:my-own-key"),
+  )
+  assert_eq(discord_server_key("GET:/channels/1/messages", headers([])), None)
+  assert_eq(
+    discord_server_key(
+      "GET:/channels/1/messages",
+      headers([("x-ratelimit-bucket", " ")]),
+    ),
+    None,
+  )
+}

@@ -304,6 +304,7 @@ pub fn Client::guild_command_ref(Self, @model.Id[@model.ApplicationMarker], @mod
 pub fn Client::guild_ref(Self, @model.Id[@model.GuildMarker]) -> GuildRef
 pub fn Client::guild_template_ref(Self, @model.Id[@model.GuildMarker], String) -> TemplateRef
 pub fn Client::guild_widget_image_url(Self, @model.Id[@model.GuildMarker], style? : String) -> String
+pub fn Client::invalid_requests(Self) -> Int
 pub fn Client::invite_ref(Self, String) -> InviteRef
 pub async fn Client::join_thread(Self, @model.Id[@model.ChannelMarker]) -> Unit raise DiscordHttpError
 pub async fn Client::leave_guild(Self, @model.Id[@model.GuildMarker]) -> Unit raise DiscordHttpError

@@ -6,6 +6,16 @@ releases (0.x → 0.y) may contain breaking changes; patch releases do not.
 
 ## [Unreleased]
 
+### Changed
+
+- **Builds against the next `gaato/discord`, `gaato/http` 0.4.1 and
+  `gaato/http-async` 0.4.2.** Voice itself is unchanged; the REST client
+  underneath now resends more server errors and counts invalid requests, as
+  listed in
+  [its changelog](https://github.com/gaato/discord.mbt/blob/main/discord/CHANGELOG.md).
+  Migration: a project that also lists `gaato/http` or `gaato/http-async`
+  in its `moon.mod` moves it to the same version.
+
 ## [0.3.0] - 2026-10-18
 
 ### Changed

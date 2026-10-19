@@ -321,7 +321,13 @@ interaction or webhook token; this also omits bot-token authentication. Set
 
 The default `@ratelimit.rate_limiter()` coordinates route buckets and Discord's
 global window inside one process. The client updates bucket state from response
-headers and retries 429 responses after the declared delay. Typed and custom
+headers and retries 429 responses after the declared delay. Routes that
+Discord answers with the same `X-RateLimit-Bucket` hash for the same channel,
+guild, or webhook share one bucket state. A 429 with `X-RateLimit-Scope:
+global` (or `X-RateLimit-Global`) holds every non-interaction route, one with
+`X-RateLimit-Scope: shared` (a limit on the resource, not the bot) holds
+nothing beyond the resend's own wait, and any other 429 holds its bucket.
+Typed and custom
 routes use the same request path, so no separate limiter integration is
 required. A custom limiter implements the `gaato/sdk-runtime` `RateLimiter`
 trait and is passed through `Client(limiter=...)`. The client calls its
@@ -336,12 +342,41 @@ about a minute for the bulk-overwrite-commands bucket.
 `DiscordHttpError::Transport` and `DiscordHttpError::Timeout` carry the
 `phase` of the exchange that failed. In `Pool` (waiting for a connection, or
 a closed client) and `Dial` (connecting, TLS, or a proxy tunnel) no byte of
-the request was sent, and `error.is_unsent()` is true. The client resends
-such a failure itself, with backoff and through the rate limiter, up to
-`Client(max_retries=4)` times, for every method: Discord never saw it, so a
-`POST` cannot be duplicated. A failure or timeout in any later phase (`Write`,
-`Head`, `Body`, or `Unknown`) is raised at once, because Discord may already
-have acted on it.
+the request was sent, and `error.is_unsent()` is true. A failure or timeout in
+any later phase (`Write`, `Head`, `Body`, or `Unknown`) may have reached
+Discord. Through a `transport=` you supply, a timed-out attempt is always
+`Unknown`, since the client cannot see how far it got.
+
+The client resends a call itself, through the rate limiter, up to
+`Client(max_retries=4)` times, only when Discord's documentation allows it or
+a resend cannot have a second effect:
+
+| Outcome | Methods | Wait |
+|---|---|---|
+| 429 from Discord | all | the body's `retry_after`, else `Retry-After`, else 1 s, plus 1 ms; uncapped |
+| 502 ("wait a bit and retry") | all | backoff |
+| unsent failure or timeout (`is_unsent()`) | all | backoff |
+| other 5xx, failure or timeout after sending | idempotent only | backoff |
+
+The idempotent calls are `GET`, `HEAD`, `PUT`, `DELETE`, and `OPTIONS`, and a
+message create sent with a `nonce` and `enforce_nonce=true`: Discord then
+returns the message it already created for that nonce instead of creating a
+second one, so pass both when a duplicate message would hurt. Any other
+`POST` or `PATCH` that may have reached Discord is raised at once. The backoff
+is 500 ms, doubling up to 30 s, within ±20 %.
+
+Everything else is Discord's answer and is raised without a resend, 401 and
+403 included. So is a 429 that has neither a JSON body nor an
+`X-RateLimit-Scope` or `X-RateLimit-Global` header: it comes from Cloudflare
+in front of Discord, and the default rate limiter also holds every
+non-interaction route for its `Retry-After` (1 s without one).
+
+Discord bans an address for a while once it receives 10,000 invalid requests
+(401, 403, or 429, except a 429 with `X-RateLimit-Scope: shared`) from it in
+ten minutes. `client.invalid_requests()` returns how many this client received
+in the past ten minutes, resends included; a bot that may hit the limit can
+watch it and slow down. It counts one client only: add up the clients that
+share an address.
 
 For a whole-operation deadline, compose `@async.with_timeout` around the
 call. This also bounds middleware and rate-limit waiting. The example uses a

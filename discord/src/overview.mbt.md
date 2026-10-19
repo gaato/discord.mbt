@@ -444,8 +444,11 @@ fields; PATCH methods expose plain optional arguments with
 ## REST without the gateway
 
 `http.Client` stands alone: typed wrappers over the routes, per-bucket rate
-limiting with a global window, automatic retry of 429s and of attempts that
-never reached Discord, multipart file uploads,
+limiting with a global window that follows Discord's `X-RateLimit-Bucket`,
+automatic retry of 429s, 502s, attempts that never reached Discord, and other
+server errors of idempotent calls (including message creates with an enforced
+`nonce`), a count of the invalid requests Discord holds against the address
+(`client.invalid_requests()`), multipart file uploads,
 and a raw `client.request(route)` escape hatch for anything not wrapped yet.
 Ordinary channel messages suppress `@everyone` and `@here` by default while
 still parsing user and role mentions.

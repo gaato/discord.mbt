@@ -591,3 +591,12 @@ test "zstd-stream refuses messages over its limit" {
     _ => fail("an oversized message decoded")
   }
 }
+
+///|
+test "the default inflater follows the requested compression" {
+  let zstd = default_inflater(ZstdStream, max_bytes=1000)
+  assert_true(zstd.push(zstd_hello) is Some(_))
+  // zlib-stream waits for its sync-flush suffix, which zstd input lacks.
+  let zlib = default_inflater(ZlibStream, max_bytes=1000)
+  assert_eq(zlib.push(zstd_hello), None)
+}

@@ -30,6 +30,8 @@ kind say what that product is.
 | Cached users seen without a holder (`cache/user_store.mbt`, `recent_`) | `recent_users`, default 128: bans, departed members, interaction users, authors of messages the cache does not keep | Least recently seen evicted |
 | Cooldown windows (`cooldown/cooldown.mbt`) | Live windows: expired keys are swept whenever the map doubles, and at least once a minute | — |
 | REST rate-limit buckets (`gaato/sdk-runtime` `WindowLimiter`, also inside the coordinator) | Buckets in use: idle gates are dropped, expired states swept whenever the map doubles, and at least once a minute | — |
+| Learned `X-RateLimit-Bucket` keys (`ratelimit/ratelimit.mbt`, `server_key`; the `WindowLimiter`'s aliases) | One per route bucket that named a hash, pointing at a recorded state: an alias whose state has expired is swept with the states | — |
+| Invalid-request count (`http/invalid_requests.mbt`, one per REST client) | 60 counters, one per ten-second step of the last ten minutes | The oldest step's counter is reset and reused |
 | REST response body (`http/client.mbt`, the transport the client creates) | 64 MiB, the same as the Gateway default | The attempt fails with `DiscordHttpError::Transport` and the connection closes; a supplied `transport=` keeps its own policy |
 | Inbound interaction request body (`endpoint_http/endpoint_http.mbt`) | `max_body_bytes`, default 1 MiB | 413 and the connection closes |
 | Interaction HTTP connections (`endpoint_http/endpoint_http.mbt`, `serve_interactions`) | `max_connections`, default 256, served at once | Further clients wait to be accepted |

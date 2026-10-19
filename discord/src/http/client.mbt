@@ -14,6 +14,8 @@ pub struct Client {
   priv clock_ : &@hclock.Clock
   // Shared with the runtime's retry rule, which resends nothing once set.
   priv closed_ : Ref[Bool]
+  // Fed by the runtime's observer; an offline client never records.
+  priv invalid_ : InvalidRequests
 }
 
 ///|
@@ -44,13 +46,27 @@ const MAX_RESPONSE_BODY_BYTES : Int32 = 67_108_864
 /// middleware are outside it. For a whole-operation deadline, compose
 /// `@async.with_timeout` around the call.
 ///
-/// `max_retries` (default 4) bounds how often one call is sent again. Only a
-/// call Discord cannot have acted on is resent: after a 429, once the delay
-/// it asks for has passed, and after a transport failure or timeout that
-/// proves no byte was sent (`DiscordHttpError::is_unsent`), with backoff.
-/// Every resend goes through the rate limiter again. A failure after
-/// connecting, or a timed-out exchange, may have reached Discord and is
-/// raised at once.
+/// `max_retries` (default 4) bounds how often one call is sent again. Every
+/// resend goes through the rate limiter again, and a call is resent only
+/// where Discord's documentation allows it or it cannot cause a second
+/// effect:
+///
+/// - a 429, for any method, once the delay Discord asks for (the body's
+///   `retry_after`, then `Retry-After`) has passed, however long; except a
+///   429 with neither a JSON body nor a Discord rate-limit header, which is
+///   Cloudflare's and raises at once;
+/// - a 502, for any method, with backoff: Discord asks to "wait a bit and
+///   retry";
+/// - a transport failure or timeout that proves no byte was sent
+///   (`DiscordHttpError::is_unsent`), for any method, with backoff;
+/// - another 5xx, and a failure or timeout after sending, with backoff, only
+///   for an idempotent call: `GET`, `HEAD`, `PUT`, `DELETE`, `OPTIONS`, or a
+///   message create with a `nonce` and `enforce_nonce: true`, which Discord
+///   does not create twice. A `POST` or `PATCH` that may have reached
+///   Discord is raised at once.
+///
+/// The backoff is 500 ms, doubling up to 30 s, within ±20 %. Anything else,
+/// 401 and 403 included, is Discord's answer and is never resent.
 ///
 /// `transport` is the `gaato/http` `Transport` that performs the wire
 /// exchange, below request validation, middleware, rate limiting, retries,
@@ -60,16 +76,20 @@ const MAX_RESPONSE_BODY_BYTES : Int32 = 67_108_864
 /// 64 MiB bound on each buffered response body, and closes it in `close`. A
 /// supplied transport is shared: the client never closes it,
 /// `max_connections` and the body bound do not apply to it, and each attempt
-/// through it is still bounded by `request_timeout_ms`.
+/// through it is still bounded by `request_timeout_ms`, by the
+/// `gaato/sdk-runtime` client's `Timeouts` on `clock`. A supplied transport
+/// cannot say how far an attempt got, so one that runs out of time fails
+/// with `Timeout(phase=Unknown)`, as does every attempt when
+/// `request_timeout_ms` is not positive.
 ///
 /// `limiter` is a `gaato/sdk-runtime` `RateLimiter`; the default is an
 /// `@ratelimit.rate_limiter()` with Discord's per-bucket and global accounting.
 ///
 /// `clock` (default: the wall clock) drives the client's time: 429 and
-/// resend back-off, the default rate limiter's windows, the attempt deadline
-/// around a supplied transport, telemetry durations, and the typing
-/// keepalive of `ChannelRef::with_typing`, and the default transport's phase
-/// limits and idle connections.
+/// resend back-off, the default rate limiter's windows, the attempt timeout
+/// around a supplied transport, telemetry durations, the window of
+/// `invalid_requests`, the typing keepalive of `ChannelRef::with_typing`,
+/// and the default transport's phase limits and idle connections.
 pub fn Client::Client(
   token : String,
   base_url~ : String = "https://discord.com",
@@ -90,17 +110,7 @@ pub fn Client::Client(
     &@ghttp.Transport,
     @transport.AsyncTransport?,
   ) = match transport {
-    // The default transport bounds each exchange itself, phase by phase; a
-    // shared one gets the same deadline from the outside.
-    Some(shared) =>
-      (
-        AttemptDeadline::{
-          inner: shared,
-          clock,
-          timeout_ms: request_timeout_ms,
-        },
-        None,
-      )
+    Some(shared) => (shared, None)
     None => {
       let owned = @transport.AsyncTransport::new(
         timeout_ms=request_timeout_ms,
@@ -114,13 +124,34 @@ pub fn Client::Client(
   let telemetry_ : Array[(@telemetry.TelemetryEvent) -> Unit raise] = []
   let warn_ : Ref[(String) -> Unit] = Ref(message => println(message))
   let closed_ = Ref(false)
+  let invalid_ = InvalidRequests::new()
+  // The default transport bounds each exchange itself, phase by phase, which
+  // tells an unsent timeout from a sent one; a shared one gets the same
+  // limit from the runtime. Giving the default one both would race two
+  // timers on one deadline.
+  let timeouts = if owned_transport is None {
+    Some(
+      @runtime.Timeouts::new(
+        @transport.ClockTimer::new(clock~),
+        attempt_ms=request_timeout_ms,
+      ),
+    )
+  } else {
+    None
+  }
   let runtime = @runtime.Client::new(
     ClosedGate::{ inner: transport, closed: closed_, },
     clock,
     base_url~,
     retry=DiscordRetry::{ max_retries, closed: closed_, },
     limiter~,
-    observer=attempt => emit_attempt(telemetry_, warn_, attempt),
+    observer=attempt => {
+      if is_invalid_request(attempt.status, attempt.headers) {
+        invalid_.record(clock.now_unix_ms())
+      }
+      emit_attempt(telemetry_, warn_, attempt)
+    },
+    timeouts?,
   )
   {
     token,
@@ -136,6 +167,7 @@ pub fn Client::Client(
     warn_,
     clock_: clock,
     closed_,
+    invalid_,
   }
 }
 
@@ -189,7 +221,23 @@ pub fn Client::offline(
     warn_: Ref(message => println(message)),
     clock_: clock,
     closed_: Ref(false),
+    invalid_: InvalidRequests::new(),
   }
+}
+
+///|
+/// How many of this client's requests in the past ten minutes Discord counts
+/// as invalid: those answered with 401, 403 or 429, except a 429 with
+/// `X-RateLimit-Scope: shared`. Every attempt counts, resends included.
+///
+/// Discord allows 10,000 invalid requests per ten minutes from one address;
+/// past that, Cloudflare bans the address for a while, for every client on
+/// it. The count moves in ten-second steps, so a request leaves it between
+/// 590 and 600 seconds after it was answered, and covers only this client:
+/// add up the clients that share an address. An offline client sends nothing
+/// and always reports 0.
+pub fn Client::invalid_requests(self : Client) -> Int32 {
+  self.invalid_.count(self.clock_.now_unix_ms())
 }
 
 ///|

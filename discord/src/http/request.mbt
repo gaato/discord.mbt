@@ -50,9 +50,12 @@ fn method_name(wire : String) -> String {
 /// Retry delay and scope of a 429 response: the body's `retry_after` (in
 /// seconds, the more precise source), then the `Retry-After-Ms` or
 /// `Retry-After` header, then one second; `global` when the
-/// `X-RateLimit-Global` header says the whole account is limited.
+/// `X-RateLimit-Global` header or `X-RateLimit-Scope: global` says the whole
+/// account is limited.
 fn rate_limit_from_json(headers : @ghttp.Headers, body : Json) -> (Int64, Bool) {
-  let global = headers.get("x-ratelimit-global") is Some(_)
+  let global = headers.get("x-ratelimit-global") is Some(_) ||
+    headers.get("x-ratelimit-scope").map(value => value.trim().to_lower()) ==
+    Some("global")
   let retry_after_ms : Int64 = match body {
     { "retry_after": Number(seconds, ..), .. } => (seconds * 1000.0).to_int64()
     _ =>
@@ -68,8 +71,7 @@ fn rate_limit_from_json(headers : @ghttp.Headers, body : Json) -> (Int64, Bool) 
 /// `rate_limit_from_json` for a wire body; one that is not JSON counts as no
 /// body.
 fn rate_limit_details(headers : @ghttp.Headers, body : Bytes) -> (Int64, Bool) {
-  let parsed = @json.parse(@utf8.decode_lossy(body)) catch { _ => Json::null() }
-  rate_limit_from_json(headers, parsed)
+  rate_limit_from_json(headers, json_body(body).unwrap_or(Json::null()))
 }
 
 ///|
@@ -88,6 +90,11 @@ fn Client::wire_request(
   )
   for name, value in headers {
     wire.headers.set(name, value)
+  }
+  // Only the client decides that a call is safe to resend.
+  wire.headers.remove(REPLAY_SAFE_HEADER)
+  if is_replay_safe(route, request.body) {
+    wire.headers.set(REPLAY_SAFE_HEADER, "1")
   }
   match (route, request.files, request.body) {
     (CreateGuildSticker(..), Some([file]), Some(json)) =>
@@ -116,6 +123,18 @@ fn Client::wire_request(
     }
     (_, _, None) => { head: wire, body: None, }
   }
+}
+
+///|
+/// Whether sending `route` with `body` twice has the effect of sending it
+/// once although its method is not idempotent: a message create with a
+/// `nonce` and `enforce_nonce: true`. Discord then checks the nonce against
+/// the author's messages of the past few minutes and returns the existing
+/// message instead of creating a second one ("Create Message" in Discord's
+/// documentation), so a create whose response was lost can be sent again.
+fn is_replay_safe(route : Route, body : Json?) -> Bool {
+  route is CreateMessage(..) &&
+  body is Some({ "nonce": String(_) | Number(_), "enforce_nonce": True, .. })
 }
 
 ///|
