@@ -7,6 +7,8 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-10-19
+
 ### Added
 
 - **Gateway `zstd-stream` transport compression.** `BotBuilder(compression=
@@ -17,6 +19,13 @@ breaking change is listed with a migration note.
   both are given, `compression` wins. `GatewayCompression` is
   `#non_exhaustive`. `max_message_bytes` bounds a zstd message, compressed or
   decoded, as it does a zlib one.
+
+### Changed
+
+- Built on `gaato/http-async` 0.4.1, so REST responses may arrive
+  zstd-compressed (`Accept-Encoding: gzip, deflate, br, zstd`), and on
+  `hustcer/ed25519` 0.6.1. `gaato/http` 0.4.0 and `gaato/sdk-runtime` 0.6.0
+  work too; the public API is unchanged by them.
 
 ## [0.10.1] - 2026-10-19
 
