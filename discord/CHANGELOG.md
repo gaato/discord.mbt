@@ -7,6 +7,8 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-10-19
+
 ### Changed
 
 - **REST resends follow Discord's documentation

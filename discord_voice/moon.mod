@@ -1,6 +1,6 @@
 name = "gaato/discord_voice"
 
-version = "0.3.0"
+version = "0.3.1"
 
 readme = "README.md"
 
@@ -24,7 +24,7 @@ supported_targets = "native"
 warnings = "-implicit_impl_as_method"
 
 import {
-  "gaato/discord@0.11.0",
+  "gaato/discord@0.12.0",
   "gaato/dave@0.1.1",
   "gaato/http@0.4.1",
   "gaato/http-async@0.4.2",

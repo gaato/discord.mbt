@@ -6,9 +6,11 @@ releases (0.x → 0.y) may contain breaking changes; patch releases do not.
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-10-19
+
 ### Changed
 
-- **Builds against the next `gaato/discord`, `gaato/http` 0.4.1 and
+- **Builds against `gaato/discord` 0.12.0, `gaato/http` 0.4.1 and
   `gaato/http-async` 0.4.2.** Voice itself is unchanged; the REST client
   underneath now resends more server errors and counts invalid requests, as
   listed in
