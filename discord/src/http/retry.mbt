@@ -70,10 +70,11 @@ fn discord_retry_rule(max_retries : Int32) -> @retry.RetryRule {
 ///
 /// - a 429's delay is the body's `retry_after` (fractional seconds), then
 ///   `Retry-After-Ms` or `Retry-After`, then one second, plus one
-///   millisecond; but a 429 with neither a JSON body nor a Discord rate-limit
-///   header (`X-RateLimit-Scope`, `X-RateLimit-Global`) is not Discord's
-///   rate limit but Cloudflare's, which bans an address that keeps sending,
-///   and fails at once;
+///   millisecond; but a 429 that is not Discord's rate limit
+///   (`@ratelimit.is_discord_rate_limit`: no JSON content type and no
+///   `X-RateLimit-Scope` or `X-RateLimit-Global`, as from Cloudflare in front
+///   of Discord) gives no wait to honour, and resending it only adds to the
+///   address's invalid requests, so it fails at once;
 /// - a call is idempotent when its method is (`GET`, `HEAD`, `PUT`,
 ///   `DELETE`, `OPTIONS`) or when it carries `REPLAY_SAFE_HEADER`.
 fn resend_decision(
@@ -88,13 +89,12 @@ fn resend_decision(
   guard error.outcome() is Some(outcome) else { return Stop(NotRetryable) }
   let server_delay_ms = match error {
     RateLimited(headers~, body~, ..) => {
-      let json = json_body(body)
-      if !is_discord_rate_limit(headers, json) {
+      if !@ratelimit.is_discord_rate_limit(headers) {
         return Stop(NotRetryable)
       }
       let (retry_after_ms, _) = rate_limit_from_json(
         headers,
-        json.unwrap_or(Json::null()),
+        json_body(body).unwrap_or(Json::null()),
       )
       Some(retry_after_ms.max(0L).min(2147483646L).to_int() + 1)
     }
@@ -113,16 +113,6 @@ fn resend_decision(
       request.headers.contains(REPLAY_SAFE_HEADER),
     replayable=context.replayable,
   )
-}
-
-///|
-/// Whether a 429 is Discord's own rate limit: Discord's 429s carry a JSON
-/// body and `X-RateLimit-Scope` (or `X-RateLimit-Global`), and a 429 with
-/// none of them comes from Cloudflare in front of Discord.
-fn is_discord_rate_limit(headers : @ghttp.Headers, json : Json?) -> Bool {
-  json is Some(Object(_)) ||
-  headers.contains("x-ratelimit-scope") ||
-  headers.contains("x-ratelimit-global")
 }
 
 ///|

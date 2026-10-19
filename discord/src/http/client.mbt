@@ -30,7 +30,7 @@ priv enum Backend {
 
 ///|
 /// Library version, sent in the User-Agent header.
-pub const VERSION : String = "0.12.0"
+pub const VERSION : String = "0.12.1"
 
 ///|
 /// The largest response body the default transport buffers, the same 64 MiB
@@ -53,8 +53,9 @@ const MAX_RESPONSE_BODY_BYTES : Int32 = 67_108_864
 ///
 /// - a 429, for any method, once the delay Discord asks for (the body's
 ///   `retry_after`, then `Retry-After`) has passed, however long; except a
-///   429 with neither a JSON body nor a Discord rate-limit header, which is
-///   Cloudflare's and raises at once;
+///   429 that is not Discord's rate limit (no JSON content type and no
+///   Discord rate-limit header, as from Cloudflare in front of Discord), which
+///   names no wait and raises at once;
 /// - a 502, for any method, with backoff: Discord asks to "wait a bit and
 ///   retry";
 /// - a transport failure or timeout that proves no byte was sent
@@ -231,8 +232,8 @@ pub fn Client::offline(
 /// `X-RateLimit-Scope: shared`. Every attempt counts, resends included.
 ///
 /// Discord allows 10,000 invalid requests per ten minutes from one address;
-/// past that, Cloudflare bans the address for a while, for every client on
-/// it. The count moves in ten-second steps, so a request leaves it between
+/// past that, Discord restricts the address for a while (its documentation
+/// calls this a Cloudflare ban), for every client on it. The count moves in ten-second steps, so a request leaves it between
 /// 590 and 600 seconds after it was answered, and covers only this client:
 /// add up the clients that share an address. An offline client sends nothing
 /// and always reports 0.

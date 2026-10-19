@@ -2,11 +2,14 @@
 package "gaato/discord/ratelimit"
 
 import {
+  "gaato/http",
   "gaato/http/clock",
   "gaato/sdk-runtime",
 }
 
 // Values
+pub fn is_discord_rate_limit(@http.Headers) -> Bool
+
 pub fn rate_limiter(global_limit? : Int, clock? : &@clock.Clock) -> @sdk-runtime.WindowLimiter
 
 // Errors

@@ -366,10 +366,12 @@ second one, so pass both when a duplicate message would hurt. Any other
 is 500 ms, doubling up to 30 s, within ±20 %.
 
 Everything else is Discord's answer and is raised without a resend, 401 and
-403 included. So is a 429 that has neither a JSON body nor an
-`X-RateLimit-Scope` or `X-RateLimit-Global` header: it comes from Cloudflare
-in front of Discord, and the default rate limiter also holds every
-non-interaction route for its `Retry-After` (1 s without one).
+403 included. So is a 429 that is not Discord's rate limit: one with neither
+a JSON content type nor an `X-RateLimit-Scope` or `X-RateLimit-Global` header
+comes from something in front of Discord (Cloudflare, for example). It names
+no wait, and resending only adds to the address's invalid requests, so the
+default rate limiter also holds every non-interaction route for its
+`Retry-After` (1 s without one).
 
 Discord bans an address for a while once it receives 10,000 invalid requests
 (401, 403, or 429, except a 429 with `X-RateLimit-Scope: shared`) from it in

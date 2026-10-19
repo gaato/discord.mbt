@@ -163,7 +163,11 @@ async test "cancelling 429 back-off propagates cancellation without another atte
   let client = wire_test_client(
     (_path, _headers, _body) => {
       attempts.val += 1
-      { status: 429, headers: Map([]), body: { "retry_after": 60.0 }, }
+      {
+        status: 429,
+        headers: { "content-type": "application/json" },
+        body: { "retry_after": 60.0 },
+      }
     },
     limiter~,
     request_timeout_ms=10,
@@ -191,7 +195,9 @@ async test "cancelling 429 back-off propagates cancellation without another atte
   })
   assert_eq(attempts.val, 1)
   assert_eq(limiter.acquires, 1)
-  assert_eq(limiter.releases, [(GetGateway.bucket(), 429, Map([]))])
+  assert_eq(limiter.releases, [
+    (GetGateway.bucket(), 429, { "content-type": "application/json" }),
+  ])
   guard events
     is [
       HttpRequest(status=429, retries=0, ..),

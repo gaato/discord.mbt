@@ -38,7 +38,11 @@ async test "a 429 without a body delay waits for the Retry-After header" {
     (_path, _headers, _body) => {
       attempts.val += 1
       if attempts.val == 1 {
-        { status: 429, headers: { "retry-after": "0.02" }, body: {}, }
+        {
+          status: 429,
+          headers: { "retry-after": "0.02", "content-type": "application/json" },
+          body: {},
+        }
       } else {
         { status: 200, headers: Map([]), body: { "ok": true }, }
       }

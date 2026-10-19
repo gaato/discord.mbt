@@ -20,9 +20,10 @@
 ///   non-exempt bucket instead, and one with `x-ratelimit-scope: shared`
 ///   (a resource's limit, which Discord does not hold against the bot) only
 ///   records the bucket's headers;
-/// - a 429 without `x-ratelimit-scope` and without a JSON content type is not
-///   Discord's but Cloudflare's, which bans the address after too many: it
-///   blocks every non-exempt bucket too;
+/// - a 429 that is not Discord's rate limit (`is_discord_rate_limit`) says
+///   nothing about which bucket to hold, while every further invalid request
+///   counts towards the address's limit: it blocks every non-exempt bucket
+///   too;
 /// - one second for a 429 without `Retry-After`.
 pub fn rate_limiter(
   global_limit~ : Int32 = 50,
@@ -98,10 +99,9 @@ fn major_parameter(bucket : String) -> String? {
 ///|
 /// What a 429 affects: `x-ratelimit-scope: shared` only its bucket's
 /// recorded headers (Discord does not hold a shared limit against the bot),
-/// `global` or `x-ratelimit-global` every non-exempt bucket, and one with no
-/// scope and no JSON content type, which is Cloudflare's rather than
-/// Discord's, every non-exempt bucket too, to protect the address. Any other
-/// 429 empties its own bucket.
+/// `global` or `x-ratelimit-global` every non-exempt bucket, and one that is
+/// not Discord's rate limit every non-exempt bucket too, to protect the
+/// address. Any other 429 empties its own bucket.
 fn discord_scope(
   _status : Int32,
   headers : @http.Headers,
@@ -113,14 +113,24 @@ fn discord_scope(
     Some("shared") => Shared
     Some("global") => Global
     _ if headers.contains("x-ratelimit-global") => Global
-    Some(_) => Bucket
-    None => {
-      let json = headers.get("content-type").map(value => value.to_lower())
-      if json is Some(content_type) && content_type.contains("json") {
-        Bucket
-      } else {
-        Global
-      }
-    }
+    _ if !is_discord_rate_limit(headers) => Global
+    _ => Bucket
   }
+}
+
+///|
+/// Whether a 429 is Discord's own rate limit, which tells the client what to
+/// wait for: Discord documents its 429s with a JSON body (`retry_after`,
+/// `global`) and the `X-RateLimit-Scope` header, and sends `X-RateLimit-Global`
+/// for a global limit. A 429 with none of these comes from something in front
+/// of Discord, such as Cloudflare. It names no bucket and no reliable wait,
+/// and since 401, 403 and 429 count towards the address's invalid-request
+/// limit (10,000 per ten minutes), it is better not to send again soon.
+pub fn is_discord_rate_limit(headers : @http.Headers) -> Bool {
+  headers.contains("x-ratelimit-scope") ||
+  headers.contains("x-ratelimit-global") ||
+  headers
+  .get("content-type")
+  .map(value => value.to_lower().contains("json"))
+  .unwrap_or(false)
 }

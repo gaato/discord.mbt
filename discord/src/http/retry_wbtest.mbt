@@ -79,7 +79,13 @@ test "a 429 is resent for any verb after the delay Discord asks for" {
       Wait(251),
     ),
     (limited([("x-ratelimit-scope", "user")], ""), Wait(1001)),
-    (limited([], "{\"retry_after\":0.25,\"global\":false}"), Wait(251)),
+    (
+      limited(
+        [("content-type", "application/json")],
+        "{\"retry_after\":0.25,\"global\":false}",
+      ),
+      Wait(251),
+    ),
     // A long wait is followed, uncapped.
     (
       limited([("x-ratelimit-scope", "global")], "{\"retry_after\":3600}"),
@@ -102,14 +108,18 @@ test "a 429 is resent for any verb after the delay Discord asks for" {
 
 ///|
 test "a 429 without a JSON body or a Discord rate-limit header fails at once" {
-  // Cloudflare's 429 in front of Discord: every retry counts against the
-  // address's 10,000 invalid requests per ten minutes.
+  // Not Discord's rate limit (for example Cloudflare's, in front of Discord):
+  // it names no wait, and every retry counts against the address's 10,000
+  // invalid requests per ten minutes. A JSON body without a JSON content
+  // type does not make it Discord's; the limiter sees only the headers, and
+  // both must agree.
   for
     error in [
       limited([], ""),
       limited([("retry-after", "2")], ""),
       limited([("content-type", "text/html")], "<html>banned</html>"),
       limited([], "\"not an object\""),
+      limited([], "{\"retry_after\":1}"),
     ] {
     assert_eq(
       decision(error, "GET"),
@@ -117,7 +127,7 @@ test "a 429 without a JSON body or a Discord rate-limit header fails at once" {
       msg=Repr(error).to_string(),
     )
   }
-  // Either Discord signal alone makes it Discord's.
+  // Any Discord signal alone makes it Discord's.
   assert_eq(
     decision(limited([("x-ratelimit-global", "true")], ""), "GET"),
     Wait(1001),
@@ -126,7 +136,13 @@ test "a 429 without a JSON body or a Discord rate-limit header fails at once" {
     decision(limited([("x-ratelimit-scope", "shared")], ""), "GET"),
     Wait(1001),
   )
-  assert_eq(decision(limited([], "{}"), "GET"), Wait(1001))
+  assert_eq(
+    decision(
+      limited([("content-type", "application/json; charset=utf-8")], "{}"),
+      "GET",
+    ),
+    Wait(1001),
+  )
 }
 
 ///|

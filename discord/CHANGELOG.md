@@ -7,6 +7,22 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+## [0.12.1] - 2026-10-19
+
+### Changed
+
+- **One test decides whether a 429 is Discord's rate limit:
+  `@ratelimit.is_discord_rate_limit`.** The resend decision and the rate
+  limiter now agree: a 429 with a JSON content type or an
+  `X-RateLimit-Scope` or `X-RateLimit-Global` header is Discord's, and any
+  other 429 comes from something in front of Discord (Cloudflare, for
+  example), names no wait, and is raised at once while the limiter holds
+  every non-interaction route. In 0.12.0 the resend decision looked at the
+  body instead, so a 429 with a JSON body but no JSON content type was
+  resent while the limiter held every route. Migration: a test server that
+  answers 429 with a JSON body should also send `Content-Type:
+  application/json`, as Discord does.
+
 ## [0.12.0] - 2026-10-19
 
 ### Changed

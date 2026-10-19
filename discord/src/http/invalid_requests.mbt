@@ -9,8 +9,8 @@ const INVALID_SLOTS : Int32 = 60
 
 ///|
 /// A rolling count of the invalid requests one client received, for
-/// Discord's limit of 10,000 per ten minutes, past which Cloudflare bans the
-/// address for a while. The window moves in ten-second steps, so a request
+/// Discord's limit of 10,000 per ten minutes, past which Discord restricts
+/// the address for a while. The window moves in ten-second steps, so a request
 /// leaves the count between 590 and 600 seconds after it was answered.
 ///
 /// It is a fixed ring of `INVALID_SLOTS` counters, each labelled with the
