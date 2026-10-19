@@ -209,6 +209,9 @@ async fn Shard::finish_transport(
 /// A message larger than `max_message_bytes`, compressed or inflated, ends
 /// the connection and the shard resumes; a limit below 1 closes the shard
 /// fatally with code 0 before it connects.
+/// `compression` asks Discord for transport compression; `compress=true` is
+/// the older spelling of `compression=ZlibStream`, and `compression` wins
+/// when both are given. `inflater_factory` replaces the decoder built for it.
 pub fn[X] Shard::start(
   group : @async.TaskGroup[X],
   token~ : String,
@@ -221,6 +224,7 @@ pub fn[X] Shard::start(
   event_filter~ : (@model.EventKind) -> Bool = _ => true,
   connector? : async (String) -> &GatewayTransport,
   compress~ : Bool = false,
+  compression? : GatewayCompression,
   inflater_factory? : () -> &Inflater raise,
   max_message_bytes~ : Int32 = DEFAULT_MAX_MESSAGE_BYTES,
   queue_capacity~ : Int32 = 256,
@@ -253,8 +257,15 @@ pub fn[X] Shard::start(
   let connector = connector.unwrap_or(url => {
     connect_websocket(url, max_message_bytes~)
   })
+  let compression = match compression {
+    Some(_) => compression
+    None => if compress { Some(ZlibStream) } else { None }
+  }
   let inflater_factory = inflater_factory.unwrap_or(() => {
-    ZlibStreamInflater(max_bytes=max_message_bytes)
+    default_inflater(
+      compression.unwrap_or(ZlibStream),
+      max_bytes=max_message_bytes,
+    )
   })
   let runner = group.spawn(no_wait=true, () => {
     if max_message_bytes < 1 {
@@ -271,7 +282,7 @@ pub fn[X] Shard::start(
       identify_queue?,
       event_filter~,
       connector~,
-      compress~,
+      compression~,
       inflater_factory~,
       clock~,
       rand~,
@@ -319,7 +330,7 @@ async fn Shard::run(
   identify_queue? : &@queue.IdentifyQueue,
   event_filter~ : (@model.EventKind) -> Bool,
   connector~ : async (String) -> &GatewayTransport,
-  compress~ : Bool,
+  compression~ : GatewayCompression?,
   inflater_factory~ : () -> &Inflater raise,
   clock~ : &@hclock.Clock,
   rand~ : @random.Rand,
@@ -335,8 +346,11 @@ async fn Shard::run(
       Some(session) => session.resume_url
       None => gateway_url
     }
-    let compression_query = if compress { "&compress=zlib-stream" } else { "" }
-    let inflater = if compress {
+    let compression_query = match compression {
+      Some(compression) => "&compress=\{compression.query_value()}"
+      None => ""
+    }
+    let inflater = if compression is Some(_) {
       Some(inflater_factory()) catch {
         _ if @async.is_being_cancelled() => return
         _ => {
@@ -371,7 +385,7 @@ async fn Shard::run(
         }
         @async.protect_from_cancel(() => self.finish_transport(transport, code~))
       }
-      if compress {
+      if compression is Some(_) {
         self.emit_telemetry(ShardCompressionEnabled(shard_id~))
       }
       self.run_connection(
@@ -583,7 +597,7 @@ async fn recv_payload(
         if inflater is Some(_) {
           raise ConnectionEnded(
             code=None,
-            reason="received text while zlib-stream compression is enabled",
+            reason="received text while transport compression is enabled",
           )
         }
         return text

@@ -11,6 +11,7 @@ import {
   "moonbitlang/core/random",
   "moonbitlang/core/encoding/utf8",
   "moonbit-community/flate/zlib",
+  "gaato/zstd",
 }
 
 import {
@@ -35,7 +36,7 @@ import {
   "gaato/http-async/mock" @simclock,
 } for "wbtest"
 
-// The gateway, including zlib-stream compression, runs on native, JavaScript, and moonrun Wasm.
+// The gateway, including zlib-stream and zstd-stream compression, runs on native, JavaScript, and moonrun Wasm.
 
 // `resume` is the public API label and is reserved by the current compiler.
 

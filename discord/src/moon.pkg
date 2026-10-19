@@ -4,6 +4,7 @@ import {
   "gaato/discord/interaction",
   "gaato/discord/app",
   "gaato/discord/bot",
+  "gaato/discord/gateway",
   "gaato/discord/endpoint_http",
   "gaato/discord/verify",
   "gaato/discord/framework",

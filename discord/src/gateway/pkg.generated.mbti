@@ -41,6 +41,14 @@ pub struct CommandLimiter {
 pub fn CommandLimiter::CommandLimiter(limit? : Int, window_ms? : Int, clock? : &@clock.Clock) -> Self
 pub async fn CommandLimiter::acquire(Self) -> Unit
 
+#non_exhaustive
+pub(all) enum GatewayCompression {
+  ZlibStream
+  ZstdStream
+} derive(Eq, @debug.Debug)
+pub fn GatewayCompression::equal(Self, Self) -> Bool
+pub fn GatewayCompression::not_equal(Self, Self) -> Bool
+
 pub(all) enum GatewayFrame {
   Text(String)
   Binary(Bytes)
@@ -70,7 +78,7 @@ pub async fn Shard::request_guild_members(Self, @model.RequestGuildMembers) -> U
 pub async fn Shard::request_soundboard_sounds(Self, @model.RequestSoundboardSounds) -> Unit
 pub async fn Shard::send(Self, Json) -> Unit
 pub fn Shard::session(Self) -> Session?
-pub fn[X] Shard::start(@async.TaskGroup[X], token~ : String, intents~ : @model.Intents, capabilities? : @model.GatewayCapabilities, gateway_url? : String, shard_id? : Int, shard_count? : Int, identify_queue? : &@queue.IdentifyQueue, event_filter? : (@model.EventKind) -> Bool, connector? : async (String) -> &GatewayTransport, compress? : Bool, inflater_factory? : () -> &Inflater raise, max_message_bytes? : Int, queue_capacity? : Int, telemetry? : (@telemetry.TelemetryEvent) -> Unit, clock? : &@clock.Clock, rand? : @random.Rand, resume? : Session, presence? : @model.UpdatePresence) -> Self
+pub fn[X] Shard::start(@async.TaskGroup[X], token~ : String, intents~ : @model.Intents, capabilities? : @model.GatewayCapabilities, gateway_url? : String, shard_id? : Int, shard_count? : Int, identify_queue? : &@queue.IdentifyQueue, event_filter? : (@model.EventKind) -> Bool, connector? : async (String) -> &GatewayTransport, compress? : Bool, compression? : GatewayCompression, inflater_factory? : () -> &Inflater raise, max_message_bytes? : Int, queue_capacity? : Int, telemetry? : (@telemetry.TelemetryEvent) -> Unit, clock? : &@clock.Clock, rand? : @random.Rand, resume? : Session, presence? : @model.UpdatePresence) -> Self
 pub fn Shard::state(Self) -> ShardState
 pub async fn Shard::update_presence(Self, @model.UpdatePresence) -> Unit
 pub async fn Shard::update_voice_state(Self, @model.UpdateVoiceState) -> Unit

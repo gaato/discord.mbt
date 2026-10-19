@@ -7,6 +7,17 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+### Added
+
+- **Gateway `zstd-stream` transport compression.** `BotBuilder(compression=
+  ZstdStream)` (and `Shard::start(compression=...)`) asks Discord for
+  `compress=zstd-stream` and decodes it with `gaato/zstd`, pure MoonBit like
+  the zlib decoder, so it works the same on native, JavaScript, and Wasm.
+  `compression=ZlibStream` is the same as `compress=true`, which stays; when
+  both are given, `compression` wins. `GatewayCompression` is
+  `#non_exhaustive`. `max_message_bytes` bounds a zstd message, compressed or
+  decoded, as it does a zlib one.
+
 ## [0.10.1] - 2026-10-19
 
 ### Changed

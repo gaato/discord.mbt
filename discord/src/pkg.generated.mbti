@@ -7,6 +7,7 @@ import {
   "gaato/discord/cache",
   "gaato/discord/endpoint_http",
   "gaato/discord/framework",
+  "gaato/discord/gateway",
   "gaato/discord/http",
   "gaato/discord/interaction",
   "gaato/discord/model",
@@ -213,6 +214,8 @@ pub using @app {type FailureOrigin}
 pub using @http {type FileUpload}
 
 pub using @model {type GatewayCapabilities}
+
+pub using @gateway {type GatewayCompression}
 
 pub using @bot {type GatewayCtx}
 

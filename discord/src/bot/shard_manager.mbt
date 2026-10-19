@@ -137,7 +137,7 @@ fn[X] BotCore::start_managed_shard(
     identify_queue~,
     event_filter~,
     connector?=self.connector_.val,
-    compress=self.compress_,
+    compression?=self.compression_,
     max_message_bytes=self.max_message_bytes_,
     telemetry=event => self.emit_telemetry(event),
     clock=self.clock_.val,

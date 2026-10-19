@@ -378,23 +378,26 @@ carries (set, not increment), so a replay sets the same state again.
 
 ## Gateway compression
 
-Gateway `zlib-stream` transport compression is opt-in. Pass `compress=true`
-to `BotBuilder(...)` (or `Shard::start` at the lower level):
+Gateway transport compression is opt-in. Pass `compression` to
+`BotBuilder(...)` (or `Shard::start` at the lower level): `ZstdStream` or
+`ZlibStream`. `compress=true` is the older spelling of `ZlibStream`.
 
 ```mbt check
 ///|
 fn compressed_bot(app : @discord.App, token : String) -> @discord.BotBuilder {
-  @discord.BotBuilder(app, token~, compress=true)
+  @discord.BotBuilder(app, token~, compression=ZstdStream)
 }
 ```
 
-Each compressed Gateway connection requests `compress=zlib-stream` and
-retains one inflate context, including across consecutive Gateway messages.
+Each compressed Gateway connection requests `compress=zstd-stream` (or
+`zlib-stream`) and retains one decoder context, including across consecutive
+Gateway messages.
 Only server-to-client binary messages are decompressed; identify, heartbeat,
 and other client-to-server payloads remain uncompressed text.
 
-The inflater is pure MoonBit, so compression works the same on native,
-JavaScript, and Wasm and needs no zlib library. A successful compressed
+Both decoders are pure MoonBit (`moonbit-community/flate` and `gaato/zstd`),
+so compression works the same on native, JavaScript, and Wasm and needs no
+zlib or zstd library. A successful compressed
 connection emits `ShardCompressionEnabled` telemetry.
 
 ## Opt-in cache

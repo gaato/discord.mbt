@@ -28,4 +28,5 @@ import {
   "moonbitlang/async@0.22.5",
   "hustcer/ed25519@0.6.0",
   "moonbit-community/flate@0.9.0",
+  "gaato/zstd@0.1.0",
 }

@@ -111,7 +111,7 @@ async test "shard config resolves auto fixed and range selections" {
   let client = @dhttp.Client("test-token")
   let app = @app.AppBuilder()
   let auto = BotBuilder(app.build(), token="test-token", shards=Auto)
-  assert_false(auto.core.compress_)
+  assert_true(auto.core.compression_ is None)
   auto.core.gateway_bot_info_.val = Some(manager_gateway_info(shards=3))
   let auto_config = auto.core.resolve_shards(client)
   debug_inspect(
@@ -125,7 +125,14 @@ async test "shard config resolves auto fixed and range selections" {
   debug_inspect((fixed_config.ids, fixed_config.count), content="([0, 1], 2)")
 
   let compressed = BotBuilder(app.build(), token="test-token", compress=true)
-  assert_true(compressed.core.compress_)
+  assert_true(compressed.core.compression_ is Some(ZlibStream))
+  let zstd = BotBuilder(
+    app.build(),
+    token="test-token",
+    compress=true,
+    compression=ZstdStream,
+  )
+  assert_true(zstd.core.compression_ is Some(ZstdStream))
 
   let injected_queue = @queue.InMemoryQueue()
   let coordinated = BotBuilder(

@@ -31,9 +31,10 @@ pub struct BotBuilder {
 /// infers the union of intents required by the typed event subscriptions
 /// (privileged intents are only inferred, never invented — they must still be
 /// enabled in the developer portal). `client` supplies a preconfigured REST
-/// client; by default one is built from `token`. `shards`, `compress`, and
+/// client; by default one is built from `token`. `shards`, `compression`, and
 /// `identify_queue` configure sharding, transport compression, and
-/// cross-process identify coordination. Every IDENTIFY, at startup or after a
+/// cross-process identify coordination; `compress=true` is the older spelling
+/// of `compression=ZlibStream`, and `compression` wins when both are given. Every IDENTIFY, at startup or after a
 /// lost session, first reads `session_start_limit` from `GET /gateway/bot`; an
 /// exhausted limit ends `run` with `SessionStartLimitExceeded` instead of
 /// risking a token reset. `capabilities` is sent in Identify (see
@@ -72,6 +73,7 @@ pub fn BotBuilder::BotBuilder(
   gateway_url? : String,
   shards~ : ShardConfig = Single(id=0, count=1),
   compress~ : Bool = false,
+  compression? : @gateway.GatewayCompression,
   identify_queue? : &@queue.IdentifyQueue,
   sync? : @app.CommandScope,
   sync_unowned~ : @framework.UnownedCommands = Delete,
@@ -90,6 +92,7 @@ pub fn BotBuilder::BotBuilder(
       gateway_url?,
       shards~,
       compress~,
+      compression?,
       identify_queue?,
       sync?,
       sync_unowned~,

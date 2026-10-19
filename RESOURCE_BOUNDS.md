@@ -16,7 +16,7 @@ kind say what that product is.
 
 | Structure | Bound | On overflow |
 |---|---|---|
-| One received Gateway message (`gateway/transport.mbt`, `gateway/compression.mbt`) | `max_message_bytes`, default 64 MiB, for the frame, accumulated compressed bytes, and inflated output | The connection ends (1009 for a frame, `InflateError::TooLarge` for zlib) and the shard resumes |
+| One received Gateway message (`gateway/transport.mbt`, `gateway/compression.mbt`) | `max_message_bytes`, default 64 MiB, for the frame, accumulated compressed bytes, and inflated output | The connection ends (1009 for a frame, `InflateError::TooLarge` for zlib-stream and zstd-stream) and the shard resumes |
 | Shard event queue (`gateway/shard.mbt`) | `queue_capacity`, default 256 | The read loop waits (backpressure) |
 | Bot event handler backlog (`bot/bot.mbt`) | `event_backlog`, default 10 000 | Handlers skip the event: `EventDropped` telemetry each, one warning per overload |
 | Running interaction handlers (`app/admission.mbt`) | `max_in_flight`, default 64 | Wait within the callback window, then `InteractionDropped` / `DeferredInteractionExpired` |

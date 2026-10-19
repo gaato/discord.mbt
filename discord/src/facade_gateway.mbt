@@ -13,3 +13,7 @@ pub using @bot {
   type ShardConfig,
   type EventMiddleware,
 }
+
+///|
+/// Transport compression for `BotBuilder(compression=...)`.
+pub using @gateway {type GatewayCompression}

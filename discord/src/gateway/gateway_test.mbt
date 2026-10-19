@@ -686,6 +686,29 @@ async test "compressed shard buffers suffix fragments and decodes messages" {
 }
 
 ///|
+async test "compression=ZstdStream requests zstd-stream over compress=true" {
+  let transport = @gatewaysim.FakeTransport()
+  let connected_url = Ref("")
+  @async.with_task_group(group => {
+    let shard = @gateway.Shard::start(
+      group,
+      rand=seeded_rand(),
+      token="tok",
+      intents=@model.Intents::guild_messages(),
+      compress=true,
+      compression=ZstdStream,
+      connector=url => {
+        connected_url.val = url
+        (transport : &@gateway.GatewayTransport)
+      },
+    )
+    @async.sleep(1)
+    assert_true(connected_url.val.has_suffix("&compress=zstd-stream"))
+    shard.close()
+  })
+}
+
+///|
 test "on_close classifies discord codes" {
   debug_inspect(@gateway.on_close(Some(4004), true), content="Fatal")
   debug_inspect(@gateway.on_close(Some(4014), true), content="Fatal")

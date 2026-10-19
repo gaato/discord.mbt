@@ -28,6 +28,9 @@ async fn sec_gateway(p : P) -> Unit {
           // Opt into channel obfuscation (mandatory for all bots from
           // 2026-11-16) so GUILD_CREATE exercises that decode path early.
           capabilities=@model.GatewayCapabilities::channel_obfuscation(),
+          // zstd-stream transport compression, so READY and GUILD_CREATE
+          // exercise the pure-MoonBit zstd decoder against Discord's encoder.
+          compression=ZstdStream,
           gateway_url~,
         )
         // Wait for READY.
@@ -35,7 +38,11 @@ async fn sec_gateway(p : P) -> Unit {
         while !ready {
           match shard.next() {
             Dispatch(Ready(r)) => {
-              p.push("gateway connect + READY", Pass, "user=\{r.user.username}")
+              p.push(
+                "gateway connect + READY (zstd-stream)",
+                Pass,
+                "user=\{r.user.username}",
+              )
               ready = true
             }
             FatallyClosed(code~) => {

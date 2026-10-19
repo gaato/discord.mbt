@@ -253,8 +253,8 @@ subscriptions; pass privileged intents (members, presences, message content)
 explicitly, and pass the full set when raw event handlers are used.
 `ctx.wait_for(...)` makes one-shot typed event observations inside a handler.
 The [events and intents guide](https://github.com/gaato/discord.mbt/blob/main/guide/04-events-intents.mbt.md) covers
-descriptors, intent derivation, decode-error observers, opt-in `zlib-stream`
-compression, and the gateway-driven in-memory cache.
+descriptors, intent derivation, decode-error observers, opt-in `zstd-stream` and
+`zlib-stream` compression, and the gateway-driven in-memory cache.
 
 Several shards can run in one process behind the same dispatch path, so
 handlers, the cache, collectors, and telemetry observe every shard:

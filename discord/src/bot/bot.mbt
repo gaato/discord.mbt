@@ -89,7 +89,7 @@ priv struct BotCore {
   client_ : @dhttp.Client?
   gateway_url_ : String?
   shards_ : ShardConfig
-  compress_ : Bool
+  compression_ : @gateway.GatewayCompression?
   resume_ : Map[Int32, BotSession]
   starting_ : Ref[Bool]
   running_shards_ : Ref[Array[ManagedShard]]
@@ -130,7 +130,8 @@ priv struct BotCore {
 /// `run` time (privileged intents are only inferred, never invented — they
 /// must still be enabled in the developer portal). `client` supplies a
 /// preconfigured REST client; by default one is built from `token`.
-/// `shards`, `compress`, and `identify_queue` configure sharding, transport
+/// `shards`, `compression` (or the older `compress=true`, meaning
+/// `ZlibStream`), and `identify_queue` configure sharding, transport
 /// compression, and cross-process identify coordination. Every IDENTIFY, at
 /// startup or after a lost session, first reads `session_start_limit` from
 /// `GET /gateway/bot`; an exhausted limit ends `run` with
@@ -157,6 +158,7 @@ fn BotCore::new(
   gateway_url? : String,
   shards~ : ShardConfig = Single(id=0, count=1),
   compress~ : Bool = false,
+  compression? : @gateway.GatewayCompression,
   identify_queue? : &@queue.IdentifyQueue,
   sync? : @app.CommandScope,
   sync_unowned~ : @framework.UnownedCommands = Delete,
@@ -175,7 +177,10 @@ fn BotCore::new(
     client_: client,
     gateway_url_: gateway_url,
     shards_: shards,
-    compress_: compress,
+    compression_: match compression {
+      Some(_) => compression
+      None => if compress { Some(ZlibStream) } else { None }
+    },
     resume_: {
       let snapshots : Map[Int32, BotSession] = Map([])
       for shard_id, snapshot in resume {
