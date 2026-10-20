@@ -230,6 +230,10 @@ body, handles Discord PINGs, dispatches through `App::serve`, and maps the
 outcome like `handle_signed_http`: 404 for `NoRoute`, 202 for `NoResponse`,
 504 for `TimedOut`. Use a reverse proxy for public HTTPS termination.
 
+The same server runs on moonrun Wasm; the
+[`interactions_http` example](https://github.com/gaato/discord.mbt/blob/main/examples/interactions_http/README.md)
+shows the `moonrun --policy` permissions it needs.
+
 ## JavaScript hosts
 
 `App::start_signed_http` exists on the JavaScript backend only and returns a
@@ -273,6 +277,26 @@ fn dispatch_on_js_host(
 }
 ```
 
+The JavaScript host adapters in `examples/` are checked to different depths:
+
+| Host | Checked in this repository | Not yet checked |
+| --- | --- | --- |
+| Cloudflare Workers | Signed requests and deferred REST in local workerd | Production deployment |
+| Deno | `Deno.serve` adapter and signed requests | Hosted lifecycle |
+| Bun | Shared MoonBit handler and `Bun.serve` loopback endpoint | Hosted lifecycle |
+| Node.js | Shared MoonBit handler and Web APIs | HTTP hosting and process lifecycle |
+| Vercel Functions | Node.js `fetch` adapter and `waitUntil` handoff | Vercel packaging and hosted lifecycle |
+| Fastly Compute | `FetchEvent` and synchronous lifetime registration with a fake event | Fastly compilation and hosted execution |
+| Lambda Function URL | Payload v2 body and response conversion with local events | AWS invocation and deployment |
+
+Other JavaScript function platforms can reuse the handler if they provide Web
+`Request`, `Response`, `crypto.subtle`, and `fetch`; their entry point,
+background-work API, bundle, and execution limits still need checking. The
+[host entry point survey](https://github.com/gaato/discord.mbt/blob/main/docs/interaction-host-entrypoints.md)
+records the conventions of other hosts, and the
+[Spin experiment](https://github.com/gaato/discord.mbt/blob/main/experiments/spin_interactions/README.md)
+tests a WASIp2 component boundary for an immediate handler.
+
 ## Cloudflare Workers
 
 On per-request runtimes such as Workers, constructing `AppBuilder()` for every request
@@ -309,7 +333,9 @@ env WRANGLER_SEND_METRICS=false npm test
 ```
 
 Voice remains native-only. Gateway bots also run on JavaScript (including
-Durable Objects) and moonrun Wasm; the JavaScript backend also serves REST,
+Durable Objects, as in the
+[`workers_gateway` example](https://github.com/gaato/discord.mbt/blob/main/examples/workers_gateway/README.md))
+and moonrun Wasm; the JavaScript backend also serves REST,
 signature verification, and gateway-free HTTP interactions.
 With `moonbitlang/async@0.22.1`, the JS Fetch transport also completes
 null-body 204 responses. The `workers_echo` suite covers this with a deferred

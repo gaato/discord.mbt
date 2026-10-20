@@ -12,21 +12,14 @@ import {
 }
 
 import {
-  "moonbitlang/core/json",
   "moonbitlang/async",
   "gaato/discord/model",
-  "gaato/discord/telemetry",
-  "gaato/discord/interaction",
-  "gaato/discord/http" @dhttp,
   "moonbitlang/async/http" @ahttp,
 } for "test"
 
 // Target-specific facade imports are unused on the other targets.
 
-// The public Bot `resume` label is reserved by this compiler version; the
-// compiled README example exercises it so documentation stays in sync.
-
-warnings = "-29-35"
+warnings = "-29"
 
 supported_targets = "js + native + wasm"
 

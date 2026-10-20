@@ -22,9 +22,42 @@ Other directories: `experiments/` holds host experiments, `scripts/` the
 repository's audits and release tooling, and `docs/` design notes. Each
 published module has its own `CHANGELOG.md`.
 
-Run `moon check`, `moon test`, and `moon fmt` from this directory to cover
-every module; native builds here need Node.js, which runs the voice modules'
-prebuild hooks. See [`discord/README.md`](discord/README.md) for usage.
+See [`discord/README.md`](discord/README.md) for usage.
+
+## Development
+
+Run these from this directory; they cover every module and build each against
+the in-tree versions of the others. Native builds here run every module's
+prebuild hook, so they need Node.js on `PATH`.
+
+```sh
+moon check --target native --deny-warn
+moon check --target js --deny-warn
+moon check --target wasm --deny-warn
+moon test --target native --release   # debug native builds need a working tcc setup
+moon test --target js --release
+moon test --target wasm --release
+moon fmt
+moon info --target native             # regenerate pkg.generated.mbti
+scripts/gen_extends.py                # regenerate extends.mbt after adding or removing a ToJson type
+```
+
+To build `gaato/discord` alone against its published dependencies, as a
+consumer does, run `MOON_WORK=off moon -C discord check --target native`.
+
+Each package's `pkg.generated.mbti` is a concise public-interface snapshot;
+review its diff when checking API drift. [`scripts/`](scripts) holds the
+audits and release tooling.
+
+The [`ghcr.io/gaato/moonbit`](https://github.com/gaato/moonbit-docker) image
+bundles the pinned toolchain with Node.js 24, `gcc`, and `git`. The
+`.devcontainer` starts from it, CI runs in it (except the Rust voice shim
+job), and `template/Dockerfile` uses it as the builder stage.
+
+Code blocks marked `mbt check` in the guides and docstrings compile and run
+as part of the test suite. `discord/README.md` keeps its examples as
+`mbt nocheck` for readers; each has a compiled twin in
+`discord/src/readme_native_test.mbt`.
 
 ## License
 

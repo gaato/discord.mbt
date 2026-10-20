@@ -320,6 +320,42 @@ RESUME would keep the old guild assignment. For multiple processes, use the
 bundled coordinator described in
 [Scaling across processes](08-scaling-processes.mbt.md).
 
+## Saved sessions
+
+A bot that restarts can resume its Gateway sessions instead of identifying
+again. While `run` is active, `Bot::sessions` returns a `BotSession` snapshot
+per shard, holding the Gateway session and its original READY metadata. Store
+them, and pass them back through `resume` when building the next bot:
+
+```mbt check
+///|
+fn current_bot_sessions(bot : @discord.Bot) -> Map[Int32, @discord.BotSession] {
+  bot.sessions()
+}
+
+///|
+fn restored_bot(
+  app : @discord.App,
+  token : String,
+  saved : Map[Int32, @discord.BotSession],
+) -> @discord.BotBuilder {
+  @discord.BotBuilder(app, token~, resume=saved)
+}
+
+///|
+test "saved session declarations compile" {
+  ignore(current_bot_sessions)
+  ignore(restored_bot)
+}
+```
+
+Snapshots are taken when you ask for them, so events handled after the last
+save are replayed (see below). They do not restore application state or cache
+contents. A graceful close invalidates the session, so discard a snapshot
+after stopping the bot on purpose. The
+[`workers_gateway` example](https://github.com/gaato/discord.mbt/blob/main/examples/workers_gateway/README.md)
+saves sessions from a Cloudflare Durable Object.
+
 ## Redelivered events
 
 A Gateway RESUME replays the events a shard missed, and a process that

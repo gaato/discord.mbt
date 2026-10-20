@@ -3,7 +3,7 @@
 [![CI](https://github.com/gaato/discord.mbt/actions/workflows/dave.yml/badge.svg)](https://github.com/gaato/discord.mbt/actions/workflows/dave.yml)
 [![mooncakes](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fmooncakes.io%2Fapi%2Fv0%2Fmodules%2Fgaato%2Fdave&query=%24.version&label=mooncakes&prefix=v)](https://mooncakes.io/docs/gaato/dave)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/gaato/discord.mbt)
-[![License](https://img.shields.io/github/license/gaato/discord.mbt)](LICENSE)
+[![License](https://img.shields.io/github/license/gaato/discord.mbt)](https://github.com/gaato/discord.mbt/blob/main/dave/LICENSE)
 
 Safe native MoonBit bindings for Discord's official
 [`libdave`](https://github.com/discord/libdave) C API.
@@ -29,7 +29,7 @@ native-handle constructors raise `DaveError::LibraryUnavailable`.
 Add the released module to the consumer and import the root package from
 `moon.pkg`:
 
-```fish
+```sh
 moon add gaato/dave@0.1.0
 ```
 
@@ -115,7 +115,7 @@ Opt in once from a native Moon build to download the matching official libdave
 archive, verify its pinned size and SHA-256 digest, and store the complete
 extraction in a user cache:
 
-```fish
+```sh
 env MBT_DAVE_REQUIRE_NATIVE=1 moon build --target native --release --deny-warn
 ```
 
@@ -123,7 +123,7 @@ The shared library is loaded at runtime; it is not installed system-wide or
 embedded in the Mooncake. Builds without `MBT_DAVE_REQUIRE_NATIVE=1`, including
 JavaScript and Wasm builds, do not bootstrap a host library.
 
-See [Native libdave runtime](docs/native-runtime.md) for cache paths, offline
+See [Native libdave runtime](https://github.com/gaato/discord.mbt/blob/main/dave/docs/native-runtime.md) for cache paths, offline
 and preseeded builds, environment overrides, and loader order.
 
 The upstream release provides these host assets:
@@ -150,7 +150,7 @@ on older distributions need a compatible self-built library supplied through
 On a supported host, bootstrap the pinned runtime and verify the backends from
 the `dave/` directory with:
 
-```fish
+```sh
 moon fmt --check
 node --test test/build.test.js
 moon check --target all --deny-warn
@@ -176,5 +176,5 @@ helper or messages produced by a live Discord voice session.
 
 This project is an independent binding. It is not affiliated with or endorsed
 by Discord. `libdave` and its bundled dependencies retain their upstream
-licenses and notices; see [THIRD_PARTY.md](THIRD_PARTY.md). The MoonBit binding
+licenses and notices; see [THIRD_PARTY.md](https://github.com/gaato/discord.mbt/blob/main/dave/THIRD_PARTY.md). The MoonBit binding
 itself is licensed under Apache-2.0.

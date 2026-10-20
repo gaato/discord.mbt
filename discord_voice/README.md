@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/gaato/discord.mbt/actions/workflows/ci.yml/badge.svg)](https://github.com/gaato/discord.mbt/actions/workflows/ci.yml)
 [![Voice shim](https://github.com/gaato/discord.mbt/actions/workflows/voice-shim.yml/badge.svg)](https://github.com/gaato/discord.mbt/actions/workflows/voice-shim.yml)
-[![License](https://img.shields.io/github/license/gaato/discord.mbt)](LICENSE)
+[![License](https://img.shields.io/github/license/gaato/discord.mbt)](https://github.com/gaato/discord.mbt/blob/main/discord_voice/LICENSE)
 
 Experimental Discord voice for bots built with
 [`gaato/discord`](https://github.com/gaato/discord.mbt/blob/main/discord/README.md), on MoonBit's native
@@ -10,7 +10,7 @@ backend: voice gateway v8, Discord's DAVE end-to-end encryption, Opus
 playback, and per-user Opus receive. The module lives in the `discord_voice/`
 directory of [gaato/discord.mbt](https://github.com/gaato/discord.mbt).
 
-```fish
+```sh
 moon add gaato/discord_voice
 ```
 
@@ -46,7 +46,7 @@ small Rust library released as `voice-shim-v0.1.0`; its sources are in
 
 A native build bootstraps and verifies both prebuilt runtimes when asked to:
 
-```fish
+```sh
 env DISCORD_VOICE_REQUIRE_SHIM=1 MBT_DAVE_REQUIRE_NATIVE=1 moon build --target native --release
 ```
 
@@ -58,7 +58,7 @@ anything. Moon does not run them for `moon check`.
 
 ## Design
 
-See [DESIGN.md](DESIGN.md) for the accepted design and its milestones.
+See [DESIGN.md](https://github.com/gaato/discord.mbt/blob/main/discord_voice/DESIGN.md) for the accepted design and its milestones.
 
 ## License
 
