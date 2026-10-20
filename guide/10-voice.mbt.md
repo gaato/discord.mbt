@@ -10,7 +10,7 @@ documented in [`DESIGN.md`](https://github.com/gaato/discord.mbt/blob/main/disco
 
 Add the module next to `gaato/discord` and import it as `@voice`:
 
-```fish
+```sh
 moon add gaato/discord_voice
 ```
 
@@ -28,7 +28,7 @@ import {
 depends on `gaato/dave`, which pins official `libdave` `v1.2.0/cpp`. Bootstrap both
 verified native runtimes from a native build:
 
-```fish
+```sh
 env DISCORD_VOICE_REQUIRE_SHIM=1 MBT_DAVE_REQUIRE_NATIVE=1 moon build --target native --release
 ```
 
@@ -67,15 +67,15 @@ API can be added once upstream exposes one.
 To develop the transport component itself or support another host, build it
 with Cargo:
 
-```fish
+```sh
 cd discord_voice/shim
 cargo build --release
 ```
 
 Point the runtime at that development build:
 
-```fish
-set -gx DISCORD_VOICE_SHIM_PATH "$PWD/target/release/libdiscord_voice_shim.so"
+```sh
+export DISCORD_VOICE_SHIM_PATH="$PWD/target/release/libdiscord_voice_shim.so"
 ```
 
 macOS uses `libdiscord_voice_shim.dylib`; Windows uses
@@ -134,7 +134,7 @@ test can drive a join with its own port.
 `OggOpusSource` passes encoded Opus packets through without decoding. Create a
 48 kHz, stereo stream with one 20 ms packet per Ogg packet:
 
-```fish
+```sh
 ffmpeg -i input.mp3 -c:a libopus -ar 48000 -ac 2 -frame_duration 20 -f ogg out.ogg
 ```
 
@@ -221,7 +221,7 @@ client in the channel while testing: the gateway sends an initial Add proposal
 to the other pending members, so a bot alone cannot establish the group. Set
 `DISCORD_TOKEN`, `GUILD_ID`, and `CHANNEL_ID`, then run:
 
-```fish
+```sh
 env DISCORD_VOICE_REQUIRE_SHIM=1 MBT_DAVE_REQUIRE_NATIVE=1 moon run --target native --release examples/dave_probe
 ```
 
@@ -237,7 +237,7 @@ For that final outbound interoperability check, explicitly enable the audible
 mode with a short, low-volume Ogg/Opus file. The probe still waits for DAVE v1
 activation before playback and clips the input at three seconds. For example:
 
-```fish
+```sh
 ffmpeg -y -hide_banner -loglevel error -f lavfi -i 'sine=frequency=880:duration=1.5' -filter:a 'volume=0.7' -c:a libopus -ar 48000 -ac 2 -frame_duration 20 /tmp/discord-dave-tone.ogg
 env DAVE_PROBE_AUDIBLE=1 DAVE_PROBE_AUDIO_FILE=/tmp/discord-dave-tone.ogg DISCORD_VOICE_REQUIRE_SHIM=1 MBT_DAVE_REQUIRE_NATIVE=1 moon run --target native --release examples/dave_probe
 ```
@@ -252,7 +252,7 @@ set `DAVE_PROBE_RECEIVE=1`, run the same probe, and speak from the other client
 when the receive probe starts. It waits up to 20 seconds for ten decrypted Opus
 frames and stores only the frame count:
 
-```fish
+```sh
 env DAVE_PROBE_RECEIVE=1 DISCORD_VOICE_REQUIRE_SHIM=1 MBT_DAVE_REQUIRE_NATIVE=1 moon run --target native --release examples/dave_probe
 ```
 
@@ -270,7 +270,7 @@ the probe does not write the audio to disk and does not echo while recording,
 so it cannot create a continuous feedback loop. It logs only Opus packet-size
 statistics, not the sender ID or audio content:
 
-```fish
+```sh
 env DAVE_PROBE_ECHO=1 DISCORD_VOICE_REQUIRE_SHIM=1 MBT_DAVE_REQUIRE_NATIVE=1 moon run --target native --release examples/dave_probe
 ```
 
@@ -278,6 +278,6 @@ When explicit recording is acceptable, set `DAVE_PROBE_RECORD_PATH` to an Ogg
 output path. This also uses the Speaking-gated two-second capture, but does not
 enable echo unless `DAVE_PROBE_ECHO=1` is set separately:
 
-```fish
+```sh
 env DAVE_PROBE_RECORD_PATH=/tmp/discord-dave-receive-check.ogg DISCORD_VOICE_REQUIRE_SHIM=1 MBT_DAVE_REQUIRE_NATIVE=1 moon run --target native --release examples/dave_probe
 ```

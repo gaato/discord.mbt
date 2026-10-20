@@ -10,7 +10,7 @@ but the resulting core module imports 118 functions from `moonbitlang/async`,
 eight from `__moonbit_fs_unstable`, and one from `__moonbit_time_unstable`.
 It therefore cannot run as a generic WASIp2 HTTP component under Spin.
 
-```fish
+```sh
 wasm-tools print _build/wasm/release/build/local/discord_examples/interactions_http/interactions_http.wasm | rg '^  \(import '
 ```
 

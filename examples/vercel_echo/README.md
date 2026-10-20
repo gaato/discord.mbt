@@ -8,7 +8,7 @@ the Function environment before deployment.
 
 From the repository root, check the adapter locally:
 
-```fish
+```sh
 moon build --target js --release --deny-warn examples/interactions_js
 node --test examples/vercel_echo/adapter.test.mjs
 ```

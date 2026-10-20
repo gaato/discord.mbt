@@ -1,8 +1,8 @@
 # CDN documentation audit
 
-From the repository root (fish syntax):
+From the repository root:
 
-```fish
+```sh
 moon run scripts/docs_cdn_audit.mbtx ~/ghq/github.com/discord/discord-api-docs/developers/reference.mdx --self-test
 ```
 
@@ -25,7 +25,7 @@ review. After reviewing and following the listed changes, move
 
 From the repository root, after `moon info`:
 
-```fish
+```sh
 moon run scripts/api_surface_audit.mbtx --self-test
 ```
 
@@ -42,7 +42,7 @@ audit.
 
 # Clock guard
 
-```fish
+```sh
 moon run scripts/clock_guard.mbtx --self-test
 ```
 
@@ -62,7 +62,7 @@ entries without a use fail the guard.
 
 # Interaction message field audit
 
-```fish
+```sh
 moon run scripts/docs_callback_audit.mbtx ~/ghq/github.com/discord/discord-api-docs --self-test
 ```
 

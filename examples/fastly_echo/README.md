@@ -7,7 +7,7 @@ deferred MoonBit work after the initial response is ready.
 
 From the repository root:
 
-```fish
+```sh
 moon build --target js --release --deny-warn examples/interactions_js
 node --test examples/fastly_echo/adapter.test.mjs
 ```

@@ -7,7 +7,7 @@ settles. The set does not guarantee completion if the host terminates the proces
 
 From the repository root:
 
-```fish
+```sh
 moon build --target js --release --deny-warn examples/interactions_js
 env DISCORD_PUBLIC_KEY=... DISCORD_TOKEN=... DISCORD_APPLICATION_ID=... deno run --allow-env --allow-net examples/deno_echo/entry.js
 deno test --allow-net examples/deno_echo/entry.test.js

@@ -9,7 +9,7 @@ connections are native-only and are not included.
 
 From the repository root:
 
-```fish
+```sh
 moon build --target js --release --deny-warn examples/workers_gateway
 cd examples/workers_gateway
 npm ci
@@ -23,9 +23,9 @@ The public `/start`, `/status`, and `/stop` routes require
 `Authorization: Bearer <CONTROL_TOKEN>`; without that secret the Worker rejects
 all controls. `/status` exposes only the enabled and running flags. For example:
 
-```fish
-set -x CONTROL_TOKEN 'your-separate-control-token'
-set -x WORKER_URL 'https://your-worker.example'
+```sh
+export CONTROL_TOKEN='your-separate-control-token'
+export WORKER_URL='https://your-worker.example'
 curl -H "Authorization: Bearer $CONTROL_TOKEN" "$WORKER_URL/start"
 curl -H "Authorization: Bearer $CONTROL_TOKEN" "$WORKER_URL/status"
 curl -X POST -H "Authorization: Bearer $CONTROL_TOKEN" "$WORKER_URL/stop"
@@ -119,7 +119,7 @@ restoration after a bot stops and starts again. Live object eviction is
 covered only by the deployment above; the local `evictDurableObject` helper
 stalled subsequent requests even for an empty object in this test setup.
 
-```fish
+```sh
 cd examples/workers_gateway
 npm ci
 env WRANGLER_SEND_METRICS=false npm test

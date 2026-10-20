@@ -9,7 +9,7 @@ expanded public key between requests.
 
 From the repository root:
 
-```fish
+```sh
 moon build --target js --release --deny-warn examples/interactions_js
 cd examples/workers_echo
 npx wrangler secret put DISCORD_TOKEN
@@ -33,7 +33,7 @@ The test suite generates a temporary Ed25519 key pair and runs signed requests
 inside Cloudflare's local `workerd` runtime. It does not read `.dev.vars` and
 does not send requests to Discord or Cloudflare:
 
-```fish
+```sh
 cd examples/workers_echo
 npm ci
 env WRANGLER_SEND_METRICS=false npm test
@@ -55,7 +55,7 @@ one-shot: `register/` builds the same `App` as the Worker (one definition in
 `../interactions_js/app.mbt`, no drift possible) and diff-syncs it — nothing is sent when the
 registered commands already match. Run it after `wrangler deploy` (or from CI):
 
-```fish
+```sh
 env DISCORD_TOKEN=... moon run --target native examples/workers_echo/register
 env GUILD_ID=... DISCORD_TOKEN=... moon run --target native examples/workers_echo/register # one guild only
 env SYNC_UNOWNED=keep DISCORD_TOKEN=... moon run --target native examples/workers_echo/register # keep commands other processes registered

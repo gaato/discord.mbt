@@ -4,7 +4,7 @@ This directory is a minimal native Gateway bot with one `/ping` command. Copy
 it out of the discord.mbt repository, then change the module name at the top of
 `moon.mod` to a name you own.
 
-```fish
+```sh
 cp -R /path/to/discord.mbt/template ./my-discord-bot
 cd my-discord-bot
 ```
@@ -13,7 +13,7 @@ cd my-discord-bot
 
 `moon.mod` pins the released `gaato/discord`; update it with Moon when needed:
 
-```fish
+```sh
 moon update
 ```
 
@@ -28,7 +28,7 @@ local checkout. Current Moon represents local path dependencies as workspace
 members rather than paths inside `moon.mod`. From a directory containing (or
 able to reference) both the checkout and the copied bot, run:
 
-```fish
+```sh
 moon work init /path/to/discord.mbt /path/to/my-discord-bot
 moon check /path/to/my-discord-bot/src/main --target native
 ```
@@ -43,7 +43,7 @@ The `Dockerfile` builds the bot with the
 [`ghcr.io/gaato/moonbit`](https://github.com/gaato/moonbit-docker) toolchain
 image and copies the executable onto `gcr.io/distroless/base-debian13`:
 
-```fish
+```sh
 docker build -t my-discord-bot .
 docker run --rm -e DISCORD_TOKEN="your-token" my-discord-bot
 ```
@@ -57,8 +57,8 @@ Create a Discord application and bot, install it with the `bot` and
 `applications.commands` scopes, then export its raw token (without a `Bot `
 prefix):
 
-```fish
-set -x DISCORD_TOKEN "your-token"
+```sh
+export DISCORD_TOKEN="your-token"
 moon run --target native src/main
 ```
 
@@ -70,8 +70,8 @@ The starter opts into synchronization on the bot's first READY. Discord's bulk
 overwrite deletes commands in the selected scope that this App does not
 declare.
 
-```fish
-set -x GUILD_ID "123456789012345678"
+```sh
+export GUILD_ID="123456789012345678"
 moon run --target native src/main
 ```
 

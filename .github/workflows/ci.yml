@@ -103,6 +103,9 @@ jobs:
       - name: Clock guard
         run: moon run scripts/clock_guard.mbtx --self-test
 
+      - name: Docs audit
+        run: moon run scripts/docs_audit.mbtx --self-test
+
       - name: Audit CDN endpoint baseline
         run: |
           curl --proto '=https' --tlsv1.2 --fail --show-error --silent --location \

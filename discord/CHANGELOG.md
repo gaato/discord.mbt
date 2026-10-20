@@ -765,7 +765,7 @@ breaking change is listed with a migration note.
   register (or bind their result) instead of calling them for their effect. A feature installer that also needs the gateway for events
   splits into one function that takes the `AppBuilder` and one that takes
   the `BotBuilder` (see the `BotBuilder` entry below); see
-  [Structuring bots](src/guide/07-structuring-bots.mbt.md).
+  [Structuring bots](https://github.com/gaato/discord.mbt/blob/main/guide/07-structuring-bots.mbt.md).
 - Breaking: `raw()` on `ImmediateCtx`, `ComponentImmediateCtx`, and
   `ModalImmediateCtx` is renamed `unchecked_raw()`. Its response methods
   bypass the rule that an immediate handler answers by returning its reply;

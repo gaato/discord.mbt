@@ -6,7 +6,7 @@ process can still interrupt unfinished REST work.
 
 From the repository root:
 
-```fish
+```sh
 moon build --target js --release --deny-warn examples/interactions_js
 bun test examples/bun_echo/entry.test.js
 env DISCORD_PUBLIC_KEY=... DISCORD_TOKEN=... DISCORD_APPLICATION_ID=... bun examples/bun_echo/entry.js

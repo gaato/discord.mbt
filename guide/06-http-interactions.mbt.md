@@ -326,7 +326,7 @@ drops unsent chunks and does not leave a MoonBit producer task behind.
 
 Run its signed endpoint tests in Cloudflare's local runtime with:
 
-```fish
+```sh
 cd examples/workers_echo
 npm ci
 env WRANGLER_SEND_METRICS=false npm test

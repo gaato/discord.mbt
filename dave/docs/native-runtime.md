@@ -27,7 +27,7 @@ digest remains the final authenticity check.
 
 Bootstrap and compile on a supported native host with:
 
-```fish
+```sh
 env MBT_DAVE_REQUIRE_NATIVE=1 moon build --target native --release
 ```
 
@@ -75,9 +75,9 @@ The following environment variables are supported:
 For example, an air-gapped build can pre-extract the matching official archive
 and run:
 
-```fish
-set -gx MBT_DAVE_NATIVE_ROOT /opt/libdave/v1.2.0-cpp/linux-x64
-set -gx MBT_DAVE_NATIVE_OFFLINE 1
+```sh
+export MBT_DAVE_NATIVE_ROOT=/opt/libdave/v1.2.0-cpp/linux-x64
+export MBT_DAVE_NATIVE_OFFLINE=1
 env MBT_DAVE_REQUIRE_NATIVE=1 moon build --target native --release
 ```
 

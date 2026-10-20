@@ -8,7 +8,7 @@ a small C ABI. DAVE MLS and media encryption are provided separately by the
 Native `gaato/discord_voice` consumers can provision the pinned component
 together with official libdave:
 
-```fish
+```sh
 env DISCORD_VOICE_REQUIRE_SHIM=1 MBT_DAVE_REQUIRE_NATIVE=1 moon build --target native --release
 ```
 
@@ -20,7 +20,7 @@ PowerShell (Windows) are required.
 
 For component development, build the shim with:
 
-```fish
+```sh
 cargo build --release
 ```
 
@@ -79,7 +79,7 @@ are `-100` (unavailable), `-101` (ABI mismatch), and `-102` (missing symbol).
 
 Before changing the ABI, run the same checks as CI:
 
-```fish
+```sh
 cargo fmt -- --check
 cargo clippy --all-targets --locked -- -D warnings
 cargo test --locked

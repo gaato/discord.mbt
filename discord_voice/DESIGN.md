@@ -123,13 +123,13 @@ selected with `MBT_DAVE_NATIVE_LIB` or a newer runtime environment.
 
 The normal consumer bootstrap is:
 
-```fish
+```sh
 env DISCORD_VOICE_REQUIRE_SHIM=1 MBT_DAVE_REQUIRE_NATIVE=1 moon build --target native --release
 ```
 
 For transport component development, build the shim from the repository root:
 
-```fish
+```sh
 cd voice-shim
 cargo build --release
 ```

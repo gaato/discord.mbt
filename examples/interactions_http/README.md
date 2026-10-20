@@ -2,7 +2,7 @@
 
 Set the bot token and application public key, then run the server:
 
-```fish
+```sh
 # Supply DISCORD_TOKEN and PUBLIC_KEY through your environment or secret manager.
 env PORT=8080 moon run --target native examples/interactions_http
 # Or use the matching moonrun runtime:
@@ -26,7 +26,7 @@ URL** to the public HTTPS URL routed to this server, for example
 Build with the pinned toolchain and run the artifact with its matching
 `moonrun` under a policy file:
 
-```fish
+```sh
 moon build --target wasm --release examples/interactions_http
 moonrun --policy discord-policy.json _build/wasm/release/build/local/discord_examples/interactions_http/interactions_http.wasm
 ```

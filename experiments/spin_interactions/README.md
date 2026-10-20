@@ -19,7 +19,7 @@ imports in the generated `moon.pkg` files are the handwritten portion.
 From the repository root, with MoonBit, wasm-tools 1.246.2, Spin 4.1.0, and
 Node.js installed:
 
-```fish
+```sh
 moon -C experiments/spin_interactions build --target wasm --release --deny-warn
 wasm-tools component embed experiments/spin_interactions/wit experiments/spin_interactions/_build/wasm/release/build/gaato/spin-discord/gen/gen.wasm --world wasi:http/discord --encoding utf16 --output /tmp/discord-spin-embedded.wasm
 wasm-tools component new /tmp/discord-spin-embedded.wasm --output experiments/spin_interactions/target/discord.component.wasm
