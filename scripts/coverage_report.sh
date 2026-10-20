@@ -5,7 +5,7 @@
 # silently omits fully covered files, which skews package totals), restricts
 # the result to library packages (LIBRARY below), prints a
 # per-package table, and checks every remaining uncovered file against the
-# TEST_COVERAGE.md ledger: a file with uncovered lines must have a ledger row
+# docs/test-coverage.md ledger: a file with uncovered lines must have a ledger row
 # whose budget covers them.
 #
 # Usage: scripts/coverage_report.sh [--from-json FILE]
@@ -23,7 +23,7 @@ set -euo pipefail
 LIBRARY='^(discord|discord_voice)/src/'
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
-ledger="$repo_root/TEST_COVERAGE.md"
+ledger="$repo_root/docs/test-coverage.md"
 json_file=""
 
 if [[ "${1:-}" == "--from-json" ]]; then

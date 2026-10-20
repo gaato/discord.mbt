@@ -1,4 +1,4 @@
-# Structuring bots with feature installers
+# Structuring bots
 
 Put each bot feature in its own package and export an installer:
 

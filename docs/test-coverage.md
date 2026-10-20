@@ -2,7 +2,7 @@
 
 Line coverage of the library packages (`discord/src/` and `discord_voice/src/`), measured
 with `moon coverage analyze` in Coveralls-JSON mode. Companion to
-[COVERAGE.md](discord/COVERAGE.md), which tracks REST *endpoint* coverage; this file
+[REST coverage](rest-coverage.md), which tracks REST *endpoint* coverage; this file
 tracks *test* coverage and applies the same closed-ledger rule:
 
 > **Every uncovered line is either covered by a test or listed below with a
@@ -52,9 +52,8 @@ Must be covered by tests:
 Accepted as uncovered (needs a ledger row):
 
 - thin adapters over live sockets/websockets and extern/FFI glue — their
-  behavior is exercised by the live probe sweeps recorded in COVERAGE.md
-  (run 11: 242 PASS / 0 FAIL, 2026-07-16) and the live voice session checks
-  (playback + recording, 2026-07-15);
+  behavior is exercised by the live probe sweep (`examples/live_probe`) and
+  live voice sessions (playback and recording);
 - timed-wait loops without an injectable clock (`with_typing`,
   shard_manager). The gateway shard, command limiter, and identify queue
   take a `clock~`, and the voice gateway, voice connection, and voice client
@@ -90,13 +89,12 @@ Live socket, websocket, and FFI adapters (live-verified; no unit seam):
 | discord/src/internal/fuzz/schedule.mbt | 1 | The cancellation re-raise arm of the one helper every run goes through: async 0.22 cancellation does not pass through ordinary catches, so it only catches an error raised while being cancelled; a test cancels each stage (both full runs, shrinking, and the final re-run). |
 | discord/src/internal/gatewaysim/fake_transport.mbt | 2 | The test fake's flags recording a close during a send or receive, which a correct shard never triggers; tests assert they stay false. |
 | discord/src/coordinator/remote.mbt | 17 | Reconnecting remote clients against a real coordinator socket; for the cooldown store, the cancellation-during-connect arms (its outage, deadline, gate-wait, and malformed-response paths are covered); the cancellation arm of the ping watchdog, which runs only when a request completes while its ping is in flight. |
-| discord/src/coordinator/server.mbt | 6 | Config validation arms, and per-connection cleanup on real disconnects (the existing socket test is retry-flaky; see project notes). |
+| discord/src/coordinator/server.mbt | 6 | Config validation arms, and per-connection cleanup on real disconnects. |
 
-Voice session state machine (transport and session flow verified live
-2026-07-15 with the pre-libdave backend: ffmpeg streaming playback and a
-72-second recording against real Discord voice; current official-libdave
-single-member paths are native-tested, while multi-member paths remain
-ledgered):
+Voice session state machine (the transport and session flow is verified live
+with streaming playback and recording against real Discord voice;
+single-member official-libdave paths are native-tested, while multi-member
+paths remain ledgered):
 
 | File | Budget | Reason |
 | --- | --- | --- |
@@ -173,7 +171,7 @@ show-flows beyond the covered happy and failing paths):
 | discord/src/app/modal.mbt | 16 | Show/prefill dispatch arms beyond the covered decode, validation, and error flows. |
 | discord/src/app/policy.mbt | 2 | Member-without-user extraction and the policy cancellation re-raise. |
 | discord/src/framework/ctx.mbt | 5 | Autocomplete response variants and nested-component lookup arms beyond the covered flows. `AutocompleteCtx::token_remaining_ms` (autocomplete answers within the callback window; the accessor is covered on the other contexts). |
-| discord/src/framework/responder.mbt | 3 | `reply`'s cancellation re-raise, the re-raise of an edit failure on a confirmed deferral, and the followup fallback after an unconfirmed deferral's edit fails (verified live with `gate_probe`, 2026-09-28). |
+| discord/src/framework/responder.mbt | 3 | `reply`'s cancellation re-raise, the re-raise of an edit failure on a confirmed deferral, and the followup fallback after an unconfirmed deferral's edit fails (verified live with `gate_probe`). |
 | discord/src/framework/sync.mbt | 1 | Option-comparison early exit not hit by the covered spec shapes (moved from `src/app/sync.mbt`). |
 | discord/src/framework/framework.mbt | 9 | Dispatch fallbacks for unroutable interactions. |
 | discord/src/framework/gate.mbt | 2 | The callback rule for an unknown interaction type and the cancellation re-raise during delivery. |

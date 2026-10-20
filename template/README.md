@@ -23,13 +23,13 @@ registry. A bot that adds voice (`gaato/discord_voice`) also needs Node.js on
 and its `gaato/dave` dependency declare prebuild hooks that Moon runs with
 `node`. Node.js is not needed to run the built executable.
 
-Before publication, use a Moon workspace to resolve `gaato/discord` from a
-local checkout. Current Moon represents local path dependencies as workspace
-members rather than paths inside `moon.mod`. From a directory containing (or
-able to reference) both the checkout and the copied bot, run:
+To build against an unreleased `gaato/discord`, resolve it from a local
+checkout with a Moon workspace; Moon represents local dependencies as
+workspace members rather than paths inside `moon.mod`. From a directory that
+can reference both the checkout and the copied bot, run:
 
 ```sh
-moon work init /path/to/discord.mbt /path/to/my-discord-bot
+moon work init /path/to/discord.mbt/discord /path/to/my-discord-bot
 moon check /path/to/my-discord-bot/src/main --target native
 ```
 

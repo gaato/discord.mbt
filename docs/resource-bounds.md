@@ -2,7 +2,7 @@
 
 What a long-running bot or interaction server can accumulate, and what keeps
 each structure from growing without limit. Companion to
-[TEST_COVERAGE.md](TEST_COVERAGE.md) and follows the same rule: **every
+[test coverage ledger](test-coverage.md) and follows the same rule: **every
 structure that grows with input from Discord, the network, or other processes
 is listed here with its bound**. A new one — a queue built with
 `kind=Unbounded`, or a map keyed by ids, tokens, or keys that arrive from

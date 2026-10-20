@@ -1,8 +1,9 @@
 # Changelog
 
 All notable changes to `gaato/dave` are documented here. The format follows
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Releases before this
-file were made from [gaato/dave.mbt](https://github.com/gaato/dave.mbt).
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Minor releases
+(0.x → 0.y) may contain breaking changes; patch releases do not. Releases up
+to 0.1.1 were made from [gaato/dave.mbt](https://github.com/gaato/dave.mbt).
 
 ## [Unreleased]
 

@@ -8,7 +8,7 @@ official OpenAPI spec ([discord/discord-api-spec], commit `ed014089`, 2026-10-14
   spec omits (List SKUs, Create Guild From Template). Everything else is a
   deliberate non-goal recorded in the "Out of scope" sections with a reason.
 - Endpoints without a typed wrapper remain reachable through the escape hatch:
-  `Route::custom` + `Client::request` (`src/http/route.mbt`).
+  `Route::custom` + `Client::request` (`discord/src/http/route.mbt`).
 - When Discord documents new endpoints, regenerate the diff below; any line
   not explained by a false positive or an "Out of scope" entry is new work.
 
@@ -17,7 +17,7 @@ official OpenAPI spec ([discord/discord-api-spec], commit `ed014089`, 2026-10-14
 ## Handle layer
 
 All endpoints have typed `Client` methods, and endpoints with a resource anchor
-are also reachable through ref handles (2026-07-16). The following 16 methods
+are also reachable through ref handles. The following 16 methods
 remain direct on `Client`:
 
 | Client method | Reason |
@@ -50,7 +50,7 @@ curl -sL https://raw.githubusercontent.com/discord/discord-api-spec/main/specs/o
   jq -r '.paths | to_entries[] | .key as $p | .value | keys[]
          | select(. != "parameters") | ascii_upcase + ":" + $p' |
   sed -E 's/\{[^}]*\}/*/g' | sort -u > /tmp/spec.txt
-sed -n '/^pub fn Route::bucket/,/^pub fn Route::is_interaction/p' src/http/route.mbt |
+sed -n '/^pub fn Route::bucket/,/^pub fn Route::is_interaction/p' discord/src/http/route.mbt |
   grep -oE '"(GET|POST|PATCH|PUT|DELETE):[^"]*"' | tr -d '"' |
   sed -E 's/\\\{[^}]*\}/*/g; s/\{\}/*/g' | sort -u > /tmp/impl.txt
 comm -23 /tmp/spec.txt /tmp/impl.txt   # in spec, not implemented
@@ -179,7 +179,7 @@ Source: Discord changelog 2026-08-26, “Game Stats Widgets”.
 ## Guild templates
 
 - [x] GET /guilds/templates/{code} — Get Guild Template (`Client::get_guild_template`)
-- [x] POST /guilds/templates/{code} — Create Guild From Template (`Client::create_guild_from_template`) (removed from the developer docs; the live API refuses bot tokens with code 20001 "Bots cannot use this endpoint", verified 2026-07-16 — the wrapper is kept for user-token deployments)
+- [x] POST /guilds/templates/{code} — Create Guild From Template (`Client::create_guild_from_template`) (removed from the developer docs; the live API refuses bot tokens with code 20001 "Bots cannot use this endpoint" — the wrapper is kept for user-token deployments)
 - [x] GET /guilds/{id}/templates — Get Guild Templates (`Client::get_guild_templates`)
 - [x] POST /guilds/{id}/templates — Create Guild Template (`Client::create_guild_template`)
 - [x] PUT /guilds/{id}/templates/{code} — Sync Guild Template (`Client::sync_guild_template`)
@@ -240,7 +240,7 @@ available if someone needs them.
 ## Out of scope: undocumented endpoints
 
 These appear in the OpenAPI spec but not in the official developer docs
-(checked against docs.discord.com, 2026-07-16). All remain reachable via
+(checked against docs.discord.com). All remain reachable via
 `Route::custom`; promote any of them to a typed wrapper if Discord documents
 them.
 
@@ -264,40 +264,30 @@ them.
 - GET /oauth2/userinfo — OAuth2 userinfo (Discord's docs reference OIDC only
   in the Social SDK provisional-accounts context)
 
-## Parameter completeness (audited 2026-07-16, closed 2026-07-16)
+## Parameters
 
-Endpoint coverage above is closed, and a docs cross-check audit (independent
-Codex review, findings verified against the developer docs) of every typed
-wrapper's *parameter list* has also been closed: all 19 audited gaps were
-implemented the same day, each pinned by a wire-boundary wbtest
-(`src/http/api_params_*_wbtest.mbt`) and, where the environment allows,
-exercised against the live API by `examples/live_probe`.
+Every typed wrapper's parameter list matches the developer docs. Each
+parameter is pinned by a wire-boundary wbtest
+(`discord/src/http/api_params_*_wbtest.mbt`) and, where the environment
+allows, exercised against the live API by `examples/live_probe`. When a docs
+change adds a parameter, add it with a wbtest of the same kind.
 
-Fixed in the same audit: `SubscriptionStatus` INACTIVE/ENDING value swap;
-`get_invite` sent the removed `with_expiration` query key.
+Documented edge cases the wrappers follow: `create_guild_sticker` accepts an
+empty `description` ("empty or 2-100 characters"); `modify_guild_sticker`
+keeps the 2-100 rule and drops a description with `clear_description`.
 
-Fixed in a follow-up (2026-07-18): `create_guild_sticker` rejected an empty
-`description`, but the docs say "empty or 2-100 characters" — verified live
-(create with `description=""` succeeded and echoed the empty string back).
-`modify_guild_sticker` keeps the 2-100 rule; the documented way to drop a
-description there is null, exposed as `clear_description`.
+## Mechanical checks
 
-Upstream sync (2026-09-19, docs changelog 2026-07-16 → 2026-09-17):
-`get_current_user_guilds` / `paginate_current_user_guilds` gained `shard`
-(required by Discord for large bot sharding since 2026-09-15); ATTACHMENT
-options and File Upload components gained `file_types` (2026-08-05). Receive
-shapes are now also checked mechanically: `scripts/docs_shape_audit.py`
-matches every `src/model` struct to its docs field table and fails on a field
-the docs mark optional (`name?`) or nullable (`?type`) that the model does not
-(it caught the 2026-08-05 channel `application_id` nullability change).
+- `scripts/docs_shape_audit.py` matches every `discord/src/model` struct to its
+  docs field table and fails on a field the docs mark optional (`name?`) or
+  nullable (`?type`) that the model does not.
+- `scripts/docs_cdn_audit.mbtx` checks every CDN row's name, path, and formats
+  against a declared baseline and verifies the implemented builders. The rows
+  left out on purpose carry their reasons in `scripts/docs_cdn_audit.allow`.
+- `scripts/docs_callback_audit.mbtx` checks interaction callback and webhook
+  message fields.
 
-CDN routes (2026-09-21): `scripts/docs_cdn_audit.mbtx` checks every row's name,
-path and formats against a declared baseline and verifies implemented builders.
-URL behavior is checked separately by the util test matrix. CI pins the docs;
-the release check uses an updated local checkout (see `scripts/README.md`).
-The three rows left out on purpose (Application Asset,
-Achievement Icon, Store Page Asset) carry their reasons in
-`scripts/docs_cdn_audit.allow`.
+See [`scripts/README.md`](../scripts/README.md) for how to run them.
 
 Intentionally not exposed (still reachable via `Route::custom`):
 

@@ -1,7 +1,5 @@
 # Voice support design (voice gateway v8 + DAVE)
 
-Status: **implemented (M1-M4).**
-
 `gaato/discord_voice` implements native voice gateway v8, UDP transport
 encryption, DAVE end-to-end encryption, Opus send/receive, and
 `VoiceClient::join` for `gaato/discord` bots.
@@ -9,8 +7,8 @@ The public API remains experimental while it gains production use.
 
 ## Protocol requirements
 
-Discord requires DAVE-encrypted audio calls as of March 1, 2026. The voice
-stack uses these protocol rules:
+Discord requires DAVE-encrypted audio calls. The voice stack uses these
+protocol rules:
 
 - Voice WebSocket version 8 carries `seq_ack` in heartbeats and replays
   buffered messages after resume.
@@ -95,12 +93,12 @@ connection; channel moves need an explicit disconnect and join.
 
 The native boundary is split by responsibility:
 
-- [`gaato/dave`](https://github.com/gaato/dave.mbt) owns the unsafe FFI
+- [`gaato/dave`](../dave/README.mbt.md) owns the unsafe FFI
   boundary to Discord's official `libdave` C API. It exposes opaque MLS
   session, key-ratchet, encryptor, and decryptor handles. The voice package
   remains responsible for Gateway opcodes, connected-member bookkeeping,
   transition timing, recovery policy, and assigning actual RTP SSRCs.
-- `shim/` is a small Rust `cdylib` for transport AEAD only. It exposes
+- `discord_voice/shim/` is a small Rust `cdylib` for transport AEAD only. It exposes
   AES-256-GCM and XChaCha20-Poly1305 seal/open operations and contains no MLS
   or DAVE session implementation.
 
@@ -109,46 +107,18 @@ Discord voice client while leaving the compact transport shim local to
 discord.mbt. Interaction signature verification is implemented separately in
 pure MoonBit.
 
-`gaato/dave` pins upstream `libdave` `v1.2.0/cpp`, and `gaato/discord` pins
-transport component release `voice-shim-v0.1.0`. A native Moon build with
-`MBT_DAVE_REQUIRE_NATIVE=1` and `DISCORD_VOICE_REQUIRE_SHIM=1` makes their
-prebuild hooks download and verify the matching host archives and extracted
-libraries; builds without the opt-ins do not bootstrap host runtimes. The
-loaders then open the shared libraries from versioned caches. Both releases
-cover Linux x86-64/ARM64, macOS x86-64/ARM64, and Windows x86-64. The current
-MoonBit installer has no macOS x86-64 toolchain, and neither release provides
-Windows ARM64. The official Linux libdave binaries require glibc 2.38 and
-GLIBCXX 3.4.32. Older Linux systems need an ABI-compatible self-built libdave
-selected with `MBT_DAVE_NATIVE_LIB` or a newer runtime environment.
+`gaato/dave` pins upstream `libdave` `v1.2.0/cpp`, and `gaato/discord_voice`
+pins transport component release `voice-shim-v0.1.0`. Their prebuild hooks
+download and verify the matching host archives only when a native build opts
+in with `MBT_DAVE_REQUIRE_NATIVE=1` and `DISCORD_VOICE_REQUIRE_SHIM=1`; the
+loaders then open the shared libraries from versioned caches, and missing
+transport and DAVE runtimes are diagnosed independently. Supported platforms,
+cache paths, and loader variables are documented for users in the
+[voice guide](../guide/10-voice.mbt.md) and
+[native libdave runtime](../dave/docs/native-runtime.md); building the shim
+itself is in [`discord_voice/shim/README.md`](../discord_voice/shim/README.md).
 
-The normal consumer bootstrap is:
-
-```sh
-env DISCORD_VOICE_REQUIRE_SHIM=1 MBT_DAVE_REQUIRE_NATIVE=1 moon build --target native --release
-```
-
-For transport component development, build the shim from the repository root:
-
-```sh
-cd voice-shim
-cargo build --release
-```
-
-Set `DISCORD_VOICE_SHIM_PATH` to the resulting `.so`, `.dylib`, or `.dll`.
-Without the variable, the loader searches `DISCORD_VOICE_SHIM_ROOT`, the
-versioned cache, and the platform library path. The remaining
-`DISCORD_VOICE_SHIM_*` variables control offline and cache behavior;
-`MBT_DAVE_NATIVE_ROOT`, `MBT_DAVE_NATIVE_CACHE_DIR`, and
-`MBT_DAVE_NATIVE_LIB` configure the separate libdave loader. Missing transport
-and DAVE runtimes are diagnosed independently.
-
-## Delivered milestones
-
-- **M1:** voice gateway v8 state machine, envelopes, heartbeat, resume.
-- **M2:** UDP, RTP, transport AEAD, Opus sender, Ogg/Opus demuxer.
-- **M3:** official libdave binding and DAVE epoch/transition processing.
-- **M4:** receive/reorder pipeline, `VoiceConnection`, bot integration,
-  facade, example, and user documentation.
+## Receive
 
 The receive API delivers raw Opus frames through `VoiceConnection::subscribe`.
 Audio is not a `VoiceEvent`: only subscribed users' packets are decrypted, and

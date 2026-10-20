@@ -30,10 +30,10 @@ Add the released module to the consumer and import the root package from
 `moon.pkg`:
 
 ```sh
-moon add gaato/dave@0.1.0
+moon add gaato/dave
 ```
 
-```moonbit
+```mbt nocheck
 import {
   "gaato/dave",
 }
@@ -42,7 +42,7 @@ import {
 Create an MLS session and obtain the key package that the Discord DAVE
 orchestration layer sends to the voice server:
 
-```moonbit
+```mbt nocheck
 ///|
 fn make_key_package() -> Bytes raise @dave.DaveError {
   let session = @dave.Session::new(
@@ -74,8 +74,8 @@ raise `DaveError::LibraryUnavailable` when DAVE is required.
   state, so access to a single value must be serialized by the application.
 - Byte strings returned from native code are copied into MoonBit-owned memory.
   Installing a `KeyRatchet` copies its native key state into the media object.
-- `Session::new` always requests libdave's transient signing-key behavior in
-  v0.1. Native authentication-session IDs and persisted-key lookup are not
+- `Session::new` always requests libdave's transient signing-key behavior.
+  Native authentication-session IDs and persisted-key lookup are not
   exposed by the safe API.
 - Invalid use, unavailable native support, and wrapper/native failures raise
   `DaveError`. MLS commit and Welcome rejections remain protocol outcomes in
@@ -102,7 +102,7 @@ asynchronous fingerprint worker and must not be called on an event-loop thread.
 
 Formatting the current-group result is an explicit second step:
 
-```moonbit
+```mbt nocheck
 let fingerprint = session.current_group_pairwise_fingerprint_blocking(
   user_id=peer_user_id,
 )
@@ -126,51 +126,19 @@ JavaScript and Wasm builds, do not bootstrap a host library.
 See [Native libdave runtime](https://github.com/gaato/discord.mbt/blob/main/dave/docs/native-runtime.md) for cache paths, offline
 and preseeded builds, environment overrides, and loader order.
 
-The upstream release provides these host assets:
+Native DAVE runs on these hosts:
 
-| Host | Architecture | CI coverage |
+| Host | Architecture | Support |
 | --- | --- | --- |
-| Linux | x86-64 | native build and tests |
-| Linux | ARM64 | native build and tests |
-| macOS | ARM64 | native build and tests |
-| macOS | x86-64 | asset bootstrap and digest smoke test |
-| Windows | x86-64 | native build and tests |
+| Linux | x86-64, ARM64 | Supported |
+| macOS | ARM64 | Supported |
+| Windows | x86-64 | Supported |
+| macOS | x86-64 | Upstream asset only; MoonBit has no Darwin x86-64 toolchain |
 
-The official MoonBit installer currently has no Darwin x86-64 toolchain, so
-the macOS Intel job cannot compile or execute the binding. Windows ARM64 and
-other hosts have no pinned upstream libdave asset. Host-selected bootstrap does
-not support cross-compilation.
-
-Upstream's Linux binaries require glibc 2.38 and GLIBCXX 3.4.32. Applications
-on older distributions need a compatible self-built library supplied through
-`MBT_DAVE_NATIVE_LIB` or a newer runtime environment.
-
-## Verification
-
-On a supported host, bootstrap the pinned runtime and verify the backends from
-the `dave/` directory with:
-
-```sh
-moon fmt --check
-node --test test/build.test.js
-moon check --target all --deny-warn
-env MBT_DAVE_REQUIRE_NATIVE=1 moon build --target native --release --deny-warn
-env MBT_DAVE_REQUIRE_NATIVE=1 moon test --target native --release --deny-warn
-moon test --target js --release --deny-warn
-moon test --target wasm --release --deny-warn
-moon info --target native
-moon package --list
-```
-
-The offline Node downloader tests under `test/` are repository-only and are
-excluded from the published Mooncake.
-
-The pinned native bridge smoke exercises the safe MoonBit/C boundary through a
-successful single-member commit, roster and authenticator decoding, key-ratchet
-installation, and encrypted media round trip. It does not cover a
-server-signed Add proposal, Welcome processing, or multi-party Discord DAVE
-conformance. Those paths require libdave's upstream test-only ExternalSender
-helper or messages produced by a live Discord voice session.
+Windows ARM64 and other hosts have no pinned upstream libdave asset, and the
+host-selected bootstrap does not cross-compile. Upstream's Linux binaries
+require glibc 2.38 and GLIBCXX 3.4.32; on older distributions, supply a
+compatible self-built library through `MBT_DAVE_NATIVE_LIB`.
 
 ## Upstream and licensing
 

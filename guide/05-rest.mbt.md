@@ -1,4 +1,4 @@
-# REST client
+# REST
 
 `gaato/discord/http.Client` can be used without the Gateway or interaction
 framework. It provides typed endpoint methods, connection pooling, rate-limit

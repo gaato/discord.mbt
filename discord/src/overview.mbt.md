@@ -163,21 +163,11 @@ examples: browse them here on mooncakes, or run `moon ide doc "@discord"`
 
 ## Examples
 
-Runnable programs live in the repository's
-[`examples/`](https://github.com/gaato/discord.mbt/tree/main/examples)
-workspace; run one from the repository root with, for example,
-`moon run --target native examples/slash_echo`.
-
-- `slash_echo`: minimal typed Gateway bot.
-- `kitchen_sink`: subcommands, autocomplete, context menus, components, and
-  modals.
-- `plugin_demo`: a stateful feature installed as a separate package.
-- `ping_gateway` and `low_level`: direct REST, Framework, and Shard use.
-- `interactions_http`: native and moonrun Wasm signed-interactions server.
-- `workers_echo`, `deno_echo`, `bun_echo`, `vercel_echo`: HTTP interactions on
-  JavaScript hosts (`fastly_echo` and `lambda_url_echo` are experiments).
-- `workers_gateway`: a Gateway bot in a Cloudflare Durable Object.
-- `voice_player` and `voice_recorder`: play and record Ogg/Opus.
+The repository's
+[`examples/`](https://github.com/gaato/discord.mbt/blob/main/examples/README.md)
+has runnable Gateway bots, HTTP interaction servers and JavaScript host
+adapters, a Durable Object bot, and voice players; run one from the
+repository root with `moon run --target native examples/slash_echo`.
 
 ## Testing
 

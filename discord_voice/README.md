@@ -56,10 +56,6 @@ This module and `gaato/dave` declare prebuild hooks that Moon runs with
 module. Without the opt-in variables the hooks exit without downloading
 anything. Moon does not run them for `moon check`.
 
-## Design
-
-See [DESIGN.md](https://github.com/gaato/discord.mbt/blob/main/discord_voice/DESIGN.md) for the accepted design and its milestones.
-
 ## License
 
 Apache-2.0

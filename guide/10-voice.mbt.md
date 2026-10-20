@@ -5,8 +5,9 @@ Voice is a separate module, `gaato/discord_voice`, for bots built with
 gateway v8, Discord's DAVE end-to-end encryption, Opus playback, and per-user
 raw Opus receive. DAVE MLS and media crypto come from the native-only
 `gaato/dave` binding to Discord's official `libdave`; the module's Rust shim
-handles RTP transport AEAD only. The accepted design and its milestones are
-documented in [`DESIGN.md`](https://github.com/gaato/discord.mbt/blob/main/discord_voice/DESIGN.md).
+handles RTP transport AEAD only. The
+[voice design notes](https://github.com/gaato/discord.mbt/blob/main/docs/voice-design.md)
+describe the connection flow underneath.
 
 Add the module next to `gaato/discord` and import it as `@voice`:
 
@@ -43,47 +44,22 @@ embedded in the Mooncake or installed system-wide.
 
 The pinned upstream release provides `libdave` for Linux x86-64/ARM64, macOS
 x86-64/ARM64, and Windows x86-64. A native MoonBit toolchain and the transport
-shim must also be available for the same host. The current MoonBit installer
+shim must also be available for the same host. The MoonBit installer
 does not provide a macOS x86-64 toolchain, and upstream provides no Windows
 ARM64 asset. Cross-compilation is not supported by the host-selected
 bootstrap. Upstream's Linux binaries require glibc 2.38 and GLIBCXX 3.4.32.
 
-For offline builds, verified extractions can be selected with
-`DISCORD_VOICE_SHIM_ROOT` and `MBT_DAVE_NATIVE_ROOT`;
-`DISCORD_VOICE_SHIM_OFFLINE=1` and `MBT_DAVE_NATIVE_OFFLINE=1` forbid
-downloads. `DISCORD_VOICE_SHIM_CACHE_DIR` and `MBT_DAVE_NATIVE_CACHE_DIR`
-override their cache bases and must be absolute paths. Set
-`DISCORD_VOICE_SHIM_PATH` or `MBT_DAVE_NATIVE_LIB` to the absolute path of an
-ABI-compatible self-built library when a published binary cannot run on the
-host. See
+Offline builds, cache locations, and loader overrides are documented in
 [`gaato/dave`'s native runtime guide](https://github.com/gaato/discord.mbt/blob/main/dave/docs/native-runtime.md)
-for the cache layout and all overrides.
+for libdave (`MBT_DAVE_NATIVE_*`) and in the
+[transport shim README](https://github.com/gaato/discord.mbt/blob/main/discord_voice/shim/README.md)
+for the shim (`DISCORD_VOICE_SHIM_*`), which also covers building the shim
+yourself for another host.
 
 Media E2EE is supported, but pairwise identity verification is intentionally
 not exposed. The official prebuilt libdave v1.2.0 C ABI rotates its ephemeral
 signing identity on every `Init` and provides no reusable identity handle; the
 API can be added once upstream exposes one.
-
-To develop the transport component itself or support another host, build it
-with Cargo:
-
-```sh
-cd discord_voice/shim
-cargo build --release
-```
-
-Point the runtime at that development build:
-
-```sh
-export DISCORD_VOICE_SHIM_PATH="$PWD/target/release/libdiscord_voice_shim.so"
-```
-
-macOS uses `libdiscord_voice_shim.dylib`; Windows uses
-`discord_voice_shim.dll`. When the explicit path is unset, the loader checks
-`DISCORD_VOICE_SHIM_ROOT`, the deterministic `v0.1.0` cache, and finally the
-platform library path. `DISCORD_VOICE_SHIM_*` configures only transport AEAD;
-the `MBT_DAVE_NATIVE_*` variables configure the separate official libdave
-runtime.
 
 ## Join and play
 
@@ -213,71 +189,7 @@ from `DISCORD_TOKEN`, `GUILD_ID`, `CHANNEL_ID`, and `AUDIO_FILE`.
 
 ## Verify DAVE against a live channel
 
-`examples/dave_probe` joins an existing channel, waits for
-`DaveMediaContextActivated(protocol_version=1)`, sends one second of canonical
-Opus silence through the active libdave encryptor, and disconnects. It does
-not create or delete Discord resources. Keep a normal DAVE-capable Discord
-client in the channel while testing: the gateway sends an initial Add proposal
-to the other pending members, so a bot alone cannot establish the group. Set
-`DISCORD_TOKEN`, `GUILD_ID`, and `CHANNEL_ID`, then run:
-
-```sh
-env DISCORD_VOICE_REQUIRE_SHIM=1 MBT_DAVE_REQUIRE_NATIVE=1 moon run --target native --release examples/dave_probe
-```
-
-With no other announced participant, the probe reports an inconclusive result.
-It fails if a peer is present but DAVE v1 does not activate within 30 seconds,
-or if the control or encryption paths emit a DAVE diagnostic. A successful run proves
-the local client completed the server-driven MLS transition and encrypted its
-outbound frames. It does not prove that another participant decrypted them;
-that final interoperability check requires a second Discord client in the
-channel.
-
-For that final outbound interoperability check, explicitly enable the audible
-mode with a short, low-volume Ogg/Opus file. The probe still waits for DAVE v1
-activation before playback and clips the input at three seconds. For example:
-
-```sh
-ffmpeg -y -hide_banner -loglevel error -f lavfi -i 'sine=frequency=880:duration=1.5' -filter:a 'volume=0.7' -c:a libopus -ar 48000 -ac 2 -frame_duration 20 /tmp/discord-dave-tone.ogg
-env DAVE_PROBE_AUDIBLE=1 DAVE_PROBE_AUDIO_FILE=/tmp/discord-dave-tone.ogg DISCORD_VOICE_REQUIRE_SHIM=1 MBT_DAVE_REQUIRE_NATIVE=1 moon run --target native --release examples/dave_probe
-```
-
-Have the other participant confirm hearing the short tone, and also
-require the probe to report no DAVE diagnostics and a clean disconnect. This
-is an opt-in manual live test, not a CI test. Hearing the tone confirms the
-outbound bot-to-client decrypt/decode/render path; validating the reverse path
-requires speaking from the client and observing decrypted frames on a
-subscription separately. To perform that reverse check without recording the audio,
-set `DAVE_PROBE_RECEIVE=1`, run the same probe, and speak from the other client
-when the receive probe starts. It waits up to 20 seconds for ten decrypted Opus
-frames and stores only the frame count:
-
-```sh
-env DAVE_PROBE_RECEIVE=1 DISCORD_VOICE_REQUIRE_SHIM=1 MBT_DAVE_REQUIRE_NATIVE=1 moon run --target native --release examples/dave_probe
-```
-
-UDP can arrive before the voice gateway's initial Speaking event establishes
-the SSRC-to-user mapping. The probe subscribes to the first user whose
-Speaking event arrives, so earlier frames are discarded unread; it passes the
-receive check once ten later frames from that user decrypt successfully. DAVE
-decrypt failures remain fatal.
-
-For a content-level manual check, `DAVE_PROBE_ECHO=1` implies receive mode,
-waits for a peer Speaking event, discards five warm-up frames, holds the next
-100 frames (about two seconds) from that peer in memory, then plays them back
-once through the active DAVE encryptor. Speak for about three seconds and stop;
-the probe does not write the audio to disk and does not echo while recording,
-so it cannot create a continuous feedback loop. It logs only Opus packet-size
-statistics, not the sender ID or audio content:
-
-```sh
-env DAVE_PROBE_ECHO=1 DISCORD_VOICE_REQUIRE_SHIM=1 MBT_DAVE_REQUIRE_NATIVE=1 moon run --target native --release examples/dave_probe
-```
-
-When explicit recording is acceptable, set `DAVE_PROBE_RECORD_PATH` to an Ogg
-output path. This also uses the Speaking-gated two-second capture, but does not
-enable echo unless `DAVE_PROBE_ECHO=1` is set separately:
-
-```sh
-env DAVE_PROBE_RECORD_PATH=/tmp/discord-dave-receive-check.ogg DISCORD_VOICE_REQUIRE_SHIM=1 MBT_DAVE_REQUIRE_NATIVE=1 moon run --target native --release examples/dave_probe
-```
+`examples/dave_probe` joins an existing channel next to a normal Discord
+client, waits for DAVE to activate, and sends a second of encrypted silence.
+Its [README](https://github.com/gaato/discord.mbt/blob/main/examples/dave_probe/README.md)
+covers the audible, receive, echo, and recording checks.

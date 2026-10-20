@@ -1,4 +1,4 @@
-# discord.mbt voice transport shim
+# Voice transport shim (`discord-voice-shim`)
 
 This crate builds the native transport AEAD shim used by
 `gaato/discord_voice`. It implements AES-256-GCM and XChaCha20-Poly1305 behind
@@ -43,10 +43,8 @@ must be absolute.
 
 ## C ABI
 
-Component release 0.1 uses transport-only ABI version 3. Release versions and
-ABI generations are independent: this is the first binary component release,
-while ABI versions 1 and 2 existed during source-only development. The loader
-requires only:
+Component release 0.1 uses transport-only ABI version 3; earlier ABI versions
+are incompatible. The loader requires only:
 
 - `vs_abi_version`
 - `vs_free`
@@ -54,8 +52,7 @@ requires only:
 - `vs_aead_seal`
 - `vs_aead_open`
 
-ABI version 2 also exposed an in-shim DAVE session API and is intentionally
-incompatible. The AEAD entry points catch unwinding panics before returning
+The AEAD entry points catch unwinding panics before returning
 across the C boundary. Output buffers remain Rust-owned until the caller passes
 the exact pointer/length pair to `vs_free`; the MoonBit C adapter copies them
 before releasing them.

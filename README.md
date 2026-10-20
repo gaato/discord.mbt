@@ -14,12 +14,13 @@ is a MoonBit workspace; each directory below is a module.
 | [`discord/`](discord/README.md) | [`gaato/discord`](https://mooncakes.io/docs/gaato/discord) | REST, interactions, and gateway bots |
 | [`discord_voice/`](discord_voice/README.md) | [`gaato/discord_voice`](https://mooncakes.io/docs/gaato/discord_voice) | Voice for `gaato/discord` bots (native) |
 | [`dave/`](dave/README.mbt.md) | [`gaato/dave`](https://mooncakes.io/docs/gaato/dave) | Bindings to Discord's `libdave` for DAVE end-to-end encryption |
-| [`examples/`](examples) | (not published) | Runnable bots and JavaScript host adapters |
+| [`examples/`](examples/README.md) | (not published) | Runnable bots, HTTP interaction servers, and JavaScript host adapters |
 | [`guide/`](guide/README.md) | (not published) | Long-form guides whose code is tested |
 | [`template/`](template/README.md) | (not published) | A bot project to copy |
 
-Other directories: `experiments/` holds host experiments, `scripts/` the
-repository's audits and release tooling, and `docs/` design notes. Each
+Other directories: [`docs/`](docs) holds the REST behaviour notes and the
+maintainers' ledgers and design notes, [`scripts/`](scripts/README.md) the
+audits and release tooling, and `experiments/` host experiments. Each
 published module has its own `CHANGELOG.md`.
 
 See [`discord/README.md`](discord/README.md) for usage.
@@ -46,8 +47,8 @@ To build `gaato/discord` alone against its published dependencies, as a
 consumer does, run `MOON_WORK=off moon -C discord check --target native`.
 
 Each package's `pkg.generated.mbti` is a concise public-interface snapshot;
-review its diff when checking API drift. [`scripts/`](scripts) holds the
-audits and release tooling.
+review its diff when checking API drift. The audits CI runs are described in
+[`scripts/README.md`](scripts/README.md).
 
 The [`ghcr.io/gaato/moonbit`](https://github.com/gaato/moonbit-docker) image
 bundles the pinned toolchain with Node.js 24, `gcc`, and `git`. The
@@ -55,9 +56,28 @@ bundles the pinned toolchain with Node.js 24, `gcc`, and `git`. The
 job), and `template/Dockerfile` uses it as the builder stage.
 
 Code blocks marked `mbt check` in the guides and docstrings compile and run
-as part of the test suite. `discord/README.md` keeps its examples as
-`mbt nocheck` for readers; each has a compiled twin in
-`discord/src/readme_native_test.mbt`.
+as part of the test suite. The module READMEs keep their examples as
+`mbt nocheck` for readers; each has a compiled twin
+(`discord/src/readme_native_test.mbt`, `dave/src/readme_examples.mbt.md`).
+
+Maintainer documents live in `docs/`:
+
+- [`rest-coverage.md`](docs/rest-coverage.md): every Discord REST endpoint
+  and its typed wrapper, and what is out of scope.
+- [`test-coverage.md`](docs/test-coverage.md): the line-coverage ledger that
+  `scripts/coverage_report.sh` checks; run it before tagging a release.
+- [`resource-bounds.md`](docs/resource-bounds.md): what bounds each structure
+  that grows with outside input.
+- [`voice-design.md`](docs/voice-design.md): how `gaato/discord_voice` is
+  built.
+
+`gaato/dave` has its own checks, run from `dave/`: the offline downloader
+tests (`node --test test/build.test.js`) and the native tests with the pinned
+runtime (`env MBT_DAVE_REQUIRE_NATIVE=1 moon test --target native --release`).
+Its native bridge smoke test covers a single-member commit, roster and
+authenticator decoding, key-ratchet installation, and an encrypted media round
+trip; a server-signed Add proposal, Welcome processing, and multi-party DAVE
+need a live Discord voice session (`examples/dave_probe`).
 
 ## License
 

@@ -10,7 +10,7 @@ name: Release
 # `voice-shim-v*` tags release the Rust shim (voice-shim.yml).
 #
 # Before tagging, run `scripts/coverage_report.sh` locally: CI cannot run the
-# TEST_COVERAGE.md ledger check, which needs the voice shim and libdave.
+# docs/test-coverage.md ledger check, which needs the voice shim and libdave.
 #
 # After the publish, a GitHub Release is created for the tag from that
 # version's section of `<module>/CHANGELOG.md`. Only gaato/discord releases are

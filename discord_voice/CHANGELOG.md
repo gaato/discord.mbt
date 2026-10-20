@@ -6,6 +6,11 @@ releases (0.x → 0.y) may contain breaking changes; patch releases do not.
 
 ## [Unreleased]
 
+### Changed
+
+- **Builds against `gaato/discord` 0.12.1**, which decides whether a 429 is
+  Discord's from its headers alone. Voice itself is unchanged.
+
 ## [0.3.1] - 2026-10-19
 
 ### Changed

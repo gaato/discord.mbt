@@ -2,7 +2,7 @@
 
 Add `"gaato/discord/testkit"` to the `import { ... } for "test"` block of
 your package's `moon.pkg`. The package depends only on `@model`, supports
-native and JS, and is not re-exported by the root facade.
+native, JavaScript, and Wasm, and is not re-exported by the root facade.
 
 The testkit provides fixtures: deterministic interactions and models to feed
 into your handlers. Everything else is the production API with the network

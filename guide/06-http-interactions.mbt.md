@@ -277,25 +277,15 @@ fn dispatch_on_js_host(
 }
 ```
 
-The JavaScript host adapters in `examples/` are checked to different depths:
-
-| Host | Checked in this repository | Not yet checked |
-| --- | --- | --- |
-| Cloudflare Workers | Signed requests and deferred REST in local workerd | Production deployment |
-| Deno | `Deno.serve` adapter and signed requests | Hosted lifecycle |
-| Bun | Shared MoonBit handler and `Bun.serve` loopback endpoint | Hosted lifecycle |
-| Node.js | Shared MoonBit handler and Web APIs | HTTP hosting and process lifecycle |
-| Vercel Functions | Node.js `fetch` adapter and `waitUntil` handoff | Vercel packaging and hosted lifecycle |
-| Fastly Compute | `FetchEvent` and synchronous lifetime registration with a fake event | Fastly compilation and hosted execution |
-| Lambda Function URL | Payload v2 body and response conversion with local events | AWS invocation and deployment |
-
-Other JavaScript function platforms can reuse the handler if they provide Web
-`Request`, `Response`, `crypto.subtle`, and `fetch`; their entry point,
-background-work API, bundle, and execution limits still need checking. The
-[host entry point survey](https://github.com/gaato/discord.mbt/blob/main/docs/interaction-host-entrypoints.md)
-records the conventions of other hosts, and the
+The Workers adapter is tested inside Cloudflare's local `workerd` runtime,
+and the Deno, Bun, Node.js, and Vercel adapters with their local servers or
+lifecycle fakes; hosted deployments are not part of the test suite. The
+Fastly and Lambda Function URL adapters are experiments. Another JavaScript
+function platform can reuse the handler if it provides Web `Request`,
+`Response`, `crypto.subtle`, and `fetch`; check its entry point,
+background-work API, bundle format, and execution limits. The
 [Spin experiment](https://github.com/gaato/discord.mbt/blob/main/experiments/spin_interactions/README.md)
-tests a WASIp2 component boundary for an immediate handler.
+tries a WASIp2 component instead, with an immediate handler only.
 
 ## Cloudflare Workers
 
@@ -337,6 +327,3 @@ Durable Objects, as in the
 [`workers_gateway` example](https://github.com/gaato/discord.mbt/blob/main/examples/workers_gateway/README.md))
 and moonrun Wasm; the JavaScript backend also serves REST,
 signature verification, and gateway-free HTTP interactions.
-With `moonbitlang/async@0.22.1`, the JS Fetch transport also completes
-null-body 204 responses. The `workers_echo` suite covers this with a deferred
-interaction-response deletion that runs to completion under `waitUntil`.

@@ -2,8 +2,8 @@
 
 `gaato/dave` performs DAVE operations on MoonBit's native backend. It loads
 Discord's official `libdave` shared library at runtime instead of linking the
-library into each application. Its JavaScript implementation is an unavailable
-facade so a multi-target dependency graph can still be checked and tested.
+library into each application. On JavaScript and Wasm it is an unavailable
+facade, so a multi-target dependency graph can still be checked and tested.
 
 ## Normal installation
 
@@ -125,7 +125,7 @@ The pinned upstream release provides:
 | macOS | x86-64, ARM64 | `lib/libdave.dylib` |
 | Windows | x86-64 | `bin/libdave.dll` |
 
-Windows ARM64 and other hosts currently have no official asset and fail with an
+Windows ARM64 and other hosts have no official asset and fail with an
 actionable prebuild error when native bootstrap is required. Cross-compiling to
 a different operating system or architecture is not supported by this
 host-selected bootstrap.
@@ -137,7 +137,7 @@ On older distributions, provide a compatible self-built `libdave` with
 `MBT_DAVE_NATIVE_LIB` and any application-specific linker flags it needs, or
 build and run inside a newer runtime environment.
 
-Moon currently marks module prebuild hooks as experimental. As with any module
+Moon marks module prebuild hooks as experimental. As with any module
 that uses one, review `build.js` before adopting it in a high-trust build. This
 hook has no package-manager dependencies and accepts only the release URLs and
 digests recorded in `release/libdave-v1.2.0.js`.

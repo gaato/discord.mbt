@@ -1,7 +1,7 @@
-# Checked API examples
+# README examples
 
-The documentation examples below are compile-checked without requiring a live
-Discord session.
+Compiled twins of the module README's `mbt nocheck` examples, so they fail to
+build when the API drifts. They need no live Discord session.
 
 ```mbt check
 ///|

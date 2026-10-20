@@ -41,8 +41,7 @@ npm run bundle:check -- --outdir /tmp/discord-mbt-workers-echo
 ```
 
 The `/vanish` command exercises a deferred Worker-side REST call that deletes
-its original response. Its workerd test returns a real null-body 204 response,
-covering the Fetch behavior fixed in `moonbitlang/async@0.22.1`.
+its original response; its workerd test covers the null-body 204 response.
 
 Set the deployed Worker's URL as the Interactions Endpoint URL in the Discord
 developer portal. Discord sends a signed PING request while validating the URL;
