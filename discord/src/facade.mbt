@@ -1,21 +1,21 @@
 ///|
-/// Golden-path names that a typical bot uses directly: application
-/// declarations and handler contexts, typed arguments and components, common
-/// models, the REST client, executors, and verification. Every type
-/// these names mention is exported here too, unless it belongs to one of the
-/// focused packages below; `scripts/api_surface_audit.mbtx` keeps it so.
-///
-/// Not re-exported — import the focused package instead:
-/// - `gaato/discord/http` for resource refs and pagination.
-/// - `gaato/discord/framework` for the low-level router and the raw contexts
-///   used by `Raw` handlers.
-/// - `gaato/discord/gateway` for shard transport primitives.
-/// - `gaato/discord/coordinator` for multi-process coordination.
-/// - `gaato/discord/telemetry` for observability events.
-/// - `gaato/discord/interaction` for raw option builders, `CommandSpec`, and
-///   low-level option decoding.
-/// - `gaato/discord/app` for implementation-facing registration, spawning,
-///   waiting, and raw failure details.
+// Golden-path names that a typical bot uses directly: application
+// declarations and handler contexts, typed arguments and components, common
+// models, the REST client, executors, and verification. Every type
+// these names mention is exported here too, unless it belongs to one of the
+// focused packages below; `scripts/api_surface_audit.mbtx` keeps it so.
+//
+// Not re-exported — import the focused package instead:
+// - `gaato/discord/http` for resource refs and pagination.
+// - `gaato/discord/framework` for the low-level router and the raw contexts
+//   used by `Raw` handlers.
+// - `gaato/discord/gateway` for shard transport primitives.
+// - `gaato/discord/coordinator` for multi-process coordination.
+// - `gaato/discord/telemetry` for observability events.
+// - `gaato/discord/interaction` for raw option builders, `CommandSpec`, and
+//   low-level option decoding.
+// - `gaato/discord/app` for implementation-facing registration, spawning,
+//   waiting, and raw failure details.
 pub using @dhttp {
   type Client,
   type FileUpload,
@@ -29,8 +29,8 @@ pub using @dhttp {
 }
 
 ///|
-/// Invocation and response types every handler context hands out, and the
-/// unanswered `ComponentCtx` a component wait returns.
+// Invocation and response types every handler context hands out, and the
+// unanswered `ComponentCtx` a component wait returns.
 pub using @framework {
   type ComponentCtx,
   type GuildInvocation,
@@ -62,8 +62,8 @@ pub using @model {
 pub using @interaction {type Arg, type Args, type SuggestCtx}
 
 ///|
-/// Gateway-free application declarations (built with `AppBuilder`), typed
-/// interaction handlers, command synchronization, and error policy contexts.
+// Gateway-free application declarations (built with `AppBuilder`), typed
+// interaction handlers, command synchronization, and error policy contexts.
 pub using @app {
   type App,
   type AppBuilder,
@@ -132,7 +132,7 @@ pub using @app {
 }
 
 ///|
-/// Pure MoonBit verification for Discord HTTP interaction signatures.
+// Pure MoonBit verification for Discord HTTP interaction signatures.
 pub using @verify {
   type InteractionVerifier,
   type InteractionVerifierError,

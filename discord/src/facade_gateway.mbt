@@ -1,5 +1,5 @@
 ///|
-/// Gateway executor and typed event descriptors (native, JavaScript, Wasm).
+// Gateway executor and typed event descriptors (native, JavaScript, Wasm).
 pub using @bot {
   type Bot,
   type BotBuilder,

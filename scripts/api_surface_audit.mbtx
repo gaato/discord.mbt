@@ -57,10 +57,11 @@ fn is_ident_char(c : Char) -> Bool {
 fn defined_types(lines : Array[String]) -> Set[String] {
   let found : Set[String] = Set([])
   for line in lines {
-    for keyword in [
-      "pub struct ", "pub(all) struct ", "pub enum ", "pub(all) enum ", "pub suberror ",
-      "pub(all) suberror ", "pub type ", "pub trait ", "pub(open) trait ",
-    ] {
+    for
+      keyword in [
+        "pub struct ", "pub(all) struct ", "pub enum ", "pub(all) enum ", "pub suberror ",
+        "pub(all) suberror ", "pub type ", "pub trait ", "pub(open) trait ",
+      ] {
       if line.has_prefix(keyword) {
         let rest = line[keyword.length():]
         let name = StringBuilder()
@@ -80,7 +81,7 @@ fn defined_types(lines : Array[String]) -> Set[String] {
 ///|
 fn parse_interface(text : String) -> Interface {
   let lines = text.split("\n").map(line => line.to_owned()).to_array()
-  { lines, types: defined_types(lines) }
+  { lines, types: defined_types(lines), }
 }
 
 ///|
@@ -191,14 +192,14 @@ fn surface_lines(iface : Interface, name : String) -> Array[String] {
       }
       continue
     }
-    if function_name(line) is Some(fn_name) &&
-      fn_name.has_prefix("\{name}::") {
+    if function_name(line) is Some(fn_name) && fn_name.has_prefix("\{name}::") {
       result.push(line)
       continue
     }
-    for keyword in [
-      "pub(all) struct ", "pub(all) enum ", "pub(all) suberror ", "pub type ",
-    ] {
+    for
+      keyword in [
+        "pub(all) struct ", "pub(all) enum ", "pub(all) suberror ", "pub type ",
+      ] {
       if line.has_prefix(keyword + name) {
         let after = line[(keyword + name).length():].to_owned()
         if after.has_prefix(" ") || after.has_prefix("[") || after.is_empty() {
@@ -363,9 +364,49 @@ fn positional_pairs(packages : Map[String, Interface]) -> Map[String, String] {
 }
 
 ///|
+/// Source roots whose `pub using` blocks are checked for doc comments.
+let source_roots : Array[String] = ["discord/src", "discord_voice/src"]
+
+///|
+/// `pub using` blocks that re-export two or more types under a `///` doc
+/// comment, keyed `doc <path>:<line>`.
+fn documented_reexports(sources : Array[(String, String)]) -> Set[String] {
+  let found : Set[String] = Set([])
+  for source in sources {
+    let (path, text) = source
+    let lines = text.split("\n").map(line => line.to_owned()).to_array()
+    for start in 0..<lines.length() {
+      guard lines[start].has_prefix("pub using ") else { continue }
+      let block = StringBuilder()
+      for index in start..<lines.length() {
+        block.write_string(lines[index])
+        block.write_char(' ')
+        if lines[index].contains("}") {
+          break
+        }
+      }
+      let items = block.to_string().split("{").to_array()
+      guard items.length() > 1 else { continue }
+      let types = items[1]
+        .split(",")
+        .filter(item => item.trim().has_prefix("type "))
+        .count()
+      let documented = start > 0 &&
+        lines[start - 1].has_prefix("///") &&
+        lines[start - 1] != "///|"
+      if types > 1 && documented {
+        found.add("doc \{path}:\{start + 1}")
+      }
+    }
+  }
+  found
+}
+
+///|
 fn audit(
   facade_text : String,
   package_texts : Map[String, String],
+  sources : Array[(String, String)],
   allow_text : String,
 ) -> Unit raise {
   let allowed = parse_allow(allow_text)
@@ -388,6 +429,15 @@ fn audit(
     } else {
       problems.push(
         "\{key} takes consecutive positional \{typ} arguments; label them",
+      )
+    }
+  }
+  for key in documented_reexports(sources) {
+    if allowed.contains(key) {
+      used.add(key)
+    } else {
+      problems.push(
+        "\{key}: a doc comment on a multi-type `pub using` replaces each type's own docs; use `//`",
       )
     }
   }
@@ -424,22 +474,43 @@ async fn main {
     let (pkg, dir) = entry
     package_texts[pkg] = @fs.read_file("\{dir}/pkg.generated.mbti").text()
   }
+  let paths : Array[String] = []
+  for root in source_roots {
+    @fs.walk(
+      root,
+      (dir, entries) => {
+        for entry in entries {
+          if entry.has_suffix(".mbt") {
+            paths.push("\{dir}/\{entry}")
+          }
+        }
+      },
+      max_concurrency=1,
+    )
+  }
+  paths.sort()
+  let sources : Array[(String, String)] = []
+  for path in paths {
+    sources.push((path, @fs.read_file(path).text()))
+  }
   let allow = @fs.read_file("scripts/api_surface_audit.allow").text()
-  audit(facade, package_texts, allow)
+  audit(facade, package_texts, sources, allow)
   if self_test {
     // Dropping a re-export, an allow entry, or a label must each fail.
     must_fail(() => {
       audit(
         facade.replace(old="pub using @app {type ModalReply}", new=""),
         package_texts,
+        sources,
         allow,
       )
     })
-    must_fail(() => audit(facade, package_texts, ""))
+    must_fail(() => audit(facade, package_texts, sources, ""))
     must_fail(() => {
       audit(
         facade.replace(old="pub using @framework {type ComponentCtx}", new=""),
         package_texts,
+        sources,
         allow,
       )
     })
@@ -447,21 +518,34 @@ async fn main {
       audit(
         facade + "\npub type Leak = @app.ComponentWaiter\n",
         package_texts,
+        sources,
         allow,
       )
     })
     must_fail(() => {
-      audit(facade, package_texts, allow + "\n@app.Nothing # stale\n")
+      audit(facade, package_texts, sources, allow + "\n@app.Nothing # stale\n")
     })
     let http = package_texts.get("http").unwrap()
     let unlabeled = package_texts.copy()
     unlabeled["http"] = http +
       "\npub fn Client::swap(Self, String, String) -> Unit\n"
-    must_fail(() => audit(facade, unlabeled, allow))
+    must_fail(() => audit(facade, unlabeled, sources, allow))
     let optional_pair = package_texts.copy()
     optional_pair["http"] = http +
       "\npub fn Client::swap_opt(Self, String?, String?) -> Unit\n"
-    must_fail(() => audit(facade, optional_pair, allow))
+    must_fail(() => audit(facade, optional_pair, sources, allow))
+    // A doc comment on a multi-type re-export must fail; on a single type,
+    // where it documents that type, it passes.
+    let documented = "///|\n/// Shared docs.\npub using @app {\n  type App,\n  type AppBuilder,\n}\n"
+    must_fail(() => {
+      audit(facade, package_texts, [("facade.mbt", documented)], allow)
+    })
+    audit(
+      facade,
+      package_texts,
+      [("facade.mbt", "///|\n/// App docs.\npub using @app {type App}\n")],
+      allow,
+    )
     println("API surface audit self-tests: OK")
   }
   println("API surface: OK")

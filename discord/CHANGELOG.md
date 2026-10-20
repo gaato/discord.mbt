@@ -7,6 +7,14 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Types re-exported by `gaato/discord` show their own documentation.**
+  The API reference showed a shared group comment for most facade types —
+  `Client` read as the facade overview, and `App`, `Command`, `Bot`, and
+  their neighbours shared one sentence each — because moon doc gives a
+  `pub using` block's doc comment to every type in it.
+
 ## [0.12.1] - 2026-10-19
 
 ### Changed
