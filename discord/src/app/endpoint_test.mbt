@@ -861,7 +861,7 @@ async test "context menu commands decode resolved targets" {
       name="Inspect",
       handler=Immediate((_, target) => {
         @app.CommandReply::message(
-          content="user:\{target.user.username}:member=\{target.member is Some(_)}",
+          content="user:\{target.user.username}:member=\{target.guild_member is Some(_)}",
         )
       }),
     ),

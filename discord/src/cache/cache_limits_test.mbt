@@ -175,7 +175,7 @@ test "list getters sweep only the expired insertion-order prefix" {
   )
   now.val = 1100L
   debug_inspect(
-    cache.members(guild_id).map(member => member.user.unwrap().id.to_string()),
+    cache.members(guild_id).map(cached => cached.user.unwrap().id.to_string()),
     content="[\"2\"]",
   )
 }

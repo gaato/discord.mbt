@@ -90,7 +90,7 @@ priv struct BotCore {
   gateway_url_ : String?
   shards_ : ShardConfig
   compression_ : @gateway.GatewayCompression?
-  resume_ : Map[Int32, BotSession]
+  saved_sessions_ : Map[Int32, BotSession]
   starting_ : Ref[Bool]
   running_shards_ : Ref[Array[ManagedShard]]
   identify_queue_ : &@queue.IdentifyQueue?
@@ -145,7 +145,7 @@ priv struct BotCore {
 /// `sync_unowned=Keep` also preserves commands registered by other owners.
 /// Deletions are reported through the app's warning hook. In multi-process
 /// sharding, enable synchronization in exactly one process.
-/// `resume` seeds saved Bot sessions per shard id so those shards RESUME instead
+/// `sessions` seeds saved Bot sessions per shard id so those shards RESUME instead
 /// of identifying (see `Bot::sessions`). It restores gateway identity, not
 /// optional cache contents or application-owned state. `run` rejects a saved
 /// session whose gateway id disagrees with its READY session id.
@@ -162,7 +162,7 @@ fn BotCore::new(
   identify_queue? : &@queue.IdentifyQueue,
   sync? : @app.CommandScope,
   sync_unowned~ : @framework.UnownedCommands = Delete,
-  resume~ : Map[Int32, BotSession] = Map([]),
+  sessions~ : Map[Int32, BotSession] = Map([]),
   event_backlog~ : Int32 = DEFAULT_EVENT_BACKLOG,
   shutdown_grace_ms~ : Int32 = DEFAULT_SHUTDOWN_GRACE_MS,
   max_message_bytes~ : Int32 = @gateway.DEFAULT_MAX_MESSAGE_BYTES,
@@ -181,9 +181,9 @@ fn BotCore::new(
       Some(_) => compression
       None => if compress { Some(ZlibStream) } else { None }
     },
-    resume_: {
+    saved_sessions_: {
       let snapshots : Map[Int32, BotSession] = Map([])
-      for shard_id, snapshot in resume {
+      for shard_id, snapshot in sessions {
         snapshots[shard_id] = clone_bot_session(snapshot)
       }
       snapshots
@@ -222,7 +222,7 @@ fn BotCore::new(
 fn BotCore::sessions(self : BotCore) -> Map[Int32, BotSession] {
   let sessions : Map[Int32, BotSession] = Map([])
   if self.starting_.val {
-    for shard_id, saved in self.resume_ {
+    for shard_id, saved in self.saved_sessions_ {
       sessions[shard_id] = clone_bot_session(saved)
     }
     return sessions
@@ -655,7 +655,9 @@ async fn BotCore::run(self : BotCore) -> Unit {
         shard_count=resolved.count,
         identify_queue~,
         event_filter=filter,
-        resume?=resolved.resume.get(shard_id).map(snapshot => snapshot.gateway),
+        session?=resolved.saved_sessions
+          .get(shard_id)
+          .map(snapshot => snapshot.gateway),
       )
       managed_shards.push({ id: shard_id, shard, context: None, })
       shard_handles.push(shard)
@@ -793,7 +795,7 @@ async fn BotCore::run(self : BotCore) -> Unit {
     }
     // Prepare restored contexts before reading any replayed Gateway dispatch.
     for owner in managed_shards {
-      if resolved.resume.get(owner.id) is Some(saved) {
+      if resolved.saved_sessions.get(owner.id) is Some(saved) {
         initialize_context(owner, clone_ready(saved.ready)) |> ignore
       }
     }

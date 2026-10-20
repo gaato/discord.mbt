@@ -397,7 +397,9 @@ async test "command contexts expose resolved context-menu targets" {
       fail("expected resolved user target")
     }
     assert_true(ctx.target_message() is None)
-    seen.push("user:\{target.user.username}:member=\{target.member is Some(_)}")
+    seen.push(
+      "user:\{target.user.username}:member=\{target.guild_member is Some(_)}",
+    )
   })
   .command(@interaction.CommandSpec::message("inspect"), ctx => {
     guard ctx.target_message() is Some(target) else {

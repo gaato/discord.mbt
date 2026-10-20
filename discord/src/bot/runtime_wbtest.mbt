@@ -103,7 +103,7 @@ async test "bot restores context before replay and snapshots live sessions" {
     client~,
     gateway_url="wss://gateway.example",
     sync=Global,
-    resume={ 0: saved },
+    sessions={ 0: saved },
   )
   // Mutating caller-owned input after construction cannot alter the seed.
   saved.gateway.sequence = 999L
@@ -210,7 +210,7 @@ async test "bot reports supplied sessions while resolving shards" {
     token="test-token",
     intents=@model.Intents::guild_messages(),
     client~,
-    resume={ 0: saved },
+    sessions={ 0: saved },
   )
   bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
@@ -281,7 +281,7 @@ async test "bot identifies instead of resuming a session from another shard layo
     intents=@model.Intents::guild_messages(),
     client~,
     gateway_url="wss://gateway.example",
-    resume={ 0: saved },
+    sessions={ 0: saved },
   )
   bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
@@ -338,7 +338,7 @@ async test "bot holds a fallback IDENTIFY when the session start limit is exhaus
     intents=@model.Intents::guild_messages(),
     client~,
     gateway_url="wss://gateway.example",
-    resume={ 0: bot_saved_session() },
+    sessions={ 0: bot_saved_session() },
   )
   bot.core.gateway_bot_info_.val = Some(manager_gateway_info(remaining=0))
   bot.core.connector_.val = Some(_ => {
@@ -448,7 +448,7 @@ async test "empty Bot replay starts services on RESUMED" {
     @app.AppBuilder().build(),
     token="test-token",
     gateway_url="wss://gateway.example",
-    resume={ 0: bot_saved_session() },
+    sessions={ 0: bot_saved_session() },
   )
   bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.core.connector_.val = Some(_ => (transport : &@gateway.GatewayTransport))
@@ -498,7 +498,7 @@ async test "build rejects a mismatched saved session before REST or connector" {
     token="test-token",
     client~,
     gateway_url="wss://gateway.example",
-    resume={ 0: bad },
+    sessions={ 0: bad },
   )
   bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.core.connector_.val = Some(_ => {
@@ -536,7 +536,7 @@ async test "rejected Bot resume uses the next actual READY" {
     client~,
     gateway_url="wss://gateway.example",
     sync=Global,
-    resume={ 0: bot_saved_session() },
+    sessions={ 0: bot_saved_session() },
   )
   bot.core.gateway_bot_info_.val = Some(manager_gateway_info())
   bot.core.connector_.val = Some(url => {

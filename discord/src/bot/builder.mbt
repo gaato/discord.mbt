@@ -48,7 +48,7 @@ pub struct BotBuilder {
 /// Deletions are reported through the app's warning hook. In multi-process
 /// sharding, enable synchronization in exactly one process.
 ///
-/// `resume` seeds saved Bot sessions per shard id so those shards RESUME
+/// `sessions` seeds saved Bot sessions per shard id so those shards RESUME
 /// instead of identifying (see `Bot::sessions`). It restores gateway identity,
 /// not optional cache contents or application-owned state.
 ///
@@ -77,7 +77,7 @@ pub fn BotBuilder::BotBuilder(
   identify_queue? : &@queue.IdentifyQueue,
   sync? : @app.CommandScope,
   sync_unowned~ : @framework.UnownedCommands = Delete,
-  resume~ : Map[Int32, BotSession] = Map([]),
+  sessions~ : Map[Int32, BotSession] = Map([]),
   event_backlog~ : Int32 = DEFAULT_EVENT_BACKLOG,
   shutdown_grace_ms~ : Int32 = DEFAULT_SHUTDOWN_GRACE_MS,
   max_message_bytes~ : Int32 = @gateway.DEFAULT_MAX_MESSAGE_BYTES,
@@ -96,7 +96,7 @@ pub fn BotBuilder::BotBuilder(
       identify_queue?,
       sync?,
       sync_unowned~,
-      resume~,
+      sessions~,
       event_backlog~,
       shutdown_grace_ms~,
       max_message_bytes~,
@@ -224,18 +224,18 @@ pub fn BotBuilder::build(self : BotBuilder) -> Bot raise BotConfigError {
     shard_layout_problem(ids, count) is Some(message) {
     raise InvalidShardConfig(message~)
   }
-  for shard_id, saved in core.resume_ {
+  for shard_id, saved in core.saved_sessions_ {
     if saved.gateway.id != saved.ready.session_id {
       raise MismatchedSession(shard_id~)
     }
   }
-  let resume : Map[Int32, BotSession] = Map([])
-  for shard_id, saved in core.resume_ {
-    resume[shard_id] = clone_bot_session(saved)
+  let sessions : Map[Int32, BotSession] = Map([])
+  for shard_id, saved in core.saved_sessions_ {
+    sessions[shard_id] = clone_bot_session(saved)
   }
   let built : BotCore = {
     ..core,
-    resume_: resume,
+    saved_sessions_: sessions,
     typed_events_: core.typed_events_.copy(),
     raw_events_: core.raw_events_.copy(),
     event_middleware_: core.event_middleware_.copy(),

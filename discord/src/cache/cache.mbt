@@ -1095,7 +1095,7 @@ fn InMemoryCache::update_member(
     self.users_.see(update.user)
     return
   }
-  let previous = self.member(update.guild_id, update.user.id)
+  let previous = self.guild_member(update.guild_id, update.user.id)
   let cached_member = @model.GuildMember::{
     user: Some(update.user),
     nick: prefer_update(update.nick, previous.bind(value => value.nick)),
@@ -1397,7 +1397,7 @@ pub fn InMemoryCache::roles(
 
 ///|
 /// The cached guild member, if retained.
-pub fn InMemoryCache::member(
+pub fn InMemoryCache::guild_member(
   self : InMemoryCache,
   guild_id : @model.GuildId,
   user_id : @model.UserId,
@@ -1511,7 +1511,7 @@ pub fn InMemoryCache::permissions(
     return None
   }
   guard self.guild(guild_id) is Some(guild) &&
-    self.member(guild_id, user_id) is Some(cached_member) &&
+    self.guild_member(guild_id, user_id) is Some(cached_member) &&
     self.roles_.get(guild_id, guild_id.cast()) is Some(everyone) else {
     return None
   }
@@ -1546,7 +1546,7 @@ pub fn InMemoryCache::permissions_in(
   self.expire()
   guard self.resources_.channels_ else { return None }
   guard self.permissions(guild_id, user_id) is Some(base) &&
-    self.member(guild_id, user_id) is Some(cached_member) &&
+    self.guild_member(guild_id, user_id) is Some(cached_member) &&
     self.cached_channel(channel_id)
     is Some({ channel, guild_id: channel_guild_id, }) &&
     channel_guild_id == Some(guild_id) else {

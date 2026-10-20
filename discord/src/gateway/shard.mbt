@@ -203,7 +203,7 @@ async fn Shard::finish_transport(
 }
 
 ///|
-/// Spawn a shard into `group` and return its handle. `resume` seeds the
+/// Spawn a shard into `group` and return its handle. `session` seeds a saved
 /// session so the first connection attempts RESUME at its `resume_url`.
 /// The initial presence is retained with a copy of its activities array.
 /// A message larger than `max_message_bytes`, compressed or inflated, ends
@@ -231,7 +231,7 @@ pub fn[X] Shard::start(
   telemetry~ : (@telemetry.TelemetryEvent) -> Unit = _ => (),
   clock~ : &@hclock.Clock = @transport.AsyncClock::new(),
   rand~ : @random.Rand = @random.Rand(),
-  resume? : Session,
+  session? : Session,
   presence? : @model.UpdatePresence,
 ) -> Shard {
   let shard = Shard::{
@@ -243,7 +243,7 @@ pub fn[X] Shard::start(
     send_gate: Semaphore(1),
     transport: None,
     state: Disconnected(reconnect_attempts=0),
-    session: resume.map(s => {
+    session: session.map(s => {
       id: s.id,
       resume_url: s.resume_url,
       sequence: s.sequence,

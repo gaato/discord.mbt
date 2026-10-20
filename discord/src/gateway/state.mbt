@@ -20,7 +20,7 @@ pub(all) enum ReconnectPolicy {
 
 ///|
 /// Gateway session state retained across reconnects for RESUME. Persist it
-/// (for example with `to_json`) and pass it to `Shard::start(resume~)` after a
+/// (for example with `to_json`) and pass it to `Shard::start(session~)` after a
 /// process restart. `sequence` serializes as a JSON string (core's `Int64`
 /// encoding); `from_json` accepts that form.
 pub(all) struct Session {

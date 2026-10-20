@@ -1,6 +1,6 @@
 ///|
-fn describe_move(move : UserMove) -> String {
-  match move {
+fn describe_move(decision : UserMove) -> String {
+  match decision {
     Promote => "promote"
     Keep => "keep"
     Drop => "drop"

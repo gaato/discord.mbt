@@ -3,13 +3,13 @@
 /// invoking member, both validated when the context was built.
 pub(all) struct GuildInvocation {
   guild_id : @model.GuildId
-  member : @model.GuildMember
+  guild_member : @model.GuildMember
 } derive(Debug)
 
 ///|
 /// The user who invoked this interaction.
 pub fn GuildInvocation::user(self : GuildInvocation) -> @model.User {
-  match self.member.user {
+  match self.guild_member.user {
     Some(user) => user
     None => abort("validated guild invocation has no member user")
   }
@@ -43,7 +43,7 @@ pub(all) suberror InteractionContextError {
 /// The resolved target of a USER context-menu command.
 pub(all) struct TargetUser {
   user : @model.User
-  member : @model.GuildMember?
+  guild_member : @model.GuildMember?
 }
 
 ///|
@@ -57,7 +57,7 @@ fn interaction_scope(
     (Some(guild_member), _) => {
       guard guild_member.user is Some(_) else { raise MissingGuildMemberUser }
       guard interaction.guild_id is Some(guild_id) else { raise MissingGuildId }
-      Guild({ guild_id, member: guild_member, })
+      Guild({ guild_id, guild_member, })
     }
     (None, Some(user)) => Dm(user)
     (None, None) => raise MissingInvoker
@@ -171,7 +171,7 @@ pub fn CommandCtx::target_user(self : CommandCtx) -> TargetUser? {
     Some(members) => members.get(target_id.to_string())
     None => None
   }
-  Some({ user, member: target_member, })
+  Some({ user, guild_member: target_member, })
 }
 
 ///|

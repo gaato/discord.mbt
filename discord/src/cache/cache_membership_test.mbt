@@ -16,7 +16,7 @@ test "member, presence, and voice-state flows land in their guild maps" {
   cache.update(
     cached_event("GUILD_MEMBER_ADD", member_add_fixture("200", "nelly")),
   )
-  guard cache.member(guild_id, user_id) is Some(added) else {
+  guard cache.guild_member(guild_id, user_id) is Some(added) else {
     fail("expected a cached member")
   }
   assert_eq(added.roles.length(), 1)
@@ -32,7 +32,7 @@ test "member, presence, and voice-state flows land in their guild maps" {
       ),
     ),
   )
-  guard cache.member(guild_id, user_id) is Some(updated) else {
+  guard cache.guild_member(guild_id, user_id) is Some(updated) else {
     fail("expected the updated member")
   }
   assert_eq(updated.roles.length(), 2)
@@ -99,7 +99,7 @@ test "member, presence, and voice-state flows land in their guild maps" {
     fail("expected the banned user record")
   }
   assert_eq(banned_user.username, "nelly-banned")
-  assert_true(cache.member(guild_id, user_id) is Some(_))
+  assert_true(cache.guild_member(guild_id, user_id) is Some(_))
   cache.update(
     cached_event(
       "GUILD_MEMBER_REMOVE",
@@ -108,7 +108,7 @@ test "member, presence, and voice-state flows land in their guild maps" {
       ),
     ),
   )
-  assert_true(cache.member(guild_id, user_id) is None)
+  assert_true(cache.guild_member(guild_id, user_id) is None)
   assert_true(cache.presence(guild_id, user_id) is None)
   assert_true(cache.voice_state(guild_id, user_id) is None)
 }

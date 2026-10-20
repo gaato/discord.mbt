@@ -149,7 +149,7 @@ pub async fn Framework::wait_for_component(Self, custom_id~ : String, user? : @m
 
 pub(all) struct GuildInvocation {
   guild_id : @model.Id[@model.GuildMarker]
-  member : @model.GuildMember
+  guild_member : @model.GuildMember
 } derive(@debug.Debug)
 pub fn GuildInvocation::user(Self) -> @model.User
 
@@ -231,7 +231,7 @@ pub(all) struct ScopeSyncReport {
 
 pub(all) struct TargetUser {
   user : @model.User
-  member : @model.GuildMember?
+  guild_member : @model.GuildMember?
 }
 
 pub(all) enum UnownedCommands {

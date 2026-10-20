@@ -173,7 +173,7 @@ async test "shard config resolves auto fixed and range selections" {
     app.build(),
     token="test-token",
     shards=Fixed(count=2),
-    resume={ 0: saved },
+    sessions={ 0: saved },
   )
   resumed.core.gateway_bot_info_.val = Some(manager_gateway_info(remaining=1))
   let resumed_config = resumed.core.resolve_shards(client)
@@ -185,7 +185,7 @@ async test "shard config resolves auto fixed and range selections" {
     app.build(),
     token="test-token",
     shards=Fixed(count=2),
-    resume={ 0: saved },
+    sessions={ 0: saved },
   )
   exhausted.core.gateway_bot_info_.val = Some(manager_gateway_info(remaining=0))
   try exhausted.core.resolve_shards(client) catch {
@@ -204,7 +204,7 @@ async test "shard config resolves auto fixed and range selections" {
     foreign_app.build(),
     token="test-token",
     shards=Fixed(count=2),
-    resume={ 0: manager_bot_session(0, 3) },
+    sessions={ 0: manager_bot_session(0, 3) },
   )
   foreign.core.gateway_bot_info_.val = Some(manager_gateway_info(remaining=1))
   try foreign.core.resolve_shards(client) catch {

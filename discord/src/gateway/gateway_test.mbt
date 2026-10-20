@@ -457,7 +457,7 @@ async test "shard resumes from a saved session and exposes snapshots" {
       token="tok",
       intents=@model.Intents::none(),
       gateway_url="wss://gateway.example",
-      resume=saved,
+      session=saved,
       connector=url => {
         urls.push(url)
         (transport : &@gateway.GatewayTransport)
@@ -499,7 +499,7 @@ async test "stale resume url falls back to identify after three connector failur
       token="tok",
       intents=@model.Intents::none(),
       gateway_url="wss://gateway.example",
-      resume={ id: "sess", resume_url: "wss://resume.example", sequence: 41L, },
+      session={ id: "sess", resume_url: "wss://resume.example", sequence: 41L, },
       connector=url => {
         urls.push(url)
         if url.contains("resume.example") {
@@ -541,7 +541,7 @@ async test "successful connector resets stale-host fallback failure count" {
       token="tok",
       intents=@model.Intents::none(),
       gateway_url="wss://gateway.example",
-      resume={ id: "sess", resume_url: "wss://resume.example", sequence: 41L, },
+      session={ id: "sess", resume_url: "wss://resume.example", sequence: 41L, },
       connector=url => {
         urls.push(url)
         match urls.length() {

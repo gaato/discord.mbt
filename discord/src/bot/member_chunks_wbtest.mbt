@@ -35,7 +35,9 @@ fn members_chunk(
 
 ///|
 fn member_ids(fetched : FetchedMembers) -> Array[String] {
-  fetched.members.map(member => member.user.unwrap().id.to_string())
+  fetched.members.map(fetched_member => {
+    fetched_member.user.unwrap().id.to_string()
+  })
 }
 
 ///|

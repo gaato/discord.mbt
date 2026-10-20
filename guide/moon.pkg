@@ -26,8 +26,4 @@ import {
   "moonbitlang/core/encoding/utf8",
 } for "test"
 
-// Bot's published `resume` label is reserved by this compiler version.
-
-warnings = "-35"
-
 supported_targets = "native"

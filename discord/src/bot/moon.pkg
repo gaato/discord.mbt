@@ -36,9 +36,7 @@ import {
 
 // The gateway executor runs on native, JavaScript, and moonrun Wasm.
 
-// `resume` is the public API label and is reserved by the current compiler.
-
-warnings = "-29-35"
+warnings = "-29"
 
 supported_targets = "js + native + wasm"
 

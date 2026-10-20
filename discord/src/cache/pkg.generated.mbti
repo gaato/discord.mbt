@@ -36,9 +36,9 @@ pub fn InMemoryCache::InMemoryCache(resources~ : CacheResources, limits? : Cache
 pub fn InMemoryCache::channel(Self, @model.Id[@model.ChannelMarker]) -> @model.Channel?
 pub fn InMemoryCache::channels(Self) -> Array[@model.Channel]
 pub fn InMemoryCache::guild(Self, @model.Id[@model.GuildMarker]) -> @model.Guild?
+pub fn InMemoryCache::guild_member(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker]) -> @model.GuildMember?
 pub fn InMemoryCache::guilds(Self) -> Array[@model.Guild]
 pub fn InMemoryCache::is_guild_unavailable(Self, @model.Id[@model.GuildMarker]) -> Bool
-pub fn InMemoryCache::member(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker]) -> @model.GuildMember?
 pub fn InMemoryCache::members(Self, @model.Id[@model.GuildMarker]) -> Array[@model.GuildMember]
 pub fn InMemoryCache::message(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker]) -> @model.Message?
 pub fn InMemoryCache::messages(Self, @model.Id[@model.ChannelMarker]) -> Array[@model.Message]

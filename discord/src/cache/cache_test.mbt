@@ -90,7 +90,7 @@ test "guild create seeds selected resources and updates replace state" {
   assert_true(cache.channel(channel_id) is Some(_))
   assert_true(cache.channel(thread_id) is Some(_))
   assert_true(cache.role(guild_id, writer_role_id) is Some(_))
-  assert_true(cache.member(guild_id, writer_id) is Some(_))
+  assert_true(cache.guild_member(guild_id, writer_id) is Some(_))
   assert_true(cache.user(writer_id) is Some(_))
   assert_true(cache.voice_state(guild_id, writer_id) is Some(_))
   assert_true(cache.presence(guild_id, writer_id) is Some(_))
@@ -134,7 +134,7 @@ test "guild create seeds selected resources and updates replace state" {
       "GUILD_MEMBER_UPDATE", "{\"guild_id\":\"100\",\"roles\":[\"302\"],\"user\":{\"id\":\"202\",\"username\":\"writer\",\"discriminator\":\"0\",\"avatar\":null},\"nick\":\"Writer\",\"avatar\":null,\"joined_at\":\"2025-06-01T10:00:00Z\"}",
     ),
   )
-  guard cache.member(guild_id, writer_id) is Some(updated_member) else {
+  guard cache.guild_member(guild_id, writer_id) is Some(updated_member) else {
     fail("expected updated member")
   }
   assert_true(updated_member.nick == Some(Value("Writer")))
@@ -144,7 +144,7 @@ test "guild create seeds selected resources and updates replace state" {
       "GUILD_BAN_ADD", "{\"guild_id\":\"100\",\"user\":{\"id\":\"202\",\"username\":\"writer\",\"discriminator\":\"0\",\"avatar\":null}}",
     ),
   )
-  assert_true(cache.member(guild_id, writer_id) is Some(_))
+  assert_true(cache.guild_member(guild_id, writer_id) is Some(_))
 
   cache.update(
     cached_event(
@@ -173,7 +173,7 @@ test "guild create seeds selected resources and updates replace state" {
       "GUILD_MEMBER_REMOVE", "{\"guild_id\":\"100\",\"user\":{\"id\":\"202\",\"username\":\"writer\",\"discriminator\":\"0\",\"avatar\":null}}",
     ),
   )
-  assert_true(cache.member(guild_id, writer_id) is None)
+  assert_true(cache.guild_member(guild_id, writer_id) is None)
   // Users outlive guild membership.
   assert_true(cache.user(writer_id) is Some(_))
   cache.update(

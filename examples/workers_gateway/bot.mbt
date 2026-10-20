@@ -9,7 +9,7 @@ pub fn build_bot(
     worker_app(),
     token~,
     gateway_url~,
-    resume=saved_sessions,
+    sessions=saved_sessions,
     intents=@model.Intents::none(),
     sync=Global,
     sync_unowned=Keep,

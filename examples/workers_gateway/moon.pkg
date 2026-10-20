@@ -8,9 +8,7 @@ import {
   "moonbitlang/core/string",
 }
 
-// Bot's published `resume` label is reserved by this compiler version.
-
-warnings = "-29-35"
+warnings = "-29"
 
 supported_targets = "js + native"
 

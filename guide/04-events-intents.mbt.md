@@ -325,7 +325,7 @@ bundled coordinator described in
 A bot that restarts can resume its Gateway sessions instead of identifying
 again. While `run` is active, `Bot::sessions` returns a `BotSession` snapshot
 per shard, holding the Gateway session and its original READY metadata. Store
-them, and pass them back through `resume` when building the next bot:
+them, and pass them back through `sessions` when building the next bot:
 
 ```mbt check
 ///|
@@ -339,7 +339,7 @@ fn restored_bot(
   token : String,
   saved : Map[Int32, @discord.BotSession],
 ) -> @discord.BotBuilder {
-  @discord.BotBuilder(app, token~, resume=saved)
+  @discord.BotBuilder(app, token~, sessions=saved)
 }
 
 ///|

@@ -7,6 +7,24 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+### Changed
+
+- **Public names no longer use words the compiler reserves.** `resume` and
+  `member` are reserved for possible future syntax, so code that wrote
+  `resume=` or built one of these records needed warning 35 suppressed to
+  build with `--deny-warn`. Behavior is unchanged.
+  - `BotBuilder(resume=...)` is `BotBuilder(sessions=...)`, the same name as
+    `Bot::sessions()` that produces the map.
+  - `@gateway.Shard::start(resume=...)` is `Shard::start(session=...)`, the
+    same name as `Shard::session()`.
+  - The `member` field of `@framework.GuildInvocation` and
+    `@framework.TargetUser` is `guild_member`, as in `@model`.
+  - `InMemoryCache::member(guild_id, user_id)` is
+    `InMemoryCache::guild_member(guild_id, user_id)`.
+
+  Migration: rename each use as listed; a `warnings` entry that only
+  suppressed 35 for these names can go.
+
 ### Fixed
 
 - **Types re-exported by `gaato/discord` show their own documentation.**

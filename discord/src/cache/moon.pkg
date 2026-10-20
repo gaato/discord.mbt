@@ -11,8 +11,3 @@ import {
 import {
   "moonbitlang/core/json",
 } for "wbtest"
-
-// Discord's public resource name is `member`; keep that getter despite the
-// compiler reserving the word for possible future syntax.
-
-warnings = "-35"

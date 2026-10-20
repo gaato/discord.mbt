@@ -19,7 +19,7 @@ priv struct ResolvedShardConfig {
   gateway_url : String
   max_concurrency : Int32
   /// Saved sessions that fit this layout, keyed by shard id.
-  resume : Map[Int32, BotSession]
+  saved_sessions : Map[Int32, BotSession]
 }
 
 ///|
@@ -123,7 +123,7 @@ fn[X] BotCore::start_managed_shard(
   shard_count~ : Int32,
   identify_queue~ : &@queue.IdentifyQueue,
   event_filter~ : (@model.EventKind) -> Bool,
-  resume? : @gateway.Session,
+  session? : @gateway.Session,
 ) -> @gateway.Shard {
   @gateway.Shard::start(
     group,
@@ -142,7 +142,7 @@ fn[X] BotCore::start_managed_shard(
     telemetry=event => self.emit_telemetry(event),
     clock=self.clock_.val,
     rand?=self.rand_.val,
-    resume?,
+    session?,
   )
 }
 
@@ -164,7 +164,7 @@ async fn BotCore::resolve_shards(
         count,
         gateway_url,
         max_concurrency: 1,
-        resume: self.sessions_for_layout(ids, count),
+        saved_sessions: self.sessions_for_layout(ids, count),
       }
     }
     Auto | Fixed(_) | Range(..) => {
@@ -179,10 +179,10 @@ async fn BotCore::resolve_shards(
           message="gateway max_concurrency must be positive",
         )
       }
-      let resume = self.sessions_for_layout(ids, count)
+      let saved = self.sessions_for_layout(ids, count)
       // A shard with a saved session sends RESUME, which does not consume the
       // identify allowance; only a rejected RESUME falls back to IDENTIFY.
-      let required = ids.filter(id => !resume.contains(id)).length()
+      let required = ids.filter(id => !saved.contains(id)).length()
       if session_start_refusal(info.session_start_limit, required~)
         is Some(error) {
         raise error
@@ -192,7 +192,7 @@ async fn BotCore::resolve_shards(
         count,
         gateway_url: self.gateway_url_.unwrap_or(info.url),
         max_concurrency: info.session_start_limit.max_concurrency,
-        resume,
+        saved_sessions: saved,
       }
     }
   }
@@ -209,7 +209,7 @@ fn BotCore::sessions_for_layout(
 ) -> Map[Int32, BotSession] {
   let usable : Map[Int32, BotSession] = Map([])
   for id in ids {
-    guard self.resume_.get(id) is Some(saved) else { continue }
+    guard self.saved_sessions_.get(id) is Some(saved) else { continue }
     let recorded = saved.ready.shard.unwrap_or([0, 1])
     if recorded is [recorded_id, recorded_count] &&
       recorded_id == id &&
