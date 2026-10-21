@@ -11,7 +11,7 @@ import {
 }
 
 // Values
-pub const VERSION : String = "0.12.1"
+pub const VERSION : String = "0.13.0"
 
 pub fn attachments_json(Array[FileUpload]) -> Json
 

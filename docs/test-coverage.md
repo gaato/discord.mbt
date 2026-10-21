@@ -124,7 +124,6 @@ Defensive arms unreachable by construction:
 
 | File | Budget | Reason |
 | --- | --- | --- |
-| discord/src/gateway/compression.mbt | 1 | The `Done` arm of the zstd-stream loop: `gaato/zstd` reports `Done` only for a step taken with `end=true`, which the inflater never passes (Discord never ends its frame, and consecutive frames decode as one stream). |
 | discord/src/util/cdn.mbt | 1 | The `StickerFormatType::..` arm that `#non_exhaustive` requires outside `@model`; every current format is matched by name. |
 | discord/src/bot/session.mbt | 1 | Abort if an already decoded READY fails its own JSON round trip; snapshot independence and serialization are tested. |
 | discord/src/http/multipart.mbt | 2 | `attachments_json` always returns an array, and encoder errors other than a boundary collision, which `validate_files` rules out before encoding. |

@@ -7,8 +7,20 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-10-22
+
 ### Changed
 
+- Built on `gaato/http` 0.5.0 and `gaato/http-async` 0.5.0: cookies,
+  Retry-After and Link follow RFC 6265bis-22, RFC 9110 and RFC 8288 more
+  closely, and a `*.example.com` entry in `NO_PROXY` bypasses the proxy for
+  `example.com` and its subdomains; see their changelogs.
+- **Gateway compression decodes through `gaato/codec_bytes`' `Decode`.**
+  `zlib-stream` is decoded by `gaato/deflate` 0.1.0's zlib decoder instead
+  of `moonbit-community/flate`, which is no longer a direct dependency, and
+  `zstd-stream` by `gaato/zstd` 0.3.1; both share one loop. The message of
+  `InflateError::Malformed` for a corrupt `zlib-stream` is the new
+  decoder's own and reads differently. Behavior is otherwise unchanged.
 - **Public names no longer use words the compiler reserves.** `resume` and
   `member` are reserved for possible future syntax, so code that wrote
   `resume=` or built one of these records needed warning 35 suppressed to

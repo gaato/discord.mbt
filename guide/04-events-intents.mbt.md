@@ -431,7 +431,7 @@ Gateway messages.
 Only server-to-client binary messages are decompressed; identify, heartbeat,
 and other client-to-server payloads remain uncompressed text.
 
-Both decoders are pure MoonBit (`moonbit-community/flate` and `gaato/zstd`),
+Both decoders are pure MoonBit (`gaato/deflate` and `gaato/zstd`),
 so compression works the same on native, JavaScript, and Wasm and needs no
 zlib or zstd library. A successful compressed
 connection emits `ShardCompressionEnabled` telemetry.

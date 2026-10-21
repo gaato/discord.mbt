@@ -36,9 +36,13 @@ fn default_inflater(
 }
 
 ///|
-priv struct ZlibStreamInflater {
-  decoder : @zlib.Decoder
-  pending : Array[Byte]
+/// Inflates one Gateway message at a time out of a stream that never ends:
+/// zlib-stream and zstd-stream differ only in their decoder and in how a
+/// message's end is found.
+priv struct MessageInflater {
+  decoder : &@codec_bytes.Decode
+  // What the stream is called in errors: "zlib-stream" or "zstd-stream".
+  name : String
   // Reused across messages; grows to the largest message seen.
   mut out : FixedArray[Byte]
   // The most bytes one message may take, compressed or inflated.
@@ -46,36 +50,26 @@ priv struct ZlibStreamInflater {
 }
 
 ///|
-fn ZlibStreamInflater::ZlibStreamInflater(
-  max_bytes~ : Int32 = DEFAULT_MAX_MESSAGE_BYTES,
-) -> ZlibStreamInflater {
-  {
-    decoder: @zlib.Decoder(),
-    pending: [],
-    out: FixedArray::make(16384, 0),
-    max_bytes,
-  }
+/// `decoder` is made with `until=EndOfMember`, so that a stream that ends,
+/// which a Gateway stream never does, answers `Done` at once; under the
+/// default it would wait for what follows.
+fn MessageInflater::new(
+  decoder : &@codec_bytes.Decode,
+  name : String,
+  max_bytes : Int32,
+) -> MessageInflater {
+  { decoder, name, out: FixedArray::make(16384, 0), max_bytes, }
 }
 
 ///|
-fn has_sync_flush_suffix(bytes : Array[Byte]) -> Bool {
-  let len = bytes.length()
-  len >= 4 &&
-  bytes[len - 4] == 0x00 &&
-  bytes[len - 3] == 0x00 &&
-  bytes[len - 2] == 0xff &&
-  bytes[len - 1] == 0xff
-}
-
-///|
-/// Inflate one sync-flushed message. One decoder step accepts at most 64 KiB
-/// of input and emits every byte up to the flush point, so `NeedMoreInput`
-/// with no input left means the message is complete.
-fn ZlibStreamInflater::inflate(
-  self : ZlibStreamInflater,
-  compressed : Bytes,
+/// Inflates `message`, all of one Gateway message. The stream does not end
+/// after it, so `NeedMoreInput` with the message consumed means every byte
+/// it holds is out (gaato/codec_bytes' first rule).
+fn MessageInflater::inflate(
+  self : MessageInflater,
+  message : BytesView,
 ) -> Bytes raise InflateError {
-  let mut input = compressed[:]
+  let mut input = message
   let mut len = 0
   while true {
     if len == self.out.length() {
@@ -83,8 +77,12 @@ fn ZlibStreamInflater::inflate(
       self.out.blit_to(grown, len~)
       self.out = grown
     }
-    let status = self.decoder.step(input, self.out.mut_view(start=len)) catch {
-      ZlibError(_, message) => raise Malformed(message~)
+    let status = self.decoder.step(
+      input,
+      self.out.mut_view(start=len),
+      end=false,
+    ) catch {
+      CodecError(_, message) => raise Malformed(message~)
     }
     len += self.decoder.last_produced()
     if len > self.max_bytes {
@@ -92,19 +90,54 @@ fn ZlibStreamInflater::inflate(
     }
     input = input[self.decoder.last_consumed():]
     match status {
-      NeedMoreInput => if input.length() == 0 { break }
+      NeedMoreInput => break
       NeedMoreOutput => continue
-      Done => raise Malformed(message="zlib-stream ended")
+      Done => raise Malformed(message="\{self.name} ended")
     }
   }
   Bytes::from_array(self.out[:len])
 }
 
 ///|
+fn utf8_message(plain : Bytes) -> String raise InflateError {
+  @utf8.decode(plain) catch {
+    _ => raise InflateError::InvalidUtf8
+  }
+}
+
+///|
+/// zlib-stream: a message may come in several WebSocket messages, and ends
+/// with the `00 00 ff ff` of a sync flush.
+priv struct ZlibStreamInflater {
+  message : MessageInflater
+  pending : Array[Byte]
+}
+
+///|
+fn ZlibStreamInflater::ZlibStreamInflater(
+  max_bytes~ : Int32 = DEFAULT_MAX_MESSAGE_BYTES,
+) -> ZlibStreamInflater {
+  {
+    message: MessageInflater::new(
+      @zlib.Decoder(until=EndOfMember),
+      "zlib-stream",
+      max_bytes,
+    ),
+    pending: [],
+  }
+}
+
+///|
+fn has_sync_flush_suffix(bytes : Array[Byte]) -> Bool {
+  bytes is [.., 0x00, 0x00, 0xff, 0xff]
+}
+
+///|
 impl Inflater for ZlibStreamInflater with fn push(self, bytes) {
-  if self.pending.length() + bytes.length() > self.max_bytes {
+  let max_bytes = self.message.max_bytes
+  if self.pending.length() + bytes.length() > max_bytes {
     self.pending.clear()
-    raise TooLarge(limit=self.max_bytes)
+    raise TooLarge(limit=max_bytes)
   }
   for byte in bytes {
     self.pending.push(byte)
@@ -114,17 +147,14 @@ impl Inflater for ZlibStreamInflater with fn push(self, bytes) {
   }
   let compressed = Bytes::from_array(self.pending)
   self.pending.clear()
-  let plain = self.inflate(compressed)
-  Some(@utf8.decode(plain) catch { _ => raise InflateError::InvalidUtf8 })
+  Some(utf8_message(self.message.inflate(compressed)))
 }
 
 ///|
+/// zstd-stream: every WebSocket message is a whole Gateway message, flushed
+/// to a block boundary of the one frame the connection never ends.
 priv struct ZstdStreamInflater {
-  decoder : @zstd.Decoder
-  // Reused across messages; grows to the largest message seen.
-  mut out : FixedArray[Byte]
-  // The most bytes one message may take, compressed or inflated.
-  max_bytes : Int32
+  message : MessageInflater
 }
 
 ///|
@@ -133,42 +163,19 @@ priv struct ZstdStreamInflater {
 fn ZstdStreamInflater::ZstdStreamInflater(
   max_bytes~ : Int32 = DEFAULT_MAX_MESSAGE_BYTES,
 ) -> ZstdStreamInflater {
-  { decoder: @zstd.Decoder(), out: FixedArray::make(16384, 0), max_bytes, }
+  {
+    message: MessageInflater::new(
+      @zstd.Decoder(until=EndOfMember),
+      "zstd-stream",
+      max_bytes,
+    ),
+  }
 }
 
 ///|
-/// Every WebSocket message is a whole Gateway message: Discord flushes the
-/// frame it never ends, so once the input is used up the decoder has handed
-/// out every byte of the message.
 impl Inflater for ZstdStreamInflater with fn push(self, bytes) {
-  if bytes.length() > self.max_bytes {
-    raise TooLarge(limit=self.max_bytes)
+  if bytes.length() > self.message.max_bytes {
+    raise TooLarge(limit=self.message.max_bytes)
   }
-  let mut input = bytes[:]
-  let mut len = 0
-  while true {
-    if len == self.out.length() {
-      let grown = FixedArray::make(len * 2, b'\x00')
-      self.out.blit_to(grown, len~)
-      self.out = grown
-    }
-    let status = self.decoder.step(input, self.out.mut_view(start=len)) catch {
-      @zstd.ZstdError(_, message) => raise Malformed(message~)
-    }
-    len += self.decoder.last_produced()
-    if len > self.max_bytes {
-      raise TooLarge(limit=self.max_bytes)
-    }
-    input = input[self.decoder.last_consumed():]
-    match status {
-      NeedMoreInput => if input.length() == 0 { break }
-      NeedMoreOutput => continue
-      Done => raise Malformed(message="zstd-stream ended")
-    }
-  }
-  Some(
-    @utf8.decode(Bytes::from_array(self.out[:len])) catch {
-      _ => raise InflateError::InvalidUtf8
-    },
-  )
+  Some(utf8_message(self.message.inflate(bytes)))
 }

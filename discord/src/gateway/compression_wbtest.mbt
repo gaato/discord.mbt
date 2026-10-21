@@ -26,7 +26,7 @@ fn sync_flush(encoder : @zlib.Encoder, input : Bytes) -> Bytes {
   let out = FixedArray::make(256, b'\x00')
   let mut rest = input[:]
   while true {
-    let status = encoder.step(rest, out.mut_view(), action=SyncFlush)
+    let status = encoder.step(rest, out.mut_view(), action=Flush)
     for i in 0..<encoder.last_produced() {
       compressed.push(out[i])
     }
@@ -231,7 +231,7 @@ test "zlib-stream refuses messages over its limit" {
   } noraise {
     _ => fail("an oversized message inflated")
   }
-  assert_true(bomb.out.length() <= 16384)
+  assert_true(bomb.message.out.length() <= 16384)
   // Compressed: a message that never reaches its sync-flush suffix stops
   // accumulating at the limit.
   let endless : &Inflater = ZlibStreamInflater(max_bytes=1000)
@@ -568,6 +568,27 @@ test "zstd-stream reports corrupt streams and invalid UTF-8" {
 }
 
 ///|
+test "a stream that ends is malformed" {
+  // A whole zstd frame: the stream that should never end ends after it.
+  let frame = hex("28b52ffd20136d00003868656c6c6f2c200100e28a11")
+  let zstd : &Inflater = ZstdStreamInflater()
+  try zstd.push(frame) catch {
+    Malformed(message~) => assert_eq(message, "zstd-stream ended")
+    error => fail("unexpected \{error}")
+  } noraise {
+    _ => fail("expected an error")
+  }
+  // A whole zlib stream, followed by a sync flush's suffix.
+  let zlib : &Inflater = ZlibStreamInflater()
+  try zlib.push(@zlib.compress(b"x") + b"\x00\x00\xff\xff") catch {
+    Malformed(message~) => assert_eq(message, "zlib-stream ended")
+    error => fail("unexpected \{error}")
+  } noraise {
+    _ => fail("expected an error")
+  }
+}
+
+///|
 test "zstd-stream refuses messages over its limit" {
   // Inflated: READY decodes to far more than its compressed size, so only
   // the output check can stop it; the buffer stops growing near the limit.
@@ -580,7 +601,7 @@ test "zstd-stream refuses messages over its limit" {
   } noraise {
     _ => fail("an oversized message inflated")
   }
-  assert_true(bomb.out.length() <= 32768)
+  assert_true(bomb.message.out.length() <= 32768)
   // Compressed: one WebSocket message is one Gateway message, so a message
   // over the limit is refused before it is decoded.
   let compressed : &Inflater = ZstdStreamInflater(max_bytes=1000)

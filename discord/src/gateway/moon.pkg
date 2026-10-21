@@ -10,7 +10,8 @@ import {
   "moonbitlang/core/json",
   "moonbitlang/core/random",
   "moonbitlang/core/encoding/utf8",
-  "moonbit-community/flate/zlib",
+  "gaato/codec_bytes",
+  "gaato/deflate/zlib",
   "gaato/zstd",
 }
 

@@ -1,6 +1,6 @@
 name = "gaato/discord"
 
-version = "0.12.1"
+version = "0.13.0"
 
 readme = "README.md"
 
@@ -22,11 +22,12 @@ preferred_target = "native"
 warnings = "-implicit_impl_as_method"
 
 import {
-  "gaato/http@0.4.1",
-  "gaato/http-async@0.4.2",
+  "gaato/http@0.5.0",
+  "gaato/http-async@0.5.0",
   "gaato/sdk-runtime@0.7.0",
   "moonbitlang/async@0.22.5",
   "hustcer/ed25519@0.6.1",
-  "moonbit-community/flate@0.9.0",
-  "gaato/zstd@0.1.0",
+  "gaato/codec_bytes@0.1.1",
+  "gaato/deflate@0.1.0",
+  "gaato/zstd@0.3.1",
 }
