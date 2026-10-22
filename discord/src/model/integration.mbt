@@ -52,6 +52,7 @@ pub(all) enum IntegrationExpireBehavior {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `IntegrationExpireBehavior`.
 pub fn IntegrationExpireBehavior::to_int(
   self : IntegrationExpireBehavior,
 ) -> Int32 {
@@ -63,6 +64,7 @@ pub fn IntegrationExpireBehavior::to_int(
 }
 
 ///|
+/// The `IntegrationExpireBehavior` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn IntegrationExpireBehavior::from_int(
   value : Int32,
 ) -> IntegrationExpireBehavior {
@@ -74,11 +76,13 @@ pub fn IntegrationExpireBehavior::from_int(
 }
 
 ///|
+/// Encodes the `IntegrationExpireBehavior` as its Discord integer value.
 pub impl ToJson for IntegrationExpireBehavior with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `IntegrationExpireBehavior` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for IntegrationExpireBehavior with fn from_json(
   json,
   path,

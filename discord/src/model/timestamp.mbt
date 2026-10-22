@@ -4,21 +4,25 @@
 pub(all) struct Timestamp(String) derive(Eq)
 
 ///|
+/// The ISO 8601 timestamp text exactly as received.
 pub fn Timestamp::to_string(self : Timestamp) -> String {
   self.0
 }
 
 ///|
+/// Debug output is the raw timestamp string.
 pub impl Debug for Timestamp with fn to_repr(self) {
   Repr(self.0)
 }
 
 ///|
+/// Encodes the timestamp as a JSON string.
 pub impl ToJson for Timestamp with fn to_json(self) {
   Json::string(self.0)
 }
 
 ///|
+/// Decodes the timestamp from a JSON string.
 pub impl @json.FromJson for Timestamp with fn from_json(json, path) {
   match json {
     String(s) => Timestamp(s)
@@ -137,6 +141,7 @@ pub fn Timestamp::unix_ms(self : Timestamp) -> Int64 raise TimestampError {
 pub(all) struct ImageHash(String) derive(Eq)
 
 ///|
+/// The image hash string.
 pub fn ImageHash::to_string(self : ImageHash) -> String {
   self.0
 }
@@ -148,16 +153,19 @@ pub fn ImageHash::is_animated(self : ImageHash) -> Bool {
 }
 
 ///|
+/// Debug output is the raw image hash string.
 pub impl Debug for ImageHash with fn to_repr(self) {
   Repr(self.0)
 }
 
 ///|
+/// Encodes the image hash as a JSON string.
 pub impl ToJson for ImageHash with fn to_json(self) {
   Json::string(self.0)
 }
 
 ///|
+/// Decodes the image hash from a JSON string.
 pub impl @json.FromJson for ImageHash with fn from_json(json, path) {
   match json {
     String(s) => ImageHash(s)

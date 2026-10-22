@@ -35,6 +35,7 @@ pub(all) enum EntryPointCommandHandlerType {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `EntryPointCommandHandlerType`.
 pub fn EntryPointCommandHandlerType::to_int(
   self : EntryPointCommandHandlerType,
 ) -> Int32 {
@@ -46,6 +47,7 @@ pub fn EntryPointCommandHandlerType::to_int(
 }
 
 ///|
+/// The `EntryPointCommandHandlerType` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn EntryPointCommandHandlerType::from_int(
   value : Int32,
 ) -> EntryPointCommandHandlerType {
@@ -57,11 +59,13 @@ pub fn EntryPointCommandHandlerType::from_int(
 }
 
 ///|
+/// Encodes the `EntryPointCommandHandlerType` as its Discord integer value.
 pub impl ToJson for EntryPointCommandHandlerType with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `EntryPointCommandHandlerType` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for EntryPointCommandHandlerType with fn from_json(
   json,
   path,
@@ -87,6 +91,7 @@ pub(all) enum ApplicationCommandType {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `ApplicationCommandType`.
 pub fn ApplicationCommandType::to_int(self : ApplicationCommandType) -> Int32 {
   match self {
     ChatInput => 1
@@ -98,6 +103,7 @@ pub fn ApplicationCommandType::to_int(self : ApplicationCommandType) -> Int32 {
 }
 
 ///|
+/// The `ApplicationCommandType` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn ApplicationCommandType::from_int(
   value : Int32,
 ) -> ApplicationCommandType {
@@ -111,11 +117,13 @@ pub fn ApplicationCommandType::from_int(
 }
 
 ///|
+/// Encodes the `ApplicationCommandType` as its Discord integer value.
 pub impl ToJson for ApplicationCommandType with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `ApplicationCommandType` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for ApplicationCommandType with fn from_json(json, path) {
   match json {
     Number(value, ..) => ApplicationCommandType::from_int(value.to_int())
@@ -174,6 +182,7 @@ pub(all) enum CommandOptionType {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `CommandOptionType`.
 pub fn CommandOptionType::to_int(self : CommandOptionType) -> Int32 {
   match self {
     SubCommand => 1
@@ -192,6 +201,7 @@ pub fn CommandOptionType::to_int(self : CommandOptionType) -> Int32 {
 }
 
 ///|
+/// The `CommandOptionType` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn CommandOptionType::from_int(value : Int32) -> CommandOptionType {
   match value {
     1 => SubCommand
@@ -210,11 +220,13 @@ pub fn CommandOptionType::from_int(value : Int32) -> CommandOptionType {
 }
 
 ///|
+/// Encodes the `CommandOptionType` as its Discord integer value.
 pub impl ToJson for CommandOptionType with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `CommandOptionType` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for CommandOptionType with fn from_json(json, path) {
   match json {
     Number(value, ..) => CommandOptionType::from_int(value.to_int())

@@ -114,6 +114,7 @@ fn decode_gateway_message_event(
 }
 
 ///|
+/// Decodes the message create event from its Discord JSON representation.
 pub impl @json.FromJson for MessageCreateEvent with fn from_json(json, path) {
   let fields = decode_gateway_message_event(json, path)
   {
@@ -126,6 +127,7 @@ pub impl @json.FromJson for MessageCreateEvent with fn from_json(json, path) {
 }
 
 ///|
+/// Decodes the message update event from its Discord JSON representation.
 pub impl @json.FromJson for MessageUpdateEvent with fn from_json(json, path) {
   let fields = decode_gateway_message_event(json, path)
   {

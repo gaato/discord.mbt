@@ -67,6 +67,7 @@ fn poll_media_request_json(media : PollMedia) -> Json {
 }
 
 ///|
+/// Encodes the poll create request as its Discord JSON representation.
 pub impl ToJson for PollCreateRequest with fn to_json(self) {
   @sdkjson.ObjBuilder::new()
   .field("question", poll_media_request_json(self.question))
@@ -91,6 +92,7 @@ pub(all) enum PollLayoutType {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `PollLayoutType`.
 pub fn PollLayoutType::to_int(self : PollLayoutType) -> Int32 {
   match self {
     Default => 1
@@ -99,6 +101,7 @@ pub fn PollLayoutType::to_int(self : PollLayoutType) -> Int32 {
 }
 
 ///|
+/// The `PollLayoutType` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn PollLayoutType::from_int(value : Int32) -> PollLayoutType {
   match value {
     1 => Default
@@ -107,11 +110,13 @@ pub fn PollLayoutType::from_int(value : Int32) -> PollLayoutType {
 }
 
 ///|
+/// Encodes the `PollLayoutType` as its Discord integer value.
 pub impl ToJson for PollLayoutType with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `PollLayoutType` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for PollLayoutType with fn from_json(json, path) {
   match json {
     Number(value, ..) => PollLayoutType::from_int(value.to_int())

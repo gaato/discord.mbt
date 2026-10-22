@@ -52,46 +52,55 @@ pub(all) struct UserPrimaryGuild {
 pub(all) struct UserFlags(UInt64) derive(Eq)
 
 ///|
+/// No flags set.
 pub fn UserFlags::none() -> UserFlags {
   UserFlags(0)
 }
 
 ///|
+/// Flags from a raw bit field; unknown bits are kept.
 pub fn UserFlags::from_bits(bits : UInt64) -> UserFlags {
   UserFlags(bits)
 }
 
 ///|
+/// The raw bit field.
 pub fn UserFlags::bits(self : UserFlags) -> UInt64 {
   self.0
 }
 
 ///|
+/// Whether every flag in `other` is set.
 pub fn UserFlags::contains(self : UserFlags, other : UserFlags) -> Bool {
   (self.0 & other.0) == other.0
 }
 
 ///|
+/// Combines flags: every flag set in either operand is set.
 pub impl BitOr for UserFlags with fn lor(a, b) {
   UserFlags(a.0 | b.0)
 }
 
 ///|
+/// Keeps the flags set in both operands.
 pub impl BitAnd for UserFlags with fn land(a, b) {
   UserFlags(a.0 & b.0)
 }
 
 ///|
+/// Debug output is the raw bit field.
 pub impl Debug for UserFlags with fn to_repr(self) {
   Repr(self.0)
 }
 
 ///|
+/// Encodes the flags as a JSON number.
 pub impl ToJson for UserFlags with fn to_json(self) {
   Json::number(self.0.to_double(), repr=self.0.to_string())
 }
 
 ///|
+/// Decodes the flags from a JSON number; unknown bits are kept.
 pub impl @json.FromJson for UserFlags with fn from_json(json, path) {
   match json {
     Number(_, repr=Some(r)) =>
@@ -109,116 +118,141 @@ pub impl @json.FromJson for UserFlags with fn from_json(json, path) {
 }
 
 ///|
+/// Discord employee.
 pub fn UserFlags::staff() -> UserFlags {
   UserFlags(1UL << 0)
 }
 
 ///|
+/// Owner of a partnered server.
 pub fn UserFlags::partner() -> UserFlags {
   UserFlags(1UL << 1)
 }
 
 ///|
+/// HypeSquad Events member.
 pub fn UserFlags::hypesquad() -> UserFlags {
   UserFlags(1UL << 2)
 }
 
 ///|
+/// Bug Hunter, level 1.
 pub fn UserFlags::bug_hunter_level_1() -> UserFlags {
   UserFlags(1UL << 3)
 }
 
 ///|
+/// Bit `1 << 4`, which Discord sets but does not document.
 pub fn UserFlags::mfa_sms() -> UserFlags {
   UserFlags(1UL << 4)
 }
 
 ///|
+/// Bit `1 << 5`, which Discord sets but does not document.
 pub fn UserFlags::premium_promo_dismissed() -> UserFlags {
   UserFlags(1UL << 5)
 }
 
 ///|
+/// Member of HypeSquad House Bravery.
 pub fn UserFlags::hype_squad_online_house_1() -> UserFlags {
   UserFlags(1UL << 6)
 }
 
 ///|
+/// Member of HypeSquad House Brilliance.
 pub fn UserFlags::hype_squad_online_house_2() -> UserFlags {
   UserFlags(1UL << 7)
 }
 
 ///|
+/// Member of HypeSquad House Balance.
 pub fn UserFlags::hype_squad_online_house_3() -> UserFlags {
   UserFlags(1UL << 8)
 }
 
 ///|
+/// Early Nitro supporter.
 pub fn UserFlags::premium_early_supporter() -> UserFlags {
   UserFlags(1UL << 9)
 }
 
 ///|
+/// Pseudo-user that represents a team rather than a person.
 pub fn UserFlags::team_pseudo_user() -> UserFlags {
   UserFlags(1UL << 10)
 }
 
 ///|
+/// Bit `1 << 13`, which Discord sets but does not document.
 pub fn UserFlags::has_unread_urgent_messages() -> UserFlags {
   UserFlags(1UL << 13)
 }
 
 ///|
+/// Bug Hunter, level 2.
 pub fn UserFlags::bug_hunter_level_2() -> UserFlags {
   UserFlags(1UL << 14)
 }
 
 ///|
+/// Verified bot.
 pub fn UserFlags::verified_bot() -> UserFlags {
   UserFlags(1UL << 16)
 }
 
 ///|
+/// Early verified bot developer.
 pub fn UserFlags::verified_developer() -> UserFlags {
   UserFlags(1UL << 17)
 }
 
 ///|
+/// Moderator Programs Alumni.
 pub fn UserFlags::certified_moderator() -> UserFlags {
   UserFlags(1UL << 18)
 }
 
 ///|
+/// Bot that receives interactions over HTTP only and has no gateway presence.
 pub fn UserFlags::bot_http_interactions() -> UserFlags {
   UserFlags(1UL << 19)
 }
 
 ///|
+/// Discord has flagged the user as a likely spammer. Discord does not
+/// document this bit (`1 << 20`).
 pub fn UserFlags::spammer() -> UserFlags {
   UserFlags(1UL << 20)
 }
 
 ///|
+/// Bit `1 << 21`, which Discord sets but does not document.
 pub fn UserFlags::disable_premium() -> UserFlags {
   UserFlags(1UL << 21)
 }
 
 ///|
+/// Active Developer badge holder.
 pub fn UserFlags::active_developer() -> UserFlags {
   UserFlags(1UL << 22)
 }
 
 ///|
+/// Discord has quarantined the account because of its recent activity.
+/// Discord does not document this bit (`1 << 44`).
 pub fn UserFlags::quarantined() -> UserFlags {
   UserFlags(1UL << 44)
 }
 
 ///|
+/// Bit `1 << 50`, which Discord sets but does not document.
 pub fn UserFlags::collaborator() -> UserFlags {
   UserFlags(1UL << 50)
 }
 
 ///|
+/// Bit `1 << 51`, which Discord sets but does not document.
 pub fn UserFlags::restricted_collaborator() -> UserFlags {
   UserFlags(1UL << 51)
 }
@@ -235,6 +269,7 @@ pub(all) enum PremiumType {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `PremiumType`.
 pub fn PremiumType::to_int(self : PremiumType) -> Int32 {
   match self {
     None => 0
@@ -246,6 +281,7 @@ pub fn PremiumType::to_int(self : PremiumType) -> Int32 {
 }
 
 ///|
+/// The `PremiumType` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn PremiumType::from_int(value : Int32) -> PremiumType {
   match value {
     0 => None
@@ -257,11 +293,13 @@ pub fn PremiumType::from_int(value : Int32) -> PremiumType {
 }
 
 ///|
+/// Encodes the `PremiumType` as its Discord integer value.
 pub impl ToJson for PremiumType with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `PremiumType` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for PremiumType with fn from_json(json, path) {
   match json {
     Number(n, ..) => PremiumType::from_int(n.to_int())

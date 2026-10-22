@@ -76,6 +76,7 @@ pub fn[T] flatten(field : Nullable[T]?) -> T? {
 }
 
 ///|
+/// Encodes `Null` as JSON `null` and `Value(v)` as `v`.
 pub impl[T : ToJson] ToJson for Nullable[T] with fn to_json(self) {
   match self {
     Null => Json::null()
@@ -84,6 +85,7 @@ pub impl[T : ToJson] ToJson for Nullable[T] with fn to_json(self) {
 }
 
 ///|
+/// Decodes JSON `null` as `Null` and any other value as `Value(v)`.
 pub impl[T : @json.FromJson] @json.FromJson for Nullable[T] with fn from_json(
   json,
   path,

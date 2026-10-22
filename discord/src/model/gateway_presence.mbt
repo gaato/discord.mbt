@@ -21,6 +21,7 @@ pub(all) enum PresenceStatus {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord string value of this `PresenceStatus`.
 pub fn PresenceStatus::to_string(self : PresenceStatus) -> String {
   match self {
     Idle => "idle"
@@ -33,6 +34,7 @@ pub fn PresenceStatus::to_string(self : PresenceStatus) -> String {
 }
 
 ///|
+/// The `PresenceStatus` for its Discord string value; unknown values become `Unknown(s)`.
 pub fn PresenceStatus::from_string(value : String) -> PresenceStatus {
   match value {
     "idle" => Idle
@@ -45,11 +47,13 @@ pub fn PresenceStatus::from_string(value : String) -> PresenceStatus {
 }
 
 ///|
+/// Encodes the `PresenceStatus` as its Discord string value.
 pub impl ToJson for PresenceStatus with fn to_json(self) {
   Json::string(self.to_string())
 }
 
 ///|
+/// Decodes the `PresenceStatus` from a JSON string; unknown values become `Unknown(s)`.
 pub impl @json.FromJson for PresenceStatus with fn from_json(json, path) {
   match json {
     String(value) => PresenceStatus::from_string(value.to_string())
@@ -80,6 +84,7 @@ pub(all) enum ActivityType {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `ActivityType`.
 pub fn ActivityType::to_int(self : ActivityType) -> Int32 {
   match self {
     Playing => 0
@@ -93,6 +98,7 @@ pub fn ActivityType::to_int(self : ActivityType) -> Int32 {
 }
 
 ///|
+/// The `ActivityType` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn ActivityType::from_int(value : Int32) -> ActivityType {
   match value {
     0 => Playing
@@ -106,11 +112,13 @@ pub fn ActivityType::from_int(value : Int32) -> ActivityType {
 }
 
 ///|
+/// Encodes the `ActivityType` as its Discord integer value.
 pub impl ToJson for ActivityType with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `ActivityType` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for ActivityType with fn from_json(json, path) {
   match json {
     Number(value, ..) => ActivityType::from_int(value.to_int())
@@ -164,6 +172,7 @@ struct ActivityWire {
 } derive(FromJson(fields(typ(rename="type"))))
 
 ///|
+/// Decodes the activity from its Discord JSON representation.
 pub impl @json.FromJson for Activity with fn from_json(json, path) {
   let wire : ActivityWire = @json.from_json(json, path~)
   {
@@ -202,6 +211,7 @@ struct ActivityTimestampsWire {
 } derive(FromJson)
 
 ///|
+/// Encodes the activity timestamps as its Discord JSON representation.
 pub impl ToJson for ActivityTimestamps with fn to_json(self) {
   let fields : Map[String, Json] = Map([])
   if self.start is Some(value) {
@@ -214,6 +224,7 @@ pub impl ToJson for ActivityTimestamps with fn to_json(self) {
 }
 
 ///|
+/// Decodes the activity timestamps from its Discord JSON representation.
 pub impl @json.FromJson for ActivityTimestamps with fn from_json(json, path) {
   let wire : ActivityTimestampsWire = @json.from_json(json, path~)
   {
@@ -273,11 +284,13 @@ pub(all) struct ActivityButton {
 pub(all) struct ActivityFlags(UInt64) derive(Eq)
 
 ///|
+/// Flags from a raw bit field; unknown bits are kept.
 pub fn ActivityFlags::from_bits(bits : UInt64) -> ActivityFlags {
   ActivityFlags(bits)
 }
 
 ///|
+/// The raw bit field.
 pub fn ActivityFlags::bits(self : ActivityFlags) -> UInt64 {
   self.0
 }
@@ -337,16 +350,19 @@ pub fn ActivityFlags::embedded() -> ActivityFlags {
 }
 
 ///|
+/// Debug output is the raw bit field.
 pub impl Debug for ActivityFlags with fn to_repr(self) {
   Repr(self.0)
 }
 
 ///|
+/// Encodes the flags as a JSON number.
 pub impl ToJson for ActivityFlags with fn to_json(self) {
   Json::number(self.0.to_double(), repr=self.0.to_string())
 }
 
 ///|
+/// Decodes the flags from a JSON number; unknown bits are kept.
 pub impl @json.FromJson for ActivityFlags with fn from_json(json, path) {
   match json {
     Number(_, repr=Some(repr)) =>
@@ -390,6 +406,7 @@ fn[T : @json.FromJson] lenient_presence_field(
 }
 
 ///|
+/// Decodes the presence user from its Discord JSON representation.
 pub impl @json.FromJson for PresenceUser with fn from_json(json, path) {
   guard json is Object(fields) else {
     raise JsonDecodeError((path, "expected presence user (object)"))
@@ -398,6 +415,7 @@ pub impl @json.FromJson for PresenceUser with fn from_json(json, path) {
 }
 
 ///|
+/// Decodes the client status from its Discord JSON representation.
 pub impl @json.FromJson for ClientStatus with fn from_json(json, path) {
   guard json is Object(fields) else {
     raise JsonDecodeError((path, "expected client status (object)"))
@@ -411,6 +429,7 @@ pub impl @json.FromJson for ClientStatus with fn from_json(json, path) {
 }
 
 ///|
+/// Decodes the presence update event from its Discord JSON representation.
 pub impl @json.FromJson for PresenceUpdateEvent with fn from_json(json, path) {
   guard json is Object(fields) else {
     raise JsonDecodeError((path, "expected presence update (object)"))

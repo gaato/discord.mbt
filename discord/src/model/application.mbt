@@ -77,6 +77,7 @@ pub(all) enum ApplicationEventWebhookStatus {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `ApplicationEventWebhookStatus`.
 pub fn ApplicationEventWebhookStatus::to_int(
   self : ApplicationEventWebhookStatus,
 ) -> Int32 {
@@ -89,6 +90,7 @@ pub fn ApplicationEventWebhookStatus::to_int(
 }
 
 ///|
+/// The `ApplicationEventWebhookStatus` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn ApplicationEventWebhookStatus::from_int(
   value : Int32,
 ) -> ApplicationEventWebhookStatus {
@@ -101,11 +103,13 @@ pub fn ApplicationEventWebhookStatus::from_int(
 }
 
 ///|
+/// Encodes the `ApplicationEventWebhookStatus` as its Discord integer value.
 pub impl ToJson for ApplicationEventWebhookStatus with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `ApplicationEventWebhookStatus` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for ApplicationEventWebhookStatus with fn from_json(
   json,
   path,
@@ -124,21 +128,25 @@ pub impl @json.FromJson for ApplicationEventWebhookStatus with fn from_json(
 pub(all) struct ApplicationFlags(UInt64) derive(Eq)
 
 ///|
+/// No flags set.
 pub fn ApplicationFlags::none() -> ApplicationFlags {
   ApplicationFlags(0)
 }
 
 ///|
+/// Flags from a raw bit field; unknown bits are kept.
 pub fn ApplicationFlags::from_bits(bits : UInt64) -> ApplicationFlags {
   ApplicationFlags(bits)
 }
 
 ///|
+/// The raw bit field.
 pub fn ApplicationFlags::bits(self : ApplicationFlags) -> UInt64 {
   self.0
 }
 
 ///|
+/// Whether every flag in `other` is set.
 pub fn ApplicationFlags::contains(
   self : ApplicationFlags,
   other : ApplicationFlags,
@@ -147,26 +155,31 @@ pub fn ApplicationFlags::contains(
 }
 
 ///|
+/// Combines flags: every flag set in either operand is set.
 pub impl BitOr for ApplicationFlags with fn lor(a, b) {
   ApplicationFlags(a.0 | b.0)
 }
 
 ///|
+/// Keeps the flags set in both operands.
 pub impl BitAnd for ApplicationFlags with fn land(a, b) {
   ApplicationFlags(a.0 & b.0)
 }
 
 ///|
+/// Debug output is the raw bit field.
 pub impl Debug for ApplicationFlags with fn to_repr(self) {
   Repr(self.0)
 }
 
 ///|
+/// Encodes the flags as a JSON number.
 pub impl ToJson for ApplicationFlags with fn to_json(self) {
   Json::number(self.0.to_double(), repr=self.0.to_string())
 }
 
 ///|
+/// Decodes the flags from a JSON number; unknown bits are kept.
 pub impl @json.FromJson for ApplicationFlags with fn from_json(json, path) {
   match json {
     String(repr) =>
@@ -193,81 +206,97 @@ pub impl @json.FromJson for ApplicationFlags with fn from_json(json, path) {
 }
 
 ///|
+/// Bit `1 << 1`, which Discord sets but does not document.
 pub fn ApplicationFlags::embedded_released() -> ApplicationFlags {
   ApplicationFlags(1UL << 1)
 }
 
 ///|
+/// Bit `1 << 2`, which Discord sets but does not document.
 pub fn ApplicationFlags::managed_emoji() -> ApplicationFlags {
   ApplicationFlags(1UL << 2)
 }
 
 ///|
+/// Bit `1 << 3`, which Discord sets but does not document.
 pub fn ApplicationFlags::embedded_iap() -> ApplicationFlags {
   ApplicationFlags(1UL << 3)
 }
 
 ///|
+/// Bit `1 << 4`, which Discord sets but does not document.
 pub fn ApplicationFlags::group_dm_create() -> ApplicationFlags {
   ApplicationFlags(1UL << 4)
 }
 
 ///|
+/// App uses the Auto Moderation API.
 pub fn ApplicationFlags::application_auto_moderation_rule_create_badge() -> ApplicationFlags {
   ApplicationFlags(1UL << 6)
 }
 
 ///|
+/// Bit `1 << 11`, which Discord sets but does not document.
 pub fn ApplicationFlags::rpc_has_connected() -> ApplicationFlags {
   ApplicationFlags(1UL << 11)
 }
 
 ///|
+/// Presence intent for bots in 100 or more servers.
 pub fn ApplicationFlags::gateway_presence() -> ApplicationFlags {
   ApplicationFlags(1UL << 12)
 }
 
 ///|
+/// Presence intent for bots in fewer than 100 servers.
 pub fn ApplicationFlags::gateway_presence_limited() -> ApplicationFlags {
   ApplicationFlags(1UL << 13)
 }
 
 ///|
+/// Server members intent for bots in 100 or more servers.
 pub fn ApplicationFlags::gateway_guild_members() -> ApplicationFlags {
   ApplicationFlags(1UL << 14)
 }
 
 ///|
+/// Server members intent for bots in fewer than 100 servers.
 pub fn ApplicationFlags::gateway_guild_members_limited() -> ApplicationFlags {
   ApplicationFlags(1UL << 15)
 }
 
 ///|
+/// Unusual growth of the app is preventing verification.
 pub fn ApplicationFlags::verification_pending_guild_limit() -> ApplicationFlags {
   ApplicationFlags(1UL << 16)
 }
 
 ///|
+/// App is embedded within the Discord client.
 pub fn ApplicationFlags::embedded() -> ApplicationFlags {
   ApplicationFlags(1UL << 17)
 }
 
 ///|
+/// Message content intent for bots in 100 or more servers.
 pub fn ApplicationFlags::gateway_message_content() -> ApplicationFlags {
   ApplicationFlags(1UL << 18)
 }
 
 ///|
+/// Message content intent for bots in fewer than 100 servers.
 pub fn ApplicationFlags::gateway_message_content_limited() -> ApplicationFlags {
   ApplicationFlags(1UL << 19)
 }
 
 ///|
+/// Bit `1 << 20`, which Discord sets but does not document.
 pub fn ApplicationFlags::embedded_first_party() -> ApplicationFlags {
   ApplicationFlags(1UL << 20)
 }
 
 ///|
+/// App has registered global application commands.
 pub fn ApplicationFlags::application_command_badge() -> ApplicationFlags {
   ApplicationFlags(1UL << 23)
 }

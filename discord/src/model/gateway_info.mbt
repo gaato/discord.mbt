@@ -25,6 +25,7 @@ struct SessionStartLimitWire {
 } derive(FromJson)
 
 ///|
+/// Decodes the session start limit from its Discord JSON representation.
 pub impl @json.FromJson for SessionStartLimit with fn from_json(json, path) {
   let wire : SessionStartLimitWire = @json.from_json(json, path~)
   {

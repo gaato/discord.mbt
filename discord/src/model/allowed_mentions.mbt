@@ -7,6 +7,7 @@ pub(all) enum AllowedMentionType {
 } derive(Eq, Debug)
 
 ///|
+/// Encodes the allowed mention type as its Discord JSON representation.
 pub impl ToJson for AllowedMentionType with fn to_json(self) {
   Json::string(
     match self {
@@ -99,6 +100,7 @@ pub fn AllowedMentions::safe_default() -> AllowedMentions {
 }
 
 ///|
+/// Encodes the allowed mentions as its Discord JSON representation.
 pub impl ToJson for AllowedMentions with fn to_json(self) {
   let fields : Map[String, Json] = Map([])
   if self.parse is Some(parse) {

@@ -25,6 +25,7 @@ pub(all) enum ChannelType {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `ChannelType`.
 pub fn ChannelType::to_int(self : ChannelType) -> Int32 {
   match self {
     GuildText => 0
@@ -45,6 +46,7 @@ pub fn ChannelType::to_int(self : ChannelType) -> Int32 {
 }
 
 ///|
+/// The `ChannelType` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn ChannelType::from_int(value : Int32) -> ChannelType {
   match value {
     0 => GuildText
@@ -65,11 +67,13 @@ pub fn ChannelType::from_int(value : Int32) -> ChannelType {
 }
 
 ///|
+/// Encodes the `ChannelType` as its Discord integer value.
 pub impl ToJson for ChannelType with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `ChannelType` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for ChannelType with fn from_json(json, path) {
   match json {
     Number(n, ..) => ChannelType::from_int(n.to_int())

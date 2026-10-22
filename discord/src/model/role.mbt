@@ -40,6 +40,7 @@ pub(all) struct RoleTags {
 } derive(Eq, Debug)
 
 ///|
+/// Encodes the role tags as its Discord JSON representation.
 pub impl ToJson for RoleTags with fn to_json(self) {
   let fields : Map[String, Json] = Map([])
   if self.bot_id is Some(value) {
@@ -64,6 +65,7 @@ pub impl ToJson for RoleTags with fn to_json(self) {
 }
 
 ///|
+/// Decodes the role tags from its Discord JSON representation.
 pub impl @json.FromJson for RoleTags with fn from_json(json, path) {
   guard json is Object(fields) else {
     raise JsonDecodeError((path, "expected role tags (object)"))
@@ -113,46 +115,55 @@ pub impl @json.FromJson for RoleTags with fn from_json(json, path) {
 pub(all) struct RoleFlags(UInt64) derive(Eq)
 
 ///|
+/// No flags set.
 pub fn RoleFlags::none() -> RoleFlags {
   RoleFlags(0)
 }
 
 ///|
+/// Flags from a raw bit field; unknown bits are kept.
 pub fn RoleFlags::from_bits(bits : UInt64) -> RoleFlags {
   RoleFlags(bits)
 }
 
 ///|
+/// The raw bit field.
 pub fn RoleFlags::bits(self : RoleFlags) -> UInt64 {
   self.0
 }
 
 ///|
+/// Whether every flag in `other` is set.
 pub fn RoleFlags::contains(self : RoleFlags, other : RoleFlags) -> Bool {
   (self.0 & other.0) == other.0
 }
 
 ///|
+/// Combines flags: every flag set in either operand is set.
 pub impl BitOr for RoleFlags with fn lor(a, b) {
   RoleFlags(a.0 | b.0)
 }
 
 ///|
+/// Keeps the flags set in both operands.
 pub impl BitAnd for RoleFlags with fn land(a, b) {
   RoleFlags(a.0 & b.0)
 }
 
 ///|
+/// Debug output is the raw bit field.
 pub impl Debug for RoleFlags with fn to_repr(self) {
   Repr(self.0)
 }
 
 ///|
+/// Encodes the flags as a JSON number.
 pub impl ToJson for RoleFlags with fn to_json(self) {
   Json::number(self.0.to_double(), repr=self.0.to_string())
 }
 
 ///|
+/// Decodes the flags from a JSON number; unknown bits are kept.
 pub impl @json.FromJson for RoleFlags with fn from_json(json, path) {
   match json {
     Number(_, repr=Some(r)) =>
@@ -170,6 +181,7 @@ pub impl @json.FromJson for RoleFlags with fn from_json(json, path) {
 }
 
 ///|
+/// The role can be selected by members in an onboarding prompt.
 pub fn RoleFlags::in_prompt() -> RoleFlags {
   RoleFlags(1UL << 0)
 }

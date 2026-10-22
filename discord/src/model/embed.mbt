@@ -99,26 +99,31 @@ pub fn Embed::Embed(
 pub(all) struct EmbedFlags(UInt64) derive(Eq)
 
 ///|
+/// Flags from a raw bit field; unknown bits are kept.
 pub fn EmbedFlags::from_bits(bits : UInt64) -> EmbedFlags {
   EmbedFlags(bits)
 }
 
 ///|
+/// The raw bit field.
 pub fn EmbedFlags::bits(self : EmbedFlags) -> UInt64 {
   self.0
 }
 
 ///|
+/// Debug output is the raw bit field.
 pub impl Debug for EmbedFlags with fn to_repr(self) {
   Repr(self.0)
 }
 
 ///|
+/// Encodes the flags as a JSON number.
 pub impl ToJson for EmbedFlags with fn to_json(self) {
   Json::number(self.0.to_double(), repr=self.0.to_string())
 }
 
 ///|
+/// Decodes the flags from a JSON number; unknown bits are kept.
 pub impl @json.FromJson for EmbedFlags with fn from_json(json, path) {
   match json {
     Number(_, repr=Some(repr)) =>
@@ -133,6 +138,7 @@ pub impl @json.FromJson for EmbedFlags with fn from_json(json, path) {
 }
 
 ///|
+/// The embed is a fallback for a reply to an activity card.
 pub fn EmbedFlags::is_content_inventory_entry() -> EmbedFlags {
   EmbedFlags(1UL << 5)
 }
@@ -155,6 +161,7 @@ pub(all) enum EmbedType {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord string value of this `EmbedType`.
 pub fn EmbedType::to_string(self : EmbedType) -> String {
   match self {
     Rich => "rich"
@@ -171,6 +178,7 @@ pub fn EmbedType::to_string(self : EmbedType) -> String {
 }
 
 ///|
+/// The `EmbedType` for its Discord string value; unknown values become `Unknown(s)`.
 pub fn EmbedType::from_string(value : String) -> EmbedType {
   match value {
     "rich" => Rich
@@ -187,11 +195,13 @@ pub fn EmbedType::from_string(value : String) -> EmbedType {
 }
 
 ///|
+/// Encodes the `EmbedType` as its Discord string value.
 pub impl ToJson for EmbedType with fn to_json(self) {
   Json::string(self.to_string())
 }
 
 ///|
+/// Decodes the `EmbedType` from a JSON string; unknown values become `Unknown(s)`.
 pub impl @json.FromJson for EmbedType with fn from_json(json, path) {
   match json {
     String(value) => EmbedType::from_string(value)

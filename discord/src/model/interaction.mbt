@@ -36,6 +36,7 @@ pub(all) enum InteractionType {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `InteractionType`.
 pub fn InteractionType::to_int(self : InteractionType) -> Int32 {
   match self {
     Ping => 1
@@ -48,6 +49,7 @@ pub fn InteractionType::to_int(self : InteractionType) -> Int32 {
 }
 
 ///|
+/// The `InteractionType` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn InteractionType::from_int(value : Int32) -> InteractionType {
   match value {
     1 => Ping
@@ -60,11 +62,13 @@ pub fn InteractionType::from_int(value : Int32) -> InteractionType {
 }
 
 ///|
+/// Encodes the `InteractionType` as its Discord integer value.
 pub impl ToJson for InteractionType with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `InteractionType` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for InteractionType with fn from_json(json, path) {
   match json {
     Number(value, ..) => InteractionType::from_int(value.to_int())
@@ -86,6 +90,7 @@ pub(all) enum InteractionData {
 } derive(Debug)
 
 ///|
+/// Encodes the interaction data as its Discord JSON representation.
 pub impl ToJson for InteractionData with fn to_json(self) {
   match self {
     Command(value) => ToJson::to_json(value)
@@ -163,6 +168,7 @@ fn decode_interaction_data(
 }
 
 ///|
+/// Encodes the interaction as its Discord JSON representation.
 pub impl ToJson for Interaction with fn to_json(self) {
   match ToJson::to_json(self.fields()) {
     Object(fields) => {
@@ -176,6 +182,7 @@ pub impl ToJson for Interaction with fn to_json(self) {
 }
 
 ///|
+/// Decodes the interaction from its Discord JSON representation.
 pub impl @json.FromJson for Interaction with fn from_json(json, path) {
   let base : InteractionFields = @json.from_json(json, path~)
   let data : InteractionData? = match json {
@@ -297,6 +304,7 @@ pub(all) enum InteractionResponseType {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `InteractionResponseType`.
 pub fn InteractionResponseType::to_int(self : InteractionResponseType) -> Int32 {
   match self {
     Pong => 1
@@ -313,6 +321,7 @@ pub fn InteractionResponseType::to_int(self : InteractionResponseType) -> Int32 
 }
 
 ///|
+/// The `InteractionResponseType` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn InteractionResponseType::from_int(
   value : Int32,
 ) -> InteractionResponseType {
@@ -331,11 +340,13 @@ pub fn InteractionResponseType::from_int(
 }
 
 ///|
+/// Encodes the `InteractionResponseType` as its Discord integer value.
 pub impl ToJson for InteractionResponseType with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `InteractionResponseType` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for InteractionResponseType with fn from_json(
   json,
   path,

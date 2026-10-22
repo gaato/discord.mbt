@@ -45,39 +45,47 @@ pub fn[M] Id::parse(s : StringView) -> Id[M] raise {
 }
 
 ///|
+/// IDs are equal when their snowflake values are equal.
 pub impl[M] Eq for Id[M] with fn equal(a, b) {
   a.0 == b.0
 }
 
 ///|
+/// Orders IDs by snowflake value, which is also creation order.
 pub impl[M] Compare for Id[M] with fn compare(a, b) {
   a.0.compare(b.0)
 }
 
 ///|
+/// Hashes the snowflake value.
 pub impl[M] Hash for Id[M] with fn hash_combine(self, hasher) {
   Hash::hash_combine(self.0, hasher)
 }
 
 ///|
+/// Makes `Id::to_string` available through `Show`.
 pub extend Id with Show::{to_string}
 
 ///|
+/// Displays the snowflake as a decimal string.
 pub impl[M] Show for Id[M] with fn output(self, logger) {
   logger.write_string(self.0.to_string())
 }
 
 ///|
+/// Debug output is the raw snowflake value.
 pub impl[M] Debug for Id[M] with fn to_repr(self) {
   Repr(self.0)
 }
 
 ///|
+/// Encodes the ID as a decimal string.
 pub impl[M] ToJson for Id[M] with fn to_json(self) {
   Json::string(self.0.to_string())
 }
 
 ///|
+/// Decodes an ID from a decimal string or an integer; integers keep full precision above 2^53.
 pub impl[M] @json.FromJson for Id[M] with fn from_json(json, path) {
   match json {
     String(s) =>

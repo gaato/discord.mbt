@@ -27,6 +27,7 @@ pub(all) enum TeamMembershipState {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `TeamMembershipState`.
 pub fn TeamMembershipState::to_int(self : TeamMembershipState) -> Int32 {
   match self {
     Invited => 1
@@ -36,6 +37,7 @@ pub fn TeamMembershipState::to_int(self : TeamMembershipState) -> Int32 {
 }
 
 ///|
+/// The `TeamMembershipState` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn TeamMembershipState::from_int(value : Int32) -> TeamMembershipState {
   match value {
     1 => Invited
@@ -45,11 +47,13 @@ pub fn TeamMembershipState::from_int(value : Int32) -> TeamMembershipState {
 }
 
 ///|
+/// Encodes the `TeamMembershipState` as its Discord integer value.
 pub impl ToJson for TeamMembershipState with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `TeamMembershipState` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for TeamMembershipState with fn from_json(json, path) {
   match json {
     Number(value, ..) => TeamMembershipState::from_int(value.to_int())

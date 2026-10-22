@@ -66,6 +66,7 @@ pub(all) enum GuildScheduledEventRecurrenceRuleFrequency {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `GuildScheduledEventRecurrenceRuleFrequency`.
 pub fn GuildScheduledEventRecurrenceRuleFrequency::to_int(
   self : GuildScheduledEventRecurrenceRuleFrequency,
 ) -> Int32 {
@@ -79,6 +80,7 @@ pub fn GuildScheduledEventRecurrenceRuleFrequency::to_int(
 }
 
 ///|
+/// The `GuildScheduledEventRecurrenceRuleFrequency` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn GuildScheduledEventRecurrenceRuleFrequency::from_int(
   value : Int32,
 ) -> GuildScheduledEventRecurrenceRuleFrequency {
@@ -92,6 +94,7 @@ pub fn GuildScheduledEventRecurrenceRuleFrequency::from_int(
 }
 
 ///|
+/// Encodes the `GuildScheduledEventRecurrenceRuleFrequency` as its Discord integer value.
 pub impl ToJson for GuildScheduledEventRecurrenceRuleFrequency with fn to_json(
   self,
 ) {
@@ -99,6 +102,7 @@ pub impl ToJson for GuildScheduledEventRecurrenceRuleFrequency with fn to_json(
 }
 
 ///|
+/// Decodes the `GuildScheduledEventRecurrenceRuleFrequency` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for GuildScheduledEventRecurrenceRuleFrequency with fn from_json(
   json,
   path,
@@ -127,6 +131,7 @@ pub(all) enum GuildScheduledEventRecurrenceRuleWeekday {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `GuildScheduledEventRecurrenceRuleWeekday`.
 pub fn GuildScheduledEventRecurrenceRuleWeekday::to_int(
   self : GuildScheduledEventRecurrenceRuleWeekday,
 ) -> Int32 {
@@ -143,6 +148,7 @@ pub fn GuildScheduledEventRecurrenceRuleWeekday::to_int(
 }
 
 ///|
+/// The `GuildScheduledEventRecurrenceRuleWeekday` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn GuildScheduledEventRecurrenceRuleWeekday::from_int(
   value : Int32,
 ) -> GuildScheduledEventRecurrenceRuleWeekday {
@@ -159,6 +165,7 @@ pub fn GuildScheduledEventRecurrenceRuleWeekday::from_int(
 }
 
 ///|
+/// Encodes the `GuildScheduledEventRecurrenceRuleWeekday` as its Discord integer value.
 pub impl ToJson for GuildScheduledEventRecurrenceRuleWeekday with fn to_json(
   self,
 ) {
@@ -166,6 +173,7 @@ pub impl ToJson for GuildScheduledEventRecurrenceRuleWeekday with fn to_json(
 }
 
 ///|
+/// Decodes the `GuildScheduledEventRecurrenceRuleWeekday` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for GuildScheduledEventRecurrenceRuleWeekday with fn from_json(
   json,
   path,
@@ -199,6 +207,7 @@ pub(all) enum GuildScheduledEventRecurrenceRuleMonth {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `GuildScheduledEventRecurrenceRuleMonth`.
 pub fn GuildScheduledEventRecurrenceRuleMonth::to_int(
   self : GuildScheduledEventRecurrenceRuleMonth,
 ) -> Int32 {
@@ -220,6 +229,7 @@ pub fn GuildScheduledEventRecurrenceRuleMonth::to_int(
 }
 
 ///|
+/// The `GuildScheduledEventRecurrenceRuleMonth` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn GuildScheduledEventRecurrenceRuleMonth::from_int(
   value : Int32,
 ) -> GuildScheduledEventRecurrenceRuleMonth {
@@ -241,11 +251,13 @@ pub fn GuildScheduledEventRecurrenceRuleMonth::from_int(
 }
 
 ///|
+/// Encodes the `GuildScheduledEventRecurrenceRuleMonth` as its Discord integer value.
 pub impl ToJson for GuildScheduledEventRecurrenceRuleMonth with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `GuildScheduledEventRecurrenceRuleMonth` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for GuildScheduledEventRecurrenceRuleMonth with fn from_json(
   json,
   path,
@@ -269,6 +281,7 @@ pub(all) enum GuildScheduledEventPrivacyLevel {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `GuildScheduledEventPrivacyLevel`.
 pub fn GuildScheduledEventPrivacyLevel::to_int(
   self : GuildScheduledEventPrivacyLevel,
 ) -> Int32 {
@@ -279,6 +292,7 @@ pub fn GuildScheduledEventPrivacyLevel::to_int(
 }
 
 ///|
+/// The `GuildScheduledEventPrivacyLevel` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn GuildScheduledEventPrivacyLevel::from_int(
   value : Int32,
 ) -> GuildScheduledEventPrivacyLevel {
@@ -289,11 +303,13 @@ pub fn GuildScheduledEventPrivacyLevel::from_int(
 }
 
 ///|
+/// Encodes the `GuildScheduledEventPrivacyLevel` as its Discord integer value.
 pub impl ToJson for GuildScheduledEventPrivacyLevel with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `GuildScheduledEventPrivacyLevel` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for GuildScheduledEventPrivacyLevel with fn from_json(
   json,
   path,
@@ -322,6 +338,7 @@ pub(all) enum GuildScheduledEventStatus {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `GuildScheduledEventStatus`.
 pub fn GuildScheduledEventStatus::to_int(
   self : GuildScheduledEventStatus,
 ) -> Int32 {
@@ -335,6 +352,7 @@ pub fn GuildScheduledEventStatus::to_int(
 }
 
 ///|
+/// The `GuildScheduledEventStatus` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn GuildScheduledEventStatus::from_int(
   value : Int32,
 ) -> GuildScheduledEventStatus {
@@ -348,11 +366,13 @@ pub fn GuildScheduledEventStatus::from_int(
 }
 
 ///|
+/// Encodes the `GuildScheduledEventStatus` as its Discord integer value.
 pub impl ToJson for GuildScheduledEventStatus with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `GuildScheduledEventStatus` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for GuildScheduledEventStatus with fn from_json(
   json,
   path,
@@ -377,6 +397,7 @@ pub(all) enum GuildScheduledEventEntityType {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `GuildScheduledEventEntityType`.
 pub fn GuildScheduledEventEntityType::to_int(
   self : GuildScheduledEventEntityType,
 ) -> Int32 {
@@ -389,6 +410,7 @@ pub fn GuildScheduledEventEntityType::to_int(
 }
 
 ///|
+/// The `GuildScheduledEventEntityType` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn GuildScheduledEventEntityType::from_int(
   value : Int32,
 ) -> GuildScheduledEventEntityType {
@@ -401,11 +423,13 @@ pub fn GuildScheduledEventEntityType::from_int(
 }
 
 ///|
+/// Encodes the `GuildScheduledEventEntityType` as its Discord integer value.
 pub impl ToJson for GuildScheduledEventEntityType with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `GuildScheduledEventEntityType` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for GuildScheduledEventEntityType with fn from_json(
   json,
   path,

@@ -12,21 +12,25 @@
 pub(all) struct GatewayCapabilities(UInt32) derive(Eq)
 
 ///|
+/// No flags set.
 pub fn GatewayCapabilities::none() -> GatewayCapabilities {
   GatewayCapabilities(0)
 }
 
 ///|
+/// Flags from a raw bit field; unknown bits are kept.
 pub fn GatewayCapabilities::from_bits(bits : UInt32) -> GatewayCapabilities {
   GatewayCapabilities(bits)
 }
 
 ///|
+/// The raw bit field.
 pub fn GatewayCapabilities::bits(self : GatewayCapabilities) -> UInt32 {
   self.0
 }
 
 ///|
+/// Whether every flag in `other` is set.
 pub fn GatewayCapabilities::contains(
   self : GatewayCapabilities,
   other : GatewayCapabilities,
@@ -35,21 +39,25 @@ pub fn GatewayCapabilities::contains(
 }
 
 ///|
+/// Combines flags: every flag set in either operand is set.
 pub impl BitOr for GatewayCapabilities with fn lor(a, b) {
   GatewayCapabilities(a.0 | b.0)
 }
 
 ///|
+/// Keeps the flags set in both operands.
 pub impl BitAnd for GatewayCapabilities with fn land(a, b) {
   GatewayCapabilities(a.0 & b.0)
 }
 
 ///|
+/// Debug output is the raw bit field.
 pub impl Debug for GatewayCapabilities with fn to_repr(self) {
   Repr(self.0)
 }
 
 ///|
+/// Encodes the flags as a JSON number.
 pub impl ToJson for GatewayCapabilities with fn to_json(self) {
   Json::number(self.0.to_uint64().to_double())
 }

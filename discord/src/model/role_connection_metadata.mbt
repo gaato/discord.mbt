@@ -29,6 +29,7 @@ pub(all) enum ApplicationRoleConnectionMetadataType {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `ApplicationRoleConnectionMetadataType`.
 pub fn ApplicationRoleConnectionMetadataType::to_int(
   self : ApplicationRoleConnectionMetadataType,
 ) -> Int32 {
@@ -46,6 +47,7 @@ pub fn ApplicationRoleConnectionMetadataType::to_int(
 }
 
 ///|
+/// The `ApplicationRoleConnectionMetadataType` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn ApplicationRoleConnectionMetadataType::from_int(
   value : Int32,
 ) -> ApplicationRoleConnectionMetadataType {
@@ -63,11 +65,13 @@ pub fn ApplicationRoleConnectionMetadataType::from_int(
 }
 
 ///|
+/// Encodes the `ApplicationRoleConnectionMetadataType` as its Discord integer value.
 pub impl ToJson for ApplicationRoleConnectionMetadataType with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `ApplicationRoleConnectionMetadataType` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for ApplicationRoleConnectionMetadataType with fn from_json(
   json,
   path,

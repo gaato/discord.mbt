@@ -75,6 +75,7 @@ fn application_identity_dynamic_field_payload(
 }
 
 ///|
+/// Encodes the application identity dynamic field as its Discord JSON representation.
 pub impl ToJson for ApplicationIdentityDynamicField with fn to_json(self) {
   match self {
     StringField(value) =>
@@ -88,6 +89,7 @@ pub impl ToJson for ApplicationIdentityDynamicField with fn to_json(self) {
 }
 
 ///|
+/// Decodes the application identity dynamic field from its Discord JSON representation.
 pub impl @json.FromJson for ApplicationIdentityDynamicField with fn from_json(
   json,
   path,

@@ -131,6 +131,7 @@ pub(all) enum BaseTheme {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `BaseTheme`.
 pub fn BaseTheme::to_int(self : BaseTheme) -> Int32 {
   match self {
     Unset => 0
@@ -157,6 +158,7 @@ pub(all) struct ChannelPins {
 } derive(ToJson, FromJson, Debug)
 
 ///|
+/// The `BaseTheme` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn BaseTheme::from_int(value : Int32) -> BaseTheme {
   match value {
     0 => Unset
@@ -169,11 +171,13 @@ pub fn BaseTheme::from_int(value : Int32) -> BaseTheme {
 }
 
 ///|
+/// Encodes the `BaseTheme` as its Discord integer value.
 pub impl ToJson for BaseTheme with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `BaseTheme` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for BaseTheme with fn from_json(json, path) {
   match json {
     Number(value, ..) => BaseTheme::from_int(value.to_int())
@@ -189,6 +193,7 @@ pub(all) enum Nonce {
 } derive(Eq, Debug)
 
 ///|
+/// Encodes the nonce as a JSON string or integer, matching its variant.
 pub impl ToJson for Nonce with fn to_json(self) {
   match self {
     Str(value) => Json::string(value)
@@ -197,6 +202,7 @@ pub impl ToJson for Nonce with fn to_json(self) {
 }
 
 ///|
+/// Decodes a nonce from a JSON string or integer.
 pub impl @json.FromJson for Nonce with fn from_json(json, path) {
   match json {
     String(value) => Str(value)
@@ -259,6 +265,7 @@ pub(all) enum ReactionType {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `ReactionType`.
 pub fn ReactionType::to_int(self : ReactionType) -> Int32 {
   match self {
     Normal => 0
@@ -268,6 +275,7 @@ pub fn ReactionType::to_int(self : ReactionType) -> Int32 {
 }
 
 ///|
+/// The `ReactionType` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn ReactionType::from_int(value : Int32) -> ReactionType {
   match value {
     0 => Normal
@@ -277,11 +285,13 @@ pub fn ReactionType::from_int(value : Int32) -> ReactionType {
 }
 
 ///|
+/// Encodes the `ReactionType` as its Discord integer value.
 pub impl ToJson for ReactionType with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `ReactionType` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for ReactionType with fn from_json(json, path) {
   match json {
     Number(value, ..) => ReactionType::from_int(value.to_int())
@@ -376,6 +386,7 @@ pub(all) enum MessageType {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `MessageType`.
 pub fn MessageType::to_int(self : MessageType) -> Int32 {
   match self {
     Default => 0
@@ -421,6 +432,7 @@ pub fn MessageType::to_int(self : MessageType) -> Int32 {
 }
 
 ///|
+/// The `MessageType` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn MessageType::from_int(value : Int32) -> MessageType {
   match value {
     0 => Default
@@ -466,11 +478,13 @@ pub fn MessageType::from_int(value : Int32) -> MessageType {
 }
 
 ///|
+/// Encodes the `MessageType` as its Discord integer value.
 pub impl ToJson for MessageType with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `MessageType` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for MessageType with fn from_json(json, path) {
   match json {
     Number(value, ..) => MessageType::from_int(value.to_int())
@@ -491,6 +505,7 @@ pub(all) enum MessageActivityType {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `MessageActivityType`.
 pub fn MessageActivityType::to_int(self : MessageActivityType) -> Int32 {
   match self {
     Join => 1
@@ -503,6 +518,7 @@ pub fn MessageActivityType::to_int(self : MessageActivityType) -> Int32 {
 }
 
 ///|
+/// The `MessageActivityType` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn MessageActivityType::from_int(value : Int32) -> MessageActivityType {
   match value {
     1 => Join
@@ -515,11 +531,13 @@ pub fn MessageActivityType::from_int(value : Int32) -> MessageActivityType {
 }
 
 ///|
+/// Encodes the `MessageActivityType` as its Discord integer value.
 pub impl ToJson for MessageActivityType with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `MessageActivityType` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for MessageActivityType with fn from_json(json, path) {
   match json {
     Number(value, ..) => MessageActivityType::from_int(value.to_int())
@@ -537,6 +555,7 @@ pub(all) enum MessageReferenceType {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `MessageReferenceType`.
 pub fn MessageReferenceType::to_int(self : MessageReferenceType) -> Int32 {
   match self {
     Default => 0
@@ -546,6 +565,7 @@ pub fn MessageReferenceType::to_int(self : MessageReferenceType) -> Int32 {
 }
 
 ///|
+/// The `MessageReferenceType` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn MessageReferenceType::from_int(value : Int32) -> MessageReferenceType {
   match value {
     0 => Default
@@ -555,11 +575,13 @@ pub fn MessageReferenceType::from_int(value : Int32) -> MessageReferenceType {
 }
 
 ///|
+/// Encodes the `MessageReferenceType` as its Discord integer value.
 pub impl ToJson for MessageReferenceType with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `MessageReferenceType` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for MessageReferenceType with fn from_json(json, path) {
   match json {
     Number(value, ..) => MessageReferenceType::from_int(value.to_int())
@@ -572,21 +594,25 @@ pub impl @json.FromJson for MessageReferenceType with fn from_json(json, path) {
 pub(all) struct MessageFlags(UInt64) derive(Eq)
 
 ///|
+/// No flags set.
 pub fn MessageFlags::none() -> MessageFlags {
   MessageFlags(0)
 }
 
 ///|
+/// Flags from a raw bit field; unknown bits are kept.
 pub fn MessageFlags::from_bits(bits : UInt64) -> MessageFlags {
   MessageFlags(bits)
 }
 
 ///|
+/// The raw bit field.
 pub fn MessageFlags::bits(self : MessageFlags) -> UInt64 {
   self.0
 }
 
 ///|
+/// Whether every flag in `other` is set.
 pub fn MessageFlags::contains(
   self : MessageFlags,
   other : MessageFlags,
@@ -595,26 +621,31 @@ pub fn MessageFlags::contains(
 }
 
 ///|
+/// Combines flags: every flag set in either operand is set.
 pub impl BitOr for MessageFlags with fn lor(a, b) {
   MessageFlags(a.0 | b.0)
 }
 
 ///|
+/// Keeps the flags set in both operands.
 pub impl BitAnd for MessageFlags with fn land(a, b) {
   MessageFlags(a.0 & b.0)
 }
 
 ///|
+/// Debug output is the raw bit field.
 pub impl Debug for MessageFlags with fn to_repr(self) {
   Repr(self.0)
 }
 
 ///|
+/// Encodes the flags as a JSON number.
 pub impl ToJson for MessageFlags with fn to_json(self) {
   Json::number(self.0.to_double(), repr=self.0.to_string())
 }
 
 ///|
+/// Decodes the flags from a JSON number; unknown bits are kept.
 pub impl @json.FromJson for MessageFlags with fn from_json(json, path) {
   match json {
     Number(_, repr=Some(repr)) =>
@@ -632,71 +663,85 @@ pub impl @json.FromJson for MessageFlags with fn from_json(json, path) {
 }
 
 ///|
+/// The message has been published to subscribed channels.
 pub fn MessageFlags::crossposted() -> MessageFlags {
   MessageFlags(1UL << 0)
 }
 
 ///|
+/// The message originated from a followed channel's announcement.
 pub fn MessageFlags::is_crosspost() -> MessageFlags {
   MessageFlags(1UL << 1)
 }
 
 ///|
+/// Do not include any embeds when serializing the message.
 pub fn MessageFlags::suppress_embeds() -> MessageFlags {
   MessageFlags(1UL << 2)
 }
 
 ///|
+/// The source message of this crosspost has been deleted.
 pub fn MessageFlags::source_message_deleted() -> MessageFlags {
   MessageFlags(1UL << 3)
 }
 
 ///|
+/// The message came from Discord's urgent message system.
 pub fn MessageFlags::urgent() -> MessageFlags {
   MessageFlags(1UL << 4)
 }
 
 ///|
+/// The message has an associated thread with the same ID as the message.
 pub fn MessageFlags::has_thread() -> MessageFlags {
   MessageFlags(1UL << 5)
 }
 
 ///|
+/// The message is only visible to the user who invoked the interaction.
 pub fn MessageFlags::ephemeral() -> MessageFlags {
   MessageFlags(1UL << 6)
 }
 
 ///|
+/// The message is an interaction response that is still deferred ("thinking").
 pub fn MessageFlags::loading() -> MessageFlags {
   MessageFlags(1UL << 7)
 }
 
 ///|
+/// Some roles mentioned in the message could not be added to the thread.
 pub fn MessageFlags::failed_to_mention_some_roles_in_thread() -> MessageFlags {
   MessageFlags(1UL << 8)
 }
 
 ///|
+/// Bit `1 << 10`, which Discord sets but does not document.
 pub fn MessageFlags::should_show_link_not_discord_warning() -> MessageFlags {
   MessageFlags(1UL << 10)
 }
 
 ///|
+/// The message does not trigger push or desktop notifications.
 pub fn MessageFlags::suppress_notifications() -> MessageFlags {
   MessageFlags(1UL << 12)
 }
 
 ///|
+/// The message is a voice message.
 pub fn MessageFlags::is_voice_message() -> MessageFlags {
   MessageFlags(1UL << 13)
 }
 
 ///|
+/// The message carries a snapshot of a forwarded message.
 pub fn MessageFlags::has_snapshot() -> MessageFlags {
   MessageFlags(1UL << 14)
 }
 
 ///|
+/// The message uses the components V2 layout instead of content and embeds.
 pub fn MessageFlags::is_components_v2() -> MessageFlags {
   MessageFlags(1UL << 15)
 }

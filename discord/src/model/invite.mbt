@@ -32,26 +32,31 @@ pub(all) struct Invite {
 pub(all) struct InviteFlags(UInt64) derive(Eq)
 
 ///|
+/// Flags from a raw bit field; unknown bits are kept.
 pub fn InviteFlags::from_bits(bits : UInt64) -> InviteFlags {
   InviteFlags(bits)
 }
 
 ///|
+/// The raw bit field.
 pub fn InviteFlags::bits(self : InviteFlags) -> UInt64 {
   self.0
 }
 
 ///|
+/// Debug output is the raw bit field.
 pub impl Debug for InviteFlags with fn to_repr(self) {
   Repr(self.0)
 }
 
 ///|
+/// Encodes the flags as a JSON number.
 pub impl ToJson for InviteFlags with fn to_json(self) {
   Json::number(self.0.to_double(), repr=self.0.to_string())
 }
 
 ///|
+/// Decodes the flags from a JSON number; unknown bits are kept.
 pub impl @json.FromJson for InviteFlags with fn from_json(json, path) {
   match json {
     Number(_, repr=Some(repr)) =>
@@ -66,6 +71,7 @@ pub impl @json.FromJson for InviteFlags with fn from_json(json, path) {
 }
 
 ///|
+/// The invite grants guest access, with temporary membership for a voice channel.
 pub fn InviteFlags::is_guest_invite() -> InviteFlags {
   InviteFlags(1UL << 0)
 }
@@ -81,6 +87,7 @@ pub(all) enum InviteType {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `InviteType`.
 pub fn InviteType::to_int(self : InviteType) -> Int32 {
   match self {
     Guild => 0
@@ -91,6 +98,7 @@ pub fn InviteType::to_int(self : InviteType) -> Int32 {
 }
 
 ///|
+/// The `InviteType` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn InviteType::from_int(value : Int32) -> InviteType {
   match value {
     0 => Guild
@@ -101,11 +109,13 @@ pub fn InviteType::from_int(value : Int32) -> InviteType {
 }
 
 ///|
+/// Encodes the `InviteType` as its Discord integer value.
 pub impl ToJson for InviteType with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `InviteType` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for InviteType with fn from_json(json, path) {
   match json {
     Number(value, ..) => InviteType::from_int(value.to_int())
@@ -126,6 +136,7 @@ pub(all) enum InviteTargetType {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `InviteTargetType`.
 pub fn InviteTargetType::to_int(self : InviteTargetType) -> Int32 {
   match self {
     Stream => 1
@@ -135,6 +146,7 @@ pub fn InviteTargetType::to_int(self : InviteTargetType) -> Int32 {
 }
 
 ///|
+/// The `InviteTargetType` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn InviteTargetType::from_int(value : Int32) -> InviteTargetType {
   match value {
     1 => Stream
@@ -144,11 +156,13 @@ pub fn InviteTargetType::from_int(value : Int32) -> InviteTargetType {
 }
 
 ///|
+/// Encodes the `InviteTargetType` as its Discord integer value.
 pub impl ToJson for InviteTargetType with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `InviteTargetType` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for InviteTargetType with fn from_json(json, path) {
   match json {
     Number(value, ..) => InviteTargetType::from_int(value.to_int())
@@ -184,6 +198,7 @@ pub(all) enum TargetUsersJobStatusCode {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `TargetUsersJobStatusCode`.
 pub fn TargetUsersJobStatusCode::to_int(
   self : TargetUsersJobStatusCode,
 ) -> Int32 {
@@ -197,6 +212,7 @@ pub fn TargetUsersJobStatusCode::to_int(
 }
 
 ///|
+/// The `TargetUsersJobStatusCode` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn TargetUsersJobStatusCode::from_int(
   value : Int32,
 ) -> TargetUsersJobStatusCode {
@@ -210,11 +226,13 @@ pub fn TargetUsersJobStatusCode::from_int(
 }
 
 ///|
+/// Encodes the `TargetUsersJobStatusCode` as its Discord integer value.
 pub impl ToJson for TargetUsersJobStatusCode with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `TargetUsersJobStatusCode` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for TargetUsersJobStatusCode with fn from_json(
   json,
   path,

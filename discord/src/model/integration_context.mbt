@@ -8,6 +8,7 @@ pub(all) enum ApplicationIntegrationType {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `ApplicationIntegrationType`.
 pub fn ApplicationIntegrationType::to_int(
   self : ApplicationIntegrationType,
 ) -> Int32 {
@@ -19,6 +20,7 @@ pub fn ApplicationIntegrationType::to_int(
 }
 
 ///|
+/// The `ApplicationIntegrationType` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn ApplicationIntegrationType::from_int(
   value : Int32,
 ) -> ApplicationIntegrationType {
@@ -30,11 +32,13 @@ pub fn ApplicationIntegrationType::from_int(
 }
 
 ///|
+/// Encodes the `ApplicationIntegrationType` as its Discord integer value.
 pub impl ToJson for ApplicationIntegrationType with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `ApplicationIntegrationType` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for ApplicationIntegrationType with fn from_json(
   json,
   path,
@@ -59,6 +63,7 @@ pub(all) enum InteractionContextType {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `InteractionContextType`.
 pub fn InteractionContextType::to_int(self : InteractionContextType) -> Int32 {
   match self {
     Guild => 0
@@ -69,6 +74,7 @@ pub fn InteractionContextType::to_int(self : InteractionContextType) -> Int32 {
 }
 
 ///|
+/// The `InteractionContextType` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn InteractionContextType::from_int(
   value : Int32,
 ) -> InteractionContextType {
@@ -81,11 +87,13 @@ pub fn InteractionContextType::from_int(
 }
 
 ///|
+/// Encodes the `InteractionContextType` as its Discord integer value.
 pub impl ToJson for InteractionContextType with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `InteractionContextType` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for InteractionContextType with fn from_json(json, path) {
   match json {
     Number(value, ..) => InteractionContextType::from_int(value.to_int())

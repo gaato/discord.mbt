@@ -18,6 +18,7 @@ pub(all) struct GuildMemberAddEvent {
 } derive(Debug)
 
 ///|
+/// Decodes the guild member add event from its Discord JSON representation.
 pub impl @json.FromJson for GuildMemberAddEvent with fn from_json(json, path) {
   guard json is Object(fields) else {
     raise JsonDecodeError((path, "expected guild member add event (object)"))
@@ -138,6 +139,7 @@ pub(all) struct IntegrationEvent {
 } derive(Debug)
 
 ///|
+/// Decodes the integration event from its Discord JSON representation.
 pub impl @json.FromJson for IntegrationEvent with fn from_json(json, path) {
   guard json is Object(fields) else {
     raise JsonDecodeError((path, "expected integration event (object)"))
@@ -279,6 +281,7 @@ struct TypingStartEventWire {
 } derive(FromJson(fields(guild_member(rename="member"))))
 
 ///|
+/// Decodes the typing start event from its Discord JSON representation.
 pub impl @json.FromJson for TypingStartEvent with fn from_json(json, path) {
   let wire : TypingStartEventWire = @json.from_json(json, path~)
   {
@@ -321,6 +324,7 @@ pub(all) struct ThreadCreateEvent {
 } derive(Debug)
 
 ///|
+/// Decodes the thread create event from its Discord JSON representation.
 pub impl @json.FromJson for ThreadCreateEvent with fn from_json(json, path) {
   guard json is Object(fields) else {
     raise JsonDecodeError((path, "expected thread create event (object)"))
@@ -362,6 +366,7 @@ pub(all) struct ThreadMemberUpdateEvent {
 } derive(Debug)
 
 ///|
+/// Decodes the thread member update event from its Discord JSON representation.
 pub impl @json.FromJson for ThreadMemberUpdateEvent with fn from_json(
   json,
   path,
@@ -459,6 +464,7 @@ pub(all) struct GuildAuditLogEntryCreateEvent {
 } derive(Debug)
 
 ///|
+/// Decodes the guild audit log entry create event from its Discord JSON representation.
 pub impl @json.FromJson for GuildAuditLogEntryCreateEvent with fn from_json(
   json,
   path,

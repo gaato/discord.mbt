@@ -48,6 +48,7 @@ pub(all) enum OnboardingPromptType {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `OnboardingPromptType`.
 pub fn OnboardingPromptType::to_int(self : OnboardingPromptType) -> Int32 {
   match self {
     MultipleChoice => 0
@@ -57,6 +58,7 @@ pub fn OnboardingPromptType::to_int(self : OnboardingPromptType) -> Int32 {
 }
 
 ///|
+/// The `OnboardingPromptType` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn OnboardingPromptType::from_int(value : Int32) -> OnboardingPromptType {
   match value {
     0 => MultipleChoice
@@ -66,11 +68,13 @@ pub fn OnboardingPromptType::from_int(value : Int32) -> OnboardingPromptType {
 }
 
 ///|
+/// Encodes the `OnboardingPromptType` as its Discord integer value.
 pub impl ToJson for OnboardingPromptType with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `OnboardingPromptType` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for OnboardingPromptType with fn from_json(json, path) {
   match json {
     Number(value, ..) => OnboardingPromptType::from_int(value.to_int())
@@ -89,6 +93,7 @@ pub(all) enum OnboardingMode {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `OnboardingMode`.
 pub fn OnboardingMode::to_int(self : OnboardingMode) -> Int32 {
   match self {
     Default => 0
@@ -98,6 +103,7 @@ pub fn OnboardingMode::to_int(self : OnboardingMode) -> Int32 {
 }
 
 ///|
+/// The `OnboardingMode` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn OnboardingMode::from_int(value : Int32) -> OnboardingMode {
   match value {
     0 => Default
@@ -107,11 +113,13 @@ pub fn OnboardingMode::from_int(value : Int32) -> OnboardingMode {
 }
 
 ///|
+/// Encodes the `OnboardingMode` as its Discord integer value.
 pub impl ToJson for OnboardingMode with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `OnboardingMode` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for OnboardingMode with fn from_json(json, path) {
   match json {
     Number(value, ..) => OnboardingMode::from_int(value.to_int())

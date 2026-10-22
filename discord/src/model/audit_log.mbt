@@ -108,6 +108,7 @@ pub(all) enum AuditLogEvent {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `AuditLogEvent`.
 pub fn AuditLogEvent::to_int(self : AuditLogEvent) -> Int32 {
   match self {
     GuildUpdate => 1
@@ -184,6 +185,7 @@ pub fn AuditLogEvent::to_int(self : AuditLogEvent) -> Int32 {
 }
 
 ///|
+/// The `AuditLogEvent` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn AuditLogEvent::from_int(value : Int32) -> AuditLogEvent {
   match value {
     1 => GuildUpdate
@@ -260,11 +262,13 @@ pub fn AuditLogEvent::from_int(value : Int32) -> AuditLogEvent {
 }
 
 ///|
+/// Encodes the `AuditLogEvent` as its Discord integer value.
 pub impl ToJson for AuditLogEvent with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `AuditLogEvent` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for AuditLogEvent with fn from_json(json, path) {
   match json {
     Number(value, ..) => AuditLogEvent::from_int(value.to_int())

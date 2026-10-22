@@ -21,6 +21,7 @@ pub(all) enum ApplicationCommandPermissionType {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `ApplicationCommandPermissionType`.
 pub fn ApplicationCommandPermissionType::to_int(
   self : ApplicationCommandPermissionType,
 ) -> Int32 {
@@ -33,6 +34,7 @@ pub fn ApplicationCommandPermissionType::to_int(
 }
 
 ///|
+/// The `ApplicationCommandPermissionType` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn ApplicationCommandPermissionType::from_int(
   value : Int32,
 ) -> ApplicationCommandPermissionType {
@@ -45,11 +47,13 @@ pub fn ApplicationCommandPermissionType::from_int(
 }
 
 ///|
+/// Encodes the `ApplicationCommandPermissionType` as its Discord integer value.
 pub impl ToJson for ApplicationCommandPermissionType with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `ApplicationCommandPermissionType` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for ApplicationCommandPermissionType with fn from_json(
   json,
   path,

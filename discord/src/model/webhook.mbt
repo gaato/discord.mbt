@@ -30,6 +30,7 @@ pub(all) enum WebhookType {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `WebhookType`.
 pub fn WebhookType::to_int(self : WebhookType) -> Int32 {
   match self {
     Incoming => 1
@@ -40,6 +41,7 @@ pub fn WebhookType::to_int(self : WebhookType) -> Int32 {
 }
 
 ///|
+/// The `WebhookType` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn WebhookType::from_int(value : Int32) -> WebhookType {
   match value {
     1 => Incoming
@@ -50,11 +52,13 @@ pub fn WebhookType::from_int(value : Int32) -> WebhookType {
 }
 
 ///|
+/// Encodes the `WebhookType` as its Discord integer value.
 pub impl ToJson for WebhookType with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `WebhookType` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for WebhookType with fn from_json(json, path) {
   match json {
     Number(value, ..) => WebhookType::from_int(value.to_int())

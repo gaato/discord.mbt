@@ -19,46 +19,55 @@
 pub(all) struct Intents(UInt32) derive(Eq)
 
 ///|
+/// No flags set.
 pub fn Intents::none() -> Intents {
   Intents(0)
 }
 
 ///|
+/// Flags from a raw bit field; unknown bits are kept.
 pub fn Intents::from_bits(bits : UInt32) -> Intents {
   Intents(bits)
 }
 
 ///|
+/// The raw bit field.
 pub fn Intents::bits(self : Intents) -> UInt32 {
   self.0
 }
 
 ///|
+/// Whether every flag in `other` is set.
 pub fn Intents::contains(self : Intents, other : Intents) -> Bool {
   (self.0 & other.0) == other.0
 }
 
 ///|
+/// Combines flags: every flag set in either operand is set.
 pub impl BitOr for Intents with fn lor(a, b) {
   Intents(a.0 | b.0)
 }
 
 ///|
+/// Keeps the flags set in both operands.
 pub impl BitAnd for Intents with fn land(a, b) {
   Intents(a.0 & b.0)
 }
 
 ///|
+/// Debug output is the raw bit field.
 pub impl Debug for Intents with fn to_repr(self) {
   Repr(self.0)
 }
 
 ///|
+/// Encodes the flags as a JSON number.
 pub impl ToJson for Intents with fn to_json(self) {
   Json::number(self.0.to_uint64().to_double())
 }
 
 ///|
+/// Decodes the flags from a JSON number; unknown bits are kept.
 pub impl @json.FromJson for Intents with fn from_json(json, path) {
   match json {
     Number(n, ..) => Intents(n.to_uint())

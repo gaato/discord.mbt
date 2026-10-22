@@ -34,6 +34,7 @@ pub(all) enum EntitlementType {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `EntitlementType`.
 pub fn EntitlementType::to_int(self : EntitlementType) -> Int32 {
   match self {
     Purchase => 1
@@ -49,6 +50,7 @@ pub fn EntitlementType::to_int(self : EntitlementType) -> Int32 {
 }
 
 ///|
+/// The `EntitlementType` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn EntitlementType::from_int(value : Int32) -> EntitlementType {
   match value {
     1 => Purchase
@@ -64,11 +66,13 @@ pub fn EntitlementType::from_int(value : Int32) -> EntitlementType {
 }
 
 ///|
+/// Encodes the `EntitlementType` as its Discord integer value.
 pub impl ToJson for EntitlementType with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `EntitlementType` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for EntitlementType with fn from_json(json, path) {
   match json {
     Number(value, ..) => EntitlementType::from_int(value.to_int())
@@ -89,6 +93,7 @@ pub(all) enum EntitlementOwnerType {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `EntitlementOwnerType`.
 pub fn EntitlementOwnerType::to_int(self : EntitlementOwnerType) -> Int32 {
   match self {
     Guild => 1
@@ -98,6 +103,7 @@ pub fn EntitlementOwnerType::to_int(self : EntitlementOwnerType) -> Int32 {
 }
 
 ///|
+/// The `EntitlementOwnerType` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn EntitlementOwnerType::from_int(value : Int32) -> EntitlementOwnerType {
   match value {
     1 => Guild
@@ -107,11 +113,13 @@ pub fn EntitlementOwnerType::from_int(value : Int32) -> EntitlementOwnerType {
 }
 
 ///|
+/// Encodes the `EntitlementOwnerType` as its Discord integer value.
 pub impl ToJson for EntitlementOwnerType with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `EntitlementOwnerType` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for EntitlementOwnerType with fn from_json(json, path) {
   match json {
     Number(value, ..) => EntitlementOwnerType::from_int(value.to_int())
@@ -147,6 +155,7 @@ pub(all) enum SkuType {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `SkuType`.
 pub fn SkuType::to_int(self : SkuType) -> Int32 {
   match self {
     Durable => 2
@@ -158,6 +167,7 @@ pub fn SkuType::to_int(self : SkuType) -> Int32 {
 }
 
 ///|
+/// The `SkuType` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn SkuType::from_int(value : Int32) -> SkuType {
   match value {
     2 => Durable
@@ -169,11 +179,13 @@ pub fn SkuType::from_int(value : Int32) -> SkuType {
 }
 
 ///|
+/// Encodes the `SkuType` as its Discord integer value.
 pub impl ToJson for SkuType with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `SkuType` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for SkuType with fn from_json(json, path) {
   match json {
     Number(value, ..) => SkuType::from_int(value.to_int())
@@ -189,46 +201,55 @@ pub impl @json.FromJson for SkuType with fn from_json(json, path) {
 pub(all) struct SkuFlags(UInt64) derive(Eq)
 
 ///|
+/// No flags set.
 pub fn SkuFlags::none() -> SkuFlags {
   SkuFlags(0)
 }
 
 ///|
+/// Flags from a raw bit field; unknown bits are kept.
 pub fn SkuFlags::from_bits(bits : UInt64) -> SkuFlags {
   SkuFlags(bits)
 }
 
 ///|
+/// The raw bit field.
 pub fn SkuFlags::bits(self : SkuFlags) -> UInt64 {
   self.0
 }
 
 ///|
+/// Whether every flag in `other` is set.
 pub fn SkuFlags::contains(self : SkuFlags, other : SkuFlags) -> Bool {
   (self.0 & other.0) == other.0
 }
 
 ///|
+/// Combines flags: every flag set in either operand is set.
 pub impl BitOr for SkuFlags with fn lor(a, b) {
   SkuFlags(a.0 | b.0)
 }
 
 ///|
+/// Keeps the flags set in both operands.
 pub impl BitAnd for SkuFlags with fn land(a, b) {
   SkuFlags(a.0 & b.0)
 }
 
 ///|
+/// Debug output is the raw bit field.
 pub impl Debug for SkuFlags with fn to_repr(self) {
   Repr(self.0)
 }
 
 ///|
+/// Encodes the flags as a JSON number.
 pub impl ToJson for SkuFlags with fn to_json(self) {
   Json::number(self.0.to_double(), repr=self.0.to_string())
 }
 
 ///|
+/// Decodes the flags from a JSON number; unknown bits are kept.
 pub impl @json.FromJson for SkuFlags with fn from_json(json, path) {
   match json {
     Number(_, repr=Some(repr)) =>
@@ -246,16 +267,19 @@ pub impl @json.FromJson for SkuFlags with fn from_json(json, path) {
 }
 
 ///|
+/// The SKU is available for purchase.
 pub fn SkuFlags::available() -> SkuFlags {
   SkuFlags(1UL << 2)
 }
 
 ///|
+/// The SKU is a recurring subscription purchased by a guild.
 pub fn SkuFlags::guild_subscription() -> SkuFlags {
   SkuFlags(1UL << 7)
 }
 
 ///|
+/// The SKU is a recurring subscription purchased by a user.
 pub fn SkuFlags::user_subscription() -> SkuFlags {
   SkuFlags(1UL << 8)
 }
@@ -286,6 +310,7 @@ pub(all) enum SubscriptionStatus {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `SubscriptionStatus`.
 pub fn SubscriptionStatus::to_int(self : SubscriptionStatus) -> Int32 {
   match self {
     Active => 0
@@ -296,6 +321,7 @@ pub fn SubscriptionStatus::to_int(self : SubscriptionStatus) -> Int32 {
 }
 
 ///|
+/// The `SubscriptionStatus` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn SubscriptionStatus::from_int(value : Int32) -> SubscriptionStatus {
   match value {
     0 => Active
@@ -306,11 +332,13 @@ pub fn SubscriptionStatus::from_int(value : Int32) -> SubscriptionStatus {
 }
 
 ///|
+/// Encodes the `SubscriptionStatus` as its Discord integer value.
 pub impl ToJson for SubscriptionStatus with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `SubscriptionStatus` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for SubscriptionStatus with fn from_json(json, path) {
   match json {
     Number(value, ..) => SubscriptionStatus::from_int(value.to_int())

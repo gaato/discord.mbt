@@ -43,6 +43,7 @@ pub(all) struct AttachmentRequest {
 } derive(Debug)
 
 ///|
+/// Encodes the attachment request as its Discord JSON representation.
 pub impl ToJson for AttachmentRequest with fn to_json(self) {
   @sdkjson.ObjBuilder::new()
   .field("id", self.id)
@@ -60,21 +61,25 @@ pub impl ToJson for AttachmentRequest with fn to_json(self) {
 pub(all) struct AttachmentFlags(UInt64) derive(Eq)
 
 ///|
+/// No flags set.
 pub fn AttachmentFlags::none() -> AttachmentFlags {
   AttachmentFlags(0)
 }
 
 ///|
+/// Flags from a raw bit field; unknown bits are kept.
 pub fn AttachmentFlags::from_bits(bits : UInt64) -> AttachmentFlags {
   AttachmentFlags(bits)
 }
 
 ///|
+/// The raw bit field.
 pub fn AttachmentFlags::bits(self : AttachmentFlags) -> UInt64 {
   self.0
 }
 
 ///|
+/// Whether every flag in `other` is set.
 pub fn AttachmentFlags::contains(
   self : AttachmentFlags,
   other : AttachmentFlags,
@@ -83,26 +88,31 @@ pub fn AttachmentFlags::contains(
 }
 
 ///|
+/// Combines flags: every flag set in either operand is set.
 pub impl BitOr for AttachmentFlags with fn lor(a, b) {
   AttachmentFlags(a.0 | b.0)
 }
 
 ///|
+/// Keeps the flags set in both operands.
 pub impl BitAnd for AttachmentFlags with fn land(a, b) {
   AttachmentFlags(a.0 & b.0)
 }
 
 ///|
+/// Debug output is the raw bit field.
 pub impl Debug for AttachmentFlags with fn to_repr(self) {
   Repr(self.0)
 }
 
 ///|
+/// Encodes the flags as a JSON number.
 pub impl ToJson for AttachmentFlags with fn to_json(self) {
   Json::number(self.0.to_double(), repr=self.0.to_string())
 }
 
 ///|
+/// Decodes the flags from a JSON number; unknown bits are kept.
 pub impl @json.FromJson for AttachmentFlags with fn from_json(json, path) {
   match json {
     Number(_, repr=Some(repr)) =>
@@ -120,26 +130,31 @@ pub impl @json.FromJson for AttachmentFlags with fn from_json(json, path) {
 }
 
 ///|
+/// The attachment is a clip from a stream.
 pub fn AttachmentFlags::is_clip() -> AttachmentFlags {
   AttachmentFlags(1UL << 0)
 }
 
 ///|
+/// The attachment is the thumbnail of a clip.
 pub fn AttachmentFlags::is_thumbnail() -> AttachmentFlags {
   AttachmentFlags(1UL << 1)
 }
 
 ///|
+/// The attachment has been edited with the remix feature.
 pub fn AttachmentFlags::is_remix() -> AttachmentFlags {
   AttachmentFlags(1UL << 2)
 }
 
 ///|
+/// The attachment is marked as a spoiler.
 pub fn AttachmentFlags::is_spoiler() -> AttachmentFlags {
   AttachmentFlags(1UL << 3)
 }
 
 ///|
+/// The attachment is an animated image.
 pub fn AttachmentFlags::is_animated() -> AttachmentFlags {
   AttachmentFlags(1UL << 5)
 }

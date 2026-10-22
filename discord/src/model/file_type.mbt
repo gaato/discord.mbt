@@ -23,6 +23,7 @@ pub(all) enum FileTypeFilter {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord string value of this `FileTypeFilter`.
 pub fn FileTypeFilter::to_string(self : FileTypeFilter) -> String {
   match self {
     Image => "image"
@@ -33,6 +34,7 @@ pub fn FileTypeFilter::to_string(self : FileTypeFilter) -> String {
 }
 
 ///|
+/// The `FileTypeFilter` for its Discord string value; values starting with `.` become `Extension`, other unknown values become `Unknown(s)`.
 pub fn FileTypeFilter::from_string(value : String) -> FileTypeFilter {
   match value {
     "image" => Image
@@ -44,11 +46,13 @@ pub fn FileTypeFilter::from_string(value : String) -> FileTypeFilter {
 }
 
 ///|
+/// Encodes the `FileTypeFilter` as its Discord string value.
 pub impl ToJson for FileTypeFilter with fn to_json(self) {
   Json::string(self.to_string())
 }
 
 ///|
+/// Decodes the `FileTypeFilter` from a JSON string; unknown values become `Unknown(s)`.
 pub impl @json.FromJson for FileTypeFilter with fn from_json(json, path) {
   match json {
     String(value) => FileTypeFilter::from_string(value)

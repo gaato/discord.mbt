@@ -66,6 +66,7 @@ pub(all) enum OverwriteType {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `OverwriteType`.
 pub fn OverwriteType::to_int(self : OverwriteType) -> Int32 {
   match self {
     Role => 0
@@ -75,6 +76,7 @@ pub fn OverwriteType::to_int(self : OverwriteType) -> Int32 {
 }
 
 ///|
+/// The `OverwriteType` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn OverwriteType::from_int(value : Int32) -> OverwriteType {
   match value {
     0 => Role
@@ -84,11 +86,13 @@ pub fn OverwriteType::from_int(value : Int32) -> OverwriteType {
 }
 
 ///|
+/// Encodes the `OverwriteType` as its Discord integer value.
 pub impl ToJson for OverwriteType with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `OverwriteType` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for OverwriteType with fn from_json(json, path) {
   match json {
     Number(value, ..) => OverwriteType::from_int(value.to_int())
@@ -106,6 +110,7 @@ pub(all) enum VideoQualityMode {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `VideoQualityMode`.
 pub fn VideoQualityMode::to_int(self : VideoQualityMode) -> Int32 {
   match self {
     Auto => 1
@@ -115,6 +120,7 @@ pub fn VideoQualityMode::to_int(self : VideoQualityMode) -> Int32 {
 }
 
 ///|
+/// The `VideoQualityMode` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn VideoQualityMode::from_int(value : Int32) -> VideoQualityMode {
   match value {
     1 => Auto
@@ -124,11 +130,13 @@ pub fn VideoQualityMode::from_int(value : Int32) -> VideoQualityMode {
 }
 
 ///|
+/// Encodes the `VideoQualityMode` as its Discord integer value.
 pub impl ToJson for VideoQualityMode with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `VideoQualityMode` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for VideoQualityMode with fn from_json(json, path) {
   match json {
     Number(value, ..) => VideoQualityMode::from_int(value.to_int())
@@ -146,6 +154,7 @@ pub(all) enum SortOrderType {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `SortOrderType`.
 pub fn SortOrderType::to_int(self : SortOrderType) -> Int32 {
   match self {
     LatestActivity => 0
@@ -155,6 +164,7 @@ pub fn SortOrderType::to_int(self : SortOrderType) -> Int32 {
 }
 
 ///|
+/// The `SortOrderType` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn SortOrderType::from_int(value : Int32) -> SortOrderType {
   match value {
     0 => LatestActivity
@@ -164,11 +174,13 @@ pub fn SortOrderType::from_int(value : Int32) -> SortOrderType {
 }
 
 ///|
+/// Encodes the `SortOrderType` as its Discord integer value.
 pub impl ToJson for SortOrderType with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `SortOrderType` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for SortOrderType with fn from_json(json, path) {
   match json {
     Number(value, ..) => SortOrderType::from_int(value.to_int())
@@ -187,6 +199,7 @@ pub(all) enum ForumLayoutType {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `ForumLayoutType`.
 pub fn ForumLayoutType::to_int(self : ForumLayoutType) -> Int32 {
   match self {
     NotSet => 0
@@ -197,6 +210,7 @@ pub fn ForumLayoutType::to_int(self : ForumLayoutType) -> Int32 {
 }
 
 ///|
+/// The `ForumLayoutType` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn ForumLayoutType::from_int(value : Int32) -> ForumLayoutType {
   match value {
     0 => NotSet
@@ -207,11 +221,13 @@ pub fn ForumLayoutType::from_int(value : Int32) -> ForumLayoutType {
 }
 
 ///|
+/// Encodes the `ForumLayoutType` as its Discord integer value.
 pub impl ToJson for ForumLayoutType with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `ForumLayoutType` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for ForumLayoutType with fn from_json(json, path) {
   match json {
     Number(value, ..) => ForumLayoutType::from_int(value.to_int())
@@ -231,6 +247,7 @@ pub(all) enum ThreadAutoArchiveDuration {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `ThreadAutoArchiveDuration`, in minutes.
 pub fn ThreadAutoArchiveDuration::to_int(
   self : ThreadAutoArchiveDuration,
 ) -> Int32 {
@@ -244,6 +261,7 @@ pub fn ThreadAutoArchiveDuration::to_int(
 }
 
 ///|
+/// The `ThreadAutoArchiveDuration` for its Discord integer value (minutes); unknown values become `Unknown(n)`.
 pub fn ThreadAutoArchiveDuration::from_int(
   value : Int32,
 ) -> ThreadAutoArchiveDuration {
@@ -257,11 +275,13 @@ pub fn ThreadAutoArchiveDuration::from_int(
 }
 
 ///|
+/// Encodes the `ThreadAutoArchiveDuration` as its Discord integer value.
 pub impl ToJson for ThreadAutoArchiveDuration with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `ThreadAutoArchiveDuration` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for ThreadAutoArchiveDuration with fn from_json(
   json,
   path,
@@ -346,6 +366,7 @@ pub(all) struct ForumTagRequest {
 } derive(Debug)
 
 ///|
+/// Encodes the forum tag request as its Discord JSON representation.
 pub impl ToJson for ForumTagRequest with fn to_json(self) {
   @sdkjson.ObjBuilder::new()
   .opt("id", self.id)
@@ -368,21 +389,25 @@ pub(all) struct DefaultReaction {
 pub(all) struct ChannelFlags(UInt64) derive(Eq)
 
 ///|
+/// No flags set.
 pub fn ChannelFlags::none() -> ChannelFlags {
   ChannelFlags(0)
 }
 
 ///|
+/// Flags from a raw bit field; unknown bits are kept.
 pub fn ChannelFlags::from_bits(bits : UInt64) -> ChannelFlags {
   ChannelFlags(bits)
 }
 
 ///|
+/// The raw bit field.
 pub fn ChannelFlags::bits(self : ChannelFlags) -> UInt64 {
   self.0
 }
 
 ///|
+/// Whether every flag in `other` is set.
 pub fn ChannelFlags::contains(
   self : ChannelFlags,
   other : ChannelFlags,
@@ -391,26 +416,31 @@ pub fn ChannelFlags::contains(
 }
 
 ///|
+/// Combines flags: every flag set in either operand is set.
 pub impl BitOr for ChannelFlags with fn lor(a, b) {
   ChannelFlags(a.0 | b.0)
 }
 
 ///|
+/// Keeps the flags set in both operands.
 pub impl BitAnd for ChannelFlags with fn land(a, b) {
   ChannelFlags(a.0 & b.0)
 }
 
 ///|
+/// Debug output is the raw bit field.
 pub impl Debug for ChannelFlags with fn to_repr(self) {
   Repr(self.0)
 }
 
 ///|
+/// Encodes the flags as a JSON number.
 pub impl ToJson for ChannelFlags with fn to_json(self) {
   Json::number(self.0.to_double(), repr=self.0.to_string())
 }
 
 ///|
+/// Decodes the flags from a JSON number; unknown bits are kept.
 pub impl @json.FromJson for ChannelFlags with fn from_json(json, path) {
   match json {
     Number(_, repr=Some(repr)) =>
@@ -428,46 +458,55 @@ pub impl @json.FromJson for ChannelFlags with fn from_json(json, path) {
 }
 
 ///|
+/// Bit `1 << 0`, which Discord sets but does not document.
 pub fn ChannelFlags::guild_feed_removed() -> ChannelFlags {
   ChannelFlags(1UL << 0)
 }
 
 ///|
+/// The thread is pinned to the top of its parent forum or media channel.
 pub fn ChannelFlags::pinned() -> ChannelFlags {
   ChannelFlags(1UL << 1)
 }
 
 ///|
+/// Bit `1 << 2`, which Discord sets but does not document.
 pub fn ChannelFlags::active_channels_removed() -> ChannelFlags {
   ChannelFlags(1UL << 2)
 }
 
 ///|
+/// A tag must be applied when creating a post in a forum or media channel.
 pub fn ChannelFlags::require_tag() -> ChannelFlags {
   ChannelFlags(1UL << 4)
 }
 
 ///|
+/// Bit `1 << 5`, which Discord sets but does not document.
 pub fn ChannelFlags::is_spam() -> ChannelFlags {
   ChannelFlags(1UL << 5)
 }
 
 ///|
+/// Bit `1 << 7`, which Discord sets but does not document.
 pub fn ChannelFlags::is_guild_resource_channel() -> ChannelFlags {
   ChannelFlags(1UL << 7)
 }
 
 ///|
+/// Bit `1 << 8`, which Discord sets but does not document.
 pub fn ChannelFlags::clyde_ai() -> ChannelFlags {
   ChannelFlags(1UL << 8)
 }
 
 ///|
+/// Bit `1 << 9`, which Discord sets but does not document.
 pub fn ChannelFlags::is_scheduled_for_deletion() -> ChannelFlags {
   ChannelFlags(1UL << 9)
 }
 
 ///|
+/// Hides the media download options; only available in media channels.
 pub fn ChannelFlags::hide_media_download_options() -> ChannelFlags {
   ChannelFlags(1UL << 15)
 }

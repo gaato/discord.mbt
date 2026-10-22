@@ -26,6 +26,7 @@ pub(all) enum GuildCreateEvent {
 } derive(Debug)
 
 ///|
+/// Decodes the available guild create event from its Discord JSON representation.
 pub impl @json.FromJson for AvailableGuildCreateEvent with fn from_json(
   json,
   path,
@@ -57,6 +58,7 @@ pub impl @json.FromJson for AvailableGuildCreateEvent with fn from_json(
 }
 
 ///|
+/// Decodes the guild create event from its Discord JSON representation.
 pub impl @json.FromJson for GuildCreateEvent with fn from_json(json, path) {
   guard json is Object(fields) else {
     raise JsonDecodeError((path, "expected guild create event (object)"))

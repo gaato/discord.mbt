@@ -82,6 +82,7 @@ pub(all) enum VerificationLevel {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `VerificationLevel`.
 pub fn VerificationLevel::to_int(self : VerificationLevel) -> Int32 {
   match self {
     None => 0
@@ -94,6 +95,7 @@ pub fn VerificationLevel::to_int(self : VerificationLevel) -> Int32 {
 }
 
 ///|
+/// The `VerificationLevel` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn VerificationLevel::from_int(value : Int32) -> VerificationLevel {
   match value {
     0 => None
@@ -106,11 +108,13 @@ pub fn VerificationLevel::from_int(value : Int32) -> VerificationLevel {
 }
 
 ///|
+/// Encodes the `VerificationLevel` as its Discord integer value.
 pub impl ToJson for VerificationLevel with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `VerificationLevel` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for VerificationLevel with fn from_json(json, path) {
   match json {
     Number(value, ..) => VerificationLevel::from_int(value.to_int())
@@ -131,6 +135,7 @@ pub(all) enum DefaultMessageNotifications {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `DefaultMessageNotifications`.
 pub fn DefaultMessageNotifications::to_int(
   self : DefaultMessageNotifications,
 ) -> Int32 {
@@ -142,6 +147,7 @@ pub fn DefaultMessageNotifications::to_int(
 }
 
 ///|
+/// The `DefaultMessageNotifications` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn DefaultMessageNotifications::from_int(
   value : Int32,
 ) -> DefaultMessageNotifications {
@@ -153,11 +159,13 @@ pub fn DefaultMessageNotifications::from_int(
 }
 
 ///|
+/// Encodes the `DefaultMessageNotifications` as its Discord integer value.
 pub impl ToJson for DefaultMessageNotifications with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `DefaultMessageNotifications` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for DefaultMessageNotifications with fn from_json(
   json,
   path,
@@ -182,6 +190,7 @@ pub(all) enum ExplicitContentFilter {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `ExplicitContentFilter`.
 pub fn ExplicitContentFilter::to_int(self : ExplicitContentFilter) -> Int32 {
   match self {
     Disabled => 0
@@ -192,6 +201,7 @@ pub fn ExplicitContentFilter::to_int(self : ExplicitContentFilter) -> Int32 {
 }
 
 ///|
+/// The `ExplicitContentFilter` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn ExplicitContentFilter::from_int(value : Int32) -> ExplicitContentFilter {
   match value {
     0 => Disabled
@@ -202,11 +212,13 @@ pub fn ExplicitContentFilter::from_int(value : Int32) -> ExplicitContentFilter {
 }
 
 ///|
+/// Encodes the `ExplicitContentFilter` as its Discord integer value.
 pub impl ToJson for ExplicitContentFilter with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `ExplicitContentFilter` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for ExplicitContentFilter with fn from_json(json, path) {
   match json {
     Number(value, ..) => ExplicitContentFilter::from_int(value.to_int())
@@ -227,6 +239,7 @@ pub(all) enum MfaLevel {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `MfaLevel`.
 pub fn MfaLevel::to_int(self : MfaLevel) -> Int32 {
   match self {
     None => 0
@@ -236,6 +249,7 @@ pub fn MfaLevel::to_int(self : MfaLevel) -> Int32 {
 }
 
 ///|
+/// The `MfaLevel` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn MfaLevel::from_int(value : Int32) -> MfaLevel {
   match value {
     0 => None
@@ -245,11 +259,13 @@ pub fn MfaLevel::from_int(value : Int32) -> MfaLevel {
 }
 
 ///|
+/// Encodes the `MfaLevel` as its Discord integer value.
 pub impl ToJson for MfaLevel with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `MfaLevel` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for MfaLevel with fn from_json(json, path) {
   match json {
     Number(value, ..) => MfaLevel::from_int(value.to_int())
@@ -269,6 +285,7 @@ pub(all) enum PremiumTier {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `PremiumTier`.
 pub fn PremiumTier::to_int(self : PremiumTier) -> Int32 {
   match self {
     None => 0
@@ -280,6 +297,7 @@ pub fn PremiumTier::to_int(self : PremiumTier) -> Int32 {
 }
 
 ///|
+/// The `PremiumTier` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn PremiumTier::from_int(value : Int32) -> PremiumTier {
   match value {
     0 => None
@@ -291,11 +309,13 @@ pub fn PremiumTier::from_int(value : Int32) -> PremiumTier {
 }
 
 ///|
+/// Encodes the `PremiumTier` as its Discord integer value.
 pub impl ToJson for PremiumTier with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `PremiumTier` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for PremiumTier with fn from_json(json, path) {
   match json {
     Number(value, ..) => PremiumTier::from_int(value.to_int())
@@ -315,6 +335,7 @@ pub(all) enum NsfwLevel {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `NsfwLevel`.
 pub fn NsfwLevel::to_int(self : NsfwLevel) -> Int32 {
   match self {
     Default => 0
@@ -326,6 +347,7 @@ pub fn NsfwLevel::to_int(self : NsfwLevel) -> Int32 {
 }
 
 ///|
+/// The `NsfwLevel` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn NsfwLevel::from_int(value : Int32) -> NsfwLevel {
   match value {
     0 => Default
@@ -337,11 +359,13 @@ pub fn NsfwLevel::from_int(value : Int32) -> NsfwLevel {
 }
 
 ///|
+/// Encodes the `NsfwLevel` as its Discord integer value.
 pub impl ToJson for NsfwLevel with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `NsfwLevel` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for NsfwLevel with fn from_json(json, path) {
   match json {
     Number(value, ..) => NsfwLevel::from_int(value.to_int())
@@ -397,6 +421,7 @@ pub(all) enum GuildFeature {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord string value of this `GuildFeature`.
 pub fn GuildFeature::to_string(self : GuildFeature) -> String {
   match self {
     AnimatedBanner => "ANIMATED_BANNER"
@@ -445,6 +470,7 @@ pub fn GuildFeature::to_string(self : GuildFeature) -> String {
 }
 
 ///|
+/// The `GuildFeature` for its Discord string value; unknown values become `Unknown(s)`.
 pub fn GuildFeature::from_string(value : String) -> GuildFeature {
   match value {
     "ANIMATED_BANNER" => AnimatedBanner
@@ -493,11 +519,13 @@ pub fn GuildFeature::from_string(value : String) -> GuildFeature {
 }
 
 ///|
+/// Encodes the `GuildFeature` as its Discord string value.
 pub impl ToJson for GuildFeature with fn to_json(self) {
   Json::string(self.to_string())
 }
 
 ///|
+/// Decodes the `GuildFeature` from a JSON string; unknown values become `Unknown(s)`.
 pub impl @json.FromJson for GuildFeature with fn from_json(json, path) {
   match json {
     String(value) => GuildFeature::from_string(value.to_string())
@@ -510,21 +538,25 @@ pub impl @json.FromJson for GuildFeature with fn from_json(json, path) {
 pub(all) struct SystemChannelFlags(UInt64) derive(Eq)
 
 ///|
+/// No flags set.
 pub fn SystemChannelFlags::none() -> SystemChannelFlags {
   SystemChannelFlags(0)
 }
 
 ///|
+/// Flags from a raw bit field; unknown bits are kept.
 pub fn SystemChannelFlags::from_bits(bits : UInt64) -> SystemChannelFlags {
   SystemChannelFlags(bits)
 }
 
 ///|
+/// The raw bit field.
 pub fn SystemChannelFlags::bits(self : SystemChannelFlags) -> UInt64 {
   self.0
 }
 
 ///|
+/// Whether every flag in `other` is set.
 pub fn SystemChannelFlags::contains(
   self : SystemChannelFlags,
   other : SystemChannelFlags,
@@ -533,26 +565,31 @@ pub fn SystemChannelFlags::contains(
 }
 
 ///|
+/// Combines flags: every flag set in either operand is set.
 pub impl BitOr for SystemChannelFlags with fn lor(a, b) {
   SystemChannelFlags(a.0 | b.0)
 }
 
 ///|
+/// Keeps the flags set in both operands.
 pub impl BitAnd for SystemChannelFlags with fn land(a, b) {
   SystemChannelFlags(a.0 & b.0)
 }
 
 ///|
+/// Debug output is the raw bit field.
 pub impl Debug for SystemChannelFlags with fn to_repr(self) {
   Repr(self.0)
 }
 
 ///|
+/// Encodes the flags as a JSON number.
 pub impl ToJson for SystemChannelFlags with fn to_json(self) {
   Json::number(self.0.to_double(), repr=self.0.to_string())
 }
 
 ///|
+/// Decodes the flags from a JSON number; unknown bits are kept.
 pub impl @json.FromJson for SystemChannelFlags with fn from_json(json, path) {
   match json {
     Number(_, repr=Some(repr)) =>
@@ -570,31 +607,37 @@ pub impl @json.FromJson for SystemChannelFlags with fn from_json(json, path) {
 }
 
 ///|
+/// Suppresses member join notifications.
 pub fn SystemChannelFlags::suppress_join_notifications() -> SystemChannelFlags {
   SystemChannelFlags(1UL << 0)
 }
 
 ///|
+/// Suppresses server boost notifications.
 pub fn SystemChannelFlags::suppress_premium_subscriptions() -> SystemChannelFlags {
   SystemChannelFlags(1UL << 1)
 }
 
 ///|
+/// Suppresses server setup tips.
 pub fn SystemChannelFlags::suppress_guild_reminder_notifications() -> SystemChannelFlags {
   SystemChannelFlags(1UL << 2)
 }
 
 ///|
+/// Hides the sticker-reply button on member join notifications.
 pub fn SystemChannelFlags::suppress_join_notification_replies() -> SystemChannelFlags {
   SystemChannelFlags(1UL << 3)
 }
 
 ///|
+/// Suppresses role subscription purchase and renewal notifications.
 pub fn SystemChannelFlags::suppress_role_subscription_purchase_notifications() -> SystemChannelFlags {
   SystemChannelFlags(1UL << 4)
 }
 
 ///|
+/// Hides the sticker-reply button on role subscription purchase notifications.
 pub fn SystemChannelFlags::suppress_role_subscription_purchase_notification_replies() -> SystemChannelFlags {
   SystemChannelFlags(1UL << 5)
 }

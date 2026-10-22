@@ -68,6 +68,7 @@ fn component_payload(payload : Json, typ : Int32) -> Json {
 }
 
 ///|
+/// Encodes the component with its `type` discriminator.
 pub impl ToJson for Component with fn to_json(self) {
   match self {
     ActionRow(value) => component_payload(ToJson::to_json(value), 1)
@@ -95,6 +96,7 @@ pub impl ToJson for Component with fn to_json(self) {
 }
 
 ///|
+/// Decodes a component by its `type` discriminator.
 pub impl @json.FromJson for Component with fn from_json(json, path) {
   guard json is Object(fields) else {
     raise JsonDecodeError((path, "expected a component (object)"))
@@ -162,6 +164,7 @@ pub(all) enum ButtonStyle {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `ButtonStyle`.
 pub fn ButtonStyle::to_int(self : ButtonStyle) -> Int32 {
   match self {
     Primary => 1
@@ -175,6 +178,7 @@ pub fn ButtonStyle::to_int(self : ButtonStyle) -> Int32 {
 }
 
 ///|
+/// The `ButtonStyle` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn ButtonStyle::from_int(value : Int32) -> ButtonStyle {
   match value {
     1 => Primary
@@ -188,11 +192,13 @@ pub fn ButtonStyle::from_int(value : Int32) -> ButtonStyle {
 }
 
 ///|
+/// Encodes the `ButtonStyle` as its Discord integer value.
 pub impl ToJson for ButtonStyle with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `ButtonStyle` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for ButtonStyle with fn from_json(json, path) {
   match json {
     Number(value, ..) => ButtonStyle::from_int(value.to_int())
@@ -404,6 +410,7 @@ pub(all) enum TextInputStyle {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `TextInputStyle`.
 pub fn TextInputStyle::to_int(self : TextInputStyle) -> Int32 {
   match self {
     Short => 1
@@ -413,6 +420,7 @@ pub fn TextInputStyle::to_int(self : TextInputStyle) -> Int32 {
 }
 
 ///|
+/// The `TextInputStyle` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn TextInputStyle::from_int(value : Int32) -> TextInputStyle {
   match value {
     1 => Short
@@ -422,11 +430,13 @@ pub fn TextInputStyle::from_int(value : Int32) -> TextInputStyle {
 }
 
 ///|
+/// Encodes the `TextInputStyle` as its Discord integer value.
 pub impl ToJson for TextInputStyle with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `TextInputStyle` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for TextInputStyle with fn from_json(json, path) {
   match json {
     Number(value, ..) => TextInputStyle::from_int(value.to_int())

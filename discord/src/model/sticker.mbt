@@ -30,6 +30,7 @@ pub(all) enum StickerType {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `StickerType`.
 pub fn StickerType::to_int(self : StickerType) -> Int32 {
   match self {
     Standard => 1
@@ -39,6 +40,7 @@ pub fn StickerType::to_int(self : StickerType) -> Int32 {
 }
 
 ///|
+/// The `StickerType` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn StickerType::from_int(value : Int32) -> StickerType {
   match value {
     1 => Standard
@@ -48,11 +50,13 @@ pub fn StickerType::from_int(value : Int32) -> StickerType {
 }
 
 ///|
+/// Encodes the `StickerType` as its Discord integer value.
 pub impl ToJson for StickerType with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `StickerType` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for StickerType with fn from_json(json, path) {
   match json {
     Number(value, ..) => StickerType::from_int(value.to_int())
@@ -72,6 +76,7 @@ pub(all) enum StickerFormatType {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `StickerFormatType`.
 pub fn StickerFormatType::to_int(self : StickerFormatType) -> Int32 {
   match self {
     Png => 1
@@ -83,6 +88,7 @@ pub fn StickerFormatType::to_int(self : StickerFormatType) -> Int32 {
 }
 
 ///|
+/// The `StickerFormatType` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn StickerFormatType::from_int(value : Int32) -> StickerFormatType {
   match value {
     1 => Png
@@ -94,11 +100,13 @@ pub fn StickerFormatType::from_int(value : Int32) -> StickerFormatType {
 }
 
 ///|
+/// Encodes the `StickerFormatType` as its Discord integer value.
 pub impl ToJson for StickerFormatType with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `StickerFormatType` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for StickerFormatType with fn from_json(json, path) {
   match json {
     Number(value, ..) => StickerFormatType::from_int(value.to_int())

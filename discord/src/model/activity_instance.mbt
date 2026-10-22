@@ -27,6 +27,7 @@ pub(all) enum ActivityLocationKind {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord string value of this `ActivityLocationKind`.
 pub fn ActivityLocationKind::to_string(self : ActivityLocationKind) -> String {
   match self {
     GuildChannel => "gc"
@@ -36,6 +37,7 @@ pub fn ActivityLocationKind::to_string(self : ActivityLocationKind) -> String {
 }
 
 ///|
+/// The `ActivityLocationKind` for its Discord string value; unknown values become `Unknown(s)`.
 pub fn ActivityLocationKind::from_string(
   value : String,
 ) -> ActivityLocationKind {
@@ -47,11 +49,13 @@ pub fn ActivityLocationKind::from_string(
 }
 
 ///|
+/// Encodes the `ActivityLocationKind` as its Discord string value.
 pub impl ToJson for ActivityLocationKind with fn to_json(self) {
   Json::string(self.to_string())
 }
 
 ///|
+/// Decodes the `ActivityLocationKind` from a JSON string; unknown values become `Unknown(s)`.
 pub impl @json.FromJson for ActivityLocationKind with fn from_json(json, path) {
   match json {
     String(value) => ActivityLocationKind::from_string(value.to_string())

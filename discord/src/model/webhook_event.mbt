@@ -21,6 +21,7 @@ pub(all) enum WebhookPayloadType {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `WebhookPayloadType`.
 pub fn WebhookPayloadType::to_int(self : WebhookPayloadType) -> Int32 {
   match self {
     Ping => 0
@@ -30,6 +31,7 @@ pub fn WebhookPayloadType::to_int(self : WebhookPayloadType) -> Int32 {
 }
 
 ///|
+/// The `WebhookPayloadType` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn WebhookPayloadType::from_int(value : Int32) -> WebhookPayloadType {
   match value {
     0 => Ping
@@ -39,11 +41,13 @@ pub fn WebhookPayloadType::from_int(value : Int32) -> WebhookPayloadType {
 }
 
 ///|
+/// Encodes the `WebhookPayloadType` as its Discord integer value.
 pub impl ToJson for WebhookPayloadType with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `WebhookPayloadType` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for WebhookPayloadType with fn from_json(json, path) {
   match json {
     Number(value, ..) => WebhookPayloadType::from_int(value.to_int())
@@ -86,6 +90,7 @@ pub(all) enum WebhookEventType {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord string value of this `WebhookEventType`.
 pub fn WebhookEventType::to_string(self : WebhookEventType) -> String {
   match self {
     ApplicationAuthorized => "APPLICATION_AUTHORIZED"
@@ -105,6 +110,7 @@ pub fn WebhookEventType::to_string(self : WebhookEventType) -> String {
 }
 
 ///|
+/// The `WebhookEventType` for its Discord string value; unknown values become `Unknown(s)`.
 pub fn WebhookEventType::from_string(value : String) -> WebhookEventType {
   match value {
     "APPLICATION_AUTHORIZED" => ApplicationAuthorized
@@ -124,11 +130,13 @@ pub fn WebhookEventType::from_string(value : String) -> WebhookEventType {
 }
 
 ///|
+/// Encodes the `WebhookEventType` as its Discord string value.
 pub impl ToJson for WebhookEventType with fn to_json(self) {
   Json::string(self.to_string())
 }
 
 ///|
+/// Decodes the `WebhookEventType` from a JSON string; unknown values become `Unknown(s)`.
 pub impl @json.FromJson for WebhookEventType with fn from_json(json, path) {
   match json {
     String(value) => WebhookEventType::from_string(value)
@@ -236,6 +244,7 @@ priv struct LobbyMessageFields {
 } derive(FromJson(fields(typ(rename="type"))))
 
 ///|
+/// Decodes the lobby message from its Discord JSON representation.
 pub impl @json.FromJson for LobbyMessage with fn from_json(json, path) {
   let fields : LobbyMessageFields = @json.from_json(json, path~)
   {
@@ -255,6 +264,7 @@ pub impl @json.FromJson for LobbyMessage with fn from_json(json, path) {
 }
 
 ///|
+/// Encodes the lobby message as its Discord JSON representation.
 pub impl ToJson for LobbyMessage with fn to_json(self) {
   self.raw
 }
@@ -274,6 +284,7 @@ priv struct LobbyMessageDeleteFields {
 } derive(FromJson)
 
 ///|
+/// Decodes the lobby message delete event from its Discord JSON representation.
 pub impl @json.FromJson for LobbyMessageDeleteEvent with fn from_json(
   json,
   path,
@@ -283,6 +294,7 @@ pub impl @json.FromJson for LobbyMessageDeleteEvent with fn from_json(
 }
 
 ///|
+/// Encodes the lobby message delete event as its Discord JSON representation.
 pub impl ToJson for LobbyMessageDeleteEvent with fn to_json(self) {
   self.raw
 }
@@ -332,6 +344,7 @@ priv struct GameDirectMessageFields {
 } derive(FromJson(fields(typ(rename="type"))))
 
 ///|
+/// Decodes the game direct message from its Discord JSON representation.
 pub impl @json.FromJson for GameDirectMessage with fn from_json(json, path) {
   let fields : GameDirectMessageFields = @json.from_json(json, path~)
   {
@@ -355,6 +368,7 @@ pub impl @json.FromJson for GameDirectMessage with fn from_json(json, path) {
 }
 
 ///|
+/// Encodes the game direct message as its Discord JSON representation.
 pub impl ToJson for GameDirectMessage with fn to_json(self) {
   self.raw
 }

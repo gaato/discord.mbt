@@ -51,6 +51,7 @@ pub(all) enum ConnectionService {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord string value of this `ConnectionService`.
 pub fn ConnectionService::to_string(self : ConnectionService) -> String {
   match self {
     AmazonMusic => "amazon-music"
@@ -84,6 +85,7 @@ pub fn ConnectionService::to_string(self : ConnectionService) -> String {
 }
 
 ///|
+/// The `ConnectionService` for its Discord string value; unknown values become `Unknown(s)`.
 pub fn ConnectionService::from_string(value : String) -> ConnectionService {
   match value {
     "amazon-music" => AmazonMusic
@@ -117,11 +119,13 @@ pub fn ConnectionService::from_string(value : String) -> ConnectionService {
 }
 
 ///|
+/// Encodes the `ConnectionService` as its Discord string value.
 pub impl ToJson for ConnectionService with fn to_json(self) {
   Json::string(self.to_string())
 }
 
 ///|
+/// Decodes the `ConnectionService` from a JSON string; unknown values become `Unknown(s)`.
 pub impl @json.FromJson for ConnectionService with fn from_json(json, path) {
   match json {
     String(value) => ConnectionService::from_string(value.to_string())

@@ -27,6 +27,7 @@ pub(all) enum AutoModerationTriggerType {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `AutoModerationTriggerType`.
 pub fn AutoModerationTriggerType::to_int(
   self : AutoModerationTriggerType,
 ) -> Int32 {
@@ -41,6 +42,7 @@ pub fn AutoModerationTriggerType::to_int(
 }
 
 ///|
+/// The `AutoModerationTriggerType` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn AutoModerationTriggerType::from_int(
   value : Int32,
 ) -> AutoModerationTriggerType {
@@ -55,11 +57,13 @@ pub fn AutoModerationTriggerType::from_int(
 }
 
 ///|
+/// Encodes the `AutoModerationTriggerType` as its Discord integer value.
 pub impl ToJson for AutoModerationTriggerType with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `AutoModerationTriggerType` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for AutoModerationTriggerType with fn from_json(
   json,
   path,
@@ -97,6 +101,7 @@ pub(all) enum AutoModerationKeywordPresetType {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `AutoModerationKeywordPresetType`.
 pub fn AutoModerationKeywordPresetType::to_int(
   self : AutoModerationKeywordPresetType,
 ) -> Int32 {
@@ -109,6 +114,7 @@ pub fn AutoModerationKeywordPresetType::to_int(
 }
 
 ///|
+/// The `AutoModerationKeywordPresetType` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn AutoModerationKeywordPresetType::from_int(
   value : Int32,
 ) -> AutoModerationKeywordPresetType {
@@ -121,11 +127,13 @@ pub fn AutoModerationKeywordPresetType::from_int(
 }
 
 ///|
+/// Encodes the `AutoModerationKeywordPresetType` as its Discord integer value.
 pub impl ToJson for AutoModerationKeywordPresetType with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `AutoModerationKeywordPresetType` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for AutoModerationKeywordPresetType with fn from_json(
   json,
   path,
@@ -152,6 +160,7 @@ pub(all) enum AutoModerationEventType {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `AutoModerationEventType`.
 pub fn AutoModerationEventType::to_int(self : AutoModerationEventType) -> Int32 {
   match self {
     MessageSend => 1
@@ -161,6 +170,7 @@ pub fn AutoModerationEventType::to_int(self : AutoModerationEventType) -> Int32 
 }
 
 ///|
+/// The `AutoModerationEventType` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn AutoModerationEventType::from_int(
   value : Int32,
 ) -> AutoModerationEventType {
@@ -172,11 +182,13 @@ pub fn AutoModerationEventType::from_int(
 }
 
 ///|
+/// Encodes the `AutoModerationEventType` as its Discord integer value.
 pub impl ToJson for AutoModerationEventType with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `AutoModerationEventType` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for AutoModerationEventType with fn from_json(
   json,
   path,
@@ -215,6 +227,7 @@ pub(all) enum AutoModerationActionType {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `AutoModerationActionType`.
 pub fn AutoModerationActionType::to_int(
   self : AutoModerationActionType,
 ) -> Int32 {
@@ -228,6 +241,7 @@ pub fn AutoModerationActionType::to_int(
 }
 
 ///|
+/// The `AutoModerationActionType` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn AutoModerationActionType::from_int(
   value : Int32,
 ) -> AutoModerationActionType {
@@ -241,11 +255,13 @@ pub fn AutoModerationActionType::from_int(
 }
 
 ///|
+/// Encodes the `AutoModerationActionType` as its Discord integer value.
 pub impl ToJson for AutoModerationActionType with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `AutoModerationActionType` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for AutoModerationActionType with fn from_json(
   json,
   path,

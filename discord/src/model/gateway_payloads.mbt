@@ -19,6 +19,7 @@ pub(all) enum GatewayOpcode {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `GatewayOpcode`.
 pub fn GatewayOpcode::to_int(self : GatewayOpcode) -> Int32 {
   match self {
     Dispatch => 0
@@ -39,6 +40,7 @@ pub fn GatewayOpcode::to_int(self : GatewayOpcode) -> Int32 {
 }
 
 ///|
+/// The `GatewayOpcode` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn GatewayOpcode::from_int(value : Int32) -> GatewayOpcode {
   match value {
     0 => Dispatch

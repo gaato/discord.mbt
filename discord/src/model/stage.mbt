@@ -19,6 +19,7 @@ pub(all) enum StagePrivacyLevel {
 } derive(Eq, Debug)
 
 ///|
+/// The Discord integer value of this `StagePrivacyLevel`.
 pub fn StagePrivacyLevel::to_int(self : StagePrivacyLevel) -> Int32 {
   match self {
     Public => 1
@@ -28,6 +29,7 @@ pub fn StagePrivacyLevel::to_int(self : StagePrivacyLevel) -> Int32 {
 }
 
 ///|
+/// The `StagePrivacyLevel` for its Discord integer value; unknown values become `Unknown(n)`.
 pub fn StagePrivacyLevel::from_int(value : Int32) -> StagePrivacyLevel {
   match value {
     1 => Public
@@ -37,11 +39,13 @@ pub fn StagePrivacyLevel::from_int(value : Int32) -> StagePrivacyLevel {
 }
 
 ///|
+/// Encodes the `StagePrivacyLevel` as its Discord integer value.
 pub impl ToJson for StagePrivacyLevel with fn to_json(self) {
   Json::number(self.to_int().to_double())
 }
 
 ///|
+/// Decodes the `StagePrivacyLevel` from a JSON number; unknown values become `Unknown(n)`.
 pub impl @json.FromJson for StagePrivacyLevel with fn from_json(json, path) {
   match json {
     Number(value, ..) => StagePrivacyLevel::from_int(value.to_int())

@@ -88,6 +88,7 @@ pub(all) struct GuildTemplatePermissionOverwrite {
 pub(all) struct GuildTemplatePermissions(UInt64) derive(Eq)
 
 ///|
+/// The raw bit field.
 pub fn GuildTemplatePermissions::bits(
   self : GuildTemplatePermissions,
 ) -> UInt64 {
@@ -95,16 +96,19 @@ pub fn GuildTemplatePermissions::bits(
 }
 
 ///|
+/// Debug output is the raw bit field.
 pub impl Debug for GuildTemplatePermissions with fn to_repr(self) {
   Repr(self.0)
 }
 
 ///|
+/// Encodes the flags as a JSON number.
 pub impl ToJson for GuildTemplatePermissions with fn to_json(self) {
   Json::number(self.0.to_double(), repr=self.0.to_string())
 }
 
 ///|
+/// Decodes the flags from a JSON number; unknown bits are kept.
 pub impl @json.FromJson for GuildTemplatePermissions with fn from_json(
   json,
   path,
