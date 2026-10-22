@@ -1,0 +1,4 @@
+{
+  "modules": ["discord", "discord_voice", "dave"],
+  "generated": ["discord/src/model/extends.mbt"]
+}

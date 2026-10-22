@@ -50,11 +50,24 @@ sockets and the coordinator's TCP client.
 moon run scripts/docs_audit.mbtx --self-test
 ```
 
-Checks every Markdown file in the repository: no code block is fenced as
-`fish` (commands are written for `sh`); files inside the published module
-directories link only to absolute URLs, because mooncakes.io renders them
-away from the repository; and every other relative link names an existing
-file. Exceptions in `docs_audit.allow` are `<file> <link>` lines.
+Checks the documentation rules shared by every gaato MoonBit repository:
+
+- No code block is fenced as `fish`; commands are written for `sh`.
+- Files inside the published module directories link only to absolute URLs,
+  because mooncakes.io serves them away from the repository. Every other
+  relative link names an existing file.
+- Each published module has `readme = "README.md"`, and that README is a
+  link to the root package's `overview.mbt.md`, so its examples compile. It
+  has a title, an `## Install` section and a `## License` section. The root
+  package has no `README.mbt.md` of its own, because mooncakes.io would show
+  it after the module README.
+- Every top-level `pub` declaration in a published package has a `///` doc
+  comment, except in generated files (first line `DO NOT EDIT`).
+
+The published modules and generated paths are in `docs_audit.json`. What a
+module leaves out of its package comes from its `.moonignore`. Exceptions in
+`docs_audit.allow` are `<file> <key>` lines with a ` #` reason. The script is
+the same in every repository; change it everywhere at once.
 
 ## Discord documentation audits
 
