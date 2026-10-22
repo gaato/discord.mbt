@@ -62,9 +62,12 @@ pub fn InMemoryCooldownStore::InMemoryCooldownStore(
 }
 
 ///|
+/// Makes `store.try_acquire(key, window_ms=...)` callable as a method.
 pub extend InMemoryCooldownStore with CooldownStore::{try_acquire}
 
 ///|
+/// Starts a window for `key` in this process, or reports the time left in the
+/// current one.
 pub impl CooldownStore for InMemoryCooldownStore with fn try_acquire(
   self,
   key,

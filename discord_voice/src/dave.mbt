@@ -18,12 +18,16 @@ pub(all) enum DaveAction {
 } derive(Debug, Eq)
 
 ///|
+/// A change to the DAVE group roster that a commit or Welcome applied: a
+/// member whose signing key was added or replaced, or one that left.
 enum DaveRosterChange {
   UpsertDaveMember(user_id~ : UInt64)
   RemoveDaveMember(user_id~ : UInt64)
 } derive(Debug, Eq)
 
 ///|
+/// What processing an MLS commit did: applied with roster changes, ignored by
+/// libdave, or failed with a reason that triggers recovery.
 enum DaveCommitOutcome {
   CommitApplied(changes~ : Array[DaveRosterChange])
   CommitIgnored
@@ -31,6 +35,8 @@ enum DaveCommitOutcome {
 } derive(Debug, Eq)
 
 ///|
+/// What processing an MLS Welcome did: joined the group with roster changes,
+/// or failed with a reason that triggers recovery.
 enum DaveWelcomeOutcome {
   WelcomeApplied(changes~ : Array[DaveRosterChange])
   WelcomeFailed(reason~ : String)

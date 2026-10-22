@@ -13,6 +13,15 @@ breaking change is listed with a migration note.
   files now spell `Int` as `Int32` and `UInt` as `UInt32`, which are the same
   types; no signature changed.
 
+### Fixed
+
+- **Every public declaration has a doc comment, and the README example
+  compiles.** The facade re-exports one name per `pub using`, each with its
+  own one-line description, so mooncakes no longer repeats one group comment
+  on every card; trait forwarders, the testkit fixtures, and the JavaScript
+  dispatch accessors are documented. The README quickstart is compiled by
+  `moon test` and the README links the changelog, guides, and examples.
+
 ## [0.13.0] - 2026-10-22
 
 ### Changed

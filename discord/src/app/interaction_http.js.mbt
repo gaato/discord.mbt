@@ -11,18 +11,22 @@ extern "js" fn js_dispatch(
   #| (response, background) => ({ response, background })
 
 ///|
+/// The promise of the HTTP response to send back to Discord.
 pub extern "js" fn InteractionHttpDispatch::response(
   self : Self,
 ) -> @js_async.Promise[InteractionHttpJsResponse] =
   #| (dispatch) => dispatch.response
 
 ///|
+/// The promise of the work that continues after the response, including
+/// deferred handlers; keep the host alive until it settles.
 pub extern "js" fn InteractionHttpDispatch::background(
   self : Self,
 ) -> @js_async.Promise[Unit] =
   #| (dispatch) => dispatch.background
 
 ///|
+/// The JavaScript response a dispatch resolves to:
 /// `{ status: number, contentType: string | null, body: Uint8Array | ReadableStream | null }`.
 #external
 pub type InteractionHttpJsResponse

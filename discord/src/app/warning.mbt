@@ -58,6 +58,7 @@ pub(all) enum AppWarning {
 pub extend AppWarning with Show::{to_string}
 
 ///|
+/// Writes the one-line message for the warning.
 pub impl Show for AppWarning with fn output(self, logger) {
   match self {
     AutoDeferFailed(target~, error~) =>

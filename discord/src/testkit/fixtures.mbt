@@ -1,4 +1,6 @@
 ///|
+/// A fixture asked to combine values that cannot belong to one interaction,
+/// such as an actor that is not the given guild member.
 pub(all) suberror FixtureError {
   InconsistentContext(String)
 } derive(Debug, Eq)
@@ -10,6 +12,8 @@ pub fn default_application_id() -> @model.ApplicationId {
 }
 
 ///|
+/// A user with fixed defaults: id `200000000000000001`, username `test-user`,
+/// and not a bot.
 pub fn user(
   id? : @model.UserId,
   username~ : String = "test-user",
@@ -25,6 +29,8 @@ pub fn user(
 }
 
 ///|
+/// A guild member for `user` with `roles`, joined at a fixed date. Pass
+/// `permissions` to set the member permissions Discord sends on interactions.
 pub fn guild_member(
   user~ : @model.User = user(),
   roles~ : Array[@model.RoleId] = [],
@@ -44,6 +50,8 @@ pub fn guild_member(
 }
 
 ///|
+/// A role named `test-role` with id `600000000000000001` and no permissions
+/// unless `permissions` is given.
 pub fn role(
   id? : @model.RoleId,
   name~ : String = "test-role",
@@ -62,6 +70,8 @@ pub fn role(
 }
 
 ///|
+/// A plain message by `author` in the default channel, with optional
+/// `components` for component fixtures to click.
 pub fn message(
   id? : @model.MessageId,
   channel_id? : @model.ChannelId,
@@ -139,6 +149,8 @@ pub fn interaction(
 }
 
 ///|
+/// A slash-command interaction for `name` with the given `options` and
+/// `resolved` entities, built on `base` or the default `interaction()`.
 pub fn slash(
   name : String,
   options~ : Array[@model.CommandDataOption] = [],
@@ -165,6 +177,8 @@ pub fn slash(
 }
 
 ///|
+/// An autocomplete interaction for `name`; mark the focused option in
+/// `options`.
 pub fn autocomplete(
   name : String,
   options~ : Array[@model.CommandDataOption],
@@ -174,6 +188,8 @@ pub fn autocomplete(
 }
 
 ///|
+/// A USER context-menu command `name` invoked on `target`, which is also put
+/// in `resolved`.
 pub fn user_command(
   name : String,
   target : @model.User,
@@ -198,6 +214,8 @@ pub fn user_command(
 }
 
 ///|
+/// A MESSAGE context-menu command `name` invoked on `target`, in the target's
+/// channel unless `base` says otherwise.
 pub fn message_command(
   name : String,
   target : @model.Message,
@@ -315,6 +333,8 @@ pub fn component_raw(
 }
 
 ///|
+/// A modal submission for `custom_id` with the submitted `components`. Raises
+/// `InconsistentContext` when `message` is in another channel than `base`.
 pub fn modal(
   custom_id : String,
   components~ : Array[@model.Component] = [],

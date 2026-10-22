@@ -12,6 +12,7 @@ pub(all) enum GatewayCompression {
 } derive(Eq, Debug)
 
 ///|
+/// Makes `equal` and `not_equal` callable as methods.
 pub extend GatewayCompression with Eq::{equal, not_equal}
 
 ///|

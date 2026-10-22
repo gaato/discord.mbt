@@ -353,6 +353,7 @@ pub fn Client::close(self : Client) -> Unit {
 }
 
 ///|
+/// Makes `client.to_string()` callable; it never includes the token.
 pub extend Client with Show::{to_string}
 
 ///|

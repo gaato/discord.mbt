@@ -30,6 +30,5 @@ options(
     "facade_interactions_js.mbt": [ "js" ],
     "facade_server.mbt": [ "native", "wasm" ],
     "facade_server_test.mbt": [ "native", "wasm" ],
-    "readme_native_test.mbt": [ "native" ],
   },
 )

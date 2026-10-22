@@ -27,6 +27,7 @@ pub(all) suberror BotError {
 } derive(Debug)
 
 ///|
+/// Makes `error.to_string()` return the message `Show` renders.
 pub extend BotError with Show::{to_string}
 
 ///|

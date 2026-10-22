@@ -189,6 +189,7 @@ pub async fn VoiceReceiveStream::next_packet(
 }
 
 ///|
+/// Makes `stream.next_frame()` callable as a method.
 pub extend VoiceReceiveStream with AudioSource::{next_frame}
 
 ///|

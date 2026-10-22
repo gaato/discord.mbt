@@ -93,7 +93,7 @@ connection; channel moves need an explicit disconnect and join.
 
 The native boundary is split by responsibility:
 
-- [`gaato/dave`](../dave/README.mbt.md) owns the unsafe FFI
+- [`gaato/dave`](../dave/README.md) owns the unsafe FFI
   boundary to Discord's official `libdave` C API. It exposes opaque MLS
   session, key-ratchet, encryptor, and decryptor handles. The voice package
   remains responsible for Gateway opcodes, connected-member bookkeeping,

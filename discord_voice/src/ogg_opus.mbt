@@ -332,6 +332,7 @@ pub fn OggOpusSource::pre_skip(self : OggOpusSource) -> Int32 {
 }
 
 ///|
+/// Makes `source.next_frame()` callable as a method.
 pub extend OggOpusSource with AudioSource::{next_frame}
 
 ///|

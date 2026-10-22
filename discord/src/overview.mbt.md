@@ -1,4 +1,4 @@
-# discord.mbt
+# gaato/discord
 
 [![CI](https://github.com/gaato/discord.mbt/actions/workflows/ci.yml/badge.svg)](https://github.com/gaato/discord.mbt/actions/workflows/ci.yml)
 [![License](https://img.shields.io/github/license/gaato/discord.mbt)](https://github.com/gaato/discord.mbt/blob/main/LICENSE)
@@ -28,7 +28,7 @@ moon add moonbitlang/async
 Build the interaction `App`, then hand it to the Gateway `Bot`. This bot
 registers and answers `/echo`:
 
-```mbt nocheck
+```mbt check
 ///|
 struct QuickstartEchoArgs {
   text : String
@@ -65,6 +65,11 @@ async fn run_echo_bot(token : String) -> Unit {
   })
   bot.build().run()
 }
+
+///|
+test "the quickstart bot compiles" {
+  ignore(run_echo_bot)
+}
 ```
 
 `Args` drives both the command's registration payload and the decoding of
@@ -78,7 +83,7 @@ or copy the [bot template](https://github.com/gaato/discord.mbt/blob/main/templa
 | Package | What it is | Native | JS | Wasm¹ |
 |---|---|---:|---:|---:|
 | `gaato/discord` | Facade: golden-path names a typical application uses directly | Yes | Yes² | Yes² |
-| `gaato/discord/model` | Pure data: ~24 entity domains, gateway payloads, zero IO | Yes | Yes | Yes |
+| `gaato/discord/model` | Pure data: API entities and gateway payloads, zero IO | Yes | Yes | Yes |
 | `gaato/discord/telemetry` | Structured REST, gateway, and dispatch observability values | Yes | Yes | Yes |
 | `gaato/discord/http` | REST `Client`, routes, rate limiting, multipart uploads | Yes | Yes | Yes |
 | `gaato/discord/gateway` | `Shard`: connection state machine, heartbeat, resume | Yes | Yes | Yes |
@@ -177,6 +182,14 @@ provides deterministic interaction and model fixtures; import it only in your
 package's `for "test"` block. See
 [the framework layer](https://github.com/gaato/discord.mbt/blob/main/guide/11-framework.mbt.md)
 for handler tests without a network.
+
+## Links
+
+- [Changelog](https://github.com/gaato/discord.mbt/blob/main/discord/CHANGELOG.md)
+- [Repository](https://github.com/gaato/discord.mbt)
+- [Guides](https://github.com/gaato/discord.mbt/blob/main/guide/README.md)
+- [Examples](https://github.com/gaato/discord.mbt/blob/main/examples/README.md)
+- [Bot template](https://github.com/gaato/discord.mbt/blob/main/template/README.md)
 
 ## License
 

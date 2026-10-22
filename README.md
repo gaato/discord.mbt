@@ -13,7 +13,7 @@ is a MoonBit workspace; each directory below is a module.
 | --- | --- | --- |
 | [`discord/`](discord/README.md) | [`gaato/discord`](https://mooncakes.io/docs/gaato/discord) | REST, interactions, and gateway bots |
 | [`discord_voice/`](discord_voice/README.md) | [`gaato/discord_voice`](https://mooncakes.io/docs/gaato/discord_voice) | Voice for `gaato/discord` bots (native) |
-| [`dave/`](dave/README.mbt.md) | [`gaato/dave`](https://mooncakes.io/docs/gaato/dave) | Bindings to Discord's `libdave` for DAVE end-to-end encryption |
+| [`dave/`](dave/README.md) | [`gaato/dave`](https://mooncakes.io/docs/gaato/dave) | Bindings to Discord's `libdave` for DAVE end-to-end encryption |
 | [`examples/`](examples/README.md) | (not published) | Runnable bots, HTTP interaction servers, and JavaScript host adapters |
 | [`guide/`](guide/README.md) | (not published) | Long-form guides whose code is tested |
 | [`template/`](template/README.md) | (not published) | A bot project to copy |
@@ -55,10 +55,9 @@ bundles the pinned toolchain with Node.js 24, `gcc`, and `git`. The
 `.devcontainer` starts from it, CI runs in it (except the Rust voice shim
 job), and `template/Dockerfile` uses it as the builder stage.
 
-Code blocks marked `mbt check` in the guides and docstrings compile and run
-as part of the test suite. The module READMEs keep their examples as
-`mbt nocheck` for readers; each has a compiled twin
-(`discord/src/readme_native_test.mbt`, `dave/src/readme_examples.mbt.md`).
+Code blocks marked `mbt check` in the guides, docstrings, and module READMEs
+compile and run as part of the test suite. Each module README is the root
+package's `src/overview.mbt.md`, and `README.md` links to it.
 
 Maintainer documents live in `docs/`:
 

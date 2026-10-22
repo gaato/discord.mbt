@@ -16,6 +16,13 @@ releases (0.x → 0.y) may contain breaking changes; patch releases do not.
   `gaato/http` 0.5.0 and `gaato/http-async` 0.5.0. Voice itself is
   unchanged.
 
+### Fixed
+
+- **The README has sections and a compile-checked example.** It now follows
+  the shared module layout (Install, Usage, Native runtime, Links), its usage
+  example is compiled by `moon test`, and it no longer names the pinned
+  runtime versions. The `AudioSource` forwarders have doc comments.
+
 ## [0.3.1] - 2026-10-19
 
 ### Changed

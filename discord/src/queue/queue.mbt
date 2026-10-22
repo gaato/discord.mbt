@@ -41,6 +41,7 @@ pub fn InMemoryQueue::InMemoryQueue(
 }
 
 ///|
+/// Makes `queue.wait_for_identify(shard_id)` callable as a method.
 pub extend InMemoryQueue with IdentifyQueue::{wait_for_identify}
 
 ///|

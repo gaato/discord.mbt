@@ -29,3 +29,12 @@ to 0.1.1 were made from [gaato/dave.mbt](https://github.com/gaato/dave.mbt).
   release that drops stdin would have made the hook download libdave for every
   native build. Run directly (`node build.js`), the hook no longer waits for
   end of input.
+
+### Fixed
+
+- **The README has sections and compile-checked examples.** The README is
+  now the compiled `src/overview.mbt.md` (Install, Usage, Verification codes,
+  Native runtime, Links), so its examples are checked by `moon test` instead
+  of a separate copy. The libdave verification boundary moved to
+  [docs/verification-boundary.md](https://github.com/gaato/discord.mbt/blob/main/dave/docs/verification-boundary.md),
+  and the README no longer names the pinned libdave release.

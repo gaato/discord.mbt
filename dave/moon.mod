@@ -2,7 +2,7 @@ name = "gaato/dave"
 
 version = "0.1.1"
 
-readme = "README.mbt.md"
+readme = "README.md"
 
 repository = "https://github.com/gaato/discord.mbt"
 

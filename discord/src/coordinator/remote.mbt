@@ -295,6 +295,7 @@ pub async fn RemoteIdentifyQueue::ping(self : RemoteIdentifyQueue) -> Unit {
 }
 
 ///|
+/// Makes `queue.wait_for_identify(shard_id)` callable as a method.
 pub extend RemoteIdentifyQueue with @queue.IdentifyQueue::{wait_for_identify}
 
 ///|
@@ -349,6 +350,7 @@ pub async fn RemoteRateLimiter::ping(self : RemoteRateLimiter) -> Unit {
 }
 
 ///|
+/// Makes `acquire` and `release` callable as methods on the limiter.
 pub extend RemoteRateLimiter with @runtime.RateLimiter::{acquire, release}
 
 ///|
@@ -461,9 +463,12 @@ fn coordinator_unreachable(error : Error) -> Bool {
 }
 
 ///|
+/// Makes `store.try_acquire(key, window_ms=...)` callable as a method.
 pub extend RemoteCooldownStore with @cooldown.CooldownStore::{try_acquire}
 
 ///|
+/// Asks the coordinator to start the window for `key`; an unreachable
+/// coordinator or a missed deadline yields `Unavailable`.
 pub impl @cooldown.CooldownStore for RemoteCooldownStore with fn try_acquire(
   self,
   key,

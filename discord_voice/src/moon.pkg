@@ -20,6 +20,7 @@ import {
 }
 
 import {
+  "gaato/discord",
   "gaato/discord_voice" @voice,
   "gaato/http-async/mock" @simclock,
   "moonbitlang/async",
