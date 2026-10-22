@@ -18,7 +18,7 @@ pub fn[A] component_route(id~ : String, state~ : CustomIdCodec[A]) -> ComponentR
 
 pub fn dm_only() -> async (CheckCtx) -> Bool
 
-pub fn file_field(custom_id~ : String, label~ : String, description? : String, min_values? : Int, max_values? : Int, file_types? : Array[@model.FileTypeFilter]) -> ModalField[Array[@model.Attachment]]
+pub fn file_field(custom_id~ : String, label~ : String, description? : String, min_values? : Int32, max_values? : Int32, file_types? : Array[@model.FileTypeFilter]) -> ModalField[Array[@model.Attachment]]
 
 pub fn guild_only() -> async (CheckCtx) -> Bool
 
@@ -28,7 +28,7 @@ pub fn[S, A] modal(custom_id~ : String, title~ : String, state~ : CustomIdCodec[
 
 pub fn required_permissions(@model.Permissions) -> async (CheckCtx) -> Bool
 
-pub fn select_field(custom_id~ : String, label~ : String, options~ : Array[@model.SelectOption], description? : String, placeholder? : String, min_values? : Int, max_values? : Int) -> ModalField[Array[String]]
+pub fn select_field(custom_id~ : String, label~ : String, options~ : Array[@model.SelectOption], description? : String, placeholder? : String, min_values? : Int32, max_values? : Int32) -> ModalField[Array[String]]
 
 pub fn[A] slash(name~ : String, description~ : String, args~ : @interaction.Args[A], handler~ : InteractionHandler[A], default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType], name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> Command[A]
 
@@ -38,7 +38,7 @@ pub fn[A] subcommand(name~ : String, description~ : String, args~ : @interaction
 
 pub fn subcommand_group(name~ : String, description~ : String, children~ : Array[SlashChild], name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> SlashChild
 
-pub fn text_field(custom_id~ : String, label~ : String, style? : @model.TextInputStyle, description? : String, placeholder? : String, min_length? : Int, max_length? : Int, value? : String) -> ModalField[String]
+pub fn text_field(custom_id~ : String, label~ : String, style? : @model.TextInputStyle, description? : String, placeholder? : String, min_length? : Int32, max_length? : Int32, value? : String) -> ModalField[String]
 
 pub fn user_command(name~ : String, handler~ : InteractionHandler[@framework.TargetUser], default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType], name_localizations? : Map[String, String]) -> Command[@framework.TargetUser]
 
@@ -55,18 +55,18 @@ pub(all) suberror AppConfigError {
   EmptyComponentRoute
   EmptyModalRoute
   InvalidRouteId(custom_id~ : String, reason~ : String)
-  InvalidModalFieldCount(custom_id~ : String, count~ : Int)
+  InvalidModalFieldCount(custom_id~ : String, count~ : Int32)
   DuplicateModalTextInput(custom_id~ : String, field~ : String)
   ModalOutsideLimits(custom_id~ : String, violation~ : @model.LimitViolation)
   InvalidFileTypes(owner~ : String, reason~ : String)
   CommandOutsideLimits(command~ : String, violation~ : @model.LimitViolation)
-  InvalidCooldown(command~ : String, seconds~ : Int)
-  InvalidMaxInFlight(value~ : Int)
-  InvalidMaxPending(value~ : Int)
+  InvalidCooldown(command~ : String, seconds~ : Int32)
+  InvalidMaxInFlight(value~ : Int32)
+  InvalidMaxPending(value~ : Int32)
 } derive(@debug.Debug)
 
 pub(all) suberror CustomIdError {
-  TooLong(custom_id~ : String, length~ : Int)
+  TooLong(custom_id~ : String, length~ : Int32)
   SeparatorInSegment(segment~ : String)
 } derive(@debug.Debug)
 
@@ -87,14 +87,14 @@ pub(all) suberror ModalShowError {
   InvalidCustomId(CustomIdError)
   UnknownCustomId(custom_id~ : String)
   NonTextInput(custom_id~ : String)
-  ValueTooLong(custom_id~ : String, length~ : Int, max~ : Int)
+  ValueTooLong(custom_id~ : String, length~ : Int32, max~ : Int32)
 } derive(@debug.Debug)
 
 // Types and methods
 pub struct App {
   // private fields
 }
-pub fn App::attach(Self, @framework.Framework, client~ : @http.Client, application_id~ : @model.Id[@model.ApplicationMarker], waiter? : async (String, @model.Id[@model.UserMarker]?, Int?) -> @framework.ComponentCtx?, latency_ms? : () -> Int64?, intake? : HandlerIntake) -> AppCtx
+pub fn App::attach(Self, @framework.Framework, client~ : @http.Client, application_id~ : @model.Id[@model.ApplicationMarker], waiter? : async (String, @model.Id[@model.UserMarker]?, Int32?) -> @framework.ComponentCtx?, latency_ms? : () -> Int64?, intake? : HandlerIntake) -> AppCtx
 pub async fn App::plan_commands(Self, @http.Client, @model.Id[@model.ApplicationMarker], scope~ : CommandScope, unowned? : @framework.UnownedCommands) -> CommandPlan
 pub async fn App::report_failure(Self, FailureOrigin, Error) -> Unit
 pub async fn App::serve(Self, @async.TaskGroup[Unit], access~ : RestAccess, application_id? : @model.Id[@model.ApplicationMarker], clock? : &@clock.Clock) -> InteractionEndpoint
@@ -105,7 +105,7 @@ pub fn App::warn(Self, AppWarning) -> Unit
 pub struct AppBuilder {
   // private fields
 }
-pub fn AppBuilder::AppBuilder(max_in_flight? : Int, max_pending? : Int, cooldown_store? : &@cooldown.CooldownStore, cooldown_outage? : CooldownOutage) -> Self
+pub fn AppBuilder::AppBuilder(max_in_flight? : Int32, max_pending? : Int32, cooldown_store? : &@cooldown.CooldownStore, cooldown_outage? : CooldownOutage) -> Self
 pub fn AppBuilder::autocomplete(Self, String, async (@framework.AutocompleteCtx) -> Unit) -> Unit
 pub fn AppBuilder::build(Self) -> App raise AppConfigError
 #callsite(autofill(loc))
@@ -143,12 +143,12 @@ pub(all) enum AppWarning {
   MalformedInteraction(origin~ : FailureOrigin, reason~ : String)
   UnhandledFailure(origin~ : FailureOrigin, error~ : Error)
   ErrorPolicyFailed(error~ : Error)
-  AutocompleteTruncated(command_path~ : String, option~ : String, count~ : Int)
+  AutocompleteTruncated(command_path~ : String, option~ : String, count~ : Int32)
   HandlerFailed(target~ : String, error~ : Error)
   WaiterUnavailable
   InteractionProcessingFailed(error~ : Error)
   Executor(source~ : String, message~ : String)
-  DeferredInteractionsRefused(max_pending~ : Int)
+  DeferredInteractionsRefused(max_pending~ : Int32)
   CooldownUnavailable(reason~ : String, outage~ : CooldownOutage)
 } derive(@debug.Debug)
 pub fn AppWarning::to_string(Self) -> String
@@ -168,7 +168,7 @@ pub struct Command[A] {
   // private fields
 }
 pub fn[A] Command::check(Self[A], async (CheckCtx) -> Bool) -> Self[A]
-pub fn[A] Command::cooldown(Self[A], seconds~ : Int, bucket? : CooldownBucket) -> Self[A]
+pub fn[A] Command::cooldown(Self[A], seconds~ : Int32, bucket? : CooldownBucket) -> Self[A]
 pub fn[A] Command::erase(Self[A]) -> RegisteredCommand
 pub fn[A] Command::spec(Self[A]) -> @interaction.CommandSpec
 
@@ -213,7 +213,7 @@ pub fn ComponentDeferredCtx::selected_roles(Self) -> Array[@model.Role]
 pub fn ComponentDeferredCtx::selected_users(Self) -> Array[@model.User]
 pub fn ComponentDeferredCtx::user(Self) -> @model.User
 pub fn ComponentDeferredCtx::values(Self) -> Array[String]
-pub async fn[A] ComponentDeferredCtx::wait_for_component(Self, ComponentRoute[A], A, from? : WaitFrom, timeout_ms? : Int) -> @framework.ComponentCtx?
+pub async fn[A] ComponentDeferredCtx::wait_for_component(Self, ComponentRoute[A], A, from? : WaitFrom, timeout_ms? : Int32) -> @framework.ComponentCtx?
 
 pub(all) enum ComponentHandler[A] {
   Immediate(async (ComponentImmediateCtx, A) -> ComponentReply)
@@ -231,7 +231,7 @@ pub fn ComponentImmediateCtx::guild_id(Self) -> @model.Id[@model.GuildMarker]?
 pub fn ComponentImmediateCtx::guild_scope(Self) -> @framework.GuildInvocation raise HandlerError
 pub fn ComponentImmediateCtx::interaction(Self) -> @model.Interaction
 pub fn ComponentImmediateCtx::message(Self) -> @model.Message
-pub fn ComponentImmediateCtx::remaining_ms(Self) -> Int?
+pub fn ComponentImmediateCtx::remaining_ms(Self) -> Int32?
 pub fn ComponentImmediateCtx::scope(Self) -> @framework.InvocationScope
 pub fn ComponentImmediateCtx::selected_channels(Self) -> Array[@model.Channel]
 pub fn ComponentImmediateCtx::selected_roles(Self) -> Array[@model.Role]
@@ -273,7 +273,7 @@ pub fn[A] CustomIdCodec::decode(Self[A], String) -> A raise HandlerError
 pub fn[A] CustomIdCodec::encode(Self[A], A) -> String raise CustomIdError
 pub fn[M] CustomIdCodec::id() -> Self[@model.Id[M]]
 pub fn[A, B] CustomIdCodec::imap(Self[A], to~ : (A) -> B raise, from~ : (B) -> A) -> Self[B]
-pub fn CustomIdCodec::int() -> Self[Int]
+pub fn CustomIdCodec::int() -> Self[Int32]
 pub fn CustomIdCodec::string() -> Self[String]
 pub fn CustomIdCodec::unit() -> Self[Unit]
 pub fn[A, B] CustomIdCodec::zip(Self[A], Self[B]) -> Self[(A, B)]
@@ -295,7 +295,7 @@ pub async fn DeferredCtx::original(Self) -> @model.Message
 pub fn DeferredCtx::raw(Self) -> @framework.CommandCtx
 pub fn DeferredCtx::scope(Self) -> @framework.InvocationScope
 pub fn DeferredCtx::user(Self) -> @model.User
-pub async fn[A] DeferredCtx::wait_for_component(Self, ComponentRoute[A], A, from? : WaitFrom, timeout_ms? : Int) -> @framework.ComponentCtx?
+pub async fn[A] DeferredCtx::wait_for_component(Self, ComponentRoute[A], A, from? : WaitFrom, timeout_ms? : Int32) -> @framework.ComponentCtx?
 
 pub struct FailureCtx {
   // private fields
@@ -337,7 +337,7 @@ pub fn ImmediateCtx::app(Self) -> AppCtx
 pub fn ImmediateCtx::guild_id(Self) -> @model.Id[@model.GuildMarker]?
 pub fn ImmediateCtx::guild_scope(Self) -> @framework.GuildInvocation raise HandlerError
 pub fn ImmediateCtx::interaction(Self) -> @model.Interaction
-pub fn ImmediateCtx::remaining_ms(Self) -> Int?
+pub fn ImmediateCtx::remaining_ms(Self) -> Int32?
 pub fn ImmediateCtx::scope(Self) -> @framework.InvocationScope
 pub fn ImmediateCtx::unchecked_raw(Self) -> @framework.CommandCtx
 pub fn ImmediateCtx::user(Self) -> @model.User
@@ -360,9 +360,9 @@ pub fn InteractionCtx::user(Self) -> @model.User
 pub struct InteractionEndpoint {
   // private fields
 }
-pub async fn InteractionEndpoint::handle(Self, Json, deadline_ms? : Int) -> Json?
-pub async fn InteractionEndpoint::handle_interaction(Self, @model.Interaction, deadline_ms? : Int) -> InteractionOutcome
-pub async fn InteractionEndpoint::handle_signed_http(Self, InteractionHttpRequest, @verify.InteractionVerifier, deadline_ms? : Int) -> InteractionHttpResponse
+pub async fn InteractionEndpoint::handle(Self, Json, deadline_ms? : Int32) -> Json?
+pub async fn InteractionEndpoint::handle_interaction(Self, @model.Interaction, deadline_ms? : Int32) -> InteractionOutcome
+pub async fn InteractionEndpoint::handle_signed_http(Self, InteractionHttpRequest, @verify.InteractionVerifier, deadline_ms? : Int32) -> InteractionHttpResponse
 
 pub(all) enum InteractionHandler[A] {
   Immediate(async (ImmediateCtx, A) -> CommandReply)
@@ -384,7 +384,7 @@ pub(all) struct InteractionHttpRequest {
 }
 
 pub(all) struct InteractionHttpResponse {
-  status : Int
+  status : Int32
   content_type : String?
   body : InteractionHttpBody
 }
@@ -432,7 +432,7 @@ pub async fn ModalDeferredCtx::original(Self) -> @model.Message
 pub fn ModalDeferredCtx::raw(Self) -> @framework.ModalCtx
 pub fn ModalDeferredCtx::scope(Self) -> @framework.InvocationScope
 pub fn ModalDeferredCtx::user(Self) -> @model.User
-pub async fn[A] ModalDeferredCtx::wait_for_component(Self, ComponentRoute[A], A, from? : WaitFrom, timeout_ms? : Int) -> @framework.ComponentCtx?
+pub async fn[A] ModalDeferredCtx::wait_for_component(Self, ComponentRoute[A], A, from? : WaitFrom, timeout_ms? : Int32) -> @framework.ComponentCtx?
 
 pub struct ModalField[A] {
   // private fields
@@ -466,7 +466,7 @@ pub fn ModalImmediateCtx::guild_id(Self) -> @model.Id[@model.GuildMarker]?
 pub fn ModalImmediateCtx::guild_scope(Self) -> @framework.GuildInvocation raise HandlerError
 pub fn ModalImmediateCtx::interaction(Self) -> @model.Interaction
 pub fn ModalImmediateCtx::origin(Self) -> @framework.ModalOrigin
-pub fn ModalImmediateCtx::remaining_ms(Self) -> Int?
+pub fn ModalImmediateCtx::remaining_ms(Self) -> Int32?
 pub fn ModalImmediateCtx::scope(Self) -> @framework.InvocationScope
 pub fn ModalImmediateCtx::unchecked_raw(Self) -> @framework.ModalCtx
 pub fn ModalImmediateCtx::user(Self) -> @model.User
@@ -512,7 +512,7 @@ pub(all) enum WaitFrom {
 // Type aliases
 pub type CommandCheck = async (CheckCtx) -> Bool
 
-pub type ComponentWaiter = async (String, @model.Id[@model.UserMarker]?, Int?) -> @framework.ComponentCtx?
+pub type ComponentWaiter = async (String, @model.Id[@model.UserMarker]?, Int32?) -> @framework.ComponentCtx?
 
 pub type ErrorPolicy = async (FailureCtx, Error) -> Unit
 

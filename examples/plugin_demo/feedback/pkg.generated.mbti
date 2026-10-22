@@ -14,16 +14,16 @@ pub fn install_feedback(@app.AppBuilder, config~ : FeedbackConfig) -> Unit
 // Types and methods
 pub(all) struct FeedbackConfig {
   destination_channel : @model.Id[@model.ChannelMarker]
-  cooldown_seconds : Int
+  cooldown_seconds : Int32
 }
-pub fn FeedbackConfig::FeedbackConfig(destination_channel~ : @model.Id[@model.ChannelMarker], cooldown_seconds? : Int) -> Self
+pub fn FeedbackConfig::FeedbackConfig(destination_channel~ : @model.Id[@model.ChannelMarker], cooldown_seconds? : Int32) -> Self
 
 pub struct FeedbackFeature {
   // private fields
 }
 pub fn FeedbackFeature::FeedbackFeature(FeedbackConfig) -> Self
 pub fn FeedbackFeature::install(Self, @app.AppBuilder) -> Unit
-pub fn FeedbackFeature::stored_count(Self) -> Int
+pub fn FeedbackFeature::stored_count(Self) -> Int32
 
 // Type aliases
 

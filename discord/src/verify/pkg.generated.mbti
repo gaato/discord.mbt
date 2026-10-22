@@ -10,7 +10,7 @@ pub fn verify_signature(public_key~ : String, signature~ : String, timestamp~ : 
 
 // Errors
 pub(all) suberror InteractionVerifierError {
-  InvalidPublicKeyLength(got~ : Int)
+  InvalidPublicKeyLength(got~ : Int32)
   InvalidPublicKeyHex
   InvalidPublicKeyEncoding
 } derive(Eq, @debug.Debug)

@@ -6,16 +6,16 @@ import {
 }
 
 // Values
-pub async fn[T : @debug.Debug] check_schedule(Array[T], async (Array[T]) -> String, max_runs? : Int) -> Unit
+pub async fn[T : @debug.Debug] check_schedule(Array[T], async (Array[T]) -> String, max_runs? : Int32) -> Unit
 
-pub async fn[T] ddmin(Array[T], async (Array[T]) -> Bool, max_runs? : Int) -> Shrunk[T]
+pub async fn[T] ddmin(Array[T], async (Array[T]) -> Bool, max_runs? : Int32) -> Shrunk[T]
 
 // Errors
 
 // Types and methods
 pub struct Shrunk[T] {
   steps : Array[T]
-  runs : Int
+  runs : Int32
   exhausted : Bool
 }
 

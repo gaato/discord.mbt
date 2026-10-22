@@ -13,32 +13,32 @@ import {
 }
 
 // Values
-pub const DEFAULT_MAX_MESSAGE_BYTES : Int = 67_108_864
+pub const DEFAULT_MAX_MESSAGE_BYTES : Int32 = 67_108_864
 
-pub async fn connect_websocket(String, max_message_bytes? : Int) -> &GatewayTransport
+pub async fn connect_websocket(String, max_message_bytes? : Int32) -> &GatewayTransport
 
-pub fn on_close(Int?, Bool) -> ReconnectPolicy
+pub fn on_close(Int32?, Bool) -> ReconnectPolicy
 
 // Errors
 pub(all) suberror GatewayConfigError {
-  InvalidMaxMessageBytes(value~ : Int)
+  InvalidMaxMessageBytes(value~ : Int32)
 } derive(@debug.Debug)
 
 pub(all) suberror InflateError {
   Malformed(message~ : String)
   InvalidUtf8
-  TooLarge(limit~ : Int)
+  TooLarge(limit~ : Int32)
 } derive(@debug.Debug)
 
 pub(all) suberror TransportClosed {
-  TransportClosed(code~ : Int?, reason~ : String)
+  TransportClosed(code~ : Int32?, reason~ : String)
 } derive(@debug.Debug)
 
 // Types and methods
 pub struct CommandLimiter {
   // private fields
 }
-pub fn CommandLimiter::CommandLimiter(limit? : Int, window_ms? : Int, clock? : &@clock.Clock) -> Self
+pub fn CommandLimiter::CommandLimiter(limit? : Int32, window_ms? : Int32, clock? : &@clock.Clock) -> Self
 pub async fn CommandLimiter::acquire(Self) -> Unit
 
 #non_exhaustive
@@ -78,7 +78,7 @@ pub async fn Shard::request_guild_members(Self, @model.RequestGuildMembers) -> U
 pub async fn Shard::request_soundboard_sounds(Self, @model.RequestSoundboardSounds) -> Unit
 pub async fn Shard::send(Self, Json) -> Unit
 pub fn Shard::session(Self) -> Session?
-pub fn[X] Shard::start(@async.TaskGroup[X], token~ : String, intents~ : @model.Intents, capabilities? : @model.GatewayCapabilities, gateway_url? : String, shard_id? : Int, shard_count? : Int, identify_queue? : &@queue.IdentifyQueue, event_filter? : (@model.EventKind) -> Bool, connector? : async (String) -> &GatewayTransport, compress? : Bool, compression? : GatewayCompression, inflater_factory? : () -> &Inflater raise, max_message_bytes? : Int, queue_capacity? : Int, telemetry? : (@telemetry.TelemetryEvent) -> Unit, clock? : &@clock.Clock, rand? : @random.Rand, session? : Session, presence? : @model.UpdatePresence) -> Self
+pub fn[X] Shard::start(@async.TaskGroup[X], token~ : String, intents~ : @model.Intents, capabilities? : @model.GatewayCapabilities, gateway_url? : String, shard_id? : Int32, shard_count? : Int32, identify_queue? : &@queue.IdentifyQueue, event_filter? : (@model.EventKind) -> Bool, connector? : async (String) -> &GatewayTransport, compress? : Bool, compression? : GatewayCompression, inflater_factory? : () -> &Inflater raise, max_message_bytes? : Int32, queue_capacity? : Int32, telemetry? : (@telemetry.TelemetryEvent) -> Unit, clock? : &@clock.Clock, rand? : @random.Rand, session? : Session, presence? : @model.UpdatePresence) -> Self
 pub fn Shard::state(Self) -> ShardState
 pub async fn Shard::update_presence(Self, @model.UpdatePresence) -> Unit
 pub async fn Shard::update_voice_state(Self, @model.UpdateVoiceState) -> Unit
@@ -87,17 +87,17 @@ pub async fn Shard::update_voice_state(Self, @model.UpdateVoiceState) -> Unit
 pub(all) enum ShardEvent {
   Dispatch(@model.Event)
   Connected(resumed~ : Bool)
-  Disconnected(code~ : Int?, resuming~ : Bool)
-  FatallyClosed(code~ : Int)
+  Disconnected(code~ : Int32?, resuming~ : Bool)
+  FatallyClosed(code~ : Int32)
 } derive(@debug.Debug)
 
 pub(all) enum ShardState {
-  Disconnected(reconnect_attempts~ : Int)
+  Disconnected(reconnect_attempts~ : Int32)
   Connecting
   Identifying
   Resuming
   Active
-  FatallyClosed(code~ : Int)
+  FatallyClosed(code~ : Int32)
 } derive(Eq, @debug.Debug)
 
 // Type aliases
@@ -106,7 +106,7 @@ pub(all) enum ShardState {
 pub(open) trait GatewayTransport {
   async fn recv(Self) -> GatewayFrame
   async fn send(Self, String) -> Unit
-  async fn close(Self, code~ : Int) -> Unit
+  async fn close(Self, code~ : Int32) -> Unit
 }
 
 pub(open) trait Inflater {

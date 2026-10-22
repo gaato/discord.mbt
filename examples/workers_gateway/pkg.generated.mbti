@@ -7,11 +7,11 @@ import {
 }
 
 // Values
-pub fn build_bot(String, String, Map[Int, @bot.BotSession]) -> @bot.Bot raise
+pub fn build_bot(String, String, Map[Int32, @bot.BotSession]) -> @bot.Bot raise
 
-pub fn decode_sessions(String) -> Map[Int, @bot.BotSession]
+pub fn decode_sessions(String) -> Map[Int32, @bot.BotSession]
 
-pub fn encode_sessions(Map[Int, @bot.BotSession]) -> String
+pub fn encode_sessions(Map[Int32, @bot.BotSession]) -> String
 
 pub fn worker_app() -> @app.App raise @app.AppConfigError
 

@@ -11,7 +11,7 @@ pub fn autocomplete(String, options~ : Array[@model.CommandDataOption], base? : 
 
 pub fn button(String, message? : @model.Message, base? : @model.Interaction) -> @model.Interaction raise FixtureError
 
-pub fn component_raw(String, typ~ : Int, values? : Array[String], resolved? : @model.ResolvedData, message? : @model.Message, base? : @model.Interaction) -> @model.Interaction raise FixtureError
+pub fn component_raw(String, typ~ : Int32, values? : Array[String], resolved? : @model.ResolvedData, message? : @model.Message, base? : @model.Interaction) -> @model.Interaction raise FixtureError
 
 pub fn default_application_id() -> @model.Id[@model.ApplicationMarker]
 

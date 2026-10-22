@@ -27,7 +27,7 @@ jobs:
   watch:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
-    container: ghcr.io/gaato/moonbit:0.10.15-943464bfa
+    container: ghcr.io/gaato/moonbit:0.10.16-b1a0e846e
 
     steps:
       - name: Check out repository

@@ -9,6 +9,9 @@ to 0.1.1 were made from [gaato/dave.mbt](https://github.com/gaato/dave.mbt).
 
 ### Changed
 
+- Built and tested with MoonBit 0.10.16. The generated `.mbti` interface
+  files now spell `Int` as `Int32` and `UInt` as `UInt32`, which are the same
+  types; no signature changed.
 - **`EncryptFailure` and `DecryptFailure` are `#non_exhaustive`**, so a later
   release can name a libdave failure code that arrives as `Unknown(code~)`
   today without breaking matches in your code.

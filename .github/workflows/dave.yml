@@ -45,7 +45,7 @@ jobs:
         target: [js, wasm]
     env:
       MBT_DAVE_NATIVE_ROOT: /definitely/missing/dave-must-not-bootstrap
-      MOONBIT_INSTALL_VERSION: "0.10.15+943464bfa"
+      MOONBIT_INSTALL_VERSION: "0.10.16+b1a0e846e"
 
     steps:
       - name: Check out repository
@@ -94,7 +94,7 @@ jobs:
             runner: windows-2025
     env:
       MBT_DAVE_REQUIRE_NATIVE: "1"
-      MOONBIT_INSTALL_VERSION: "0.10.15+943464bfa"
+      MOONBIT_INSTALL_VERSION: "0.10.16+b1a0e846e"
 
     steps:
       - name: Check out repository

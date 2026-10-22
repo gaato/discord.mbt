@@ -38,14 +38,14 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  MOONBIT_INSTALL_VERSION: "0.10.15+943464bfa"
+  MOONBIT_INSTALL_VERSION: "0.10.16+b1a0e846e"
 
 jobs:
   publish:
     if: github.event_name == 'push'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
-    container: ghcr.io/gaato/moonbit:0.10.15-943464bfa
+    container: ghcr.io/gaato/moonbit:0.10.16-b1a0e846e
     environment: mooncakes
     steps:
       - name: Check out the tagged commit

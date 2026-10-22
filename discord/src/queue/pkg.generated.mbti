@@ -13,13 +13,13 @@ import {
 pub struct InMemoryQueue {
   // private fields
 }
-pub fn InMemoryQueue::InMemoryQueue(max_concurrency? : Int, spacing_ms? : Int, clock? : &@clock.Clock) -> Self
-pub async fn InMemoryQueue::wait_for_identify(Self, Int) -> Unit
+pub fn InMemoryQueue::InMemoryQueue(max_concurrency? : Int32, spacing_ms? : Int32, clock? : &@clock.Clock) -> Self
+pub async fn InMemoryQueue::wait_for_identify(Self, Int32) -> Unit
 pub impl IdentifyQueue for InMemoryQueue
 
 // Type aliases
 
 // Traits
 pub(open) trait IdentifyQueue {
-  async fn wait_for_identify(Self, Int) -> Unit
+  async fn wait_for_identify(Self, Int32) -> Unit
 }

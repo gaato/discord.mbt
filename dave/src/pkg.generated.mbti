@@ -48,7 +48,7 @@ pub(all) enum DecryptFailure {
   MissingKeyRatchet
   InvalidNonce
   MissingCryptor
-  Unknown(code~ : Int)
+  Unknown(code~ : Int32)
 } derive(Eq, @debug.Debug)
 
 pub struct Decryptor {
@@ -65,14 +65,14 @@ pub(all) enum EncryptFailure {
   MissingKeyRatchet
   MissingCryptor
   TooManyAttempts
-  Unknown(code~ : Int)
+  Unknown(code~ : Int32)
 } derive(Eq, @debug.Debug)
 
 pub struct Encryptor {
   // private fields
 }
-pub fn Encryptor::assign_ssrc_to_codec(Self, ssrc~ : UInt, codec~ : Codec) -> Unit raise DaveError
-pub fn Encryptor::encrypt(Self, media_type~ : MediaType, ssrc~ : UInt, Bytes) -> Bytes raise DaveError
+pub fn Encryptor::assign_ssrc_to_codec(Self, ssrc~ : UInt32, codec~ : Codec) -> Unit raise DaveError
+pub fn Encryptor::encrypt(Self, media_type~ : MediaType, ssrc~ : UInt32, Bytes) -> Bytes raise DaveError
 pub fn Encryptor::has_key_ratchet(Self) -> Bool
 pub fn Encryptor::is_passthrough_mode(Self) -> Bool
 pub fn Encryptor::new() -> Self raise DaveError

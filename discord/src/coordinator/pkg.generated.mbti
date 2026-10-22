@@ -27,13 +27,13 @@ pub struct Coordinator {
 }
 pub fn Coordinator::addr(Self) -> String
 pub async fn Coordinator::close(Self) -> Unit noraise
-pub async fn[X] Coordinator::serve(@async.TaskGroup[X], addr~ : String, max_concurrency? : Int, identify_spacing_ms? : Int, global_limit? : Int) -> Self
+pub async fn[X] Coordinator::serve(@async.TaskGroup[X], addr~ : String, max_concurrency? : Int32, identify_spacing_ms? : Int32, global_limit? : Int32) -> Self
 
 pub struct RemoteCooldownStore {
   // private fields
 }
 pub fn RemoteCooldownStore::close(Self) -> Unit
-pub async fn RemoteCooldownStore::connect(String, timeout_ms? : Int) -> Self
+pub async fn RemoteCooldownStore::connect(String, timeout_ms? : Int32) -> Self
 pub async fn RemoteCooldownStore::ping(Self) -> Unit
 pub async fn RemoteCooldownStore::try_acquire(Self, String, window_ms~ : Int64) -> @cooldown.CooldownDecision
 pub impl @cooldown.CooldownStore for RemoteCooldownStore
@@ -44,7 +44,7 @@ pub struct RemoteIdentifyQueue {
 pub fn RemoteIdentifyQueue::close(Self) -> Unit
 pub async fn RemoteIdentifyQueue::connect(String) -> Self
 pub async fn RemoteIdentifyQueue::ping(Self) -> Unit
-pub async fn RemoteIdentifyQueue::wait_for_identify(Self, Int) -> Unit
+pub async fn RemoteIdentifyQueue::wait_for_identify(Self, Int32) -> Unit
 pub impl @queue.IdentifyQueue for RemoteIdentifyQueue
 
 pub struct RemoteRateLimiter {
@@ -54,7 +54,7 @@ pub async fn RemoteRateLimiter::acquire(Self, String, global_exempt~ : Bool) -> 
 pub fn RemoteRateLimiter::close(Self) -> Unit
 pub async fn RemoteRateLimiter::connect(String) -> Self
 pub async fn RemoteRateLimiter::ping(Self) -> Unit
-pub async fn RemoteRateLimiter::release(Self, String, status~ : Int, headers~ : @http.Headers) -> Unit
+pub async fn RemoteRateLimiter::release(Self, String, status~ : Int32, headers~ : @http.Headers) -> Unit
 pub impl @sdk-runtime.RateLimiter for RemoteRateLimiter
 
 // Type aliases

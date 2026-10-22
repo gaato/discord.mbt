@@ -7,6 +7,12 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+### Changed
+
+- Built and tested with MoonBit 0.10.16. The generated `.mbti` interface
+  files now spell `Int` as `Int32` and `UInt` as `UInt32`, which are the same
+  types; no signature changed.
+
 ## [0.13.0] - 2026-10-22
 
 ### Changed

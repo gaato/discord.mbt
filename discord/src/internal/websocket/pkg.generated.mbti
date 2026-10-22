@@ -6,13 +6,13 @@ import {
 }
 
 // Values
-pub fn close_code_from_int(Int) -> @moonbitlang/async/websocket.CloseCode
+pub fn close_code_from_int(Int32) -> @moonbitlang/async/websocket.CloseCode
 
-pub fn close_code_to_int(@moonbitlang/async/websocket.CloseCode) -> Int
+pub fn close_code_to_int(@moonbitlang/async/websocket.CloseCode) -> Int32
 
 pub async fn connect(String, headers? : Map[@http.CaseInsensitiveString, String], proxy? : @http.Client) -> @moonbitlang/async/websocket.Conn
 
-pub async fn read_message(@moonbitlang/async/websocket.Message, max_bytes~ : Int) -> Bytes?
+pub async fn read_message(@moonbitlang/async/websocket.Message, max_bytes~ : Int32) -> Bytes?
 
 // Errors
 

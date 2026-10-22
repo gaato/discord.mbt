@@ -13,7 +13,7 @@ import {
 pub struct CacheLimit {
   // private fields
 }
-pub fn CacheLimit::CacheLimit(max_entries? : Int, ttl_ms? : Int64) -> Self
+pub fn CacheLimit::CacheLimit(max_entries? : Int32, ttl_ms? : Int64) -> Self
 
 pub struct CacheLimits {
   // private fields

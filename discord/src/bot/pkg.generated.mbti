@@ -15,27 +15,27 @@ import {
 }
 
 // Values
-pub const DEFAULT_EVENT_BACKLOG : Int = 10000
+pub const DEFAULT_EVENT_BACKLOG : Int32 = 10000
 
-pub const DEFAULT_SHUTDOWN_GRACE_MS : Int = 10000
+pub const DEFAULT_SHUTDOWN_GRACE_MS : Int32 = 10000
 
 // Errors
 pub(all) suberror BotConfigError {
   EmptyToken
   InvalidShardConfig(message~ : String)
-  MismatchedSession(shard_id~ : Int)
-  InvalidEventBacklog(value~ : Int)
-  InvalidShutdownGrace(value~ : Int)
-  InvalidMaxMessageBytes(value~ : Int)
+  MismatchedSession(shard_id~ : Int32)
+  InvalidEventBacklog(value~ : Int32)
+  InvalidShutdownGrace(value~ : Int32)
+  InvalidMaxMessageBytes(value~ : Int32)
 } derive(@debug.Debug)
 
 pub(all) suberror BotError {
-  FatallyClosed(code~ : Int)
+  FatallyClosed(code~ : Int32)
   AlreadyRunning
   InvalidGatewayInfo(message~ : String)
-  SessionStartLimitExceeded(required~ : Int, remaining~ : Int, reset_after_ms~ : Int64)
-  ShardNotManaged(shard_id~ : Int)
-  GatewayRateLimited(opcode~ : Int, retry_after_ms~ : Int64)
+  SessionStartLimitExceeded(required~ : Int32, remaining~ : Int32, reset_after_ms~ : Int64)
+  ShardNotManaged(shard_id~ : Int32)
+  GatewayRateLimited(opcode~ : Int32, retry_after_ms~ : Int64)
   GatewayRequestTimeout
 } derive(@debug.Debug)
 pub fn BotError::to_string(Self) -> String
@@ -46,12 +46,12 @@ pub struct Bot {
   // private fields
 }
 pub async fn Bot::run(Self) -> Unit
-pub fn Bot::sessions(Self) -> Map[Int, BotSession]
+pub fn Bot::sessions(Self) -> Map[Int32, BotSession]
 
 pub struct BotBuilder {
   // private fields
 }
-pub fn BotBuilder::BotBuilder(@app.App, token~ : String, intents? : @model.Intents, capabilities? : @model.GatewayCapabilities, client? : @http.Client, gateway_url? : String, shards? : ShardConfig, compress? : Bool, compression? : @gateway.GatewayCompression, identify_queue? : &@queue.IdentifyQueue, sync? : @app.CommandScope, sync_unowned? : @framework.UnownedCommands, sessions? : Map[Int, BotSession], event_backlog? : Int, shutdown_grace_ms? : Int, max_message_bytes? : Int) -> Self
+pub fn BotBuilder::BotBuilder(@app.App, token~ : String, intents? : @model.Intents, capabilities? : @model.GatewayCapabilities, client? : @http.Client, gateway_url? : String, shards? : ShardConfig, compress? : Bool, compression? : @gateway.GatewayCompression, identify_queue? : &@queue.IdentifyQueue, sync? : @app.CommandScope, sync_unowned? : @framework.UnownedCommands, sessions? : Map[Int32, BotSession], event_backlog? : Int32, shutdown_grace_ms? : Int32, max_message_bytes? : Int32) -> Self
 pub fn BotBuilder::attach_cache(Self, @cache.InMemoryCache) -> Unit
 pub fn BotBuilder::build(Self) -> Bot raise BotConfigError
 pub fn BotBuilder::middleware(Self, async (GatewayCtx, @model.Event, async (@model.Event) -> Unit) -> Unit) -> Unit
@@ -169,7 +169,7 @@ pub fn GatewayCtx::app(Self) -> @app.AppCtx
 pub fn GatewayCtx::cache(Self) -> @cache.InMemoryCache?
 pub fn GatewayCtx::channel_ref(Self, @model.Id[@model.ChannelMarker]) -> @http.ChannelRef
 pub fn[T] GatewayCtx::expect_event(Self, EventType[T], (T) -> Bool) -> PendingEvent[T]
-pub async fn GatewayCtx::fetch_guild_members(Self, @model.Id[@model.GuildMarker], @model.MemberSelect, presences? : Bool, timeout_ms? : Int) -> FetchedMembers
+pub async fn GatewayCtx::fetch_guild_members(Self, @model.Id[@model.GuildMarker], @model.MemberSelect, presences? : Bool, timeout_ms? : Int32) -> FetchedMembers
 pub fn GatewayCtx::framework_raw(Self) -> @framework.Framework
 pub fn GatewayCtx::guild_ref(Self, @model.Id[@model.GuildMarker]) -> @http.GuildRef
 pub fn GatewayCtx::intents(Self) -> @model.Intents
@@ -187,20 +187,20 @@ pub async fn GatewayCtx::shutdown(Self) -> Unit
 pub async fn GatewayCtx::update_presence(Self, @model.UpdatePresence) -> Unit
 pub async fn GatewayCtx::update_voice_state(Self, @model.UpdateVoiceState) -> Unit
 pub fn GatewayCtx::user_ref(Self, @model.Id[@model.UserMarker]) -> @http.UserRef
-pub async fn[T] GatewayCtx::wait_for(Self, EventType[T], (T) -> Bool, timeout_ms? : Int) -> T?
-pub async fn[A] GatewayCtx::wait_for_component(Self, @app.ComponentRoute[A], A, user? : @model.Id[@model.UserMarker], timeout_ms? : Int) -> @framework.ComponentCtx?
+pub async fn[T] GatewayCtx::wait_for(Self, EventType[T], (T) -> Bool, timeout_ms? : Int32) -> T?
+pub async fn[A] GatewayCtx::wait_for_component(Self, @app.ComponentRoute[A], A, user? : @model.Id[@model.UserMarker], timeout_ms? : Int32) -> @framework.ComponentCtx?
 
 pub struct PendingEvent[T] {
   // private fields
 }
 pub fn[T] PendingEvent::cancel(Self[T]) -> Unit
-pub async fn[T] PendingEvent::wait(Self[T], timeout_ms? : Int) -> T?
+pub async fn[T] PendingEvent::wait(Self[T], timeout_ms? : Int32) -> T?
 
 pub(all) enum ShardConfig {
   Auto
-  Single(id~ : Int, count~ : Int)
-  Fixed(count~ : Int)
-  Range(ids~ : Array[Int], count~ : Int)
+  Single(id~ : Int32, count~ : Int32)
+  Fixed(count~ : Int32)
+  Range(ids~ : Array[Int32], count~ : Int32)
 } derive(@debug.Debug)
 
 // Type aliases

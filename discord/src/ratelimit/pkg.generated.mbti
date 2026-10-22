@@ -10,7 +10,7 @@ import {
 // Values
 pub fn is_discord_rate_limit(@http.Headers) -> Bool
 
-pub fn rate_limiter(global_limit? : Int, clock? : &@clock.Clock) -> @sdk-runtime.WindowLimiter
+pub fn rate_limiter(global_limit? : Int32, clock? : &@clock.Clock) -> @sdk-runtime.WindowLimiter
 
 // Errors
 

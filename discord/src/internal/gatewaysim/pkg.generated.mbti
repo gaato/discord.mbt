@@ -24,19 +24,19 @@ pub struct FakeTransport {
   block_next_send : @ref.Ref[Bool]
   send_started : @aqueue.Queue[Unit]
   fail_close : @ref.Ref[Bool]
-  close_takes_ms : @ref.Ref[Int]
-  close_calls : @ref.Ref[Int]
-  close_code : @ref.Ref[Int?]
+  close_takes_ms : @ref.Ref[Int32]
+  close_calls : @ref.Ref[Int32]
+  close_code : @ref.Ref[Int32?]
   close_during_send : @ref.Ref[Bool]
   close_during_recv : @ref.Ref[Bool]
-  sends_after_close : @ref.Ref[Int]
+  sends_after_close : @ref.Ref[Int32]
   send_in_flight : @ref.Ref[Bool]
   recv_in_flight : @ref.Ref[Bool]
   // private fields
 }
 pub fn FakeTransport::FakeTransport(clock? : @mock.VirtualClock) -> Self
 pub async fn FakeTransport::put(Self, String) -> Unit
-pub fn FakeTransport::server_close(Self, Int?) -> Unit
+pub fn FakeTransport::server_close(Self, Int32?) -> Unit
 pub impl @gateway.GatewayTransport for FakeTransport
 
 // Type aliases
