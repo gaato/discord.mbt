@@ -15,6 +15,10 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# The MoonBit gates that depend on the toolchain version run through
+# scripts/gates.sh, which the canary (canary.yml) also runs on the latest and
+# nightly toolchains.
+#
 # Every job except voice-shim runs in ghcr.io/gaato/moonbit
 # (https://github.com/gaato/moonbit-docker), which carries the toolchain and
 # Node.js 24, and installs only project runtimes on top; voice-shim builds Rust
@@ -50,22 +54,13 @@ jobs:
       - name: Update registry index
         run: moon update
 
-      - name: Type check
-        run: moon check --target native --deny-warn
+      - name: Type and format check
+        run: scripts/gates.sh check
 
       - name: Test with coverage
         run: |
-          moon test --target native --enable-coverage
+          scripts/gates.sh native --enable-coverage
           moon coverage report -f summary
-
-      - name: Format check
-        run: moon fmt --check
-
-      - name: Check gaato/discord against published dependencies
-        run: |
-          # The workspace resolves every member to its directory here; a
-          # consumer gets every dependency from the registry.
-          MOON_WORK=off moon -C discord check --target native --deny-warn
 
       - name: Check published module contents
         shell: bash
@@ -148,14 +143,11 @@ jobs:
       - name: Update registry index
         run: moon update
 
-      - name: Type check
-        run: moon check --target js --deny-warn
+      - name: Type check and test
+        run: scripts/gates.sh js
 
       - name: Test native prebuild
         run: node --test discord/test/*.test.js discord_voice/test/*.test.js
-
-      - name: Test
-        run: moon test --target js
 
       - name: Install Workers test dependencies
         working-directory: examples/workers_echo
@@ -240,17 +232,8 @@ jobs:
       - name: Update registry index
         run: moon update
 
-      - name: Type check Wasm
-        run: |
-          moon check --target wasm --deny-warn
-          # Explicit roots must not silently disappear through target filtering.
-          moon check discord/src discord/src/coordinator discord/src/endpoint_http discord/src/testkit --target wasm --deny-warn
-
-      - name: Test Wasm including HTTP and TCP loopback
-        run: moon test --target wasm --release --verbose
-
-      - name: Build HTTP interactions example
-        run: moon build examples/interactions_http --target wasm --release --deny-warn
+      - name: Type check, test, and build the HTTP interactions example
+        run: scripts/gates.sh wasm
 
   spin-component:
     runs-on: ubuntu-24.04
