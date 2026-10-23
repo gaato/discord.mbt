@@ -3,7 +3,8 @@
   "extends": [
     "config:recommended",
     "helpers:pinGitHubActionDigests",
-    ":timezone(Asia/Tokyo)"
+    ":timezone(Asia/Tokyo)",
+    "github>gaato/.github:moonbit"
   ],
   "schedule": [
     "before 9am on monday"
