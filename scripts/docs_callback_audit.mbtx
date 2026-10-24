@@ -1,3 +1,11 @@
+----
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/fs",
+  "moonbitlang/core/env",
+}
+----
+
 ///|
 /// Audit the message fields each interaction message surface sends against
 /// Discord's documentation.
@@ -21,11 +29,6 @@
 /// surface claims to send must still be documented and must appear as a
 /// string literal in the functions that build it, so the claim cannot outlive
 /// the implementation. Unknown or stale allow entries fail the audit.
-import {
-  "moonbitlang/async",
-  "moonbitlang/async/fs",
-  "moonbitlang/core/env",
-}
 
 ///|
 struct Surface {

@@ -26,13 +26,13 @@ concurrency:
 # upstream script. The image tag must match this version, which the
 # containerized jobs verify.
 env:
-  MOONBIT_INSTALL_VERSION: "0.10.16+b1a0e846e"
+  MOONBIT_INSTALL_VERSION: "0.10.17+d971670cd"
 
 jobs:
   check:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
-    container: ghcr.io/gaato/moonbit:0.10.16-b1a0e846e
+    container: ghcr.io/gaato/moonbit:0.10.17-d971670cd
 
     steps:
       - name: Check out repository
@@ -121,7 +121,7 @@ jobs:
   js:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
-    container: ghcr.io/gaato/moonbit:0.10.16-b1a0e846e
+    container: ghcr.io/gaato/moonbit:0.10.17-d971670cd
 
     steps:
       - name: Check out repository
@@ -215,7 +215,7 @@ jobs:
   wasm:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
-    container: ghcr.io/gaato/moonbit:0.10.16-b1a0e846e
+    container: ghcr.io/gaato/moonbit:0.10.17-d971670cd
 
     steps:
       - name: Check out repository
@@ -238,7 +238,7 @@ jobs:
   spin-component:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
-    container: ghcr.io/gaato/moonbit:0.10.16-b1a0e846e
+    container: ghcr.io/gaato/moonbit:0.10.17-d971670cd
 
     steps:
       - name: Check out repository

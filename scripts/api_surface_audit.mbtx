@@ -1,3 +1,11 @@
+----
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/fs",
+  "moonbitlang/core/env",
+}
+----
+
 ///|
 /// Audit the public API surface recorded in the generated interfaces.
 ///
@@ -11,11 +19,6 @@
 ///
 /// Deliberate exceptions live in `scripts/api_surface_audit.allow`, one per
 /// line with a `#` reason. Unknown or stale entries fail the audit.
-import {
-  "moonbitlang/async",
-  "moonbitlang/async/fs",
-  "moonbitlang/core/env",
-}
 
 ///|
 /// Library packages, by alias and directory, whose public functions are

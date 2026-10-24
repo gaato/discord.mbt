@@ -1,3 +1,11 @@
+----
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/fs",
+  "moonbitlang/core/env",
+}
+----
+
 ///|
 /// Guard the injected clock: library code (tests excluded) must wait and read
 /// time through a `gaato/http/clock` `Clock` it was given, so a test can drive
@@ -9,11 +17,6 @@
 /// injection point itself and passes. Every other call site needs an entry in
 /// `scripts/clock_guard.allow`: `<file> <function> <entry point> # reason`,
 /// one line per use. Unknown or stale entries fail the audit.
-import {
-  "moonbitlang/async",
-  "moonbitlang/async/fs",
-  "moonbitlang/core/env",
-}
 
 ///|
 /// The library source roots, one per module.
