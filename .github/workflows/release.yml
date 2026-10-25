@@ -43,7 +43,7 @@ env:
 jobs:
   publish:
     if: github.event_name == 'push'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 20
     container: ghcr.io/gaato/moonbit:0.10.17-d971670cd
     environment: mooncakes
@@ -101,7 +101,7 @@ jobs:
     if: >-
       !cancelled() && (needs.publish.result == 'success' ||
       (github.event_name == 'workflow_dispatch' && needs.publish.result == 'skipped'))
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     permissions:
       contents: write
