@@ -206,7 +206,7 @@ jobs:
   checksums:
     if: github.event_name != 'release' || github.event.release.tag_name == 'voice-shim-v0.1.0'
     needs: build
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     steps:
       - name: Download libraries
@@ -253,7 +253,7 @@ jobs:
   publish:
     if: github.event_name == 'release' && github.event.release.tag_name == 'voice-shim-v0.1.0'
     needs: checksums
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     permissions:
       contents: write
