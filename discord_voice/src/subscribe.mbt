@@ -157,7 +157,7 @@ pub async fn VoiceReceiveStream::next_packet(
       // that arrives as the silence timer fires is still the user's audio,
       // whether `get` took it as it was cancelled or it is still queued.
       let delivered : Ref[ReceivedAudio?] = Ref(None)
-      let _ : Unit? = @transport.with_timeout_opt(
+      let _ : Unit? = @netruntime.with_timeout_opt(
         self.connection.clock_,
         timeout_ms,
         () => delivered.val = Some(self.queue.get()),

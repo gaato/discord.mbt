@@ -140,7 +140,7 @@ async fn acquire_while_open(
   let acquired = intake.acquire(limiter, limit=wait => {
     match wait_ms {
       Some(wait_ms) =>
-        @transport.with_timeout_opt(clock, wait_ms, wait) |> ignore
+        @netruntime.with_timeout_opt(clock, wait_ms, wait) |> ignore
       None => wait()
     }
   })

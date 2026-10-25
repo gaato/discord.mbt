@@ -1,6 +1,6 @@
 ///|
 async test "fake transport counts every close and records late sends" {
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   let transport = @gatewaysim.FakeTransport(clock~)
   let port : &@gateway.GatewayTransport = transport
   transport.put("{\"op\":11}")

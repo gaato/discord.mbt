@@ -323,7 +323,7 @@ async test "the default cooldown store runs on the executor's clock" {
       handler=Raw(_ => handled.val += 1),
     ).cooldown(seconds=10, bucket=Global),
   )
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   @async.with_task_group(group => {
     let endpoint = app
       .build()
@@ -334,9 +334,10 @@ async test "the default cooldown store runs on the executor's clock" {
         clock~,
       )
     let ping = (id : String) => {
+      let before = handled.val + retries.length()
       endpoint.handle_interaction(wbtest_command("ping", id), deadline_ms=3000)
       |> ignore
-      clock.settle()
+      clock.settle(until=() => handled.val + retries.length() == before + 1)
     }
     ping("500000000000000981")
     clock.advance(4_000)

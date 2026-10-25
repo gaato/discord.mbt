@@ -136,16 +136,21 @@ impl @voice.VoiceUdp for SilentVoiceUdp with fn close(_self) {
 ///|
 async test "IP discovery retries receive timeouts on its clock and then raises" {
   let udp = SilentVoiceUdp::{ sends: [], }
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   @async.with_task_group(group => {
     let discovery = group.spawn(no_wait=true, allow_failure=true, () => {
       @voice.discover_external_address(udp, 42U, retries=2, clock~)
     })
-    clock.settle()
+    clock.settle(until=() => {
+      udp.sends.length() == 1 && clock.pending() == [1000]
+    })
     // one request per attempt goes out before each timeout
     assert_eq(udp.sends.length(), 1)
     assert_eq(clock.pending(), [1000])
     clock.advance(1000)
+    clock.settle(until=() => {
+      udp.sends.length() == 2 && clock.pending() == [1000]
+    })
     assert_eq(udp.sends.length(), 2)
     clock.advance(1000)
     try discovery.wait() catch {

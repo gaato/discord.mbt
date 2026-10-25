@@ -58,7 +58,7 @@ Accepted as uncovered (needs a ledger row):
   shard_manager). The gateway shard, command limiter, and identify queue
   take a `clock~`, and the voice gateway, voice connection, and voice client
   a `clock?` (a
-  `gaato/http/clock` `Clock`, driven in tests by `gaato/http-async/mock`'s
+  `gaato/mttp/clock` `Clock`, driven in tests by `gaato/mttp-net/runtime`'s
   `VirtualClock`; `scripts/clock_guard.mbtx` keeps library code off the real
   clock), plus `rand?`; their backoff/heartbeat/keepalive
   cadences, and for voice also playback pacing, receive backoff and
@@ -85,7 +85,8 @@ Live socket, websocket, and FFI adapters (live-verified; no unit seam):
 | discord_voice/src/crypto.mbt | 5 | Shim error-status translation paths; round-trips and geometry checks are covered with the shim loaded. |
 | discord/src/http/client.mbt | 2 | Default warning sinks (`println`) of the online and offline constructors. |
 | discord/src/http/request.mbt | 1 | The `Api` re-raise for middleware that raises it itself; the send loop, its retry rule, request validation, and every error mapping are covered by table and fake-wire contract tests. |
-| discord/src/endpoint_http/endpoint_http.mbt | 6 | Arms that need a broken connection or a cancellation mid-failure: a response write that fails because the peer is gone, cancellation of a failed request or write, and a server that stops after startup. Startup failure, 202/504 replies, and a request whose body fails mid-read are tested. |
+| discord/src/endpoint_http/endpoint_http.mbt | 2 | A listener that fails after announcing startup; transport write and parser failures are now tested in mttp-net/server. Startup failure, 202/504 replies, body failure and bounded connection handling remain covered here. |
+| discord/src/endpoint_http/handler.mbt | 1 | The inverse map3 encoder is required by the bidirectional Input API but cannot run through this server-only Handler; the raw-byte security decode, signature failure and reply encoding failure are tested. |
 | discord/src/internal/fuzz/schedule.mbt | 1 | The cancellation re-raise arm of the one helper every run goes through: async 0.22 cancellation does not pass through ordinary catches, so it only catches an error raised while being cancelled; a test cancels each stage (both full runs, shrinking, and the final re-run). |
 | discord/src/internal/gatewaysim/fake_transport.mbt | 2 | The test fake's flags recording a close during a send or receive, which a correct shard never triggers; tests assert they stay false. |
 | discord/src/coordinator/remote.mbt | 17 | Reconnecting remote clients against a real coordinator socket; for the cooldown store, the cancellation-during-connect arms (its outage, deadline, gate-wait, and malformed-response paths are covered); the cancellation arm of the ping watchdog, which runs only when a request completes while its ping is in flight. |

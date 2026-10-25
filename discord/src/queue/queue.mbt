@@ -31,7 +31,7 @@ pub struct InMemoryQueue {
 pub fn InMemoryQueue::InMemoryQueue(
   max_concurrency~ : Int32 = 1,
   spacing_ms~ : Int32 = 5250,
-  clock~ : &@hclock.Clock = @transport.AsyncClock::new(),
+  clock~ : &@hclock.Clock = @netruntime.AsyncClock::new(),
 ) -> InMemoryQueue {
   let buckets = []
   for _ in 0..<max_concurrency {

@@ -12,7 +12,7 @@ fn scripted_gate(remaining : Ref[Int32?], token : Ref[Int32]) -> AdmissionGate {
 ///|
 fn scripted_admission(
   permits : Int32,
-  clock~ : @simclock.VirtualClock = @simclock.VirtualClock(),
+  clock~ : @netruntime.VirtualClock = @netruntime.VirtualClock(),
 ) -> Admission {
   {
     limiter: @async.Semaphore(permits),
@@ -84,7 +84,7 @@ async test "an expired token is not run even with a free permit" {
 ///|
 async test "a permit handed over after the window closed is given back" {
   for plan in [Respond, DeferMessage(ephemeral=false)] {
-    let clock = @simclock.VirtualClock()
+    let clock = @netruntime.VirtualClock()
     let admission = scripted_admission(1, clock~)
     admission.limiter.acquire()
     let remaining = Ref(Some(5000))
@@ -101,7 +101,7 @@ async test "a permit handed over after the window closed is given back" {
           ran,
         )
       })
-      clock.settle()
+      clock.settle(until=() => !clock.pending().is_empty())
       // Both windows close while the interaction waits; then the permit it
       // was waiting for is released to it.
       remaining.val = Some(0)
@@ -257,7 +257,7 @@ async test "nothing starts once the intake has closed" {
 ///|
 async test "closing the intake drops waiting interactions at once" {
   for plan in [Respond, DeferMessage(ephemeral=false)] {
-    let clock = @simclock.VirtualClock()
+    let clock = @netruntime.VirtualClock()
     let admission = scripted_admission(1, clock~)
     admission.limiter.acquire()
     let warnings = []
@@ -274,10 +274,10 @@ async test "closing the intake drops waiting interactions at once" {
         )
         at.val = clock.now_unix_ms()
       })
-      clock.settle()
+      clock.settle(until=() => !clock.pending().is_empty())
       clock.advance(100)
       admission.intake.close()
-      clock.settle()
+      clock.settle(until=() => at.val == clock.now_unix_ms())
       // The permit it waited for comes free only now.
       admission.limiter.release()
     })

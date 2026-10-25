@@ -15,7 +15,7 @@ test("Fastly registers lifetime synchronously and waits for deferred work", asyn
   const calls = [];
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (input, init) => {
-    calls.push({ url: typeof input === "string" ? input : input.url, method: init.method });
+    calls.push({ url: new URL(typeof input === "string" ? input : input.url).href, method: init.method });
     return Response.json(deferredMessageJson());
   };
   try {

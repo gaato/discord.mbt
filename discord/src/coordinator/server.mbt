@@ -8,7 +8,7 @@ pub struct Coordinator {
 ///|
 priv struct CoordinatorState {
   identify : @queue.InMemoryQueue
-  limiter : @runtime.WindowLimiter
+  limiter : @window.WindowLimiter
   cooldown : @cooldown.InMemoryCooldownStore
   owners : Map[String, BucketOwner]
   next_connection_id : Ref[Int32]
@@ -173,7 +173,7 @@ async fn cleanup_connection(
     if state.owners.get(bucket) is Some(owner) &&
       owner.connection.id == connection.id {
       state.owners.remove(bucket)
-      state.limiter.release(bucket, status=0, headers=@http.Headers::new())
+      state.limiter.release(bucket, status=0, headers=@http.Headers::empty())
     }
     connection.held_buckets.val.remove(bucket)
   }

@@ -1,12 +1,12 @@
 import {
-  "gaato/http",
-  "gaato/http/clock",
-  "gaato/http-async" @transport,
-  "gaato/sdk-runtime" @runtime,
+  "gaato/mttp/model" @http,
+  "gaato/mttp/clock",
+  "gaato/mttp-net/runtime" @netruntime,
+  "gaato/mttp/client/ratelimit" @runtime,
 }
 
 import {
-  "gaato/http/mock",
+  "gaato/mttp/clock/fake" @mock,
   "moonbitlang/async",
 } for "test"
 

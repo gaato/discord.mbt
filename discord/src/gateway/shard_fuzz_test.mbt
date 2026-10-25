@@ -129,7 +129,7 @@ enum FuzzDelay {
 /// The reference model: the session the shard should hold, the reconnect
 /// bookkeeping the docs imply, and every connection so far.
 struct FuzzModel {
-  clock : @simclock.VirtualClock
+  clock : @netruntime.VirtualClock
   conns : Array[FuzzConn]
   log : Array[String]
   seed : Int32
@@ -436,7 +436,7 @@ async fn FuzzModel::apply(
 
 ///|
 async fn run_shard_schedule(seed : Int32, steps : Array[FuzzStep]) -> String {
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   let connector_rand = fuzz_rand(seed, 1)
   // some schedules fail most connects, to reach the stale-host fallback
   let failure_percent = [5, 15, 60][seed % 3]
@@ -503,10 +503,9 @@ async fn run_shard_schedule(seed : Int32, steps : Array[FuzzStep]) -> String {
     group.spawn_bg(no_wait=true, () => {
       while true {
         ignore(shard.next())
-        clock.touch()
       }
     })
-    clock.settle()
+    model.wait_parked(shard)
     model.observe(shard, None, false)
     for step in steps {
       match step {
@@ -515,16 +514,32 @@ async fn run_shard_schedule(seed : Int32, steps : Array[FuzzStep]) -> String {
           let target = clock.now_unix_ms() + ms.to_int64()
           while clock.next_deadline() is Some(deadline) && deadline <= target {
             ignore(clock.advance_to_next())
+            model.wait_parked(shard)
             model.observe(shard, None, true)
           }
           clock.advance((target - clock.now_unix_ms()).to_int())
           model.observe(shard, None, false)
         }
         _ => {
+          let before = model
+            .alive()
+            .map(conn => (conn.transport, conn.transport.received.val))
           let (cause, ran) = model.apply(step)
           if ran {
             model.log.push("\{dbg(step)}")
-            clock.settle()
+            if cause is Some(_) {
+              clock.settle(until=() => {
+                match shard.state() {
+                  Disconnected(..) | FatallyClosed(..) => true
+                  _ => false
+                }
+              })
+            } else if before is Some((transport, count)) {
+              clock.settle(until=() => {
+                transport.received.val > count && transport.recv_in_flight.val
+              })
+            }
+            model.wait_parked(shard)
             model.observe(shard, cause, false)
           }
         }
@@ -533,7 +548,10 @@ async fn run_shard_schedule(seed : Int32, steps : Array[FuzzStep]) -> String {
     model.log.push("Stop")
     let live = model.alive()
     shard.close()
-    clock.settle()
+    clock.settle(until=() => {
+      clock.pending().is_empty() &&
+      model.conns.all(conn => conn.transport.close_calls.val > 0)
+    })
     if live is Some(conn) && conn.transport.close_code.val != Some(1000) {
       model.violation(
         "shutdown closed with \{dbg(conn.transport.close_code.val)}, not 1000",
@@ -556,6 +574,34 @@ async fn run_shard_schedule(seed : Int32, steps : Array[FuzzStep]) -> String {
 fn fuzz_steps(seed : Int32, length : Int32) -> Array[FuzzStep] {
   let rand = fuzz_rand(seed, 0)
   Array::makei(length, _ => fuzz_step(rand))
+}
+
+///|
+/// Observe the protocol's blocking points: a new receive and its heartbeat
+/// timer, a registered reconnect wait, or a fully cleaned-up fatal close.
+async fn FuzzModel::wait_parked(
+  self : FuzzModel,
+  shard : @gateway.Shard,
+) -> Unit {
+  self.clock.settle(until=() => {
+    match shard.state() {
+      Disconnected(..) => self.clock.pending().length() == 1
+      FatallyClosed(..) => self.clock.pending().is_empty()
+      _ =>
+        match self.conns.last() {
+          Some(conn) =>
+            conn.transport.recv_in_flight.val &&
+            conn.transport.close_calls.val == 0 &&
+            (if conn.hello {
+              self.clock.pending().length() == 1 &&
+              !conn.transport.sent.is_empty()
+            } else {
+              self.clock.pending().is_empty()
+            })
+          None => false
+        }
+    }
+  })
 }
 
 ///|

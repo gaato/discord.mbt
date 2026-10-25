@@ -25,7 +25,7 @@ async test "coordinator serializes identify and HTTP limits across clients" {
     remote_limiter.release(
       "POST:/channels/1/messages",
       status=200,
-      headers=@http.Headers::from_array([
+      headers=@http.Headers::of([
         ("x-ratelimit-remaining", "0"),
         ("x-ratelimit-reset-after", "0.04"),
       ]),
@@ -36,7 +36,7 @@ async test "coordinator serializes identify and HTTP limits across clients" {
     remote_limiter.release(
       "POST:/channels/1/messages",
       status=200,
-      headers=@http.Headers::from_array([("x-ratelimit-remaining", "1")]),
+      headers=@http.Headers::of([("x-ratelimit-remaining", "1")]),
     )
     assert_true(rate_wait >= 25L)
 
@@ -49,7 +49,7 @@ async test "coordinator serializes identify and HTTP limits across clients" {
       remote_limiter.release(
         concurrent_bucket,
         status=200,
-        headers=@http.Headers::from_array([("x-ratelimit-remaining", "1")]),
+        headers=@http.Headers::of([("x-ratelimit-remaining", "1")]),
       )
       waited
     })
@@ -57,7 +57,7 @@ async test "coordinator serializes identify and HTTP limits across clients" {
     remote_limiter.release(
       concurrent_bucket,
       status=200,
-      headers=@http.Headers::from_array([("x-ratelimit-remaining", "1")]),
+      headers=@http.Headers::of([("x-ratelimit-remaining", "1")]),
     )
     assert_true(blocked_acquire.wait() >= 8L)
 
@@ -141,7 +141,7 @@ async test "coordinator EOF releases a held HTTP bucket" {
       second,
       bucket,
       status=0,
-      headers=@http.Headers::new(),
+      headers=@http.Headers::empty(),
     )
   })
 }
@@ -397,9 +397,9 @@ async test "a blocked http_acquire does not delay cooldown_acquire" {
       )
     })
     assert_false(acquired.val)
-    limiter.release(bucket, status=200, headers=@http.Headers::new())
+    limiter.release(bucket, status=200, headers=@http.Headers::empty())
     blocked.wait()
-    limiter.release(bucket, status=200, headers=@http.Headers::new())
+    limiter.release(bucket, status=200, headers=@http.Headers::empty())
   })
 }
 
@@ -527,8 +527,8 @@ async test "an acquire waiting through a coordinator restart lands on the new on
     guard @async.with_timeout_opt(5000, () => waiting.wait()) is Some(_) else {
       fail("the waiting acquire never reached the new coordinator")
     }
-    waiter.release(bucket, status=200, headers=@http.Headers::new())
-    holder.release(bucket, status=200, headers=@http.Headers::new())
+    waiter.release(bucket, status=200, headers=@http.Headers::empty())
+    holder.release(bucket, status=200, headers=@http.Headers::empty())
   })
 }
 
@@ -607,7 +607,7 @@ async test "a lease from before a coordinator restart cannot release a new owner
     let limiter = RemoteRateLimiter::connect(first.addr())
     for _ in 0..<2 {
       limiter.acquire(bucket, global_exempt=true)
-      limiter.release(bucket, status=200, headers=@http.Headers::new())
+      limiter.release(bucket, status=200, headers=@http.Headers::empty())
     }
     limiter.acquire(bucket, global_exempt=true)
     address.val = Some(first.addr())
@@ -628,10 +628,10 @@ async test "a lease from before a coordinator restart cannot release a new owner
     // rounds the owner's lease carries the stale client's count.
     for _ in 0..<2 {
       owner.acquire(bucket, global_exempt=true)
-      owner.release(bucket, status=200, headers=@http.Headers::new())
+      owner.release(bucket, status=200, headers=@http.Headers::empty())
     }
     owner.acquire(bucket, global_exempt=true)
-    stale.release(bucket, status=200, headers=@http.Headers::new())
+    stale.release(bucket, status=200, headers=@http.Headers::empty())
     let acquired = Ref(false)
     let blocked = second_group.spawn(() => {
       waiter.acquire(bucket, global_exempt=true)
@@ -639,9 +639,9 @@ async test "a lease from before a coordinator restart cannot release a new owner
     })
     @async.sleep(20)
     assert_false(acquired.val)
-    owner.release(bucket, status=200, headers=@http.Headers::new())
+    owner.release(bucket, status=200, headers=@http.Headers::empty())
     blocked.wait()
-    waiter.release(bucket, status=200, headers=@http.Headers::new())
+    waiter.release(bucket, status=200, headers=@http.Headers::empty())
   })
 }
 
@@ -672,7 +672,7 @@ async test "a client still works with an older coordinator's integer leases" {
     defer limiter.close()
     let bucket = "POST:/channels/old-coordinator/messages"
     limiter.acquire(bucket, global_exempt=true)
-    limiter.release(bucket, status=200, headers=@http.Headers::new())
+    limiter.release(bucket, status=200, headers=@http.Headers::empty())
     // The integer comes back exactly as the older coordinator issued it.
     assert_eq(released, [7])
     omit_lease.val = true
@@ -711,7 +711,7 @@ async test "a legacy client is refused before it can hold a bucket" {
     let current = RemoteRateLimiter::connect(coordinator.addr())
     defer current.close()
     @async.with_timeout(1000, () => current.acquire(bucket, global_exempt=false))
-    current.release(bucket, status=200, headers=@http.Headers::new())
+    current.release(bucket, status=200, headers=@http.Headers::empty())
   })
 }
 

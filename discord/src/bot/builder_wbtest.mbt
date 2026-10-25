@@ -47,7 +47,7 @@ test "a built bot keeps the registrations it was built with" {
 ///|
 async test "a bot runs once at a time and may run again after it stops" {
   let app = @app.AppBuilder()
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   let builder = middleware_runtime_bot(
     app.build(),
     @gatewaysim.FakeTransport(clock~),
@@ -118,7 +118,7 @@ async test "a supplied client reports to the bot once per call, only while it ru
       http_events.val += 1
     }
   })
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   builder.core.use_test_time(clock)
   let bot = builder.build()
   for _ in 0..<2 {
@@ -146,7 +146,7 @@ async test "a supplied client reports to the bot once per call, only while it ru
 
 ///|
 async test "events beyond the backlog skip handlers with telemetry and one warning" {
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   let transport = @gatewaysim.FakeTransport(clock~)
   let warnings : Array[String] = []
   let app = @app.AppBuilder()
@@ -204,25 +204,23 @@ async test "events beyond the backlog skip handlers with telemetry and one warni
     let ctx = ready_contexts.get()
     // 1 holds the consumer, 2 and 3 fill the backlog of two, 4 is dropped.
     send(1)
-    clock.settle()
-    assert_eq(blocked.try_get(), Some("1"))
+    assert_eq(blocked.get(), "1")
     for id in 2..<=4 {
       send(id)
     }
-    clock.settle()
+    clock.settle(until=() => dropped.length() == 1)
     assert_eq(dropped.length(), 1)
     // Releasing 1 lets the consumer take 2, which holds it again: one slot
     // frees but the backlog never drains, so the next overflow must not warn
     // a second time.
     release.put(())
-    clock.settle()
-    assert_eq(blocked.try_get(), Some("2"))
+    assert_eq(blocked.get(), "2")
     send(5)
     send(6)
-    clock.settle()
+    clock.settle(until=() => dropped.length() == 2)
     assert_eq(dropped.length(), 2)
     release.put(())
-    clock.settle()
+    clock.settle(until=() => handled.length() == 4)
     assert_eq(handled.length(), 4)
     ctx.shutdown()
     running.wait()

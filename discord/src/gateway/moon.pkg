@@ -2,8 +2,8 @@ import {
   "gaato/discord/model",
   "gaato/discord/telemetry",
   "gaato/discord/queue",
-  "gaato/http-async" @transport,
-  "gaato/http/clock" @hclock,
+  "gaato/mttp-net/runtime" @netruntime,
+  "gaato/mttp/clock" @hclock,
   "moonbitlang/async",
   "moonbitlang/async/aqueue",
   "gaato/discord/internal/websocket",
@@ -22,9 +22,9 @@ import {
   "gaato/discord/model",
   "gaato/discord/telemetry",
   "gaato/discord/queue",
-  "gaato/http-async/mock" @simclock,
+  "gaato/mttp-net/runtime" @netruntime,
   "gaato/discord/internal/gatewaysim",
-  "gaato/http/clock" @hclock,
+  "gaato/mttp/clock" @hclock,
   "moonbitlang/core/random",
   "moonbitlang/core/debug",
   "moonbitlang/async/http" @ahttp,
@@ -34,7 +34,7 @@ import {
 } for "test"
 
 import {
-  "gaato/http-async/mock" @simclock,
+  "gaato/mttp-net/runtime" @netruntime,
 } for "wbtest"
 
 // The gateway, including zlib-stream and zstd-stream compression, runs on native, JavaScript, and moonrun Wasm.

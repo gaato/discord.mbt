@@ -13,8 +13,8 @@ pub suberror SimFailure {
 /// connection was closed exactly once. A send after the first close is
 /// recorded in `sends_after_close`.
 ///
-/// With a `clock`, every send, receive, and close counts as progress for
-/// `VirtualClock::settle`.
+/// With a `clock`, close delays run on virtual time. Tests observe the queues,
+/// counters and in-flight flags before advancing that time.
 pub struct FakeTransport {
   incoming : @aqueue.Queue[@gateway.GatewayFrame]
   outgoing : @aqueue.Queue[Json]
@@ -33,12 +33,14 @@ pub struct FakeTransport {
   sends_after_close : Ref[Int32]
   send_in_flight : Ref[Bool]
   recv_in_flight : Ref[Bool]
-  priv clock : @simclock.VirtualClock?
+  /// Frames handed to the shard, for observing completion of injected input.
+  received : Ref[Int32]
+  priv clock : @netruntime.VirtualClock?
 }
 
 ///|
 pub fn FakeTransport::FakeTransport(
-  clock? : @simclock.VirtualClock,
+  clock? : @netruntime.VirtualClock,
 ) -> FakeTransport {
   {
     incoming: Queue(kind=Unbounded),
@@ -56,6 +58,7 @@ pub fn FakeTransport::FakeTransport(
     clock,
     send_in_flight: Ref(false),
     recv_in_flight: Ref(false),
+    received: Ref(0),
   }
 }
 
@@ -74,20 +77,13 @@ pub fn FakeTransport::server_close(self : FakeTransport, code : Int32?) -> Unit 
 }
 
 ///|
-fn FakeTransport::touch(self : FakeTransport) -> Unit {
-  if self.clock is Some(clock) {
-    clock.touch()
-  }
-}
-
-///|
 pub impl @gateway.GatewayTransport for FakeTransport with fn recv(self) {
   self.recv_in_flight.val = true
   defer {
     self.recv_in_flight.val = false
   }
   let frame = self.incoming.get()
-  self.touch()
+  self.received.val += 1
   frame
 }
 
@@ -110,7 +106,6 @@ pub impl @gateway.GatewayTransport for FakeTransport with fn send(self, text) {
   let frame = @json.parse(text) catch { _ => Json::null() }
   self.sent.push(frame)
   self.outgoing.put(frame)
-  self.touch()
 }
 
 ///|
@@ -122,7 +117,6 @@ pub impl @gateway.GatewayTransport for FakeTransport with fn close(self, code~) 
     self.close_during_recv.val = true
   }
   self.close_calls.val += 1
-  self.touch()
   if self.close_calls.val > 1 {
     return
   }

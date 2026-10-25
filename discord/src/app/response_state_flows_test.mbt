@@ -398,7 +398,7 @@ async test "a failed fallback keeps an unconfirmed placeholder open" {
 ///|
 async test "concurrent replies edit the placeholder once, then follow up" {
   let requests : Array[String] = []
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   let client = @dhttp.Client("test-token")
   defer client.close()
   client.middleware((request, _) => {
@@ -429,8 +429,11 @@ async test "concurrent replies edit the placeholder once, then follow up" {
     let processing = group.spawn(() => {
       framework.process_with(interaction, gate~)
     })
-    while clock.advance_to_next() {
-      ()
+    for count in 1..<=2 {
+      clock.settle(until=() => {
+        requests.length() == count && clock.pending() == [50]
+      })
+      assert_true(clock.advance_to_next())
     }
     assert_true(processing.wait())
   })

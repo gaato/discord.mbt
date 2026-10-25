@@ -46,9 +46,7 @@ test "negative times fall in the step below" {
 
 ///|
 test "Discord counts 401, 403 and 429 as invalid, except a shared 429" {
-  let headers = (pairs : Array[(String, String)]) => {
-    @ghttp.Headers::from_array(pairs)
-  }
+  let headers = (pairs : Array[(String, String)]) => @ghttp.Headers::of(pairs)
   assert_true(is_invalid_request(401, headers([])))
   assert_true(is_invalid_request(403, headers([])))
   assert_true(is_invalid_request(429, headers([])))
@@ -72,7 +70,7 @@ test "Discord counts 401, 403 and 429 as invalid, except a shared 429" {
 
 ///|
 async test "a client counts the invalid answers of every attempt" {
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   let answers : Array[(Int32, Map[String, String], Json)] = [
     (401, Map([]), { "code": 0, "message": "401: Unauthorized" }),
     (403, Map([]), { "code": 50013, "message": "Missing Permissions" }),

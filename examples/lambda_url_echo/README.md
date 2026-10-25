@@ -3,6 +3,9 @@
 Function URLs deliver a payload-format 2.0 JSON object. This adapter decodes
 the event body into exact bytes before the shared MoonBit handler checks the
 Discord signature, then returns a base64-encoded response envelope.
+The adapter rejects decoded request bodies above 1 MiB before allocation,
+rejects malformed base64, and buffers at most 4 MiB of response bytes. Response
+cookies remain separate entries in the Function URL envelope.
 
 From the repository root:
 

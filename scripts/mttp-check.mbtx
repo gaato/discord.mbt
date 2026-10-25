@@ -1,0 +1,27 @@
+----
+import {
+  "moonbitlang/async@0.22.5",
+  "moonbitlang/async@0.22.5/fs",
+  "moonbitlang/async@0.22.5/shell",
+}
+----
+
+// Scope execution to Discord consumers: moon.work also contains the mttp
+// suites, whose linked Fetch example and platform probes have their own gate.
+async fn main {
+  let packages = []
+  for root in ["discord/src", "discord_voice/src"] {
+    @fs.walk(root, (dir, entries) => {
+      if entries.contains("moon.pkg") {
+        packages.push(dir)
+      }
+    })
+  }
+  packages.sort()
+  for target in ["native", "wasm", "js"] {
+    println("Checking workspace for \{target}")
+    @shell.Cmd("moon", ["check", "--target", target, "--deny-warn"], stdout=Inherit, stderr=Inherit).run(timeout_ms=600000)
+    println("Testing Discord consumers for \{target}")
+    @shell.Cmd("moon", ["test", ..packages, "--target", target, "--deny-warn", "-j", "2"], stdout=Inherit, stderr=Inherit).run(timeout_ms=600000)
+  }
+}

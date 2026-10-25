@@ -1,33 +1,57 @@
 ///|
+priv struct GateStream {
+  mut closed : Bool
+}
+
+///|
+impl @ghttp.BodyStream for GateStream with fn read_some(_self) {
+  None
+}
+
+///|
+impl @ghttp.BodyStream for GateStream with fn close(self) {
+  self.closed = true
+}
+
+///|
 async test "ClosedGate passes exchanges through until closed, then refuses them" {
-  let closed = Ref(false)
-  let gate = ClosedGate::{
-    inner: FakeWire::{
-      answer: (_path, _headers, _body) => {
-        status: 204,
-        headers: Map([]),
-        body: Json::null(),
-      },
-    },
-    closed,
-  }
-  let request = @ghttp.Request::get("https://discord.com/api/v10/gateway")
-  let outcome = async fn(stream : Bool) -> String {
-    try {
-      if stream {
-        ignore(@ghttp.Transport::send_stream(gate, request))
-      } else {
-        ignore(@ghttp.Transport::send(gate, request))
-      }
-      "sent"
-    } catch {
-      @ghttp.HttpError::Connect(message) => "refused: \{message}"
-      error => "inner: \{@debug.to_string(error)}"
+  for streaming in [false, true] {
+    let closed = Ref(false)
+    let stream = GateStream::{ closed: false, }
+    let calls = Ref(0)
+    let gate = ClosedGate::{
+      inner: @runtime.from_fn((_, _) => {
+        calls.val += 1
+        @ghttp.Response::new(
+          200,
+          body=if streaming {
+            Stream(@ghttp.StreamBody::new(stream))
+          } else {
+            Bytes(b"ok")
+          },
+        )
+      }),
+      closed,
     }
+    let request = @ghttp.Request::get("https://discord.com/api/v10/gateway")
+    let response = @runtime.Backend::send(
+      gate,
+      request,
+      @runtime.RequestOptions::default(),
+    )
+    response.close()
+    assert_eq(stream.closed, streaming)
+    assert_eq(calls.val, 1)
+    closed.val = true
+    try
+      @runtime.Backend::send(gate, request, @runtime.RequestOptions::default())
+    catch {
+      @ghttp.TransportError(kind=Closed, phase=Pool, detail~) =>
+        assert_eq(detail, CLOSED_MESSAGE)
+      error => raise error
+    } noraise {
+      _ => fail("closed gate sent another request")
+    }
+    assert_eq(calls.val, 1)
   }
-  assert_eq(outcome(false), "sent")
-  assert_eq(outcome(true), "inner: Protocol(\"FakeWire does not stream\")")
-  closed.val = true
-  assert_eq(outcome(false), "refused: client is closed")
-  assert_eq(outcome(true), "refused: client is closed")
 }

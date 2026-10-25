@@ -3,21 +3,18 @@ package "gaato/discord/endpoint_http"
 
 import {
   "gaato/discord/app",
-  "gaato/discord/model",
+  "gaato/discord/verify",
+  "gaato/mttp-net/server",
+  "gaato/mttp/endpoint",
   "moonbitlang/async",
-  "moonbitlang/core/debug",
 }
 
 // Values
-pub async fn[X] serve_interactions(@async.TaskGroup[X], @app.App, addr~ : String, public_key~ : String, access~ : @app.RestAccess, application_id? : @model.Id[@model.ApplicationMarker], path? : String, deadline_ms? : Int32, max_body_bytes? : Int32, body_timeout_ms? : Int32, header_timeout_ms? : Int32, max_connections? : Int32) -> InteractionsServer
+pub fn interaction_handler(@app.InteractionEndpoint, @verify.InteractionVerifier, path? : String, deadline_ms? : Int32, max_body_bytes? : Int32, warn? : (@app.AppWarning) -> Unit) -> (async (@gaato/mttp/model.Request) -> @gaato/mttp/model.Response noraise) raise @endpoint.DefinitionError
+
+pub async fn[X] serve_interactions(@async.TaskGroup[X], @app.App, addr~ : String, public_key~ : String, access~ : @app.RestAccess, application_id? : @gaato/discord/model.Id[@gaato/discord/model.ApplicationMarker], path? : String, deadline_ms? : Int32, max_body_bytes? : Int32, body_timeout_ms? : Int32, header_timeout_ms? : Int32, max_connections? : Int32) -> InteractionsServer
 
 // Errors
-pub(all) suberror ServerConfigError {
-  InvalidMaxBodyBytes(value~ : Int32)
-  InvalidBodyTimeoutMs(value~ : Int32)
-  InvalidHeaderTimeoutMs(value~ : Int32)
-  InvalidMaxConnections(value~ : Int32)
-} derive(@debug.Debug)
 
 // Types and methods
 pub struct InteractionsServer {
@@ -27,5 +24,6 @@ pub fn InteractionsServer::addr(Self) -> String
 pub async fn InteractionsServer::close(Self) -> Unit noraise
 
 // Type aliases
+pub using @server {type ServerConfigError}
 
 // Traits
