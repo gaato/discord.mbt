@@ -29,13 +29,15 @@ kind say what that product is.
 | Cache deadline indexes (`cache/deadline_heap.mbt`, `Buckets.due_`), per resource with a TTL | 2 × its non-empty buckets + 16 items, checked whenever an item is added or a bucket goes | Rebuilt from the live buckets, one item each |
 | Cached users seen without a holder (`cache/user_store.mbt`, `recent_`) | `recent_users`, default 128: bans, departed members, interaction users, authors of messages the cache does not keep | Least recently seen evicted |
 | Cooldown windows (`cooldown/cooldown.mbt`) | Live windows: expired keys are swept whenever the map doubles, and at least once a minute | — |
-| REST rate-limit buckets (`gaato/sdk-runtime` `WindowLimiter`, also inside the coordinator) | Buckets in use: idle gates are dropped, expired states swept whenever the map doubles, and at least once a minute | — |
+| REST rate-limit buckets (`gaato/mttp/client/ratelimit` `WindowLimiter`, also inside the coordinator) | Buckets in use: idle gates are dropped, expired states swept whenever the map doubles, and at least once a minute | — |
 | Learned `X-RateLimit-Bucket` keys (`ratelimit/ratelimit.mbt`, `server_key`; the `WindowLimiter`'s aliases) | One per route bucket that named a hash, pointing at a recorded state: an alias whose state has expired is swept with the states | — |
 | Invalid-request count (`http/invalid_requests.mbt`, one per REST client) | 60 counters, one per ten-second step of the last ten minutes | The oldest step's counter is reset and reused |
-| REST response body (`http/client.mbt`, the transport the client creates) | 64 MiB, the same as the Gateway default | The attempt fails with `DiscordHttpError::Transport` and the connection closes; a supplied `transport=` keeps its own policy |
+| REST response body (`http/client.mbt`, including a supplied Backend) | 64 MiB, the same as the Gateway default | The attempt fails with `DiscordHttpError::Transport` and its response body closes |
 | Inbound interaction request body (`endpoint_http/endpoint_http.mbt`) | `max_body_bytes`, default 1 MiB | 413 and the connection closes |
 | Interaction HTTP connections (`endpoint_http/endpoint_http.mbt`, `serve_interactions`) | `max_connections`, default 256, served at once | Further clients wait to be accepted |
-| Time to the next request head on an interaction HTTP connection (`endpoint_http/endpoint_http.mbt`, `serve_connection`) | `header_timeout_ms`, default 5 s, idle keep-alive time included | The connection closes, freeing its slot |
+| Time to the next request head on an interaction HTTP connection (`mttp-net/server`) | `header_timeout_ms`, default 5 s, idle keep-alive time included | 408 and the connection closes, freeing its slot |
+| Interaction HTTP request heads (`mttp-net/server`) | 16 KiB per request head | 431 and the connection closes |
+| REST response heads (default native/Wasm `mttp-net/backend`) | 16 KiB per response head | The attempt fails with a transport limit error |
 | Voice receive stream (`discord_voice/src/subscribe.mbt`) | 250 frames | Newest frames dropped, then a `Lost(count)` marker; `ReceiveDropped` telemetry |
 | Voice event queue (`discord_voice/src/connection.mbt`) | 256 events | Oldest dropped; `EventDropped` telemetry |
 | Voice reorder buffer (`discord_voice/src/reorder.mbt`) | 8 packets or 60 ms | Flushed as `Lost` |
@@ -67,11 +69,9 @@ kind say what that product is.
 | Member chunk collection (`bot/member_chunks.mbt`) | `GUILD_MEMBERS_CHUNK` events for one `fetch_guild_members` | The guild's member count, for at most the call's `timeout_ms` |
 | Coordinator client leases (`coordinator/remote.mbt`, `RemoteRateLimiter`) | REST requests through the coordinator | Requests in flight: each lease leaves on release |
 
-## Known gaps
+## Host-dependent limits
 
-Growth the library does not bound yet, with what limits it in practice.
-
-| Structure | Grows with | What limits it |
-|---|---|---|
-| REST response heads (`moonbitlang/async` HTTP client under the `gaato/http-async` transport) | Status line and header size | Parsed with no byte limit; only `request_timeout_ms` times bandwidth, from Discord over TLS |
-| Interaction HTTP request heads (`moonbitlang/async` HTTP server under `endpoint_http`) | Request line and header size | No byte limit: only `header_timeout_ms` times the client's bandwidth, per connection, for `max_connections` connections. A client holding every slot delays Discord's requests until its heads time out; put the server behind a proxy that limits header size and connections per client when it is exposed beyond Discord |
+JavaScript Fetch parses HTTP response heads in the host runtime, whose header
+limits apply. Supplied Backends also own their head-parsing policy. The native
+listener's connection cap is global; per-client connection admission remains
+the responsibility of the deployment or its reverse proxy.

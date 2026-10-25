@@ -14,7 +14,7 @@ async test "deadline races preserve every accepted capture" {
   // in the order the timers were registered.
   let timings = [(0, 0), (1, 1), (0, 10), (10, 0)]
   for (delay, deadline) in timings {
-    let clock = @simclock.VirtualClock()
+    let clock = @netruntime.VirtualClock()
     let app = @app.AppBuilder()
     let ends : Array[RaceEnd] = []
     app.on_warn(warning => ends.push(Warned(warning)))
@@ -49,8 +49,10 @@ async test "deadline races preserve every accepted capture" {
           deadline_ms=deadline,
         )
       })
-      while clock.advance_to_next() {
-        ()
+      clock.settle(until=() => !ends.is_empty() || clock.pending().length() == 2)
+      if ends.is_empty() {
+        assert_true(clock.advance_to_next())
+        clock.settle(until=() => !ends.is_empty())
       }
       let outcome = handling.wait()
       match ends {

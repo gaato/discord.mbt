@@ -1,5 +1,5 @@
 ///|
-/// The contracts the send loop keeps now that `gaato/sdk-runtime` runs it:
+/// The contracts the send loop keeps with mttp:
 /// Discord's retry rule, where a 429's delay and scope come from, how limiter
 /// and deadline failures surface, and the wire shape of uploads.
 
@@ -148,10 +148,8 @@ async test "a rate limiter whose release fails surfaces as a transport error" {
   )
   defer client.close()
   try client.request(GetGateway) catch {
-    Transport(phase=Unknown, message~) => {
-      assert_true(message.contains("rate limiter release failed"))
+    Transport(phase=Unknown, message~) =>
       assert_true(message.contains("ReleaseRejected"))
-    }
     error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the release failure")
@@ -196,47 +194,49 @@ async test "files upload as payload_json then files[n] on the wire" {
 }
 
 ///|
-/// A transport that fails or stalls in a chosen way on both methods.
+/// A backend that fails or stalls before returning its response head.
 priv struct ScriptedFailure {
-  fail_with : @ghttp.HttpError?
+  fail_with : @ghttp.TransportError?
 }
 
 ///|
-impl @ghttp.Transport for ScriptedFailure with fn send(self, _request) {
+impl @runtime.Backend for ScriptedFailure with fn send(self, _request, _options) {
   match self.fail_with {
     Some(error) => raise error
     None => {
       @async.sleep(60000)
-      { status: 200, headers: @ghttp.Headers::new(), body: b"", }
+      @ghttp.Response::new(200)
     }
   }
 }
 
 ///|
-impl @ghttp.Transport for ScriptedFailure with fn send_stream(self, request) {
-  ignore(@ghttp.Transport::send(self, request))
-  raise @ghttp.HttpError::Protocol("unreachable")
+fn deadline_reader(streaming : Bool) -> @runtime.ResponseAs[Unit] {
+  if streaming {
+    @runtime.as_stream((_, _) => ())
+  } else {
+    @runtime.as_bytes().map(_ => ())
+  }
 }
 
 ///|
 async test "a supplied transport keeps its errors and gets the attempt deadline" {
   let request = @ghttp.Request::get("https://discord.com/api/v10/gateway")
-  for
-    error in [
-      @ghttp.HttpError::Connect("refused"),
-      @ghttp.HttpError::Protocol("garbled"),
-    ] {
-    let transport = @transport.DeadlineTransport::new(
+  for error in [wire_connect("refused"), wire_protocol("garbled")] {
+    let transport = @runtime.Client::new(
       ScriptedFailure::{ fail_with: Some(error), },
-      timeout_ms=1000,
+      @netruntime.AsyncClock::new(),
+      timer=@netruntime.ClockTimer::new(),
     )
     for streaming in [false, true] {
       let raised = try {
-        if streaming {
-          ignore(@ghttp.Transport::send_stream(transport, request))
-        } else {
-          ignore(@ghttp.Transport::send(transport, request))
-        }
+        ignore(
+          transport.send(
+            @runtime.ClientRequest::new(request, deadline_reader(streaming)).timeout_ms(
+              1000,
+            ),
+          ),
+        )
         "no error"
       } catch {
         raised => @debug.to_string(raised)
@@ -244,19 +244,23 @@ async test "a supplied transport keeps its errors and gets the attempt deadline"
       assert_eq(raised, @debug.to_string(error))
     }
   }
-  let stalled = @transport.DeadlineTransport::new(
+  let stalled = @runtime.Client::new(
     ScriptedFailure::{ fail_with: None, },
-    timeout_ms=10,
+    @netruntime.AsyncClock::new(),
+    timer=@netruntime.ClockTimer::new(),
   )
   for streaming in [false, true] {
-    try {
-      if streaming {
-        ignore(@ghttp.Transport::send_stream(stalled, request))
-      } else {
-        ignore(@ghttp.Transport::send(stalled, request))
-      }
-    } catch {
-      @ghttp.HttpError::Timeout(ms~, ..) => inspect(ms, content="10")
+    try
+      ignore(
+        stalled.send(
+          @runtime.ClientRequest::new(request, deadline_reader(streaming)).timeout_ms(
+            10,
+          ),
+        ),
+      )
+    catch {
+      @ghttp.TransportError(kind=Timeout(ms~), phase=Unknown, ..) =>
+        inspect(ms, content="10")
       error => fail("unexpected error: \{Repr(error)}")
     } noraise {
       _ => fail("expected the deadline")

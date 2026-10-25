@@ -12,6 +12,7 @@ import {
   "gaato/discord/interaction",
   "gaato/discord/model",
   "gaato/discord/verify",
+  "gaato/mttp-net/server",
   "moonbitlang/async",
 }
 
@@ -291,7 +292,7 @@ pub using @framework {type ResponseState}
 
 pub using @app {type RestAccess}
 
-pub using @endpoint_http {type ServerConfigError}
+pub using @server {type ServerConfigError}
 
 pub using @bot {type ShardConfig}
 

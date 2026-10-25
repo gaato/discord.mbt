@@ -450,14 +450,14 @@ async test "interactions server bounds request bodies by size and read time" {
       "{}",
     )
     assert_true(stalled.has_prefix("HTTP/1.1 408 Request Timeout\r\n"))
-    // A rejected request with an oversized body is answered and closed rather
-    // than drained.
+    // The bounded HTTP transport rejects an oversized declared body before
+    // dispatching the request, including requests missing signature headers.
     let unsigned = raw_exchange(
       server.addr(),
       "POST / HTTP/1.1\r\nHost: localhost\r\nContent-Length: \{over.length()}\r\n\r\n",
       over,
     )
-    assert_true(unsigned.has_prefix("HTTP/1.1 401 Unauthorized\r\n"))
+    assert_true(unsigned.has_prefix("HTTP/1.1 413 Content Too Large\r\n"))
   })
 }
 
@@ -476,7 +476,7 @@ async test "interactions server rejects non-positive body limits" {
       )
       |> ignore
     catch {
-      InvalidMaxBodyBytes(value~) => assert_eq(value, 0)
+      @server.InvalidMaxBodyBytes(value~) => assert_eq(value, 0)
       error => fail("unexpected startup error: \{Repr(error)}")
     } noraise {
       _ => fail("a zero body limit was accepted")
@@ -492,64 +492,12 @@ async test "interactions server rejects non-positive body limits" {
       )
       |> ignore
     catch {
-      InvalidBodyTimeoutMs(value~) => assert_eq(value, -1)
+      @server.InvalidBodyTimeoutMs(value~) => assert_eq(value, -1)
       error => fail("unexpected startup error: \{Repr(error)}")
     } noraise {
       _ => fail("a negative body timeout was accepted")
     }
   })
-}
-
-///|
-test "request_rejection checks the method, then the path, then the signature headers" {
-  let signed : @ahttp.Headers = {
-    "x-signature-ed25519": "aa",
-    "x-signature-timestamp": "1",
-  }
-  let cases : Array[(@ahttp.RequestMethod, String, @ahttp.Headers, Int32?)] = [
-    (Get, "/", signed, Some(405)),
-    (Get, "/x", signed, Some(405)),
-    (Post, "/x", signed, Some(404)),
-    (Post, "/", {}, Some(401)),
-    (Post, "/", { "x-signature-ed25519": "aa" }, Some(401)),
-    (Post, "/", { "x-signature-timestamp": "1" }, Some(401)),
-    (Post, "/", signed, None),
-    (
-      Post,
-      "/",
-      { "X-Signature-Ed25519": "aa", "X-SIGNATURE-TIMESTAMP": "1" },
-      None,
-    ),
-  ]
-  for case in cases {
-    let (meth, path, headers, expected) = case
-    let rejection = request_rejection({ meth, path, headers, }, "/")
-    assert_eq(rejection.map(response => response.status), expected)
-  }
-}
-
-///|
-test "settle_body keeps the connection only for a body read to its end" {
-  let unauthorized = Some(text_response(401, "missing signature"))
-  let not_allowed = Some(text_response(405, "method not allowed"))
-  let cases : Array[
-    (@app.InteractionHttpResponse?, BodyRead, Result[Bytes, (Int32, Bool)]),
-  ] = [
-    (None, Complete(b"{}"), Ok(b"{}")),
-    (None, TooLarge, Err((413, true))),
-    (None, TimedOut, Err((408, true))),
-    (unauthorized, Complete(b""), Err((401, false))),
-    (unauthorized, TooLarge, Err((401, true))),
-    (not_allowed, TimedOut, Err((405, true))),
-  ]
-  for case in cases {
-    let (rejection, body, expected) = case
-    let settled = settle_body(rejection, body).map_err(answer => {
-      let (response, close) = answer
-      (response.status, close)
-    })
-    assert_eq(settled, expected)
-  }
 }
 
 ///|
@@ -573,12 +521,12 @@ async test "interactions server closes idle connections and serves at most max_c
       max_connections=1,
     )
     defer server.close()
-    // A connection that sends nothing, or a head that never ends, is closed
-    // once the header timeout passes.
-    assert_eq(raw_exchange(server.addr(), "", ""), "")
-    assert_eq(
-      raw_exchange(server.addr(), "POST / HTTP/1.1\r\nHost: localhost\r\n", ""),
-      "",
+    // The transport sends 408 and closes when a head does not arrive in time.
+    assert_true(raw_exchange(server.addr(), "", "").has_prefix("HTTP/1.1 408 "))
+    assert_true(
+      raw_exchange(server.addr(), "POST / HTTP/1.1\r\nHost: localhost\r\n", "").has_prefix(
+        "HTTP/1.1 408 ",
+      ),
     )
     // With one slot, a second client is served only after the idle first
     // one has been closed.
@@ -625,8 +573,8 @@ async test "interactions server rejects non-positive connection limits" {
         )
         "started"
       } catch {
-        InvalidHeaderTimeoutMs(value~) => "header timeout \{value}"
-        InvalidMaxConnections(value~) => "max connections \{value}"
+        @server.InvalidHeaderTimeoutMs(value~) => "header timeout \{value}"
+        @server.InvalidMaxConnections(value~) => "max connections \{value}"
         error => "unexpected \{Repr(error)}"
       }
       outcomes.push(outcome)

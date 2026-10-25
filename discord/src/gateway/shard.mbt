@@ -229,7 +229,7 @@ pub fn[X] Shard::start(
   max_message_bytes~ : Int32 = DEFAULT_MAX_MESSAGE_BYTES,
   queue_capacity~ : Int32 = 256,
   telemetry~ : (@telemetry.TelemetryEvent) -> Unit = _ => (),
-  clock~ : &@hclock.Clock = @transport.AsyncClock::new(),
+  clock~ : &@hclock.Clock = @netruntime.AsyncClock::new(),
   rand~ : @random.Rand = @random.Rand(),
   session? : Session,
   presence? : @model.UpdatePresence,

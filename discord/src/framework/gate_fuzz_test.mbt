@@ -45,7 +45,7 @@ enum GateModelState {
 
 ///|
 struct GateModel {
-  clock : @simclock.VirtualClock
+  clock : @netruntime.VirtualClock
   deadline_at : Int64
   log : Array[String]
   seed : Int32
@@ -161,7 +161,7 @@ fn gate_steps(seed : Int32, length : Int32) -> Array[GateStep] {
 
 ///|
 async fn run_gate_schedule(seed : Int32, steps : Array[GateStep]) -> String {
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   let plans = gate_rand(seed, 1)
   let model = GateModel::{
     clock,
@@ -176,7 +176,6 @@ async fn run_gate_schedule(seed : Int32, steps : Array[GateStep]) -> String {
   let blocked : Array[@aqueue.Queue[SinkPlan]] = []
   let returned = Ref(0)
   let sink = async fn(response : @model.InteractionResponse, _files) {
-    clock.touch()
     // The gate must only deliver from a pending window before its deadline.
     model.settle_deadline()
     if model.state != Pending {
@@ -194,11 +193,10 @@ async fn run_gate_schedule(seed : Int32, steps : Array[GateStep]) -> String {
     if plan is Block {
       let release : @aqueue.Queue[SinkPlan] = Queue(kind=Unbounded)
       blocked.push(release)
+      defer blocked.retain(other => !physical_equal(other, release))
       plan = release.get()
-      blocked.retain(other => !physical_equal(other, release))
     }
     finished = true
-    clock.touch()
     model.log.push("  sink \{@debug.to_string(plan)}")
     match plan {
       Succeed => {
@@ -239,8 +237,10 @@ async fn run_gate_schedule(seed : Int32, steps : Array[GateStep]) -> String {
       match step {
         Send(typ) => {
           model.log.push(@debug.to_string(step))
+          let started = Ref(false)
           tasks.push(
             group.spawn(no_wait=true, allow_failure=true, () => {
+              started.val = true
               try gate.send({ typ, data: None, }) catch {
                 // a caller that arrives mid-delivery waits for its outcome
                 error if gate_refusal(error) && model.state is InFlight(_) =>
@@ -251,16 +251,25 @@ async fn run_gate_schedule(seed : Int32, steps : Array[GateStep]) -> String {
               }
             }),
           )
+          clock.settle(until=() => started.val)
         }
         Release(plan) =>
           if blocked.length() > 0 {
             model.log.push(@debug.to_string(step))
-            blocked[0].put(plan)
+            let release = blocked[0]
+            release.put(plan)
+            clock.settle(until=() => {
+              !blocked.any(other => physical_equal(other, release))
+            })
           }
         Cancel(pick) =>
           if tasks.length() > 0 {
             model.log.push(@debug.to_string(step))
-            tasks.remove(pick % tasks.length()).cancel()
+            let task = tasks.remove(pick % tasks.length())
+            task.cancel()
+            task.wait() catch {
+              _ => ()
+            }
           }
         Expire => {
           model.log.push(@debug.to_string(step))
@@ -274,7 +283,9 @@ async fn run_gate_schedule(seed : Int32, steps : Array[GateStep]) -> String {
           clock.advance(ms)
         }
       }
-      clock.settle()
+      // All callers have entered send; they either finished or are waiting
+      // behind the explicitly blocked sink. No scheduler-idle guess is needed.
+      clock.settle(until=() => !blocked.is_empty() || tasks.all(gate_task_done))
       if model.flagged is Some(message) {
         model.violation(message)
       }
@@ -296,9 +307,16 @@ async fn run_gate_schedule(seed : Int32, steps : Array[GateStep]) -> String {
     for release in blocked.copy() {
       release.put(Succeed)
     }
-    clock.settle()
+    clock.settle(until=() => tasks.all(gate_task_done))
   })
   "seed \{seed}\n" + model.log.join("\n")
+}
+
+///|
+fn gate_task_done(task : @async.Task[Unit]) -> Bool {
+  (task.try_wait() is Some(_)) catch {
+    _ => true
+  }
 }
 
 ///|

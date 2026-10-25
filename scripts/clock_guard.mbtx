@@ -8,7 +8,7 @@ import {
 
 ///|
 /// Guard the injected clock: library code (tests excluded) must wait and read
-/// time through a `gaato/http/clock` `Clock` it was given, so a test can drive
+/// time through a `gaato/mttp/clock` `Clock` it was given, so a test can drive
 /// it with a virtual clock. This audit fails on any direct use of a real-time
 /// entry point in the library sources of every module.
 ///

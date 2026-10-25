@@ -81,7 +81,7 @@ priv struct JoinGate {
 /// Create a client. `clock` times the joins' waits and every connection the
 /// client starts (see `VoiceConnection::start`).
 pub fn VoiceClient::VoiceClient(
-  clock~ : &@hclock.Clock = @transport.AsyncClock::new(),
+  clock~ : &@hclock.Clock = @netruntime.AsyncClock::new(),
 ) -> VoiceClient {
   {
     connections: Map([]),
@@ -288,7 +288,7 @@ async fn VoiceClient::running_group(
   if self.group is Some(group) {
     return group
   }
-  @transport.with_timeout_opt(self.clock_.val, timeout_ms, () => {
+  @netruntime.with_timeout_opt(self.clock_.val, timeout_ms, () => {
     while self.group is None {
       self.started.wait()
     }

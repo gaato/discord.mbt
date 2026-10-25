@@ -3,17 +3,24 @@ import {
   "gaato/discord/verify",
   "gaato/discord/http" @dhttp,
   "gaato/discord/model",
+  "gaato/mttp/model" @hmodel,
+  "gaato/mttp/endpoint",
+  "gaato/mttp/router",
+  "gaato/mttp/schema",
+  "gaato/mttp-net/server",
+  "gaato/mttp-net/fetch",
   "moonbitlang/async",
   "moonbitlang/async/aqueue",
-  "moonbitlang/async/http" @ahttp,
-  "moonbitlang/async/io",
-  "moonbitlang/async/socket",
+  "moonbitlang/async/js_async",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
   "moonbitlang/core/encoding/utf8",
 }
 
 import {
+  "moonbitlang/async/http" @ahttp,
+  "moonbitlang/async/io",
+  "moonbitlang/async/socket",
   "gaato/discord/interaction",
   "hustcer/ed25519",
   "moonbitlang/async",
@@ -28,6 +35,7 @@ supported_targets = "js + native + wasm"
 
 options(
   targets: {
+    "fetch.js.mbt": [ "js" ],
     "endpoint_http.mbt": [ "native", "wasm" ],
     "endpoint_http_wbtest.mbt": [ "native", "wasm" ],
     "pkg.generated.mbti": [ "native", "wasm" ],

@@ -33,12 +33,12 @@ fn encode_headers(headers : @http.Headers) -> Json {
 ///|
 /// Headers from their wire object, or why one of them is not a string.
 fn decode_headers(fields : Map[String, Json]) -> Result[@http.Headers, String] {
-  let headers = @http.Headers::new()
+  let mut headers = @http.Headers::empty()
   for name, value in fields {
     guard value is String(text) else {
       return Err("header \{name} must be a string")
     }
-    headers.set(name.to_lower(), text)
+    headers = headers.set(name.to_lower(), text)
   }
   Ok(headers)
 }

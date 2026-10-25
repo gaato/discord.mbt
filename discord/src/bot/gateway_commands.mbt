@@ -130,7 +130,7 @@ pub async fn GatewayCtx::fetch_guild_members(
   // cancel the wait just as that chunk reaches it. (A refusal received that
   // way still raises out of the timeout.)
   let fetched : Ref[FetchedMembers?] = Ref(None)
-  let result = @transport.with_timeout_opt(
+  let result = @netruntime.with_timeout_opt(
     self.collector_.clock.val,
     timeout_ms,
     () => {

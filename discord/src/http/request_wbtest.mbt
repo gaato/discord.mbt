@@ -1,6 +1,6 @@
 ///|
 fn headers_of(pairs : Array[(String, String)]) -> @ghttp.Headers {
-  @ghttp.Headers::from_array(pairs)
+  @ghttp.Headers::of(pairs)
 }
 
 ///|
@@ -157,7 +157,7 @@ test "api_error_of decodes Discord errors and keeps any other body verbatim" {
 
 ///|
 /// What `settle_runtime_error` makes of a runtime error, as text.
-fn settled(error : @runtime.SdkError) -> String {
+fn settled(error : Error) -> String {
   try settle_runtime_error(error) catch {
     error => "raise \{Repr(error)}"
   } noraise {
@@ -167,60 +167,67 @@ fn settled(error : @runtime.SdkError) -> String {
 
 ///|
 test "the closed gate's refusal is reported as the client's closure" {
-  let settle = (error : @ghttp.HttpError) => {
-    try settle_runtime_error(@runtime.Transport(error)) catch {
+  let settle = (error : @ghttp.TransportError) => {
+    try settle_runtime_error(error) catch {
       error => Repr(error).to_string()
     } noraise {
       _ => "response"
     }
   }
   assert_eq(
-    settle(Connect(CLOSED_MESSAGE)),
+    settle(
+      @ghttp.TransportError(kind=Closed, phase=Pool, detail=CLOSED_MESSAGE),
+    ),
     "Transport(phase=Pool, message=\"client is closed\")",
   )
   // A real refusal keeps its own report.
   assert_eq(
-    settle(Connect("refused")),
+    settle(wire_connect("refused")),
     "Transport(phase=Dial, message=\"could not connect: refused\")",
   )
 }
 
 ///|
 test "settle_runtime_error turns a status into a response and raises the rest" {
-  let no_headers = @ghttp.Headers::from_array([])
-  let cases : Array[(@runtime.SdkError, String)] = [
+  let no_headers = @ghttp.Headers::of([])
+  let cases : Array[(Error, String)] = [
     (
-      @runtime.Status(
-        status=404,
-        headers=no_headers,
+      @runtime.UnexpectedStatus(
+        @ghttp.Response::new(404, headers=no_headers).head(),
         body=@utf8.encode("{\"code\":10003}"),
       ),
       "status 404 {\"code\":10003}",
     ),
     (
-      @runtime.RateLimited(
-        retry_after_ms=Some(9),
-        headers=@ghttp.Headers::from_array([
-          ("retry-after", "2"),
-          ("x-ratelimit-global", "true"),
-        ]),
+      @runtime.UnexpectedStatus(
+        @ghttp.Response::new(
+          429,
+          headers=@ghttp.Headers::of([
+            ("retry-after", "2"),
+            ("x-ratelimit-global", "true"),
+          ]),
+        ).head(),
         body=b"",
       ),
       "raise RateLimited(retry_after_ms=2000, global=true)",
     ),
+    (wire_timeout(phase=Head, ms=5), "raise Timeout(phase=Head, timeout_ms=5)"),
     (
-      @runtime.Transport(@ghttp.HttpError::Timeout(phase=Head, ms=5)),
-      "raise Timeout(phase=Head, timeout_ms=5)",
-    ),
-    (
-      @runtime.Transport(@ghttp.HttpError::Connect("refused")),
+      wire_connect("refused"),
       "raise Transport(phase=Dial, message=\"could not connect: refused\")",
     ),
     (
-      @runtime.Decode(message="bad json", body=b"{"),
+      @runtime.Deserialization(
+        @ghttp.Response::new(200).head(),
+        message="bad json",
+        body=b"{",
+      ),
       "raise Transport(phase=Unknown, message=\"bad json\")",
     ),
-    (@runtime.Config("bad"), "raise Transport(phase=Unknown, message=\"bad\")"),
+    (
+      @runtime.InvalidRequest(message="bad"),
+      "raise Transport(phase=Unknown, message=\"bad\")",
+    ),
   ]
   for case in cases {
     let (error, expected) = case

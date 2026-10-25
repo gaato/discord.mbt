@@ -184,7 +184,7 @@ async test "response gate remains terminal after sink cancellation" {
 
 ///|
 async test "a pending gate expires at its deadline" {
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   let sent = Ref(0)
   let gate = @framework.ResponseGate(
     ApplicationCommand,

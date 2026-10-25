@@ -180,7 +180,7 @@ async test "a rejected modal update is answered even when every handler slot is 
   )
   let client = @dhttp.Client("test-token")
   defer client.close()
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   @async.with_task_group(group => {
     let endpoint = app
       .build()

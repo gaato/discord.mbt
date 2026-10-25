@@ -8,6 +8,12 @@ releases (0.x → 0.y) may contain breaking changes; patch releases do not.
 
 ### Changed
 
+- **Unreleased 0.4 migration:** clock types now come from `gaato/mttp/clock`
+  and runtime clocks from `gaato/mttp-net/runtime`; the dependency on Discord
+  moves to 0.14. Virtual-time tests observe timer registration and task outcomes
+  explicitly. Native voice transport and DAVE APIs are unchanged by this
+  migration. No registry release is made here.
+
 - Built and tested with MoonBit 0.10.16. The generated `.mbti` interface
   files now spell `Int` as `Int32` and `UInt` as `UInt32`, which are the same
   types; no signature changed.

@@ -3,7 +3,7 @@ async test "unknown bucket admits immediately" {
   let clock = @mock.FakeClock::new()
   let limiter = @ratelimit.rate_limiter(clock~)
   limiter.acquire("unknown", global_exempt=false)
-  limiter.release("unknown", status=200, headers=@http.Headers::new())
+  limiter.release("unknown", status=200, headers=@http.Headers::empty())
   assert_eq(clock.slept(), [])
 }
 
@@ -15,13 +15,13 @@ async test "exhausted bucket waits 1500 ms for Discord reset-after" {
   limiter.release(
     "bucket",
     status=200,
-    headers=@http.Headers::from_array([
+    headers=@http.Headers::of([
       ("x-ratelimit-remaining", "0"),
       ("x-ratelimit-reset-after", "1.5"),
     ]),
   )
   limiter.acquire("bucket", global_exempt=false)
-  limiter.release("bucket", status=200, headers=@http.Headers::new())
+  limiter.release("bucket", status=200, headers=@http.Headers::empty())
   assert_eq(clock.slept(), [1500])
 }
 
@@ -33,13 +33,13 @@ async test "remaining budget admits without waiting" {
   limiter.release(
     "bucket",
     status=200,
-    headers=@http.Headers::from_array([
+    headers=@http.Headers::of([
       ("x-ratelimit-remaining", "3"),
       ("x-ratelimit-reset-after", "60"),
     ]),
   )
   limiter.acquire("bucket", global_exempt=false)
-  limiter.release("bucket", status=200, headers=@http.Headers::new())
+  limiter.release("bucket", status=200, headers=@http.Headers::empty())
   assert_eq(clock.slept(), [])
 }
 
@@ -51,16 +51,16 @@ async test "global 429 blocks another bucket but exempts interaction routes" {
   limiter.release(
     "bucket",
     status=429,
-    headers=@http.Headers::from_array([
+    headers=@http.Headers::of([
       ("x-ratelimit-global", "true"),
       ("retry-after", "1.5"),
     ]),
   )
   limiter.acquire("interaction", global_exempt=true)
-  limiter.release("interaction", status=200, headers=@http.Headers::new())
+  limiter.release("interaction", status=200, headers=@http.Headers::empty())
   assert_eq(clock.slept(), [])
   limiter.acquire("other", global_exempt=false)
-  limiter.release("other", status=200, headers=@http.Headers::new())
+  limiter.release("other", status=200, headers=@http.Headers::empty())
   assert_eq(clock.slept(), [1500])
 }
 
@@ -72,16 +72,16 @@ async test "route 429 exhausts only its bucket" {
   limiter.release(
     "bucket",
     status=429,
-    headers=@http.Headers::from_array([
+    headers=@http.Headers::of([
       ("x-ratelimit-scope", "user"),
       ("retry-after", "0.08"),
     ]),
   )
   limiter.acquire("other", global_exempt=false)
-  limiter.release("other", status=200, headers=@http.Headers::new())
+  limiter.release("other", status=200, headers=@http.Headers::empty())
   assert_eq(clock.slept(), [])
   limiter.acquire("bucket", global_exempt=false)
-  limiter.release("bucket", status=200, headers=@http.Headers::new())
+  limiter.release("bucket", status=200, headers=@http.Headers::empty())
   assert_eq(clock.slept(), [80])
 }
 
@@ -93,10 +93,10 @@ async test "a 429 without Retry-After waits one second on its bucket" {
   limiter.release(
     "bucket",
     status=429,
-    headers=@http.Headers::from_array([("x-ratelimit-scope", "user")]),
+    headers=@http.Headers::of([("x-ratelimit-scope", "user")]),
   )
   limiter.acquire("bucket", global_exempt=true)
-  limiter.release("bucket", status=200, headers=@http.Headers::new())
+  limiter.release("bucket", status=200, headers=@http.Headers::empty())
   assert_eq(clock.slept(), [1000])
 }
 
@@ -106,13 +106,13 @@ async test "the default global window delays the 51st non-exempt acquire" {
   let limiter = @ratelimit.rate_limiter(clock~)
   for _ in 0..<50 {
     limiter.acquire("bucket", global_exempt=false)
-    limiter.release("bucket", status=200, headers=@http.Headers::new())
+    limiter.release("bucket", status=200, headers=@http.Headers::empty())
   }
   limiter.acquire("interaction", global_exempt=true)
-  limiter.release("interaction", status=200, headers=@http.Headers::new())
+  limiter.release("interaction", status=200, headers=@http.Headers::empty())
   assert_eq(clock.slept(), [])
   limiter.acquire("bucket", global_exempt=false)
-  limiter.release("bucket", status=200, headers=@http.Headers::new())
+  limiter.release("bucket", status=200, headers=@http.Headers::empty())
   assert_eq(clock.slept(), [1000])
 }
 
@@ -124,17 +124,17 @@ async test "a global-scope 429 blocks every non-exempt bucket" {
   limiter.release(
     "bucket",
     status=429,
-    headers=@http.Headers::from_array([
+    headers=@http.Headers::of([
       ("x-ratelimit-scope", "global"),
       ("content-type", "application/json"),
       ("retry-after", "2"),
     ]),
   )
   limiter.acquire("interaction", global_exempt=true)
-  limiter.release("interaction", status=200, headers=@http.Headers::new())
+  limiter.release("interaction", status=200, headers=@http.Headers::empty())
   assert_eq(clock.slept(), [])
   limiter.acquire("other", global_exempt=false)
-  limiter.release("other", status=200, headers=@http.Headers::new())
+  limiter.release("other", status=200, headers=@http.Headers::empty())
   assert_eq(clock.slept(), [2000])
 }
 
@@ -146,7 +146,7 @@ async test "a shared-scope 429 records the bucket's headers and blocks nothing" 
   limiter.release(
     "bucket",
     status=429,
-    headers=@http.Headers::from_array([
+    headers=@http.Headers::of([
       ("x-ratelimit-scope", "shared"),
       ("x-ratelimit-remaining", "2"),
       ("x-ratelimit-reset-after", "5"),
@@ -154,9 +154,9 @@ async test "a shared-scope 429 records the bucket's headers and blocks nothing" 
     ]),
   )
   limiter.acquire("bucket", global_exempt=false)
-  limiter.release("bucket", status=200, headers=@http.Headers::new())
+  limiter.release("bucket", status=200, headers=@http.Headers::empty())
   limiter.acquire("other", global_exempt=false)
-  limiter.release("other", status=200, headers=@http.Headers::new())
+  limiter.release("other", status=200, headers=@http.Headers::empty())
   assert_eq(clock.slept(), [])
   assert_eq(limiter.state("bucket").map(state => state.remaining), Some(1))
 }
@@ -173,15 +173,11 @@ async test "a 429 that is not Discord's blocks every non-exempt bucket" {
     let clock = @mock.FakeClock::new()
     let limiter = @ratelimit.rate_limiter(clock~)
     limiter.acquire("bucket", global_exempt=false)
-    limiter.release(
-      "bucket",
-      status=429,
-      headers=@http.Headers::from_array(headers),
-    )
+    limiter.release("bucket", status=429, headers=@http.Headers::of(headers))
     limiter.acquire("interaction", global_exempt=true)
-    limiter.release("interaction", status=200, headers=@http.Headers::new())
+    limiter.release("interaction", status=200, headers=@http.Headers::empty())
     limiter.acquire("other", global_exempt=false)
-    limiter.release("other", status=200, headers=@http.Headers::new())
+    limiter.release("other", status=200, headers=@http.Headers::empty())
     let expected = if headers.length() == 2 { [3000] } else { [1000] }
     assert_eq(clock.slept(), expected, msg="case \{index}")
   }
@@ -192,12 +188,12 @@ async test "a 429 that is not Discord's blocks every non-exempt bucket" {
   limiter.release(
     "bucket",
     status=429,
-    headers=@http.Headers::from_array([
+    headers=@http.Headers::of([
       ("content-type", "application/json; charset=utf-8"),
     ]),
   )
   limiter.acquire("other", global_exempt=false)
-  limiter.release("other", status=200, headers=@http.Headers::new())
+  limiter.release("other", status=200, headers=@http.Headers::empty())
   assert_eq(clock.slept(), [])
 }
 
@@ -205,7 +201,7 @@ async test "a 429 that is not Discord's blocks every non-exempt bucket" {
 /// The headers of a 200 that leaves `remaining` requests in Discord's bucket
 /// `hash`, resetting in 1.5 s.
 fn bucket_headers(hash : String, remaining : String) -> @http.Headers {
-  @http.Headers::from_array([
+  @http.Headers::of([
     ("x-ratelimit-bucket", hash),
     ("x-ratelimit-remaining", remaining),
     ("x-ratelimit-reset-after", "1.5"),
@@ -252,13 +248,13 @@ async test "a 429 in a shared Discord bucket holds every route in it" {
   limiter.release(
     create,
     status=429,
-    headers=@http.Headers::from_array([
+    headers=@http.Headers::of([
       ("x-ratelimit-bucket", "h"),
       ("x-ratelimit-scope", "user"),
       ("retry-after", "0.25"),
     ]),
   )
   limiter.acquire(reply, global_exempt=false)
-  limiter.release(reply, status=200, headers=@http.Headers::new())
+  limiter.release(reply, status=200, headers=@http.Headers::empty())
   assert_eq(clock.slept(), [250])
 }

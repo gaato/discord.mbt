@@ -78,7 +78,7 @@ fn discord_retry_rule(max_retries : Int32) -> @retry.RetryRule {
 /// - a call is idempotent when its method is (`GET`, `HEAD`, `PUT`,
 ///   `DELETE`, `OPTIONS`) or when it carries `REPLAY_SAFE_HEADER`.
 fn resend_decision(
-  error : @runtime.SdkError,
+  error : Error,
   context : @runtime.RetryContext,
   max_retries~ : Int32,
   closed~ : Bool,
@@ -86,9 +86,12 @@ fn resend_decision(
   if closed {
     return Stop(NotRetryable)
   }
-  guard error.outcome() is Some(outcome) else { return Stop(NotRetryable) }
+  guard @runtime.outcome_of(error) is Some(outcome) else {
+    return Stop(NotRetryable)
+  }
   let server_delay_ms = match error {
-    RateLimited(headers~, body~, ..) => {
+    @runtime.UnexpectedStatus(head, body~) if head.status == 429 => {
+      let headers = head.headers
       if !@ratelimit.is_discord_rate_limit(headers) {
         return Stop(NotRetryable)
       }

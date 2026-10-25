@@ -108,7 +108,7 @@ pub async fn discover_external_address(
   ssrc : UInt32,
   retries~ : Int32 = 3,
   timeout_ms~ : Int32 = 1000,
-  clock~ : &@hclock.Clock = @transport.AsyncClock::new(),
+  clock~ : &@hclock.Clock = @netruntime.AsyncClock::new(),
 ) -> (String, Int32) {
   if retries <= 0 || timeout_ms <= 0 {
     raise VoiceUdpError::IpDiscoveryFailed(
@@ -120,7 +120,7 @@ pub async fn discover_external_address(
   for attempt in 0..<retries {
     udp.send(request)
     let buffer : FixedArray[Byte] = FixedArray::make(74, 0)
-    let received = @transport.with_timeout_opt(clock, timeout_ms, () => {
+    let received = @netruntime.with_timeout_opt(clock, timeout_ms, () => {
       udp.recv(buffer)
     })
     guard received is Some(received) else {

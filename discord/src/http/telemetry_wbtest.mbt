@@ -2,6 +2,31 @@
 priv suberror TelemetryHookFailure derive(Debug)
 
 ///|
+test "a failed 429 body still reports rate-limit headers" {
+  let events : Array[@telemetry.TelemetryEvent] = []
+  emit_attempt([event => events.push(event)], Ref(_ => ()), {
+    request: @ghttp.Request::get("https://discord.com/api/v10/gateway").head(),
+    bucket: "gateway",
+    attempt: 0,
+    status: 429,
+    headers: @ghttp.Headers::of([
+      ("retry-after", "0.06"),
+      ("x-ratelimit-global", "true"),
+    ]),
+    duration_ms: 5L,
+    error: Some(wire_network(phase=Body, message="truncated response")),
+    decision: None,
+  })
+  guard events
+    is [
+      HttpRequest(status=429, ..),
+      HttpRateLimited(global=true, retry_after_ms=60L, ..),
+    ] else {
+    fail("missing rate-limit metadata after body failure")
+  }
+}
+
+///|
 async test "429 retry_after longer than the request timeout retries with telemetry" {
   let limiter = TimeoutTestLimiter(() => ())
   let calls = Ref(0)

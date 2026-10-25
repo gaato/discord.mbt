@@ -192,7 +192,7 @@ describe("Cloudflare Worker interaction endpoint", () => {
   it("finishes deferred work after the incoming request is aborted", async () => {
     const calls = [];
     const fetchMock = vi.fn(async (input, init) => {
-      const url = typeof input === "string" ? input : input.url;
+      const url = new URL(typeof input === "string" ? input : input.url).href;
       const method = init?.method ?? input.method;
       const requestBody = init?.body
         ? await new Response(init.body).text()
@@ -228,7 +228,7 @@ describe("Cloudflare Worker interaction endpoint", () => {
   it("finishes a deferred REST call when a 204 response has a null body", async () => {
     const calls = [];
     const fetchMock = vi.fn(async (input, init) => {
-      const url = typeof input === "string" ? input : input.url;
+      const url = new URL(typeof input === "string" ? input : input.url).href;
       const method = init?.method ?? input.method;
       calls.push({ method, url });
       return new Response(null, { status: 204 });
@@ -249,7 +249,7 @@ describe("Cloudflare Worker interaction endpoint", () => {
     });
   });
 
-  it("rejects a pre-aborted response waiter but completes the background", async () => {
+  it("rejects a pre-aborted request and settles its registered background", async () => {
     const moonbit = await import(
       "../../../_build/js/release/build/local/discord_examples/interactions_js/interactions_js.js"
     );
@@ -258,20 +258,19 @@ describe("Cloudflare Worker interaction endpoint", () => {
     const signed = await signedRequest(interaction(2, "echo", [
       { name: "text", type: 3, value: "already aborted" },
     ]));
-    const dispatchResult = moonbit.start_signed_interaction(
+    let background;
+    const response = moonbit.handle_interaction(
       "test-token",
       "400000000000000001",
       publicKeyHex,
-      "POST",
-      signed.headers.get("x-signature-ed25519"),
-      TIMESTAMP,
-      new Uint8Array(await signed.arrayBuffer()),
       "https://discord.com",
-      controller.signal,
+      "/interactions",
+      new Request(signed, { signal: controller.signal }),
+      promise => { background = promise; },
     );
-    await expect(dispatchResult.response).rejects.toMatchObject({
+    await expect(response).rejects.toMatchObject({
       name: "AbortError",
     });
-    await expect(dispatchResult.background).resolves.toBeUndefined();
+    await expect(background).resolves.toBeUndefined();
   });
 });

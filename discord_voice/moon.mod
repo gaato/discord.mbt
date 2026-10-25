@@ -1,6 +1,6 @@
 name = "gaato/discord_voice"
 
-version = "0.3.1"
+version = "0.4.0"
 
 readme = "README.md"
 
@@ -24,10 +24,10 @@ supported_targets = "native"
 warnings = "-implicit_impl_as_method"
 
 import {
-  "gaato/discord@0.13.0",
+  "gaato/mttp@0.1.0",
+  "gaato/mttp-net@0.1.0",
+  "gaato/discord@0.14.0",
   "gaato/dave@0.1.1",
-  "gaato/http@0.5.0",
-  "gaato/http-async@0.5.0",
   "moonbitlang/async@0.22.5",
 }
 
