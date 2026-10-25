@@ -121,7 +121,7 @@ pub async fn InteractionEndpoint::handle_interaction(
       captured
     })
     let result = match
-      @transport.with_timeout_opt(clock, deadline_ms, () => race.get()) {
+      @netruntime.with_timeout_opt(clock, deadline_ms, () => race.get()) {
       Some(Captured(captured)) =>
         Reply(response=captured.response, files=captured.files)
       Some(Completed(true)) => NoResponse

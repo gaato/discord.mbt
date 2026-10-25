@@ -3,7 +3,7 @@
 /// `ms` wakes, before the sleeper resumes: a frame that arrives as a timeout
 /// fires.
 priv struct HookedClock {
-  inner : @simclock.VirtualClock
+  inner : @netruntime.VirtualClock
   ms : Int32
   mut hook : (() -> Unit)?
 }
@@ -31,7 +31,7 @@ fn silence_test_frame(sequence : Int32) -> ReceivedAudio {
 async fn with_silence_stream(
   body : async (VoiceReceiveStream, HookedClock) -> Unit,
 ) -> Unit {
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   let hooked = HookedClock::{ inner: clock, ms: 200, hook: None, }
   let transport = DaveConnectionTransport()
   @async.with_task_group(group => {
@@ -73,7 +73,7 @@ async test "a frame that arrives as the silence timeout fires is delivered" {
     })
     let reading = @async.with_task_group(group => {
       let task = group.spawn(() => stream.next_packet())
-      hooked.inner.settle()
+      hooked.inner.settle(until=() => hooked.inner.pending().contains(200))
       hooked.inner.advance(200)
       task.wait()
     })
@@ -87,7 +87,7 @@ async test "silence with no frame still ends the stream" {
   with_silence_stream((stream, hooked) => {
     let reading = @async.with_task_group(group => {
       let task = group.spawn(() => stream.next_packet())
-      hooked.inner.settle()
+      hooked.inner.settle(until=() => hooked.inner.pending().contains(200))
       hooked.inner.advance(200)
       task.wait()
     })

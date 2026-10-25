@@ -38,7 +38,7 @@ fn offline_test_client() -> (
 }
 
 ///|
-/// A `gaato/http` transport for whitebox tests of the send loop. Each wire
+/// An mttp backend for whitebox tests of the send loop. Each wire
 /// request is decoded into its path under the host, its lowercase headers,
 /// and its JSON body (a body that is not JSON, such as a multipart upload,
 /// arrives as a JSON string of its text); `answer`'s logical response is
@@ -50,7 +50,7 @@ priv struct FakeWire {
 }
 
 ///|
-impl @ghttp.Transport for FakeWire with fn send(self, request) {
+impl @runtime.Backend for FakeWire with fn send(self, request, _options) {
   let url = request.url
   let path = match url.find("/api/") {
     Some(index) => url[index:].to_owned()
@@ -69,26 +69,24 @@ impl @ghttp.Transport for FakeWire with fn send(self, request) {
     }
   }
   let response = (self.answer)(path, headers, body) catch {
-    error => raise @ghttp.HttpError::Protocol(@debug.to_string(error))
+    error =>
+      raise @ghttp.TransportError(
+        kind=Protocol,
+        phase=Unknown,
+        detail=@debug.to_string(error),
+      )
   }
-  let wire_headers = @ghttp.Headers::new()
-  for name, value in response.headers {
-    wire_headers.set(name, value)
-  }
-  {
-    status: response.status,
-    headers: wire_headers,
-    body: match response.body {
-      _ if response.status == 204 => b""
-      String(text) => @utf8.encode(text)
-      json => @utf8.encode(json.stringify())
-    },
-  }
-}
-
-///|
-impl @ghttp.Transport for FakeWire with fn send_stream(_self, _request) {
-  raise @ghttp.HttpError::Protocol("FakeWire does not stream")
+  @ghttp.Response::new(
+    response.status,
+    headers=@ghttp.Headers::of(response.headers.to_array()),
+    body=Bytes(
+      match response.body {
+        _ if response.status == 204 => b""
+        String(text) => @utf8.encode(text)
+        json => @utf8.encode(json.stringify())
+      },
+    ),
+  )
 }
 
 ///|

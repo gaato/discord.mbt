@@ -27,7 +27,7 @@
 /// - one second for a 429 without `Retry-After`.
 pub fn rate_limiter(
   global_limit~ : Int32 = 50,
-  clock~ : &@clock.Clock = @transport.AsyncClock::new(),
+  clock~ : &@clock.Clock = @netruntime.AsyncClock::new(),
 ) -> @runtime.WindowLimiter {
   @runtime.WindowLimiter::new(
     clock,
@@ -35,7 +35,7 @@ pub fn rate_limiter(
       remaining="x-ratelimit-remaining",
       reset_after_seconds="x-ratelimit-reset-after",
     ),
-    gate=() => @transport.SemaphoreGate::new(),
+    gate=() => @netruntime.SemaphoreGate::new(),
     server_key=discord_server_key,
     scope=discord_scope,
     global={ limit: global_limit, window_ms: 1000, },

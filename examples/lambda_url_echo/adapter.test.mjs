@@ -21,6 +21,20 @@ async function signedEvent(body, privateKey, base64) {
   };
 }
 
+test("Lambda rejects oversized or malformed envelopes before signature handling", async () => {
+  const handler = createLambdaUrlHandler({ publicKey: "invalid", token: "test", applicationId: "1" });
+  for (const isBase64Encoded of [false, true]) {
+    const bytes = Buffer.alloc(1024 * 1024 + 1, 97);
+    const body = bytes.toString(isBase64Encoded ? "base64" : "utf8");
+    assert.equal((await handler({ body, isBase64Encoded })).statusCode, 413);
+  }
+  for (const body of ["%%%", "YQ", "YQ=", "YQ==\n", "YQ=\n", "===="]) {
+    assert.equal((await handler({ body, isBase64Encoded: true })).statusCode, 400);
+  }
+  const atLimit = Buffer.alloc(1024 * 1024, 97).toString("base64");
+  assert.equal((await handler({ body: atLimit, isBase64Encoded: true })).statusCode, 401);
+});
+
 test("Lambda URL adapter preserves raw signed body in both event encodings", async () => {
   const { privateKey, publicKey } = await generateSigningKeys();
   const handler = createLambdaUrlHandler({ publicKey, token: "test-token", applicationId: "400000000000000001" });

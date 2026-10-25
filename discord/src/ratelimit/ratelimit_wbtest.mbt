@@ -9,16 +9,16 @@ async test "Discord allows only one request in flight per bucket" {
       started.release()
       limiter.acquire("bucket", global_exempt=true)
       admitted.val = true
-      limiter.release("bucket", status=200, headers=@http.Headers::new())
+      limiter.release("bucket", status=200, headers=@http.Headers::empty())
     })
     started.acquire()
     @async.sleep(10)
     assert_false(admitted.val)
     // A different bucket still proceeds while the first exchange is in flight.
     limiter.acquire("other", global_exempt=true)
-    limiter.release("other", status=200, headers=@http.Headers::new())
+    limiter.release("other", status=200, headers=@http.Headers::empty())
     assert_false(admitted.val)
-    limiter.release("bucket", status=200, headers=@http.Headers::new())
+    limiter.release("bucket", status=200, headers=@http.Headers::empty())
     @async.with_timeout(1000, () => waiting.wait())
     assert_true(admitted.val)
   })
@@ -49,9 +49,7 @@ test "major_parameter reads the route's channel, guild or webhook" {
 
 ///|
 test "discord_server_key joins the bucket hash and the major parameter" {
-  let headers = (pairs : Array[(String, String)]) => {
-    @http.Headers::from_array(pairs)
-  }
+  let headers = (pairs : Array[(String, String)]) => @http.Headers::of(pairs)
   assert_eq(
     discord_server_key(
       "GET:/channels/1/messages",

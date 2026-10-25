@@ -84,17 +84,17 @@ fn Client::wire_request(
   let route = request.route
   let headers = base_headers(self.token, route, request.audit_reason)
   headers.merge_in_place(request.headers)
-  let wire = @ghttp.Request::new(
-    wire_method(route.method_()),
+  let mut wire = @ghttp.Request::new(
+    @ghttp.Method::parse(wire_method(route.method_())),
     self.base_url + self.base_path + route.path(),
   )
   for name, value in headers {
-    wire.headers.set(name, value)
+    wire = { ..wire, headers: wire.headers.set(name, value), }
   }
   // Only the client decides that a call is safe to resend.
-  wire.headers.remove(REPLAY_SAFE_HEADER)
+  wire = { ..wire, headers: wire.headers.remove(REPLAY_SAFE_HEADER), }
   if is_replay_safe(route, request.body) {
-    wire.headers.set(REPLAY_SAFE_HEADER, "1")
+    wire = wire.header(REPLAY_SAFE_HEADER, "1")
   }
   match (route, request.files, request.body) {
     (CreateGuildSticker(..), Some([file]), Some(json)) =>
@@ -118,7 +118,7 @@ fn Client::wire_request(
         ),
       )
     (_, _, Some(json)) => {
-      wire.headers.set("content-type", "application/json")
+      wire = wire.header("content-type", "application/json")
       { head: wire.body_bytes(@utf8.encode(json.stringify())), body: None, }
     }
     (_, _, None) => { head: wire, body: None, }
@@ -323,7 +323,7 @@ async fn Client::answer_offline(
   )
   if response.status == 429 {
     let (retry_after_ms, global) = rate_limit_from_json(
-      @ghttp.Headers::from_array(response.headers.to_array()),
+      @ghttp.Headers::of(response.headers.to_array()),
       response.body,
     )
     self.emit_telemetry(
@@ -341,20 +341,25 @@ async fn Client::answer_offline(
 /// rate-limiter failure (`Config`) may come after the exchange, so it may
 /// have reached Discord (`Unknown`). `ClosedGate`'s refusal is the client's
 /// closure, reported as the check before the call reports it.
-fn settle_runtime_error(
-  error : @runtime.SdkError,
-) -> HttpResponse raise DiscordHttpError {
+fn settle_runtime_error(error : Error) -> HttpResponse raise DiscordHttpError {
   match error {
-    Transport(Connect(message)) if message == CLOSED_MESSAGE =>
+    @ghttp.TransportError(kind=Closed, detail=CLOSED_MESSAGE, ..) =>
       raise DiscordHttpError::Transport(phase=Pool, message=CLOSED_MESSAGE)
-    Status(status~, headers~, body~) => decode_response(status, headers, body)
-    RateLimited(headers~, body~, ..) => {
-      let (retry_after_ms, global) = rate_limit_details(headers, body)
+    @runtime.UnexpectedStatus(head, body~) if head.status == 429 => {
+      let (retry_after_ms, global) = rate_limit_details(head.headers, body)
       raise DiscordHttpError::RateLimited(retry_after_ms~, global~)
     }
-    Transport(error) => raise transport_failure(error)
-    Decode(message~, ..) | Config(message) =>
+    @runtime.UnexpectedStatus(head, body~) =>
+      decode_response(head.status, head.headers, body)
+    @ghttp.TransportError(..) as error => raise transport_failure(error)
+    @runtime.Deserialization(_, message~, ..)
+    | @runtime.InvalidRequest(message~) =>
       raise DiscordHttpError::Transport(phase=Unknown, message~)
+    error =>
+      raise DiscordHttpError::Transport(
+        phase=Unknown,
+        message=error.to_string(),
+      )
   }
 }
 
@@ -371,12 +376,14 @@ async fn Client::request_online(
   request : HttpRequest,
 ) -> HttpResponse {
   let wire = self.wire_request(request)
-  let response = runtime.send(
-    wire.head,
-    bucket=request.route.bucket(),
-    global_exempt=request.route.is_interaction(),
-    body?=wire.body,
-  ) catch {
+  let call = @runtime.ClientRequest::new(wire.head, @runtime.as_bytes())
+    .attribute(@runtime.rate_limit_bucket, request.route.bucket())
+    .attribute(@runtime.global_exempt, request.route.is_interaction())
+  let call = match wire.body {
+    Some(body) => call.body_fn(body)
+    None => call
+  }
+  let response = runtime.send(call) catch {
     error => return settle_runtime_error(error)
   }
   decode_response(response.status, response.headers, response.body)

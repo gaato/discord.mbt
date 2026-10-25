@@ -7,6 +7,17 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+### Changed
+
+- **Unreleased 0.15 migration to mttp:** REST accepts mttp Backends and clock
+  types; header updates are immutable. The 64 MiB response cap also applies to
+  caller-supplied Backends. The interactions listener uses a signed Endpoint
+  and bounded HTTP/1 server, and `interaction_fetch_handler` adapts that route
+  to Web Request/Response with synchronous background registration. See the
+  [migration notes](https://github.com/gaato/discord.mbt/blob/main/docs/mttp-migration.md)
+  for error-type, retry-observer and HTTP rejection-order changes. These
+  manifests are for local integration; no registry release is made here.
+
 ## [0.14.0] - 2026-11-07
 
 Follows Discord's developer docs through

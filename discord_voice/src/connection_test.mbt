@@ -63,6 +63,7 @@ struct ConnectionTestUdp {
   fail_close : Ref[Bool]
   recv_started : @aqueue.Queue[Unit]
   fail_recv : Ref[Bool]
+  received : Ref[Int32]
 }
 
 ///|
@@ -74,6 +75,7 @@ fn ConnectionTestUdp::new() -> ConnectionTestUdp {
     fail_close: Ref(false),
     recv_started: Queue(kind=Unbounded),
     fail_recv: Ref(false),
+    received: Ref(0),
   }
 }
 
@@ -81,6 +83,7 @@ fn ConnectionTestUdp::new() -> ConnectionTestUdp {
 impl @voice.VoiceUdp for ConnectionTestUdp with fn recv(self, buffer) {
   self.recv_started.put(())
   let packet = self.incoming.get()
+  self.received.val += 1
   if self.fail_recv.val {
     raise VoiceTestFailure
   }
@@ -138,7 +141,7 @@ async test "voice connection rejects unsupported Ready modes before opening UDP"
         raise VoiceTestFailure
       },
       receive=false,
-      clock=@simclock.VirtualClock(),
+      clock=@netruntime.VirtualClock(),
     )
     transport.incoming.put(connection_hello())
     transport.outgoing_text.get() |> ignore
@@ -179,7 +182,7 @@ async test "voice connection translates UDP open and discovery errors" {
           (udp : &@voice.VoiceUdp)
         },
         receive=false,
-        clock=@simclock.VirtualClock(),
+        clock=@netruntime.VirtualClock(),
       )
       transport.incoming.put(connection_hello())
       transport.outgoing_text.get() |> ignore
@@ -233,7 +236,7 @@ async test "voice connection cancellation interrupts a pending UDP opener" {
         pending.get()
       },
       receive=false,
-      clock=@simclock.VirtualClock(),
+      clock=@netruntime.VirtualClock(),
     )
     transport.incoming.put(connection_hello())
     transport.outgoing_text.get() |> ignore
@@ -261,7 +264,7 @@ async test "voice connection rejects invalid Session Description modes and keys"
         connector=_ => (transport : &@voice.VoiceTransport),
         udp_opener=(_, _) => (udp : &@voice.VoiceUdp),
         receive=false,
-        clock=@simclock.VirtualClock(),
+        clock=@netruntime.VirtualClock(),
       )
       connection_finish_protocol_selection(transport, udp)
       let frame : Json = {
@@ -314,7 +317,7 @@ async test "voice connection rejects an invalid DAVE version during session esta
       connector=_ => (transport : &@voice.VoiceTransport),
       udp_opener=(_, _) => (udp : &@voice.VoiceUdp),
       receive=false,
-      clock=@simclock.VirtualClock(),
+      clock=@netruntime.VirtualClock(),
     )
     connection_finish_protocol_selection(transport, udp)
     transport.incoming.put(
@@ -345,7 +348,7 @@ async test "voice connection selects xchacha and exposes speaking and latency wi
       connector=_ => (transport : &@voice.VoiceTransport),
       udp_opener=(_, _) => (udp : &@voice.VoiceUdp),
       receive=false,
-      clock=@simclock.VirtualClock(),
+      clock=@netruntime.VirtualClock(),
     )
     assert_eq(connection.latency_ms(), None)
     try connection.set_speaking(1) catch {
@@ -405,7 +408,7 @@ async test "voice connection preserves fatal close errors and failed rejoin cred
         },
         connector=_ => (transport : &@voice.VoiceTransport),
         receive=false,
-        clock=@simclock.VirtualClock(),
+        clock=@netruntime.VirtualClock(),
       )
       transport.incoming.put(connection_hello())
       transport.outgoing_text.get() |> ignore
@@ -430,7 +433,7 @@ async test "voice connection preserves fatal close errors and failed rejoin cred
 async test "voice connection keepalive ignores UDP send failure and keeps its cadence" {
   let transport = ConnectionTestTransport::new()
   let udp = ConnectionTestUdp::new()
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   @async.with_task_group(group => {
     let connection = @voice.VoiceConnection::start(
       group,
@@ -445,11 +448,12 @@ async test "voice connection keepalive ignores UDP send failure and keeps its ca
       clock~,
     )
     connection_finish_protocol_selection(transport, udp)
-    clock.settle()
+    clock.settle(until=() => clock.pending() == [5000, 60000])
     // the keepalive and the gateway heartbeat
     assert_eq(clock.pending(), [5000, 60000])
     udp.outgoing.close(error=VoiceTestFailure)
     clock.advance(5000)
+    clock.settle(until=() => clock.pending() == [5000, 60000])
     // the failed send is ignored and the next tick is scheduled at once
     assert_eq(clock.pending(), [5000, 60000])
     assert_eq(clock.next_deadline(), Some(clock.now_unix_ms() + 5000))
@@ -484,7 +488,7 @@ async test "voice connection ignores credentials returned after disconnect" {
         (transport : &@voice.VoiceTransport)
       },
       receive=false,
-      clock=@simclock.VirtualClock(),
+      clock=@netruntime.VirtualClock(),
     )
     transport.incoming.put(connection_hello())
     transport.outgoing_text.get() |> ignore
@@ -505,7 +509,7 @@ async test "voice events arriving while disconnect leaves the channel are ignore
   let leaving : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   let left : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   let rejoins = Ref(0)
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   @async.with_task_group(group => {
     let connection = @voice.VoiceConnection::start(
       group,
@@ -531,7 +535,7 @@ async test "voice events arriving while disconnect leaves the channel are ignore
     // server asks for a rejoin.
     leaving.get()
     transport.server_close(4006)
-    clock.settle()
+    clock.settle(until=() => connection.state() is Closed(..))
     assert_eq(rejoins.val, 0)
     assert_eq(connection.state(), Closed(code=None))
     left.put(())
@@ -547,7 +551,7 @@ async test "voice connection resumes its existing session after a transient clos
   let second = ConnectionTestTransport::new()
   let transports = [second, first]
   let udp = ConnectionTestUdp::new()
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   let backoffs = BackoffDraws::new()
   @async.with_task_group(group => {
     let connection = @voice.VoiceConnection::start(
@@ -567,7 +571,12 @@ async test "voice connection resumes its existing session after a transient clos
     first.incoming.put(connection_session_description(2))
     assert_eq(connection.next_event(), ConnectionReady)
     first.server_close(4015)
-    clock.settle()
+    clock.settle(until=() => {
+      connection.state() is Reconnecting &&
+      clock.pending().length() == 2 &&
+      clock.pending().contains(5000) &&
+      !clock.pending().contains(60000)
+    })
     assert_eq(connection.state(), Reconnecting)
     // the backoff runs ahead of the keepalive; the old heartbeat is gone
     assert_eq(clock.pending(), [backoffs.next(attempts=1), 5000])
@@ -589,7 +598,7 @@ async test "voice receiver discards empty datagrams and stops after UDP close" {
   }
   let transport = ConnectionTestTransport::new()
   let udp = ConnectionTestUdp::new()
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   @async.with_task_group(group => {
     let connection = ready_receive_connection(group, transport, udp, clock~)
     map_connection_speaker(connection, transport, "200", 77U, 3)
@@ -598,6 +607,7 @@ async test "voice receiver discards empty datagrams and stops after UDP close" {
     udp.recv_started.get()
     udp.fail_recv.val = true
     udp.incoming.put(b"failed receive")
+    clock.settle(until=() => clock.pending().contains(5))
     clock.advance(5)
     udp.recv_started.get()
     udp.fail_recv.val = false
@@ -615,7 +625,7 @@ async test "voice receiver discards empty datagrams and stops after UDP close" {
     )
     udp.recv_started.get()
     connection.disconnect()
-    clock.settle()
+    clock.settle(until=() => clock.pending().is_empty())
     expect_connection_terminated(connection)
   })
 }
@@ -627,7 +637,7 @@ async test "voice receiver backs off on the clock after a failed receive" {
   }
   let transport = ConnectionTestTransport::new()
   let udp = ConnectionTestUdp::new()
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   @async.with_task_group(group => {
     let connection = ready_receive_connection(group, transport, udp, clock~)
     map_connection_speaker(connection, transport, "200", 77U, 3)
@@ -636,7 +646,7 @@ async test "voice receiver backs off on the clock after a failed receive" {
     udp.recv_started.get()
     udp.fail_recv.val = true
     udp.incoming.put(b"failed receive")
-    clock.settle()
+    clock.settle(until=() => clock.pending() == [5, 5000, 60000])
     // a 5ms backoff ahead of the keepalive and the heartbeat
     assert_eq(clock.pending(), [5, 5000, 60000])
     udp.fail_recv.val = false
@@ -657,7 +667,7 @@ async test "voice receiver backs off on the clock after a failed receive" {
 async test "disconnect wakes the voice receiver waiting for a session" {
   let transport = ConnectionTestTransport::new()
   let udp = ConnectionTestUdp::new()
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   @async.with_task_group(group => {
     let connection = @voice.VoiceConnection::start(
       group,
@@ -671,9 +681,9 @@ async test "disconnect wakes the voice receiver waiting for a session" {
       clock~,
     )
     connection_finish_protocol_selection(transport, udp)
-    clock.settle()
+    clock.settle(until=() => clock.pending() == [5000, 60000])
     connection.disconnect()
-    clock.settle()
+    clock.settle(until=() => clock.pending().is_empty())
     // only IP discovery ever read the socket
     assert_eq(udp.recv_started.try_get() is Some(_), true)
     assert_eq(udp.recv_started.try_get(), None)
@@ -1085,7 +1095,7 @@ async test "voice connection reports reordered packet loss" {
   }
   let transport = ConnectionTestTransport::new()
   let udp = ConnectionTestUdp::new()
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   @async.with_task_group(group => {
     let connection = ready_receive_connection(group, transport, udp, clock~)
     map_connection_speaker(connection, transport, "200", 55U, 3)
@@ -1105,11 +1115,13 @@ async test "voice connection reports reordered packet loss" {
     udp.incoming.put(packet(1, 960U))
     guard! stream.next_packet() is Some(Opus(sequence=1, ..))
     // sequence 2 never arrives: 3 and 4 wait for it while the 60ms hold lasts
+    let received_before = udp.received.val
     udp.incoming.put(packet(3, 2880U))
+    clock.settle(until=() => udp.received.val == received_before + 1)
     clock.advance(59)
     udp.incoming.put(packet(4, 3840U))
     let reader = group.spawn(no_wait=true, () => stream.next_packet())
-    clock.settle()
+    clock.settle(until=() => udp.received.val == received_before + 2)
     assert_eq(reader.try_wait(), None)
     // the first arrival 60ms after 3 gives up on 2
     clock.advance(1)
@@ -1244,7 +1256,7 @@ async test "voice rejoin clears a pre-session external sender" {
 async test "fatal voice close performs terminal teardown" {
   let transport = ConnectionTestTransport::new()
   let leave_calls = Ref(0)
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   @async.with_task_group(group => {
     let connection = @voice.VoiceConnection::start(
       group,
@@ -1260,7 +1272,9 @@ async test "fatal voice close performs terminal teardown" {
     transport.incoming.put(connection_hello())
     transport.outgoing_text.get() |> ignore
     transport.server_close(4014)
-    clock.settle()
+    clock.settle(until=() => {
+      connection.state() is Closed(code=Some(4014)) && leave_calls.val == 1
+    })
     assert_eq(connection.state(), Closed(code=Some(4014)))
     assert_eq(leave_calls.val, 1)
     try connection.next_event() |> ignore catch {
@@ -1277,7 +1291,7 @@ async test "fatal voice close performs terminal teardown" {
 ///|
 async test "voice connection wait_ready reports JoinTimeout" {
   let transport = ConnectionTestTransport::new()
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   @async.with_task_group(group => {
     let connection = @voice.VoiceConnection::start(
       group,
@@ -1293,6 +1307,7 @@ async test "voice connection wait_ready reports JoinTimeout" {
     let waiting = group.spawn(no_wait=true, allow_failure=true, () => {
       connection.wait_ready(timeout_ms=10)
     })
+    clock.settle(until=() => clock.pending().contains(10))
     clock.advance(9)
     assert_eq(waiting.try_wait(), None)
     clock.advance(1)
@@ -1344,7 +1359,7 @@ async fn[X] ready_receive_connection(
   group : @async.TaskGroup[X],
   transport : ConnectionTestTransport,
   udp : ConnectionTestUdp,
-  clock~ : @simclock.VirtualClock = @simclock.VirtualClock(),
+  clock~ : @netruntime.VirtualClock = @netruntime.VirtualClock(),
 ) -> @voice.VoiceConnection {
   let connection = @voice.VoiceConnection::start(
     group,
@@ -1425,7 +1440,7 @@ async test "voice subscription ends and unregisters after silence" {
   }
   let transport = ConnectionTestTransport::new()
   let udp = ConnectionTestUdp::new()
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   @async.with_task_group(group => {
     let connection = ready_receive_connection(group, transport, udp, clock~)
     map_connection_speaker(connection, transport, "200", 77U, 3)
@@ -1437,6 +1452,7 @@ async test "voice subscription ends and unregisters after silence" {
     udp.incoming.put(connection_opus_datagram(77U, 1, b"first"))
     assert_eq(audio.next_frame(), Some(b"first"))
     let reader = group.spawn(no_wait=true, () => audio.next_frame())
+    clock.settle(until=() => clock.pending().contains(20))
     clock.advance(19)
     assert_eq(reader.try_wait(), None)
     clock.advance(1)
@@ -1450,7 +1466,7 @@ async test "voice subscription ends and unregisters after silence" {
 ///|
 async test "closing a voice subscription wakes a blocked reader" {
   let transport = ConnectionTestTransport::new()
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   @async.with_task_group(group => {
     let connection = @voice.VoiceConnection::start(
       group,
@@ -1465,12 +1481,15 @@ async test "closing a voice subscription wakes a blocked reader" {
     )
     let stream = connection.subscribe(user_id="target")
     let audio : &@voice.AudioSource = stream
-    let blocked = group.spawn(() => audio.next_frame())
-    clock.settle()
+    let entered = Ref(false)
+    let blocked = group.spawn(() => {
+      entered.val = true
+      audio.next_frame()
+    })
+    clock.settle(until=() => entered.val)
     assert_eq(blocked.try_wait(), None)
     stream.close()
-    clock.settle()
-    assert_eq(blocked.try_wait(), Some(None))
+    assert_eq(blocked.wait(), None)
     connection.disconnect()
   })
 }
@@ -1478,7 +1497,7 @@ async test "closing a voice subscription wakes a blocked reader" {
 ///|
 async test "disconnect ends every voice subscription" {
   let transport = ConnectionTestTransport::new()
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   @async.with_task_group(group => {
     let connection = @voice.VoiceConnection::start(
       group,
@@ -1493,15 +1512,21 @@ async test "disconnect ends every voice subscription" {
     )
     let first : &@voice.AudioSource = connection.subscribe(user_id="one")
     let second : &@voice.AudioSource = connection.subscribe(user_id="two")
-    let first_read = group.spawn(() => first.next_frame())
-    let second_read = group.spawn(() => second.next_frame())
-    clock.settle()
+    let entered = Ref(0)
+    let first_read = group.spawn(() => {
+      entered.val += 1
+      first.next_frame()
+    })
+    let second_read = group.spawn(() => {
+      entered.val += 1
+      second.next_frame()
+    })
+    clock.settle(until=() => entered.val == 2)
     assert_eq(first_read.try_wait(), None)
     assert_eq(second_read.try_wait(), None)
     connection.disconnect()
-    clock.settle()
-    assert_eq(first_read.try_wait(), Some(None))
-    assert_eq(second_read.try_wait(), Some(None))
+    assert_eq(first_read.wait(), None)
+    assert_eq(second_read.wait(), None)
   })
 }
 
@@ -1512,7 +1537,7 @@ async test "manual voice subscription waits across a long gap" {
   }
   let transport = ConnectionTestTransport::new()
   let udp = ConnectionTestUdp::new()
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   @async.with_task_group(group => {
     let connection = ready_receive_connection(group, transport, udp, clock~)
     map_connection_speaker(connection, transport, "200", 77U, 3)
@@ -1520,7 +1545,11 @@ async test "manual voice subscription waits across a long gap" {
     let audio : &@voice.AudioSource = stream
     let blocked = group.spawn(() => audio.next_frame())
     // half a minute of silence (six keepalive ticks) does not end it
-    clock.advance(30000)
+    for _ in 0..<6 {
+      clock.settle(until=() => clock.pending().contains(5000))
+      clock.advance(5000)
+      udp.outgoing.get() |> ignore
+    }
     assert_eq(blocked.try_wait(), None)
     udp.incoming.put(connection_opus_datagram(77U, 1, b"after-gap"))
     assert_eq(blocked.wait(), Some(b"after-gap"))
@@ -1533,7 +1562,7 @@ async test "manual voice subscription waits across a long gap" {
 async test "voice keepalive cadence runs on the clock" {
   let transport = ConnectionTestTransport::new()
   let udp = ConnectionTestUdp::new()
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   @async.with_task_group(group => {
     let connection = @voice.VoiceConnection::start(
       group,
@@ -1547,21 +1576,23 @@ async test "voice keepalive cadence runs on the clock" {
       receive=false,
       clock~,
     )
-    clock.settle()
+    clock.settle(until=() => clock.pending() == [5000])
     assert_eq(clock.pending(), [5000])
     // tick 1 elapses before the UDP socket exists: nothing is sent
     clock.advance(5000)
+    clock.settle(until=() => clock.pending() == [5000])
     assert_eq(clock.pending(), [5000])
     // bring the socket up (the gateway heartbeat joins), then tick 2 sends
     // the 8-byte counter
     connection_finish_protocol_selection(transport, udp)
-    clock.settle()
+    clock.settle(until=() => clock.pending() == [5000, 60000])
     assert_eq(clock.pending(), [5000, 60000])
     clock.advance(4999)
     assert_eq(udp.outgoing.try_get(), None)
     clock.advance(1)
     assert_eq(udp.outgoing.get(), b"\x00\x00\x00\x00\x00\x00\x00\x00")
     // tick 3, 5000ms later: the counter increments little-endian
+    clock.settle(until=() => clock.pending() == [5000, 60000])
     clock.advance(4999)
     assert_eq(udp.outgoing.try_get(), None)
     clock.advance(1)
@@ -1577,7 +1608,7 @@ async test "voice playback paces frames and the closing silence on the clock" {
   }
   let transport = ConnectionTestTransport::new()
   let udp = ConnectionTestUdp::new()
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   let cipher = @voice.TransportCipher::new(AeadAes256GcmRtpsize, Bytes::new(32))
   // the next packet, decrypted, as (sequence, timestamp, payload)
   let next_packet = () => {
@@ -1597,7 +1628,7 @@ async test "voice playback paces frames and the closing silence on the clock" {
       is { "op": Number(5, ..), "d": { "speaking": Number(1, ..), .. }, .. }
     // the first frame goes out at once, then every 20ms slot carries one
     assert_eq(next_packet(), (0, 0, b"frame-1"))
-    clock.settle()
+    clock.settle(until=() => clock.pending() == [20, 5000, 60000])
     assert_eq(clock.pending(), [20, 5000, 60000])
     clock.advance(19)
     assert_eq(udp.outgoing.try_get(), None)
@@ -1605,6 +1636,7 @@ async test "voice playback paces frames and the closing silence on the clock" {
     assert_eq(next_packet(), (1, 960, b"frame-2"))
     // five silence frames flush the decoder, one per slot
     for index in 0..<5 {
+      clock.settle(until=() => clock.pending().contains(20))
       clock.advance(19)
       assert_eq(udp.outgoing.try_get(), None)
       clock.advance(1)
@@ -1613,6 +1645,7 @@ async test "voice playback paces frames and the closing silence on the clock" {
       assert_eq(next_packet(), (sequence, timestamp, @voice.SILENCE_FRAME))
     }
     // the speaking flag clears once the last silence slot has elapsed
+    clock.settle(until=() => clock.pending().contains(20))
     clock.advance(19)
     assert_eq(transport.outgoing_text.try_get(), None)
     clock.advance(1)
@@ -1642,7 +1675,7 @@ async test "stopping voice playback flushes paced silence before it returns" {
   }
   let transport = ConnectionTestTransport::new()
   let udp = ConnectionTestUdp::new()
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   let cipher = @voice.TransportCipher::new(AeadAes256GcmRtpsize, Bytes::new(32))
   let next_payload = () => {
     @voice.parse_rtp_packet(cipher.open(udp.outgoing.get(), header_len=12)).payload
@@ -1658,10 +1691,12 @@ async test "stopping voice playback flushes paced silence before it returns" {
     // the sender sees the request when its current slot ends: no more source
     // frames, then five silence frames, one per 20ms slot
     for _ in 0..<5 {
+      clock.settle(until=() => clock.pending().contains(20))
       clock.advance(20)
       assert_eq(next_payload(), @voice.SILENCE_FRAME)
       assert_eq(stopping.try_wait(), None)
     }
+    clock.settle(until=() => clock.pending().contains(20))
     clock.advance(20)
     guard! transport.outgoing_text.get()
       is { "op": Number(5, ..), "d": { "speaking": Number(0, ..), .. }, .. }
@@ -1679,7 +1714,7 @@ async test "closing a voice subscription ends a read waiting out its silence" {
   }
   let transport = ConnectionTestTransport::new()
   let udp = ConnectionTestUdp::new()
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   @async.with_task_group(group => {
     let connection = ready_receive_connection(group, transport, udp, clock~)
     map_connection_speaker(connection, transport, "200", 77U, 3)
@@ -1690,12 +1725,12 @@ async test "closing a voice subscription ends a read waiting out its silence" {
     udp.incoming.put(connection_opus_datagram(77U, 1, b"first"))
     guard! stream.next_packet() is Some(Opus(sequence=1, ..))
     let reader = group.spawn(no_wait=true, () => stream.next_packet())
-    clock.settle()
+    clock.settle(until=() => clock.pending() == [20, 5000, 60000])
     assert_eq(clock.pending(), [20, 5000, 60000])
     stream.close()
-    clock.settle()
     // the read ends at once, and its silence timer goes with it
-    assert_eq(reader.try_wait(), Some(None))
+    assert_eq(reader.wait(), None)
+    clock.settle(until=() => clock.pending() == [5000, 60000])
     assert_eq(clock.pending(), [5000, 60000])
     connection.disconnect()
   })
@@ -1725,7 +1760,7 @@ async test "no background task outlives its voice connection" {
   }
   let transport = ConnectionTestTransport::new()
   let udp = ConnectionTestUdp::new()
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   @async.with_task_group(group => {
     let connection = ready_receive_connection(group, transport, udp, clock~)
     let source = WaitingSource::{
@@ -1733,11 +1768,13 @@ async test "no background task outlives its voice connection" {
       reading: Ref(false),
     }
     connection.play(source)
-    clock.settle()
+    clock.settle(until=() => {
+      source.reading.val && clock.pending() == [5000, 60000]
+    })
     assert_true(source.reading.val)
     assert_eq(clock.pending(), [5000, 60000])
     connection.disconnect()
-    clock.settle()
+    clock.settle(until=() => !source.reading.val && clock.pending().is_empty())
     // The playback waiting on its source and the keepalive waiting for its
     // next tick end with the connection instead of holding it.
     assert_false(source.reading.val)

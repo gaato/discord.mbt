@@ -1,56 +1,69 @@
 ///|
 test "transport_failure keeps the phase and agrees on what was not sent" {
-  let cases : Array[(@ghttp.HttpError, DiscordHttpError, Bool)] = [
+  let cases : Array[(@ghttp.TransportError, DiscordHttpError, Bool)] = [
     (
-      Connect("refused"),
+      wire_connect("refused"),
       Transport(phase=Dial, message="could not connect: refused"),
       true,
     ),
     (
-      Proxy(status=407, message="auth"),
+      wire_proxy(status=407, message="auth"),
       Transport(phase=Dial, message="proxy refused the tunnel with 407: auth"),
       true,
     ),
-    (Timeout(phase=Pool, ms=5), Timeout(phase=Pool, timeout_ms=5), true),
-    (Timeout(phase=Dial, ms=5), Timeout(phase=Dial, timeout_ms=5), true),
-    (Timeout(phase=Write, ms=5), Timeout(phase=Write, timeout_ms=5), false),
-    (Timeout(phase=Head, ms=5), Timeout(phase=Head, timeout_ms=5), false),
-    (Timeout(phase=Body, ms=5), Timeout(phase=Body, timeout_ms=5), false),
-    (Timeout(phase=Unknown, ms=5), Timeout(phase=Unknown, timeout_ms=5), false),
+    (wire_timeout(phase=Pool, ms=5), Timeout(phase=Pool, timeout_ms=5), true),
+    (wire_timeout(phase=Dial, ms=5), Timeout(phase=Dial, timeout_ms=5), true),
+    (wire_timeout(phase=Write, ms=5), Timeout(phase=Write, timeout_ms=5), false),
+    (wire_timeout(phase=Head, ms=5), Timeout(phase=Head, timeout_ms=5), false),
+    (wire_timeout(phase=Body, ms=5), Timeout(phase=Body, timeout_ms=5), false),
     (
-      Network(phase=Write, message="reset"),
+      wire_timeout(phase=Unknown, ms=5),
+      Timeout(phase=Unknown, timeout_ms=5),
+      false,
+    ),
+    (
+      wire_network(phase=Write, message="reset"),
       Transport(phase=Write, message="reset"),
       false,
     ),
     (
-      Network(phase=Head, message="eof"),
+      wire_network(phase=Head, message="eof"),
       Transport(phase=Head, message="eof"),
       false,
     ),
     (
-      Network(phase=Body, message="eof"),
+      wire_network(phase=Body, message="eof"),
       Transport(phase=Body, message="eof"),
       false,
     ),
     (
-      Network(phase=Unknown, message="fetch failed"),
+      wire_network(phase=Unknown, message="fetch failed"),
       Transport(phase=Unknown, message="fetch failed"),
       false,
     ),
     // a network failure claiming a pre-connection phase proves nothing
     (
-      Network(phase=Dial, message="odd"),
+      wire_network(phase=Dial, message="odd"),
       Transport(phase=Unknown, message="odd"),
       false,
     ),
     (
-      Network(phase=Pool, message="odd"),
+      wire_network(phase=Pool, message="odd"),
       Transport(phase=Unknown, message="odd"),
       false,
     ),
     (
-      Protocol("garbled"),
+      wire_protocol("garbled"),
       Transport(phase=Unknown, message="protocol error: garbled"),
+      false,
+    ),
+    (
+      @ghttp.TransportError(
+        kind=TooLarge(limit=4),
+        phase=Body,
+        detail="body exceeds limit",
+      ),
+      Transport(phase=Unknown, message="body exceeds limit"),
       false,
     ),
   ]

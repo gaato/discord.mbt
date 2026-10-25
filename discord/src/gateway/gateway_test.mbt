@@ -15,7 +15,7 @@ async test "typed commands and latest presence survive re-identify" {
   let latest = @model.UpdatePresence(status=Invisible, activities=[
     @model.BotActivity::custom("busy"),
   ])
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   @async.with_timeout(5000, () => {
     @async.with_task_group(group => {
       let shard = @gateway.Shard::start(
@@ -225,7 +225,7 @@ async test "shard suppresses connector failure after protected cancellation clea
 
 ///|
 async test "shard connector failure reports telemetry and cancelled backoff stops retrying" {
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   let attempts = Ref(0)
   let telemetry : Array[@telemetry.TelemetryEvent] = []
   @async.with_task_group(group => {
@@ -241,7 +241,7 @@ async test "shard connector failure reports telemetry and cancelled backoff stop
       clock~,
       telemetry=event => telemetry.push(event),
     )
-    clock.settle()
+    clock.settle(until=() => clock.pending().length() == 1)
     guard clock.pending() is [delay] else { fail("expected one backoff") }
     assert_true(delay >= 250 && delay < 2250)
     assert_eq(shard.state(), Disconnected(reconnect_attempts=1))
@@ -266,7 +266,7 @@ async test "shard rejects malformed Hello and preserves transport close codes" {
         token="tok",
         intents=@model.Intents::none(),
         connector=_ => (transport : &@gateway.GatewayTransport),
-        clock=@simclock.VirtualClock(),
+        clock=@netruntime.VirtualClock(),
       )
       match failure {
         0 => transport.put("{\"op\":10,\"d\":{}}")
@@ -291,7 +291,7 @@ async test "shard ignores incomplete dispatches and reconnects from a zero seque
   let first = @gatewaysim.FakeTransport()
   let second = @gatewaysim.FakeTransport()
   let transports = [second, first]
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
@@ -341,7 +341,7 @@ async test "shard malformed read frames disconnect and tolerate transport close 
       token="tok",
       intents=@model.Intents::none(),
       connector=_ => (transport : &@gateway.GatewayTransport),
-      clock=@simclock.VirtualClock(),
+      clock=@netruntime.VirtualClock(),
     )
     transport.put(HELLO)
     transport.outgoing.get() |> ignore
@@ -367,7 +367,7 @@ async test "shard rejects compression frame mismatches" {
         compress~,
         connector=_ => (transport : &@gateway.GatewayTransport),
         inflater_factory=() => (inflater : &@gateway.Inflater),
-        clock=@simclock.VirtualClock(),
+        clock=@netruntime.VirtualClock(),
       )
       transport.incoming.put(
         if compress {
@@ -393,7 +393,7 @@ async test "shard send failures release the writer gate" {
       token="tok",
       intents=@model.Intents::none(),
       connector=_ => (transport : &@gateway.GatewayTransport),
-      clock=@simclock.VirtualClock(),
+      clock=@netruntime.VirtualClock(),
     )
     transport.put(HELLO)
     transport.outgoing.get() |> ignore
@@ -491,7 +491,7 @@ async test "stale resume url falls back to identify after three connector failur
   let transport = @gatewaysim.FakeTransport()
   let urls : Array[String] = []
   let connected : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
@@ -510,8 +510,12 @@ async test "stale resume url falls back to identify after three connector failur
       },
       clock~,
     )
-    clock.settle()
-    while urls.length() < 4 {
+    for expected in 1..<4 {
+      clock.settle(until=() => {
+        urls.length() == expected &&
+        shard.state() is Disconnected(..) &&
+        clock.pending().length() == 1
+      })
       assert_true(clock.advance_to_next())
     }
     connected.get()
@@ -533,7 +537,7 @@ async test "successful connector resets stale-host fallback failure count" {
   let urls : Array[String] = []
   let first_connected : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   let fallback_connected : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
@@ -558,6 +562,7 @@ async test "successful connector resets stale-host fallback failure count" {
       },
       clock~,
     )
+    clock.settle(until=() => urls.length() == 1 && clock.pending().length() == 1)
     assert_true(clock.advance_to_next())
     first_connected.get()
     first.put(HELLO)
@@ -565,8 +570,12 @@ async test "successful connector resets stale-host fallback failure count" {
     // a resumable drop: the stale-host count restarts, so the resume url gets
     // three more tries before the fallback
     first.server_close(Some(4000))
-    clock.settle()
-    while urls.length() < 6 {
+    for expected in 2..<6 {
+      clock.settle(until=() => {
+        urls.length() == expected &&
+        shard.state() is Disconnected(..) &&
+        clock.pending().length() == 1
+      })
       assert_true(clock.advance_to_next())
     }
     fallback_connected.get()
@@ -999,12 +1008,12 @@ async test "shard answers heartbeat requests and tracks op9" {
 
 ///|
 async test "identify queue spaces buckets" {
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   let queue = @queue.InMemoryQueue(max_concurrency=1, spacing_ms=60, clock~)
   @async.with_task_group(group => {
     queue.wait_for_identify(0)
     let second = group.spawn(() => queue.wait_for_identify(1))
-    clock.settle()
+    clock.settle(until=() => clock.pending() == [60])
     assert_eq(clock.pending(), [60])
     clock.advance(60)
     second.wait()
@@ -1018,7 +1027,7 @@ async test "shard backoff, resume url switch, and op9 delay run on the clock" {
   let third = @gatewaysim.FakeTransport()
   let pending : Array[@gatewaysim.FakeTransport] = [third, second, first]
   let urls : Array[String] = []
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
@@ -1046,7 +1055,9 @@ async test "shard backoff, resume url switch, and op9 delay run on the clock" {
     first.server_close(Some(4000))
     guard! shard.next() is Disconnected(code=Some(4000), resuming=true)
     // the heartbeat timer went with the connection; only the backoff is left
-    clock.settle()
+    clock.settle(until=() => {
+      clock.pending() is [wait] && wait >= 250 && wait < 2250
+    })
     guard clock.pending() is [backoff1] else { fail("expected one backoff") }
     // attempts=1: full jitter over 2000ms plus the 250ms floor
     assert_true(backoff1 >= 250 && backoff1 < 2250)
@@ -1066,7 +1077,9 @@ async test "shard backoff, resume url switch, and op9 delay run on the clock" {
       ),
     )
     guard! shard.next() is Disconnected(code=None, resuming=false)
-    clock.settle()
+    clock.settle(until=() => {
+      clock.pending() is [wait] && wait >= 1000 && wait < 5000
+    })
     guard clock.pending() is [op9_wait] else { fail("expected one op9 wait") }
     assert_true(op9_wait >= 1000 && op9_wait < 5000)
     assert_true(clock.advance_to_next())
@@ -1086,7 +1099,7 @@ async test "connections that reach READY or RESUMED reset the reconnect backoff"
   let transports = Array::makei(6, _ => @gatewaysim.FakeTransport())
   let pending = transports.copy()
   pending.rev_in_place()
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
@@ -1106,7 +1119,9 @@ async test "connections that reach READY or RESUMED reset the reconnect backoff"
       guard! shard.next() is Disconnected(code=Some(4000), resuming=true)
       // every drop follows a healthy connection, so the backoff stays at
       // its first step (2000ms jitter plus the 250ms floor)
-      clock.settle()
+      clock.settle(until=() => {
+        clock.pending() is [wait] && wait >= 250 && wait < 2250
+      })
       guard clock.pending() is [backoff] else { fail("expected one backoff") }
       assert_true(backoff >= 250 && backoff < 2250)
       assert_true(clock.advance_to_next())
@@ -1127,7 +1142,7 @@ async test "shard heartbeat loop beats, tracks acks, and zombie-closes" {
   let second = @gatewaysim.FakeTransport()
   let pending : Array[@gatewaysim.FakeTransport] = [second, first]
   let latencies : Array[Int64] = []
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   @async.with_task_group(group => {
     let shard = @gateway.Shard::start(
       group,
@@ -1155,7 +1170,7 @@ async test "shard heartbeat loop beats, tracks acks, and zombie-closes" {
     guard! shard.next() is Connected(resumed=false)
     guard! shard.next() is Dispatch(Ready(_))
     // the first beat waits out the documented jitter
-    clock.settle()
+    clock.settle(until=() => clock.pending().length() == 1)
     guard clock.pending() is [jitter] else { fail("expected the jitter wait") }
     assert_true(jitter >= 0 && jitter < 60000)
     assert_true(clock.advance_to_next())
@@ -1164,7 +1179,7 @@ async test "shard heartbeat loop beats, tracks acks, and zombie-closes" {
       fail("expected heartbeat with seq 1, got \{beat.stringify()}")
     }
     first.put("{\"op\":11,\"d\":null}")
-    clock.settle()
+    clock.settle(until=() => latencies == [0L] && clock.pending() == [60000])
     // acked at the same virtual instant the beat went out
     assert_eq(latencies, [0L])
     // acked: the steady-state interval elapses and the next beat goes out
@@ -1193,7 +1208,7 @@ async test "shard heartbeat loop beats, tracks acks, and zombie-closes" {
 
 ///|
 async test "command limiter admits under the limit immediately" {
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   let limiter = @gateway.CommandLimiter(limit=5, clock~)
   @async.with_task_group(group => {
     let sends = group.spawn(() => {
@@ -1201,21 +1216,19 @@ async test "command limiter admits under the limit immediately" {
         limiter.acquire()
       }
     })
-    clock.settle()
-    assert_eq(clock.pending(), [])
     sends.wait()
+    assert_eq(clock.pending(), [])
   })
 }
 
 ///|
 async test "identify queue lets a fresh bucket identify at once from time zero" {
-  let clock = @simclock.VirtualClock(start_ms=0)
+  let clock = @netruntime.VirtualClock(start_ms=0)
   let queue = @queue.InMemoryQueue(max_concurrency=1, spacing_ms=5250, clock~)
   @async.with_task_group(group => {
     let first = group.spawn(() => queue.wait_for_identify(0))
-    clock.settle()
-    assert_eq(clock.pending(), [])
     first.wait()
+    assert_eq(clock.pending(), [])
   })
 }
 

@@ -227,7 +227,7 @@ fn form_parts(
 /// the caller's, so nothing is copied until the segments are joined.
 fn encode_parts(
   parts : Array[@multipart.Part],
-  random~ : () -> Double = @random.default_random,
+  random~ : () -> Double = @hclock.default_random,
 ) -> (String, Array[Bytes]) raise DiscordHttpError {
   @multipart.encode_segments_fresh(parts, random~) catch {
     // Only a broken random source gets here, before any I/O.
@@ -246,7 +246,7 @@ fn multipart_request(
   parts : Array[@multipart.Part],
 ) -> WireRequest raise DiscordHttpError {
   let (content_type, segments) = encode_parts(parts)
-  request.headers.set("content-type", content_type)
+  let request = request.header("content-type", content_type)
   { head: request, body: Some(() => @multipart.join_segments(segments)), }
 }
 

@@ -1,4 +1,6 @@
 members = [
+  "../mttp/mttp",
+  "../mttp/mttp-net",
   "./discord",
   "./discord_voice",
   "./dave",

@@ -139,15 +139,13 @@ struct RefusingTransport {
 }
 
 ///|
-impl @ghttp.Transport for RefusingTransport with fn send(self, _request) {
+impl @runtime.Backend for RefusingTransport with fn send(
+  self,
+  _request,
+  _options,
+) {
   self.attempts += 1
-  raise @ghttp.HttpError::Connect("refused")
-}
-
-///|
-impl @ghttp.Transport for RefusingTransport with fn send_stream(self, _request) {
-  self.attempts += 1
-  raise @ghttp.HttpError::Connect("refused")
+  raise @ghttp.TransportError(kind=Connect, phase=Dial, detail="refused")
 }
 
 ///|

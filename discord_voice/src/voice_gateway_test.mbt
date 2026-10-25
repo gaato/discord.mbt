@@ -203,7 +203,7 @@ async test "voice gateway rejects malformed Hello and protocol selection failure
         endpoint="voice.example",
         select_protocol=(_, _, _, _) => raise VoiceTestFailure,
         connector=_ => (transport : &@voice.VoiceTransport),
-        clock=@simclock.VirtualClock(),
+        clock=@netruntime.VirtualClock(),
       )
       match failure {
         0 => transport.incoming.put(hello_frame(0))
@@ -237,7 +237,7 @@ async test "voice gateway malformed text and binary frames request rejoin" {
         endpoint="voice.example",
         select_protocol=(_, _, _, _) => fail("unexpected protocol selection"),
         connector=_ => (transport : &@voice.VoiceTransport),
-        clock=@simclock.VirtualClock(),
+        clock=@netruntime.VirtualClock(),
       )
       transport.incoming.put(hello_frame(60000))
       transport.outgoing_text.get() |> ignore
@@ -253,7 +253,7 @@ async test "voice gateway malformed text and binary frames request rejoin" {
 ///|
 async test "voice gateway acknowledges the sequence supplied by Hello" {
   let transport = FakeVoiceTransport()
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   @async.with_task_group(group => {
     let gateway = @voice.VoiceGateway::start(
       group,
@@ -271,7 +271,7 @@ async test "voice gateway acknowledges the sequence supplied by Hello" {
     )
     guard! transport.outgoing_text.get() is { "op": Number(0, ..), .. }
     // voice v8 has no first-beat jitter: the first wait is the full interval
-    clock.settle()
+    clock.settle(until=() => clock.pending() == [60000])
     assert_eq(clock.pending(), [60000])
     assert_eq(transport.outgoing_text.try_get(), None)
     clock.advance(60000)
@@ -297,7 +297,7 @@ async test "voice gateway failed writers release the shared send gate" {
       endpoint="voice.example",
       select_protocol=(_, _, _, _) => fail("unexpected protocol selection"),
       connector=_ => (transport : &@voice.VoiceTransport),
-      clock=@simclock.VirtualClock(),
+      clock=@netruntime.VirtualClock(),
     )
     transport.incoming.put(hello_frame(60000))
     transport.outgoing_text.get() |> ignore
@@ -324,7 +324,7 @@ async test "voice gateway failed writers release the shared send gate" {
 
 ///|
 async test "voice gateway cancellation interrupts reconnect backoff" {
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   let backoffs = BackoffDraws::new()
   let attempts = Ref(0)
   @async.with_task_group(group => {
@@ -343,11 +343,14 @@ async test "voice gateway cancellation interrupts reconnect backoff" {
       clock~,
       rand=backoff_rand(),
     )
-    clock.settle()
+    clock.settle(until=() => {
+      gateway.state() is Disconnected(reconnect_attempts=1) &&
+      clock.pending().length() == 1
+    })
     assert_eq(clock.pending(), [backoffs.next(attempts=1)])
     assert_eq(gateway.state(), Disconnected(reconnect_attempts=1))
     gateway.close()
-    clock.settle()
+    clock.settle(until=() => clock.pending().is_empty())
     assert_eq(clock.pending(), [])
     assert_eq(attempts.val, 1)
   })
@@ -515,7 +518,7 @@ async test "voice gateway URL always has a path before the v8 query" {
 
 ///|
 async test "voice gateway reports connector failures through telemetry and retries" {
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   let backoffs = BackoffDraws::new()
   let attempts = Ref(0)
   let failures : Array[String] = []
@@ -548,11 +551,16 @@ async test "voice gateway reports connector failures through telemetry and retri
       rand=backoff_rand(),
     )
     let next_event = group.spawn(no_wait=true, () => gateway.next())
-    clock.settle()
+    clock.settle(until=() => {
+      failures.length() == 1 && clock.pending().length() == 1
+    })
     assert_eq(failures.length(), 1)
     // consecutive failures widen the full-jitter window: 2000ms, then 4000ms
     assert_eq(clock.pending(), [backoffs.next(attempts=1)])
     assert_true(clock.advance_to_next())
+    clock.settle(until=() => {
+      failures.length() == 2 && clock.pending().length() == 1
+    })
     assert_eq(failures.length(), 2)
     assert_eq(clock.pending(), [backoffs.next(attempts=2)])
     // connector failures are telemetry only, never gateway events
@@ -570,7 +578,7 @@ async test "missing heartbeat ACK closes with 4000 and reconnects" {
   let first = FakeVoiceTransport()
   let second = FakeVoiceTransport()
   let pending : Array[FakeVoiceTransport] = [second, first]
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   let backoffs = BackoffDraws::new()
   @async.with_task_group(group => {
     let gateway = @voice.VoiceGateway::start(
@@ -594,7 +602,7 @@ async test "missing heartbeat ACK closes with 4000 and reconnects" {
       rand=backoff_rand(),
     )
     finish_handshake(gateway, first, heartbeat_interval=100)
-    clock.settle()
+    clock.settle(until=() => clock.pending() == [100])
     assert_eq(clock.pending(), [100])
     clock.advance(100)
     guard! first.outgoing_text.get()
@@ -697,7 +705,7 @@ async test "voice gateway completes identify and protocol selection" {
 ///|
 async test "cancelled voice gateway sends release the serialized send gate" {
   let transport = FakeVoiceTransport()
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   @async.with_task_group(group => {
     let gateway = @voice.VoiceGateway::start(
       group,
@@ -714,7 +722,7 @@ async test "cancelled voice gateway sends release the serialized send gate" {
       clock~,
     )
     finish_handshake(gateway, transport)
-    clock.settle()
+    clock.settle(until=() => transport.recv_in_flight.val)
     assert_true(transport.recv_in_flight.val)
 
     transport.block_next_text_send.val = true
@@ -758,7 +766,7 @@ async test "cancelled voice gateway sends release the serialized send gate" {
 ///|
 async test "closing a voice gateway drains an in-flight writer before transport close" {
   let transport = FakeVoiceTransport()
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   @async.with_task_group(group => {
     let gateway = @voice.VoiceGateway::start(
       group,
@@ -790,12 +798,14 @@ async test "closing a voice gateway drains an in-flight writer before transport 
       gateway.close()
     })
     close_started.get()
-    clock.settle()
+    clock.settle(until=() => !transport.recv_in_flight.val)
     assert_false(transport.recv_in_flight.val)
+    let binary_entered = Ref(false)
     let queued_binary = group.spawn(no_wait=true, allow_failure=true, () => {
+      binary_entered.val = true
       gateway.send_binary(op=26, b"after-close")
     })
-    clock.settle()
+    clock.settle(until=() => binary_entered.val)
     assert_eq(transport.close_calls.val, 0)
     assert_eq(closing.try_wait(), None)
 
@@ -829,7 +839,7 @@ async test "closing a voice gateway drains an in-flight writer before transport 
 ///|
 async test "voice heartbeat tracks JSON and binary sequence numbers" {
   let transport = FakeVoiceTransport()
-  let clock = @simclock.VirtualClock(start_ms=1_000_000)
+  let clock = @netruntime.VirtualClock(start_ms=1_000_000)
   @async.with_task_group(group => {
     let gateway = @voice.VoiceGateway::start(
       group,
@@ -878,7 +888,7 @@ async test "voice heartbeat tracks JSON and binary sequence numbers" {
     // the ACK lands 7ms after the beat: latency is measured on the clock
     clock.advance(7)
     transport.incoming.put(Text("{\"op\":6,\"d\":{\"t\":1000120}}"))
-    clock.settle()
+    clock.settle(until=() => gateway.latency_ms() == Some(7L))
     assert_eq(gateway.latency_ms(), Some(7L))
     gateway.close()
   })
@@ -890,7 +900,7 @@ async test "4015 resumes with seq_ack and skips protocol selection" {
   let second = FakeVoiceTransport()
   let pending : Array[FakeVoiceTransport] = [second, first]
   let select_calls = Ref(0)
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   @async.with_task_group(group => {
     let gateway = @voice.VoiceGateway::start(
       group,
@@ -1023,7 +1033,7 @@ async test "voice reconnect backoff runs on the clock" {
   let second = FakeVoiceTransport()
   let pending : Array[FakeVoiceTransport] = [second, first]
   let connects = Ref(0)
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   let backoffs = BackoffDraws::new()
   @async.with_task_group(group => {
     let gateway = @voice.VoiceGateway::start(
@@ -1048,18 +1058,19 @@ async test "voice reconnect backoff runs on the clock" {
       rand=backoff_rand(),
     )
     finish_handshake(gateway, first)
-    clock.settle()
+    clock.settle(until=() => clock.pending() == [60000])
     assert_eq(clock.pending(), [60000])
     first.server_close(Some(4000))
     guard! gateway.next() is Disconnected(code=Some(4000), resuming=true)
     // the heartbeat went with the connection; only the backoff is left
     let backoff = backoffs.next(attempts=1)
-    clock.settle()
+    clock.settle(until=() => clock.pending() == [backoff])
     assert_eq(clock.pending(), [backoff])
     // the reconnect is gated on the backoff sleep
     clock.advance(backoff - 1)
     assert_eq(connects.val, 1)
     clock.advance(1)
+    clock.settle(until=() => connects.val == 2)
     assert_eq(connects.val, 2)
     second.incoming.put(hello_frame(60000))
     guard! second.outgoing_text.get()
@@ -1073,7 +1084,7 @@ async test "voice connections that reach Active reset the reconnect backoff" {
   let transports = Array::makei(6, _ => FakeVoiceTransport())
   let pending = transports.copy()
   pending.rev_in_place()
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   let backoffs = BackoffDraws::new()
   @async.with_task_group(group => {
     let gateway = @voice.VoiceGateway::start(
@@ -1096,7 +1107,9 @@ async test "voice connections that reach Active reset the reconnect backoff" {
       transports[i].server_close(Some(4015))
       guard! gateway.next() is Disconnected(code=Some(4015), resuming=true)
       // each drop follows a healthy connection: first backoff step only
-      clock.settle()
+      clock.settle(until=() => {
+        transports[i].close_calls.val == 1 && clock.pending().length() == 1
+      })
       assert_eq(clock.pending(), [backoffs.next(attempts=1)])
       assert_true(clock.advance_to_next())
       let next = transports[i + 1]

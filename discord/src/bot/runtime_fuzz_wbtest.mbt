@@ -118,6 +118,7 @@ priv struct BotFuzzConn {
   mut hello : Bool
   mut active : Bool
   mut server_closed : Bool
+  mut submitted : Int32
 }
 
 ///|
@@ -161,7 +162,7 @@ priv struct BotFuzzCommand {
 /// The reference model: the event pipeline the backlog implies, every
 /// handler invocation, every interaction, and every connection so far.
 priv struct BotFuzzModel {
-  clock : @simclock.VirtualClock
+  clock : @netruntime.VirtualClock
   seed : Int32
   log : Array[String]
   started_at : Int64
@@ -297,7 +298,6 @@ fn BotFuzzModel::start(
   }
   self.runs.push(run)
   self.note("  start \{label} for \{bot_fuzz_dbg(duration)}")
-  self.clock.touch()
   run
 }
 
@@ -311,7 +311,6 @@ async fn BotFuzzModel::hold(self : BotFuzzModel, run : BotFuzzRun) -> Unit {
     } else {
       Cancelled(self.now())
     }
-    self.clock.touch()
   }
   match run.finish_at {
     Some(at) =>
@@ -373,7 +372,6 @@ fn BotFuzzModel::message_started(
 
 ///|
 fn BotFuzzModel::warn(self : BotFuzzModel, warning : @app.AppWarning) -> Unit {
-  self.clock.touch()
   let deadline = @framework.DEFAULT_INTERACTION_DEADLINE_MS.to_int64()
   match warning {
     InteractionDropped(target~) => {
@@ -465,8 +463,8 @@ fn BotFuzzModel::connect(self : BotFuzzModel) -> &@gateway.GatewayTransport {
     hello: false,
     active: false,
     server_closed: false,
+    submitted: 0,
   })
-  self.clock.touch()
   transport
 }
 
@@ -578,7 +576,7 @@ async fn BotFuzzModel::apply(
       match self.pick(pick, conn => !conn.hello) {
         Some(conn) => {
           conn.hello = true
-          conn.transport.put(BOT_HELLO)
+          conn.send(BOT_HELLO)
         }
         None => return false
       }
@@ -593,7 +591,7 @@ async fn BotFuzzModel::apply(
           self.next_seq += 1
           conn.active = true
           self.dispatch(None)
-          conn.transport.put(
+          conn.send(
             bot_fuzz_ready(
               shard,
               self.shard_count,
@@ -612,7 +610,7 @@ async fn BotFuzzModel::apply(
         Some(conn) => {
           self.next_seq += 1
           conn.active = true
-          conn.transport.put(
+          conn.send(
             "{\"op\":0,\"t\":\"RESUMED\",\"s\":\{self.next_seq},\"d\":{}}",
           )
         }
@@ -634,7 +632,7 @@ async fn BotFuzzModel::apply(
           })
           self.note("command \{id}")
           self.dispatch(None)
-          conn.transport.put(command_frame(self.next_seq, id))
+          conn.send(command_frame(self.next_seq, id))
           return true
         }
         None => return false
@@ -647,14 +645,14 @@ async fn BotFuzzModel::apply(
           let id = (700000000000000000L + self.next_id.to_int64()).to_string()
           self.note("message \{id}")
           self.dispatch(Some(id))
-          conn.transport.put(message_delete_frame(self.next_seq, id))
+          conn.send(message_delete_frame(self.next_seq, id))
           return true
         }
         None => return false
       }
     Ack =>
       match self.pick(pick, conn => conn.hello) {
-        Some(conn) => conn.transport.put("{\"op\":11}")
+        Some(conn) => conn.send("{\"op\":11}")
         None => return false
       }
     ServerClose(code) =>
@@ -898,7 +896,6 @@ fn BotFuzzModel::on_return(self : BotFuzzModel) -> Unit {
   for conn in self.conns {
     self.sent_at_return.push(conn.transport.sent.length())
   }
-  self.clock.touch()
 }
 
 ///|
@@ -912,6 +909,7 @@ async fn BotFuzzModel::advance(
   let target = self.now() + ms.to_int64()
   while self.clock.next_deadline() is Some(deadline) && deadline <= target {
     ignore(self.clock.advance_to_next())
+    self.wait_parked(bot)
     self.observe(bot)
   }
   self.clock.advance((target - self.now()).to_int())
@@ -948,7 +946,7 @@ async fn BotFuzzModel::end(
       run.cancel()
     }
   }
-  self.clock.settle()
+  self.wait_parked(bot)
   self.observe(bot)
   true
 }
@@ -1003,7 +1001,7 @@ async fn run_bot_schedule(
   } else {
     Shutdown
   }
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   let model = BotFuzzModel::{
     clock,
     seed,
@@ -1100,7 +1098,7 @@ async fn run_bot_schedule(
         error => model.raised = Some(error)
       }
     })
-    clock.settle()
+    model.wait_parked(bot)
     model.observe(bot)
     // After `End`, an ending that cannot happen yet (no READY context to ask
     // for a shutdown) is retried before every later step.
@@ -1123,7 +1121,7 @@ async fn run_bot_schedule(
         Advance(ms) => model.advance(bot, ms)
         step =>
           if model.apply(step, pick) {
-            clock.settle()
+            model.wait_parked(bot)
             model.observe(bot)
           }
       }
@@ -1143,7 +1141,7 @@ async fn run_bot_schedule(
           Advance(ms) => model.advance(bot, ms)
           step =>
             if model.apply(step, 0) {
-              clock.settle()
+              model.wait_parked(bot)
               model.observe(bot)
             }
         }
@@ -1156,13 +1154,116 @@ async fn run_bot_schedule(
         )
         return
       }
+      model.wait_parked(bot)
       model.observe(bot)
     }
-    clock.settle()
+    model.wait_parked(bot)
     model.observe(bot)
   })
   model.finish()
   "seed \{seed}\n" + model.log.join("\n")
+}
+
+///|
+async fn BotFuzzConn::send(self : BotFuzzConn, text : String) -> Unit {
+  self.submitted += 1
+  self.transport.put(text)
+}
+
+///|
+/// Observe input delivery, handler outcomes, accounting and the timers owned
+/// by those operations before advancing the next deadline.
+async fn BotFuzzModel::wait_parked(self : BotFuzzModel, bot : Bot) -> Unit {
+  self.clock.settle(until=() => {
+    if self.flagged is Some(_) {
+      return true
+    }
+    if self.returned_at is Some(_) {
+      return self.clock.pending().is_empty()
+    }
+    if self.cancelled_at is Some(_) || self.fatal_at is Some(_) {
+      return false
+    }
+    let now = self.now()
+    let mut timers = 0
+    for run in self.runs {
+      if run.outcome is Running && run.finish_at is Some(until) {
+        if until <= now {
+          return false
+        }
+        timers += 1
+      }
+    }
+    for command in self.commands {
+      if command.state == Waiting {
+        if self.shutdown_at is Some(_) ||
+          self.running(true) < self.permits ||
+          now >=
+          command.arrived_at +
+          @framework.DEFAULT_INTERACTION_DEADLINE_MS.to_int64() {
+          return false
+        }
+        timers += 1
+      }
+    }
+    if self.shutdown_at is Some(_) {
+      if self.alive() == 0 ||
+        self.conns.any(conn => conn.transport.close_calls.val == 0) {
+        return false
+      }
+      timers += 1 // the grace period
+    } else {
+      let owners = bot.core.running_shards_.val
+      if owners.length() != self.shard_count {
+        return false
+      }
+      let disconnected = owners
+        .filter(owner => owner.shard.state() is Disconnected(..))
+        .length()
+      timers += disconnected
+      let live = self.conns.filter(conn => conn.transport.close_calls.val == 0)
+      if live.length() + disconnected != self.shard_count {
+        return false
+      }
+      for conn in live {
+        let identifying = conn.hello &&
+          bot_fuzz_identified(conn) is None &&
+          !bot_fuzz_resuming(conn)
+        // A shard waiting for IDENTIFY admission cannot consume subsequent
+        // input, including peer closes, until its queue timer fires.
+        if !identifying &&
+          (conn.transport.received.val != conn.submitted || conn.server_closed) {
+          return false
+        }
+        if conn.hello {
+          timers += 1 // heartbeat
+        } else if !conn.transport.recv_in_flight.val {
+          return false
+        }
+      }
+      if live.any(conn => {
+          conn.hello &&
+          bot_fuzz_identified(conn) is None &&
+          !bot_fuzz_resuming(conn)
+        }) {
+        timers += 1
+      }
+      self.pump()
+      if self.messages != self.expected_messages ||
+        self.taken != self.expected_taken {
+        return false
+      }
+    }
+    self.drops == self.expected_drops &&
+    self.discards == self.expected_discards &&
+    self.backlog_warnings == self.expected_backlog_warnings &&
+    self.clock.pending().length() >= timers
+  }) catch {
+    _ =>
+      self.violation(
+        "expected input, handler or timer observation did not arrive",
+      )
+  }
 }
 
 ///|
