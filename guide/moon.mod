@@ -17,5 +17,5 @@ import {
   "gaato/discord@0.13.0",
   "gaato/discord_voice@0.3.1",
   "gaato/sdk-runtime@0.7.0",
-  "moonbitlang/async@0.22.5",
+  "moonbitlang/async@0.22.7",
 }
