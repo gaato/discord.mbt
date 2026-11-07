@@ -129,7 +129,7 @@ async test "timed-out interaction expires its gate" {
   })
   let client = @dhttp.Client("test-token")
   defer client.close()
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   @async.with_task_group(group => {
     let endpoint = app
       .build()
@@ -145,11 +145,12 @@ async test "timed-out interaction expires its gate" {
         deadline_ms=50,
       )
     })
+    clock.settle(until=() => clock.pending().contains(50))
     clock.advance(50)
     assert_true(handling.wait() is TimedOut)
     release.put(())
-    clock.settle()
-    assert_eq(failures.try_get(), Some((Some(Expired), true)))
+    assert_eq(failures.get(), (Some(Expired), true))
+    clock.settle(until=() => warnings.length() == 1)
     assert_eq(warnings, [
       "cannot respond to an expired interaction: expired reply",
     ])
@@ -418,7 +419,7 @@ async test "interaction endpoint dispatches captured responses and completion ou
     max_connections=1,
   )
   defer client.close()
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   @async.with_task_group(group => {
     // Explicit client/id must perform no startup HTTP.
     let app = app
@@ -458,7 +459,7 @@ async test "interaction endpoint dispatches captured responses and completion ou
     let silent = group.spawn(() => {
       app.handle_interaction(app_command("silent", "500000000000000103"))
     })
-    clock.settle()
+    clock.settle(until=() => (silent.try_wait() is Some(_)) catch { _ => true })
     match silent.try_wait() {
       Some(NoResponse) => ()
       outcome => fail("expected prompt NoResponse, got \{Repr(outcome)}")
@@ -482,16 +483,14 @@ async test "interaction endpoint dispatches captured responses and completion ou
         deadline_ms=100,
       )
     })
+    clock.settle(until=() => clock.pending().contains(100))
     clock.advance(100)
     match slow.wait() {
       TimedOut => ()
       outcome => fail("expected TimedOut, got \{Repr(outcome)}")
     }
     slow_release.put(())
-    clock.settle()
-    guard slow_finished.try_get() is Some(_) else {
-      fail("timed-out handler did not continue in the app task group")
-    }
+    slow_finished.get()
     guard app.handle(app_command("immediate", "500000000000000105").to_json())
       is Some(json) else {
       fail("expected JSON callback")

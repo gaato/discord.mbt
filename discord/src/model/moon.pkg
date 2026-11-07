@@ -2,13 +2,13 @@
 warnings = "-unused_type_variable"
 
 import {
-  "gaato/sdk-runtime/json" @sdkjson,
+  "gaato/mttp/jsonkit" @sdkjson,
   "moonbitlang/core/json",
   "moonbitlang/core/string",
 }
 
 import {
-  "gaato/sdk-runtime/json" @sdkjson,
+  "gaato/mttp/jsonkit" @sdkjson,
   "moonbitlang/core/json",
   "moonbitlang/core/quickcheck" @qc,
 } for "test"

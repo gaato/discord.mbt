@@ -78,7 +78,7 @@ async test "command contexts expose their interaction and REST surfaces" {
       }),
     ),
   )
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   @async.with_task_group(group => {
     let served = app
       .build()
@@ -100,7 +100,7 @@ async test "command contexts expose their interaction and REST surfaces" {
         assert_true(response.typ == DeferredChannelMessageWithSource)
       outcome => fail("expected deferred reply, got \{Repr(outcome)}")
     }
-    clock.settle()
+    clock.settle(until=() => rest_paths.length() == 2)
     inspect(
       rest_paths.join("\n"),
       content=(

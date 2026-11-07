@@ -8,6 +8,12 @@ releases (0.x → 0.y) may contain breaking changes; patch releases do not.
 
 ### Changed
 
+- **Unreleased 0.4 migration:** clock types now come from `gaato/mttp/clock`
+  and runtime clocks from `gaato/mttp-net/runtime`; the dependency on Discord
+  moves to 0.15. Virtual-time tests observe timer registration and task outcomes
+  explicitly. Native voice transport and DAVE APIs are unchanged by this
+  migration. No registry release is made here.
+
 - Built and tested with MoonBit 0.10.20. The generated `.mbti` interface
   files spell `Int` as `Int32` and `UInt` as `UInt32` (since 0.10.16), list
   derived traits as a `#derive(...)` attribute above each declaration, and
@@ -15,7 +21,7 @@ releases (0.x → 0.y) may contain breaking changes; patch releases do not.
   changed.
 - **Builds against `moonbitlang/async` 0.22.7**, which uses
   `moonbitlang/core/async` and so needs MoonBit 0.10.20 or later.
-- **Builds against `gaato/discord` 0.14.0**, which decides whether a 429 is
+- **Builds against `gaato/discord` 0.15.0**, which decides whether a 429 is
   Discord's from its headers alone (since 0.12.1), and against
   `gaato/http` 0.5.0 and `gaato/http-async` 0.5.0. Voice itself is
   unchanged.

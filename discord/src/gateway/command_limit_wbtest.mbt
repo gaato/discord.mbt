@@ -1,12 +1,12 @@
 ///|
 async test "command limiter waits out the sliding window when full" {
-  let clock = @simclock.VirtualClock(start_ms=0)
+  let clock = @netruntime.VirtualClock(start_ms=0)
   let limiter = CommandLimiter(limit=1, clock~)
   @async.with_task_group(group => {
     limiter.acquire()
     clock.advance(1000)
     let second = group.spawn(() => limiter.acquire())
-    clock.settle()
+    clock.settle(until=() => clock.pending() == [59001])
     // the oldest send leaves the 60 s window at 60000, plus the 1 ms nudge
     assert_eq(clock.pending(), [59001])
     clock.advance(59001)
@@ -36,7 +36,7 @@ impl GatewayTransport for PresenceTestTransport with fn send(self, text) {
 
 ///|
 async test "presence records only after a successful write" {
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   @async.with_task_group(group => {
     let shard = Shard::start(
       group,
@@ -64,10 +64,12 @@ async test "presence records only after a successful write" {
     shard.transport = Some(transport)
     // Hold the writer gate so a presence waiting to write cannot record a slot.
     shard.send_gate.acquire()
+    let entered = Ref(false)
     let update = group.spawn(no_wait=true, () => {
+      entered.val = true
       shard.update_presence(@model.UpdatePresence(status=Online))
     })
-    clock.settle()
+    clock.settle(until=() => entered.val)
     assert_eq(shard.presence_limiter.timestamps.length(), 0)
     shard.send_gate.release()
     update.wait()
@@ -97,7 +99,7 @@ impl GatewayTransport for PresenceTestTransport with fn close(_self, code~) {
 
 ///|
 async test "presence allows five updates and waits on the sixth" {
-  let clock = @simclock.VirtualClock(start_ms=0)
+  let clock = @netruntime.VirtualClock(start_ms=0)
   @async.with_task_group(group => {
     let shard = Shard::start(
       group,
@@ -119,7 +121,7 @@ async test "presence allows five updates and waits on the sixth" {
     let sixth = group.spawn(() => {
       shard.update_presence(@model.UpdatePresence(status=Idle))
     })
-    clock.settle()
+    clock.settle(until=() => clock.pending() == [20001])
     assert_eq(clock.pending(), [20001])
     assert_eq(transport.sent.length(), 5)
     clock.advance(20001)
@@ -133,7 +135,7 @@ async test "presence allows five updates and waits on the sixth" {
 
 ///|
 async test "concurrent presence updates wait for general slots before presence slots" {
-  let clock = @simclock.VirtualClock(start_ms=0)
+  let clock = @netruntime.VirtualClock(start_ms=0)
   @async.with_task_group(group => {
     let shard = Shard::start(
       group,
@@ -156,11 +158,14 @@ async test "concurrent presence updates wait for general slots before presence s
         shard.update_presence(@model.UpdatePresence(status=Online))
       })
     })
-    clock.settle()
+    clock.settle(until=() => clock.pending() == [60001])
     // one update waits for a general slot without holding a presence slot
     assert_eq(clock.pending(), [60001])
     assert_eq(shard.presence_limiter.timestamps.length(), 0)
     clock.advance(60001)
+    clock.settle(until=() => {
+      transport.sent.length() == 5 && clock.pending() == [20001]
+    })
     // five went out; the sixth holds a general slot and waits for presence
     assert_eq(clock.pending(), [20001])
     assert_eq(shard.command_limiter.timestamps.length(), 6)

@@ -96,8 +96,18 @@ async test "a stalled response body times out and releases the bucket once" {
   })
   assert_eq(attempts.val, 1)
   assert_eq(limiter.acquires, 1)
-  assert_eq(limiter.releases, [(GetGateway.bucket(), 0, Map([]))])
-  guard events is [HttpRequest(status=0, retries=0, ..)] else {
+  // The head arrived before the body timed out, so accounting retains it.
+  assert_eq(limiter.releases, [
+    (
+      GetGateway.bucket(),
+      200,
+      Map([
+        ("content-type", "application/json"),
+        ("transfer-encoding", "chunked"),
+      ]),
+    ),
+  ])
+  guard events is [HttpRequest(status=200, retries=0, ..)] else {
     fail("expected one timed-out attempt event: \{Repr(events)}")
   }
 }
@@ -266,7 +276,7 @@ async test "plain json requests round-trip and non-json error bodies surface" {
 async test "the default transport times its phases on the client's clock" {
   let server = @ahttp.Server(@socket.Addr::parse("127.0.0.1:0"))
   defer server.close()
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   let client = Client(
     "test-token",
     base_url="http://\{server.addr}",
@@ -299,10 +309,11 @@ async test "the default transport times its phases on the client's clock" {
     })
     // The server has the request; from here only the virtual clock moves.
     received.get()
-    clock.settle()
+    clock.settle(until=() => clock.pending().contains(30000))
     clock.advance(29_999)
     assert_eq(outcome.val, None)
     clock.advance(1)
+    clock.settle(until=() => outcome.val is Some(_))
     assert_eq(outcome.val, Some("Timeout Head 30000"))
     release.put(())
   })

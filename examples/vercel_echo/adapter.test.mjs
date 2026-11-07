@@ -28,7 +28,7 @@ test("Vercel fetch adapter passes deferred work to waitUntil", async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (input, init) => {
     const requestUrl = typeof input === "string" ? input : input.url;
-    calls.push({ url: requestUrl, method: init?.method ?? input.method });
+    calls.push({ url: new URL(requestUrl).href, method: init?.method ?? input.method });
     return Response.json(deferredMessageJson());
   };
   try {

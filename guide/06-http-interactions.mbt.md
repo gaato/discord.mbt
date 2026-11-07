@@ -224,8 +224,9 @@ test "http interaction declarations compile" {
 ```
 
 The server validates and expands the public key before binding its socket, then
-reuses that verifier for every request. It answers 401 before reading the body
-when either signature header is missing, verifies signatures against the raw
+reuses that verifier for every request. It rejects declared bodies above 1 MiB
+before endpoint dispatch; otherwise it answers 401 before reading the body
+when either signature header is missing. It verifies signatures against the raw
 body, handles Discord PINGs, dispatches through `App::serve`, and maps the
 outcome like `handle_signed_http`: 404 for `NoRoute`, 202 for `NoResponse`,
 504 for `TimedOut`. Use a reverse proxy for public HTTPS termination.
@@ -236,44 +237,40 @@ shows the `moonrun --policy` permissions it needs.
 
 ## JavaScript hosts
 
-`App::start_signed_http` exists on the JavaScript backend only and returns a
-JavaScript object `{ response, background }`: `InteractionHttpDispatch`. Both
-promises exist synchronously when the function returns, so hosts such as
-Fastly that must register `waitUntil` before awaiting anything can do so
-immediately. Pass `background` to the host's `waitUntil`-style lifetime API
-and await `response` for the initial callback. `abort_signal` cancels only the
-`response` waiter; `background` keeps running so deferred handlers still
-finish after a client disconnect.
+`interaction_fetch_handler` exists on the JavaScript backend and returns a
+function accepting a Web Request and a background-registration callback. It
+uses the same signed Endpoint as the native listener through mttp-net/fetch.
+The callback receives one promise synchronously, before the response promise
+is returned. Retain that promise with the host's `waitUntil` or equivalent so
+deferred handlers finish after the response.
 
-The library caches the expanded verifier for the most recent `public_key`
-(one entry, process-wide) and answers 401 for an unusable key without caching
-it. Each dispatch owns one REST `Client` built from `token` and the optional
-`api_base_url`, and closes it when its work ends, so connections are not
-reused across interactions. `application_id` is required so no startup
-request is made. A handler that produces no initial response yields status
-202 with a `null` body and `null` content type; multipart replies arrive as a
-`ReadableStream` of chunks. See `examples/interactions_js/handler.js` for
-a reference host adapter.
+The adapter enforces a 1 MiB request ceiling before passing exact body bytes to
+signature verification. An already aborted request does not start app work.
+A later abort cancels the response waiter; app work already registered with
+the background owner can finish. Each dispatch owns and closes its REST
+client. `application_id` avoids a startup lookup. Multipart replies are streamed
+without concatenating their chunks. The older `App::start_signed_http` bridge
+remains available for callers that already supply buffered raw bytes; new
+Web Request integrations should use the bounded Fetch adapter.
 
 ```mbt nocheck
 ///|
 fn dispatch_on_js_host(
-  app : @discord.AppBuilder,
-  request : @discord.InteractionHttpRequest,
+  app : @discord.App,
+  request : @fetch.JsRequest,
+  background : @fetch.JsBackground,
   token : String,
   application_id : @model.ApplicationId,
   public_key : String,
-  abort_signal : @js_async.AbortSignal,
-) -> @discord.InteractionHttpDispatch {
-  app
-  .build()
-  .start_signed_http(
-    request,
+) -> @fetch.JsPromise {
+  let handler = @discord.interaction_fetch_handler(
+    app,
     token~,
     application_id~,
     public_key~,
-    abort_signal~,
+    path="/interactions",
   )
+  handler(request, background)
 }
 ```
 

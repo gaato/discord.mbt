@@ -54,7 +54,7 @@ Idempotent calls are `GET`, `HEAD`, `PUT`, `DELETE`, `OPTIONS`, and a message
 create with a `nonce` and `enforce_nonce: true`. A `POST` or `PATCH` that may
 have reached Discord is otherwise raised at once rather than risk a second
 effect. Resends stop after `max_retries` (default 4); the backoff is
-`gaato/sdk-runtime`'s conservative one (500 ms doubling up to 30 s, within
+`gaato/mttp/client`'s conservative one (500 ms doubling up to 30 s, within
 ±20 %), and each attempt is bounded by `request_timeout_ms` (default 30 s).
 
 **Whose 429 is it?** A 429 is Discord's when it has an `X-RateLimit-Scope`
@@ -88,7 +88,7 @@ one client.
 
 ## Implementation
 
-- `discord/src/http/retry.mbt`: `discord_retry_rule` is a `gaato/http/retry`
+- `discord/src/http/retry.mbt`: `discord_retry_rule` is a `gaato/mttp/client/retry`
   `RetryRule`, and `resend_decision` adds the Discord-specific inputs (the
   429 wait and whether the call is idempotent).
 - The resend decision cannot see a multipart body, which is assembled just
@@ -96,6 +96,7 @@ one client.
   has a `nonce` and `enforce_nonce: true` with the internal header
   `x-discord-mbt-replay-safe`; the client removes it before the transport, so
   it never reaches Discord, and removes it from callers' requests first.
-- `Timeouts` from `gaato/sdk-runtime` wrap only a transport the caller
-  supplies. The default `AsyncTransport` times each phase itself, so it can
-  tell a timeout before sending (`Pool`, `Dial`) from one after.
+- A mttp `ClockTimer` bounds attempts on a Backend the caller supplies. The
+  default `AsyncBackend` times each phase itself, so it can tell a timeout
+  before sending (`Pool`, `Dial`) from one after. Both paths enforce the
+  client's response-body bound.

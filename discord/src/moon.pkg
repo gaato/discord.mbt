@@ -6,6 +6,7 @@ import {
   "gaato/discord/bot",
   "gaato/discord/gateway",
   "gaato/discord/endpoint_http",
+  "gaato/mttp-net/fetch",
   "gaato/discord/verify",
   "gaato/discord/framework",
   "gaato/discord/cache",

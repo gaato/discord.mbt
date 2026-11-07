@@ -1,20 +1,16 @@
 ///|
 /// A 429 as the runtime classifies it.
-fn limited(
-  headers : Array[(String, String)],
-  body : String,
-) -> @runtime.SdkError {
-  @runtime.RateLimited(
-    retry_after_ms=None,
-    headers=@ghttp.Headers::from_array(headers),
+fn limited(headers : Array[(String, String)], body : String) -> Error {
+  @runtime.UnexpectedStatus(
+    @ghttp.Response::new(429, headers=@ghttp.Headers::of(headers)).head(),
     body=@utf8.encode(body),
   )
 }
 
 ///|
 /// An error status as the runtime classifies it.
-fn status_error(status : Int32) -> @runtime.SdkError {
-  @runtime.Status(status~, headers=@ghttp.Headers::new(), body=b"")
+fn status_error(status : Int32) -> Error {
+  @runtime.UnexpectedStatus(@ghttp.Response::new(status).head(), body=b"")
 }
 
 ///|
@@ -22,7 +18,7 @@ fn status_error(status : Int32) -> @runtime.SdkError {
 /// attempt `attempt`, with random 0.5 (the backoff's middle: 500 ms,
 /// doubling per attempt).
 fn decision(
-  error : @runtime.SdkError,
+  error : Error,
   verb : String,
   attempt~ : Int32 = 0,
   max_retries~ : Int32 = 4,
@@ -30,11 +26,15 @@ fn decision(
   replay_safe~ : Bool = false,
   remaining_ms? : Int64,
 ) -> @retry.Decision {
-  let request = @ghttp.Request::new(
-    verb, "https://discord.com/api/v10/channels/1/messages",
+  let mut request = @ghttp.Request::new(
+    @ghttp.Method::parse(verb),
+    "https://discord.com/api/v10/channels/1/messages",
   )
   if replay_safe {
-    request.headers.set(REPLAY_SAFE_HEADER, "1")
+    request = {
+      ..request,
+      headers: request.headers.set(REPLAY_SAFE_HEADER, "1"),
+    }
   }
   resend_decision(
     error,
@@ -54,15 +54,17 @@ test "a 429 is resent for any verb after the delay Discord asks for" {
     assert_eq(decision(discord, verb), Wait(1501), msg=verb)
   }
   // The body's retry_after first, then Retry-After-Ms, then Retry-After,
-  // then one second; the runtime's own retry_after_ms is not consulted.
-  let cases : Array[(@runtime.SdkError, @retry.Decision)] = [
+  // then one second; the error carries the actual response without a parsed delay.
+  let cases : Array[(Error, @retry.Decision)] = [
     (
-      @runtime.RateLimited(
-        retry_after_ms=Some(9),
-        headers=@ghttp.Headers::from_array([
-          ("x-ratelimit-scope", "user"),
-          ("retry-after", "2"),
-        ]),
+      @runtime.UnexpectedStatus(
+        @ghttp.Response::new(
+          429,
+          headers=@ghttp.Headers::of([
+            ("x-ratelimit-scope", "user"),
+            ("retry-after", "2"),
+          ]),
+        ).head(),
         body=b"",
       ),
       Wait(2001),
@@ -185,63 +187,60 @@ test "401, 403 and other answers are never resent" {
       )
     }
   }
-  assert_eq(decision(@runtime.Config("limiter"), "GET"), Stop(NotRetryable))
+  assert_eq(
+    decision(@runtime.InvalidRequest(message="limiter"), "GET"),
+    Stop(NotRetryable),
+  )
 }
 
 ///|
 test "a transport failure is resent when nothing was sent, or for an idempotent call" {
-  let unsent : Array[@ghttp.HttpError] = [
-    Connect("refused"),
-    Timeout(phase=Pool, ms=5),
-    Timeout(phase=Dial, ms=5),
-    Proxy(status=502, message="down"),
+  let unsent : Array[@ghttp.TransportError] = [
+    wire_connect("refused"),
+    wire_timeout(phase=Pool, ms=5),
+    wire_timeout(phase=Dial, ms=5),
+    wire_proxy(status=502, message="down"),
   ]
   for failure in unsent {
     for verb in ["GET", "POST"] {
       assert_eq(
-        decision(@runtime.Transport(failure), verb),
+        decision(failure, verb),
         Wait(500),
         msg="\{Repr(failure)} \{verb}",
       )
     }
   }
-  assert_eq(
-    decision(@runtime.Transport(Connect("refused")), "POST", attempt=2),
-    Wait(2000),
-  )
+  assert_eq(decision(wire_connect("refused"), "POST", attempt=2), Wait(2000))
   // Unsent but not transient: the proxy will refuse again.
   assert_eq(
-    decision(@runtime.Transport(Proxy(status=407, message="auth")), "GET"),
+    decision(wire_proxy(status=407, message="auth"), "GET"),
     Stop(NotRetryable),
   )
   // May have reached Discord: only an idempotent call is sent again.
-  let sent : Array[@ghttp.HttpError] = [
-    Timeout(phase=Head, ms=5),
-    Timeout(phase=Unknown, ms=5),
-    Network(phase=Write, message="reset"),
+  let sent : Array[@ghttp.TransportError] = [
+    wire_timeout(phase=Head, ms=5),
+    wire_timeout(phase=Unknown, ms=5),
+    wire_network(phase=Write, message="reset"),
   ]
   for failure in sent {
     assert_eq(
-      decision(@runtime.Transport(failure), "GET"),
+      decision(failure, "GET"),
       Wait(500),
       msg=Repr(failure).to_string(),
     )
     assert_eq(
-      decision(@runtime.Transport(failure), "POST"),
+      decision(failure, "POST"),
       Stop(MethodNotAllowed),
       msg=Repr(failure).to_string(),
     )
   }
   // A garbled answer is never resent.
-  assert_eq(
-    decision(@runtime.Transport(Protocol("garbled")), "GET"),
-    Stop(NotRetryable),
-  )
+  assert_eq(decision(wire_protocol("garbled"), "GET"), Stop(NotRetryable))
 }
 
 ///|
 test "a replay-safe message create is resent like an idempotent call" {
-  let after_sending = @runtime.Transport(Timeout(phase=Head, ms=5))
+  let after_sending = wire_timeout(phase=Head, ms=5)
   assert_eq(decision(after_sending, "POST"), Stop(MethodNotAllowed))
   assert_eq(decision(after_sending, "POST", replay_safe=true), Wait(500))
   assert_eq(decision(status_error(500), "POST", replay_safe=true), Wait(500))
@@ -283,33 +282,28 @@ test "only a message create with a nonce and enforce_nonce is replay-safe" {
 /// A wire that fails its first attempts with `failures`, in order, then
 /// answers through `wire`.
 priv struct FlakyWire {
-  failures : Array[@ghttp.HttpError]
+  failures : Array[@ghttp.TransportError]
   wire : FakeWire
   mut failed : Int32
 }
 
 ///|
-impl @ghttp.Transport for FlakyWire with fn send(self, request) {
+impl @runtime.Backend for FlakyWire with fn send(self, request, options) {
   if self.failed < self.failures.length() {
     self.failed += 1
     raise self.failures[self.failed - 1]
   }
-  @ghttp.Transport::send(self.wire, request)
-}
-
-///|
-impl @ghttp.Transport for FlakyWire with fn send_stream(_self, _request) {
-  raise @ghttp.HttpError::Protocol("FlakyWire does not stream")
+  @runtime.Backend::send(self.wire, request, options)
 }
 
 ///|
 /// A `test-token` client over a `FlakyWire` whose answers count in
 /// `answered`, on a virtual clock.
 fn flaky_client(
-  failures : Array[@ghttp.HttpError],
+  failures : Array[@ghttp.TransportError],
   limiter : TimeoutTestLimiter,
   answered : Ref[Int32],
-  clock~ : @simclock.VirtualClock = @simclock.VirtualClock(),
+  clock~ : @netruntime.VirtualClock = @netruntime.VirtualClock(),
 ) -> (Client, FlakyWire) {
   let wire = FlakyWire::{
     failures,
@@ -328,9 +322,9 @@ fn flaky_client(
 async test "a POST that never reached Discord is sent again through the limiter" {
   let limiter = TimeoutTestLimiter(() => ())
   let answered = Ref(0)
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   let (client, wire) = flaky_client(
-    [@ghttp.HttpError::Connect("refused")],
+    [wire_connect("refused")],
     limiter,
     answered,
     clock~,
@@ -344,13 +338,12 @@ async test "a POST that never reached Discord is sent again through the limiter"
     let sending = group.spawn(() => {
       client.request(route, body={ "content": "once" })
     })
-    clock.settle()
+    clock.settle(until=() => wire.failed == 1 && backoff_ready(clock))
     // Refused once, now waiting out the backoff on the client's clock.
     assert_eq(wire.failed, 1)
     assert_eq(answered.val, 0)
-    while sending.try_wait() is None {
-      guard clock.advance_to_next() else { fail("nothing left to wait for") }
-    }
+    assert_true(clock.advance_to_next())
+    clock.settle(until=() => task_finished(sending))
     json_inspect(sending.wait(), content={ "ok": true })
   })
   // The runtime's default backoff: 500 ms with 20% jitter.
@@ -376,10 +369,10 @@ async test "a POST that never reached Discord is sent again through the limiter"
 async test "a POST that may have reached Discord is raised at once" {
   for
     failure in [
-      @ghttp.HttpError::Network(phase=Write, message="reset"),
-      @ghttp.HttpError::Network(phase=Head, message="eof"),
-      @ghttp.HttpError::Timeout(phase=Head, ms=5),
-      @ghttp.HttpError::Protocol("garbled"),
+      wire_network(phase=Write, message="reset"),
+      wire_network(phase=Head, message="eof"),
+      wire_timeout(phase=Head, ms=5),
+      wire_protocol("garbled"),
     ] {
     let limiter = TimeoutTestLimiter(() => ())
     let answered = Ref(0)
@@ -405,31 +398,35 @@ async test "a POST that may have reached Discord is raised at once" {
 async test "a closed client does not resend a call that never reached Discord" {
   let limiter = TimeoutTestLimiter(() => ())
   let answered = Ref(0)
+  let clock = @netruntime.VirtualClock()
   let (client, wire) = flaky_client(
-    [@ghttp.HttpError::Connect("refused")],
+    [wire_connect("refused")],
     limiter,
     answered,
+    clock~,
   )
-  // Telemetry for the failed attempt runs before the retry decision.
+  // mttp reports the decided retry to the observer. Closure there must still
+  // prevent that already-decided resend from reaching the supplied backend.
   client.on_telemetry(_ => client.close())
-  try client.request(GetGateway) catch {
-    Transport(phase=Dial, ..) as error => assert_true(error.is_unsent())
+  try on_virtual_time(clock, () => client.request(GetGateway)) catch {
+    DiscordHttpError::Transport(phase=Pool, message=CLOSED_MESSAGE) as error =>
+      assert_true(error.is_unsent())
     error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the refused connection")
   }
   assert_eq(wire.failed, 1)
   assert_eq(answered.val, 0)
-  assert_eq(limiter.acquires, 1)
+  assert_eq(limiter.acquires, 2)
 }
 
 ///|
 async test "a client closed during the backoff does not send the resend" {
   let limiter = TimeoutTestLimiter(() => ())
   let answered = Ref(0)
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   let (client, wire) = flaky_client(
-    [@ghttp.HttpError::Connect("refused")],
+    [wire_connect("refused")],
     limiter,
     answered,
     clock~,
@@ -443,12 +440,11 @@ async test "a client closed during the backoff does not send the resend" {
         _ => None
       }
     })
-    clock.settle()
+    clock.settle(until=() => wire.failed == 1 && backoff_ready(clock))
     assert_eq(wire.failed, 1, msg="refused once, now in the backoff")
     client.close()
-    while sending.try_wait() is None {
-      guard clock.advance_to_next() else { fail("nothing left to wait for") }
-    }
+    assert_true(clock.advance_to_next())
+    clock.settle(until=() => task_finished(sending))
     guard sending.wait() is Some(error) else { fail("the resend went out") }
     assert_true(error.is_unsent(), msg=@debug.to_string(error))
   })
@@ -459,20 +455,20 @@ async test "a client closed during the backoff does not send the resend" {
 async test "a GET that may have reached Discord is sent again" {
   for
     failure in [
-      @ghttp.HttpError::Network(phase=Write, message="reset"),
-      @ghttp.HttpError::Network(phase=Head, message="eof"),
-      @ghttp.HttpError::Timeout(phase=Head, ms=5),
+      wire_network(phase=Write, message="reset"),
+      wire_network(phase=Head, message="eof"),
+      wire_timeout(phase=Head, ms=5),
     ] {
     let limiter = TimeoutTestLimiter(() => ())
     let answered = Ref(0)
-    let clock = @simclock.VirtualClock()
+    let clock = @netruntime.VirtualClock()
     let (client, wire) = flaky_client([failure], limiter, answered, clock~)
     defer client.close()
     @async.with_task_group(group => {
       let sending = group.spawn(() => client.request(GetGateway))
-      while sending.try_wait() is None {
-        guard clock.advance_to_next() else { fail("nothing left to wait for") }
-      }
+      clock.settle(until=() => wire.failed == 1 && backoff_ready(clock))
+      assert_true(clock.advance_to_next())
+      clock.settle(until=() => task_finished(sending))
       json_inspect(sending.wait(), content={ "ok": true })
     })
     assert_eq(wire.failed, 1)
@@ -488,7 +484,7 @@ fn status_sequence_client(
   answered : Ref[Int32],
   seen : Array[Map[String, String]],
   max_retries~ : Int32 = 4,
-  clock~ : @simclock.VirtualClock = @simclock.VirtualClock(),
+  clock~ : @netruntime.VirtualClock = @netruntime.VirtualClock(),
 ) -> Client {
   let wire = FakeWire::{
     answer: (_path, headers, _body) => {
@@ -536,16 +532,34 @@ fn status_sequence_client(
 }
 
 ///|
-/// Runs `call` on `clock`'s virtual time until it finishes.
+/// These immediate fake backends use a 30-second attempt timer and retry waits
+/// below 10 seconds. A sole short timer observes the completed attempt and its
+/// registered backoff, rather than advancing the attempt deadline prematurely.
+fn[T] task_finished(task : @async.Task[T]) -> Bool {
+  (task.try_wait() is Some(_)) catch {
+    _ => true
+  }
+}
+
+///|
+fn backoff_ready(clock : @netruntime.VirtualClock) -> Bool {
+  clock.pending() is [wait] && wait < 10000
+}
+
+///|
+/// Runs an immediate fake-backend call, advancing only its observed retry waits.
 async fn[T] on_virtual_time(
-  clock : @simclock.VirtualClock,
+  clock : @netruntime.VirtualClock,
   call : async () -> T,
 ) -> T {
   @async.with_task_group(group => {
     let task = group.spawn(call)
-    clock.settle()
-    while task.try_wait() is None {
-      guard clock.advance_to_next() else { fail("nothing left to wait for") }
+    for ;; {
+      clock.settle(until=() => task_finished(task) || backoff_ready(clock))
+      if task_finished(task) {
+        break
+      }
+      assert_true(clock.advance_to_next())
     }
     task.wait()
   })
@@ -553,7 +567,7 @@ async fn[T] on_virtual_time(
 
 ///|
 async test "a 502 is sent again for a POST, another 5xx is not" {
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   let answered = Ref(0)
   let client = status_sequence_client(
     [(502, Map([]), Json::string("<html>bad gateway</html>"))],
@@ -585,7 +599,7 @@ async test "a 502 is sent again for a POST, another 5xx is not" {
 
 ///|
 async test "a message create with an enforced nonce is sent again and the mark stays home" {
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   let answered = Ref(0)
   let seen : Array[Map[String, String]] = []
   let client = status_sequence_client(

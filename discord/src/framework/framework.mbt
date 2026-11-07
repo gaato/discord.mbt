@@ -76,7 +76,7 @@ pub struct Framework {
 pub fn Framework::Framework(
   client : @dhttp.Client,
   application_id : @model.ApplicationId,
-  clock~ : &@hclock.Clock = @transport.AsyncClock::new(),
+  clock~ : &@hclock.Clock = @netruntime.AsyncClock::new(),
 ) -> Framework {
   {
     client,
@@ -442,7 +442,7 @@ pub async fn Framework::wait_for_component(
       // it handled), whether `get` took it as it was cancelled or it is
       // still queued.
       let delivered : Ref[ComponentCtx?] = Ref(None)
-      @transport.with_timeout_opt(self.clock, ms, () => {
+      @netruntime.with_timeout_opt(self.clock, ms, () => {
         delivered.val = Some(waiter.queue.get())
       })
       |> ignore

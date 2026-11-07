@@ -33,7 +33,7 @@ pub struct PendingEvent[T] {
 
 ///|
 fn EventCollector::EventCollector(
-  clock~ : Ref[&@hclock.Clock] = Ref(@transport.AsyncClock::new()),
+  clock~ : Ref[&@hclock.Clock] = Ref(@netruntime.AsyncClock::new()),
 ) -> EventCollector {
   { waiters: [], clock, }
 }
@@ -118,7 +118,7 @@ pub async fn[T] PendingEvent::wait(
       // dispatched here as the timer fires is this wait's, whether `get`
       // took it as it was cancelled or it is still queued.
       let delivered : Ref[@model.Event?] = Ref(None)
-      @transport.with_timeout_opt(self.collector.clock.val, ms, () => {
+      @netruntime.with_timeout_opt(self.collector.clock.val, ms, () => {
         delivered.val = Some(self.waiter.queue.get())
       })
       |> ignore

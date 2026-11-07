@@ -44,11 +44,13 @@ struct Arrival {
   mut answered : Bool
   mut defers : Int32
   mut outcome : AdmitOutcome
+  mut finished : Bool
+  mut body_until : Int64?
 }
 
 ///|
 struct AdmitModel {
-  clock : @simclock.VirtualClock
+  clock : @netruntime.VirtualClock
   admission : Admission
   permits : Int32
   arrivals : Array[Arrival]
@@ -106,7 +108,6 @@ fn AdmitModel::gate(self : AdmitModel, arrival : Arrival) -> AdmissionGate {
       }
       arrival.defers += 1
       arrival.answered = true
-      self.clock.touch()
     },
   }
 }
@@ -164,6 +165,8 @@ fn AdmitModel::arrive(
     answered: false,
     defers: 0,
     outcome: Waiting,
+    finished: false,
+    body_until: None,
   }
   let label = "#\{self.arrivals.length()}"
   self.arrivals.push(arrival)
@@ -176,9 +179,11 @@ fn AdmitModel::arrive(
       self.flag("\{label} ended twice")
     }
     arrival.outcome = outcome
-    self.clock.touch()
   }
   group.spawn_bg(() => {
+    defer {
+      arrival.finished = true
+    }
     run_admitted(
       self.admission,
       gate,
@@ -217,9 +222,11 @@ fn AdmitModel::arrive(
         // A responding handler answers as it starts; for a deferring route
         // the framework defers before the handler runs.
         arrival.answered = true
+        arrival.body_until = Some(
+          self.clock.now_unix_ms() + arrival.duration.to_int64(),
+        )
         self.admission.clock.sleep(arrival.duration)
         self.running -= 1
-        self.clock.touch()
       },
     )
   })
@@ -259,7 +266,7 @@ async fn run_admission_schedule(
   max_pending : Int32,
   steps : Array[AdmitStep],
 ) -> String {
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   let admission = scripted_admission(permits, clock~)
   let model = AdmitModel::{
     clock,
@@ -283,10 +290,15 @@ async fn run_admission_schedule(
         Arrive(spec) => model.arrive(group, spec)
         Advance(ms) => {
           model.log.push("advance \{ms}")
-          clock.advance(ms)
+          let target = clock.now_unix_ms() + ms.to_int64()
+          while clock.next_deadline() is Some(deadline) && deadline <= target {
+            assert_true(clock.advance_to_next())
+            model.wait_parked()
+          }
+          clock.advance((target - clock.now_unix_ms()).to_int())
         }
       }
-      clock.settle()
+      model.wait_parked()
       if model.flagged is Some(message) {
         model.violation(message)
       }
@@ -313,7 +325,7 @@ async fn run_admission_schedule(
     }
     // Let every handler, wait, and watchdog run out.
     while clock.advance_to_next() {
-      ()
+      model.wait_parked()
     }
   })
   if model.flagged is Some(message) {
@@ -336,6 +348,58 @@ async fn run_admission_schedule(
     }
   }
   "seed \{seed}\n" + model.log.join("\n")
+}
+
+///|
+/// Wait for each arrival to finish or own its documented wait timers. Counting
+/// these protocol waits also observes cancellation of per-admission watchdogs.
+async fn AdmitModel::wait_parked(self : AdmitModel) -> Unit {
+  self.clock.settle(until=() => {
+    let now = self.clock.now_unix_ms()
+    let mut timers = 0
+    let mut waiting = 0
+    for arrival in self.arrivals {
+      if arrival.finished {
+        continue
+      }
+      match arrival.outcome {
+        Busy | Warned(_) => return false
+        Ran => {
+          guard arrival.body_until is Some(until) && until > now else {
+            return false
+          }
+          timers += 1
+        }
+        Waiting => {
+          if arrival.expect_busy || self.running < self.permits {
+            return false
+          }
+          let budget = if arrival.plan is Respond {
+            arrival.deadline_ms
+          } else {
+            waiting += 1
+            Some(arrival.token_ms.min(self.admission.wait_limit_ms))
+          }
+          if budget is Some(ms) {
+            if arrival.arrived_at + ms.to_int64() <= now {
+              return false
+            }
+            timers += 1
+          }
+        }
+      }
+      if !(arrival.plan is Respond) {
+        let watchdog_at = arrival.arrived_at +
+          auto_defer_delay(arrival.deadline_ms).to_int64()
+        if watchdog_at > now {
+          timers += 1
+        } else if !arrival.answered {
+          return false
+        }
+      }
+    }
+    self.admission.pending == waiting && self.clock.pending().length() == timers
+  })
 }
 
 ///|

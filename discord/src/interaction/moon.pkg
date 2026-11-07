@@ -1,5 +1,5 @@
 import {
-  "gaato/sdk-runtime/json" @sdkjson,
+  "gaato/mttp/jsonkit" @sdkjson,
   "gaato/discord/model",
   "moonbitlang/core/string",
 }

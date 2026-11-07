@@ -16,6 +16,15 @@ const background = [];
 const dispatch = (request) =>
   handleInteraction(request, config, (promise) => background.push(promise));
 
+let registered = false;
+const refused = handleInteraction(new Request("https://example.test/interactions", {
+  method: "POST",
+  headers: { "content-length": "1048577" },
+  body: "{}",
+}), config, (promise) => { registered = true; background.push(promise); });
+assert(registered, "background lifetime was not registered synchronously");
+assert((await refused).status === 413, "declared oversized body was accepted");
+
 const url = "https://example.test/interactions";
 
 const ping = await dispatch(await signedRequest(url, interaction(1), privateKey));
@@ -51,7 +60,7 @@ try {
   await Promise.all(background);
   assert(calls.length === 1, "deferred REST count differs");
   assert(calls[0].method === "PATCH", "deferred REST method differs");
-  assert(calls[0].url === "https://discord.com/api/v10/webhooks/400000000000000001/interaction-token/messages/@original", "deferred REST URL differs");
+  assert(new URL(calls[0].url).href === "https://discord.com/api/v10/webhooks/400000000000000001/interaction-token/messages/@original", `deferred REST URL differs: ${calls[0].url}`);
   assert(JSON.parse(calls[0].body).content === "Finished in the background.", "deferred REST payload differs");
 } finally {
   globalThis.fetch = originalFetch;

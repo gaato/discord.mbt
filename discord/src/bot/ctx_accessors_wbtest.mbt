@@ -62,7 +62,7 @@ test "shard id validation rejects each invalid selection" {
 
 ///|
 async test "gateway context exposes raw handles, refs, and waiters" {
-  let clock = @simclock.VirtualClock()
+  let clock = @netruntime.VirtualClock()
   let transport = @gatewaysim.FakeTransport(clock~)
   let app = @app.AppBuilder()
   let client = @dhttp.Client("test-token")
@@ -155,7 +155,7 @@ async test "gateway context exposes raw handles, refs, and waiters" {
         timeout_ms=2000,
       )
     })
-    clock.settle()
+    clock.settle(until=() => ctx.collector_.waits_for(KMessageCreate))
     transport.put(
       (
         #|{"op":0,"s":2,"t":"MESSAGE_CREATE","d":{"id":"500","channel_id":"400","author":{"id":"200","username":"nelly","discriminator":"0","avatar":null},"content":"hello","timestamp":"2024-01-02T03:04:05.000000+00:00","edited_timestamp":null,"tts":false,"mention_everyone":false,"mentions":[],"mention_roles":[],"attachments":[],"embeds":[],"pinned":false,"type":0}}
@@ -185,6 +185,7 @@ async test "gateway context exposes raw handles, refs, and waiters" {
         timeout_ms=1,
       )
     })
+    clock.settle(until=() => clock.pending().filter(ms => ms == 1).length() == 2)
     clock.advance(1)
     assert_true(unmatched.wait() is None)
     assert_true(unclicked.wait() is None)
