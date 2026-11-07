@@ -157,7 +157,31 @@ pub fn AttachmentFlags::is_spoiler() -> AttachmentFlags {
 }
 
 ///|
+/// The attachment was flagged as explicit content.
+/// Discord's content scanning sets it, possibly after the message is sent:
+/// check the message you send and any later Message Update.
+pub fn AttachmentFlags::contains_explicit_content() -> AttachmentFlags {
+  AttachmentFlags(1UL << 4)
+}
+
+///|
 /// The attachment is an animated image.
 pub fn AttachmentFlags::is_animated() -> AttachmentFlags {
   AttachmentFlags(1UL << 5)
+}
+
+///|
+/// The attachment was flagged as gore.
+/// Discord's content scanning sets it, possibly after the message is sent:
+/// check the message you send and any later Message Update.
+pub fn AttachmentFlags::contains_gore_content() -> AttachmentFlags {
+  AttachmentFlags(1UL << 6)
+}
+
+///|
+/// The attachment was flagged as self-harm content.
+/// Discord's content scanning sets it, possibly after the message is sent:
+/// check the message you send and any later Message Update.
+pub fn AttachmentFlags::contains_self_harm_content() -> AttachmentFlags {
+  AttachmentFlags(1UL << 7)
 }

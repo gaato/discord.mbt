@@ -242,27 +242,22 @@ pub struct GuildChannelPosition {
   priv position : Int32?
   priv lock_permissions : Bool?
   priv parent_id : @sdkjson.Presence[@model.ChannelId]
-  priv flags : @sdkjson.Presence[@model.ChannelFlags]
 }
 
 ///|
 /// Construct one channel-position entry.
-/// Use `clear_flags=true` to send null for the documented nullable flags field.
 pub fn GuildChannelPosition::GuildChannelPosition(
   id : @model.ChannelId,
   position? : Int32,
   lock_permissions? : Bool,
   parent_id? : @model.ChannelId,
   clear_parent_id~ : Bool = false,
-  flags? : @model.ChannelFlags,
-  clear_flags~ : Bool = false,
 ) -> GuildChannelPosition raise DiscordHttpError {
   {
     id,
     position,
     lock_permissions,
     parent_id: patch_nullable("parent_id", parent_id, clear_parent_id),
-    flags: patch_nullable("flags", flags, clear_flags),
   }
 }
 
@@ -277,7 +272,6 @@ fn modify_guild_channel_positions_body(
       .opt("position", entry.position)
       .opt("lock_permissions", entry.lock_permissions)
       .presence("parent_id", entry.parent_id)
-      .presence("flags", entry.flags)
       .build()
     }),
   )
@@ -305,6 +299,20 @@ pub async fn Client::get_guild_member(
   user_id : @model.UserId,
 ) -> @model.GuildMember raise DiscordHttpError {
   decode(self.request(GetGuildMember(guild_id~, user_id~)))
+}
+
+///|
+/// Fetch a member's computed guild permissions: their roles combined with
+/// `@everyone`.
+pub async fn Client::get_guild_member_permissions(
+  self : Client,
+  guild_id : @model.GuildId,
+  user_id : @model.UserId,
+) -> @model.Permissions raise DiscordHttpError {
+  let response : PermissionsResponse = decode(
+    self.request(GetGuildMemberPermissions(guild_id~, user_id~)),
+  )
+  response.permissions
 }
 
 ///|
@@ -946,6 +954,20 @@ pub async fn Client::get_guild_role(
   role_id : @model.RoleId,
 ) -> @model.Role raise DiscordHttpError {
   decode(self.request(GetGuildRole(guild_id~, role_id~)))
+}
+
+///|
+/// Fetch the guild permissions of a role combined with `@everyone`. Other
+/// roles and member-specific restrictions are not included.
+pub async fn Client::get_guild_role_permissions(
+  self : Client,
+  guild_id : @model.GuildId,
+  role_id : @model.RoleId,
+) -> @model.Permissions raise DiscordHttpError {
+  let response : PermissionsResponse = decode(
+    self.request(GetGuildRolePermissions(guild_id~, role_id~)),
+  )
+  response.permissions
 }
 
 ///|

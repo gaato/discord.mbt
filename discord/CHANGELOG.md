@@ -7,7 +7,41 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+Follows Discord's developer docs through
+[`da52492c`](https://github.com/discord/discord-api-docs/commit/da52492ced82d375981c46618cc3e182daada9a2).
+
+### Added
+
+- **Computed permissions from Discord.** `Client::get_guild_member_permissions`
+  and `Client::get_guild_role_permissions` return a member's or a role's guild
+  permissions (combined with `@everyone`), and
+  `Client::get_channel_member_permissions` and
+  `Client::get_channel_role_permissions` return them in a channel with its
+  overwrites applied; `implicit=false` skips Discord's implicit permission
+  masking. Each returns `@model.Permissions`. The handles have them too:
+  `MemberRef::permissions`, `RoleRef::permissions`,
+  `ChannelRef::member_permissions` and `ChannelRef::role_permissions`.
+- **Content scanning results.** `AttachmentFlags` and `EmbedFlags` have
+  `contains_explicit_content`, `contains_gore_content` and
+  `contains_self_harm_content`, and `UnfurledMediaItem` has
+  `content_scan_metadata` (`ContentScanMetadata` with `ContentScanFlags`:
+  `is_explicit_content`, `is_gore_content`, `is_self_harm_content`). Discord
+  may set them after a message is sent, so check later Message Update events
+  too.
+- `AuditLogEvent::ChannelPositionUpdate` (16) and
+  `AuditLogEvent::RolePositionUpdate` (33), which decoded as `Unknown(16)`
+  and `Unknown(33)` before.
+
 ### Changed
+
+- **`ApplicationRoleConnection`'s fields are optional**, as Discord now
+  documents them: `platform_name` and `platform_username` are
+  `Nullable[String]?` and `metadata` is `Json?`, so a connection without them
+  decodes. Migration: unwrap the `Option`, or match `Some(..)`.
+- **A forum or media thread's starter message can use Components V2.**
+  `Client::start_thread_in_forum_or_media_channel` (and
+  `ChannelRef::start_forum_thread`) set `IS_COMPONENTS_V2` for a layout, as
+  when sending a message, instead of raising `Validation`.
 
 - Built and tested with MoonBit 0.10.20. The generated `.mbti` interface
   files spell `Int` as `Int32` and `UInt` as `UInt32` (since 0.10.16), list
@@ -16,6 +50,17 @@ breaking change is listed with a migration note.
   changed.
 - **Builds against `moonbitlang/async` 0.22.7**, which uses
   `moonbitlang/core/async` and so needs MoonBit 0.10.20 or later.
+
+### Removed
+
+- **The `flags` of `GuildChannelPosition`** (`flags` and `clear_flags`),
+  which Discord no longer documents for Modify Guild Channel Positions.
+  Migration: drop the arguments; set channel flags with `Client::modify_channel`.
+- **The audit log reason of a message delete** (`Client::delete_message`'s
+  `audit_reason` and `MessageRef::delete`'s `reason`): Discord documents that
+  Delete Message does not take one, and `Route::DeleteMessage` no longer
+  reports `supports_reason`. Migration: drop the argument;
+  `bulk_delete_messages` still takes a reason.
 
 ### Fixed
 

@@ -7,6 +7,15 @@ pub async fn MemberRef::fetch(
 }
 
 ///|
+/// Fetch this member's computed guild permissions: their roles combined with
+/// `@everyone`.
+pub async fn MemberRef::permissions(
+  self : MemberRef,
+) -> @model.Permissions raise DiscordHttpError {
+  self.client.get_guild_member_permissions(self.guild_id, self.user_id)
+}
+
+///|
 /// Ban this member from the guild.
 pub async fn MemberRef::ban(
   self : MemberRef,

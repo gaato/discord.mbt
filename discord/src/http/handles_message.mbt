@@ -86,13 +86,8 @@ pub async fn MessageRef::edit(
 /// Delete this message.
 pub async fn MessageRef::delete(
   self : MessageRef,
-  reason? : String,
 ) -> Unit raise DiscordHttpError {
-  self.client.delete_message(
-    self.channel_id,
-    self.message_id,
-    audit_reason?=reason,
-  )
+  self.client.delete_message(self.channel_id, self.message_id)
 }
 
 ///|

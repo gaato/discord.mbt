@@ -500,9 +500,9 @@ pub enum ApplicationMarker {
 
 #derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ApplicationRoleConnection {
-  platform_name : Nullable[String]
-  platform_username : Nullable[String]
-  metadata : @json.Json
+  platform_name : Nullable[String]?
+  platform_username : Nullable[String]?
+  metadata : @json.Json?
 }
 pub fn ApplicationRoleConnection::to_json(Self) -> @json.Json
 
@@ -572,6 +572,9 @@ pub fn Attachment::to_json(Self) -> @json.Json
 pub(all) struct AttachmentFlags(UInt64)
 pub fn AttachmentFlags::bits(Self) -> UInt64
 pub fn AttachmentFlags::contains(Self, Self) -> Bool
+pub fn AttachmentFlags::contains_explicit_content() -> Self
+pub fn AttachmentFlags::contains_gore_content() -> Self
+pub fn AttachmentFlags::contains_self_harm_content() -> Self
 pub fn AttachmentFlags::from_bits(UInt64) -> Self
 pub fn AttachmentFlags::is_animated() -> Self
 pub fn AttachmentFlags::is_clip() -> Self
@@ -648,6 +651,7 @@ pub(all) enum AuditLogEvent {
   ChannelOverwriteCreate
   ChannelOverwriteUpdate
   ChannelOverwriteDelete
+  ChannelPositionUpdate
   MemberKick
   MemberPrune
   MemberBanAdd
@@ -660,6 +664,7 @@ pub(all) enum AuditLogEvent {
   RoleCreate
   RoleUpdate
   RoleDelete
+  RolePositionUpdate
   InviteCreate
   InviteUpdate
   InviteDelete
@@ -1276,6 +1281,28 @@ pub(all) struct Container {
 }
 pub fn Container::to_json(Self) -> @json.Json
 
+#derive(Eq)
+pub(all) struct ContentScanFlags(UInt64)
+pub fn ContentScanFlags::bits(Self) -> UInt64
+pub fn ContentScanFlags::contains(Self, Self) -> Bool
+pub fn ContentScanFlags::from_bits(UInt64) -> Self
+pub fn ContentScanFlags::is_explicit_content() -> Self
+pub fn ContentScanFlags::is_gore_content() -> Self
+pub fn ContentScanFlags::is_self_harm_content() -> Self
+pub fn ContentScanFlags::none() -> Self
+pub fn ContentScanFlags::to_json(Self) -> @json.Json
+pub impl BitAnd for ContentScanFlags
+pub impl BitOr for ContentScanFlags
+pub impl @debug.Debug for ContentScanFlags
+pub impl @json.FromJson for ContentScanFlags
+pub impl @json.ToJson for ContentScanFlags
+
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
+pub(all) struct ContentScanMetadata {
+  flags : ContentScanFlags
+}
+pub fn ContentScanMetadata::to_json(Self) -> @json.Json
+
 #derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct CurrentUserGuild {
   id : Id[GuildMarker]
@@ -1353,6 +1380,9 @@ pub fn EmbedField::to_json(Self) -> @json.Json
 #derive(Eq)
 pub(all) struct EmbedFlags(UInt64)
 pub fn EmbedFlags::bits(Self) -> UInt64
+pub fn EmbedFlags::contains_explicit_content() -> Self
+pub fn EmbedFlags::contains_gore_content() -> Self
+pub fn EmbedFlags::contains_self_harm_content() -> Self
 pub fn EmbedFlags::from_bits(UInt64) -> Self
 pub fn EmbedFlags::is_content_inventory_entry() -> Self
 pub fn EmbedFlags::to_json(Self) -> @json.Json
@@ -4290,6 +4320,7 @@ pub(all) struct UnfurledMediaItem {
   placeholder_version : Int32?
   content_type : String?
   flags : Int32?
+  content_scan_metadata : ContentScanMetadata?
   attachment_id : String?
 }
 pub fn UnfurledMediaItem::to_json(Self) -> @json.Json

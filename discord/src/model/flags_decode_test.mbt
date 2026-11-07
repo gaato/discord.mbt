@@ -40,7 +40,10 @@ test "attachment and channel flag constants pin exact bits" {
     (@model.AttachmentFlags::is_thumbnail(), 1UL << 1),
     (@model.AttachmentFlags::is_remix(), 1UL << 2),
     (@model.AttachmentFlags::is_spoiler(), 1UL << 3),
+    (@model.AttachmentFlags::contains_explicit_content(), 1UL << 4),
     (@model.AttachmentFlags::is_animated(), 1UL << 5),
+    (@model.AttachmentFlags::contains_gore_content(), 1UL << 6),
+    (@model.AttachmentFlags::contains_self_harm_content(), 1UL << 7),
   ]
   for item in attachment_cases {
     let (flag, expected) = item
@@ -168,7 +171,24 @@ test "SKU, role, invite, embed, and activity flags pin wire values" {
   assert_eq(prompt.bits(), 1UL)
   assert_eq(((@model.RoleFlags::none() | prompt) & prompt).bits(), 1UL)
   assert_eq(@model.InviteFlags::is_guest_invite().bits(), 1UL)
+  assert_eq(@model.EmbedFlags::contains_explicit_content().bits(), 1UL << 4)
   assert_eq(@model.EmbedFlags::is_content_inventory_entry().bits(), 1UL << 5)
+  assert_eq(@model.EmbedFlags::contains_gore_content().bits(), 1UL << 6)
+  assert_eq(@model.EmbedFlags::contains_self_harm_content().bits(), 1UL << 7)
+  let scan_cases : Array[(@model.ContentScanFlags, UInt64)] = [
+    (@model.ContentScanFlags::is_explicit_content(), 1UL << 0),
+    (@model.ContentScanFlags::is_gore_content(), 1UL << 1),
+    (@model.ContentScanFlags::is_self_harm_content(), 1UL << 2),
+  ]
+  for item in scan_cases {
+    let (flag, expected) = item
+    assert_eq(flag.bits(), expected)
+  }
+  let gore = @model.ContentScanFlags::is_gore_content()
+  assert_eq(@model.ContentScanFlags::none().bits(), 0UL)
+  assert_true(
+    (@model.ContentScanFlags::is_explicit_content() | gore).contains(gore),
+  )
   let activity = @model.ActivityFlags::from_bits(257UL)
   assert_eq(activity.bits(), 257UL)
   assert_eq(activity.to_json().stringify(), "257")

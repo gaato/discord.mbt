@@ -672,7 +672,10 @@ pub(all) struct WelcomeScreenChannel {
 }
 
 ///|
-/// A guild that is temporarily unavailable to the client.
+/// A guild that is temporarily unavailable to the client. In a Guild Delete
+/// event, `unavailable` is true while the guild is unavailable, for example
+/// during an outage, and a Guild Create follows when it returns; otherwise
+/// the user left or was removed from the guild.
 #derive(ToJson, FromJson, Debug)
 pub(all) struct UnavailableGuild {
   id : GuildId

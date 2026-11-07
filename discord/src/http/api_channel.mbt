@@ -226,6 +226,61 @@ pub async fn Client::delete_channel_permission(
 }
 
 ///|
+/// The body of Discord's computed-permissions endpoints.
+#derive(FromJson)
+priv struct PermissionsResponse {
+  permissions : @model.Permissions
+}
+
+///|
+fn implicit_query(implicit : Bool?) -> String {
+  match implicit {
+    Some(value) => "?implicit=\{value}"
+    None => ""
+  }
+}
+
+///|
+/// Fetch a member's computed permissions in a channel: their roles and the
+/// channel's role and member overwrites. A thread uses its parent channel's
+/// overwrites. Requires `VIEW_CHANNEL`, and `CONNECT` for voice and stage
+/// channels. By default Discord applies implicit permission masking for a
+/// missing `VIEW_CHANNEL` (or `CONNECT` on voice and stage channels);
+/// `implicit=false` skips it. A bot's permissions are never masked.
+pub async fn Client::get_channel_member_permissions(
+  self : Client,
+  channel_id : @model.ChannelId,
+  user_id : @model.UserId,
+  implicit? : Bool,
+) -> @model.Permissions raise DiscordHttpError {
+  let query = implicit_query(implicit)
+  let response : PermissionsResponse = decode(
+    self.request(GetChannelMemberPermissions(channel_id~, user_id~, query~)),
+  )
+  response.permissions
+}
+
+///|
+/// Fetch the permissions a role grants in a channel together with
+/// `@everyone`, with their channel overwrites applied. Other roles and member
+/// overwrites are not included; a thread uses its parent channel's
+/// overwrites. Requires `VIEW_CHANNEL`, and `CONNECT` for voice and stage
+/// channels. `implicit=false` skips Discord's implicit permission masking
+/// for a missing `VIEW_CHANNEL` or voice/stage `CONNECT`.
+pub async fn Client::get_channel_role_permissions(
+  self : Client,
+  channel_id : @model.ChannelId,
+  role_id : @model.RoleId,
+  implicit? : Bool,
+) -> @model.Permissions raise DiscordHttpError {
+  let query = implicit_query(implicit)
+  let response : PermissionsResponse = decode(
+    self.request(GetChannelRolePermissions(channel_id~, role_id~, query~)),
+  )
+  response.permissions
+}
+
+///|
 /// List invites created for a channel.
 pub async fn Client::get_channel_invites(
   self : Client,
@@ -325,7 +380,10 @@ fn set_voice_channel_status_body(
 }
 
 ///|
-/// Set a voice channel's status, or clear it by omitting `status`.
+/// Set a voice channel's status, or clear it by omitting `status`. Requires
+/// `SET_VOICE_CHANNEL_STATUS`, plus `MANAGE_CHANNELS` when the current user
+/// is not connected to the channel; a connected user does not need
+/// `CONNECT`.
 pub async fn Client::set_voice_channel_status(
   self : Client,
   channel_id : @model.ChannelId,
@@ -518,7 +576,9 @@ pub async fn Client::start_thread_without_message(
 /// Start a thread in a forum or media channel. The thread's starter message
 /// is created in the same request from the message fields; at least one of
 /// `content`, `embeds`, `components`, `sticker_ids`, or `files` must be
-/// provided.
+/// provided. Components V2 layouts set the `IS_COMPONENTS_V2` flag, as when
+/// sending a message; `flags` may otherwise carry `SUPPRESS_EMBEDS` and
+/// `SUPPRESS_NOTIFICATIONS`.
 pub async fn Client::start_thread_in_forum_or_media_channel(
   self : Client,
   channel_id : @model.ChannelId,
@@ -547,12 +607,13 @@ pub async fn Client::start_thread_in_forum_or_media_channel(
       message="one of content/embeds/components/sticker_ids/files is required",
     )
   }
-  validate_message_limits(embeds, components)
-  if components is Some(values) && @model.requires_components_v2(values) {
-    raise Validation(
-      message="forum thread starter messages only allow the SUPPRESS_EMBEDS and SUPPRESS_NOTIFICATIONS flags, so Components V2 is unavailable",
-    )
-  }
+  let flags = message_flags_with_components_v2(
+    flags,
+    content,
+    embeds,
+    components,
+    sticker_ids?,
+  )
   let message = self.with_channel_allowed_mentions(
     @sdkjson.ObjBuilder::new()
     .opt("content", content)

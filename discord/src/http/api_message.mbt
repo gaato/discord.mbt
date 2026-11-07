@@ -156,14 +156,14 @@ pub async fn Client::edit_message(
 }
 
 ///|
-/// Delete a message.
+/// Delete a message. Discord does not take an audit log reason for this
+/// endpoint; `bulk_delete_messages` does.
 pub async fn Client::delete_message(
   self : Client,
   channel_id : @model.ChannelId,
   message_id : @model.MessageId,
-  audit_reason? : String,
 ) -> Unit raise DiscordHttpError {
-  self.request(DeleteMessage(channel_id~, message_id~), audit_reason?) |> ignore
+  self.request(DeleteMessage(channel_id~, message_id~)) |> ignore
 }
 
 ///|

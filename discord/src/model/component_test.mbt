@@ -571,6 +571,37 @@ test "media gallery round-trips" {
 }
 
 ///|
+test "unfurled media keeps its content scan metadata" {
+  json_inspect(
+    component_round_trip(
+      (
+        #|{
+        #|  "type": 11,
+        #|  "media": {
+        #|    "url": "https://cdn.discordapp.com/attachments/1/2/a.png",
+        #|    "content_scan_metadata": {"flags": 5}
+        #|  }
+        #|}
+      ),
+    ),
+    content={
+      "media": {
+        "url": "https://cdn.discordapp.com/attachments/1/2/a.png",
+        "content_scan_metadata": { "flags": 5 },
+      },
+      "type": 11,
+    },
+  )
+  let item : @model.UnfurledMediaItem = @json.from_json(
+    @json.parse("{\"url\":\"a\",\"content_scan_metadata\":{\"flags\":5}}"),
+  )
+  let flags = item.content_scan_metadata.unwrap().flags
+  assert_true(flags.contains(@model.ContentScanFlags::is_explicit_content()))
+  assert_true(flags.contains(@model.ContentScanFlags::is_self_harm_content()))
+  assert_false(flags.contains(@model.ContentScanFlags::is_gore_content()))
+}
+
+///|
 test "file component round-trips" {
   json_inspect(
     component_round_trip(

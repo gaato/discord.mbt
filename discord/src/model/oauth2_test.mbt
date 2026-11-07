@@ -76,9 +76,9 @@ test "connection service and role metadata preserve unknown values" {
     role_connection,
     content=(
       #|{
-      #|  platform_name: Null,
-      #|  platform_username: Value("nelly"),
-      #|  metadata: Object({ "level": String("42"), "score": Number(9001), "future": True }),
+      #|  platform_name: Some(Null),
+      #|  platform_username: Some(Value("nelly")),
+      #|  metadata: Some(Object({ "level": String("42"), "score": Number(9001), "future": True })),
       #|}
     ),
   )
@@ -88,6 +88,11 @@ test "connection service and role metadata preserve unknown values" {
       #|{"platform_name":null,"platform_username":"nelly","metadata":{"level":"42","score":9001,"future":true}}
     ),
   )
+  // Every field is optional; a connection without them decodes empty.
+  let empty : @model.ApplicationRoleConnection = @json.from_json(
+    @json.parse("{}"),
+  )
+  inspect(empty.to_json().stringify(), content="{}")
 }
 
 ///|

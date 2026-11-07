@@ -42,7 +42,7 @@ async test "handle unit delegations pin every bound id at the wire boundary" {
   client.role_ref(guild_id, role_id).delete(reason="cleanup")
 
   let message = client.message_ref(channel_id, message_id)
-  message.delete(reason="cleanup")
+  message.delete()
   message.unpin(reason="cleanup")
   message.react("wave:80")
   message.delete_reactions()

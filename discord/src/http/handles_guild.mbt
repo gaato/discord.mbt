@@ -686,6 +686,14 @@ pub async fn RoleRef::fetch(
 }
 
 ///|
+/// Fetch the guild permissions of this role combined with `@everyone`.
+pub async fn RoleRef::permissions(
+  self : RoleRef,
+) -> @model.Permissions raise DiscordHttpError {
+  self.client.get_guild_role_permissions(self.guild_id, self.role_id)
+}
+
+///|
 /// Edit this role.
 pub async fn RoleRef::edit(
   self : RoleRef,

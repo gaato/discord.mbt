@@ -132,12 +132,13 @@ pub impl @json.FromJson for ConnectionService with fn from_json(json, path) {
 }
 
 ///|
-/// Metadata attached to a user's application role connection.
+/// Metadata attached to a user's application role connection. Discord may
+/// omit any field, for example on a connection the application never set.
 #derive(ToJson, FromJson, Debug)
 pub(all) struct ApplicationRoleConnection {
-  platform_name : Nullable[String]
-  platform_username : Nullable[String]
-  metadata : Json
+  platform_name : Nullable[String]?
+  platform_username : Nullable[String]?
+  metadata : Json?
 }
 
 ///|

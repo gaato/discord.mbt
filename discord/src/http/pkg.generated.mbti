@@ -114,6 +114,7 @@ pub async fn ChannelRef::invites(Self) -> Array[@model.Invite] raise DiscordHttp
 pub async fn ChannelRef::join_thread(Self) -> Unit raise DiscordHttpError
 pub async fn ChannelRef::joined_private_archived_threads(Self, before? : @model.Id[@model.ChannelMarker], limit? : Int32) -> @model.ArchivedThreads raise DiscordHttpError
 pub async fn ChannelRef::leave_thread(Self) -> Unit raise DiscordHttpError
+pub async fn ChannelRef::member_permissions(Self, @model.Id[@model.UserMarker], implicit? : Bool) -> @model.Permissions raise DiscordHttpError
 pub fn ChannelRef::message_ref(Self, @model.Id[@model.MessageMarker]) -> MessageRef
 pub fn ChannelRef::messages(Self, before? : @model.Id[@model.MessageMarker], after? : @model.Id[@model.MessageMarker], around? : @model.Id[@model.MessageMarker], page_size? : Int32) -> @sdk-runtime.Paginator[@model.Message, DiscordHttpError] raise DiscordHttpError
 #deprecated
@@ -122,6 +123,7 @@ pub async fn ChannelRef::pins_page(Self, before? : @model.Timestamp, limit? : In
 pub async fn ChannelRef::private_archived_threads(Self, before? : @model.Timestamp, limit? : Int32) -> @model.ArchivedThreads raise DiscordHttpError
 pub async fn ChannelRef::public_archived_threads(Self, before? : @model.Timestamp, limit? : Int32) -> @model.ArchivedThreads raise DiscordHttpError
 pub async fn ChannelRef::remove_thread_member(Self, @model.Id[@model.UserMarker]) -> Unit raise DiscordHttpError
+pub async fn ChannelRef::role_permissions(Self, @model.Id[@model.RoleMarker], implicit? : Bool) -> @model.Permissions raise DiscordHttpError
 pub async fn ChannelRef::send(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], sticker_ids? : Array[@model.Id[@model.StickerMarker]], files? : Array[FileUpload], reply_to? : @model.Id[@model.MessageMarker], tts? : Bool, flags? : @model.MessageFlags, allowed_mentions? : @model.AllowedMentions, nonce? : @model.Nonce, enforce_nonce? : Bool, poll? : @model.PollCreateRequest, message_reference? : @model.MessageReference, shared_client_theme? : @model.SharedClientTheme) -> @model.Message raise DiscordHttpError
 pub async fn ChannelRef::send_soundboard_sound(Self, @model.Id[@model.SoundboardSoundMarker], source_guild_id? : @model.Id[@model.GuildMarker]) -> Unit raise DiscordHttpError
 pub async fn ChannelRef::set_voice_status(Self, status? : String, reason? : String) -> Unit raise DiscordHttpError
@@ -199,7 +201,7 @@ pub async fn Client::delete_guild_soundboard_sound(Self, @model.Id[@model.GuildM
 pub async fn Client::delete_guild_sticker(Self, @model.Id[@model.GuildMarker], @model.Id[@model.StickerMarker], audit_reason? : String) -> Unit raise DiscordHttpError
 pub async fn Client::delete_guild_template(Self, @model.Id[@model.GuildMarker], String) -> @model.GuildTemplate raise DiscordHttpError
 pub async fn Client::delete_invite(Self, String, audit_reason? : String) -> @model.Invite raise DiscordHttpError
-pub async fn Client::delete_message(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], audit_reason? : String) -> Unit raise DiscordHttpError
+pub async fn Client::delete_message(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker]) -> Unit raise DiscordHttpError
 pub async fn Client::delete_original_response(Self, @model.Id[@model.ApplicationMarker], String) -> Unit raise DiscordHttpError
 pub async fn Client::delete_own_reaction(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], String) -> Unit raise DiscordHttpError
 pub async fn Client::delete_stage_instance(Self, @model.Id[@model.ChannelMarker], audit_reason? : String) -> Unit raise DiscordHttpError
@@ -234,8 +236,10 @@ pub async fn Client::get_application_role_connection_metadata_records(Self, @mod
 pub async fn Client::get_auto_moderation_rule(Self, @model.Id[@model.GuildMarker], @model.Id[@model.AutoModerationRuleMarker]) -> @model.AutoModerationRule raise DiscordHttpError
 pub async fn Client::get_channel(Self, @model.Id[@model.ChannelMarker]) -> @model.Channel raise DiscordHttpError
 pub async fn Client::get_channel_invites(Self, @model.Id[@model.ChannelMarker]) -> Array[@model.Invite] raise DiscordHttpError
+pub async fn Client::get_channel_member_permissions(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.UserMarker], implicit? : Bool) -> @model.Permissions raise DiscordHttpError
 pub async fn Client::get_channel_messages(Self, @model.Id[@model.ChannelMarker], limit? : Int32, around? : @model.Id[@model.MessageMarker], before? : @model.Id[@model.MessageMarker], after? : @model.Id[@model.MessageMarker]) -> Array[@model.Message] raise DiscordHttpError
 pub async fn Client::get_channel_pins(Self, @model.Id[@model.ChannelMarker], before? : @model.Timestamp, limit? : Int32) -> @model.ChannelPins raise DiscordHttpError
+pub async fn Client::get_channel_role_permissions(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.RoleMarker], implicit? : Bool) -> @model.Permissions raise DiscordHttpError
 pub async fn Client::get_channel_webhooks(Self, @model.Id[@model.ChannelMarker]) -> Array[@model.Webhook] raise DiscordHttpError
 pub async fn Client::get_current_application(Self) -> @model.Application raise DiscordHttpError
 pub async fn Client::get_current_authorization_information(Self, bearer_token~ : String) -> @model.AuthorizationInformation raise DiscordHttpError
@@ -266,10 +270,12 @@ pub async fn Client::get_guild_emoji(Self, @model.Id[@model.GuildMarker], @model
 pub async fn Client::get_guild_integrations(Self, @model.Id[@model.GuildMarker]) -> Array[@model.Integration] raise DiscordHttpError
 pub async fn Client::get_guild_invites(Self, @model.Id[@model.GuildMarker]) -> Array[@model.Invite] raise DiscordHttpError
 pub async fn Client::get_guild_member(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker]) -> @model.GuildMember raise DiscordHttpError
+pub async fn Client::get_guild_member_permissions(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker]) -> @model.Permissions raise DiscordHttpError
 pub async fn Client::get_guild_onboarding(Self, @model.Id[@model.GuildMarker]) -> @model.GuildOnboarding raise DiscordHttpError
 pub async fn Client::get_guild_preview(Self, @model.Id[@model.GuildMarker]) -> @model.GuildPreview raise DiscordHttpError
 pub async fn Client::get_guild_prune_count(Self, @model.Id[@model.GuildMarker], days? : Int32, include_roles? : Array[@model.Id[@model.RoleMarker]]) -> @model.GuildPruneResult raise DiscordHttpError
 pub async fn Client::get_guild_role(Self, @model.Id[@model.GuildMarker], @model.Id[@model.RoleMarker]) -> @model.Role raise DiscordHttpError
+pub async fn Client::get_guild_role_permissions(Self, @model.Id[@model.GuildMarker], @model.Id[@model.RoleMarker]) -> @model.Permissions raise DiscordHttpError
 pub async fn Client::get_guild_roles(Self, @model.Id[@model.GuildMarker]) -> Array[@model.Role] raise DiscordHttpError
 pub async fn Client::get_guild_scheduled_event(Self, @model.Id[@model.GuildMarker], @model.Id[@model.ScheduledEventMarker], with_user_count? : Bool) -> @model.GuildScheduledEvent raise DiscordHttpError
 pub async fn Client::get_guild_soundboard_sound(Self, @model.Id[@model.GuildMarker], @model.Id[@model.SoundboardSoundMarker]) -> @model.SoundboardSound raise DiscordHttpError
@@ -434,7 +440,7 @@ pub async fn GlobalCommandRef::fetch(Self) -> @model.ApplicationCommand raise Di
 pub struct GuildChannelPosition {
   // private fields
 }
-pub fn GuildChannelPosition::GuildChannelPosition(@model.Id[@model.ChannelMarker], position? : Int32, lock_permissions? : Bool, parent_id? : @model.Id[@model.ChannelMarker], clear_parent_id? : Bool, flags? : @model.ChannelFlags, clear_flags? : Bool) -> Self raise DiscordHttpError
+pub fn GuildChannelPosition::GuildChannelPosition(@model.Id[@model.ChannelMarker], position? : Int32, lock_permissions? : Bool, parent_id? : @model.Id[@model.ChannelMarker], clear_parent_id? : Bool) -> Self raise DiscordHttpError
 
 pub struct GuildCommandRef {
   // private fields
@@ -543,6 +549,7 @@ pub async fn MemberRef::edit(Self, nick? : String, clear_nick? : Bool, roles? : 
 pub async fn MemberRef::edit_voice_state(Self, @model.Id[@model.ChannelMarker], suppress? : Bool) -> Unit raise DiscordHttpError
 pub async fn MemberRef::fetch(Self) -> @model.GuildMember raise DiscordHttpError
 pub async fn MemberRef::kick(Self, reason? : String) -> Unit raise DiscordHttpError
+pub async fn MemberRef::permissions(Self) -> @model.Permissions raise DiscordHttpError
 pub async fn MemberRef::remove_role(Self, @model.Id[@model.RoleMarker], reason? : String) -> Unit raise DiscordHttpError
 pub async fn MemberRef::timeout(Self, @model.Timestamp?, reason? : String) -> @model.GuildMember raise DiscordHttpError
 pub async fn MemberRef::unban(Self, reason? : String) -> Unit raise DiscordHttpError
@@ -552,7 +559,7 @@ pub struct MessageRef {
   // private fields
 }
 pub async fn MessageRef::crosspost(Self) -> @model.Message raise DiscordHttpError
-pub async fn MessageRef::delete(Self, reason? : String) -> Unit raise DiscordHttpError
+pub async fn MessageRef::delete(Self) -> Unit raise DiscordHttpError
 pub async fn MessageRef::delete_reactions(Self) -> Unit raise DiscordHttpError
 pub async fn MessageRef::delete_reactions_for(Self, String) -> Unit raise DiscordHttpError
 pub async fn MessageRef::delete_user_reaction(Self, String, @model.Id[@model.UserMarker]) -> Unit raise DiscordHttpError
@@ -575,6 +582,7 @@ pub struct RoleRef {
 pub async fn RoleRef::delete(Self, reason? : String) -> Unit raise DiscordHttpError
 pub async fn RoleRef::edit(Self, name? : String, permissions? : @model.Permissions, color? : Int32, colors? : @model.RoleColors, hoist? : Bool, icon? : String, clear_icon? : Bool, unicode_emoji? : String, clear_unicode_emoji? : Bool, mentionable? : Bool, reason? : String) -> @model.Role raise DiscordHttpError
 pub async fn RoleRef::fetch(Self) -> @model.Role raise DiscordHttpError
+pub async fn RoleRef::permissions(Self) -> @model.Permissions raise DiscordHttpError
 
 pub(all) enum Route {
   Custom(request_method~ : @moonbitlang/async/http.RequestMethod, path~ : String, bucket_key~ : String, is_interaction~ : Bool, supports_reason~ : Bool)
@@ -642,6 +650,8 @@ pub(all) enum Route {
   GetPinnedMessages(channel_id~ : @model.Id[@model.ChannelMarker])
   EditChannelPermissions(channel_id~ : @model.Id[@model.ChannelMarker], overwrite_id~ : @model.Id[@model.GenericMarker])
   DeleteChannelPermission(channel_id~ : @model.Id[@model.ChannelMarker], overwrite_id~ : @model.Id[@model.GenericMarker])
+  GetChannelMemberPermissions(channel_id~ : @model.Id[@model.ChannelMarker], user_id~ : @model.Id[@model.UserMarker], query~ : String)
+  GetChannelRolePermissions(channel_id~ : @model.Id[@model.ChannelMarker], role_id~ : @model.Id[@model.RoleMarker], query~ : String)
   GetChannelInvites(channel_id~ : @model.Id[@model.ChannelMarker])
   CreateChannelInvite(channel_id~ : @model.Id[@model.ChannelMarker])
   FollowAnnouncementChannel(channel_id~ : @model.Id[@model.ChannelMarker])
@@ -671,6 +681,7 @@ pub(all) enum Route {
   CreateGuildChannel(guild_id~ : @model.Id[@model.GuildMarker])
   ModifyGuildChannelPositions(guild_id~ : @model.Id[@model.GuildMarker])
   GetGuildMember(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])
+  GetGuildMemberPermissions(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])
   ListGuildMembers(guild_id~ : @model.Id[@model.GuildMarker], query~ : String)
   SearchGuildMembers(guild_id~ : @model.Id[@model.GuildMarker], query~ : String)
   ModifyGuildMember(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])
@@ -678,6 +689,7 @@ pub(all) enum Route {
   AddGuildMember(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])
   GetGuildRoles(guild_id~ : @model.Id[@model.GuildMarker])
   GetGuildRole(guild_id~ : @model.Id[@model.GuildMarker], role_id~ : @model.Id[@model.RoleMarker])
+  GetGuildRolePermissions(guild_id~ : @model.Id[@model.GuildMarker], role_id~ : @model.Id[@model.RoleMarker])
   CreateGuildRole(guild_id~ : @model.Id[@model.GuildMarker])
   ModifyGuildRolePositions(guild_id~ : @model.Id[@model.GuildMarker])
   ModifyGuildRole(guild_id~ : @model.Id[@model.GuildMarker], role_id~ : @model.Id[@model.RoleMarker])

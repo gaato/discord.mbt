@@ -315,6 +315,32 @@ pub async fn ChannelRef::delete_permission(
 }
 
 ///|
+/// Fetch a member's computed permissions in this channel; see
+/// `Client::get_channel_member_permissions`.
+pub async fn ChannelRef::member_permissions(
+  self : ChannelRef,
+  user_id : @model.UserId,
+  implicit? : Bool,
+) -> @model.Permissions raise DiscordHttpError {
+  self.client.get_channel_member_permissions(
+    self.channel_id,
+    user_id,
+    implicit?,
+  )
+}
+
+///|
+/// Fetch the permissions a role and `@everyone` have in this channel; see
+/// `Client::get_channel_role_permissions`.
+pub async fn ChannelRef::role_permissions(
+  self : ChannelRef,
+  role_id : @model.RoleId,
+  implicit? : Bool,
+) -> @model.Permissions raise DiscordHttpError {
+  self.client.get_channel_role_permissions(self.channel_id, role_id, implicit?)
+}
+
+///|
 /// Follow this announcement channel. `webhook_channel_id` is the target
 /// channel that receives messages and requires `MANAGE_WEBHOOKS` there.
 pub async fn ChannelRef::follow(

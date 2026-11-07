@@ -46,6 +46,7 @@ pub(all) enum AuditLogEvent {
   ChannelOverwriteCreate
   ChannelOverwriteUpdate
   ChannelOverwriteDelete
+  ChannelPositionUpdate
   MemberKick
   MemberPrune
   MemberBanAdd
@@ -58,6 +59,7 @@ pub(all) enum AuditLogEvent {
   RoleCreate
   RoleUpdate
   RoleDelete
+  RolePositionUpdate
   InviteCreate
   InviteUpdate
   InviteDelete
@@ -122,6 +124,7 @@ pub fn AuditLogEvent::to_int(self : AuditLogEvent) -> Int32 {
     ChannelOverwriteCreate => 13
     ChannelOverwriteUpdate => 14
     ChannelOverwriteDelete => 15
+    ChannelPositionUpdate => 16
     MemberKick => 20
     MemberPrune => 21
     MemberBanAdd => 22
@@ -134,6 +137,7 @@ pub fn AuditLogEvent::to_int(self : AuditLogEvent) -> Int32 {
     RoleCreate => 30
     RoleUpdate => 31
     RoleDelete => 32
+    RolePositionUpdate => 33
     InviteCreate => 40
     InviteUpdate => 41
     InviteDelete => 42
@@ -199,6 +203,7 @@ pub fn AuditLogEvent::from_int(value : Int32) -> AuditLogEvent {
     13 => ChannelOverwriteCreate
     14 => ChannelOverwriteUpdate
     15 => ChannelOverwriteDelete
+    16 => ChannelPositionUpdate
     20 => MemberKick
     21 => MemberPrune
     22 => MemberBanAdd
@@ -211,6 +216,7 @@ pub fn AuditLogEvent::from_int(value : Int32) -> AuditLogEvent {
     30 => RoleCreate
     31 => RoleUpdate
     32 => RoleDelete
+    33 => RolePositionUpdate
     40 => InviteCreate
     41 => InviteUpdate
     42 => InviteDelete

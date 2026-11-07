@@ -186,6 +186,16 @@ pub(all) enum Route {
     channel_id~ : @model.ChannelId,
     overwrite_id~ : @model.GenericId
   )
+  GetChannelMemberPermissions(
+    channel_id~ : @model.ChannelId,
+    user_id~ : @model.UserId,
+    query~ : String
+  )
+  GetChannelRolePermissions(
+    channel_id~ : @model.ChannelId,
+    role_id~ : @model.RoleId,
+    query~ : String
+  )
   GetChannelInvites(channel_id~ : @model.ChannelId)
   CreateChannelInvite(channel_id~ : @model.ChannelId)
   FollowAnnouncementChannel(channel_id~ : @model.ChannelId)
@@ -228,6 +238,10 @@ pub(all) enum Route {
   CreateGuildChannel(guild_id~ : @model.GuildId)
   ModifyGuildChannelPositions(guild_id~ : @model.GuildId)
   GetGuildMember(guild_id~ : @model.GuildId, user_id~ : @model.UserId)
+  GetGuildMemberPermissions(
+    guild_id~ : @model.GuildId,
+    user_id~ : @model.UserId
+  )
   ListGuildMembers(guild_id~ : @model.GuildId, query~ : String)
   SearchGuildMembers(guild_id~ : @model.GuildId, query~ : String)
   ModifyGuildMember(guild_id~ : @model.GuildId, user_id~ : @model.UserId)
@@ -235,6 +249,7 @@ pub(all) enum Route {
   AddGuildMember(guild_id~ : @model.GuildId, user_id~ : @model.UserId)
   GetGuildRoles(guild_id~ : @model.GuildId)
   GetGuildRole(guild_id~ : @model.GuildId, role_id~ : @model.RoleId)
+  GetGuildRolePermissions(guild_id~ : @model.GuildId, role_id~ : @model.RoleId)
   CreateGuildRole(guild_id~ : @model.GuildId)
   ModifyGuildRolePositions(guild_id~ : @model.GuildId)
   ModifyGuildRole(guild_id~ : @model.GuildId, role_id~ : @model.RoleId)
@@ -577,6 +592,8 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | GetPollAnswerVoters(..)
     | GetChannelPins(..)
     | GetPinnedMessages(..)
+    | GetChannelMemberPermissions(..)
+    | GetChannelRolePermissions(..)
     | GetChannelInvites(..)
     | GetChannelWebhooks(..)
     | ListThreadMembers(..)
@@ -590,9 +607,11 @@ pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
     | GetGuildPreview(..)
     | GetGuildChannels(..)
     | GetGuildMember(..)
+    | GetGuildMemberPermissions(..)
     | ListGuildMembers(..)
     | SearchGuildMembers(..)
     | GetGuildRole(..)
+    | GetGuildRolePermissions(..)
     | GetGuildRoles(..)
     | GetGuildBan(..)
     | GetGuildBans(..)
@@ -883,6 +902,10 @@ pub fn Route::path(self : Route) -> String {
     EditChannelPermissions(channel_id~, overwrite_id~)
     | DeleteChannelPermission(channel_id~, overwrite_id~) =>
       "/channels/\{channel_id}/permissions/\{overwrite_id}"
+    GetChannelMemberPermissions(channel_id~, user_id~, query~) =>
+      "/channels/\{channel_id}/permissions/member/\{user_id}\{query}"
+    GetChannelRolePermissions(channel_id~, role_id~, query~) =>
+      "/channels/\{channel_id}/permissions/role/\{role_id}\{query}"
     GetChannelInvites(channel_id~) | CreateChannelInvite(channel_id~) =>
       "/channels/\{channel_id}/invites"
     FollowAnnouncementChannel(channel_id~) =>
@@ -926,6 +949,10 @@ pub fn Route::path(self : Route) -> String {
     | AddGuildMember(guild_id~, user_id~)
     | RemoveGuildMember(guild_id~, user_id~) =>
       "/guilds/\{guild_id}/members/\{user_id}"
+    GetGuildMemberPermissions(guild_id~, user_id~) =>
+      "/guilds/\{guild_id}/permissions/member/\{user_id}"
+    GetGuildRolePermissions(guild_id~, role_id~) =>
+      "/guilds/\{guild_id}/permissions/role/\{role_id}"
     ListGuildMembers(guild_id~, query~) => "/guilds/\{guild_id}/members\{query}"
     SearchGuildMembers(guild_id~, query~) =>
       "/guilds/\{guild_id}/members/search\{query}"
@@ -1207,6 +1234,10 @@ pub fn Route::bucket(self : Route) -> String {
       "PUT:/channels/\{channel_id}/permissions/{}"
     DeleteChannelPermission(channel_id~, ..) =>
       "DELETE:/channels/\{channel_id}/permissions/{}"
+    GetChannelMemberPermissions(channel_id~, ..) =>
+      "GET:/channels/\{channel_id}/permissions/member/{}"
+    GetChannelRolePermissions(channel_id~, ..) =>
+      "GET:/channels/\{channel_id}/permissions/role/{}"
     GetChannelInvites(channel_id~) => "GET:/channels/\{channel_id}/invites"
     CreateChannelInvite(channel_id~) => "POST:/channels/\{channel_id}/invites"
     FollowAnnouncementChannel(channel_id~) =>
@@ -1253,6 +1284,10 @@ pub fn Route::bucket(self : Route) -> String {
     ModifyGuildChannelPositions(guild_id~) =>
       "PATCH:/guilds/\{guild_id}/channels"
     GetGuildMember(guild_id~, ..) => "GET:/guilds/\{guild_id}/members/{}"
+    GetGuildMemberPermissions(guild_id~, ..) =>
+      "GET:/guilds/\{guild_id}/permissions/member/{}"
+    GetGuildRolePermissions(guild_id~, ..) =>
+      "GET:/guilds/\{guild_id}/permissions/role/{}"
     ListGuildMembers(guild_id~, ..) => "GET:/guilds/\{guild_id}/members"
     SearchGuildMembers(guild_id~, ..) =>
       "GET:/guilds/\{guild_id}/members/search"
@@ -1476,7 +1511,6 @@ pub fn Route::supports_reason(self : Route) -> Bool {
     Custom(supports_reason~, ..) => supports_reason
     ModifyChannel(..)
     | DeleteChannel(..)
-    | DeleteMessage(..)
     | BulkDeleteMessages(..)
     | PinMessage(..)
     | UnpinMessage(..)

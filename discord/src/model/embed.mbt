@@ -136,9 +136,33 @@ pub impl @json.FromJson for EmbedFlags with fn from_json(json, path) {
 }
 
 ///|
+/// The embed's media was flagged as explicit content.
+/// Discord's content scanning sets it, possibly after the message is sent:
+/// check the message you send and any later Message Update.
+pub fn EmbedFlags::contains_explicit_content() -> EmbedFlags {
+  EmbedFlags(1UL << 4)
+}
+
+///|
 /// The embed is a fallback for a reply to an activity card.
 pub fn EmbedFlags::is_content_inventory_entry() -> EmbedFlags {
   EmbedFlags(1UL << 5)
+}
+
+///|
+/// The embed's media was flagged as gore.
+/// Discord's content scanning sets it, possibly after the message is sent:
+/// check the message you send and any later Message Update.
+pub fn EmbedFlags::contains_gore_content() -> EmbedFlags {
+  EmbedFlags(1UL << 6)
+}
+
+///|
+/// The embed's media was flagged as self-harm content.
+/// Discord's content scanning sets it, possibly after the message is sent:
+/// check the message you send and any later Message Update.
+pub fn EmbedFlags::contains_self_harm_content() -> EmbedFlags {
+  EmbedFlags(1UL << 7)
 }
 
 ///|

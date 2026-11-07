@@ -56,7 +56,7 @@ async test "thread endpoints build paths and bodies for every optional shape" {
 }
 
 ///|
-async test "forum threads need a starter message without Components V2" {
+async test "forum threads need a starter message" {
   let client = Client("test-token")
   defer client.close()
   let channel_id : @model.ChannelId = Id(1UL)
@@ -72,14 +72,52 @@ async test "forum threads need a starter message without Components V2" {
   } noraise {
     _ => fail("empty starter message accepted")
   }
+}
+
+///|
+async test "forum thread starter messages set IS_COMPONENTS_V2 for a layout" {
+  let (client, perform) = offline_test_client()
+  defer client.close()
+  let bodies : Array[Json?] = []
+  perform.val = Some((_route, _path, _headers, body, _files) => {
+    bodies.push(body)
+    { status: 200, headers: Map([]), body: Json::null(), }
+  })
+  let channel_id : @model.ChannelId = Id(1UL)
   try
-    client.start_thread_in_forum_or_media_channel(channel_id, "thread", components=[
-      TextDisplay({ id: None, content: "layout", }),
-    ])
+    client.start_thread_in_forum_or_media_channel(
+      channel_id,
+      "thread",
+      components=[TextDisplay({ id: None, content: "layout", })],
+      flags=@model.MessageFlags::suppress_notifications(),
+    )
+  catch {
+    Deserialize(_) => ()
+    error => fail("unexpected error: \{Repr(error)}")
+  } noraise {
+    _ => fail("fake thread response should not decode")
+  }
+  guard bodies is [Some(body)] else { fail("expected one thread body") }
+  json_inspect(body, content={
+    "name": "thread",
+    "message": {
+      "components": [{ "content": "layout", "type": 10 }],
+      "flags": 36864,
+      "allowed_mentions": { "parse": ["users", "roles"] },
+    },
+  })
+  // Components V2 still excludes content, as in any message.
+  try
+    client.start_thread_in_forum_or_media_channel(
+      channel_id,
+      "thread",
+      content="text",
+      components=[TextDisplay({ id: None, content: "layout", })],
+    )
   catch {
     Validation(message~) => assert_true(message.contains("Components V2"))
     error => fail("unexpected error: \{Repr(error)}")
   } noraise {
-    _ => fail("Components V2 starter message accepted")
+    _ => fail("Components V2 with content accepted")
   }
 }

@@ -193,7 +193,7 @@ async fn sec_messages(p : P) -> Unit {
   })
   p.probe("delete_message", () => {
     let msg = c.create_message(text, content="delete me")
-    c.delete_message(text, msg.id, audit_reason="live probe delete")
+    c.delete_message(text, msg.id)
     "ok"
   })
   p.probe("create_message (poll) + get_poll_answer_voters + expire_poll", () => {

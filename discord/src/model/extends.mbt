@@ -256,6 +256,12 @@ pub extend ConnectionService with ToJson::{to_json}
 pub extend Container with ToJson::{to_json}
 
 ///|
+pub extend ContentScanFlags with ToJson::{to_json}
+
+///|
+pub extend ContentScanMetadata with ToJson::{to_json}
+
+///|
 pub extend CurrentUserGuild with ToJson::{to_json}
 
 ///|

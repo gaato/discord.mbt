@@ -400,7 +400,110 @@ pub(all) struct UnfurledMediaItem {
   placeholder_version : Int32?
   content_type : String?
   flags : Int32?
+  /// Discord's content scanning result, once the media has been scanned. The
+  /// scan can finish after the message is sent, so it may first appear in a
+  /// Message Update.
+  content_scan_metadata : ContentScanMetadata?
   attachment_id : String?
+}
+
+///|
+/// The result of Discord's content scanning for an unfurled media item.
+#derive(ToJson, FromJson, Debug)
+pub(all) struct ContentScanMetadata {
+  flags : ContentScanFlags
+}
+
+///|
+/// Bit flags recording what Discord's content scanning found in a media item.
+#derive(Eq)
+pub(all) struct ContentScanFlags(UInt64)
+
+///|
+/// No flags set.
+pub fn ContentScanFlags::none() -> ContentScanFlags {
+  ContentScanFlags(0)
+}
+
+///|
+/// Flags from a raw bit field; unknown bits are kept.
+pub fn ContentScanFlags::from_bits(bits : UInt64) -> ContentScanFlags {
+  ContentScanFlags(bits)
+}
+
+///|
+/// The raw bit field.
+pub fn ContentScanFlags::bits(self : ContentScanFlags) -> UInt64 {
+  self.0
+}
+
+///|
+/// Whether every flag in `other` is set.
+pub fn ContentScanFlags::contains(
+  self : ContentScanFlags,
+  other : ContentScanFlags,
+) -> Bool {
+  (self.0 & other.0) == other.0
+}
+
+///|
+/// Combines flags: every flag set in either operand is set.
+pub impl BitOr for ContentScanFlags with fn lor(a, b) {
+  ContentScanFlags(a.0 | b.0)
+}
+
+///|
+/// Keeps the flags set in both operands.
+pub impl BitAnd for ContentScanFlags with fn land(a, b) {
+  ContentScanFlags(a.0 & b.0)
+}
+
+///|
+/// Debug output is the raw bit field.
+pub impl Debug for ContentScanFlags with fn to_repr(self) {
+  Repr(self.0)
+}
+
+///|
+/// Encodes the flags as a JSON number.
+pub impl ToJson for ContentScanFlags with fn to_json(self) {
+  Json::number(self.0.to_double(), repr=self.0.to_string())
+}
+
+///|
+/// Decodes the flags from a JSON number; unknown bits are kept.
+pub impl @json.FromJson for ContentScanFlags with fn from_json(json, path) {
+  match json {
+    Number(_, repr=Some(repr)) =>
+      ContentScanFlags(
+        @string.parse_uint64(repr.to_string()) catch {
+          _ =>
+            raise JsonDecodeError(
+              (path, "expected content scan flags (number), got \{repr}"),
+            )
+        },
+      )
+    Number(value, repr=None) => ContentScanFlags(value.to_uint64())
+    _ => raise JsonDecodeError((path, "expected content scan flags (number)"))
+  }
+}
+
+///|
+/// The media was flagged as explicit content.
+pub fn ContentScanFlags::is_explicit_content() -> ContentScanFlags {
+  ContentScanFlags(1UL << 0)
+}
+
+///|
+/// The media was flagged as gore.
+pub fn ContentScanFlags::is_gore_content() -> ContentScanFlags {
+  ContentScanFlags(1UL << 1)
+}
+
+///|
+/// The media was flagged as self-harm content.
+pub fn ContentScanFlags::is_self_harm_content() -> ContentScanFlags {
+  ContentScanFlags(1UL << 2)
 }
 
 ///|
