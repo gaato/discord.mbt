@@ -28,7 +28,7 @@ import {
   "gaato/dave@0.1.1",
   "gaato/http@0.5.0",
   "gaato/http-async@0.5.0",
-  "moonbitlang/async@0.22.5",
+  "moonbitlang/async@0.22.7",
 }
 
 options(

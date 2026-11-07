@@ -14,6 +14,8 @@ breaking change is listed with a migration note.
   derived traits as a `#derive(...)` attribute above each declaration, and
   qualify `Json` as `@json.Json`; these are the same types, and no signature
   changed.
+- **Builds against `moonbitlang/async` 0.22.7**, which uses
+  `moonbitlang/core/async` and so needs MoonBit 0.10.20 or later.
 
 ### Fixed
 

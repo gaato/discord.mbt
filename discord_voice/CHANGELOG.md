@@ -13,6 +13,8 @@ releases (0.x → 0.y) may contain breaking changes; patch releases do not.
   derived traits as a `#derive(...)` attribute above each declaration, and
   qualify `Json` as `@json.Json`; these are the same types, and no signature
   changed.
+- **Builds against `moonbitlang/async` 0.22.7**, which uses
+  `moonbitlang/core/async` and so needs MoonBit 0.10.20 or later.
 - **Builds against `gaato/discord` 0.13.0**, which decides whether a 429 is
   Discord's from its headers alone (since 0.12.1), and against
   `gaato/http` 0.5.0 and `gaato/http-async` 0.5.0. Voice itself is
