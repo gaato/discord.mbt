@@ -1,6 +1,6 @@
 {
   "name": "discord.mbt",
-  "image": "ghcr.io/gaato/moonbit:0.10.17-d971670cd",
+  "image": "ghcr.io/gaato/moonbit:0.10.20-65efd5b93",
   "features": {
     "ghcr.io/devcontainers/features/python:1": { "version": "os-provided" }
   },

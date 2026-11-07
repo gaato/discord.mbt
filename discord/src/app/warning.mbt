@@ -3,6 +3,7 @@
 /// know about. Delivered to `AppBuilder::on_warn`; without a hook the App
 /// prints it. `Show` renders a one-line message for every variant, so a hook
 /// that only logs can call `to_string()`.
+#derive(Debug)
 #non_exhaustive
 pub(all) enum AppWarning {
   /// The watchdog tried to defer a slow deferring route and the defer failed.
@@ -51,7 +52,7 @@ pub(all) enum AppWarning {
   /// The cooldown store stopped answering; `outage` is what commands with a
   /// cooldown do until it answers again. Reported once per outage.
   CooldownUnavailable(reason~ : String, outage~ : CooldownOutage)
-} derive(Debug)
+}
 
 ///|
 /// The one-line message, as the default hook prints it.

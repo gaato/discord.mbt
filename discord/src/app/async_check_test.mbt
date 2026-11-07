@@ -1,5 +1,6 @@
 ///|
-priv suberror AsyncCheckFailure derive(Debug)
+#derive(Debug)
+priv suberror AsyncCheckFailure
 
 ///|
 fn async_check_interaction(

@@ -94,11 +94,12 @@ pub fn required_permissions(required : @model.Permissions) -> CommandCheck {
 
 ///|
 /// Identity used to share a fixed-window command cooldown.
+#derive(Debug, Eq)
 pub(all) enum CooldownBucket {
   User
   Guild
   Global
-} derive(Debug, Eq)
+}
 
 ///|
 priv struct CooldownConfig {
@@ -127,13 +128,14 @@ fn cooldown_key(
 ///|
 /// Whether a command with a cooldown runs while the cooldown store cannot
 /// answer.
+#derive(Debug, Eq)
 pub(all) enum CooldownOutage {
   /// Run it without a cooldown: cooldowns damp abuse, so an outage should not
   /// take every command offline.
   Allow
   /// Refuse it as if its cooldown were active for its whole window.
   Refuse
-} derive(Debug, Eq)
+}
 
 ///|
 /// The App's cooldown store, its outage policy, and whether the store is

@@ -42,9 +42,10 @@ test "cache attachment keeps the gateway filter open and shares state" {
 }
 
 ///|
+#derive(Debug)
 priv suberror RuntimeTestFailure {
   RuntimeTestFailure
-} derive(Debug)
+}
 
 ///|
 test "bot telemetry hook failures flow to app warnings" {

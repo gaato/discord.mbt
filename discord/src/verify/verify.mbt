@@ -1,10 +1,11 @@
 ///|
 /// Errors raised while constructing a reusable Discord interaction verifier.
+#derive(Eq, Debug)
 pub(all) suberror InteractionVerifierError {
   InvalidPublicKeyLength(got~ : Int32)
   InvalidPublicKeyHex
   InvalidPublicKeyEncoding
-} derive(Eq, Debug)
+}
 
 ///|
 /// A validated and expanded Discord interaction public key.

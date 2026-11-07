@@ -1,5 +1,6 @@
 ///|
 /// Voice gateway lifecycle state.
+#derive(Debug, Eq)
 #doc(hidden)
 pub(all) enum VoiceGatewayState {
   Disconnected(reconnect_attempts~ : Int32)
@@ -9,17 +10,18 @@ pub(all) enum VoiceGatewayState {
   Active
   Resuming
   FatallyClosed(code~ : Int32)
-} derive(Debug, Eq)
+}
 
 ///|
 /// Action after a voice WebSocket close: resume the session, rejoin from
 /// scratch, or give up because reconnecting cannot succeed.
+#derive(Debug, Eq)
 #doc(hidden)
 pub(all) enum VoiceReconnectPolicy {
   Resume
   Rejoin
   Fatal
-} derive(Debug, Eq)
+}
 
 ///|
 /// Classify a voice WebSocket close code. A resumable transport failure still

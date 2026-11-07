@@ -1,10 +1,11 @@
 ///|
 /// Discord's JSON error body (`{"code": 50008, "message": "...", "errors": {...}}`).
+#derive(FromJson, ToJson, Debug)
 pub(all) struct ApiError {
   code : Int32
   message : String
   errors : Json?
-} derive(FromJson, ToJson, Debug)
+}
 
 ///|
 /// Everything a REST call can raise, from client-side validation to decoded
@@ -13,6 +14,7 @@ pub(all) struct ApiError {
 /// `Transport` and `Timeout` carry the `phase` of the exchange that failed.
 /// `Pool` and `Dial` mean no byte of the request was sent, so Discord cannot
 /// have acted on it (`is_unsent`); any other phase means it may have.
+#derive(Debug)
 pub(all) suberror DiscordHttpError {
   /// Discord answered with an error status; `error` is the decoded body.
   Api(status~ : Int32, error~ : ApiError)
@@ -32,7 +34,7 @@ pub(all) suberror DiscordHttpError {
   Timeout(phase~ : @ghttp.Phase, timeout_ms~ : Int32)
   /// The request was rejected client-side before any I/O.
   Validation(message~ : String)
-} derive(Debug)
+}
 
 ///|
 /// Whether the error proves that no byte of the request reached Discord, so

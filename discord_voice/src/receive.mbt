@@ -2,6 +2,7 @@
 /// Membership and lifecycle events of a live voice connection. Received audio
 /// is not an event: it is delivered per user through
 /// `VoiceConnection::subscribe`.
+#derive(Debug, Eq)
 #non_exhaustive
 pub(all) enum VoiceEvent {
   SpeakingChanged(user_id~ : String, ssrc~ : UInt32, flags~ : Int32)
@@ -9,20 +10,22 @@ pub(all) enum VoiceEvent {
   UserDisconnected(user_id~ : String)
   ConnectionReady
   ConnectionResumed
-} derive(Debug, Eq)
+}
 
 ///|
 /// One item of a user's received audio, in RTP sequence order.
+#derive(Debug, Eq)
 pub(all) enum ReceivedAudio {
   /// An Opus frame as the sender encoded it.
   Opus(sequence~ : Int32, timestamp~ : UInt32, opus~ : Bytes)
   /// `count` frames that never arrived, or that were dropped because the
   /// stream's backlog was full, before the next item.
   Lost(count~ : Int32)
-} derive(Debug, Eq)
+}
 
 ///|
 /// Non-fatal diagnostics from the connection's gateway and media paths.
+#derive(Debug, Eq)
 #non_exhaustive
 pub(all) enum VoiceTelemetry {
   GatewayEvent(VoiceGatewayEvent)
@@ -47,7 +50,7 @@ pub(all) enum VoiceTelemetry {
   /// A receive stream for `user_id` held `backlog` unread items, so a newly
   /// received frame was discarded. The reader sees it as `Lost`.
   ReceiveDropped(user_id~ : String, backlog~ : Int32)
-} derive(Debug, Eq)
+}
 
 ///|
 priv struct ReceivedOpus {

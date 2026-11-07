@@ -1,5 +1,6 @@
 ///|
 /// A reusable soundboard sound configured for Discord playback.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct SoundboardSound {
   name : String
   sound_id : SoundboardSoundId
@@ -9,4 +10,4 @@ pub(all) struct SoundboardSound {
   guild_id : GuildId?
   available : Bool
   user : User?
-} derive(ToJson, FromJson, Debug)
+}

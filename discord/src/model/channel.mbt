@@ -1,5 +1,6 @@
 ///|
 /// A flat channel model covering every Discord channel variant.
+#derive(ToJson(fields(typ(rename="type"), thread_member(rename="member"))), FromJson(fields(typ(rename="type"), thread_member(rename="member"))), Debug)
 pub(all) struct Channel {
   id : ChannelId
   typ : ChannelType
@@ -37,33 +38,27 @@ pub(all) struct Channel {
   default_thread_rate_limit_per_user : Int32?
   default_sort_order : Nullable[SortOrderType]?
   default_forum_layout : ForumLayoutType?
-} derive (
-  ToJson(fields(typ(rename="type"), thread_member(rename="member"))),
-  FromJson(fields(typ(rename="type"), thread_member(rename="member"))),
-  Debug,
-)
+}
 
 ///|
 /// A role or member permission override on a channel.
+#derive(ToJson(fields(typ(rename="type"))), FromJson(fields(typ(rename="type"))), Debug)
 pub(all) struct Overwrite {
   id : GenericId
   typ : OverwriteType
   allow : Permissions
   deny : Permissions
-} derive (
-  ToJson(fields(typ(rename="type"))),
-  FromJson(fields(typ(rename="type"))),
-  Debug,
-)
+}
 
 ///|
 /// The target category of a permission overwrite.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum OverwriteType {
   Role
   Member
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `OverwriteType`.
@@ -102,12 +97,13 @@ pub impl @json.FromJson for OverwriteType with fn from_json(json, path) {
 
 ///|
 /// The camera quality mode used by a voice channel.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum VideoQualityMode {
   Auto
   Full
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `VideoQualityMode`.
@@ -146,12 +142,13 @@ pub impl @json.FromJson for VideoQualityMode with fn from_json(json, path) {
 
 ///|
 /// The ordering used for posts in a forum or media channel.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum SortOrderType {
   LatestActivity
   CreationDate
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `SortOrderType`.
@@ -190,13 +187,14 @@ pub impl @json.FromJson for SortOrderType with fn from_json(json, path) {
 
 ///|
 /// The presentation layout used by a forum channel.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum ForumLayoutType {
   NotSet
   ListView
   GalleryView
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `ForumLayoutType`.
@@ -237,6 +235,7 @@ pub impl @json.FromJson for ForumLayoutType with fn from_json(json, path) {
 
 ///|
 /// The inactivity duration in minutes before a thread is archived.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum ThreadAutoArchiveDuration {
   OneHour
@@ -244,7 +243,7 @@ pub(all) enum ThreadAutoArchiveDuration {
   ThreeDays
   OneWeek
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `ThreadAutoArchiveDuration`, in minutes.
@@ -297,6 +296,7 @@ pub impl @json.FromJson for ThreadAutoArchiveDuration with fn from_json(
 
 ///|
 /// Metadata controlling a thread's archive and lock state.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct ThreadMetadata {
   archived : Bool
   auto_archive_duration : ThreadAutoArchiveDuration
@@ -304,66 +304,68 @@ pub(all) struct ThreadMetadata {
   locked : Bool
   invitable : Bool?
   create_timestamp : Nullable[Timestamp]?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// A user's membership state in a thread.
+#derive(ToJson(fields(guild_member(rename="member"))), FromJson(fields(guild_member(rename="member"))), Debug)
 pub(all) struct ThreadMember {
   id : ChannelId?
   user_id : UserId?
   join_timestamp : Timestamp
   flags : Int32
   guild_member : GuildMember?
-} derive (
-  ToJson(fields(guild_member(rename="member"))),
-  FromJson(fields(guild_member(rename="member"))),
-  Debug,
-)
+}
 
 ///|
 /// Archived thread channels and their membership records.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct ArchivedThreads {
   threads : Array[Channel]
   members : Array[ThreadMember]
   has_more : Bool
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// Active thread channels in a guild and their membership records.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct ActiveGuildThreads {
   threads : Array[Channel]
   members : Array[ThreadMember]
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// The announcement channel and webhook created by following a channel.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct FollowedChannel {
   channel_id : ChannelId
   webhook_id : WebhookId
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// A tag available for categorizing threads in a forum or media channel.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct ForumTag {
   id : GenericId
   name : String
   moderated : Bool
   emoji_id : Nullable[EmojiId]
   emoji_name : Nullable[String]
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// A forum tag as sent in `available_tags` when creating or modifying a
 /// forum or media channel. Only `name` is required; omit `id` to create a
 /// new tag, keep an existing tag's `id` to update it in place. At most one
 /// of `emoji_id` and `emoji_name` may be set.
+#derive(Debug)
 pub(all) struct ForumTagRequest {
   id : GenericId?
   name : String
   moderated : Bool?
   emoji_id : EmojiId?
   emoji_name : String?
-} derive(Debug)
+}
 
 ///|
 /// Encodes the forum tag request as its Discord JSON representation.
@@ -379,14 +381,16 @@ pub impl ToJson for ForumTagRequest with fn to_json(self) {
 
 ///|
 /// The default custom or Unicode reaction for a forum or media channel.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct DefaultReaction {
   emoji_id : Nullable[EmojiId]
   emoji_name : Nullable[String]
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// Bit flags describing special behavior assigned to a channel.
-pub(all) struct ChannelFlags(UInt64) derive(Eq)
+#derive(Eq)
+pub(all) struct ChannelFlags(UInt64)
 
 ///|
 /// No flags set.

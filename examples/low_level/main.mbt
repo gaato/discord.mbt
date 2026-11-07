@@ -11,10 +11,11 @@ const DEFAULT_RUN_SECONDS : Int32 = 120
 
 ///|
 /// The typed view of one /echo invocation.
+#derive(Debug)
 struct Echo {
   text : String
   times : Int32
-} derive(Debug)
+}
 
 ///|
 impl @interaction.CommandModel for Echo with fn from_options(options) {

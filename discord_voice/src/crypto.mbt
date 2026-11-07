@@ -1,14 +1,16 @@
 ///|
 /// Discord voice transport encryption modes supported by this package.
+#derive(Debug, Eq)
 #doc(hidden)
 #non_exhaustive
 pub(all) enum EncryptionMode {
   AeadAes256GcmRtpsize
   AeadXChaCha20Poly1305Rtpsize
-} derive(Debug, Eq)
+}
 
 ///|
 /// Errors raised by transport-mode negotiation and packet encryption.
+#derive(Debug, Eq)
 #doc(hidden)
 pub(all) suberror VoiceCryptoError {
   NoCompatibleMode(modes~ : Array[String])
@@ -20,7 +22,7 @@ pub(all) suberror VoiceCryptoError {
   /// The session key has sealed 2^32 packets; reusing a nonce suffix would
   /// break the AEAD. A new session (reconnect or rejoin) issues a new key.
   NonceExhausted
-} derive(Debug, Eq)
+}
 
 ///|
 /// Select the preferred common Discord transport encryption mode.

@@ -1,10 +1,11 @@
 ///|
 /// How one racing interaction ended, as the handler, the error policy, or the
 /// warning hook saw it.
+#derive(Debug)
 priv enum RaceEnd {
   Gate(@framework.ResponseState)
   Warned(@app.AppWarning)
-} derive(Debug)
+}
 
 ///|
 async test "deadline races preserve every accepted capture" {

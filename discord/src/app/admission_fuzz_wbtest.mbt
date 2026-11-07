@@ -8,26 +8,29 @@
 
 ///|
 /// One interaction as a schedule draws it.
+#derive(Debug)
 priv struct ArrivalSpec {
   defers : Bool
   deadline_ms : Int32?
   token_ms : Int32
   duration : Int32
-} derive(Debug)
+}
 
 ///|
+#derive(Debug)
 enum AdmitStep {
   Arrive(ArrivalSpec)
   Advance(Int32)
-} derive(Debug)
+}
 
 ///|
+#derive(Debug, Eq)
 enum AdmitOutcome {
   Waiting
   Ran
   Busy
   Warned(String)
-} derive(Debug, Eq)
+}
 
 ///|
 /// One interaction's scripted gate and what happened to it.

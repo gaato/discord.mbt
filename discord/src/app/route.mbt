@@ -1,12 +1,13 @@
 ///|
 /// A custom id that exceeds Discord's limit or cannot round-trip its segments.
+#derive(Debug)
 pub(all) suberror CustomIdError {
   /// The encoded state or complete custom id exceeds 100 characters
   /// (`@model.text_length`).
   TooLong(custom_id~ : String, length~ : Int32)
   /// A non-final zip segment contains `:` and would not round-trip.
   SeparatorInSegment(segment~ : String)
-} derive(Debug)
+}
 
 ///|
 fn check_custom_id_length(custom_id : String) -> Unit raise CustomIdError {

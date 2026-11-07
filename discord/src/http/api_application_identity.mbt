@@ -86,9 +86,10 @@ pub async fn Client::get_application_identity_profile(
 }
 
 ///|
+#derive(FromJson)
 priv struct ApplicationIdentities {
   identities : Array[@model.ApplicationIdentity]
-} derive(FromJson)
+}
 
 ///|
 /// List a user's external identities for an application (unwrapped from

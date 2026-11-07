@@ -20,10 +20,11 @@
 ///   assert_true(cleared.to_option() is None)
 /// }
 /// ```
+#derive(Eq, Debug)
 pub(all) enum Nullable[T] {
   Null
   Value(T)
-} derive(Eq, Debug)
+}
 
 ///|
 /// `Some` for a value, `None` for JSON `null`.

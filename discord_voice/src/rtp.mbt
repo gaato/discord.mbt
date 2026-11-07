@@ -1,5 +1,6 @@
 ///|
 /// A parsed RTP packet with the `rtpsize` cleartext header separated.
+#derive(Debug, Eq)
 #doc(hidden)
 pub(all) struct RtpPacket {
   sequence : UInt16
@@ -8,14 +9,15 @@ pub(all) struct RtpPacket {
   header_len : Int32
   header : Bytes
   payload : Bytes
-} derive(Debug, Eq)
+}
 
 ///|
 /// Errors raised while validating an RTP packet.
+#derive(Debug, Eq)
 #doc(hidden)
 pub(all) suberror RtpError {
   InvalidRtpPacket(reason~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 /// Build Discord's RTP header for a 20 ms Opus frame.

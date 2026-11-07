@@ -6,6 +6,7 @@
 /// on values Discord adds later, plus total `to_int`/`from_int` conversions
 /// and hand-written JSON impls (the derived enum representation is not
 /// Discord's scalar encoding).
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum ChannelType {
   GuildText
@@ -22,7 +23,7 @@ pub(all) enum ChannelType {
   GuildForum
   GuildMedia
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `ChannelType`.

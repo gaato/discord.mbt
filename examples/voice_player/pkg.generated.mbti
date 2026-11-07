@@ -8,7 +8,8 @@ import {
 // Values
 
 // Errors
-type VoicePlayerError derive(@debug.Debug)
+#derive(@debug.Debug)
+type VoicePlayerError
 
 // Types and methods
 type TrackedOggSource

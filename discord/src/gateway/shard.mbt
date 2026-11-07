@@ -1,12 +1,13 @@
 ///|
 /// Events surfaced by `Shard::next`.
+#derive(Debug)
 #non_exhaustive
 pub(all) enum ShardEvent {
   Dispatch(@model.Event)
   Connected(resumed~ : Bool)
   Disconnected(code~ : Int32?, resuming~ : Bool)
   FatallyClosed(code~ : Int32)
-} derive(Debug)
+}
 
 ///|
 /// A single gateway connection with automatic heartbeat, resume, and

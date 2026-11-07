@@ -622,10 +622,11 @@ test "command option access errors identify the failure" {
 }
 
 ///|
+#derive(Debug)
 struct ExampleCommand {
   query : String
   limit : Int64?
-} derive(Debug)
+}
 
 ///|
 impl @interaction.CommandModel for ExampleCommand with fn from_options(options) {

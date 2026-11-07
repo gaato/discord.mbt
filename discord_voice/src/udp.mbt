@@ -8,11 +8,12 @@ pub(open) trait VoiceUdp {
 
 ///|
 /// Errors raised by voice UDP setup and IP discovery.
+#derive(Debug, Eq)
 #doc(hidden)
 pub(all) suberror VoiceUdpError {
   InvalidDiscoveryPacket(reason~ : String)
   IpDiscoveryFailed(attempts~ : Int32, reason~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 priv struct SocketVoiceUdp {

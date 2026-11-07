@@ -1,5 +1,6 @@
 ///|
 /// A Discord standard or guild sticker.
+#derive(ToJson(fields(typ(rename="type"))), FromJson(fields(typ(rename="type"))), Debug)
 pub(all) struct Sticker {
   id : StickerId
   pack_id : StickerPackId?
@@ -14,20 +15,17 @@ pub(all) struct Sticker {
   guild_id : GuildId?
   user : User?
   sort_value : Int32?
-} derive (
-  ToJson(fields(typ(rename="type"))),
-  FromJson(fields(typ(rename="type"))),
-  Debug,
-)
+}
 
 ///|
 /// The origin category of a sticker.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum StickerType {
   Standard
   Guild
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `StickerType`.
@@ -66,6 +64,7 @@ pub impl @json.FromJson for StickerType with fn from_json(json, path) {
 
 ///|
 /// The media format used by a sticker asset.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum StickerFormatType {
   Png
@@ -73,7 +72,7 @@ pub(all) enum StickerFormatType {
   Lottie
   Gif
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `StickerFormatType`.
@@ -116,14 +115,16 @@ pub impl @json.FromJson for StickerFormatType with fn from_json(json, path) {
 
 ///|
 /// The compact sticker representation included in messages.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct StickerItem {
   id : StickerId
   name : String
   format_type : StickerFormatType
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// A purchasable collection of standard stickers.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct StickerPack {
   id : StickerPackId
   stickers : Array[Sticker]
@@ -132,10 +133,11 @@ pub(all) struct StickerPack {
   cover_sticker_id : StickerId?
   description : String
   banner_asset_id : GenericId?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// The envelope returned by the sticker-packs listing endpoint.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct StickerPacksResponse {
   sticker_packs : Array[StickerPack]
-} derive(ToJson, FromJson, Debug)
+}

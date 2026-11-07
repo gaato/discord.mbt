@@ -10,11 +10,12 @@ import {
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug)
 pub(all) enum CooldownDecision {
   Acquired
   Active(retry_after_ms~ : Int64)
   Unavailable(reason~ : String)
-} derive(Eq, @debug.Debug)
+}
 
 pub struct InMemoryCooldownStore {
   // private fields

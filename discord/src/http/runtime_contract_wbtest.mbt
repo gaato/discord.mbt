@@ -105,7 +105,8 @@ async test "an offline 429 without a delay reports one second at once" {
 }
 
 ///|
-priv suberror ReleaseRejected derive(Debug)
+#derive(Debug)
+priv suberror ReleaseRejected
 
 ///|
 /// A limiter whose release fails, as a coordinator does for an unknown lease.

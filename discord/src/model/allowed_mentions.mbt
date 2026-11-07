@@ -1,10 +1,11 @@
 ///|
 /// A mention category Discord may derive directly from message content.
+#derive(Eq, Debug)
 pub(all) enum AllowedMentionType {
   Roles
   Users
   Everyone
-} derive(Eq, Debug)
+}
 
 ///|
 /// Encodes the allowed mention type as its Discord JSON representation.
@@ -20,11 +21,12 @@ pub impl ToJson for AllowedMentionType with fn to_json(self) {
 
 ///|
 /// An invalid allowed-mentions configuration rejected during construction.
+#derive(Eq, Debug)
 pub(all) suberror AllowedMentionsError {
   ParseAndExplicit(typ~ : AllowedMentionType)
   TooManyRoles(count~ : Int32)
   TooManyUsers(count~ : Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// Controls which mentions Discord resolves and notifies for an outgoing
@@ -33,12 +35,13 @@ pub(all) suberror AllowedMentionsError {
 /// Use `AllowedMentions(...)` so parse categories and explicit ID lists cannot
 /// conflict. The stored arrays are copied during construction to preserve that
 /// invariant if callers later mutate their input arrays.
+#derive(Debug)
 pub struct AllowedMentions {
   priv parse : Array[AllowedMentionType]?
   priv roles : Array[RoleId]?
   priv users : Array[UserId]?
   priv replied_user : Bool?
-} derive(Debug)
+}
 
 ///|
 /// Construct a validated allowed-mentions object.

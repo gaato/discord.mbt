@@ -9,7 +9,8 @@
 ///   inspect(capabilities.bits(), content="32768")
 /// }
 /// ```
-pub(all) struct GatewayCapabilities(UInt32) derive(Eq)
+#derive(Eq)
+pub(all) struct GatewayCapabilities(UInt32)
 
 ///|
 /// No flags set.

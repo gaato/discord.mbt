@@ -20,6 +20,7 @@ pub const DEFAULT_EVENT_BACKLOG : Int32 = 10000
 pub const DEFAULT_SHUTDOWN_GRACE_MS : Int32 = 10000
 
 // Errors
+#derive(@debug.Debug)
 pub(all) suberror BotConfigError {
   EmptyToken
   InvalidShardConfig(message~ : String)
@@ -27,8 +28,9 @@ pub(all) suberror BotConfigError {
   InvalidEventBacklog(value~ : Int32)
   InvalidShutdownGrace(value~ : Int32)
   InvalidMaxMessageBytes(value~ : Int32)
-} derive(@debug.Debug)
+}
 
+#derive(@debug.Debug)
 pub(all) suberror BotError {
   FatallyClosed(code~ : Int32)
   AlreadyRunning
@@ -37,7 +39,7 @@ pub(all) suberror BotError {
   ShardNotManaged(shard_id~ : Int32)
   GatewayRateLimited(opcode~ : Int32, retry_after_ms~ : Int64)
   GatewayRequestTimeout
-} derive(@debug.Debug)
+}
 pub fn BotError::to_string(Self) -> String
 pub impl Show for BotError
 
@@ -56,17 +58,18 @@ pub fn BotBuilder::attach_cache(Self, @cache.InMemoryCache) -> Unit
 pub fn BotBuilder::build(Self) -> Bot raise BotConfigError
 pub fn BotBuilder::middleware(Self, async (GatewayCtx, @model.Event, async (@model.Event) -> Unit) -> Unit) -> Unit
 pub fn[T] BotBuilder::on(Self, EventType[T], async (GatewayCtx, T) -> Unit) -> Unit
-pub fn BotBuilder::on_decode_error(Self, (String, Json) -> Unit) -> Unit
+pub fn BotBuilder::on_decode_error(Self, (String, @json.Json) -> Unit) -> Unit
 pub fn BotBuilder::on_event(Self, async (GatewayCtx, @model.Event) -> Unit) -> Unit
 pub fn BotBuilder::on_telemetry(Self, (@telemetry.TelemetryEvent) -> Unit raise) -> Unit
 pub fn BotBuilder::presence(Self, @model.UpdatePresence) -> Unit
 pub fn BotBuilder::service(Self, name~ : String, async (GatewayCtx) -> Unit) -> Unit
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct BotSession {
   gateway : @gateway.Session
   ready : @model.Ready
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn BotSession::to_json(Self) -> Json
+}
+pub fn BotSession::to_json(Self) -> @json.Json
 
 pub struct EventType[T] {
   // private fields
@@ -156,11 +159,12 @@ pub fn Events::voice_server_update() -> EventType[@model.VoiceServerUpdateEvent]
 pub fn Events::voice_state_update() -> EventType[@model.VoiceState]
 pub fn Events::webhooks_update() -> EventType[@model.WebhooksUpdateEvent]
 
+#derive(@debug.Debug)
 pub(all) struct FetchedMembers {
   members : Array[@model.GuildMember]
   presences : Array[@model.PresenceUpdateEvent]
-  not_found : Array[Json]
-} derive(@debug.Debug)
+  not_found : Array[@json.Json]
+}
 
 pub struct GatewayCtx {
   // private fields
@@ -196,12 +200,13 @@ pub struct PendingEvent[T] {
 pub fn[T] PendingEvent::cancel(Self[T]) -> Unit
 pub async fn[T] PendingEvent::wait(Self[T], timeout_ms? : Int32) -> T?
 
+#derive(@debug.Debug)
 pub(all) enum ShardConfig {
   Auto
   Single(id~ : Int32, count~ : Int32)
   Fixed(count~ : Int32)
   Range(ids~ : Array[Int32], count~ : Int32)
-} derive(@debug.Debug)
+}
 
 // Type aliases
 pub type EventMiddleware = async (GatewayCtx, @model.Event, async (@model.Event) -> Unit) -> Unit

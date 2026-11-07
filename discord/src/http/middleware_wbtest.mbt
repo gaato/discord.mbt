@@ -1,10 +1,12 @@
 ///|
-priv suberror MiddlewareFailure derive(Debug)
+#derive(Debug)
+priv suberror MiddlewareFailure
 
 ///|
+#derive(Debug)
 priv suberror QuotaExhausted {
   QuotaExhausted(remaining~ : Int32)
-} derive(Debug)
+}
 
 ///|
 async test "middleware execution order is onion-style" {

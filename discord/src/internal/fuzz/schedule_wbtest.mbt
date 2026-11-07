@@ -209,9 +209,10 @@ async test "cancelling a schedule cancels it at any stage" {
 }
 
 ///|
+#derive(Debug)
 priv suberror ScheduleBroke {
   ScheduleBroke(Int32)
-} derive(Debug)
+}
 
 ///|
 async test "an error other than a failure is reported by its debug form" {

@@ -1,11 +1,12 @@
 ///|
 /// An outgoing presence, also usable as the initial Identify presence.
+#derive(Debug)
 pub(all) struct UpdatePresence {
   status : PresenceStatus
   activities : Array[BotActivity]
   afk : Bool
   since : Int64?
-} derive(Debug)
+}
 
 ///|
 /// Construct a presence; an absent `since` is encoded as null.
@@ -34,12 +35,13 @@ pub impl ToJson for UpdatePresence with fn to_json(self) {
 
 ///|
 /// The activity fields bot users may send, separate from received activities.
+#derive(ToJson(fields(type_(rename="type"))), Debug)
 pub(all) struct BotActivity {
   name : String
   type_ : ActivityType
   state : String?
   url : String?
-} derive(ToJson(fields(type_(rename="type"))), Debug)
+}
 
 ///|
 /// Show a playing activity.
@@ -79,26 +81,29 @@ pub fn BotActivity::custom(state : String) -> BotActivity {
 
 ///|
 /// Select all members, a nonempty username prefix, or 1 to 100 user ids.
+#derive(Debug)
 pub(all) enum MemberSelect {
   All
   Prefix(String, limit~ : Int32)
   Ids(Array[UserId])
-} derive(Debug)
+}
 
 ///|
 /// An invalid outgoing Gateway command, with the offending field and reason.
+#derive(Debug)
 pub(all) suberror GatewayCommandError {
   InvalidCommand(LimitViolation)
-} derive(Debug)
+}
 
 ///|
 /// Request members for one guild. `validate` is called by typed send paths.
+#derive(Debug)
 pub(all) struct RequestGuildMembers {
   guild_id : GuildId
   select : MemberSelect
   presences : Bool
   nonce : String?
-} derive(Debug)
+}
 
 ///|
 /// Check selection bounds and the nonce's UTF-8 byte length before sending.
@@ -166,18 +171,20 @@ pub impl ToJson for RequestGuildMembers with fn to_json(self) {
 
 ///|
 /// Request soundboard sounds for each listed guild.
+#derive(ToJson, Debug)
 pub(all) struct RequestSoundboardSounds {
   guild_ids : Array[GuildId]
-} derive(ToJson, Debug)
+}
 
 ///|
 /// An ephemeral channel field; `Other` preserves future field names.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum ChannelInfoField {
   Status
   VoiceStartTime
   Other(String)
-} derive(Eq, Debug)
+}
 
 ///|
 /// Encode a requested channel field name.
@@ -191,7 +198,8 @@ pub impl ToJson for ChannelInfoField with fn to_json(self) {
 
 ///|
 /// Request ephemeral channel data for a guild.
+#derive(ToJson, Debug)
 pub(all) struct RequestChannelInfo {
   guild_id : GuildId
   fields : Array[ChannelInfoField]
-} derive(ToJson, Debug)
+}

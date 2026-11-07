@@ -15,13 +15,14 @@
 ///                refused as expected
 ///   FAIL         anything unexpected, including decode errors
 ///   SKIP         not called (reason recorded)
+#derive(Eq)
 enum Outcome {
   Pass
   PassErr
   EnvLimited
   Fail
   Skip
-} derive(Eq)
+}
 
 ///|
 fn Outcome::label(self : Outcome) -> String {

@@ -1,9 +1,10 @@
 ///|
 /// Details captured from libdave's MLS failure callback.
+#derive(Debug, Eq)
 pub(all) struct MlsFailure {
   source : String
   reason : String
-} derive(Debug, Eq)
+}
 
 ///|
 /// Errors reported by the safe DAVE wrapper.
@@ -12,6 +13,7 @@ pub(all) struct MlsFailure {
 /// `CommitResult::Failed` or `WelcomeResult::Failed`, rather than raised as an
 /// error. Raised errors represent invalid wrapper use, unavailable native
 /// support, or an operation that could not produce a protocol result.
+#derive(Debug, Eq)
 pub(all) suberror DaveError {
   LibraryUnavailable(reason~ : String)
   InvalidArgument(operation~ : String, reason~ : String)
@@ -21,4 +23,4 @@ pub(all) suberror DaveError {
   EncryptFailed(reason~ : EncryptFailure)
   DecryptFailed(reason~ : DecryptFailure)
   NativeFailure(operation~ : String, reason~ : String)
-} derive(Debug, Eq)
+}

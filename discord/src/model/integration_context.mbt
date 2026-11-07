@@ -1,11 +1,12 @@
 ///|
 /// Where an application command is installed.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum ApplicationIntegrationType {
   GuildInstall
   UserInstall
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `ApplicationIntegrationType`.
@@ -54,13 +55,14 @@ pub impl @json.FromJson for ApplicationIntegrationType with fn from_json(
 
 ///|
 /// Where an interaction was triggered.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum InteractionContextType {
   Guild
   BotDm
   PrivateChannel
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `InteractionContextType`.

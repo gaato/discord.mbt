@@ -1,32 +1,37 @@
 ///|
+#derive(Debug, Eq)
 struct FakeProposalCall {
   payload : Bytes
   recognized_user_ids : Array[UInt64]
-} derive(Debug, Eq)
+}
 
 ///|
+#derive(Debug, Eq)
 struct FakeWelcomeCall {
   payload : Bytes
   recognized_user_ids : Array[UInt64]
-} derive(Debug, Eq)
+}
 
 ///|
+#derive(Debug, Eq)
 struct FakePreparedRemote {
   user_id : UInt64
   protocol_version : Int32
-} derive(Debug, Eq)
+}
 
 ///|
+#derive(Debug, Eq)
 struct FakeEncryptedOpus {
   ssrc : UInt32
   frame : Bytes
-} derive(Debug, Eq)
+}
 
 ///|
+#derive(Debug, Eq)
 struct FakeDecryptedOpus {
   user_id : UInt64
   frame : Bytes
-} derive(Debug, Eq)
+}
 
 ///|
 struct FakeDaveBackend {

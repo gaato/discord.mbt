@@ -11,6 +11,7 @@
 ///   inspect(Json(filter).stringify(), content="[\"image\",\".pdf\"]")
 /// }
 /// ```
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum FileTypeFilter {
   Image
@@ -20,7 +21,7 @@ pub(all) enum FileTypeFilter {
   Extension(String)
   /// A value this version does not know (e.g. a future preset group).
   Unknown(String)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord string value of this `FileTypeFilter`.

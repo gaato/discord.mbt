@@ -1,4 +1,5 @@
 ///|
+#derive(Debug)
 struct RouteMetadata {
   name : String
   method_name : String
@@ -6,7 +7,7 @@ struct RouteMetadata {
   bucket : String
   needs_auth : Bool
   supports_reason : Bool
-} derive(Debug)
+}
 
 ///|
 fn route_metadata(name : String, route : @http.Route) -> RouteMetadata {

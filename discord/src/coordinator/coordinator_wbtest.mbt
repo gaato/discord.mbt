@@ -9,8 +9,8 @@ async test "coordinator serializes identify and HTTP limits across clients" {
     let first = RemoteIdentifyQueue::connect(coordinator.addr())
     let second = RemoteIdentifyQueue::connect(coordinator.addr())
     let remote_limiter = RemoteRateLimiter::connect(coordinator.addr())
-    defer first.close()
-    defer second.close()
+    defer @async.protect_from_cancel(() => first.close())
+    defer @async.protect_from_cancel(() => second.close())
     defer remote_limiter.close()
     first.ping()
     remote_limiter.ping()
@@ -93,7 +93,7 @@ async test "remote client reconnects after coordinator restart" {
       addr="127.0.0.1:0",
       identify_spacing_ms=0,
     )
-    defer first.close()
+    defer @async.protect_from_cancel(() => first.close())
     let first_remote = RemoteIdentifyQueue::connect(first.addr())
     first_remote.ping()
     address.val = Some(first.addr())
@@ -109,7 +109,7 @@ async test "remote client reconnects after coordinator restart" {
       addr=address,
       identify_spacing_ms=0,
     )
-    defer second.close()
+    defer @async.protect_from_cancel(() => second.close())
     remote.ping()
     try remote.client.request({ "op": "not_a_real_operation" }) catch {
       CoordinatorError::Remote(message~) =>
@@ -125,11 +125,11 @@ async test "remote client reconnects after coordinator restart" {
 async test "coordinator EOF releases a held HTTP bucket" {
   @async.with_task_group(group => {
     let coordinator = Coordinator::serve(group, addr="127.0.0.1:0")
-    defer coordinator.close()
+    defer @async.protect_from_cancel(() => coordinator.close())
     let first = RemoteRateLimiter::connect(coordinator.addr())
     let second = RemoteRateLimiter::connect(coordinator.addr())
-    defer first.close()
-    defer second.close()
+    defer @async.protect_from_cancel(() => first.close())
+    defer @async.protect_from_cancel(() => second.close())
     let bucket = "POST:/channels/9/messages"
     @runtime.RateLimiter::acquire(first, bucket, global_exempt=true)
     first.acquire_client.close()
@@ -147,15 +147,16 @@ async test "coordinator EOF releases a held HTTP bucket" {
 }
 
 ///|
+#derive(Debug)
 priv suberror CoordinatorConnectTestError {
   SecondConnectionFailed
-} derive(Debug)
+}
 
 ///|
 async test "remote rate limiter closes its first client when the second connection fails" {
   @async.with_task_group(group => {
     let coordinator = Coordinator::serve(group, addr="127.0.0.1:0")
-    defer coordinator.close()
+    defer @async.protect_from_cancel(() => coordinator.close())
     let warmup = RemoteIdentifyQueue::connect(coordinator.addr())
     defer warmup.close()
     warmup.ping()
@@ -271,7 +272,7 @@ async test "a stale HTTP release lease cannot release the current owner" {
 async test "a closed remote client never reconnects" {
   @async.with_task_group(group => {
     let coordinator = Coordinator::serve(group, addr="127.0.0.1:0")
-    defer coordinator.close()
+    defer @async.protect_from_cancel(() => coordinator.close())
     let remote = RemoteIdentifyQueue::connect(coordinator.addr())
     remote.close()
     try remote.ping() catch {
@@ -287,11 +288,11 @@ async test "a closed remote client never reconnects" {
 async test "cooldown is shared across remote clients" {
   @async.with_task_group(group => {
     let coordinator = Coordinator::serve(group, addr="127.0.0.1:0")
-    defer coordinator.close()
+    defer @async.protect_from_cancel(() => coordinator.close())
     let first = RemoteCooldownStore::connect(coordinator.addr())
     let second = RemoteCooldownStore::connect(coordinator.addr())
-    defer first.close()
-    defer second.close()
+    defer @async.protect_from_cancel(() => first.close())
+    defer @async.protect_from_cancel(() => second.close())
     first.ping()
     let key = "1:limited|user:1"
     assert_eq(first.try_acquire(key, window_ms=10_000L), Acquired)
@@ -374,7 +375,7 @@ async test "cooldown outages cover disconnection and initial refusal" {
 async test "a blocked http_acquire does not delay cooldown_acquire" {
   @async.with_task_group(group => {
     let coordinator = Coordinator::serve(group, addr="127.0.0.1:0")
-    defer coordinator.close()
+    defer @async.protect_from_cancel(() => coordinator.close())
     let limiter = RemoteRateLimiter::connect(coordinator.addr())
     let cooldown = RemoteCooldownStore::connect(
       coordinator.addr(),
@@ -429,7 +430,7 @@ async test "cooldown cancellation always propagates without reporting an outage"
 async test "cooldown deadline includes waiting for the connection gate" {
   @async.with_task_group(group => {
     let coordinator = Coordinator::serve(group, addr="127.0.0.1:0")
-    defer coordinator.close()
+    defer @async.protect_from_cancel(() => coordinator.close())
     let remote = RemoteCooldownStore::connect(
       coordinator.addr(),
       timeout_ms=100,
@@ -523,7 +524,7 @@ async test "an acquire waiting through a coordinator restart lands on the new on
     // The restart dropped the waiter's connection; its retry reaches the new
     // coordinator, which knows nothing of the old holder.
     let second = Coordinator::serve(group, addr=address.val)
-    defer second.close()
+    defer @async.protect_from_cancel(() => second.close())
     guard @async.with_timeout_opt(5000, () => waiting.wait()) is Some(_) else {
       fail("the waiting acquire never reached the new coordinator")
     }
@@ -603,7 +604,7 @@ async test "a lease from before a coordinator restart cannot release a new owner
   let stale : Ref[RemoteRateLimiter?] = Ref(None)
   @async.with_task_group(first_group => {
     let first = Coordinator::serve(first_group, addr="127.0.0.1:0")
-    defer first.close()
+    defer @async.protect_from_cancel(() => first.close())
     let limiter = RemoteRateLimiter::connect(first.addr())
     for _ in 0..<2 {
       limiter.acquire(bucket, global_exempt=true)
@@ -619,7 +620,7 @@ async test "a lease from before a coordinator restart cannot release a new owner
   defer stale.close()
   @async.with_task_group(second_group => {
     let second = Coordinator::serve(second_group, addr=address)
-    defer second.close()
+    defer @async.protect_from_cancel(() => second.close())
     let owner = RemoteRateLimiter::connect(address)
     let waiter = RemoteRateLimiter::connect(address)
     defer owner.close()
@@ -689,7 +690,7 @@ async test "a client still works with an older coordinator's integer leases" {
 async test "a legacy client is refused before it can hold a bucket" {
   @async.with_task_group(group => {
     let coordinator = Coordinator::serve(group, addr="127.0.0.1:0")
-    defer coordinator.close()
+    defer @async.protect_from_cancel(() => coordinator.close())
     let legacy = CoordinatorClient(coordinator.addr())
     defer legacy.close()
     let bucket = "POST:/channels/legacy/messages"
@@ -719,7 +720,7 @@ async test "a legacy client is refused before it can hold a bucket" {
 async test "the coordinator answers an over-long request line and hangs up" {
   @async.with_task_group(group => {
     let coordinator = Coordinator::serve(group, addr="127.0.0.1:0")
-    defer coordinator.close()
+    defer @async.protect_from_cancel(() => coordinator.close())
     let conn = @socket.Tcp::connect(@socket.Addr::parse(coordinator.addr()))
     defer conn.close()
     // One byte past the limit and no newline: the coordinator rejects the

@@ -1,8 +1,9 @@
 ///|
 /// Errors introduced by typed argument combinators.
+#derive(Debug)
 pub(all) suberror ArgsDecodeError {
   Validation(name~ : String, message~ : String)
-} derive(Debug)
+}
 
 ///|
 /// One typed command option, combining its registration definition and reader.

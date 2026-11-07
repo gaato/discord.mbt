@@ -1,9 +1,10 @@
 ///|
 /// Errors raised while parsing Ogg pages and Opus stream headers.
+#derive(Debug, Eq)
 pub(all) suberror OggOpusError {
   InvalidOggPage(reason~ : String)
   InvalidOpusStream(reason~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 fn ogg_crc_table() -> FixedArray[UInt32] {

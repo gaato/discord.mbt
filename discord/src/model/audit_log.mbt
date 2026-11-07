@@ -1,5 +1,6 @@
 ///|
 /// A guild audit log with referenced domain objects.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct AuditLog {
   audit_log_entries : Array[AuditLogEntry]
   users : Array[User]
@@ -9,10 +10,11 @@ pub(all) struct AuditLog {
   auto_moderation_rules : Array[AutoModerationRule]
   threads : Array[Channel]
   guild_scheduled_events : Array[GuildScheduledEvent]
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// One actor action recorded in a guild audit log.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct AuditLogEntry {
   target_id : Nullable[String]
   changes : Array[AuditLogChange]?
@@ -21,18 +23,20 @@ pub(all) struct AuditLogEntry {
   action_type : AuditLogEvent
   options : Json?
   reason : String?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// A raw before-and-after field change recorded in an audit entry.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct AuditLogChange {
   key : String
   new_value : Json?
   old_value : Json?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// The action category recorded by a guild audit log.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum AuditLogEvent {
   GuildUpdate
@@ -105,7 +109,7 @@ pub(all) enum AuditLogEvent {
   VoiceChannelStatusCreate
   VoiceChannelStatusDelete
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `AuditLogEvent`.

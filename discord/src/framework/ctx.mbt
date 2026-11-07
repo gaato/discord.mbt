@@ -1,10 +1,11 @@
 ///|
 /// Proof that an interaction was invoked in a guild: the guild id and the
 /// invoking member, both validated when the context was built.
+#derive(Debug)
 pub(all) struct GuildInvocation {
   guild_id : @model.GuildId
   guild_member : @model.GuildMember
-} derive(Debug)
+}
 
 ///|
 /// The user who invoked this interaction.
@@ -17,27 +18,30 @@ pub fn GuildInvocation::user(self : GuildInvocation) -> @model.User {
 
 ///|
 /// The context in which an interaction was invoked.
+#derive(Debug)
 pub(all) enum InvocationScope {
   Guild(GuildInvocation)
   Dm(@model.User)
-} derive(Debug)
+}
 
 ///|
 /// The interaction that opened a submitted modal.
+#derive(Debug)
 pub(all) enum ModalOrigin {
   FromComponent(@model.Message)
   FromCommand
-} derive(Debug)
+}
 
 ///|
 /// A malformed interaction that cannot satisfy the guarantees exposed by a
 /// typed handler context.
+#derive(Debug)
 pub(all) suberror InteractionContextError {
   MissingInvoker
   MissingGuildMemberUser
   MissingGuildId
   MissingComponentMessage
-} derive(Debug)
+}
 
 ///|
 /// The resolved target of a USER context-menu command.

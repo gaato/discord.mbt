@@ -1,5 +1,6 @@
 ///|
 /// A Discord message component dispatched by its numeric wire discriminator.
+#derive(Debug)
 #non_exhaustive
 pub(all) enum Component {
   ActionRow(ActionRow)
@@ -23,7 +24,7 @@ pub(all) enum Component {
   CheckboxGroup(CheckboxGroup)
   Checkbox(Checkbox)
   Unknown(Json)
-} derive(Debug)
+}
 
 ///|
 /// Whether any top-level component requires Discord's Components V2 message
@@ -132,13 +133,15 @@ pub impl @json.FromJson for Component with fn from_json(json, path) {
 
 ///|
 /// A layout row containing nested interactive components.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct ActionRow {
   id : Int32?
   components : Array[Component]
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// A clickable button component.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct Button {
   id : Int32?
   style : ButtonStyle
@@ -148,10 +151,11 @@ pub(all) struct Button {
   sku_id : SkuId?
   url : String?
   disabled : Bool?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// The visual and behavioral style of a button.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum ButtonStyle {
   Primary
@@ -161,7 +165,7 @@ pub(all) enum ButtonStyle {
   Link
   Premium
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `ButtonStyle`.
@@ -208,6 +212,7 @@ pub impl @json.FromJson for ButtonStyle with fn from_json(json, path) {
 
 ///|
 /// A text or auto-populated select menu component.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct SelectMenu {
   id : Int32?
   custom_id : String
@@ -220,107 +225,115 @@ pub(all) struct SelectMenu {
   channel_types : Array[ChannelType]?
   default_values : Array[SelectDefaultValue]?
   values : Array[String]?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// A selectable option in a string select menu.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct SelectOption {
   label : String
   value : String
   description : String?
   emoji : Emoji?
   default : Bool?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// A preselected entity in an auto-populated select menu.
+#derive(ToJson(fields(typ(rename="type"))), FromJson(fields(typ(rename="type"))), Debug)
 pub(all) struct SelectDefaultValue {
   id : GenericId
   typ : String
-} derive (
-  ToJson(fields(typ(rename="type"))),
-  FromJson(fields(typ(rename="type"))),
-  Debug,
-)
+}
 
 ///|
 /// A section containing text components and a button or thumbnail accessory.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct Section {
   id : Int32?
   components : Array[Component]
   accessory : Component
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// A markdown text block displayed in a Components v2 layout.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct TextDisplay {
   id : Int32?
   content : String
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// A thumbnail accessory rendered from an unfurled media item.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct Thumbnail {
   id : Int32?
   media : UnfurledMediaItem
   description : Nullable[String]?
   spoiler : Bool?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// A gallery containing one to ten media items.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct MediaGallery {
   id : Int32?
   items : Array[MediaGalleryItem]
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// One item in a media gallery.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct MediaGalleryItem {
   media : UnfurledMediaItem
   description : Nullable[String]?
   spoiler : Bool?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// A file attachment rendered as a Components v2 file component.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct FileComponent {
   id : Int32?
   file : UnfurledMediaItem
   spoiler : Bool?
   name : String?
   size : Int32?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// A visual separator between Components v2 content blocks.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct Separator {
   id : Int32?
   divider : Bool?
   spacing : Int32?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// A Components v2 container with an optional accent color.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct Container {
   id : Int32?
   components : Array[Component]
   accent_color : Nullable[Int32]?
   spoiler : Bool?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// A modal label wrapping one interactive component.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct Label {
   id : Int32?
   // Required when sending a modal; omitted in modal-submit payloads.
   label : String?
   description : String?
   component : Component
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// A modal file upload component.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct FileUpload {
   id : Int32?
   custom_id : String
@@ -329,29 +342,32 @@ pub(all) struct FileUpload {
   required : Bool?
   values : Array[String]?
   file_types : Array[FileTypeFilter]?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// A modal radio group accepting one option.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct RadioGroup {
   id : Int32?
   custom_id : String
   options : Array[RadioOption]
   required : Bool?
   value : String?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// A selectable option shared by radio and checkbox groups.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct RadioOption {
   value : String
   label : String
   description : String?
   default : Bool?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// A modal checkbox group accepting zero or more options.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct CheckboxGroup {
   id : Int32?
   custom_id : String
@@ -360,19 +376,21 @@ pub(all) struct CheckboxGroup {
   max_values : Int32?
   required : Bool?
   values : Array[String]?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// A single modal checkbox.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct Checkbox {
   id : Int32?
   custom_id : String
   default : Bool?
   value : Bool?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// Media metadata used by thumbnail, gallery, and file components.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct UnfurledMediaItem {
   url : String
   proxy_url : String?
@@ -383,10 +401,11 @@ pub(all) struct UnfurledMediaItem {
   content_type : String?
   flags : Int32?
   attachment_id : String?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// A free-form text input component used in a modal.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct TextInput {
   id : Int32?
   custom_id : String
@@ -398,16 +417,17 @@ pub(all) struct TextInput {
   required : Bool?
   value : String?
   placeholder : String?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// The single-line or multi-line style of a text input.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum TextInputStyle {
   Short
   Paragraph
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `TextInputStyle`.

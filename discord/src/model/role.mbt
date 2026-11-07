@@ -1,5 +1,6 @@
 ///|
 /// A Discord guild role and its permissions.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct Role {
   id : RoleId
   name : String
@@ -14,15 +15,16 @@ pub(all) struct Role {
   mentionable : Bool
   tags : RoleTags?
   flags : RoleFlags?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// Primary and optional enhanced gradient colors of a role.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct RoleColors {
   primary_color : Int32
   secondary_color : Nullable[Int32]
   tertiary_color : Nullable[Int32]
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// Role ownership tags, including null-valued markers whose presence means true.
@@ -30,6 +32,7 @@ pub(all) struct RoleColors {
 /// Discord represents `premium_subscriber`, `available_for_purchase`, and
 /// `guild_connections` as optional fields whose only wire value is `null`.
 /// Their Boolean values record whether each field was present.
+#derive(Eq, Debug)
 pub(all) struct RoleTags {
   bot_id : UserId?
   premium_subscriber : Bool
@@ -37,7 +40,7 @@ pub(all) struct RoleTags {
   subscription_listing_id : SkuId?
   available_for_purchase : Bool
   guild_connections : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 /// Encodes the role tags as its Discord JSON representation.
@@ -112,7 +115,8 @@ pub impl @json.FromJson for RoleTags with fn from_json(json, path) {
 
 ///|
 /// Bit flags describing special behavior assigned to a role.
-pub(all) struct RoleFlags(UInt64) derive(Eq)
+#derive(Eq)
+pub(all) struct RoleFlags(UInt64)
 
 ///|
 /// No flags set.

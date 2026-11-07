@@ -1,9 +1,10 @@
 ///|
 /// A fixture asked to combine values that cannot belong to one interaction,
 /// such as an actor that is not the given guild member.
+#derive(Debug, Eq)
 pub(all) suberror FixtureError {
   InconsistentContext(String)
-} derive(Debug, Eq)
+}
 
 ///|
 /// Shared by the default interaction fixtures.
@@ -241,13 +242,14 @@ pub fn message_command(
 
 ///|
 /// The select menu a `select` fixture submits.
+#derive(Eq, Debug)
 pub(all) enum SelectKind {
   StringSelect
   UserSelect
   RoleSelect
   MentionableSelect
   ChannelSelect
-} derive(Eq, Debug)
+}
 
 ///|
 fn SelectKind::component_type(self : SelectKind) -> Int32 {

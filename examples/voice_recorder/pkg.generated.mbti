@@ -8,7 +8,8 @@ import {
 // Values
 
 // Errors
-type VoiceRecorderError derive(@debug.Debug)
+#derive(@debug.Debug)
+type VoiceRecorderError
 
 // Types and methods
 

@@ -1,5 +1,6 @@
 ///|
 /// The result of dispatching one HTTP-delivered interaction.
+#derive(Debug)
 #non_exhaustive
 pub(all) enum InteractionOutcome {
   Reply(
@@ -9,7 +10,7 @@ pub(all) enum InteractionOutcome {
   NoRoute
   NoResponse
   TimedOut
-} derive(Debug)
+}
 
 ///|
 /// A gateway-free interaction dispatcher backed by a caller-owned task group.

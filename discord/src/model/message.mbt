@@ -1,5 +1,6 @@
 ///|
 /// A message sent to a Discord channel.
+#derive(ToJson(fields(typ(rename="type"))), FromJson(fields(typ(rename="type"))), Debug)
 pub(all) struct Message {
   id : MessageId
   channel_id : ChannelId
@@ -39,17 +40,14 @@ pub(all) struct Message {
   // Not modeled: message soundboard_sounds is not in the public documentation.
   // Not modeled: full message stickers are deprecated in favor of sticker_items.
   shared_client_theme : SharedClientTheme?
-} derive (
-  ToJson(fields(typ(rename="type"))),
-  FromJson(fields(typ(rename="type"))),
-  Debug,
-)
+}
 
 ///|
 /// A guild message search response. All fields are optional because Discord
 /// returns either completed results or an HTTP 202 indexing response. When
 /// `retry_after` is `Some`, the search index was not ready and the caller
 /// should retry after that many seconds.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct GuildMessageSearchResults {
   doing_deep_historical_index : Bool?
   documents_indexed : Int32?
@@ -60,13 +58,14 @@ pub(all) struct GuildMessageSearchResults {
   retry_after : Int32?
   code : Int32?
   message : String?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// Metadata identifying the interaction that produced a message.
 ///
 /// The optional fields cover the documented command, component, and modal
 /// variants. `type` determines which subset is present.
+#derive(ToJson(fields(typ(rename="type"))), FromJson(fields(typ(rename="type"))), Debug)
 pub(all) struct MessageInteractionMetadata {
   id : InteractionId
   typ : InteractionType
@@ -77,20 +76,18 @@ pub(all) struct MessageInteractionMetadata {
   target_message_id : MessageId?
   interacted_message_id : MessageId?
   triggering_interaction_metadata : MessageInteractionMetadata?
-} derive (
-  ToJson(fields(typ(rename="type"))),
-  FromJson(fields(typ(rename="type"))),
-  Debug,
-)
+}
 
 ///|
 /// A forwarded message snapshot.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct MessageSnapshot {
   message : MessageSnapshotContent
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// The documented subset of a message retained in a forwarded snapshot.
+#derive(ToJson(fields(typ(rename="type"))), FromJson(fields(typ(rename="type"))), Debug)
 pub(all) struct MessageSnapshotContent {
   typ : MessageType?
   content : String?
@@ -103,23 +100,21 @@ pub(all) struct MessageSnapshotContent {
   mention_roles : Array[RoleId]?
   sticker_items : Array[StickerItem]?
   components : Array[Component]?
-} derive (
-  ToJson(fields(typ(rename="type"))),
-  FromJson(fields(typ(rename="type"))),
-  Debug,
-)
+}
 
 ///|
 /// Theme colors shared by an activity-card message.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct SharedClientTheme {
   colors : Array[String]
   gradient_angle : Int32
   base_mix : Int32
   base_theme : Nullable[BaseTheme]?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// The base client theme a `SharedClientTheme` gradient is mixed against.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum BaseTheme {
   Unset
@@ -128,7 +123,7 @@ pub(all) enum BaseTheme {
   Darker
   Midnight
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `BaseTheme`.
@@ -145,17 +140,19 @@ pub fn BaseTheme::to_int(self : BaseTheme) -> Int32 {
 
 ///|
 /// One entry returned by the paginated channel-pins endpoint.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct MessagePin {
   pinned_at : Timestamp
   message : Message
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// One page from `GET /channels/{channel.id}/messages/pins`.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct ChannelPins {
   items : Array[MessagePin]
   has_more : Bool
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// The `BaseTheme` for its Discord integer value; unknown values become `Unknown(n)`.
@@ -187,10 +184,11 @@ pub impl @json.FromJson for BaseTheme with fn from_json(json, path) {
 
 ///|
 /// A client nonce represented as either its string or integer wire form.
+#derive(Eq, Debug)
 pub(all) enum Nonce {
   Str(String)
   Num(Int64)
-} derive(Eq, Debug)
+}
 
 ///|
 /// Encodes the nonce as a JSON string or integer, matching its variant.
@@ -225,19 +223,17 @@ pub impl @json.FromJson for Nonce with fn from_json(json, path) {
 
 ///|
 /// A channel referenced directly in message content.
+#derive(ToJson(fields(typ(rename="type"))), FromJson(fields(typ(rename="type"))), Debug)
 pub(all) struct ChannelMention {
   id : ChannelId
   guild_id : GuildId
   typ : ChannelType
   name : String
-} derive (
-  ToJson(fields(typ(rename="type"))),
-  FromJson(fields(typ(rename="type"))),
-  Debug,
-)
+}
 
 ///|
 /// Aggregate reaction state for one emoji on a message.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct Reaction {
   count : Int32
   count_details : ReactionCountDetails
@@ -245,24 +241,26 @@ pub(all) struct Reaction {
   me_burst : Bool
   emoji : Emoji
   burst_colors : Array[String]
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// Normal and burst reaction counts for a reaction.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct ReactionCountDetails {
   burst : Int32
   normal : Int32
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// Whether a reaction is a normal or a burst (super) reaction, as selected
 /// by the `type` query parameter of the reaction endpoints.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum ReactionType {
   Normal
   Burst
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `ReactionType`.
@@ -301,47 +299,44 @@ pub impl @json.FromJson for ReactionType with fn from_json(json, path) {
 
 ///|
 /// Rich Presence activity metadata attached to a message.
+#derive(ToJson(fields(typ(rename="type"))), FromJson(fields(typ(rename="type"))), Debug)
 pub(all) struct MessageActivity {
   typ : MessageActivityType
   party_id : String?
-} derive (
-  ToJson(fields(typ(rename="type"))),
-  FromJson(fields(typ(rename="type"))),
-  Debug,
-)
+}
 
 ///|
 /// Origin identifiers and delivery behavior for a message reference.
+#derive(ToJson(fields(typ(rename="type"))), FromJson(fields(typ(rename="type"))), Debug)
 pub(all) struct MessageReference {
   typ : MessageReferenceType?
   message_id : MessageId?
   channel_id : ChannelId?
   guild_id : GuildId?
   fail_if_not_exists : Bool?
-} derive (
-  ToJson(fields(typ(rename="type"))),
-  FromJson(fields(typ(rename="type"))),
-  Debug,
-)
+}
 
 ///|
 /// Participant and end-time data for a call message.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct MessageCall {
   participants : Array[UserId]
   ended_timestamp : Nullable[Timestamp]?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// Subscription tier data attached to a role purchase message.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct RoleSubscriptionData {
   role_subscription_listing_id : SkuId
   tier_name : String
   total_months_subscribed : Int32
   is_renewal : Bool
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// The system or user event category represented by a message.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum MessageType {
   Default
@@ -383,7 +378,7 @@ pub(all) enum MessageType {
   PurchaseNotification
   PollResult
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `MessageType`.
@@ -494,6 +489,7 @@ pub impl @json.FromJson for MessageType with fn from_json(json, path) {
 
 ///|
 /// The Rich Presence action represented by a message activity.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum MessageActivityType {
   Join
@@ -502,7 +498,7 @@ pub(all) enum MessageActivityType {
   JoinRequest
   StreamRequest
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `MessageActivityType`.
@@ -547,12 +543,13 @@ pub impl @json.FromJson for MessageActivityType with fn from_json(json, path) {
 
 ///|
 /// The reference mode used for a reply or forwarded message.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum MessageReferenceType {
   Default
   Forward
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `MessageReferenceType`.
@@ -591,7 +588,8 @@ pub impl @json.FromJson for MessageReferenceType with fn from_json(json, path) {
 
 ///|
 /// Bit flags describing delivery and presentation behavior of a message.
-pub(all) struct MessageFlags(UInt64) derive(Eq)
+#derive(Eq)
+pub(all) struct MessageFlags(UInt64)
 
 ///|
 /// No flags set.

@@ -1,12 +1,13 @@
 ///|
 /// The routed target of an interaction entering the middleware chain.
 /// Autocomplete, gateway events, and services never pass through it.
+#derive(Debug)
 #non_exhaustive
 pub(all) enum InteractionTarget {
   Command(name~ : String)
   Component(custom_id~ : String)
   Modal(custom_id~ : String)
-} derive(Debug)
+}
 
 ///|
 /// Read-only context handed to interaction middleware, before any initial

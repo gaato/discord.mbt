@@ -12,10 +12,11 @@ Combine arguments with `Args::map1` through `Args::map8`:
 
 ```mbt check
 ///|
+#derive(Debug)
 struct PaintArgs {
   color : String
   coats : Int32
-} derive(Debug)
+}
 
 ///|
 let paint_args : @discord.Args[PaintArgs] = @discord.Args::map2(

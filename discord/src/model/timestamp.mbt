@@ -1,7 +1,8 @@
 ///|
 /// An ISO 8601 timestamp, kept as the raw string for lossless round-tripping.
 /// Discord sends e.g. `2021-03-11T18:15:37.907000+00:00`.
-pub(all) struct Timestamp(String) derive(Eq)
+#derive(Eq)
+pub(all) struct Timestamp(String)
 
 ///|
 /// The ISO 8601 timestamp text exactly as received.
@@ -32,9 +33,10 @@ pub impl @json.FromJson for Timestamp with fn from_json(json, path) {
 
 ///|
 /// Raised when a string is not a valid ISO 8601 timestamp.
+#derive(Debug)
 pub suberror TimestampError {
   InvalidTimestamp(String)
-} derive(Debug)
+}
 
 ///|
 /// Parse the timestamp into milliseconds since the Unix epoch.
@@ -138,7 +140,8 @@ pub fn Timestamp::unix_ms(self : Timestamp) -> Int64 raise TimestampError {
 
 ///|
 /// A guild/user avatar or icon hash, kept raw (e.g. `a_1269e74af4df7417b13759eae50c83dc`).
-pub(all) struct ImageHash(String) derive(Eq)
+#derive(Eq)
+pub(all) struct ImageHash(String)
 
 ///|
 /// The image hash string.

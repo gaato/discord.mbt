@@ -1,15 +1,17 @@
 ///|
 /// A guild's onboarding configuration.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct GuildOnboarding {
   guild_id : GuildId
   prompts : Array[OnboardingPrompt]
   default_channel_ids : Array[ChannelId]
   enabled : Bool
   mode : OnboardingMode
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// A question presented during guild onboarding.
+#derive(ToJson(fields(typ(rename="type"))), FromJson(fields(typ(rename="type"))), Debug)
 pub(all) struct OnboardingPrompt {
   id : GenericId
   typ : OnboardingPromptType
@@ -18,14 +20,11 @@ pub(all) struct OnboardingPrompt {
   single_select : Bool
   required : Bool
   in_onboarding : Bool
-} derive (
-  ToJson(fields(typ(rename="type"))),
-  FromJson(fields(typ(rename="type"))),
-  Debug,
-)
+}
 
 ///|
 /// A selectable answer to an onboarding prompt.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct OnboardingPromptOption {
   id : GenericId
   channel_ids : Array[ChannelId]
@@ -36,16 +35,17 @@ pub(all) struct OnboardingPromptOption {
   emoji_animated : Bool?
   title : String
   description : Nullable[String]
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// The input control used by an onboarding prompt.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum OnboardingPromptType {
   MultipleChoice
   Dropdown
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `OnboardingPromptType`.
@@ -85,12 +85,13 @@ pub impl @json.FromJson for OnboardingPromptType with fn from_json(json, path) {
 
 ///|
 /// How extensively onboarding is configured for a guild.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum OnboardingMode {
   Default
   Advanced
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `OnboardingMode`.

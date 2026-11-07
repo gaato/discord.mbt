@@ -9,7 +9,7 @@ import {
 // Values
 pub fn command_limit_violations(typ~ : ApplicationCommandType, name~ : String, name_localizations~ : Map[String, String]?, description~ : String, description_localizations~ : Map[String, String]?, options~ : Array[CommandOption]) -> Array[LimitViolation]
 
-pub fn dispatch_event(String, Json) -> Event raise
+pub fn dispatch_event(String, @json.Json) -> Event raise
 
 pub fn embed_limit_violations(Array[Embed]) -> Array[LimitViolation]
 
@@ -26,40 +26,47 @@ pub let text_input_max_length : Int32
 pub fn text_length(String) -> Int32
 
 // Errors
+#derive(Eq, @debug.Debug)
 pub(all) suberror AllowedMentionsError {
   ParseAndExplicit(typ~ : AllowedMentionType)
   TooManyRoles(count~ : Int32)
   TooManyUsers(count~ : Int32)
-} derive(Eq, @debug.Debug)
+}
 
+#derive(@debug.Debug)
 pub(all) suberror GatewayCommandError {
   InvalidCommand(LimitViolation)
-} derive(@debug.Debug)
+}
 
+#derive(@debug.Debug)
 pub suberror TimestampError {
   InvalidTimestamp(String)
-} derive(@debug.Debug)
+}
 
 // Types and methods
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ActionMetadata {
   channel_id : Id[ChannelMarker]?
   duration_seconds : Int32?
   custom_message : Nullable[String]?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn ActionMetadata::to_json(Self) -> Json
+}
+pub fn ActionMetadata::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ActionRow {
   id : Int32?
   components : Array[Component]
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn ActionRow::to_json(Self) -> Json
+}
+pub fn ActionRow::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ActiveGuildThreads {
   threads : Array[Channel]
   members : Array[ThreadMember]
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn ActiveGuildThreads::to_json(Self) -> Json
+}
+pub fn ActiveGuildThreads::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.ToJson)
 pub(all) struct Activity {
   name : String
   typ : ActivityType
@@ -79,10 +86,11 @@ pub(all) struct Activity {
   instance : Bool?
   flags : ActivityFlags?
   buttons : Array[ActivityButton]?
-} derive(ToJson, @debug.Debug)
-pub fn Activity::to_json(Self) -> Json
+}
+pub fn Activity::to_json(Self) -> @json.Json
 pub impl @json.FromJson for Activity
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ActivityAssets {
   large_image : String?
   large_text : String?
@@ -91,23 +99,26 @@ pub(all) struct ActivityAssets {
   small_text : String?
   small_url : String?
   invite_cover_image : String?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn ActivityAssets::to_json(Self) -> Json
+}
+pub fn ActivityAssets::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ActivityButton {
   label : String
   url : String
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn ActivityButton::to_json(Self) -> Json
+}
+pub fn ActivityButton::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ActivityEmoji {
   name : String
   id : Id[EmojiMarker]?
   animated : Bool?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn ActivityEmoji::to_json(Self) -> Json
+}
+pub fn ActivityEmoji::to_json(Self) -> @json.Json
 
-pub(all) struct ActivityFlags(UInt64) derive(Eq)
+#derive(Eq)
+pub(all) struct ActivityFlags(UInt64)
 pub fn ActivityFlags::bits(Self) -> UInt64
 pub fn ActivityFlags::embedded() -> Self
 pub fn ActivityFlags::from_bits(UInt64) -> Self
@@ -119,64 +130,72 @@ pub fn ActivityFlags::party_privacy_voice_channel() -> Self
 pub fn ActivityFlags::play() -> Self
 pub fn ActivityFlags::spectate() -> Self
 pub fn ActivityFlags::sync() -> Self
-pub fn ActivityFlags::to_json(Self) -> Json
-pub impl ToJson for ActivityFlags
+pub fn ActivityFlags::to_json(Self) -> @json.Json
 pub impl @debug.Debug for ActivityFlags
 pub impl @json.FromJson for ActivityFlags
+pub impl @json.ToJson for ActivityFlags
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ActivityInstance {
   application_id : Id[ApplicationMarker]
   instance_id : String
   launch_id : Id[GenericMarker]
   location : ActivityLocation
   users : Array[Id[UserMarker]]
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn ActivityInstance::to_json(Self) -> Json
+}
+pub fn ActivityInstance::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ActivityLocation {
   id : String
   kind : ActivityLocationKind
   channel_id : Id[ChannelMarker]
   guild_id : Nullable[Id[GuildMarker]]?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn ActivityLocation::to_json(Self) -> Json
+}
+pub fn ActivityLocation::to_json(Self) -> @json.Json
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum ActivityLocationKind {
   GuildChannel
   PrivateChannel
   Unknown(String)
-} derive(Eq, @debug.Debug)
+}
 pub fn ActivityLocationKind::from_string(String) -> Self
-pub fn ActivityLocationKind::to_json(Self) -> Json
+pub fn ActivityLocationKind::to_json(Self) -> @json.Json
 pub fn ActivityLocationKind::to_string(Self) -> String
-pub impl ToJson for ActivityLocationKind
 pub impl @json.FromJson for ActivityLocationKind
+pub impl @json.ToJson for ActivityLocationKind
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ActivityParty {
   id : String?
   size : Array[Int32]?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn ActivityParty::to_json(Self) -> Json
+}
+pub fn ActivityParty::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ActivitySecrets {
   join : String?
   spectate : String?
   match_ : String?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn ActivitySecrets::to_json(Self) -> Json
+}
+pub fn ActivitySecrets::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug)
 pub(all) struct ActivityTimestamps {
   start : Int64?
   end : Int64?
-} derive(@debug.Debug)
-pub fn ActivityTimestamps::to_json(Self) -> Json
-pub impl ToJson for ActivityTimestamps
+}
+pub fn ActivityTimestamps::to_json(Self) -> @json.Json
 pub impl @json.FromJson for ActivityTimestamps
+pub impl @json.ToJson for ActivityTimestamps
 
-type ActivityTimestampsWire derive(@json.FromJson)
+#derive(@json.FromJson)
+type ActivityTimestampsWire
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum ActivityType {
   Playing
   Streaming
@@ -185,32 +204,36 @@ pub(all) enum ActivityType {
   Custom
   Competing
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn ActivityType::from_int(Int32) -> Self
 pub fn ActivityType::to_int(Self) -> Int32
-pub fn ActivityType::to_json(Self) -> Json
-pub impl ToJson for ActivityType
+pub fn ActivityType::to_json(Self) -> @json.Json
 pub impl @json.FromJson for ActivityType
+pub impl @json.ToJson for ActivityType
 
-type ActivityWire derive(@json.FromJson)
+#derive(@json.FromJson)
+type ActivityWire
 
+#derive(Eq, @debug.Debug)
 pub(all) enum AllowedMentionType {
   Roles
   Users
   Everyone
-} derive(Eq, @debug.Debug)
-pub fn AllowedMentionType::to_json(Self) -> Json
-pub impl ToJson for AllowedMentionType
+}
+pub fn AllowedMentionType::to_json(Self) -> @json.Json
+pub impl @json.ToJson for AllowedMentionType
 
+#derive(@debug.Debug)
 pub struct AllowedMentions {
   // private fields
-} derive(@debug.Debug)
+}
 pub fn AllowedMentions::AllowedMentions(parse? : Array[AllowedMentionType], roles? : Array[Id[RoleMarker]], users? : Array[Id[UserMarker]], replied_user? : Bool) -> Self raise AllowedMentionsError
 pub fn AllowedMentions::none() -> Self
 pub fn AllowedMentions::safe_default() -> Self
-pub fn AllowedMentions::to_json(Self) -> Json
-pub impl ToJson for AllowedMentions
+pub fn AllowedMentions::to_json(Self) -> @json.Json
+pub impl @json.ToJson for AllowedMentions
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct Application {
   id : Id[ApplicationMarker]
   name : String
@@ -245,18 +268,20 @@ pub(all) struct Application {
   install_params : InstallParams?
   integration_types_config : Map[String, ApplicationIntegrationTypeConfiguration]?
   custom_install_url : String?
-} derive(ToJson, @debug.Debug, @json.FromJson)
+}
 pub fn Application::effective_flags(Self) -> ApplicationFlags?
-pub fn Application::to_json(Self) -> Json
+pub fn Application::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ApplicationAuthorizedEvent {
   integration_type : ApplicationIntegrationType?
   user : User
   scopes : Array[String]
   guild : Guild?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn ApplicationAuthorizedEvent::to_json(Self) -> Json
+}
+pub fn ApplicationAuthorizedEvent::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ApplicationCommand {
   id : Id[CommandMarker]
   typ : ApplicationCommandType?
@@ -276,62 +301,68 @@ pub(all) struct ApplicationCommand {
   handler : EntryPointCommandHandlerType?
   name_localized : String?
   description_localized : String?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn ApplicationCommand::to_json(Self) -> Json
+}
+pub fn ApplicationCommand::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ApplicationCommandPermission {
   id : Id[GenericMarker]
   typ : ApplicationCommandPermissionType
   permission : Bool
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn ApplicationCommandPermission::to_json(Self) -> Json
+}
+pub fn ApplicationCommandPermission::to_json(Self) -> @json.Json
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum ApplicationCommandPermissionType {
   Role
   User
   Channel
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn ApplicationCommandPermissionType::from_int(Int32) -> Self
 pub fn ApplicationCommandPermissionType::to_int(Self) -> Int32
-pub fn ApplicationCommandPermissionType::to_json(Self) -> Json
-pub impl ToJson for ApplicationCommandPermissionType
+pub fn ApplicationCommandPermissionType::to_json(Self) -> @json.Json
 pub impl @json.FromJson for ApplicationCommandPermissionType
+pub impl @json.ToJson for ApplicationCommandPermissionType
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum ApplicationCommandType {
   ChatInput
   User
   Message
   PrimaryEntryPoint
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn ApplicationCommandType::from_int(Int32) -> Self
 pub fn ApplicationCommandType::to_int(Self) -> Int32
-pub fn ApplicationCommandType::to_json(Self) -> Json
-pub impl ToJson for ApplicationCommandType
+pub fn ApplicationCommandType::to_json(Self) -> @json.Json
 pub impl @json.FromJson for ApplicationCommandType
+pub impl @json.ToJson for ApplicationCommandType
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ApplicationDeauthorizedEvent {
   user : User
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn ApplicationDeauthorizedEvent::to_json(Self) -> Json
+}
+pub fn ApplicationDeauthorizedEvent::to_json(Self) -> @json.Json
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum ApplicationEventWebhookStatus {
   Disabled
   Enabled
   DisabledByDiscord
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn ApplicationEventWebhookStatus::from_int(Int32) -> Self
 pub fn ApplicationEventWebhookStatus::to_int(Self) -> Int32
-pub fn ApplicationEventWebhookStatus::to_json(Self) -> Json
-pub impl ToJson for ApplicationEventWebhookStatus
+pub fn ApplicationEventWebhookStatus::to_json(Self) -> @json.Json
 pub impl @json.FromJson for ApplicationEventWebhookStatus
+pub impl @json.ToJson for ApplicationEventWebhookStatus
 
-pub(all) struct ApplicationFlags(UInt64) derive(Eq)
+#derive(Eq)
+pub(all) struct ApplicationFlags(UInt64)
 pub fn ApplicationFlags::application_auto_moderation_rule_create_badge() -> Self
 pub fn ApplicationFlags::application_command_badge() -> Self
 pub fn ApplicationFlags::bits(Self) -> UInt64
@@ -351,51 +382,57 @@ pub fn ApplicationFlags::group_dm_create() -> Self
 pub fn ApplicationFlags::managed_emoji() -> Self
 pub fn ApplicationFlags::none() -> Self
 pub fn ApplicationFlags::rpc_has_connected() -> Self
-pub fn ApplicationFlags::to_json(Self) -> Json
+pub fn ApplicationFlags::to_json(Self) -> @json.Json
 pub fn ApplicationFlags::verification_pending_guild_limit() -> Self
 pub impl BitAnd for ApplicationFlags
 pub impl BitOr for ApplicationFlags
-pub impl ToJson for ApplicationFlags
 pub impl @debug.Debug for ApplicationFlags
 pub impl @json.FromJson for ApplicationFlags
+pub impl @json.ToJson for ApplicationFlags
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ApplicationIdentity {
   user_id : Id[UserMarker]?
   provider_type : String
   provider_id : String?
   provider_issued_user_id : String
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn ApplicationIdentity::to_json(Self) -> Json
+}
+pub fn ApplicationIdentity::to_json(Self) -> @json.Json
 
 #non_exhaustive
+#derive(@debug.Debug)
 pub(all) enum ApplicationIdentityDynamicField {
   StringField(ApplicationIdentityDynamicStringField)
   NumberField(ApplicationIdentityDynamicNumberField)
   MediaField(ApplicationIdentityDynamicMediaField)
-  Unknown(Json)
-} derive(@debug.Debug)
-pub fn ApplicationIdentityDynamicField::to_json(Self) -> Json
-pub impl ToJson for ApplicationIdentityDynamicField
+  Unknown(@json.Json)
+}
+pub fn ApplicationIdentityDynamicField::to_json(Self) -> @json.Json
 pub impl @json.FromJson for ApplicationIdentityDynamicField
+pub impl @json.ToJson for ApplicationIdentityDynamicField
 
+#derive(Eq, @debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ApplicationIdentityDynamicMediaField {
   name : String
   value : ApplicationIdentityProfileMedia
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-pub fn ApplicationIdentityDynamicMediaField::to_json(Self) -> Json
+}
+pub fn ApplicationIdentityDynamicMediaField::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ApplicationIdentityDynamicNumberField {
   name : String
   value : Double
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn ApplicationIdentityDynamicNumberField::to_json(Self) -> Json
+}
+pub fn ApplicationIdentityDynamicNumberField::to_json(Self) -> @json.Json
 
+#derive(Eq, @debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ApplicationIdentityDynamicStringField {
   name : String
   value : String
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-pub fn ApplicationIdentityDynamicStringField::to_json(Self) -> Json
+}
+pub fn ApplicationIdentityDynamicStringField::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ApplicationIdentityPrimaryProfileData {
   season : String?
   rank_name : String?
@@ -415,54 +452,61 @@ pub(all) struct ApplicationIdentityPrimaryProfileData {
   current_period_assists : Int32?
   total_deaths : Int32?
   current_period_deaths : Int32?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn ApplicationIdentityPrimaryProfileData::to_json(Self) -> Json
+}
+pub fn ApplicationIdentityPrimaryProfileData::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ApplicationIdentityProfile {
   username : Nullable[String]
-  metadata : Nullable[Json]
+  metadata : Nullable[@json.Json]
   data : Nullable[ApplicationIdentityProfileData]
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn ApplicationIdentityProfile::to_json(Self) -> Json
+}
+pub fn ApplicationIdentityProfile::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ApplicationIdentityProfileData {
   primary : ApplicationIdentityPrimaryProfileData?
   dynamic : Array[ApplicationIdentityDynamicField]?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn ApplicationIdentityProfileData::to_json(Self) -> Json
+}
+pub fn ApplicationIdentityProfileData::to_json(Self) -> @json.Json
 
+#derive(Eq, @debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ApplicationIdentityProfileMedia {
   url : String
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-pub fn ApplicationIdentityProfileMedia::to_json(Self) -> Json
+}
+pub fn ApplicationIdentityProfileMedia::to_json(Self) -> @json.Json
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum ApplicationIntegrationType {
   GuildInstall
   UserInstall
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn ApplicationIntegrationType::from_int(Int32) -> Self
 pub fn ApplicationIntegrationType::to_int(Self) -> Int32
-pub fn ApplicationIntegrationType::to_json(Self) -> Json
-pub impl ToJson for ApplicationIntegrationType
+pub fn ApplicationIntegrationType::to_json(Self) -> @json.Json
 pub impl @json.FromJson for ApplicationIntegrationType
+pub impl @json.ToJson for ApplicationIntegrationType
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ApplicationIntegrationTypeConfiguration {
   oauth2_install_params : InstallParams?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn ApplicationIntegrationTypeConfiguration::to_json(Self) -> Json
+}
+pub fn ApplicationIntegrationTypeConfiguration::to_json(Self) -> @json.Json
 
 pub enum ApplicationMarker {
 }
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ApplicationRoleConnection {
   platform_name : Nullable[String]
   platform_username : Nullable[String]
-  metadata : Json
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn ApplicationRoleConnection::to_json(Self) -> Json
+  metadata : @json.Json
+}
+pub fn ApplicationRoleConnection::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ApplicationRoleConnectionMetadata {
   typ : ApplicationRoleConnectionMetadataType
   key : String
@@ -470,10 +514,11 @@ pub(all) struct ApplicationRoleConnectionMetadata {
   name_localizations : Nullable[Map[String, String]]?
   description : String
   description_localizations : Nullable[Map[String, String]]?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn ApplicationRoleConnectionMetadata::to_json(Self) -> Json
+}
+pub fn ApplicationRoleConnectionMetadata::to_json(Self) -> @json.Json
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum ApplicationRoleConnectionMetadataType {
   IntegerLessThanOrEqual
   IntegerGreaterThanOrEqual
@@ -484,20 +529,22 @@ pub(all) enum ApplicationRoleConnectionMetadataType {
   BooleanEqual
   BooleanNotEqual
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn ApplicationRoleConnectionMetadataType::from_int(Int32) -> Self
 pub fn ApplicationRoleConnectionMetadataType::to_int(Self) -> Int32
-pub fn ApplicationRoleConnectionMetadataType::to_json(Self) -> Json
-pub impl ToJson for ApplicationRoleConnectionMetadataType
+pub fn ApplicationRoleConnectionMetadataType::to_json(Self) -> @json.Json
 pub impl @json.FromJson for ApplicationRoleConnectionMetadataType
+pub impl @json.ToJson for ApplicationRoleConnectionMetadataType
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ArchivedThreads {
   threads : Array[Channel]
   members : Array[ThreadMember]
   has_more : Bool
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn ArchivedThreads::to_json(Self) -> Json
+}
+pub fn ArchivedThreads::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct Attachment {
   id : Id[AttachmentMarker]
   filename : String
@@ -518,10 +565,11 @@ pub(all) struct Attachment {
   clip_participants : Array[User]?
   clip_created_at : Timestamp?
   application : Nullable[Application]?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn Attachment::to_json(Self) -> Json
+}
+pub fn Attachment::to_json(Self) -> @json.Json
 
-pub(all) struct AttachmentFlags(UInt64) derive(Eq)
+#derive(Eq)
+pub(all) struct AttachmentFlags(UInt64)
 pub fn AttachmentFlags::bits(Self) -> UInt64
 pub fn AttachmentFlags::contains(Self, Self) -> Bool
 pub fn AttachmentFlags::from_bits(UInt64) -> Self
@@ -531,16 +579,17 @@ pub fn AttachmentFlags::is_remix() -> Self
 pub fn AttachmentFlags::is_spoiler() -> Self
 pub fn AttachmentFlags::is_thumbnail() -> Self
 pub fn AttachmentFlags::none() -> Self
-pub fn AttachmentFlags::to_json(Self) -> Json
+pub fn AttachmentFlags::to_json(Self) -> @json.Json
 pub impl BitAnd for AttachmentFlags
 pub impl BitOr for AttachmentFlags
-pub impl ToJson for AttachmentFlags
 pub impl @debug.Debug for AttachmentFlags
 pub impl @json.FromJson for AttachmentFlags
+pub impl @json.ToJson for AttachmentFlags
 
 pub enum AttachmentMarker {
 }
 
+#derive(@debug.Debug)
 pub(all) struct AttachmentRequest {
   id : Id[AttachmentMarker]
   filename : String?
@@ -549,10 +598,11 @@ pub(all) struct AttachmentRequest {
   duration_secs : Double?
   waveform : String?
   is_spoiler : Bool?
-} derive(@debug.Debug)
-pub fn AttachmentRequest::to_json(Self) -> Json
-pub impl ToJson for AttachmentRequest
+}
+pub fn AttachmentRequest::to_json(Self) -> @json.Json
+pub impl @json.ToJson for AttachmentRequest
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct AuditLog {
   audit_log_entries : Array[AuditLogEntry]
   users : Array[User]
@@ -562,31 +612,34 @@ pub(all) struct AuditLog {
   auto_moderation_rules : Array[AutoModerationRule]
   threads : Array[Channel]
   guild_scheduled_events : Array[GuildScheduledEvent]
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn AuditLog::to_json(Self) -> Json
+}
+pub fn AuditLog::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct AuditLogChange {
   key : String
-  new_value : Json?
-  old_value : Json?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn AuditLogChange::to_json(Self) -> Json
+  new_value : @json.Json?
+  old_value : @json.Json?
+}
+pub fn AuditLogChange::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct AuditLogEntry {
   target_id : Nullable[String]
   changes : Array[AuditLogChange]?
   user_id : Nullable[Id[UserMarker]]
   id : Id[AuditLogEntryMarker]
   action_type : AuditLogEvent
-  options : Json?
+  options : @json.Json?
   reason : String?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn AuditLogEntry::to_json(Self) -> Json
+}
+pub fn AuditLogEntry::to_json(Self) -> @json.Json
 
 pub enum AuditLogEntryMarker {
 }
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum AuditLogEvent {
   GuildUpdate
   ChannelCreate
@@ -658,27 +711,30 @@ pub(all) enum AuditLogEvent {
   VoiceChannelStatusCreate
   VoiceChannelStatusDelete
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn AuditLogEvent::from_int(Int32) -> Self
 pub fn AuditLogEvent::to_int(Self) -> Int32
-pub fn AuditLogEvent::to_json(Self) -> Json
-pub impl ToJson for AuditLogEvent
+pub fn AuditLogEvent::to_json(Self) -> @json.Json
 pub impl @json.FromJson for AuditLogEvent
+pub impl @json.ToJson for AuditLogEvent
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct AuthorizationInformation {
   application : Application
   scopes : Array[String]
   expires : Timestamp
   user : User?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn AuthorizationInformation::to_json(Self) -> Json
+}
+pub fn AuthorizationInformation::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct AutoModerationAction {
   typ : AutoModerationActionType
   metadata : ActionMetadata?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn AutoModerationAction::to_json(Self) -> Json
+}
+pub fn AutoModerationAction::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct AutoModerationActionExecutionEvent {
   guild_id : Id[GuildMarker]
   action : AutoModerationAction
@@ -691,48 +747,52 @@ pub(all) struct AutoModerationActionExecutionEvent {
   content : String
   matched_keyword : Nullable[String]
   matched_content : Nullable[String]
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn AutoModerationActionExecutionEvent::to_json(Self) -> Json
+}
+pub fn AutoModerationActionExecutionEvent::to_json(Self) -> @json.Json
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum AutoModerationActionType {
   BlockMessage
   SendAlertMessage
   Timeout
   BlockMemberInteraction
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn AutoModerationActionType::from_int(Int32) -> Self
 pub fn AutoModerationActionType::to_int(Self) -> Int32
-pub fn AutoModerationActionType::to_json(Self) -> Json
-pub impl ToJson for AutoModerationActionType
+pub fn AutoModerationActionType::to_json(Self) -> @json.Json
 pub impl @json.FromJson for AutoModerationActionType
+pub impl @json.ToJson for AutoModerationActionType
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum AutoModerationEventType {
   MessageSend
   MemberUpdate
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn AutoModerationEventType::from_int(Int32) -> Self
 pub fn AutoModerationEventType::to_int(Self) -> Int32
-pub fn AutoModerationEventType::to_json(Self) -> Json
-pub impl ToJson for AutoModerationEventType
+pub fn AutoModerationEventType::to_json(Self) -> @json.Json
 pub impl @json.FromJson for AutoModerationEventType
+pub impl @json.ToJson for AutoModerationEventType
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum AutoModerationKeywordPresetType {
   Profanity
   SexualContent
   Slurs
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn AutoModerationKeywordPresetType::from_int(Int32) -> Self
 pub fn AutoModerationKeywordPresetType::to_int(Self) -> Int32
-pub fn AutoModerationKeywordPresetType::to_json(Self) -> Json
-pub impl ToJson for AutoModerationKeywordPresetType
+pub fn AutoModerationKeywordPresetType::to_json(Self) -> @json.Json
 pub impl @json.FromJson for AutoModerationKeywordPresetType
+pub impl @json.ToJson for AutoModerationKeywordPresetType
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct AutoModerationRule {
   id : Id[AutoModerationRuleMarker]
   guild_id : Id[GuildMarker]
@@ -745,13 +805,14 @@ pub(all) struct AutoModerationRule {
   enabled : Bool
   exempt_roles : Array[Id[RoleMarker]]
   exempt_channels : Array[Id[ChannelMarker]]
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn AutoModerationRule::to_json(Self) -> Json
+}
+pub fn AutoModerationRule::to_json(Self) -> @json.Json
 
 pub enum AutoModerationRuleMarker {
 }
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum AutoModerationTriggerType {
   Keyword
   Spam
@@ -759,13 +820,14 @@ pub(all) enum AutoModerationTriggerType {
   MentionSpam
   MemberProfile
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn AutoModerationTriggerType::from_int(Int32) -> Self
 pub fn AutoModerationTriggerType::to_int(Self) -> Int32
-pub fn AutoModerationTriggerType::to_json(Self) -> Json
-pub impl ToJson for AutoModerationTriggerType
+pub fn AutoModerationTriggerType::to_json(Self) -> @json.Json
 pub impl @json.FromJson for AutoModerationTriggerType
+pub impl @json.ToJson for AutoModerationTriggerType
 
+#derive(@debug.Debug)
 pub(all) struct AvailableGuildCreateEvent {
   guild : Guild
   joined_at : Timestamp
@@ -780,16 +842,18 @@ pub(all) struct AvailableGuildCreateEvent {
   stage_instances : Array[StageInstance]
   guild_scheduled_events : Array[GuildScheduledEvent]
   soundboard_sounds : Array[SoundboardSound]
-} derive(@debug.Debug)
+}
 pub impl @json.FromJson for AvailableGuildCreateEvent
 
+#derive(Eq, @debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct AvatarDecorationData {
   asset : ImageHash
   sku_id : Id[SkuMarker]
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-pub fn AvatarDecorationData::to_json(Self) -> Json
+}
+pub fn AvatarDecorationData::to_json(Self) -> @json.Json
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum BaseTheme {
   Unset
   Dark
@@ -797,33 +861,36 @@ pub(all) enum BaseTheme {
   Darker
   Midnight
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn BaseTheme::from_int(Int32) -> Self
 pub fn BaseTheme::to_int(Self) -> Int32
-pub fn BaseTheme::to_json(Self) -> Json
-pub impl ToJson for BaseTheme
+pub fn BaseTheme::to_json(Self) -> @json.Json
 pub impl @json.FromJson for BaseTheme
+pub impl @json.ToJson for BaseTheme
 
+#derive(@debug.Debug, @json.ToJson)
 pub(all) struct BotActivity {
   name : String
   type_ : ActivityType
   state : String?
   url : String?
-} derive(ToJson, @debug.Debug)
+}
 pub fn BotActivity::competing(String) -> Self
 pub fn BotActivity::custom(String) -> Self
 pub fn BotActivity::listening(String) -> Self
 pub fn BotActivity::playing(String) -> Self
 pub fn BotActivity::streaming(String, String) -> Self
-pub fn BotActivity::to_json(Self) -> Json
+pub fn BotActivity::to_json(Self) -> @json.Json
 pub fn BotActivity::watching(String) -> Self
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct BulkBanResponse {
   banned_users : Array[Id[UserMarker]]
   failed_users : Array[Id[UserMarker]]
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn BulkBanResponse::to_json(Self) -> Json
+}
+pub fn BulkBanResponse::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct Button {
   id : Int32?
   style : ButtonStyle
@@ -833,10 +900,11 @@ pub(all) struct Button {
   sku_id : Id[SkuMarker]?
   url : String?
   disabled : Bool?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn Button::to_json(Self) -> Json
+}
+pub fn Button::to_json(Self) -> @json.Json
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum ButtonStyle {
   Primary
   Secondary
@@ -845,13 +913,14 @@ pub(all) enum ButtonStyle {
   Link
   Premium
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn ButtonStyle::from_int(Int32) -> Self
 pub fn ButtonStyle::to_int(Self) -> Int32
-pub fn ButtonStyle::to_json(Self) -> Json
-pub impl ToJson for ButtonStyle
+pub fn ButtonStyle::to_json(Self) -> @json.Json
 pub impl @json.FromJson for ButtonStyle
+pub impl @json.ToJson for ButtonStyle
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct Channel {
   id : Id[ChannelMarker]
   typ : ChannelType
@@ -889,11 +958,12 @@ pub(all) struct Channel {
   default_thread_rate_limit_per_user : Int32?
   default_sort_order : Nullable[SortOrderType]?
   default_forum_layout : ForumLayoutType?
-} derive(ToJson, @debug.Debug, @json.FromJson)
+}
 pub fn Channel::is_obfuscated(Self) -> Bool
-pub fn Channel::to_json(Self) -> Json
+pub fn Channel::to_json(Self) -> @json.Json
 
-pub(all) struct ChannelFlags(UInt64) derive(Eq)
+#derive(Eq)
+pub(all) struct ChannelFlags(UInt64)
 pub fn ChannelFlags::active_channels_removed() -> Self
 pub fn ChannelFlags::bits(Self) -> UInt64
 pub fn ChannelFlags::channel_obfuscated() -> Self
@@ -909,60 +979,67 @@ pub fn ChannelFlags::is_spoiler_channel() -> Self
 pub fn ChannelFlags::none() -> Self
 pub fn ChannelFlags::pinned() -> Self
 pub fn ChannelFlags::require_tag() -> Self
-pub fn ChannelFlags::to_json(Self) -> Json
+pub fn ChannelFlags::to_json(Self) -> @json.Json
 pub impl BitAnd for ChannelFlags
 pub impl BitOr for ChannelFlags
-pub impl ToJson for ChannelFlags
 pub impl @debug.Debug for ChannelFlags
 pub impl @json.FromJson for ChannelFlags
+pub impl @json.ToJson for ChannelFlags
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ChannelInfo {
   id : Id[ChannelMarker]
   status : Nullable[String]?
   voice_start_time : Nullable[Int64]?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn ChannelInfo::to_json(Self) -> Json
+}
+pub fn ChannelInfo::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ChannelInfoEvent {
   guild_id : Id[GuildMarker]
   channels : Array[ChannelInfo]
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn ChannelInfoEvent::to_json(Self) -> Json
+}
+pub fn ChannelInfoEvent::to_json(Self) -> @json.Json
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum ChannelInfoField {
   Status
   VoiceStartTime
   Other(String)
-} derive(Eq, @debug.Debug)
-pub fn ChannelInfoField::to_json(Self) -> Json
-pub impl ToJson for ChannelInfoField
+}
+pub fn ChannelInfoField::to_json(Self) -> @json.Json
+pub impl @json.ToJson for ChannelInfoField
 
 pub enum ChannelMarker {
 }
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ChannelMention {
   id : Id[ChannelMarker]
   guild_id : Id[GuildMarker]
   typ : ChannelType
   name : String
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn ChannelMention::to_json(Self) -> Json
+}
+pub fn ChannelMention::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ChannelPins {
   items : Array[MessagePin]
   has_more : Bool
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn ChannelPins::to_json(Self) -> Json
+}
+pub fn ChannelPins::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ChannelPinsUpdateEvent {
   guild_id : Id[GuildMarker]?
   channel_id : Id[ChannelMarker]
   last_pin_timestamp : Nullable[Timestamp]?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn ChannelPinsUpdateEvent::to_json(Self) -> Json
+}
+pub fn ChannelPinsUpdateEvent::to_json(Self) -> @json.Json
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum ChannelType {
   GuildText
   Dm
@@ -978,21 +1055,23 @@ pub(all) enum ChannelType {
   GuildForum
   GuildMedia
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn ChannelType::from_int(Int32) -> Self
 pub fn ChannelType::to_int(Self) -> Int32
-pub fn ChannelType::to_json(Self) -> Json
-pub impl ToJson for ChannelType
+pub fn ChannelType::to_json(Self) -> @json.Json
 pub impl @json.FromJson for ChannelType
+pub impl @json.ToJson for ChannelType
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct Checkbox {
   id : Int32?
   custom_id : String
   default : Bool?
   value : Bool?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn Checkbox::to_json(Self) -> Json
+}
+pub fn Checkbox::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct CheckboxGroup {
   id : Int32?
   custom_id : String
@@ -1001,23 +1080,26 @@ pub(all) struct CheckboxGroup {
   max_values : Int32?
   required : Bool?
   values : Array[String]?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn CheckboxGroup::to_json(Self) -> Json
+}
+pub fn CheckboxGroup::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.ToJson)
 pub(all) struct ClientStatus {
   desktop : PresenceStatus?
   mobile : PresenceStatus?
   web : PresenceStatus?
   vr : PresenceStatus?
-} derive(ToJson, @debug.Debug)
-pub fn ClientStatus::to_json(Self) -> Json
+}
+pub fn ClientStatus::to_json(Self) -> @json.Json
 pub impl @json.FromJson for ClientStatus
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct Collectibles {
   nameplate : Nameplate?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn Collectibles::to_json(Self) -> Json
+}
+pub fn Collectibles::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct CommandData {
   id : Id[CommandMarker]
   name : String
@@ -1026,21 +1108,23 @@ pub(all) struct CommandData {
   options : Array[CommandDataOption]?
   guild_id : Id[GuildMarker]?
   target_id : Id[GenericMarker]?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn CommandData::to_json(Self) -> Json
+}
+pub fn CommandData::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct CommandDataOption {
   name : String
   typ : CommandOptionType
-  value : Json?
+  value : @json.Json?
   options : Array[CommandDataOption]?
   focused : Bool?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn CommandDataOption::to_json(Self) -> Json
+}
+pub fn CommandDataOption::to_json(Self) -> @json.Json
 
 pub enum CommandMarker {
 }
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct CommandOption {
   typ : CommandOptionType
   name : String
@@ -1051,23 +1135,25 @@ pub(all) struct CommandOption {
   choices : Array[CommandOptionChoice]?
   options : Array[CommandOption]?
   channel_types : Array[ChannelType]?
-  min_value : Json?
-  max_value : Json?
+  min_value : @json.Json?
+  max_value : @json.Json?
   min_length : Int32?
   max_length : Int32?
   autocomplete : Bool?
   file_types : Array[FileTypeFilter]?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn CommandOption::to_json(Self) -> Json
+}
+pub fn CommandOption::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct CommandOptionChoice {
   name : String
   name_localizations : Nullable[Map[String, String]]?
-  value : Json
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn CommandOptionChoice::to_json(Self) -> Json
+  value : @json.Json
+}
+pub fn CommandOptionChoice::to_json(Self) -> @json.Json
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum CommandOptionType {
   SubCommand
   SubCommandGroup
@@ -1081,17 +1167,18 @@ pub(all) enum CommandOptionType {
   Number
   Attachment
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn CommandOptionType::from_int(Int32) -> Self
 pub fn CommandOptionType::to_int(Self) -> Int32
-pub fn CommandOptionType::to_json(Self) -> Json
-pub impl ToJson for CommandOptionType
+pub fn CommandOptionType::to_json(Self) -> @json.Json
 pub impl @json.FromJson for CommandOptionType
+pub impl @json.ToJson for CommandOptionType
 
 pub enum CommandVersionMarker {
 }
 
 #non_exhaustive
+#derive(@debug.Debug)
 pub(all) enum Component {
   ActionRow(ActionRow)
   Button(Button)
@@ -1113,20 +1200,22 @@ pub(all) enum Component {
   RadioGroup(RadioGroup)
   CheckboxGroup(CheckboxGroup)
   Checkbox(Checkbox)
-  Unknown(Json)
-} derive(@debug.Debug)
-pub fn Component::to_json(Self) -> Json
-pub impl ToJson for Component
+  Unknown(@json.Json)
+}
+pub fn Component::to_json(Self) -> @json.Json
 pub impl @json.FromJson for Component
+pub impl @json.ToJson for Component
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ComponentData {
   custom_id : String
   component_type : Int32
   values : Array[String]?
   resolved : ResolvedData?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn ComponentData::to_json(Self) -> Json
+}
+pub fn ComponentData::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct Connection {
   id : String
   name : String
@@ -1138,10 +1227,11 @@ pub(all) struct Connection {
   show_activity : Bool
   two_way_link : Bool
   visibility : Int32
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn Connection::to_json(Self) -> Json
+}
+pub fn Connection::to_json(Self) -> @json.Json
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum ConnectionService {
   AmazonMusic
   BattleNet
@@ -1170,21 +1260,23 @@ pub(all) enum ConnectionService {
   Xbox
   Youtube
   Unknown(String)
-} derive(Eq, @debug.Debug)
+}
 pub fn ConnectionService::from_string(String) -> Self
-pub fn ConnectionService::to_json(Self) -> Json
+pub fn ConnectionService::to_json(Self) -> @json.Json
 pub fn ConnectionService::to_string(Self) -> String
-pub impl ToJson for ConnectionService
 pub impl @json.FromJson for ConnectionService
+pub impl @json.ToJson for ConnectionService
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct Container {
   id : Int32?
   components : Array[Component]
   accent_color : Nullable[Int32]?
   spoiler : Bool?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn Container::to_json(Self) -> Json
+}
+pub fn Container::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct CurrentUserGuild {
   id : Id[GuildMarker]
   name : String
@@ -1195,27 +1287,30 @@ pub(all) struct CurrentUserGuild {
   features : Array[GuildFeature]
   approximate_member_count : Int32?
   approximate_presence_count : Int32?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn CurrentUserGuild::to_json(Self) -> Json
+}
+pub fn CurrentUserGuild::to_json(Self) -> @json.Json
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum DefaultMessageNotifications {
   AllMessages
   OnlyMentions
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn DefaultMessageNotifications::from_int(Int32) -> Self
 pub fn DefaultMessageNotifications::to_int(Self) -> Int32
-pub fn DefaultMessageNotifications::to_json(Self) -> Json
-pub impl ToJson for DefaultMessageNotifications
+pub fn DefaultMessageNotifications::to_json(Self) -> @json.Json
 pub impl @json.FromJson for DefaultMessageNotifications
+pub impl @json.ToJson for DefaultMessageNotifications
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct DefaultReaction {
   emoji_id : Nullable[Id[EmojiMarker]]
   emoji_name : Nullable[String]
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn DefaultReaction::to_json(Self) -> Json
+}
+pub fn DefaultReaction::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct Embed {
   title : String?
   typ : EmbedType?
@@ -1232,44 +1327,49 @@ pub(all) struct Embed {
   fields : Array[EmbedField]?
   components : Array[Component]?
   flags : EmbedFlags?
-} derive(ToJson, @debug.Debug, @json.FromJson)
+}
 pub fn Embed::Embed(title? : String, description? : String, url? : String, timestamp? : Timestamp, color? : Int32, footer? : EmbedFooter, image? : EmbedImage, thumbnail? : EmbedThumbnail, author? : EmbedAuthor, fields? : Array[EmbedField]) -> Self
-pub fn Embed::to_json(Self) -> Json
+pub fn Embed::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct EmbedAuthor {
   name : String
   url : String?
   icon_url : String?
   proxy_icon_url : String?
-} derive(ToJson, @debug.Debug, @json.FromJson)
+}
 pub fn EmbedAuthor::EmbedAuthor(String, url? : String, icon_url? : String) -> Self
-pub fn EmbedAuthor::to_json(Self) -> Json
+pub fn EmbedAuthor::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct EmbedField {
   name : String
   value : String
   inline : Bool?
-} derive(ToJson, @debug.Debug, @json.FromJson)
+}
 pub fn EmbedField::EmbedField(String, String, inline? : Bool) -> Self
-pub fn EmbedField::to_json(Self) -> Json
+pub fn EmbedField::to_json(Self) -> @json.Json
 
-pub(all) struct EmbedFlags(UInt64) derive(Eq)
+#derive(Eq)
+pub(all) struct EmbedFlags(UInt64)
 pub fn EmbedFlags::bits(Self) -> UInt64
 pub fn EmbedFlags::from_bits(UInt64) -> Self
 pub fn EmbedFlags::is_content_inventory_entry() -> Self
-pub fn EmbedFlags::to_json(Self) -> Json
-pub impl ToJson for EmbedFlags
+pub fn EmbedFlags::to_json(Self) -> @json.Json
 pub impl @debug.Debug for EmbedFlags
 pub impl @json.FromJson for EmbedFlags
+pub impl @json.ToJson for EmbedFlags
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct EmbedFooter {
   text : String
   icon_url : String?
   proxy_icon_url : String?
-} derive(ToJson, @debug.Debug, @json.FromJson)
+}
 pub fn EmbedFooter::EmbedFooter(String, icon_url? : String) -> Self
-pub fn EmbedFooter::to_json(Self) -> Json
+pub fn EmbedFooter::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct EmbedImage {
   url : String
   proxy_url : String?
@@ -1280,26 +1380,29 @@ pub(all) struct EmbedImage {
   placeholder_version : Int32?
   description : String?
   flags : Int32?
-} derive(ToJson, @debug.Debug, @json.FromJson)
+}
 pub fn EmbedImage::EmbedImage(String) -> Self
-pub fn EmbedImage::to_json(Self) -> Json
+pub fn EmbedImage::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct EmbedProvider {
   name : String?
   url : String?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn EmbedProvider::to_json(Self) -> Json
+}
+pub fn EmbedProvider::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct EmbedThumbnail {
   url : String
   proxy_url : String?
   height : Int32?
   width : Int32?
-} derive(ToJson, @debug.Debug, @json.FromJson)
+}
 pub fn EmbedThumbnail::EmbedThumbnail(String) -> Self
-pub fn EmbedThumbnail::to_json(Self) -> Json
+pub fn EmbedThumbnail::to_json(Self) -> @json.Json
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum EmbedType {
   Rich
   Image
@@ -1311,13 +1414,14 @@ pub(all) enum EmbedType {
   PollResult
   Components
   Unknown(String)
-} derive(Eq, @debug.Debug)
+}
 pub fn EmbedType::from_string(String) -> Self
-pub fn EmbedType::to_json(Self) -> Json
+pub fn EmbedType::to_json(Self) -> @json.Json
 pub fn EmbedType::to_string(Self) -> String
-pub impl ToJson for EmbedType
 pub impl @json.FromJson for EmbedType
+pub impl @json.ToJson for EmbedType
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct EmbedVideo {
   url : String?
   proxy_url : String?
@@ -1328,9 +1432,10 @@ pub(all) struct EmbedVideo {
   placeholder_version : Int32?
   description : String?
   flags : Int32?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn EmbedVideo::to_json(Self) -> Json
+}
+pub fn EmbedVideo::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct Emoji {
   id : Nullable[Id[EmojiMarker]]?
   name : Nullable[String]
@@ -1340,12 +1445,13 @@ pub(all) struct Emoji {
   require_colons : Bool?
   managed : Bool?
   available : Bool?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn Emoji::to_json(Self) -> Json
+}
+pub fn Emoji::to_json(Self) -> @json.Json
 
 pub enum EmojiMarker {
 }
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct Entitlement {
   id : Id[EntitlementMarker]
   sku_id : Id[SkuMarker]
@@ -1357,25 +1463,27 @@ pub(all) struct Entitlement {
   ends_at : Nullable[Timestamp]?
   guild_id : Id[GuildMarker]?
   consumed : Bool?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn Entitlement::to_json(Self) -> Json
+}
+pub fn Entitlement::to_json(Self) -> @json.Json
 
 pub enum EntitlementMarker {
 }
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum EntitlementOwnerType {
   Guild
   User
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn EntitlementOwnerType::from_int(Int32) -> Self
 pub fn EntitlementOwnerType::to_int(Self) -> Int32
-pub fn EntitlementOwnerType::to_json(Self) -> Json
-pub impl ToJson for EntitlementOwnerType
+pub fn EntitlementOwnerType::to_json(Self) -> @json.Json
 pub impl @json.FromJson for EntitlementOwnerType
+pub impl @json.ToJson for EntitlementOwnerType
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum EntitlementType {
   Purchase
   PremiumSubscription
@@ -1386,31 +1494,34 @@ pub(all) enum EntitlementType {
   PremiumPurchase
   ApplicationSubscription
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn EntitlementType::from_int(Int32) -> Self
 pub fn EntitlementType::to_int(Self) -> Int32
-pub fn EntitlementType::to_json(Self) -> Json
-pub impl ToJson for EntitlementType
+pub fn EntitlementType::to_json(Self) -> @json.Json
 pub impl @json.FromJson for EntitlementType
+pub impl @json.ToJson for EntitlementType
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct EntityMetadata {
   location : String?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn EntityMetadata::to_json(Self) -> Json
+}
+pub fn EntityMetadata::to_json(Self) -> @json.Json
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum EntryPointCommandHandlerType {
   AppHandler
   DiscordLaunchActivity
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn EntryPointCommandHandlerType::from_int(Int32) -> Self
 pub fn EntryPointCommandHandlerType::to_int(Self) -> Int32
-pub fn EntryPointCommandHandlerType::to_json(Self) -> Json
-pub impl ToJson for EntryPointCommandHandlerType
+pub fn EntryPointCommandHandlerType::to_json(Self) -> @json.Json
 pub impl @json.FromJson for EntryPointCommandHandlerType
+pub impl @json.ToJson for EntryPointCommandHandlerType
 
 #non_exhaustive
+#derive(@debug.Debug)
 pub(all) enum Event {
   ApplicationCommandPermissionsUpdate(GuildApplicationCommandPermissions)
   AutoModerationActionExecution(AutoModerationActionExecutionEvent)
@@ -1491,10 +1602,11 @@ pub(all) enum Event {
   VoiceServerUpdate(VoiceServerUpdateEvent)
   VoiceStateUpdate(VoiceState)
   WebhooksUpdate(WebhooksUpdateEvent)
-  Unknown(t~ : String, d~ : Json)
-} derive(@debug.Debug)
+  Unknown(t~ : String, d~ : @json.Json)
+}
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum EventKind {
   KApplicationCommandPermissionsUpdate
   KAutoModerationActionExecution
@@ -1576,46 +1688,50 @@ pub(all) enum EventKind {
   KVoiceStateUpdate
   KWebhooksUpdate
   KUnknown
-} derive(Eq, @debug.Debug)
+}
 pub fn EventKind::of_name(String) -> Self
 pub fn EventKind::required_intents(Self) -> Intents
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum ExplicitContentFilter {
   Disabled
   MembersWithoutRoles
   AllMembers
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn ExplicitContentFilter::from_int(Int32) -> Self
 pub fn ExplicitContentFilter::to_int(Self) -> Int32
-pub fn ExplicitContentFilter::to_json(Self) -> Json
-pub impl ToJson for ExplicitContentFilter
+pub fn ExplicitContentFilter::to_json(Self) -> @json.Json
 pub impl @json.FromJson for ExplicitContentFilter
+pub impl @json.ToJson for ExplicitContentFilter
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct FileComponent {
   id : Int32?
   file : UnfurledMediaItem
   spoiler : Bool?
   name : String?
   size : Int32?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn FileComponent::to_json(Self) -> Json
+}
+pub fn FileComponent::to_json(Self) -> @json.Json
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum FileTypeFilter {
   Image
   Video
   Audio
   Extension(String)
   Unknown(String)
-} derive(Eq, @debug.Debug)
+}
 pub fn FileTypeFilter::from_string(String) -> Self
-pub fn FileTypeFilter::to_json(Self) -> Json
+pub fn FileTypeFilter::to_json(Self) -> @json.Json
 pub fn FileTypeFilter::to_string(Self) -> String
-pub impl ToJson for FileTypeFilter
 pub impl @json.FromJson for FileTypeFilter
+pub impl @json.ToJson for FileTypeFilter
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct FileUpload {
   id : Int32?
   custom_id : String
@@ -1624,47 +1740,52 @@ pub(all) struct FileUpload {
   required : Bool?
   values : Array[String]?
   file_types : Array[FileTypeFilter]?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn FileUpload::to_json(Self) -> Json
+}
+pub fn FileUpload::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct FollowedChannel {
   channel_id : Id[ChannelMarker]
   webhook_id : Id[WebhookMarker]
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn FollowedChannel::to_json(Self) -> Json
+}
+pub fn FollowedChannel::to_json(Self) -> @json.Json
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum ForumLayoutType {
   NotSet
   ListView
   GalleryView
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn ForumLayoutType::from_int(Int32) -> Self
 pub fn ForumLayoutType::to_int(Self) -> Int32
-pub fn ForumLayoutType::to_json(Self) -> Json
-pub impl ToJson for ForumLayoutType
+pub fn ForumLayoutType::to_json(Self) -> @json.Json
 pub impl @json.FromJson for ForumLayoutType
+pub impl @json.ToJson for ForumLayoutType
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ForumTag {
   id : Id[GenericMarker]
   name : String
   moderated : Bool
   emoji_id : Nullable[Id[EmojiMarker]]
   emoji_name : Nullable[String]
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn ForumTag::to_json(Self) -> Json
+}
+pub fn ForumTag::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug)
 pub(all) struct ForumTagRequest {
   id : Id[GenericMarker]?
   name : String
   moderated : Bool?
   emoji_id : Id[EmojiMarker]?
   emoji_name : String?
-} derive(@debug.Debug)
-pub fn ForumTagRequest::to_json(Self) -> Json
-pub impl ToJson for ForumTagRequest
+}
+pub fn ForumTagRequest::to_json(Self) -> @json.Json
+pub impl @json.ToJson for ForumTagRequest
 
+#derive(@debug.Debug)
 pub(all) struct GameDirectMessage {
   id : Id[MessageMarker]
   typ : MessageType?
@@ -1680,33 +1801,36 @@ pub(all) struct GameDirectMessage {
   attachments : Array[Attachment]?
   components : Array[Component]?
   activity : MessageActivity?
-  application : Json?
-  raw : Json
-} derive(@debug.Debug)
-pub fn GameDirectMessage::to_json(Self) -> Json
-pub impl ToJson for GameDirectMessage
+  application : @json.Json?
+  raw : @json.Json
+}
+pub fn GameDirectMessage::to_json(Self) -> @json.Json
 pub impl @json.FromJson for GameDirectMessage
+pub impl @json.ToJson for GameDirectMessage
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct GatewayBotInfo {
   url : String
   shards : Int32
   session_start_limit : SessionStartLimit
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn GatewayBotInfo::to_json(Self) -> Json
+}
+pub fn GatewayBotInfo::to_json(Self) -> @json.Json
 
-pub(all) struct GatewayCapabilities(UInt32) derive(Eq)
+#derive(Eq)
+pub(all) struct GatewayCapabilities(UInt32)
 pub fn GatewayCapabilities::bits(Self) -> UInt32
 pub fn GatewayCapabilities::channel_obfuscation() -> Self
 pub fn GatewayCapabilities::contains(Self, Self) -> Bool
 pub fn GatewayCapabilities::from_bits(UInt32) -> Self
 pub fn GatewayCapabilities::none() -> Self
-pub fn GatewayCapabilities::to_json(Self) -> Json
+pub fn GatewayCapabilities::to_json(Self) -> @json.Json
 pub impl BitAnd for GatewayCapabilities
 pub impl BitOr for GatewayCapabilities
-pub impl ToJson for GatewayCapabilities
 pub impl @debug.Debug for GatewayCapabilities
+pub impl @json.ToJson for GatewayCapabilities
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum GatewayOpcode {
   Dispatch
   Heartbeat
@@ -1722,20 +1846,22 @@ pub(all) enum GatewayOpcode {
   RequestSoundboardSounds
   RequestChannelInfo
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn GatewayOpcode::from_int(Int32) -> Self
 pub fn GatewayOpcode::to_int(Self) -> Int32
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct GatewayRateLimitedEvent {
   opcode : Int32
   retry_after : Double
-  meta : Json
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn GatewayRateLimitedEvent::to_json(Self) -> Json
+  meta : @json.Json
+}
+pub fn GatewayRateLimitedEvent::to_json(Self) -> @json.Json
 
 pub enum GenericMarker {
 }
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct Guild {
   id : Id[GuildMarker]
   name : String
@@ -1780,48 +1906,55 @@ pub(all) struct Guild {
   premium_progress_bar_enabled : Bool?
   safety_alerts_channel_id : Nullable[Id[ChannelMarker]]
   incidents_data : Nullable[IncidentsData]?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn Guild::to_json(Self) -> Json
+}
+pub fn Guild::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct GuildApplicationCommandPermissions {
   id : Id[CommandMarker]
   application_id : Id[ApplicationMarker]
   guild_id : Id[GuildMarker]
   permissions : Array[ApplicationCommandPermission]
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn GuildApplicationCommandPermissions::to_json(Self) -> Json
+}
+pub fn GuildApplicationCommandPermissions::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug)
 pub(all) struct GuildAuditLogEntryCreateEvent {
   guild_id : Id[GuildMarker]
   entry : AuditLogEntry
-} derive(@debug.Debug)
+}
 pub impl @json.FromJson for GuildAuditLogEntryCreateEvent
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct GuildBan {
   reason : Nullable[String]
   user : User
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn GuildBan::to_json(Self) -> Json
+}
+pub fn GuildBan::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct GuildBanEvent {
   guild_id : Id[GuildMarker]
   user : User
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn GuildBanEvent::to_json(Self) -> Json
+}
+pub fn GuildBanEvent::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug)
 pub(all) enum GuildCreateEvent {
   Available(AvailableGuildCreateEvent)
   Unavailable(UnavailableGuild)
-} derive(@debug.Debug)
+}
 pub impl @json.FromJson for GuildCreateEvent
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct GuildEmojisUpdateEvent {
   guild_id : Id[GuildMarker]
   emojis : Array[Emoji]
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn GuildEmojisUpdateEvent::to_json(Self) -> Json
+}
+pub fn GuildEmojisUpdateEvent::to_json(Self) -> @json.Json
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum GuildFeature {
   AnimatedBanner
   AnimatedIcon
@@ -1864,21 +1997,23 @@ pub(all) enum GuildFeature {
   PinPermissionMigrationComplete
   PruneRequiresAdmin
   Unknown(String)
-} derive(Eq, @debug.Debug)
+}
 pub fn GuildFeature::from_string(String) -> Self
-pub fn GuildFeature::to_json(Self) -> Json
+pub fn GuildFeature::to_json(Self) -> @json.Json
 pub fn GuildFeature::to_string(Self) -> String
-pub impl ToJson for GuildFeature
 pub impl @json.FromJson for GuildFeature
+pub impl @json.ToJson for GuildFeature
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct GuildIntegrationsUpdateEvent {
   guild_id : Id[GuildMarker]
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn GuildIntegrationsUpdateEvent::to_json(Self) -> Json
+}
+pub fn GuildIntegrationsUpdateEvent::to_json(Self) -> @json.Json
 
 pub enum GuildMarker {
 }
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct GuildMember {
   user : User?
   nick : Nullable[String]?
@@ -1895,16 +2030,18 @@ pub(all) struct GuildMember {
   communication_disabled_until : Nullable[Timestamp]?
   avatar_decoration_data : Nullable[AvatarDecorationData]?
   collectibles : Nullable[Collectibles]?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn GuildMember::to_json(Self) -> Json
+}
+pub fn GuildMember::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug)
 pub(all) struct GuildMemberAddEvent {
   guild_id : Id[GuildMarker]
   guild_member : GuildMember
-} derive(@debug.Debug)
+}
 pub impl @json.FromJson for GuildMemberAddEvent
 
-pub(all) struct GuildMemberFlags(UInt64) derive(Eq)
+#derive(Eq)
+pub(all) struct GuildMemberFlags(UInt64)
 pub fn GuildMemberFlags::auto_mod_quarantined_guild_tag() -> Self
 pub fn GuildMemberFlags::automod_quarantined_bio() -> Self
 pub fn GuildMemberFlags::automod_quarantined_username_or_guild_nickname() -> Self
@@ -1920,19 +2057,21 @@ pub fn GuildMemberFlags::is_guest() -> Self
 pub fn GuildMemberFlags::none() -> Self
 pub fn GuildMemberFlags::started_home_actions() -> Self
 pub fn GuildMemberFlags::started_onboarding() -> Self
-pub fn GuildMemberFlags::to_json(Self) -> Json
+pub fn GuildMemberFlags::to_json(Self) -> @json.Json
 pub impl BitAnd for GuildMemberFlags
 pub impl BitOr for GuildMemberFlags
-pub impl ToJson for GuildMemberFlags
 pub impl @debug.Debug for GuildMemberFlags
 pub impl @json.FromJson for GuildMemberFlags
+pub impl @json.ToJson for GuildMemberFlags
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct GuildMemberRemoveEvent {
   guild_id : Id[GuildMarker]
   user : User
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn GuildMemberRemoveEvent::to_json(Self) -> Json
+}
+pub fn GuildMemberRemoveEvent::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct GuildMemberUpdateEvent {
   guild_id : Id[GuildMarker]
   roles : Array[Id[RoleMarker]]
@@ -1949,20 +2088,22 @@ pub(all) struct GuildMemberUpdateEvent {
   communication_disabled_until : Nullable[Timestamp]?
   flags : GuildMemberFlags?
   avatar_decoration_data : Nullable[AvatarDecorationData]?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn GuildMemberUpdateEvent::to_json(Self) -> Json
+}
+pub fn GuildMemberUpdateEvent::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct GuildMembersChunkEvent {
   guild_id : Id[GuildMarker]
   members : Array[GuildMember]
   chunk_index : Int32
   chunk_count : Int32
-  not_found : Array[Json]?
+  not_found : Array[@json.Json]?
   presences : Array[PresenceUpdateEvent]?
   nonce : String?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn GuildMembersChunkEvent::to_json(Self) -> Json
+}
+pub fn GuildMembersChunkEvent::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct GuildMessageSearchResults {
   doing_deep_historical_index : Bool?
   documents_indexed : Int32?
@@ -1973,18 +2114,20 @@ pub(all) struct GuildMessageSearchResults {
   retry_after : Int32?
   code : Int32?
   message : String?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn GuildMessageSearchResults::to_json(Self) -> Json
+}
+pub fn GuildMessageSearchResults::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct GuildOnboarding {
   guild_id : Id[GuildMarker]
   prompts : Array[OnboardingPrompt]
   default_channel_ids : Array[Id[ChannelMarker]]
   enabled : Bool
   mode : OnboardingMode
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn GuildOnboarding::to_json(Self) -> Json
+}
+pub fn GuildOnboarding::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct GuildPreview {
   id : Id[GuildMarker]
   name : String
@@ -1997,26 +2140,30 @@ pub(all) struct GuildPreview {
   approximate_presence_count : Int32
   description : Nullable[String]
   stickers : Array[Sticker]
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn GuildPreview::to_json(Self) -> Json
+}
+pub fn GuildPreview::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct GuildPruneResult {
   pruned : Nullable[Int32]
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn GuildPruneResult::to_json(Self) -> Json
+}
+pub fn GuildPruneResult::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct GuildRoleDeleteEvent {
   guild_id : Id[GuildMarker]
   role_id : Id[RoleMarker]
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn GuildRoleDeleteEvent::to_json(Self) -> Json
+}
+pub fn GuildRoleDeleteEvent::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct GuildRoleEvent {
   guild_id : Id[GuildMarker]
   role : Role
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn GuildRoleEvent::to_json(Self) -> Json
+}
+pub fn GuildRoleEvent::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct GuildScheduledEvent {
   id : Id[ScheduledEventMarker]
   guild_id : Id[GuildMarker]
@@ -2035,33 +2182,36 @@ pub(all) struct GuildScheduledEvent {
   user_count : Int32?
   image : Nullable[ImageHash]?
   recurrence_rule : Nullable[GuildScheduledEventRecurrenceRule]
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn GuildScheduledEvent::to_json(Self) -> Json
+}
+pub fn GuildScheduledEvent::to_json(Self) -> @json.Json
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum GuildScheduledEventEntityType {
   StageInstance
   Voice
   External
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn GuildScheduledEventEntityType::from_int(Int32) -> Self
 pub fn GuildScheduledEventEntityType::to_int(Self) -> Int32
-pub fn GuildScheduledEventEntityType::to_json(Self) -> Json
-pub impl ToJson for GuildScheduledEventEntityType
+pub fn GuildScheduledEventEntityType::to_json(Self) -> @json.Json
 pub impl @json.FromJson for GuildScheduledEventEntityType
+pub impl @json.ToJson for GuildScheduledEventEntityType
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum GuildScheduledEventPrivacyLevel {
   GuildOnly
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn GuildScheduledEventPrivacyLevel::from_int(Int32) -> Self
 pub fn GuildScheduledEventPrivacyLevel::to_int(Self) -> Int32
-pub fn GuildScheduledEventPrivacyLevel::to_json(Self) -> Json
-pub impl ToJson for GuildScheduledEventPrivacyLevel
+pub fn GuildScheduledEventPrivacyLevel::to_json(Self) -> @json.Json
 pub impl @json.FromJson for GuildScheduledEventPrivacyLevel
+pub impl @json.ToJson for GuildScheduledEventPrivacyLevel
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct GuildScheduledEventRecurrenceRule {
   start : Timestamp
   end : Nullable[Timestamp]?
@@ -2073,23 +2223,25 @@ pub(all) struct GuildScheduledEventRecurrenceRule {
   by_month_day : Nullable[Array[Int32]]?
   by_year_day : Array[Int32]?
   count : Int32?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn GuildScheduledEventRecurrenceRule::to_json(Self) -> Json
+}
+pub fn GuildScheduledEventRecurrenceRule::to_json(Self) -> @json.Json
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum GuildScheduledEventRecurrenceRuleFrequency {
   Yearly
   Monthly
   Weekly
   Daily
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn GuildScheduledEventRecurrenceRuleFrequency::from_int(Int32) -> Self
 pub fn GuildScheduledEventRecurrenceRuleFrequency::to_int(Self) -> Int32
-pub fn GuildScheduledEventRecurrenceRuleFrequency::to_json(Self) -> Json
-pub impl ToJson for GuildScheduledEventRecurrenceRuleFrequency
+pub fn GuildScheduledEventRecurrenceRuleFrequency::to_json(Self) -> @json.Json
 pub impl @json.FromJson for GuildScheduledEventRecurrenceRuleFrequency
+pub impl @json.ToJson for GuildScheduledEventRecurrenceRuleFrequency
 
+#derive(Eq, @debug.Debug)
 pub(all) enum GuildScheduledEventRecurrenceRuleMonth {
   January
   February
@@ -2104,19 +2256,21 @@ pub(all) enum GuildScheduledEventRecurrenceRuleMonth {
   November
   December
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn GuildScheduledEventRecurrenceRuleMonth::from_int(Int32) -> Self
 pub fn GuildScheduledEventRecurrenceRuleMonth::to_int(Self) -> Int32
-pub fn GuildScheduledEventRecurrenceRuleMonth::to_json(Self) -> Json
-pub impl ToJson for GuildScheduledEventRecurrenceRuleMonth
+pub fn GuildScheduledEventRecurrenceRuleMonth::to_json(Self) -> @json.Json
 pub impl @json.FromJson for GuildScheduledEventRecurrenceRuleMonth
+pub impl @json.ToJson for GuildScheduledEventRecurrenceRuleMonth
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct GuildScheduledEventRecurrenceRuleNWeekday {
   n : Int32
   day : GuildScheduledEventRecurrenceRuleWeekday
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn GuildScheduledEventRecurrenceRuleNWeekday::to_json(Self) -> Json
+}
+pub fn GuildScheduledEventRecurrenceRuleNWeekday::to_json(Self) -> @json.Json
 
+#derive(Eq, @debug.Debug)
 pub(all) enum GuildScheduledEventRecurrenceRuleWeekday {
   Monday
   Tuesday
@@ -2126,53 +2280,59 @@ pub(all) enum GuildScheduledEventRecurrenceRuleWeekday {
   Saturday
   Sunday
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn GuildScheduledEventRecurrenceRuleWeekday::from_int(Int32) -> Self
 pub fn GuildScheduledEventRecurrenceRuleWeekday::to_int(Self) -> Int32
-pub fn GuildScheduledEventRecurrenceRuleWeekday::to_json(Self) -> Json
-pub impl ToJson for GuildScheduledEventRecurrenceRuleWeekday
+pub fn GuildScheduledEventRecurrenceRuleWeekday::to_json(Self) -> @json.Json
 pub impl @json.FromJson for GuildScheduledEventRecurrenceRuleWeekday
+pub impl @json.ToJson for GuildScheduledEventRecurrenceRuleWeekday
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum GuildScheduledEventStatus {
   Scheduled
   Active
   Completed
   Canceled
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn GuildScheduledEventStatus::from_int(Int32) -> Self
 pub fn GuildScheduledEventStatus::to_int(Self) -> Int32
-pub fn GuildScheduledEventStatus::to_json(Self) -> Json
-pub impl ToJson for GuildScheduledEventStatus
+pub fn GuildScheduledEventStatus::to_json(Self) -> @json.Json
 pub impl @json.FromJson for GuildScheduledEventStatus
+pub impl @json.ToJson for GuildScheduledEventStatus
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct GuildScheduledEventUser {
   guild_scheduled_event_id : Id[ScheduledEventMarker]
   user : User
   guild_member : GuildMember?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn GuildScheduledEventUser::to_json(Self) -> Json
+}
+pub fn GuildScheduledEventUser::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct GuildScheduledEventUserEvent {
   guild_scheduled_event_id : Id[ScheduledEventMarker]
   user_id : Id[UserMarker]
   guild_id : Id[GuildMarker]
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn GuildScheduledEventUserEvent::to_json(Self) -> Json
+}
+pub fn GuildScheduledEventUserEvent::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct GuildSoundboardSoundDeleteEvent {
   sound_id : Id[SoundboardSoundMarker]
   guild_id : Id[GuildMarker]
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn GuildSoundboardSoundDeleteEvent::to_json(Self) -> Json
+}
+pub fn GuildSoundboardSoundDeleteEvent::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct GuildStickersUpdateEvent {
   guild_id : Id[GuildMarker]
   stickers : Array[Sticker]
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn GuildStickersUpdateEvent::to_json(Self) -> Json
+}
+pub fn GuildStickersUpdateEvent::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct GuildTemplate {
   code : String
   name : String
@@ -2185,9 +2345,10 @@ pub(all) struct GuildTemplate {
   source_guild_id : Id[GuildMarker]
   serialized_source_guild : GuildTemplateSource
   is_dirty : Nullable[Bool]
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn GuildTemplate::to_json(Self) -> Json
+}
+pub fn GuildTemplate::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct GuildTemplateChannel {
   id : Int32
   typ : ChannelType
@@ -2200,24 +2361,27 @@ pub(all) struct GuildTemplateChannel {
   rate_limit_per_user : Int32?
   parent_id : Nullable[Int32]?
   permission_overwrites : Array[GuildTemplatePermissionOverwrite]?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn GuildTemplateChannel::to_json(Self) -> Json
+}
+pub fn GuildTemplateChannel::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct GuildTemplatePermissionOverwrite {
   id : Int32
   typ : Int32
   allow : GuildTemplatePermissions
   deny : GuildTemplatePermissions
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn GuildTemplatePermissionOverwrite::to_json(Self) -> Json
+}
+pub fn GuildTemplatePermissionOverwrite::to_json(Self) -> @json.Json
 
-pub(all) struct GuildTemplatePermissions(UInt64) derive(Eq)
+#derive(Eq)
+pub(all) struct GuildTemplatePermissions(UInt64)
 pub fn GuildTemplatePermissions::bits(Self) -> UInt64
-pub fn GuildTemplatePermissions::to_json(Self) -> Json
-pub impl ToJson for GuildTemplatePermissions
+pub fn GuildTemplatePermissions::to_json(Self) -> @json.Json
 pub impl @debug.Debug for GuildTemplatePermissions
 pub impl @json.FromJson for GuildTemplatePermissions
+pub impl @json.ToJson for GuildTemplatePermissions
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct GuildTemplateRole {
   id : Int32
   name : String
@@ -2228,9 +2392,10 @@ pub(all) struct GuildTemplateRole {
   mentionable : Bool
   icon : Nullable[ImageHash]?
   unicode_emoji : Nullable[String]?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn GuildTemplateRole::to_json(Self) -> Json
+}
+pub fn GuildTemplateRole::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct GuildTemplateSource {
   name : String?
   description : Nullable[String]?
@@ -2246,15 +2411,17 @@ pub(all) struct GuildTemplateSource {
   system_channel_id : Nullable[Int32]?
   system_channel_flags : SystemChannelFlags?
   icon_hash : Nullable[ImageHash]?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn GuildTemplateSource::to_json(Self) -> Json
+}
+pub fn GuildTemplateSource::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct GuildVanityUrl {
   code : Nullable[String]
   uses : Int32
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn GuildVanityUrl::to_json(Self) -> Json
+}
+pub fn GuildVanityUrl::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct GuildWidget {
   id : Id[GuildMarker]
   name : String
@@ -2262,16 +2429,18 @@ pub(all) struct GuildWidget {
   channels : Array[GuildWidgetChannel]
   members : Array[GuildWidgetMember]
   presence_count : Int32
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn GuildWidget::to_json(Self) -> Json
+}
+pub fn GuildWidget::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct GuildWidgetChannel {
   id : Id[ChannelMarker]
   name : String
   position : Int32
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn GuildWidgetChannel::to_json(Self) -> Json
+}
+pub fn GuildWidgetChannel::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct GuildWidgetMember {
   id : String
   username : String
@@ -2279,57 +2448,63 @@ pub(all) struct GuildWidgetMember {
   avatar : Nullable[String]
   status : String
   avatar_url : String
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn GuildWidgetMember::to_json(Self) -> Json
+}
+pub fn GuildWidgetMember::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct GuildWidgetSettings {
   enabled : Bool
   channel_id : Nullable[Id[ChannelMarker]]
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn GuildWidgetSettings::to_json(Self) -> Json
+}
+pub fn GuildWidgetSettings::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct Hello {
   heartbeat_interval : Int32
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn Hello::to_json(Self) -> Json
+}
+pub fn Hello::to_json(Self) -> @json.Json
 
 pub(all) struct Id[M](UInt64)
 pub fn[M, N] Id::cast(Self[M]) -> Self[N]
 pub fn[M] Id::parse(StringView) -> Self[M] raise
 pub fn[M] Id::timestamp_ms(Self[M]) -> Int64
-pub fn[M] Id::to_json(Self[M]) -> Json
+pub fn[M] Id::to_json(Self[M]) -> @json.Json
 pub fn[M] Id::to_string(Self[M]) -> String
 pub fn[M] Id::value(Self[M]) -> UInt64
 pub impl[M] Compare for Id[M]
 pub impl[M] Eq for Id[M]
 pub impl[M] Hash for Id[M]
 pub impl[M] Show for Id[M]
-pub impl[M] ToJson for Id[M]
 pub impl[M] @debug.Debug for Id[M]
 pub impl[M] @json.FromJson for Id[M]
+pub impl[M] @json.ToJson for Id[M]
 
-pub(all) struct ImageHash(String) derive(Eq)
+#derive(Eq)
+pub(all) struct ImageHash(String)
 pub fn ImageHash::is_animated(Self) -> Bool
-pub fn ImageHash::to_json(Self) -> Json
+pub fn ImageHash::to_json(Self) -> @json.Json
 pub fn ImageHash::to_string(Self) -> String
-pub impl ToJson for ImageHash
 pub impl @debug.Debug for ImageHash
 pub impl @json.FromJson for ImageHash
+pub impl @json.ToJson for ImageHash
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct IncidentsData {
   invites_disabled_until : Nullable[Timestamp]?
   dms_disabled_until : Nullable[Timestamp]?
   dm_spam_detected_at : Nullable[Timestamp]?
   raid_detected_at : Nullable[Timestamp]?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn IncidentsData::to_json(Self) -> Json
+}
+pub fn IncidentsData::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct InstallParams {
   scopes : Array[String]
   permissions : Permissions
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn InstallParams::to_json(Self) -> Json
+}
+pub fn InstallParams::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct Integration {
   id : Id[IntegrationMarker]?
   name : String?
@@ -2348,53 +2523,59 @@ pub(all) struct Integration {
   application : IntegrationApplication?
   application_id : Id[ApplicationMarker]?
   scopes : Array[String]?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn Integration::to_json(Self) -> Json
+}
+pub fn Integration::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct IntegrationAccount {
   id : String
   name : String
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn IntegrationAccount::to_json(Self) -> Json
+}
+pub fn IntegrationAccount::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct IntegrationApplication {
   id : Id[ApplicationMarker]
   name : String
   icon : Nullable[ImageHash]
   description : String
   bot : User?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn IntegrationApplication::to_json(Self) -> Json
+}
+pub fn IntegrationApplication::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct IntegrationDeleteEvent {
   id : Id[IntegrationMarker]
   guild_id : Id[GuildMarker]
   application_id : Id[ApplicationMarker]?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn IntegrationDeleteEvent::to_json(Self) -> Json
+}
+pub fn IntegrationDeleteEvent::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug)
 pub(all) struct IntegrationEvent {
   guild_id : Id[GuildMarker]
-  integration : Json
-} derive(@debug.Debug)
+  integration : @json.Json
+}
 pub impl @json.FromJson for IntegrationEvent
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum IntegrationExpireBehavior {
   RemoveRole
   Kick
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn IntegrationExpireBehavior::from_int(Int32) -> Self
 pub fn IntegrationExpireBehavior::to_int(Self) -> Int32
-pub fn IntegrationExpireBehavior::to_json(Self) -> Json
-pub impl ToJson for IntegrationExpireBehavior
+pub fn IntegrationExpireBehavior::to_json(Self) -> @json.Json
 pub impl @json.FromJson for IntegrationExpireBehavior
+pub impl @json.ToJson for IntegrationExpireBehavior
 
 pub enum IntegrationMarker {
 }
 
-pub(all) struct Intents(UInt32) derive(Eq)
+#derive(Eq)
+pub(all) struct Intents(UInt32)
 pub fn Intents::auto_moderation_configuration() -> Self
 pub fn Intents::auto_moderation_execution() -> Self
 pub fn Intents::bits(Self) -> UInt32
@@ -2420,13 +2601,14 @@ pub fn Intents::guild_webhooks() -> Self
 pub fn Intents::guilds() -> Self
 pub fn Intents::message_content() -> Self
 pub fn Intents::none() -> Self
-pub fn Intents::to_json(Self) -> Json
+pub fn Intents::to_json(Self) -> @json.Json
 pub impl BitAnd for Intents
 pub impl BitOr for Intents
-pub impl ToJson for Intents
 pub impl @debug.Debug for Intents
 pub impl @json.FromJson for Intents
+pub impl @json.ToJson for Intents
 
+#derive(@debug.Debug)
 pub(all) struct Interaction {
   id : Id[InteractionMarker]
   application_id : Id[ApplicationMarker]
@@ -2448,11 +2630,12 @@ pub(all) struct Interaction {
   authorizing_integration_owners : Map[String, String]?
   context : InteractionContextType?
   attachment_size_limit : Int32?
-} derive(@debug.Debug)
-pub fn Interaction::to_json(Self) -> Json
-pub impl ToJson for Interaction
+}
+pub fn Interaction::to_json(Self) -> @json.Json
 pub impl @json.FromJson for Interaction
+pub impl @json.ToJson for Interaction
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct InteractionCallback {
   id : Id[InteractionMarker]
   typ : InteractionType
@@ -2460,60 +2643,67 @@ pub(all) struct InteractionCallback {
   response_message_id : Id[MessageMarker]?
   response_message_loading : Bool?
   response_message_ephemeral : Bool?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn InteractionCallback::to_json(Self) -> Json
+}
+pub fn InteractionCallback::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct InteractionCallbackActivityInstance {
   id : String
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn InteractionCallbackActivityInstance::to_json(Self) -> Json
+}
+pub fn InteractionCallbackActivityInstance::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct InteractionCallbackResource {
   typ : InteractionResponseType
   activity_instance : InteractionCallbackActivityInstance?
   message : Message?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn InteractionCallbackResource::to_json(Self) -> Json
+}
+pub fn InteractionCallbackResource::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct InteractionCallbackResponse {
   interaction : InteractionCallback
   resource : InteractionCallbackResource?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn InteractionCallbackResponse::to_json(Self) -> Json
+}
+pub fn InteractionCallbackResponse::to_json(Self) -> @json.Json
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum InteractionContextType {
   Guild
   BotDm
   PrivateChannel
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn InteractionContextType::from_int(Int32) -> Self
 pub fn InteractionContextType::to_int(Self) -> Int32
-pub fn InteractionContextType::to_json(Self) -> Json
-pub impl ToJson for InteractionContextType
+pub fn InteractionContextType::to_json(Self) -> @json.Json
 pub impl @json.FromJson for InteractionContextType
+pub impl @json.ToJson for InteractionContextType
 
 #non_exhaustive
+#derive(@debug.Debug)
 pub(all) enum InteractionData {
   Command(CommandData)
   Component(ComponentData)
   Modal(ModalData)
-  Unknown(Json)
-} derive(@debug.Debug)
-pub fn InteractionData::to_json(Self) -> Json
-pub impl ToJson for InteractionData
+  Unknown(@json.Json)
+}
+pub fn InteractionData::to_json(Self) -> @json.Json
+pub impl @json.ToJson for InteractionData
 
 pub enum InteractionMarker {
 }
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct InteractionResponse {
   typ : InteractionResponseType
-  data : Json?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn InteractionResponse::to_json(Self) -> Json
+  data : @json.Json?
+}
+pub fn InteractionResponse::to_json(Self) -> @json.Json
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum InteractionResponseType {
   Pong
   ChannelMessageWithSource
@@ -2525,14 +2715,15 @@ pub(all) enum InteractionResponseType {
   PremiumRequired
   LaunchActivity
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn InteractionResponseType::from_int(Int32) -> Self
 pub fn InteractionResponseType::to_int(Self) -> Int32
-pub fn InteractionResponseType::to_json(Self) -> Json
-pub impl ToJson for InteractionResponseType
+pub fn InteractionResponseType::to_json(Self) -> @json.Json
 pub impl @json.FromJson for InteractionResponseType
+pub impl @json.ToJson for InteractionResponseType
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum InteractionType {
   Ping
   ApplicationCommand
@@ -2540,13 +2731,14 @@ pub(all) enum InteractionType {
   ApplicationCommandAutocomplete
   ModalSubmit
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn InteractionType::from_int(Int32) -> Self
 pub fn InteractionType::to_int(Self) -> Int32
-pub fn InteractionType::to_json(Self) -> Json
-pub impl ToJson for InteractionType
+pub fn InteractionType::to_json(Self) -> @json.Json
 pub impl @json.FromJson for InteractionType
+pub impl @json.ToJson for InteractionType
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct Invite {
   typ : InviteType?
   code : String
@@ -2567,9 +2759,10 @@ pub(all) struct Invite {
   max_age : Int32?
   temporary : Bool?
   created_at : Timestamp?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn Invite::to_json(Self) -> Json
+}
+pub fn Invite::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct InviteCreateEvent {
   channel_id : Id[ChannelMarker]
   code : String
@@ -2580,70 +2773,77 @@ pub(all) struct InviteCreateEvent {
   max_uses : Int32
   target_type : InviteTargetType?
   target_user : User?
-  target_application : Json?
+  target_application : @json.Json?
   temporary : Bool
   uses : Int32
   expires_at : Nullable[Timestamp]
   role_ids : Array[Id[RoleMarker]]?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn InviteCreateEvent::to_json(Self) -> Json
+}
+pub fn InviteCreateEvent::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct InviteDeleteEvent {
   channel_id : Id[ChannelMarker]
   guild_id : Id[GuildMarker]?
   code : String
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn InviteDeleteEvent::to_json(Self) -> Json
+}
+pub fn InviteDeleteEvent::to_json(Self) -> @json.Json
 
-pub(all) struct InviteFlags(UInt64) derive(Eq)
+#derive(Eq)
+pub(all) struct InviteFlags(UInt64)
 pub fn InviteFlags::bits(Self) -> UInt64
 pub fn InviteFlags::from_bits(UInt64) -> Self
 pub fn InviteFlags::is_guest_invite() -> Self
-pub fn InviteFlags::to_json(Self) -> Json
-pub impl ToJson for InviteFlags
+pub fn InviteFlags::to_json(Self) -> @json.Json
 pub impl @debug.Debug for InviteFlags
 pub impl @json.FromJson for InviteFlags
+pub impl @json.ToJson for InviteFlags
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum InviteTargetType {
   Stream
   EmbeddedApplication
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn InviteTargetType::from_int(Int32) -> Self
 pub fn InviteTargetType::to_int(Self) -> Int32
-pub fn InviteTargetType::to_json(Self) -> Json
-pub impl ToJson for InviteTargetType
+pub fn InviteTargetType::to_json(Self) -> @json.Json
 pub impl @json.FromJson for InviteTargetType
+pub impl @json.ToJson for InviteTargetType
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum InviteType {
   Guild
   GroupDm
   Friend
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn InviteType::from_int(Int32) -> Self
 pub fn InviteType::to_int(Self) -> Int32
-pub fn InviteType::to_json(Self) -> Json
-pub impl ToJson for InviteType
+pub fn InviteType::to_json(Self) -> @json.Json
 pub impl @json.FromJson for InviteType
+pub impl @json.ToJson for InviteType
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct Label {
   id : Int32?
   label : String?
   description : String?
   component : Component
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn Label::to_json(Self) -> Json
+}
+pub fn Label::to_json(Self) -> @json.Json
 
+#derive(Eq, @debug.Debug)
 pub(all) struct LimitViolation {
   path : String
   custom_id : String?
   reason : String
-} derive(Eq, @debug.Debug)
+}
 pub fn LimitViolation::message(Self) -> String
 
+#derive(@debug.Debug)
 pub(all) struct LobbyMessage {
   id : Id[MessageMarker]
   typ : MessageType
@@ -2651,45 +2851,50 @@ pub(all) struct LobbyMessage {
   lobby_id : Id[GenericMarker]
   channel_id : Id[ChannelMarker]
   author : User
-  metadata : Json?
+  metadata : @json.Json?
   flags : MessageFlags
   application_id : Id[ApplicationMarker]?
   timestamp : Timestamp?
   edited_timestamp : Nullable[Timestamp]?
-  raw : Json
-} derive(@debug.Debug)
-pub fn LobbyMessage::to_json(Self) -> Json
-pub impl ToJson for LobbyMessage
+  raw : @json.Json
+}
+pub fn LobbyMessage::to_json(Self) -> @json.Json
 pub impl @json.FromJson for LobbyMessage
+pub impl @json.ToJson for LobbyMessage
 
+#derive(@debug.Debug)
 pub(all) struct LobbyMessageDeleteEvent {
   id : Id[MessageMarker]
   lobby_id : Id[GenericMarker]
-  raw : Json
-} derive(@debug.Debug)
-pub fn LobbyMessageDeleteEvent::to_json(Self) -> Json
-pub impl ToJson for LobbyMessageDeleteEvent
+  raw : @json.Json
+}
+pub fn LobbyMessageDeleteEvent::to_json(Self) -> @json.Json
 pub impl @json.FromJson for LobbyMessageDeleteEvent
+pub impl @json.ToJson for LobbyMessageDeleteEvent
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct MediaGallery {
   id : Int32?
   items : Array[MediaGalleryItem]
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn MediaGallery::to_json(Self) -> Json
+}
+pub fn MediaGallery::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct MediaGalleryItem {
   media : UnfurledMediaItem
   description : Nullable[String]?
   spoiler : Bool?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn MediaGalleryItem::to_json(Self) -> Json
+}
+pub fn MediaGalleryItem::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug)
 pub(all) enum MemberSelect {
   All
   Prefix(String, limit~ : Int32)
   Ids(Array[Id[UserMarker]])
-} derive(@debug.Debug)
+}
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct Message {
   id : Id[MessageMarker]
   channel_id : Id[ChannelMarker]
@@ -2726,16 +2931,18 @@ pub(all) struct Message {
   resolved : ResolvedData?
   message_snapshots : Array[MessageSnapshot]?
   shared_client_theme : SharedClientTheme?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn Message::to_json(Self) -> Json
+}
+pub fn Message::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct MessageActivity {
   typ : MessageActivityType
   party_id : String?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn MessageActivity::to_json(Self) -> Json
+}
+pub fn MessageActivity::to_json(Self) -> @json.Json
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum MessageActivityType {
   Join
   Spectate
@@ -2743,43 +2950,48 @@ pub(all) enum MessageActivityType {
   JoinRequest
   StreamRequest
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn MessageActivityType::from_int(Int32) -> Self
 pub fn MessageActivityType::to_int(Self) -> Int32
-pub fn MessageActivityType::to_json(Self) -> Json
-pub impl ToJson for MessageActivityType
+pub fn MessageActivityType::to_json(Self) -> @json.Json
 pub impl @json.FromJson for MessageActivityType
+pub impl @json.ToJson for MessageActivityType
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct MessageCall {
   participants : Array[Id[UserMarker]]
   ended_timestamp : Nullable[Timestamp]?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn MessageCall::to_json(Self) -> Json
+}
+pub fn MessageCall::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug)
 pub(all) struct MessageCreateEvent {
   message : Message
   guild_id : Id[GuildMarker]?
   guild_member : GuildMember?
   mention_members : Map[Id[UserMarker], GuildMember]
   channel_type : ChannelType?
-} derive(@debug.Debug)
+}
 pub impl @json.FromJson for MessageCreateEvent
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct MessageDeleteBulkEvent {
   ids : Array[Id[MessageMarker]]
   channel_id : Id[ChannelMarker]
   guild_id : Id[GuildMarker]?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn MessageDeleteBulkEvent::to_json(Self) -> Json
+}
+pub fn MessageDeleteBulkEvent::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct MessageDeleteEvent {
   id : Id[MessageMarker]
   channel_id : Id[ChannelMarker]
   guild_id : Id[GuildMarker]?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn MessageDeleteEvent::to_json(Self) -> Json
+}
+pub fn MessageDeleteEvent::to_json(Self) -> @json.Json
 
-pub(all) struct MessageFlags(UInt64) derive(Eq)
+#derive(Eq)
+pub(all) struct MessageFlags(UInt64)
 pub fn MessageFlags::bits(Self) -> UInt64
 pub fn MessageFlags::contains(Self, Self) -> Bool
 pub fn MessageFlags::crossposted() -> Self
@@ -2797,14 +3009,15 @@ pub fn MessageFlags::should_show_link_not_discord_warning() -> Self
 pub fn MessageFlags::source_message_deleted() -> Self
 pub fn MessageFlags::suppress_embeds() -> Self
 pub fn MessageFlags::suppress_notifications() -> Self
-pub fn MessageFlags::to_json(Self) -> Json
+pub fn MessageFlags::to_json(Self) -> @json.Json
 pub fn MessageFlags::urgent() -> Self
 pub impl BitAnd for MessageFlags
 pub impl BitOr for MessageFlags
-pub impl ToJson for MessageFlags
 pub impl @debug.Debug for MessageFlags
 pub impl @json.FromJson for MessageFlags
+pub impl @json.ToJson for MessageFlags
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct MessageInteractionMetadata {
   id : Id[InteractionMarker]
   typ : InteractionType
@@ -2815,27 +3028,30 @@ pub(all) struct MessageInteractionMetadata {
   target_message_id : Id[MessageMarker]?
   interacted_message_id : Id[MessageMarker]?
   triggering_interaction_metadata : MessageInteractionMetadata?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn MessageInteractionMetadata::to_json(Self) -> Json
+}
+pub fn MessageInteractionMetadata::to_json(Self) -> @json.Json
 
 pub enum MessageMarker {
 }
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct MessagePin {
   pinned_at : Timestamp
   message : Message
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn MessagePin::to_json(Self) -> Json
+}
+pub fn MessagePin::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct MessagePollVoteEvent {
   user_id : Id[UserMarker]
   channel_id : Id[ChannelMarker]
   message_id : Id[MessageMarker]
   guild_id : Id[GuildMarker]?
   answer_id : Int32
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn MessagePollVoteEvent::to_json(Self) -> Json
+}
+pub fn MessagePollVoteEvent::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct MessageReactionAddEvent {
   user_id : Id[UserMarker]
   channel_id : Id[ChannelMarker]
@@ -2847,24 +3063,27 @@ pub(all) struct MessageReactionAddEvent {
   burst : Bool
   burst_colors : Array[String]?
   typ : Int32
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn MessageReactionAddEvent::to_json(Self) -> Json
+}
+pub fn MessageReactionAddEvent::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct MessageReactionRemoveAllEvent {
   channel_id : Id[ChannelMarker]
   message_id : Id[MessageMarker]
   guild_id : Id[GuildMarker]?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn MessageReactionRemoveAllEvent::to_json(Self) -> Json
+}
+pub fn MessageReactionRemoveAllEvent::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct MessageReactionRemoveEmojiEvent {
   channel_id : Id[ChannelMarker]
   message_id : Id[MessageMarker]
   guild_id : Id[GuildMarker]?
   emoji : Emoji
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn MessageReactionRemoveEmojiEvent::to_json(Self) -> Json
+}
+pub fn MessageReactionRemoveEmojiEvent::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct MessageReactionRemoveEvent {
   user_id : Id[UserMarker]
   channel_id : Id[ChannelMarker]
@@ -2873,35 +3092,39 @@ pub(all) struct MessageReactionRemoveEvent {
   emoji : Emoji
   burst : Bool
   typ : Int32
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn MessageReactionRemoveEvent::to_json(Self) -> Json
+}
+pub fn MessageReactionRemoveEvent::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct MessageReference {
   typ : MessageReferenceType?
   message_id : Id[MessageMarker]?
   channel_id : Id[ChannelMarker]?
   guild_id : Id[GuildMarker]?
   fail_if_not_exists : Bool?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn MessageReference::to_json(Self) -> Json
+}
+pub fn MessageReference::to_json(Self) -> @json.Json
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum MessageReferenceType {
   Default
   Forward
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn MessageReferenceType::from_int(Int32) -> Self
 pub fn MessageReferenceType::to_int(Self) -> Int32
-pub fn MessageReferenceType::to_json(Self) -> Json
-pub impl ToJson for MessageReferenceType
+pub fn MessageReferenceType::to_json(Self) -> @json.Json
 pub impl @json.FromJson for MessageReferenceType
+pub impl @json.ToJson for MessageReferenceType
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct MessageSnapshot {
   message : MessageSnapshotContent
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn MessageSnapshot::to_json(Self) -> Json
+}
+pub fn MessageSnapshot::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct MessageSnapshotContent {
   typ : MessageType?
   content : String?
@@ -2914,10 +3137,11 @@ pub(all) struct MessageSnapshotContent {
   mention_roles : Array[Id[RoleMarker]]?
   sticker_items : Array[StickerItem]?
   components : Array[Component]?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn MessageSnapshotContent::to_json(Self) -> Json
+}
+pub fn MessageSnapshotContent::to_json(Self) -> @json.Json
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum MessageType {
   Default
   RecipientAdd
@@ -2958,13 +3182,14 @@ pub(all) enum MessageType {
   PurchaseNotification
   PollResult
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn MessageType::from_int(Int32) -> Self
 pub fn MessageType::to_int(Self) -> Int32
-pub fn MessageType::to_json(Self) -> Json
-pub impl ToJson for MessageType
+pub fn MessageType::to_json(Self) -> @json.Json
 pub impl @json.FromJson for MessageType
+pub impl @json.ToJson for MessageType
 
+#derive(@debug.Debug)
 pub(all) struct MessageUpdateEvent {
   message : Message
   before : Message?
@@ -2972,81 +3197,89 @@ pub(all) struct MessageUpdateEvent {
   guild_member : GuildMember?
   mention_members : Map[Id[UserMarker], GuildMember]
   channel_type : ChannelType?
-} derive(@debug.Debug)
+}
 pub fn MessageUpdateEvent::is_edit(Self) -> Bool
 pub impl @json.FromJson for MessageUpdateEvent
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum MfaLevel {
   None
   Elevated
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn MfaLevel::from_int(Int32) -> Self
 pub fn MfaLevel::to_int(Self) -> Int32
-pub fn MfaLevel::to_json(Self) -> Json
-pub impl ToJson for MfaLevel
+pub fn MfaLevel::to_json(Self) -> @json.Json
 pub impl @json.FromJson for MfaLevel
+pub impl @json.ToJson for MfaLevel
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ModalData {
   custom_id : String
   components : Array[Component]
   resolved : ResolvedData?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn ModalData::to_json(Self) -> Json
+}
+pub fn ModalData::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct Nameplate {
   sku_id : Id[SkuMarker]
   asset : String
   label : String
   palette : String
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn Nameplate::to_json(Self) -> Json
+}
+pub fn Nameplate::to_json(Self) -> @json.Json
 
+#derive(Eq, @debug.Debug)
 pub(all) enum Nonce {
   Str(String)
   Num(Int64)
-} derive(Eq, @debug.Debug)
-pub fn Nonce::to_json(Self) -> Json
-pub impl ToJson for Nonce
+}
+pub fn Nonce::to_json(Self) -> @json.Json
 pub impl @json.FromJson for Nonce
+pub impl @json.ToJson for Nonce
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum NsfwLevel {
   Default
   Explicit
   Safe
   AgeRestricted
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn NsfwLevel::from_int(Int32) -> Self
 pub fn NsfwLevel::to_int(Self) -> Int32
-pub fn NsfwLevel::to_json(Self) -> Json
-pub impl ToJson for NsfwLevel
+pub fn NsfwLevel::to_json(Self) -> @json.Json
 pub impl @json.FromJson for NsfwLevel
+pub impl @json.ToJson for NsfwLevel
 
+#derive(Eq, @debug.Debug)
 pub(all) enum Nullable[T] {
   Null
   Value(T)
-} derive(Eq, @debug.Debug)
+}
 pub fn[T] Nullable::from_option(T?) -> Self[T]
-pub fn[T : ToJson] Nullable::to_json(Self[T]) -> Json
+pub fn[T : @json.ToJson] Nullable::to_json(Self[T]) -> @json.Json
 pub fn[T] Nullable::to_option(Self[T]) -> T?
-pub impl[T : ToJson] ToJson for Nullable[T]
 pub impl[T : @json.FromJson] @json.FromJson for Nullable[T]
+pub impl[T : @json.ToJson] @json.ToJson for Nullable[T]
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum OnboardingMode {
   Default
   Advanced
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn OnboardingMode::from_int(Int32) -> Self
 pub fn OnboardingMode::to_int(Self) -> Int32
-pub fn OnboardingMode::to_json(Self) -> Json
-pub impl ToJson for OnboardingMode
+pub fn OnboardingMode::to_json(Self) -> @json.Json
 pub impl @json.FromJson for OnboardingMode
+pub impl @json.ToJson for OnboardingMode
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct OnboardingPrompt {
   id : Id[GenericMarker]
   typ : OnboardingPromptType
@@ -3055,9 +3288,10 @@ pub(all) struct OnboardingPrompt {
   single_select : Bool
   required : Bool
   in_onboarding : Bool
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn OnboardingPrompt::to_json(Self) -> Json
+}
+pub fn OnboardingPrompt::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct OnboardingPromptOption {
   id : Id[GenericMarker]
   channel_ids : Array[Id[ChannelMarker]]
@@ -3068,50 +3302,55 @@ pub(all) struct OnboardingPromptOption {
   emoji_animated : Bool?
   title : String
   description : Nullable[String]
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn OnboardingPromptOption::to_json(Self) -> Json
+}
+pub fn OnboardingPromptOption::to_json(Self) -> @json.Json
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum OnboardingPromptType {
   MultipleChoice
   Dropdown
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn OnboardingPromptType::from_int(Int32) -> Self
 pub fn OnboardingPromptType::to_int(Self) -> Int32
-pub fn OnboardingPromptType::to_json(Self) -> Json
-pub impl ToJson for OnboardingPromptType
+pub fn OnboardingPromptType::to_json(Self) -> @json.Json
 pub impl @json.FromJson for OnboardingPromptType
+pub impl @json.ToJson for OnboardingPromptType
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct Overwrite {
   id : Id[GenericMarker]
   typ : OverwriteType
   allow : Permissions
   deny : Permissions
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn Overwrite::to_json(Self) -> Json
+}
+pub fn Overwrite::to_json(Self) -> @json.Json
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum OverwriteType {
   Role
   Member
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn OverwriteType::from_int(Int32) -> Self
 pub fn OverwriteType::to_int(Self) -> Int32
-pub fn OverwriteType::to_json(Self) -> Json
-pub impl ToJson for OverwriteType
+pub fn OverwriteType::to_json(Self) -> @json.Json
 pub impl @json.FromJson for OverwriteType
+pub impl @json.ToJson for OverwriteType
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct PartialChannel {
   id : Id[ChannelMarker]
   typ : ChannelType?
   name : Nullable[String]?
   icon : Nullable[ImageHash]?
   permissions : Permissions?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn PartialChannel::to_json(Self) -> Json
+}
+pub fn PartialChannel::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct PartialGuild {
   id : Id[GuildMarker]
   name : String?
@@ -3125,9 +3364,10 @@ pub(all) struct PartialGuild {
   nsfw_level : NsfwLevel?
   premium_subscription_count : Int32?
   locale : String?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn PartialGuild::to_json(Self) -> Json
+}
+pub fn PartialGuild::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct PartialRole {
   id : Id[RoleMarker]
   name : String
@@ -3136,10 +3376,11 @@ pub(all) struct PartialRole {
   colors : RoleColors?
   icon : Nullable[ImageHash]?
   unicode_emoji : Nullable[String]?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn PartialRole::to_json(Self) -> Json
+}
+pub fn PartialRole::to_json(Self) -> @json.Json
 
-pub(all) struct Permissions(UInt64) derive(Eq)
+#derive(Eq)
+pub(all) struct Permissions(UInt64)
 pub fn Permissions::add_reactions() -> Self
 pub fn Permissions::administrator() -> Self
 pub fn Permissions::attach_files() -> Self
@@ -3184,7 +3425,7 @@ pub fn Permissions::send_voice_messages() -> Self
 pub fn Permissions::set_voice_channel_status() -> Self
 pub fn Permissions::speak() -> Self
 pub fn Permissions::stream() -> Self
-pub fn Permissions::to_json(Self) -> Json
+pub fn Permissions::to_json(Self) -> @json.Json
 pub fn Permissions::use_application_commands() -> Self
 pub fn Permissions::use_embedded_activities() -> Self
 pub fn Permissions::use_external_apps() -> Self
@@ -3199,10 +3440,11 @@ pub fn Permissions::view_creator_monetization_analytics() -> Self
 pub fn Permissions::view_guild_insights() -> Self
 pub impl BitAnd for Permissions
 pub impl BitOr for Permissions
-pub impl ToJson for Permissions
 pub impl @debug.Debug for Permissions
 pub impl @json.FromJson for Permissions
+pub impl @json.ToJson for Permissions
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct Poll {
   question : PollMedia
   answers : Array[PollAnswer]
@@ -3210,89 +3452,99 @@ pub(all) struct Poll {
   allow_multiselect : Bool
   layout_type : PollLayoutType
   results : PollResults?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn Poll::to_json(Self) -> Json
+}
+pub fn Poll::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct PollAnswer {
   answer_id : Int32
   poll_media : PollMedia
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn PollAnswer::to_json(Self) -> Json
+}
+pub fn PollAnswer::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct PollAnswerCount {
   id : Int32
   count : Int32
   me_voted : Bool
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn PollAnswerCount::to_json(Self) -> Json
+}
+pub fn PollAnswerCount::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct PollAnswerVoters {
   users : Array[User]
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn PollAnswerVoters::to_json(Self) -> Json
+}
+pub fn PollAnswerVoters::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug)
 pub(all) struct PollCreateRequest {
   question : PollMedia
   answers : Array[PollMedia]
   duration : Int32?
   allow_multiselect : Bool?
   layout_type : PollLayoutType?
-} derive(@debug.Debug)
-pub fn PollCreateRequest::to_json(Self) -> Json
-pub impl ToJson for PollCreateRequest
+}
+pub fn PollCreateRequest::to_json(Self) -> @json.Json
+pub impl @json.ToJson for PollCreateRequest
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum PollLayoutType {
   Default
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn PollLayoutType::from_int(Int32) -> Self
 pub fn PollLayoutType::to_int(Self) -> Int32
-pub fn PollLayoutType::to_json(Self) -> Json
-pub impl ToJson for PollLayoutType
+pub fn PollLayoutType::to_json(Self) -> @json.Json
 pub impl @json.FromJson for PollLayoutType
+pub impl @json.ToJson for PollLayoutType
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct PollMedia {
   text : String?
   emoji : Emoji?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn PollMedia::to_json(Self) -> Json
+}
+pub fn PollMedia::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct PollResults {
   is_finalized : Bool
   answer_counts : Array[PollAnswerCount]
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn PollResults::to_json(Self) -> Json
+}
+pub fn PollResults::to_json(Self) -> @json.Json
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum PremiumTier {
   None
   Tier1
   Tier2
   Tier3
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn PremiumTier::from_int(Int32) -> Self
 pub fn PremiumTier::to_int(Self) -> Int32
-pub fn PremiumTier::to_json(Self) -> Json
-pub impl ToJson for PremiumTier
+pub fn PremiumTier::to_json(Self) -> @json.Json
 pub impl @json.FromJson for PremiumTier
+pub impl @json.ToJson for PremiumTier
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum PremiumType {
   None
   NitroClassic
   Nitro
   NitroBasic
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn PremiumType::from_int(Int32) -> Self
 pub fn PremiumType::to_int(Self) -> Int32
-pub fn PremiumType::to_json(Self) -> Json
-pub impl ToJson for PremiumType
+pub fn PremiumType::to_json(Self) -> @json.Json
 pub impl @json.FromJson for PremiumType
+pub impl @json.ToJson for PremiumType
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum PresenceStatus {
   Idle
   Dnd
@@ -3300,46 +3552,51 @@ pub(all) enum PresenceStatus {
   Offline
   Invisible
   Unknown(String)
-} derive(Eq, @debug.Debug)
+}
 pub fn PresenceStatus::from_string(String) -> Self
-pub fn PresenceStatus::to_json(Self) -> Json
+pub fn PresenceStatus::to_json(Self) -> @json.Json
 pub fn PresenceStatus::to_string(Self) -> String
-pub impl ToJson for PresenceStatus
 pub impl @json.FromJson for PresenceStatus
+pub impl @json.ToJson for PresenceStatus
 
+#derive(@debug.Debug, @json.ToJson)
 pub(all) struct PresenceUpdateEvent {
   user : PresenceUser?
   guild_id : Id[GuildMarker]?
   status : PresenceStatus?
   activities : Array[Activity]?
   client_status : ClientStatus?
-} derive(ToJson, @debug.Debug)
-pub fn PresenceUpdateEvent::to_json(Self) -> Json
+}
+pub fn PresenceUpdateEvent::to_json(Self) -> @json.Json
 pub impl @json.FromJson for PresenceUpdateEvent
 
+#derive(@debug.Debug, @json.ToJson)
 pub(all) struct PresenceUser {
   id : Id[UserMarker]?
-} derive(ToJson, @debug.Debug)
-pub fn PresenceUser::to_json(Self) -> Json
+}
+pub fn PresenceUser::to_json(Self) -> @json.Json
 pub impl @json.FromJson for PresenceUser
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct RadioGroup {
   id : Int32?
   custom_id : String
   options : Array[RadioOption]
   required : Bool?
   value : String?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn RadioGroup::to_json(Self) -> Json
+}
+pub fn RadioGroup::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct RadioOption {
   value : String
   label : String
   description : String?
   default : Bool?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn RadioOption::to_json(Self) -> Json
+}
+pub fn RadioOption::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct Reaction {
   count : Int32
   count_details : ReactionCountDetails
@@ -3347,27 +3604,30 @@ pub(all) struct Reaction {
   me_burst : Bool
   emoji : Emoji
   burst_colors : Array[String]
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn Reaction::to_json(Self) -> Json
+}
+pub fn Reaction::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ReactionCountDetails {
   burst : Int32
   normal : Int32
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn ReactionCountDetails::to_json(Self) -> Json
+}
+pub fn ReactionCountDetails::to_json(Self) -> @json.Json
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum ReactionType {
   Normal
   Burst
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn ReactionType::from_int(Int32) -> Self
 pub fn ReactionType::to_int(Self) -> Int32
-pub fn ReactionType::to_json(Self) -> Json
-pub impl ToJson for ReactionType
+pub fn ReactionType::to_json(Self) -> @json.Json
 pub impl @json.FromJson for ReactionType
+pub impl @json.ToJson for ReactionType
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct Ready {
   v : Int32
   user : User
@@ -3376,37 +3636,42 @@ pub(all) struct Ready {
   resume_gateway_url : String
   shard : Array[Int32]?
   application : ReadyApplication
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn Ready::to_json(Self) -> Json
+}
+pub fn Ready::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ReadyApplication {
   id : Id[ApplicationMarker]
   flags : ApplicationFlags?
   flags_new : ApplicationFlags?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn ReadyApplication::to_json(Self) -> Json
+}
+pub fn ReadyApplication::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.ToJson)
 pub(all) struct RequestChannelInfo {
   guild_id : Id[GuildMarker]
   fields : Array[ChannelInfoField]
-} derive(ToJson, @debug.Debug)
-pub fn RequestChannelInfo::to_json(Self) -> Json
+}
+pub fn RequestChannelInfo::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug)
 pub(all) struct RequestGuildMembers {
   guild_id : Id[GuildMarker]
   select : MemberSelect
   presences : Bool
   nonce : String?
-} derive(@debug.Debug)
-pub fn RequestGuildMembers::to_json(Self) -> Json
+}
+pub fn RequestGuildMembers::to_json(Self) -> @json.Json
 pub fn RequestGuildMembers::validate(Self) -> Unit raise GatewayCommandError
-pub impl ToJson for RequestGuildMembers
+pub impl @json.ToJson for RequestGuildMembers
 
+#derive(@debug.Debug, @json.ToJson)
 pub(all) struct RequestSoundboardSounds {
   guild_ids : Array[Id[GuildMarker]]
-} derive(ToJson, @debug.Debug)
-pub fn RequestSoundboardSounds::to_json(Self) -> Json
+}
+pub fn RequestSoundboardSounds::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ResolvedData {
   users : Map[String, User]?
   members : Map[String, GuildMember]?
@@ -3414,9 +3679,10 @@ pub(all) struct ResolvedData {
   channels : Map[String, Channel]?
   messages : Map[String, Message]?
   attachments : Map[String, Attachment]?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn ResolvedData::to_json(Self) -> Json
+}
+pub fn ResolvedData::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct Role {
   id : Id[RoleMarker]
   name : String
@@ -3431,40 +3697,44 @@ pub(all) struct Role {
   mentionable : Bool
   tags : RoleTags?
   flags : RoleFlags?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn Role::to_json(Self) -> Json
+}
+pub fn Role::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct RoleColors {
   primary_color : Int32
   secondary_color : Nullable[Int32]
   tertiary_color : Nullable[Int32]
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn RoleColors::to_json(Self) -> Json
+}
+pub fn RoleColors::to_json(Self) -> @json.Json
 
-pub(all) struct RoleFlags(UInt64) derive(Eq)
+#derive(Eq)
+pub(all) struct RoleFlags(UInt64)
 pub fn RoleFlags::bits(Self) -> UInt64
 pub fn RoleFlags::contains(Self, Self) -> Bool
 pub fn RoleFlags::from_bits(UInt64) -> Self
 pub fn RoleFlags::in_prompt() -> Self
 pub fn RoleFlags::none() -> Self
-pub fn RoleFlags::to_json(Self) -> Json
+pub fn RoleFlags::to_json(Self) -> @json.Json
 pub impl BitAnd for RoleFlags
 pub impl BitOr for RoleFlags
-pub impl ToJson for RoleFlags
 pub impl @debug.Debug for RoleFlags
 pub impl @json.FromJson for RoleFlags
+pub impl @json.ToJson for RoleFlags
 
 pub enum RoleMarker {
 }
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct RoleSubscriptionData {
   role_subscription_listing_id : Id[SkuMarker]
   tier_name : String
   total_months_subscribed : Int32
   is_renewal : Bool
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn RoleSubscriptionData::to_json(Self) -> Json
+}
+pub fn RoleSubscriptionData::to_json(Self) -> @json.Json
 
+#derive(Eq, @debug.Debug)
 pub(all) struct RoleTags {
   bot_id : Id[UserMarker]?
   premium_subscriber : Bool
@@ -3472,27 +3742,30 @@ pub(all) struct RoleTags {
   subscription_listing_id : Id[SkuMarker]?
   available_for_purchase : Bool
   guild_connections : Bool
-} derive(Eq, @debug.Debug)
-pub fn RoleTags::to_json(Self) -> Json
-pub impl ToJson for RoleTags
+}
+pub fn RoleTags::to_json(Self) -> @json.Json
 pub impl @json.FromJson for RoleTags
+pub impl @json.ToJson for RoleTags
 
 pub enum ScheduledEventMarker {
 }
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct Section {
   id : Int32?
   components : Array[Component]
   accessory : Component
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn Section::to_json(Self) -> Json
+}
+pub fn Section::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct SelectDefaultValue {
   id : Id[GenericMarker]
   typ : String
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn SelectDefaultValue::to_json(Self) -> Json
+}
+pub fn SelectDefaultValue::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct SelectMenu {
   id : Int32?
   custom_id : String
@@ -3505,44 +3778,50 @@ pub(all) struct SelectMenu {
   channel_types : Array[ChannelType]?
   default_values : Array[SelectDefaultValue]?
   values : Array[String]?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn SelectMenu::to_json(Self) -> Json
+}
+pub fn SelectMenu::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct SelectOption {
   label : String
   value : String
   description : String?
   emoji : Emoji?
   default : Bool?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn SelectOption::to_json(Self) -> Json
+}
+pub fn SelectOption::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct Separator {
   id : Int32?
   divider : Bool?
   spacing : Int32?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn Separator::to_json(Self) -> Json
+}
+pub fn Separator::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.ToJson)
 pub(all) struct SessionStartLimit {
   total : Int32
   remaining : Int32
   reset_after : Int64
   max_concurrency : Int32
-} derive(ToJson, @debug.Debug)
-pub fn SessionStartLimit::to_json(Self) -> Json
+}
+pub fn SessionStartLimit::to_json(Self) -> @json.Json
 pub impl @json.FromJson for SessionStartLimit
 
-type SessionStartLimitWire derive(@json.FromJson)
+#derive(@json.FromJson)
+type SessionStartLimitWire
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct SharedClientTheme {
   colors : Array[String]
   gradient_angle : Int32
   base_mix : Int32
   base_theme : Nullable[BaseTheme]?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn SharedClientTheme::to_json(Self) -> Json
+}
+pub fn SharedClientTheme::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct Sku {
   id : Id[SkuMarker]
   typ : SkuType
@@ -3550,53 +3829,57 @@ pub(all) struct Sku {
   name : String
   slug : String
   flags : SkuFlags
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn Sku::to_json(Self) -> Json
+}
+pub fn Sku::to_json(Self) -> @json.Json
 
-pub(all) struct SkuFlags(UInt64) derive(Eq)
+#derive(Eq)
+pub(all) struct SkuFlags(UInt64)
 pub fn SkuFlags::available() -> Self
 pub fn SkuFlags::bits(Self) -> UInt64
 pub fn SkuFlags::contains(Self, Self) -> Bool
 pub fn SkuFlags::from_bits(UInt64) -> Self
 pub fn SkuFlags::guild_subscription() -> Self
 pub fn SkuFlags::none() -> Self
-pub fn SkuFlags::to_json(Self) -> Json
+pub fn SkuFlags::to_json(Self) -> @json.Json
 pub fn SkuFlags::user_subscription() -> Self
 pub impl BitAnd for SkuFlags
 pub impl BitOr for SkuFlags
-pub impl ToJson for SkuFlags
 pub impl @debug.Debug for SkuFlags
 pub impl @json.FromJson for SkuFlags
+pub impl @json.ToJson for SkuFlags
 
 pub enum SkuMarker {
 }
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum SkuType {
   Durable
   Consumable
   Subscription
   SubscriptionGroup
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn SkuType::from_int(Int32) -> Self
 pub fn SkuType::to_int(Self) -> Int32
-pub fn SkuType::to_json(Self) -> Json
-pub impl ToJson for SkuType
+pub fn SkuType::to_json(Self) -> @json.Json
 pub impl @json.FromJson for SkuType
+pub impl @json.ToJson for SkuType
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum SortOrderType {
   LatestActivity
   CreationDate
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn SortOrderType::from_int(Int32) -> Self
 pub fn SortOrderType::to_int(Self) -> Int32
-pub fn SortOrderType::to_json(Self) -> Json
-pub impl ToJson for SortOrderType
+pub fn SortOrderType::to_json(Self) -> @json.Json
 pub impl @json.FromJson for SortOrderType
+pub impl @json.ToJson for SortOrderType
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct SoundboardSound {
   name : String
   sound_id : Id[SoundboardSoundMarker]
@@ -3606,18 +3889,20 @@ pub(all) struct SoundboardSound {
   guild_id : Id[GuildMarker]?
   available : Bool
   user : User?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn SoundboardSound::to_json(Self) -> Json
+}
+pub fn SoundboardSound::to_json(Self) -> @json.Json
 
 pub enum SoundboardSoundMarker {
 }
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct SoundboardSoundsEvent {
   soundboard_sounds : Array[SoundboardSound]
   guild_id : Id[GuildMarker]
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn SoundboardSoundsEvent::to_json(Self) -> Json
+}
+pub fn SoundboardSoundsEvent::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct StageInstance {
   id : Id[StageInstanceMarker]
   guild_id : Id[GuildMarker]
@@ -3625,24 +3910,26 @@ pub(all) struct StageInstance {
   topic : String
   privacy_level : StagePrivacyLevel
   guild_scheduled_event_id : Nullable[Id[ScheduledEventMarker]]
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn StageInstance::to_json(Self) -> Json
+}
+pub fn StageInstance::to_json(Self) -> @json.Json
 
 pub enum StageInstanceMarker {
 }
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum StagePrivacyLevel {
   Public
   GuildOnly
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn StagePrivacyLevel::from_int(Int32) -> Self
 pub fn StagePrivacyLevel::to_int(Self) -> Int32
-pub fn StagePrivacyLevel::to_json(Self) -> Json
-pub impl ToJson for StagePrivacyLevel
+pub fn StagePrivacyLevel::to_json(Self) -> @json.Json
 pub impl @json.FromJson for StagePrivacyLevel
+pub impl @json.ToJson for StagePrivacyLevel
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct Sticker {
   id : Id[StickerMarker]
   pack_id : Id[StickerPackMarker]?
@@ -3656,33 +3943,36 @@ pub(all) struct Sticker {
   guild_id : Id[GuildMarker]?
   user : User?
   sort_value : Int32?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn Sticker::to_json(Self) -> Json
+}
+pub fn Sticker::to_json(Self) -> @json.Json
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum StickerFormatType {
   Png
   Apng
   Lottie
   Gif
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn StickerFormatType::from_int(Int32) -> Self
 pub fn StickerFormatType::to_int(Self) -> Int32
-pub fn StickerFormatType::to_json(Self) -> Json
-pub impl ToJson for StickerFormatType
+pub fn StickerFormatType::to_json(Self) -> @json.Json
 pub impl @json.FromJson for StickerFormatType
+pub impl @json.ToJson for StickerFormatType
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct StickerItem {
   id : Id[StickerMarker]
   name : String
   format_type : StickerFormatType
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn StickerItem::to_json(Self) -> Json
+}
+pub fn StickerItem::to_json(Self) -> @json.Json
 
 pub enum StickerMarker {
 }
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct StickerPack {
   id : Id[StickerPackMarker]
   stickers : Array[Sticker]
@@ -3691,29 +3981,32 @@ pub(all) struct StickerPack {
   cover_sticker_id : Id[StickerMarker]?
   description : String
   banner_asset_id : Id[GenericMarker]?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn StickerPack::to_json(Self) -> Json
+}
+pub fn StickerPack::to_json(Self) -> @json.Json
 
 pub enum StickerPackMarker {
 }
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct StickerPacksResponse {
   sticker_packs : Array[StickerPack]
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn StickerPacksResponse::to_json(Self) -> Json
+}
+pub fn StickerPacksResponse::to_json(Self) -> @json.Json
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum StickerType {
   Standard
   Guild
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn StickerType::from_int(Int32) -> Self
 pub fn StickerType::to_int(Self) -> Int32
-pub fn StickerType::to_json(Self) -> Json
-pub impl ToJson for StickerType
+pub fn StickerType::to_json(Self) -> @json.Json
 pub impl @json.FromJson for StickerType
+pub impl @json.ToJson for StickerType
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct Subscription {
   id : Id[GenericMarker]
   user_id : Id[UserMarker]
@@ -3725,26 +4018,28 @@ pub(all) struct Subscription {
   status : SubscriptionStatus
   canceled_at : Nullable[Timestamp]
   country : String?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn Subscription::to_json(Self) -> Json
+}
+pub fn Subscription::to_json(Self) -> @json.Json
 
 pub enum SubscriptionMarker {
 }
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum SubscriptionStatus {
   Active
   Ending
   Inactive
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn SubscriptionStatus::from_int(Int32) -> Self
 pub fn SubscriptionStatus::to_int(Self) -> Int32
-pub fn SubscriptionStatus::to_json(Self) -> Json
-pub impl ToJson for SubscriptionStatus
+pub fn SubscriptionStatus::to_json(Self) -> @json.Json
 pub impl @json.FromJson for SubscriptionStatus
+pub impl @json.ToJson for SubscriptionStatus
 
-pub(all) struct SystemChannelFlags(UInt64) derive(Eq)
+#derive(Eq)
+pub(all) struct SystemChannelFlags(UInt64)
 pub fn SystemChannelFlags::bits(Self) -> UInt64
 pub fn SystemChannelFlags::contains(Self, Self) -> Bool
 pub fn SystemChannelFlags::from_bits(UInt64) -> Self
@@ -3755,13 +4050,14 @@ pub fn SystemChannelFlags::suppress_join_notifications() -> Self
 pub fn SystemChannelFlags::suppress_premium_subscriptions() -> Self
 pub fn SystemChannelFlags::suppress_role_subscription_purchase_notification_replies() -> Self
 pub fn SystemChannelFlags::suppress_role_subscription_purchase_notifications() -> Self
-pub fn SystemChannelFlags::to_json(Self) -> Json
+pub fn SystemChannelFlags::to_json(Self) -> @json.Json
 pub impl BitAnd for SystemChannelFlags
 pub impl BitOr for SystemChannelFlags
-pub impl ToJson for SystemChannelFlags
 pub impl @debug.Debug for SystemChannelFlags
 pub impl @json.FromJson for SystemChannelFlags
+pub impl @json.ToJson for SystemChannelFlags
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct TargetUsersJobStatus {
   status : TargetUsersJobStatusCode
   total_users : Int32
@@ -3769,61 +4065,67 @@ pub(all) struct TargetUsersJobStatus {
   created_at : Timestamp
   completed_at : Nullable[Timestamp]
   error_message : String?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn TargetUsersJobStatus::to_json(Self) -> Json
+}
+pub fn TargetUsersJobStatus::to_json(Self) -> @json.Json
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum TargetUsersJobStatusCode {
   Unspecified
   Processing
   Completed
   Failed
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn TargetUsersJobStatusCode::from_int(Int32) -> Self
 pub fn TargetUsersJobStatusCode::to_int(Self) -> Int32
-pub fn TargetUsersJobStatusCode::to_json(Self) -> Json
-pub impl ToJson for TargetUsersJobStatusCode
+pub fn TargetUsersJobStatusCode::to_json(Self) -> @json.Json
 pub impl @json.FromJson for TargetUsersJobStatusCode
+pub impl @json.ToJson for TargetUsersJobStatusCode
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct Team {
   icon : Nullable[ImageHash]
   id : Id[TeamMarker]
   members : Array[TeamMember]
   name : String
   owner_user_id : Id[UserMarker]
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn Team::to_json(Self) -> Json
+}
+pub fn Team::to_json(Self) -> @json.Json
 
 pub enum TeamMarker {
 }
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct TeamMember {
   membership_state : TeamMembershipState
   team_id : Id[TeamMarker]
   user : User
   role : String?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn TeamMember::to_json(Self) -> Json
+}
+pub fn TeamMember::to_json(Self) -> @json.Json
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum TeamMembershipState {
   Invited
   Accepted
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn TeamMembershipState::from_int(Int32) -> Self
 pub fn TeamMembershipState::to_int(Self) -> Int32
-pub fn TeamMembershipState::to_json(Self) -> Json
-pub impl ToJson for TeamMembershipState
+pub fn TeamMembershipState::to_json(Self) -> @json.Json
 pub impl @json.FromJson for TeamMembershipState
+pub impl @json.ToJson for TeamMembershipState
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct TextDisplay {
   id : Int32?
   content : String
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn TextDisplay::to_json(Self) -> Json
+}
+pub fn TextDisplay::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct TextInput {
   id : Int32?
   custom_id : String
@@ -3834,81 +4136,90 @@ pub(all) struct TextInput {
   required : Bool?
   value : String?
   placeholder : String?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn TextInput::to_json(Self) -> Json
+}
+pub fn TextInput::to_json(Self) -> @json.Json
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum TextInputStyle {
   Short
   Paragraph
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn TextInputStyle::from_int(Int32) -> Self
 pub fn TextInputStyle::to_int(Self) -> Int32
-pub fn TextInputStyle::to_json(Self) -> Json
-pub impl ToJson for TextInputStyle
+pub fn TextInputStyle::to_json(Self) -> @json.Json
 pub impl @json.FromJson for TextInputStyle
+pub impl @json.ToJson for TextInputStyle
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum ThreadAutoArchiveDuration {
   OneHour
   OneDay
   ThreeDays
   OneWeek
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn ThreadAutoArchiveDuration::from_int(Int32) -> Self
 pub fn ThreadAutoArchiveDuration::to_int(Self) -> Int32
-pub fn ThreadAutoArchiveDuration::to_json(Self) -> Json
-pub impl ToJson for ThreadAutoArchiveDuration
+pub fn ThreadAutoArchiveDuration::to_json(Self) -> @json.Json
 pub impl @json.FromJson for ThreadAutoArchiveDuration
+pub impl @json.ToJson for ThreadAutoArchiveDuration
 
+#derive(@debug.Debug)
 pub(all) struct ThreadCreateEvent {
   channel : Channel
   newly_created : Bool?
-} derive(@debug.Debug)
+}
 pub impl @json.FromJson for ThreadCreateEvent
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ThreadDeleteEvent {
   id : Id[ChannelMarker]
   guild_id : Id[GuildMarker]
   parent_id : Id[ChannelMarker]
   typ : ChannelType
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn ThreadDeleteEvent::to_json(Self) -> Json
+}
+pub fn ThreadDeleteEvent::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ThreadListSyncEvent {
   guild_id : Id[GuildMarker]
   channel_ids : Array[Id[ChannelMarker]]?
   threads : Array[Channel]
   members : Array[ThreadMember]
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn ThreadListSyncEvent::to_json(Self) -> Json
+}
+pub fn ThreadListSyncEvent::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ThreadMember {
   id : Id[ChannelMarker]?
   user_id : Id[UserMarker]?
   join_timestamp : Timestamp
   flags : Int32
   guild_member : GuildMember?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn ThreadMember::to_json(Self) -> Json
+}
+pub fn ThreadMember::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug)
 pub(all) struct ThreadMemberUpdateEvent {
   guild_id : Id[GuildMarker]
   thread_member : ThreadMember
-} derive(@debug.Debug)
+}
 pub impl @json.FromJson for ThreadMemberUpdateEvent
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ThreadMembersUpdateEvent {
   id : Id[ChannelMarker]
   guild_id : Id[GuildMarker]
   member_count : Int32
   added_members : Array[ThreadMember]?
   removed_member_ids : Array[Id[UserMarker]]?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn ThreadMembersUpdateEvent::to_json(Self) -> Json
+}
+pub fn ThreadMembersUpdateEvent::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ThreadMetadata {
   archived : Bool
   auto_archive_duration : ThreadAutoArchiveDuration
@@ -3916,25 +4227,28 @@ pub(all) struct ThreadMetadata {
   locked : Bool
   invitable : Bool?
   create_timestamp : Nullable[Timestamp]?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn ThreadMetadata::to_json(Self) -> Json
+}
+pub fn ThreadMetadata::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct Thumbnail {
   id : Int32?
   media : UnfurledMediaItem
   description : Nullable[String]?
   spoiler : Bool?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn Thumbnail::to_json(Self) -> Json
+}
+pub fn Thumbnail::to_json(Self) -> @json.Json
 
-pub(all) struct Timestamp(String) derive(Eq)
-pub fn Timestamp::to_json(Self) -> Json
+#derive(Eq)
+pub(all) struct Timestamp(String)
+pub fn Timestamp::to_json(Self) -> @json.Json
 pub fn Timestamp::to_string(Self) -> String
 pub fn Timestamp::unix_ms(Self) -> Int64 raise TimestampError
-pub impl ToJson for Timestamp
 pub impl @debug.Debug for Timestamp
 pub impl @json.FromJson for Timestamp
+pub impl @json.ToJson for Timestamp
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct TriggerMetadata {
   keyword_filter : Array[String]?
   presets : Array[AutoModerationKeywordPresetType]?
@@ -3942,27 +4256,31 @@ pub(all) struct TriggerMetadata {
   regex_patterns : Array[String]?
   mention_total_limit : Int32?
   mention_raid_protection_enabled : Bool?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn TriggerMetadata::to_json(Self) -> Json
+}
+pub fn TriggerMetadata::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.ToJson)
 pub(all) struct TypingStartEvent {
   channel_id : Id[ChannelMarker]
   guild_id : Id[GuildMarker]?
   user_id : Id[UserMarker]
   timestamp : Int64
   guild_member : GuildMember?
-} derive(ToJson, @debug.Debug)
-pub fn TypingStartEvent::to_json(Self) -> Json
+}
+pub fn TypingStartEvent::to_json(Self) -> @json.Json
 pub impl @json.FromJson for TypingStartEvent
 
-type TypingStartEventWire derive(@json.FromJson)
+#derive(@json.FromJson)
+type TypingStartEventWire
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct UnavailableGuild {
   id : Id[GuildMarker]
   unavailable : Bool
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn UnavailableGuild::to_json(Self) -> Json
+}
+pub fn UnavailableGuild::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct UnfurledMediaItem {
   url : String
   proxy_url : String?
@@ -3973,28 +4291,31 @@ pub(all) struct UnfurledMediaItem {
   content_type : String?
   flags : Int32?
   attachment_id : String?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn UnfurledMediaItem::to_json(Self) -> Json
+}
+pub fn UnfurledMediaItem::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug)
 pub(all) struct UpdatePresence {
   status : PresenceStatus
   activities : Array[BotActivity]
   afk : Bool
   since : Int64?
-} derive(@debug.Debug)
+}
 pub fn UpdatePresence::UpdatePresence(status? : PresenceStatus, activities? : Array[BotActivity], afk? : Bool, since? : Int64) -> Self
-pub fn UpdatePresence::to_json(Self) -> Json
-pub impl ToJson for UpdatePresence
+pub fn UpdatePresence::to_json(Self) -> @json.Json
+pub impl @json.ToJson for UpdatePresence
 
+#derive(Eq, @debug.Debug)
 pub(all) struct UpdateVoiceState {
   guild_id : Id[GuildMarker]
   channel_id : Id[ChannelMarker]?
   self_mute : Bool
   self_deaf : Bool
-} derive(Eq, @debug.Debug)
-pub fn UpdateVoiceState::to_json(Self) -> Json
-pub impl ToJson for UpdateVoiceState
+}
+pub fn UpdateVoiceState::to_json(Self) -> @json.Json
+pub impl @json.ToJson for UpdateVoiceState
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct User {
   id : Id[UserMarker]
   username : String
@@ -4016,10 +4337,11 @@ pub(all) struct User {
   avatar_decoration_data : Nullable[AvatarDecorationData]?
   collectibles : Nullable[Collectibles]?
   primary_guild : Nullable[UserPrimaryGuild]?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn User::to_json(Self) -> Json
+}
+pub fn User::to_json(Self) -> @json.Json
 
-pub(all) struct UserFlags(UInt64) derive(Eq)
+#derive(Eq)
+pub(all) struct UserFlags(UInt64)
 pub fn UserFlags::active_developer() -> Self
 pub fn UserFlags::bits(Self) -> UInt64
 pub fn UserFlags::bot_http_interactions() -> Self
@@ -4045,27 +4367,29 @@ pub fn UserFlags::restricted_collaborator() -> Self
 pub fn UserFlags::spammer() -> Self
 pub fn UserFlags::staff() -> Self
 pub fn UserFlags::team_pseudo_user() -> Self
-pub fn UserFlags::to_json(Self) -> Json
+pub fn UserFlags::to_json(Self) -> @json.Json
 pub fn UserFlags::verified_bot() -> Self
 pub fn UserFlags::verified_developer() -> Self
 pub impl BitAnd for UserFlags
 pub impl BitOr for UserFlags
-pub impl ToJson for UserFlags
 pub impl @debug.Debug for UserFlags
 pub impl @json.FromJson for UserFlags
+pub impl @json.ToJson for UserFlags
 
 pub enum UserMarker {
 }
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct UserPrimaryGuild {
   identity_guild_id : Nullable[Id[GuildMarker]]?
   identity_enabled : Nullable[Bool]?
   tag : Nullable[String]?
   badge : Nullable[ImageHash]?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn UserPrimaryGuild::to_json(Self) -> Json
+}
+pub fn UserPrimaryGuild::to_json(Self) -> @json.Json
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum VerificationLevel {
   None
   Low
@@ -4073,25 +4397,27 @@ pub(all) enum VerificationLevel {
   High
   VeryHigh
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn VerificationLevel::from_int(Int32) -> Self
 pub fn VerificationLevel::to_int(Self) -> Int32
-pub fn VerificationLevel::to_json(Self) -> Json
-pub impl ToJson for VerificationLevel
+pub fn VerificationLevel::to_json(Self) -> @json.Json
 pub impl @json.FromJson for VerificationLevel
+pub impl @json.ToJson for VerificationLevel
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum VideoQualityMode {
   Auto
   Full
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn VideoQualityMode::from_int(Int32) -> Self
 pub fn VideoQualityMode::to_int(Self) -> Int32
-pub fn VideoQualityMode::to_json(Self) -> Json
-pub impl ToJson for VideoQualityMode
+pub fn VideoQualityMode::to_json(Self) -> @json.Json
 pub impl @json.FromJson for VideoQualityMode
+pub impl @json.ToJson for VideoQualityMode
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct VoiceChannelEffectSendEvent {
   channel_id : Id[ChannelMarker]
   guild_id : Id[GuildMarker]
@@ -4099,41 +4425,46 @@ pub(all) struct VoiceChannelEffectSendEvent {
   emoji : Nullable[Emoji]?
   animation_type : Nullable[Int32]?
   animation_id : Int32?
-  sound_id : Json?
+  sound_id : @json.Json?
   sound_volume : Double?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn VoiceChannelEffectSendEvent::to_json(Self) -> Json
+}
+pub fn VoiceChannelEffectSendEvent::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct VoiceChannelStartTimeUpdateEvent {
   id : Id[ChannelMarker]
   guild_id : Id[GuildMarker]
   voice_start_time : Nullable[Int64]?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn VoiceChannelStartTimeUpdateEvent::to_json(Self) -> Json
+}
+pub fn VoiceChannelStartTimeUpdateEvent::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct VoiceChannelStatusUpdateEvent {
   id : Id[ChannelMarker]
   guild_id : Id[GuildMarker]
   status : Nullable[String]
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn VoiceChannelStatusUpdateEvent::to_json(Self) -> Json
+}
+pub fn VoiceChannelStatusUpdateEvent::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct VoiceRegion {
   id : String
   name : String
   optimal : Bool
   deprecated : Bool
   custom : Bool
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn VoiceRegion::to_json(Self) -> Json
+}
+pub fn VoiceRegion::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct VoiceServerUpdateEvent {
   token : String
   guild_id : Id[GuildMarker]
   endpoint : Nullable[String]
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn VoiceServerUpdateEvent::to_json(Self) -> Json
+}
+pub fn VoiceServerUpdateEvent::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct VoiceState {
   guild_id : Id[GuildMarker]?
   channel_id : Nullable[Id[ChannelMarker]]
@@ -4148,9 +4479,10 @@ pub(all) struct VoiceState {
   self_video : Bool?
   suppress : Bool
   request_to_speak_timestamp : Nullable[Timestamp]
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn VoiceState::to_json(Self) -> Json
+}
+pub fn VoiceState::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct Webhook {
   id : Id[WebhookMarker]
   typ : WebhookType
@@ -4164,10 +4496,11 @@ pub(all) struct Webhook {
   source_guild : PartialGuild?
   source_channel : PartialChannel?
   url : String?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn Webhook::to_json(Self) -> Json
+}
+pub fn Webhook::to_json(Self) -> @json.Json
 
 #non_exhaustive
+#derive(@debug.Debug)
 pub(all) enum WebhookEvent {
   ApplicationAuthorized(ApplicationAuthorizedEvent)
   ApplicationDeauthorized(ApplicationDeauthorizedEvent)
@@ -4181,26 +4514,29 @@ pub(all) enum WebhookEvent {
   GameDirectMessageUpdate(GameDirectMessage)
   GameDirectMessageDelete(GameDirectMessage)
   QuestUserEnrollment
-  Unknown(typ~ : String, data~ : Json?)
-} derive(@debug.Debug)
+  Unknown(typ~ : String, data~ : @json.Json?)
+}
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct WebhookEventBody {
   typ : WebhookEventType
   timestamp : Timestamp
-  data : Json?
-} derive(ToJson, @debug.Debug, @json.FromJson)
+  data : @json.Json?
+}
 pub fn WebhookEventBody::project(Self) -> WebhookEvent raise
-pub fn WebhookEventBody::to_json(Self) -> Json
+pub fn WebhookEventBody::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct WebhookEventPayload {
   version : Int32
   application_id : Id[ApplicationMarker]
   typ : WebhookPayloadType
   event : WebhookEventBody?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn WebhookEventPayload::to_json(Self) -> Json
+}
+pub fn WebhookEventPayload::to_json(Self) -> @json.Json
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum WebhookEventType {
   ApplicationAuthorized
   ApplicationDeauthorized
@@ -4215,60 +4551,65 @@ pub(all) enum WebhookEventType {
   GameDirectMessageDelete
   QuestUserEnrollment
   Unknown(String)
-} derive(Eq, @debug.Debug)
+}
 pub fn WebhookEventType::from_string(String) -> Self
-pub fn WebhookEventType::to_json(Self) -> Json
+pub fn WebhookEventType::to_json(Self) -> @json.Json
 pub fn WebhookEventType::to_string(Self) -> String
-pub impl ToJson for WebhookEventType
 pub impl @json.FromJson for WebhookEventType
+pub impl @json.ToJson for WebhookEventType
 
 pub enum WebhookMarker {
 }
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum WebhookPayloadType {
   Ping
   Event
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn WebhookPayloadType::from_int(Int32) -> Self
 pub fn WebhookPayloadType::to_int(Self) -> Int32
-pub fn WebhookPayloadType::to_json(Self) -> Json
-pub impl ToJson for WebhookPayloadType
+pub fn WebhookPayloadType::to_json(Self) -> @json.Json
 pub impl @json.FromJson for WebhookPayloadType
+pub impl @json.ToJson for WebhookPayloadType
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum WebhookType {
   Incoming
   ChannelFollower
   Application
   Unknown(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn WebhookType::from_int(Int32) -> Self
 pub fn WebhookType::to_int(Self) -> Int32
-pub fn WebhookType::to_json(Self) -> Json
-pub impl ToJson for WebhookType
+pub fn WebhookType::to_json(Self) -> @json.Json
 pub impl @json.FromJson for WebhookType
+pub impl @json.ToJson for WebhookType
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct WebhooksUpdateEvent {
   guild_id : Id[GuildMarker]
   channel_id : Id[ChannelMarker]
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn WebhooksUpdateEvent::to_json(Self) -> Json
+}
+pub fn WebhooksUpdateEvent::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct WelcomeScreen {
   description : Nullable[String]
   welcome_channels : Array[WelcomeScreenChannel]
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn WelcomeScreen::to_json(Self) -> Json
+}
+pub fn WelcomeScreen::to_json(Self) -> @json.Json
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct WelcomeScreenChannel {
   channel_id : Id[ChannelMarker]
   description : String
   emoji_id : Nullable[Id[EmojiMarker]]
   emoji_name : Nullable[String]
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn WelcomeScreenChannel::to_json(Self) -> Json
+}
+pub fn WelcomeScreenChannel::to_json(Self) -> @json.Json
 
 // Type aliases
 pub type ApplicationId = Id[ApplicationMarker]

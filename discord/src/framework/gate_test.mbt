@@ -63,9 +63,10 @@ async test "response gate rejects modal callbacks for modal submits" {
 }
 
 ///|
+#derive(Debug)
 priv suberror GateSinkError {
   GateSinkError
-} derive(Debug)
+}
 
 ///|
 async test "state records the sent callback type" {

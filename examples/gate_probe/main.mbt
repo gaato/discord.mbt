@@ -12,9 +12,10 @@
 const DEFAULT_RUN_SECONDS : Int32 = 600
 
 ///|
+#derive(Debug)
 priv suberror ProbeFailure {
   ProbeFailure(String)
-} derive(Debug)
+}
 
 ///|
 /// `/probe-overflow`: the initial response is one character over Discord's

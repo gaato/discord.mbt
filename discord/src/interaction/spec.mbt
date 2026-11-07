@@ -2,6 +2,7 @@
 /// A declarative description of one application command, used both to
 /// register the command (its `ToJson` is the registration payload) and to
 /// route incoming interactions by command type and name.
+#derive(Debug)
 pub(all) struct CommandSpec {
   name : String
   name_localizations : Map[String, String]?
@@ -13,7 +14,7 @@ pub(all) struct CommandSpec {
   nsfw : Bool?
   integration_types : Array[@model.ApplicationIntegrationType]?
   contexts : Array[@model.InteractionContextType]?
-} derive(Debug)
+}
 
 ///|
 /// Every documented Discord limit this declaration breaks, in declaration

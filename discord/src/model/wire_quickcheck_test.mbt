@@ -2,7 +2,8 @@
 /// Exercises the full wire-width instead of QuickCheck's size-bounded
 /// built-in UInt64 generator. Sizes 0 through 7 are fixed boundary cases;
 /// later sizes draw from the full UInt64 range.
-priv struct WireUInt64(UInt64) derive(Debug)
+#derive(Debug)
+priv struct WireUInt64(UInt64)
 
 ///|
 impl @qc.Arbitrary for WireUInt64 with fn arbitrary(size, state) {

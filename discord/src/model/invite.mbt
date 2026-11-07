@@ -1,5 +1,6 @@
 ///|
 /// A Discord invite with optional usage metadata.
+#derive(ToJson(fields(typ(rename="type"))), FromJson(fields(typ(rename="type"))), Debug)
 pub(all) struct Invite {
   typ : InviteType?
   code : String
@@ -21,15 +22,12 @@ pub(all) struct Invite {
   max_age : Int32?
   temporary : Bool?
   created_at : Timestamp?
-} derive (
-  ToJson(fields(typ(rename="type"))),
-  FromJson(fields(typ(rename="type"))),
-  Debug,
-)
+}
 
 ///|
 /// Bit flags describing a guild invite.
-pub(all) struct InviteFlags(UInt64) derive(Eq)
+#derive(Eq)
+pub(all) struct InviteFlags(UInt64)
 
 ///|
 /// Flags from a raw bit field; unknown bits are kept.
@@ -78,13 +76,14 @@ pub fn InviteFlags::is_guest_invite() -> InviteFlags {
 
 ///|
 /// The destination category of a Discord invite.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum InviteType {
   Guild
   GroupDm
   Friend
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `InviteType`.
@@ -128,12 +127,13 @@ pub impl @json.FromJson for InviteType with fn from_json(json, path) {
 
 ///|
 /// The special target carried by a voice channel invite.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum InviteTargetType {
   Stream
   EmbeddedApplication
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `InviteTargetType`.
@@ -177,6 +177,7 @@ pub impl @json.FromJson for InviteTargetType with fn from_json(json, path) {
 
 ///|
 /// Progress and outcome of an invite target-user CSV update.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct TargetUsersJobStatus {
   status : TargetUsersJobStatusCode
   total_users : Int32
@@ -184,10 +185,11 @@ pub(all) struct TargetUsersJobStatus {
   created_at : Timestamp
   completed_at : Nullable[Timestamp]
   error_message : String?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// State of an invite target-user CSV update job.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum TargetUsersJobStatusCode {
   Unspecified
@@ -195,7 +197,7 @@ pub(all) enum TargetUsersJobStatusCode {
   Completed
   Failed
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `TargetUsersJobStatusCode`.

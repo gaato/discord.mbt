@@ -1,5 +1,6 @@
 ///|
 /// Gateway opcodes (send and receive).
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum GatewayOpcode {
   Dispatch
@@ -16,7 +17,7 @@ pub(all) enum GatewayOpcode {
   RequestSoundboardSounds
   RequestChannelInfo
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `GatewayOpcode`.
@@ -62,20 +63,23 @@ pub fn GatewayOpcode::from_int(value : Int32) -> GatewayOpcode {
 
 ///|
 /// Payload of opcode 10 (Hello).
+#derive(ToJson, FromJson, Debug)
 pub(all) struct Hello {
   heartbeat_interval : Int32
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// Partial application object included in READY.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct ReadyApplication {
   id : ApplicationId
   flags : ApplicationFlags?
   flags_new : ApplicationFlags?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// Payload of the READY dispatch.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct Ready {
   v : Int32
   user : User
@@ -84,17 +88,18 @@ pub(all) struct Ready {
   resume_gateway_url : String
   shard : Array[Int32]?
   application : ReadyApplication
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// Payload of opcode 4 (Update Voice State): join or move to `channel_id`
 /// in `guild_id`, or leave the guild's voice channel with `channel_id = None`.
+#derive(Eq, Debug)
 pub(all) struct UpdateVoiceState {
   guild_id : GuildId
   channel_id : ChannelId?
   self_mute : Bool
   self_deaf : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 /// Leaving is an explicit `"channel_id": null`, so a missing channel is

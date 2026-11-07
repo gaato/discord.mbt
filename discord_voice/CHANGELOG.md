@@ -8,9 +8,11 @@ releases (0.x → 0.y) may contain breaking changes; patch releases do not.
 
 ### Changed
 
-- Built and tested with MoonBit 0.10.16. The generated `.mbti` interface
-  files now spell `Int` as `Int32` and `UInt` as `UInt32`, which are the same
-  types; no signature changed.
+- Built and tested with MoonBit 0.10.20. The generated `.mbti` interface
+  files spell `Int` as `Int32` and `UInt` as `UInt32` (since 0.10.16), list
+  derived traits as a `#derive(...)` attribute above each declaration, and
+  qualify `Json` as `@json.Json`; these are the same types, and no signature
+  changed.
 - **Builds against `gaato/discord` 0.13.0**, which decides whether a 429 is
   Discord's from its headers alone (since 0.12.1), and against
   `gaato/http` 0.5.0 and `gaato/http-async` 0.5.0. Voice itself is
@@ -18,6 +20,10 @@ releases (0.x → 0.y) may contain breaking changes; patch releases do not.
 
 ### Fixed
 
+- **A cancelled voice connection finishes its teardown.** When the task
+  group running the connection is cancelled, the teardown that sends the
+  voice leave and closes the gateway and UDP transports now runs to the end
+  instead of being cut short at its first await.
 - **The README has sections and a compile-checked example.** It now follows
   the shared module layout (Install, Usage, Native runtime, Links), its usage
   example is compiled by `moon test`, and it no longer names the pinned

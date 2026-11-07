@@ -140,7 +140,7 @@ async test "interactions server authenticates and dispatches HTTP requests" {
       application_id=@model.Id::parse("400000000000000001"),
       path="/interactions",
     )
-    defer server.close()
+    defer @async.protect_from_cancel(() => server.close())
 
     let ping = ping_body()
     let (ping_response, ping_result) = http_request(
@@ -342,7 +342,7 @@ async test "interactions server answers 202, 504, and 500 and reports startup fa
       // load; "slow" waits for `slow_release`, so it times out either way.
       deadline_ms=200,
     )
-    defer server.close()
+    defer @async.protect_from_cancel(() => server.close())
     let silent = command_body("silent", "x", "500000000000000104")
     let (silent_response, silent_result) = http_request(
       server.addr(),
@@ -417,7 +417,7 @@ async test "interactions server bounds request bodies by size and read time" {
       max_body_bytes=ping.length(),
       body_timeout_ms=200,
     )
-    defer server.close()
+    defer @async.protect_from_cancel(() => server.close())
     // A body of exactly the limit is accepted.
     let (exact, exact_result) = http_request(
       server.addr(),
@@ -572,7 +572,7 @@ async test "interactions server closes idle connections and serves at most max_c
       header_timeout_ms=200,
       max_connections=1,
     )
-    defer server.close()
+    defer @async.protect_from_cancel(() => server.close())
     // A connection that sends nothing, or a head that never ends, is closed
     // once the header timeout passes.
     assert_eq(raw_exchange(server.addr(), "", ""), "")

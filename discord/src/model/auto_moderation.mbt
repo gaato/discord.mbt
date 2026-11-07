@@ -1,5 +1,6 @@
 ///|
 /// A guild auto-moderation rule and its configured actions.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct AutoModerationRule {
   id : AutoModerationRuleId
   guild_id : GuildId
@@ -12,10 +13,11 @@ pub(all) struct AutoModerationRule {
   enabled : Bool
   exempt_roles : Array[RoleId]
   exempt_channels : Array[ChannelId]
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// The condition category that activates an auto-moderation rule.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum AutoModerationTriggerType {
   Keyword
@@ -24,7 +26,7 @@ pub(all) enum AutoModerationTriggerType {
   MentionSpam
   MemberProfile
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `AutoModerationTriggerType`.
@@ -81,6 +83,7 @@ pub impl @json.FromJson for AutoModerationTriggerType with fn from_json(
 
 ///|
 /// Optional condition settings used by auto-moderation triggers.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct TriggerMetadata {
   keyword_filter : Array[String]?
   presets : Array[AutoModerationKeywordPresetType]?
@@ -88,17 +91,18 @@ pub(all) struct TriggerMetadata {
   regex_patterns : Array[String]?
   mention_total_limit : Int32?
   mention_raid_protection_enabled : Bool?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// A built-in keyword set used by auto moderation.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum AutoModerationKeywordPresetType {
   Profanity
   SexualContent
   Slurs
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `AutoModerationKeywordPresetType`.
@@ -152,12 +156,13 @@ pub impl @json.FromJson for AutoModerationKeywordPresetType with fn from_json(
 
 ///|
 /// The guild event evaluated by an auto-moderation rule.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum AutoModerationEventType {
   MessageSend
   MemberUpdate
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `AutoModerationEventType`.
@@ -206,17 +211,15 @@ pub impl @json.FromJson for AutoModerationEventType with fn from_json(
 
 ///|
 /// An action executed when an auto-moderation rule matches.
+#derive(ToJson(fields(typ(rename="type"))), FromJson(fields(typ(rename="type"))), Debug)
 pub(all) struct AutoModerationAction {
   typ : AutoModerationActionType
   metadata : ActionMetadata?
-} derive (
-  ToJson(fields(typ(rename="type"))),
-  FromJson(fields(typ(rename="type"))),
-  Debug,
-)
+}
 
 ///|
 /// The operation performed by auto moderation.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum AutoModerationActionType {
   BlockMessage
@@ -224,7 +227,7 @@ pub(all) enum AutoModerationActionType {
   Timeout
   BlockMemberInteraction
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `AutoModerationActionType`.
@@ -280,8 +283,9 @@ pub impl @json.FromJson for AutoModerationActionType with fn from_json(
 ///
 /// `custom_message` is nullable on the wire: `Some(Null)` is a rule that
 /// explicitly has no custom message, and sending it clears one.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct ActionMetadata {
   channel_id : ChannelId?
   duration_seconds : Int32?
   custom_message : Nullable[String]?
-} derive(ToJson, FromJson, Debug)
+}

@@ -1,6 +1,7 @@
 ///|
 /// A Discord application record. Fields that are absent from partial
 /// application payloads remain optional on receipt.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct Application {
   id : ApplicationId
   name : String
@@ -40,7 +41,7 @@ pub(all) struct Application {
     ApplicationIntegrationTypeConfiguration,
   ]?
   custom_install_url : String?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// Return Discord's full response bitfield when present, falling back to the
@@ -54,27 +55,30 @@ pub fn Application::effective_flags(self : Application) -> ApplicationFlags? {
 
 ///|
 /// Default OAuth2 installation scopes and bot permissions for an application.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct InstallParams {
   scopes : Array[String]
   permissions : Permissions
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// Installation settings for one application integration context.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct ApplicationIntegrationTypeConfiguration {
   oauth2_install_params : InstallParams?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// Whether Discord delivers event webhooks to the application;
 /// `DisabledByDiscord` means delivery was deactivated for inactivity.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum ApplicationEventWebhookStatus {
   Disabled
   Enabled
   DisabledByDiscord
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `ApplicationEventWebhookStatus`.
@@ -125,7 +129,8 @@ pub impl @json.FromJson for ApplicationEventWebhookStatus with fn from_json(
 
 ///|
 /// Bit flags describing capabilities and privileged access for an application.
-pub(all) struct ApplicationFlags(UInt64) derive(Eq)
+#derive(Eq)
+pub(all) struct ApplicationFlags(UInt64)
 
 ///|
 /// No flags set.

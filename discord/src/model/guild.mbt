@@ -1,5 +1,6 @@
 ///|
 /// A Discord guild and its configured capabilities.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct Guild {
   id : GuildId
   name : String
@@ -44,19 +45,21 @@ pub(all) struct Guild {
   premium_progress_bar_enabled : Bool?
   safety_alerts_channel_id : Nullable[ChannelId]
   incidents_data : Nullable[IncidentsData]?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// Temporary safety restrictions and detection timestamps for a guild.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct IncidentsData {
   invites_disabled_until : Nullable[Timestamp]?
   dms_disabled_until : Nullable[Timestamp]?
   dm_spam_detected_at : Nullable[Timestamp]?
   raid_detected_at : Nullable[Timestamp]?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// The partial guild representation returned for the current user's guilds.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct CurrentUserGuild {
   id : GuildId
   name : String
@@ -67,10 +70,11 @@ pub(all) struct CurrentUserGuild {
   features : Array[GuildFeature]
   approximate_member_count : Int32?
   approximate_presence_count : Int32?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// Discord's guild verification level.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum VerificationLevel {
   None
@@ -79,7 +83,7 @@ pub(all) enum VerificationLevel {
   High
   VeryHigh
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `VerificationLevel`.
@@ -127,12 +131,13 @@ pub impl @json.FromJson for VerificationLevel with fn from_json(json, path) {
 
 ///|
 /// Discord's default message notification level.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum DefaultMessageNotifications {
   AllMessages
   OnlyMentions
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `DefaultMessageNotifications`.
@@ -181,13 +186,14 @@ pub impl @json.FromJson for DefaultMessageNotifications with fn from_json(
 
 ///|
 /// Discord's explicit content filter level.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum ExplicitContentFilter {
   Disabled
   MembersWithoutRoles
   AllMembers
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `ExplicitContentFilter`.
@@ -231,12 +237,13 @@ pub impl @json.FromJson for ExplicitContentFilter with fn from_json(json, path) 
 
 ///|
 /// Discord's guild MFA level.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum MfaLevel {
   None
   Elevated
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `MfaLevel`.
@@ -275,6 +282,7 @@ pub impl @json.FromJson for MfaLevel with fn from_json(json, path) {
 
 ///|
 /// Discord's guild premium tier.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum PremiumTier {
   None
@@ -282,7 +290,7 @@ pub(all) enum PremiumTier {
   Tier2
   Tier3
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `PremiumTier`.
@@ -325,6 +333,7 @@ pub impl @json.FromJson for PremiumTier with fn from_json(json, path) {
 
 ///|
 /// Discord's guild NSFW level.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum NsfwLevel {
   Default
@@ -332,7 +341,7 @@ pub(all) enum NsfwLevel {
   Safe
   AgeRestricted
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `NsfwLevel`.
@@ -375,6 +384,7 @@ pub impl @json.FromJson for NsfwLevel with fn from_json(json, path) {
 
 ///|
 /// A capability enabled for a Discord guild.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum GuildFeature {
   AnimatedBanner
@@ -418,7 +428,7 @@ pub(all) enum GuildFeature {
   PinPermissionMigrationComplete
   PruneRequiresAdmin
   Unknown(String)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord string value of this `GuildFeature`.
@@ -535,7 +545,8 @@ pub impl @json.FromJson for GuildFeature with fn from_json(json, path) {
 
 ///|
 /// Bit flags controlling messages sent to a guild system channel.
-pub(all) struct SystemChannelFlags(UInt64) derive(Eq)
+#derive(Eq)
+pub(all) struct SystemChannelFlags(UInt64)
 
 ///|
 /// No flags set.
@@ -644,30 +655,34 @@ pub fn SystemChannelFlags::suppress_role_subscription_purchase_notification_repl
 
 ///|
 /// The welcome screen shown to new members of a community guild.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct WelcomeScreen {
   description : Nullable[String]
   welcome_channels : Array[WelcomeScreenChannel]
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// A channel suggested on a guild welcome screen.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct WelcomeScreenChannel {
   channel_id : ChannelId
   description : String
   emoji_id : Nullable[EmojiId]
   emoji_name : Nullable[String]
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// A guild that is temporarily unavailable to the client.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct UnavailableGuild {
   id : GuildId
   unavailable : Bool
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// A ban record pairing a user with an optional reason.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct GuildBan {
   reason : Nullable[String]
   user : User
-} derive(ToJson, FromJson, Debug)
+}

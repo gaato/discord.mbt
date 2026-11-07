@@ -1,17 +1,14 @@
 ///|
 /// A sample struct mirroring how model entities will use the core types:
 /// derived JSON codecs composing hand-written impls on Id/Nullable/etc.
+#derive(ToJson(fields(typ(rename="type"))), FromJson(fields(typ(rename="type"))), Debug)
 struct SampleEntity {
   id : @model.UserId
   guild_id : @model.GuildId?
   nick : @model.Nullable[String]
   avatar : @model.Nullable[@model.ImageHash]?
   typ : @model.ChannelType
-} derive (
-  ToJson(fields(typ(rename="type"))),
-  FromJson(fields(typ(rename="type"))),
-  Debug,
-)
+}
 
 ///|
 test "id decodes from string, int, and big int; encodes as string" {
@@ -32,13 +29,13 @@ test "id decode rejects garbage" {
   try
     (@json.from_json(Json::string("not-a-number")) : @model.UserId) |> ignore
   catch {
-    e =>
-      debug_inspect(
-        e,
-        content=(
-          #|JsonDecodeError((Root, "expected a snowflake (decimal string), got not-a-number"))
-        ),
+    // Compare the path's text, not its Debug form, which core may change.
+    @json.JsonDecodeError((path, message)) => {
+      assert_eq(path.to_string(), "")
+      assert_eq(
+        message, "expected a snowflake (decimal string), got not-a-number",
       )
+    }
   } noraise {
     _ => fail("expected decode to fail")
   }

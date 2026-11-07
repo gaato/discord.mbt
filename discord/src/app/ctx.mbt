@@ -42,11 +42,12 @@ pub fn AppCtx::application_ref(self : AppCtx) -> @dhttp.ApplicationRef {
 
 ///|
 /// Who may satisfy a component wait.
+#derive(Debug, Eq)
 pub(all) enum WaitFrom {
   Invoker
   User(@model.UserId)
   Anyone
-} derive(Debug, Eq)
+}
 
 ///|
 fn WaitFrom::user_filter(

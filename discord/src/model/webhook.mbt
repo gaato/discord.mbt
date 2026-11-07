@@ -1,5 +1,6 @@
 ///|
 /// A Discord webhook and its execution metadata.
+#derive(ToJson(fields(typ(rename="type"))), FromJson(fields(typ(rename="type"))), Debug)
 pub(all) struct Webhook {
   id : WebhookId
   typ : WebhookType
@@ -13,21 +14,18 @@ pub(all) struct Webhook {
   source_guild : PartialGuild?
   source_channel : PartialChannel?
   url : String?
-} derive (
-  ToJson(fields(typ(rename="type"))),
-  FromJson(fields(typ(rename="type"))),
-  Debug,
-)
+}
 
 ///|
 /// The behavior category of a Discord webhook.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum WebhookType {
   Incoming
   ChannelFollower
   Application
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `WebhookType`.

@@ -87,9 +87,10 @@ async test "channel ref create stage instance binds the channel id" {
 }
 
 ///|
+#derive(Debug)
 priv suberror TypingBodyError {
   TypingBodyError
-} derive(Debug)
+}
 
 ///|
 async test "channel ref with typing sends before body and returns its value" {

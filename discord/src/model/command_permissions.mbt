@@ -1,24 +1,22 @@
 ///|
 /// One role, user, or channel permission override for an application command.
+#derive(ToJson(fields(typ(rename="type"))), FromJson(fields(typ(rename="type"))), Debug)
 pub(all) struct ApplicationCommandPermission {
   id : GenericId
   typ : ApplicationCommandPermissionType
   permission : Bool
-} derive (
-  ToJson(fields(typ(rename="type"))),
-  FromJson(fields(typ(rename="type"))),
-  Debug,
-)
+}
 
 ///|
 /// The target kind of an application-command permission override.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum ApplicationCommandPermissionType {
   Role
   User
   Channel
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `ApplicationCommandPermissionType`.
@@ -70,9 +68,10 @@ pub impl @json.FromJson for ApplicationCommandPermissionType with fn from_json(
 
 ///|
 /// Guild-scoped permission overrides for one application command.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct GuildApplicationCommandPermissions {
   id : CommandId
   application_id : ApplicationId
   guild_id : GuildId
   permissions : Array[ApplicationCommandPermission]
-} derive(ToJson, FromJson, Debug)
+}

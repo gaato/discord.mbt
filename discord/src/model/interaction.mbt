@@ -1,5 +1,6 @@
 ///|
 /// An interaction delivered by Discord to an application.
+#derive(Debug)
 pub(all) struct Interaction {
   id : InteractionId
   application_id : ApplicationId
@@ -21,10 +22,11 @@ pub(all) struct Interaction {
   authorizing_integration_owners : Map[String, String]?
   context : InteractionContextType?
   attachment_size_limit : Int32?
-} derive(Debug)
+}
 
 ///|
 /// The dispatch category of an interaction.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum InteractionType {
   Ping
@@ -33,7 +35,7 @@ pub(all) enum InteractionType {
   ApplicationCommandAutocomplete
   ModalSubmit
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `InteractionType`.
@@ -81,13 +83,14 @@ pub impl @json.FromJson for InteractionType with fn from_json(json, path) {
 
 ///|
 /// Polymorphic interaction data selected by the parent interaction type.
+#derive(Debug)
 #non_exhaustive
 pub(all) enum InteractionData {
   Command(CommandData)
   Component(ComponentData)
   Modal(ModalData)
   Unknown(Json)
-} derive(Debug)
+}
 
 ///|
 /// Encodes the interaction data as its Discord JSON representation.
@@ -102,6 +105,7 @@ pub impl ToJson for InteractionData with fn to_json(self) {
 
 ///|
 /// Mechanical interaction fields decoded independently from polymorphic data.
+#derive(ToJson(fields(typ(rename="type"), guild_member(rename="member"))), FromJson(fields(typ(rename="type"), guild_member(rename="member"))))
 priv struct InteractionFields {
   id : InteractionId
   application_id : ApplicationId
@@ -122,10 +126,7 @@ priv struct InteractionFields {
   authorizing_integration_owners : Map[String, String]?
   context : InteractionContextType?
   attachment_size_limit : Int32?
-} derive (
-  ToJson(fields(typ(rename="type"), guild_member(rename="member"))),
-  FromJson(fields(typ(rename="type"), guild_member(rename="member"))),
-)
+}
 
 ///|
 fn Interaction::fields(self : Interaction) -> InteractionFields {
@@ -220,6 +221,7 @@ pub impl @json.FromJson for Interaction with fn from_json(json, path) {
 
 ///|
 /// Application-command data carried by command and autocomplete interactions.
+#derive(ToJson(fields(typ(rename="type"))), FromJson(fields(typ(rename="type"))), Debug)
 pub(all) struct CommandData {
   id : CommandId
   name : String
@@ -228,45 +230,41 @@ pub(all) struct CommandData {
   options : Array[CommandDataOption]?
   guild_id : GuildId?
   target_id : GenericId?
-} derive (
-  ToJson(fields(typ(rename="type"))),
-  FromJson(fields(typ(rename="type"))),
-  Debug,
-)
+}
 
 ///|
 /// A submitted command option with its raw scalar or nested option value.
+#derive(ToJson(fields(typ(rename="type"))), FromJson(fields(typ(rename="type"))), Debug)
 pub(all) struct CommandDataOption {
   name : String
   typ : CommandOptionType
   value : Json?
   options : Array[CommandDataOption]?
   focused : Bool?
-} derive (
-  ToJson(fields(typ(rename="type"))),
-  FromJson(fields(typ(rename="type"))),
-  Debug,
-)
+}
 
 ///|
 /// Component-specific data carried by a message component interaction.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct ComponentData {
   custom_id : String
   component_type : Int32
   values : Array[String]?
   resolved : ResolvedData?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// Submitted modal data containing the modal's component tree.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct ModalData {
   custom_id : String
   components : Array[Component]
   resolved : ResolvedData?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// Entity maps resolved alongside interaction option values.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct ResolvedData {
   users : Map[String, User]?
   members : Map[String, GuildMember]?
@@ -274,21 +272,19 @@ pub(all) struct ResolvedData {
   channels : Map[String, Channel]?
   messages : Map[String, Message]?
   attachments : Map[String, Attachment]?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// A response envelope sent for an interaction callback.
+#derive(ToJson(fields(typ(rename="type"))), FromJson(fields(typ(rename="type"))), Debug)
 pub(all) struct InteractionResponse {
   typ : InteractionResponseType
   data : Json?
-} derive (
-  ToJson(fields(typ(rename="type"))),
-  FromJson(fields(typ(rename="type"))),
-  Debug,
-)
+}
 
 ///|
 /// The callback behavior requested by an interaction response.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum InteractionResponseType {
   Pong
@@ -301,7 +297,7 @@ pub(all) enum InteractionResponseType {
   PremiumRequired
   LaunchActivity
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `InteractionResponseType`.
@@ -365,13 +361,15 @@ pub impl @json.FromJson for InteractionResponseType with fn from_json(
 ///|
 /// The envelope returned by Create Interaction Response when the caller asks
 /// for it with `with_response=true`.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct InteractionCallbackResponse {
   interaction : InteractionCallback
   resource : InteractionCallbackResource?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// The interaction as seen by the callback endpoint.
+#derive(ToJson(fields(typ(rename="type"))), FromJson(fields(typ(rename="type"))), Debug)
 pub(all) struct InteractionCallback {
   id : InteractionId
   typ : InteractionType
@@ -379,29 +377,23 @@ pub(all) struct InteractionCallback {
   response_message_id : MessageId?
   response_message_loading : Bool?
   response_message_ephemeral : Bool?
-} derive (
-  ToJson(fields(typ(rename="type"))),
-  FromJson(fields(typ(rename="type"))),
-  Debug,
-)
+}
 
 ///|
 /// What the interaction response created. `message` is set for message
 /// callbacks, `activity_instance` when an Activity was launched.
+#derive(ToJson(fields(typ(rename="type"))), FromJson(fields(typ(rename="type"))), Debug)
 pub(all) struct InteractionCallbackResource {
   typ : InteractionResponseType
   activity_instance : InteractionCallbackActivityInstance?
   message : Message?
-} derive (
-  ToJson(fields(typ(rename="type"))),
-  FromJson(fields(typ(rename="type"))),
-  Debug,
-)
+}
 
 ///|
 /// The Activity instance launched by an interaction response. Distinct from
 /// the fuller `ActivityInstance` resource returned by the application
 /// endpoints.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct InteractionCallbackActivityInstance {
   id : String
-} derive(ToJson, FromJson, Debug)
+}

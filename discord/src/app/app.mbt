@@ -1,13 +1,15 @@
 ///|
 /// Which command scope a synchronization targets.
+#derive(Debug)
 pub(all) enum CommandScope {
   Global
   Guild(@model.GuildId)
   Guilds(Array[@model.GuildId])
-} derive(Debug)
+}
 
 ///|
 /// Configuration errors detected before starting an application executor.
+#derive(Debug)
 pub(all) suberror AppConfigError {
   EmptyToken
   /// Two registrations share a command name and type; `first` and `second`
@@ -49,7 +51,7 @@ pub(all) suberror AppConfigError {
   InvalidMaxInFlight(value~ : Int32)
   /// `max_pending` must allow at least one waiting deferred interaction.
   InvalidMaxPending(value~ : Int32)
-} derive(Debug)
+}
 
 ///|
 /// A declaration and the call site that registered it.
@@ -830,9 +832,10 @@ pub fn App::attach(
 
 ///|
 /// Reports for each synchronized scope, in the requested order.
+#derive(Debug)
 pub(all) struct SyncReport {
   scopes : Array[@framework.ScopeSyncReport]
-} derive(Debug)
+}
 
 ///|
 /// Planned synchronizations for each requested scope, in order. Inspect

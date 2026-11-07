@@ -56,6 +56,7 @@ pub fn custom_emoji_mention(
 
 ///|
 /// A Discord timestamp display style.
+#derive(Eq, Debug)
 pub(all) enum TimestampStyle {
   ShortTime
   LongTime
@@ -64,7 +65,7 @@ pub(all) enum TimestampStyle {
   ShortDateTime
   LongDateTime
   Relative
-} derive(Eq, Debug)
+}
 
 ///|
 fn TimestampStyle::code(self : TimestampStyle) -> String {

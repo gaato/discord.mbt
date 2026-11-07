@@ -2,6 +2,7 @@
 /// Structured, dependency-free operational events emitted by discord.mbt.
 ///
 /// Callbacks receive these values synchronously and should return promptly.
+#derive(Debug)
 #non_exhaustive
 pub(all) enum TelemetryEvent {
   ShardConnecting(shard_id~ : Int32)
@@ -35,4 +36,4 @@ pub(all) enum TelemetryEvent {
   /// it.
   EventDiscarded(kind~ : String)
   DecodeError(marker~ : String)
-} derive(Debug)
+}

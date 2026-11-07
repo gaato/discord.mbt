@@ -8,7 +8,8 @@ import {
 // Values
 
 // Errors
-type DaveProbeError derive(@debug.Debug)
+#derive(@debug.Debug)
+type DaveProbeError
 
 // Types and methods
 type AudibleProbeSource

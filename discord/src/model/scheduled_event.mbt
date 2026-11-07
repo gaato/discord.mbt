@@ -1,5 +1,6 @@
 ///|
 /// A guild event scheduled for a stage, voice channel, or external location.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct GuildScheduledEvent {
   id : ScheduledEventId
   guild_id : GuildId
@@ -18,22 +19,20 @@ pub(all) struct GuildScheduledEvent {
   user_count : Int32?
   image : Nullable[ImageHash]?
   recurrence_rule : Nullable[GuildScheduledEventRecurrenceRule]
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// A user interested in a guild scheduled event.
+#derive(ToJson(fields(guild_member(rename="member"))), FromJson(fields(guild_member(rename="member"))), Debug)
 pub(all) struct GuildScheduledEventUser {
   guild_scheduled_event_id : ScheduledEventId
   user : User
   guild_member : GuildMember?
-} derive (
-  ToJson(fields(guild_member(rename="member"))),
-  FromJson(fields(guild_member(rename="member"))),
-  Debug,
-)
+}
 
 ///|
 /// A recurrence schedule attached to a guild scheduled event.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct GuildScheduledEventRecurrenceRule {
   start : Timestamp
   end : Nullable[Timestamp]?
@@ -45,17 +44,19 @@ pub(all) struct GuildScheduledEventRecurrenceRule {
   by_month_day : Nullable[Array[Int32]]?
   by_year_day : Array[Int32]?
   count : Int32?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// An ordinal weekday constraint such as the first Monday of a month.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct GuildScheduledEventRecurrenceRuleNWeekday {
   n : Int32
   day : GuildScheduledEventRecurrenceRuleWeekday
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// The base period used by a scheduled-event recurrence rule.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum GuildScheduledEventRecurrenceRuleFrequency {
   Yearly
@@ -63,7 +64,7 @@ pub(all) enum GuildScheduledEventRecurrenceRuleFrequency {
   Weekly
   Daily
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `GuildScheduledEventRecurrenceRuleFrequency`.
@@ -119,6 +120,7 @@ pub impl @json.FromJson for GuildScheduledEventRecurrenceRuleFrequency with fn f
 
 ///|
 /// A weekday used by a scheduled-event recurrence rule (Monday is zero).
+#derive(Eq, Debug)
 pub(all) enum GuildScheduledEventRecurrenceRuleWeekday {
   Monday
   Tuesday
@@ -128,7 +130,7 @@ pub(all) enum GuildScheduledEventRecurrenceRuleWeekday {
   Saturday
   Sunday
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `GuildScheduledEventRecurrenceRuleWeekday`.
@@ -190,6 +192,7 @@ pub impl @json.FromJson for GuildScheduledEventRecurrenceRuleWeekday with fn fro
 
 ///|
 /// A calendar month used by a scheduled-event recurrence rule.
+#derive(Eq, Debug)
 pub(all) enum GuildScheduledEventRecurrenceRuleMonth {
   January
   February
@@ -204,7 +207,7 @@ pub(all) enum GuildScheduledEventRecurrenceRuleMonth {
   November
   December
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `GuildScheduledEventRecurrenceRuleMonth`.
@@ -274,11 +277,12 @@ pub impl @json.FromJson for GuildScheduledEventRecurrenceRuleMonth with fn from_
 
 ///|
 /// The audience allowed to access a scheduled event.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum GuildScheduledEventPrivacyLevel {
   GuildOnly
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `GuildScheduledEventPrivacyLevel`.
@@ -328,6 +332,7 @@ pub impl @json.FromJson for GuildScheduledEventPrivacyLevel with fn from_json(
 
 ///|
 /// The lifecycle state of a scheduled event.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum GuildScheduledEventStatus {
   Scheduled
@@ -335,7 +340,7 @@ pub(all) enum GuildScheduledEventStatus {
   Completed
   Canceled
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `GuildScheduledEventStatus`.
@@ -388,13 +393,14 @@ pub impl @json.FromJson for GuildScheduledEventStatus with fn from_json(
 
 ///|
 /// The hosting entity used by a scheduled event.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum GuildScheduledEventEntityType {
   StageInstance
   Voice
   External
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `GuildScheduledEventEntityType`.
@@ -445,6 +451,7 @@ pub impl @json.FromJson for GuildScheduledEventEntityType with fn from_json(
 
 ///|
 /// Optional metadata describing a scheduled event's external entity.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct EntityMetadata {
   location : String?
-} derive(ToJson, FromJson, Debug)
+}

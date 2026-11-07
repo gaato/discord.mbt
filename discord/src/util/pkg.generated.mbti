@@ -78,20 +78,23 @@ pub fn user_banner_url(@model.Id[@model.UserMarker], @model.ImageHash, format? :
 pub fn user_mention(@model.Id[@model.UserMarker]) -> String
 
 // Errors
+#derive(Eq, @debug.Debug)
 pub(all) suberror CdnUrlError {
   InvalidSize(Int32)
   UnsupportedStickerFormat(Int32)
   UnsupportedFormat(endpoint~ : String, format~ : CdnImageFormat)
-} derive(Eq, @debug.Debug)
+}
 
 // Types and methods
+#derive(Eq, @debug.Debug)
 pub(all) enum CdnImageFormat {
   Png
   Jpeg
   Webp
   Gif
-} derive(Eq, @debug.Debug)
+}
 
+#derive(Eq, @debug.Debug)
 pub(all) enum TimestampStyle {
   ShortTime
   LongTime
@@ -100,7 +103,7 @@ pub(all) enum TimestampStyle {
   ShortDateTime
   LongDateTime
   Relative
-} derive(Eq, @debug.Debug)
+}
 
 // Type aliases
 

@@ -33,9 +33,10 @@ pub async fn Client::list_default_soundboard_sounds(
 }
 
 ///|
+#derive(FromJson)
 priv struct SoundboardSoundItems {
   items : Array[@model.SoundboardSound]
-} derive(FromJson)
+}
 
 ///|
 /// List the custom soundboard sounds in a guild. Unlike the default-sound

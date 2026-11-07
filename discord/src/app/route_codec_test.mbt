@@ -136,7 +136,8 @@ test "modal show enforces the custom id limit" {
 }
 
 ///|
-priv struct CodecSnowflake(UInt64) derive(Debug)
+#derive(Debug)
+priv struct CodecSnowflake(UInt64)
 
 ///|
 impl @qc.Arbitrary for CodecSnowflake with fn arbitrary(size, state) {

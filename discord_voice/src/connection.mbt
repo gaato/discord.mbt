@@ -1,5 +1,6 @@
 ///|
 /// Errors surfaced while joining or operating a voice connection.
+#derive(Debug)
 pub(all) suberror VoiceError {
   /// The main Gateway session lacks an intent required by the voice
   /// handshake.
@@ -15,35 +16,38 @@ pub(all) suberror VoiceError {
   /// `VoiceClient::join` ran while the client's `run` (the service `attach`
   /// registers) was not running.
   ClientNotRunning
-} derive(Debug)
+}
 
 ///|
 /// Public voice connection lifecycle.
+#derive(Debug, Eq)
 pub(all) enum VoiceConnectionState {
   Connecting
   Ready
   Reconnecting
   Rejoining
   Closed(code~ : Int32?)
-} derive(Debug, Eq)
+}
 
 ///|
 /// Credentials supplied by the main Discord gateway voice-state handshake.
+#derive(Debug, Eq)
 pub(all) struct VoiceCredentials {
   server_id : String
   session_id : String
   token : String
   endpoint : String
-} derive(Debug, Eq)
+}
 
 ///|
 /// A voice server change Discord reported after the session started: the
 /// token and endpoint of a VOICE_SERVER_UPDATE. A `None` endpoint means the
 /// server went away and another is being allocated.
+#derive(Debug, Eq)
 pub(all) struct VoiceServer {
   token : String
   endpoint : String?
-} derive(Debug, Eq)
+}
 
 ///|
 /// A server change the event pump has yet to act on.
@@ -684,7 +688,13 @@ async fn[X] VoiceConnection::run_event_pump(
   group : @async.TaskGroup[X],
   gateway : VoiceGateway,
 ) -> Unit noraise {
-  defer self.terminal_teardown(notify_leave=true)
+  // Teardown runs to the end even when the pump is cancelled; otherwise its
+  // awaits (the leave notification, the gateway close) would be cut short.
+  defer (@async.protect_from_cancel(() => {
+    self.terminal_teardown(notify_leave=true)
+  }) catch {
+    _ => ()
+  })
   // The pump is the only task that replaces the gateway, and terminal
   // teardown is the only one that clears it, so it follows its own handle
   // instead of waiting on `self.gateway`.

@@ -1,5 +1,6 @@
 ///|
 /// Events surfaced by `VoiceGateway::next`.
+#derive(Debug, Eq)
 #non_exhaustive
 pub(all) enum VoiceGatewayEvent {
   ReadyReceived
@@ -14,7 +15,7 @@ pub(all) enum VoiceGatewayEvent {
   ConnectFailed(reason~ : String)
   NeedsRejoin(code~ : Int32?)
   FatallyClosed(code~ : Int32)
-} derive(Debug, Eq)
+}
 
 ///|
 /// Voice gateway v8 driver. The caller-owned task group controls its
@@ -207,9 +208,10 @@ pub fn[X] VoiceGateway::start(
 }
 
 ///|
+#derive(Debug)
 priv suberror VoiceConnectionEnded {
   VoiceConnectionEnded(code~ : Int32?, reason~ : String)
-} derive(Debug)
+}
 
 ///|
 async fn VoiceGateway::emit(

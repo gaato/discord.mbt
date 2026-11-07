@@ -3,9 +3,10 @@
 /// second of silence. Set DISCORD_TOKEN, GUILD_ID, CHANNEL_ID, TARGET_USER_ID,
 /// and optionally OUTPUT_PATH (defaults to `recording.ogg`):
 ///   moon run --target native --release examples/voice_recorder
+#derive(Debug)
 suberror VoiceRecorderError {
   MissingEnvironmentVariable(String)
-} derive(Debug)
+}
 
 ///|
 fn required_env(name : String) -> String raise VoiceRecorderError {

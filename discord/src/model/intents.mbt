@@ -16,7 +16,8 @@
 ///   assert_true(intents.contains(@model.Intents::message_content()))
 /// }
 /// ```
-pub(all) struct Intents(UInt32) derive(Eq)
+#derive(Eq)
+pub(all) struct Intents(UInt32)
 
 ///|
 /// No flags set.

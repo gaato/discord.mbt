@@ -1,5 +1,6 @@
 ///|
 /// A registered Discord application command.
+#derive(ToJson(fields(typ(rename="type"))), FromJson(fields(typ(rename="type"))), Debug)
 pub(all) struct ApplicationCommand {
   id : CommandId
   typ : ApplicationCommandType?
@@ -19,20 +20,17 @@ pub(all) struct ApplicationCommand {
   handler : EntryPointCommandHandlerType?
   name_localized : String?
   description_localized : String?
-} derive (
-  ToJson(fields(typ(rename="type"))),
-  FromJson(fields(typ(rename="type"))),
-  Debug,
-)
+}
 
 ///|
 /// The handler used for a primary entry-point command.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum EntryPointCommandHandlerType {
   AppHandler
   DiscordLaunchActivity
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `EntryPointCommandHandlerType`.
@@ -81,6 +79,7 @@ pub impl @json.FromJson for EntryPointCommandHandlerType with fn from_json(
 
 ///|
 /// The invocation category of an application command.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum ApplicationCommandType {
   ChatInput
@@ -88,7 +87,7 @@ pub(all) enum ApplicationCommandType {
   Message
   PrimaryEntryPoint
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `ApplicationCommandType`.
@@ -138,6 +137,7 @@ pub impl @json.FromJson for ApplicationCommandType with fn from_json(json, path)
 
 ///|
 /// A flat command option supporting every current slash-command option shape.
+#derive(ToJson(fields(typ(rename="type"))), FromJson(fields(typ(rename="type"))), Debug)
 pub(all) struct CommandOption {
   typ : CommandOptionType
   name : String
@@ -157,14 +157,11 @@ pub(all) struct CommandOption {
   autocomplete : Bool?
   /// Upload filter for ATTACHMENT options (at most 10 entries).
   file_types : Array[FileTypeFilter]?
-} derive (
-  ToJson(fields(typ(rename="type"))),
-  FromJson(fields(typ(rename="type"))),
-  Debug,
-)
+}
 
 ///|
 /// The value category accepted by a command option.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum CommandOptionType {
   SubCommand
@@ -179,7 +176,7 @@ pub(all) enum CommandOptionType {
   Number
   Attachment
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `CommandOptionType`.
@@ -241,9 +238,10 @@ pub impl @json.FromJson for CommandOptionType with fn from_json(json, path) {
 
 ///|
 /// A named value offered as a predefined command option choice.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct CommandOptionChoice {
   name : String
   name_localizations : Nullable[Map[String, String]]?
   /// A string or number retained in its original JSON representation.
   value : Json
-} derive(ToJson, FromJson, Debug)
+}

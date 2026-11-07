@@ -4,6 +4,7 @@
 /// `proxy_url` serves images and videos (which carry `width` and `height`)
 /// and passes audio through unmodified; for any other file Discord's media
 /// proxy answers `415 Unsupported Media Type`, so fetch `url` instead.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct Attachment {
   id : AttachmentId
   filename : String
@@ -24,7 +25,7 @@ pub(all) struct Attachment {
   clip_participants : Array[User]?
   clip_created_at : Timestamp?
   application : Nullable[Application]?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// An existing attachment to retain when editing a message, per the
@@ -32,6 +33,7 @@ pub(all) struct Attachment {
 /// may be updated in place; absent fields are omitted from the wire, leaving
 /// them unchanged. New uploads are announced by the typed wrappers from
 /// their `files` parameter instead.
+#derive(Debug)
 pub(all) struct AttachmentRequest {
   id : AttachmentId
   filename : String?
@@ -40,7 +42,7 @@ pub(all) struct AttachmentRequest {
   duration_secs : Double?
   waveform : String?
   is_spoiler : Bool?
-} derive(Debug)
+}
 
 ///|
 /// Encodes the attachment request as its Discord JSON representation.
@@ -58,7 +60,8 @@ pub impl ToJson for AttachmentRequest with fn to_json(self) {
 
 ///|
 /// Bit flags describing special properties of an attachment.
-pub(all) struct AttachmentFlags(UInt64) derive(Eq)
+#derive(Eq)
+pub(all) struct AttachmentFlags(UInt64)
 
 ///|
 /// No flags set.

@@ -1,3 +1,6 @@
 target/
 _build/
 .spin/
+# moon check writes these since MoonBit 0.10.20; the experiment has no public
+# interface to track.
+pkg.generated.mbti

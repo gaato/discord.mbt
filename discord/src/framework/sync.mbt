@@ -146,14 +146,16 @@ fn command_key(typ : @model.ApplicationCommandType, name : String) -> String {
 
 ///|
 /// What to do with undeclared remote commands. Entry points are always kept.
+#derive(Debug, Eq)
 pub(all) enum UnownedCommands {
   Delete
   Keep
-} derive(Debug, Eq)
+}
 
 ///|
 /// Changes in one scope. Slash commands use plain names; other commands use
 /// `<type int>:<name>`. `None` identifies the global scope.
+#derive(Debug)
 pub(all) struct ScopeSyncReport {
   guild_id : @model.GuildId?
   created : Array[String]
@@ -162,7 +164,7 @@ pub(all) struct ScopeSyncReport {
   unchanged : Array[String]
   preserved : Array[String]
   overwritten : Bool
-} derive(Debug)
+}
 
 ///|
 fn remote_command_identity(

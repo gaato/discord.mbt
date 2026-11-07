@@ -1,6 +1,7 @@
 ///|
 /// Transport compression for a Gateway connection. Discord compresses what it
 /// sends; what the shard sends stays plain.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum GatewayCompression {
   /// `compress=zlib-stream`: one zlib context per connection, and every
@@ -9,7 +10,7 @@ pub(all) enum GatewayCompression {
   /// `compress=zstd-stream`: one zstd frame per connection, and every
   /// WebSocket message is one Gateway message flushed to a block boundary.
   ZstdStream
-} derive(Eq, Debug)
+}
 
 ///|
 /// Makes `equal` and `not_equal` callable as methods.

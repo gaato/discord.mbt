@@ -1,9 +1,10 @@
 ///|
 /// A complete WebSocket message received from the voice gateway.
+#derive(Debug, Eq)
 pub(all) enum VoiceFrame {
   Text(String)
   Binary(Bytes)
-} derive(Debug, Eq)
+}
 
 ///|
 /// The network seam used by `VoiceGateway`. Tests can provide an in-memory
@@ -17,9 +18,10 @@ pub(open) trait VoiceTransport {
 
 ///|
 /// Raised when a voice transport is closed or cannot continue.
+#derive(Debug)
 pub(all) suberror VoiceTransportClosed {
   VoiceTransportClosed(code~ : Int32?, reason~ : String)
-} derive(Debug)
+}
 
 ///|
 priv struct VoiceWsTransport {

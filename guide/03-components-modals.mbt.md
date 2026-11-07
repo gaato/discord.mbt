@@ -185,10 +185,11 @@ Define a modal once — its state codec and fields — then use the same
 
 ```mbt check
 ///|
+#derive(Debug)
 struct Feedback {
   topic : String
   details : String?
-} derive(Debug)
+}
 
 ///|
 let feedback : @discord.Modal[Int32, Feedback] = @discord.modal(

@@ -1,5 +1,6 @@
 ///|
 /// One application role connection metadata record.
+#derive(ToJson(fields(typ(rename="type"))), FromJson(fields(typ(rename="type"))), Debug)
 pub(all) struct ApplicationRoleConnectionMetadata {
   typ : ApplicationRoleConnectionMetadataType
   key : String
@@ -7,14 +8,11 @@ pub(all) struct ApplicationRoleConnectionMetadata {
   name_localizations : Nullable[Map[String, String]]?
   description : String
   description_localizations : Nullable[Map[String, String]]?
-} derive (
-  ToJson(fields(typ(rename="type"))),
-  FromJson(fields(typ(rename="type"))),
-  Debug,
-)
+}
 
 ///|
 /// The comparison used for an application role connection metadata record.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum ApplicationRoleConnectionMetadataType {
   IntegerLessThanOrEqual
@@ -26,7 +24,7 @@ pub(all) enum ApplicationRoleConnectionMetadataType {
   BooleanEqual
   BooleanNotEqual
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `ApplicationRoleConnectionMetadataType`.

@@ -11,6 +11,7 @@
 // list.
 
 ///|
+#derive(Debug)
 enum BotFuzzStep {
   Hello
   Ready
@@ -23,14 +24,15 @@ enum BotFuzzStep {
   Advance(Int32)
   /// End the schedule the way the seed says (see `BotFuzzEnding`).
   End
-} derive(Debug)
+}
 
 ///|
 /// How a schedule ends when its ending step comes.
+#derive(Debug, Eq)
 enum BotFuzzEnding {
   Shutdown
   Cancel
-} derive(Debug, Eq)
+}
 
 ///|
 /// Close codes after which the shard reconnects.
@@ -119,11 +121,12 @@ priv struct BotFuzzConn {
 }
 
 ///|
+#derive(Eq)
 priv enum BotFuzzOutcome {
   Running
   Completed(Int64)
   Cancelled(Int64)
-} derive(Eq)
+}
 
 ///|
 /// One handler invocation, as the handler itself recorded it.
@@ -137,11 +140,12 @@ priv struct BotFuzzRun {
 }
 
 ///|
+#derive(Debug, Eq)
 priv enum BotFuzzAdmit {
   Waiting
   Started
   Dropped
-} derive(Debug, Eq)
+}
 
 ///|
 /// One interaction the peer sent, and what admission did with it.

@@ -221,11 +221,11 @@ async fn sec_base_channels(p : P) -> Unit {
       audit_reason="live probe targeted invite (ids)",
     )
     let handle = c.invite_ref(invite.code)
-    defer {
+    defer @async.protect_from_cancel(() => {
       let _ = c.delete_invite(invite.code, audit_reason="cleanup") catch {
         _ => invite
       }
-    }
+    })
     handle.remove_target_user(target)
     handle.add_target_user(target)
     handle.bulk_delete_target_users([target])

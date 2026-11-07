@@ -1,8 +1,9 @@
 ///|
 /// Raised by a `FakeTransport` whose `fail_close` knob is set.
+#derive(Debug)
 pub suberror SimFailure {
   SimFailure
-} derive(Debug)
+}
 
 ///|
 /// In-memory Gateway connection. `incoming` feeds `recv`; every sent frame is

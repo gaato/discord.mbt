@@ -34,6 +34,7 @@
 ///   })
 /// }
 /// ```
+#derive(ToJson(fields(typ(rename="type"))), FromJson(fields(typ(rename="type"))), Debug)
 pub(all) struct Embed {
   title : String?
   typ : EmbedType?
@@ -53,11 +54,7 @@ pub(all) struct Embed {
   /// payload. Receive-only and display-only; absent on every other type.
   components : Array[Component]?
   flags : EmbedFlags?
-} derive (
-  ToJson(fields(typ(rename="type"))),
-  FromJson(fields(typ(rename="type"))),
-  Debug,
-)
+}
 
 ///|
 /// Construct an embed containing only fields accepted in outgoing payloads.
@@ -96,7 +93,8 @@ pub fn Embed::Embed(
 
 ///|
 /// Bit flags describing special rendering behavior of an embed.
-pub(all) struct EmbedFlags(UInt64) derive(Eq)
+#derive(Eq)
+pub(all) struct EmbedFlags(UInt64)
 
 ///|
 /// Flags from a raw bit field; unknown bits are kept.
@@ -145,6 +143,7 @@ pub fn EmbedFlags::is_content_inventory_entry() -> EmbedFlags {
 
 ///|
 /// The string discriminator describing an embed's rendering category.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum EmbedType {
   Rich
@@ -158,7 +157,7 @@ pub(all) enum EmbedType {
   /// A link preview built from Discord components; see `Embed.components`.
   Components
   Unknown(String)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord string value of this `EmbedType`.
@@ -211,11 +210,12 @@ pub impl @json.FromJson for EmbedType with fn from_json(json, path) {
 
 ///|
 /// Footer text and optional icon URLs for an embed.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct EmbedFooter {
   text : String
   icon_url : String?
   proxy_icon_url : String?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// Construct footer content for an outgoing embed.
@@ -228,6 +228,7 @@ pub fn EmbedFooter::EmbedFooter(
 
 ///|
 /// Image media displayed within an embed.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct EmbedImage {
   url : String
   proxy_url : String?
@@ -239,7 +240,7 @@ pub(all) struct EmbedImage {
   description : String?
   /// Embed media flags; IS_ANIMATED is bit 5.
   flags : Int32?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// Construct image media for an outgoing embed.
@@ -259,12 +260,13 @@ pub fn EmbedImage::EmbedImage(url : String) -> EmbedImage {
 
 ///|
 /// Thumbnail media displayed beside an embed.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct EmbedThumbnail {
   url : String
   proxy_url : String?
   height : Int32?
   width : Int32?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// Construct thumbnail media for an outgoing embed.
@@ -274,6 +276,7 @@ pub fn EmbedThumbnail::EmbedThumbnail(url : String) -> EmbedThumbnail {
 
 ///|
 /// Video media attached to an embed.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct EmbedVideo {
   url : String?
   proxy_url : String?
@@ -285,23 +288,25 @@ pub(all) struct EmbedVideo {
   description : String?
   /// Embed media flags; IS_ANIMATED is bit 5.
   flags : Int32?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// Attribution information for the provider of an embed.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct EmbedProvider {
   name : String?
   url : String?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// Author information displayed at the top of an embed.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct EmbedAuthor {
   name : String
   url : String?
   icon_url : String?
   proxy_icon_url : String?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// Construct author information for an outgoing embed.
@@ -315,11 +320,12 @@ pub fn EmbedAuthor::EmbedAuthor(
 
 ///|
 /// A named value displayed in an embed's field grid.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct EmbedField {
   name : String
   value : String
   inline : Bool?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// Construct a field for an outgoing embed.

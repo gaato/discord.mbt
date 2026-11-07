@@ -1,11 +1,13 @@
 ///|
 /// A media value stored in an application identity profile.
+#derive(ToJson, FromJson, Eq, Debug)
 pub(all) struct ApplicationIdentityProfileMedia {
   url : String
-} derive(ToJson, FromJson, Eq, Debug)
+}
 
 ///|
 /// Pre-configured game statistics in an application identity profile.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct ApplicationIdentityPrimaryProfileData {
   season : String?
   rank_name : String?
@@ -25,40 +27,44 @@ pub(all) struct ApplicationIdentityPrimaryProfileData {
   current_period_assists : Int32?
   total_deaths : Int32?
   current_period_deaths : Int32?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// A text-valued custom game statistic.
+#derive(ToJson, FromJson, Eq, Debug)
 pub(all) struct ApplicationIdentityDynamicStringField {
   name : String
   value : String
-} derive(ToJson, FromJson, Eq, Debug)
+}
 
 ///|
 /// A number-valued custom game statistic.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct ApplicationIdentityDynamicNumberField {
   name : String
   value : Double
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// A media-valued custom game statistic.
+#derive(ToJson, FromJson, Eq, Debug)
 pub(all) struct ApplicationIdentityDynamicMediaField {
   name : String
   value : ApplicationIdentityProfileMedia
-} derive(ToJson, FromJson, Eq, Debug)
+}
 
 ///|
 /// A custom game statistic dispatched by its numeric wire discriminator.
 /// Unknown variants retain their complete JSON object for forward-compatible
 /// round trips.
+#derive(Debug)
 #non_exhaustive
 pub(all) enum ApplicationIdentityDynamicField {
   StringField(ApplicationIdentityDynamicStringField)
   NumberField(ApplicationIdentityDynamicNumberField)
   MediaField(ApplicationIdentityDynamicMediaField)
   Unknown(Json)
-} derive(Debug)
+}
 
 ///|
 fn application_identity_dynamic_field_payload(
@@ -111,24 +117,27 @@ pub impl @json.FromJson for ApplicationIdentityDynamicField with fn from_json(
 
 ///|
 /// Game statistics stored in an application identity profile.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct ApplicationIdentityProfileData {
   primary : ApplicationIdentityPrimaryProfileData?
   dynamic : Array[ApplicationIdentityDynamicField]?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// Profile data attached to a user's application identity.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct ApplicationIdentityProfile {
   username : Nullable[String]
   metadata : Nullable[Json]
   data : Nullable[ApplicationIdentityProfileData]
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// An external account identity associated with a Discord user and application.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct ApplicationIdentity {
   user_id : UserId?
   provider_type : String
   provider_id : String?
   provider_issued_user_id : String
-} derive(ToJson, FromJson, Debug)
+}

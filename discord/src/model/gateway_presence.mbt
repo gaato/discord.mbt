@@ -4,12 +4,14 @@
 /// Discord only normally requires `id`, but explicitly warns that presence
 /// fields and their types are not validated. Keeping the id optional lets a
 /// malformed user fragment remain observable without rejecting the event.
+#derive(ToJson, Debug)
 pub(all) struct PresenceUser {
   id : UserId?
-} derive(ToJson, Debug)
+}
 
 ///|
 /// A user's overall presence state.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum PresenceStatus {
   Idle
@@ -18,7 +20,7 @@ pub(all) enum PresenceStatus {
   Offline
   Invisible
   Unknown(String)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord string value of this `PresenceStatus`.
@@ -63,15 +65,17 @@ pub impl @json.FromJson for PresenceStatus with fn from_json(json, path) {
 
 ///|
 /// The Discord client families on which a user is active.
+#derive(ToJson, Debug)
 pub(all) struct ClientStatus {
   desktop : PresenceStatus?
   mobile : PresenceStatus?
   web : PresenceStatus?
   vr : PresenceStatus?
-} derive(ToJson, Debug)
+}
 
 ///|
 /// An activity category reported in a presence update.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum ActivityType {
   Playing
@@ -81,7 +85,7 @@ pub(all) enum ActivityType {
   Custom
   Competing
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `ActivityType`.
@@ -128,6 +132,7 @@ pub impl @json.FromJson for ActivityType with fn from_json(json, path) {
 
 ///|
 /// A Discord presence activity, including the documented Rich Presence fields.
+#derive(ToJson(fields(typ(rename="type"))), Debug)
 pub(all) struct Activity {
   name : String
   typ : ActivityType
@@ -147,9 +152,10 @@ pub(all) struct Activity {
   instance : Bool?
   flags : ActivityFlags?
   buttons : Array[ActivityButton]?
-} derive(ToJson(fields(typ(rename="type"))), Debug)
+}
 
 ///|
+#derive(FromJson(fields(typ(rename="type"))))
 struct ActivityWire {
   name : String
   typ : ActivityType
@@ -169,7 +175,7 @@ struct ActivityWire {
   instance : Bool?
   flags : ActivityFlags?
   buttons : Array[ActivityButton]?
-} derive(FromJson(fields(typ(rename="type"))))
+}
 
 ///|
 /// Decodes the activity from its Discord JSON representation.
@@ -199,16 +205,18 @@ pub impl @json.FromJson for Activity with fn from_json(json, path) {
 
 ///|
 /// Unix millisecond start and end times of an activity.
+#derive(Debug)
 pub(all) struct ActivityTimestamps {
   start : Int64?
   end : Int64?
-} derive(Debug)
+}
 
 ///|
+#derive(FromJson)
 struct ActivityTimestampsWire {
   start : Double?
   end : Double?
-} derive(FromJson)
+}
 
 ///|
 /// Encodes the activity timestamps as its Discord JSON representation.
@@ -235,21 +243,24 @@ pub impl @json.FromJson for ActivityTimestamps with fn from_json(json, path) {
 
 ///|
 /// The custom or unicode emoji attached to a custom status.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct ActivityEmoji {
   name : String
   id : EmojiId?
   animated : Bool?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// The rich-presence party, with `size` as `[current, max]` when present.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct ActivityParty {
   id : String?
   size : Array[Int32]?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// Rich-presence artwork references and their hover texts.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct ActivityAssets {
   large_image : String?
   large_text : String?
@@ -258,30 +269,29 @@ pub(all) struct ActivityAssets {
   small_text : String?
   small_url : String?
   invite_cover_image : String?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// Secrets for joining or spectating a rich-presence session.
+#derive(ToJson(fields(match_(rename="match"))), FromJson(fields(match_(rename="match"))), Debug)
 pub(all) struct ActivitySecrets {
   join : String?
   spectate : String?
   match_ : String?
-} derive (
-  ToJson(fields(match_(rename="match"))),
-  FromJson(fields(match_(rename="match"))),
-  Debug,
-)
+}
 
 ///|
 /// A custom label/url button shown on a rich presence.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct ActivityButton {
   label : String
   url : String
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// Bit set describing which rich-presence interactions an activity supports.
-pub(all) struct ActivityFlags(UInt64) derive(Eq)
+#derive(Eq)
+pub(all) struct ActivityFlags(UInt64)
 
 ///|
 /// Flags from a raw bit field; unknown bits are kept.
@@ -382,13 +392,14 @@ pub impl @json.FromJson for ActivityFlags with fn from_json(json, path) {
 /// Discord does not validate the presence payload. A missing field or a field
 /// whose value has the wrong type is represented as `None`; one bad field never
 /// prevents the rest of the event from being delivered.
+#derive(ToJson, Debug)
 pub(all) struct PresenceUpdateEvent {
   user : PresenceUser?
   guild_id : GuildId?
   status : PresenceStatus?
   activities : Array[Activity]?
   client_status : ClientStatus?
-} derive(ToJson, Debug)
+}
 
 ///|
 fn[T : @json.FromJson] lenient_presence_field(

@@ -15,6 +15,7 @@ pub fn pairwise_verification_code(Bytes) -> String raise DaveError
 pub fn unavailable_reason() -> String?
 
 // Errors
+#derive(Eq, @debug.Debug)
 pub(all) suberror DaveError {
   LibraryUnavailable(reason~ : String)
   InvalidArgument(operation~ : String, reason~ : String)
@@ -24,9 +25,10 @@ pub(all) suberror DaveError {
   EncryptFailed(reason~ : EncryptFailure)
   DecryptFailed(reason~ : DecryptFailure)
   NativeFailure(operation~ : String, reason~ : String)
-} derive(Eq, @debug.Debug)
+}
 
 // Types and methods
+#derive(Eq, @debug.Debug)
 pub(all) enum Codec {
   Opus
   Vp8
@@ -34,22 +36,24 @@ pub(all) enum Codec {
   H264
   H265
   Av1
-} derive(Eq, @debug.Debug)
+}
 
+#derive(Eq, @debug.Debug)
 pub(all) enum CommitResult {
   Applied(changes~ : Array[RosterChange])
   Ignored
   Failed(failure~ : MlsFailure)
-} derive(Eq, @debug.Debug)
+}
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum DecryptFailure {
   DecryptionFailure
   MissingKeyRatchet
   InvalidNonce
   MissingCryptor
   Unknown(code~ : Int32)
-} derive(Eq, @debug.Debug)
+}
 
 pub struct Decryptor {
   // private fields
@@ -60,13 +64,14 @@ pub fn Decryptor::transition_to_key_ratchet(Self, KeyRatchet) -> Unit raise Dave
 pub fn Decryptor::transition_to_passthrough_mode(Self, enabled~ : Bool) -> Unit raise DaveError
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum EncryptFailure {
   EncryptionFailure
   MissingKeyRatchet
   MissingCryptor
   TooManyAttempts
   Unknown(code~ : Int32)
-} derive(Eq, @debug.Debug)
+}
 
 pub struct Encryptor {
   // private fields
@@ -84,20 +89,23 @@ pub struct KeyRatchet {
   // private fields
 }
 
+#derive(Eq, @debug.Debug)
 pub(all) enum MediaType {
   Audio
   Video
-} derive(Eq, @debug.Debug)
+}
 
+#derive(Eq, @debug.Debug)
 pub(all) struct MlsFailure {
   source : String
   reason : String
-} derive(Eq, @debug.Debug)
+}
 
+#derive(Eq, @debug.Debug)
 pub(all) enum RosterChange {
   Upsert(user_id~ : UInt64, signature_key~ : Bytes)
   Remove(user_id~ : UInt64)
-} derive(Eq, @debug.Debug)
+}
 
 pub struct Session {
   // private fields
@@ -116,10 +124,11 @@ pub fn Session::reset(Self) -> Unit raise DaveError
 pub fn Session::set_external_sender(Self, Bytes) -> Unit raise DaveError
 pub fn Session::set_protocol_version(Self, protocol_version~ : UInt16) -> Unit raise DaveError
 
+#derive(Eq, @debug.Debug)
 pub(all) enum WelcomeResult {
   Applied(changes~ : Array[RosterChange])
   Failed(failure~ : MlsFailure)
-} derive(Eq, @debug.Debug)
+}
 
 // Type aliases
 

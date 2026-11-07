@@ -1,7 +1,8 @@
 ///|
+#derive(FromJson)
 priv struct EmojiItems {
   items : Array[@model.Emoji]
-} derive(FromJson)
+}
 
 ///|
 fn decode_application_emoji_items(

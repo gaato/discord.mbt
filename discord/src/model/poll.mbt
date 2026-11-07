@@ -1,5 +1,6 @@
 ///|
 /// A poll attached to a Discord message.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct Poll {
   question : PollMedia
   answers : Array[PollAnswer]
@@ -7,55 +8,61 @@ pub(all) struct Poll {
   allow_multiselect : Bool
   layout_type : PollLayoutType
   results : PollResults?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// Text and emoji content used by a poll question or answer.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct PollMedia {
   text : String?
   emoji : Emoji?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// A selectable answer in a poll.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct PollAnswer {
   answer_id : Int32
   poll_media : PollMedia
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// Aggregated results for a poll.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct PollResults {
   is_finalized : Bool
   answer_counts : Array[PollAnswerCount]
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// Vote count and current-user state for one poll answer.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct PollAnswerCount {
   id : Int32
   count : Int32
   me_voted : Bool
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// Users returned by the poll answer-voters endpoint.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct PollAnswerVoters {
   users : Array[User]
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// Poll definition attached when creating a message or executing a webhook.
 /// Answers carry their media directly; Discord assigns the answer ids.
 /// `duration` is the number of hours the poll stays open (up to 32 days,
 /// default 24).
+#derive(Debug)
 pub(all) struct PollCreateRequest {
   question : PollMedia
   answers : Array[PollMedia]
   duration : Int32?
   allow_multiselect : Bool?
   layout_type : PollLayoutType?
-} derive(Debug)
+}
 
 ///|
 /// Request-side poll media omits absent fields instead of sending nulls.
@@ -85,11 +92,12 @@ pub impl ToJson for PollCreateRequest with fn to_json(self) {
 
 ///|
 /// The presentation layout used by a poll.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum PollLayoutType {
   Default
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `PollLayoutType`.

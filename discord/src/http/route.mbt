@@ -4,10 +4,11 @@ pub using @ahttp {type RequestMethod}
 
 ///|
 /// Invalid metadata supplied while constructing a custom REST route.
+#derive(Debug)
 pub(all) suberror CustomRouteError {
   InvalidPath(path~ : String)
   EmptyBucket
-} derive(Debug)
+}
 
 ///|
 /// One variant per Discord REST endpoint. A route knows its HTTP method, its

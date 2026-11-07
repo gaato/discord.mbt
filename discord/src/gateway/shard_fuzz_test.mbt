@@ -11,6 +11,7 @@ const FUZZ_INTERVAL : Int32 = 45000
 ///|
 /// One server-side action or a passage of time. Actions whose protocol
 /// precondition does not hold (READY before an IDENTIFY, say) are skipped.
+#derive(Debug)
 enum FuzzStep {
   Hello
   Ready
@@ -23,7 +24,7 @@ enum FuzzStep {
   ServerClose(Int32?)
   Garbage
   Advance(Int32)
-} derive(Debug)
+}
 
 ///|
 let fuzz_close_codes : Array[Int32?] = [
@@ -91,11 +92,12 @@ fn fuzz_rand(seed : Int32, stream : Int32) -> @random.Rand {
 
 ///|
 /// What the first protocol frame of a connection was.
+#derive(Eq, Debug)
 enum Opening {
   Unopened
   Identified
   Resumed
-} derive(Eq, Debug)
+}
 
 ///|
 /// The model's view of one connection.
@@ -113,17 +115,19 @@ struct FuzzConn {
 
 ///|
 /// Why the connection ended, as the step that caused it says.
+#derive(Debug)
 enum FuzzEnd {
   Closed(Int32?)
   Invalid(Bool)
-} derive(Debug)
+}
 
 ///|
+#derive(Debug)
 enum FuzzDelay {
   NoDelay
   Backoff(Int32)
   InvalidSessionWait
-} derive(Debug)
+}
 
 ///|
 /// The reference model: the session the shard should hold, the reconnect

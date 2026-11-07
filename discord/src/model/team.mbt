@@ -1,30 +1,33 @@
 ///|
 /// A Discord developer team and its members.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct Team {
   icon : Nullable[ImageHash]
   id : TeamId
   members : Array[TeamMember]
   name : String
   owner_user_id : UserId
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// A user's membership record within a developer team.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct TeamMember {
   membership_state : TeamMembershipState
   team_id : TeamId
   user : User
   role : String?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// A user's invitation state within a developer team.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum TeamMembershipState {
   Invited
   Accepted
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `TeamMembershipState`.

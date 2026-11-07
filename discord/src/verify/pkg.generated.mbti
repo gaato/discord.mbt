@@ -9,11 +9,12 @@ import {
 pub fn verify_signature(public_key~ : String, signature~ : String, timestamp~ : String, body~ : BytesView) -> Bool
 
 // Errors
+#derive(Eq, @debug.Debug)
 pub(all) suberror InteractionVerifierError {
   InvalidPublicKeyLength(got~ : Int32)
   InvalidPublicKeyHex
   InvalidPublicKeyEncoding
-} derive(Eq, @debug.Debug)
+}
 
 // Types and methods
 pub struct InteractionVerifier {

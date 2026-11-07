@@ -42,6 +42,7 @@ pub struct ModalHandle {
 
 ///|
 /// Why `Modal::show` could not prepare a modal response.
+#derive(Debug)
 pub(all) suberror ModalShowError {
   /// The state does not encode, or the complete custom id exceeds 100
   /// characters.
@@ -53,7 +54,7 @@ pub(all) suberror ModalShowError {
   /// the official clients count the field in UTF-16 units and would not
   /// submit the modal until the user deleted text.
   ValueTooLong(custom_id~ : String, length~ : Int32, max~ : Int32)
-} derive(Debug)
+}
 
 ///|
 fn find_modal_component(

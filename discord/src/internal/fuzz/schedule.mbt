@@ -1,10 +1,11 @@
 ///|
 /// How one run of a schedule ended: the trace it returned, or the text of
 /// the error it raised.
+#derive(Eq)
 priv enum Outcome {
   Passed(String)
   Failed(String)
-} derive(Eq)
+}
 
 ///|
 /// Run a randomized schedule twice, and fail when the two runs disagree; when

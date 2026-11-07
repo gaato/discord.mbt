@@ -1,5 +1,6 @@
 ///|
 /// An error raised when an interaction callback cannot be accepted.
+#derive(Debug)
 pub(all) suberror ResponseGateError {
   AlreadyResponded
   Expired
@@ -7,10 +8,11 @@ pub(all) suberror ResponseGateError {
     kind~ : @model.InteractionType,
     typ~ : @model.InteractionResponseType
   )
-} derive(Debug)
+}
 
 ///|
 /// What has happened to an interaction's single initial callback.
+#derive(Debug, Eq)
 pub(all) enum ResponseState {
   Pending
   Sent(@model.InteractionResponseType)
@@ -18,10 +20,11 @@ pub(all) enum ResponseState {
   Unconfirmed(@model.InteractionResponseType)
   /// The executor gave up the callback window.
   Expired
-} derive(Debug, Eq)
+}
 
 ///|
 /// How a failed callback delivery left the interaction's callback window.
+#derive(Debug, Eq)
 #non_exhaustive
 pub(all) enum DeliveryFailure {
   /// The callback was definitively refused, by Discord or by client-side
@@ -35,7 +38,7 @@ pub(all) enum DeliveryFailure {
   Expired
   /// Discord may or may not have accepted the callback.
   Uncertain
-} derive(Debug, Eq)
+}
 
 ///|
 /// A single-use interaction callback gate.

@@ -1,9 +1,10 @@
 ///|
 /// A complete WebSocket message received from the Gateway.
+#derive(Debug)
 pub(all) enum GatewayFrame {
   Text(String)
   Binary(Bytes)
-} derive(Debug)
+}
 
 ///|
 /// The seam between the shard driver and the network: implemented by the
@@ -18,9 +19,10 @@ pub(open) trait GatewayTransport {
 /// Raised by transports when the peer closed the connection. `code` is the
 /// WebSocket close code (Discord uses 4xxx application codes), `None` for
 /// abnormal/transport-level termination.
+#derive(Debug)
 pub(all) suberror TransportClosed {
   TransportClosed(code~ : Int32?, reason~ : String)
-} derive(Debug)
+}
 
 ///|
 priv struct WsTransport {
@@ -37,10 +39,11 @@ pub const DEFAULT_MAX_MESSAGE_BYTES : Int32 = 67_108_864
 
 ///|
 /// Raised for a Gateway configuration that cannot work.
+#derive(Debug)
 pub(all) suberror GatewayConfigError {
   /// `max_message_bytes` must be positive.
   InvalidMaxMessageBytes(value~ : Int32)
-} derive(Debug)
+}
 
 ///|
 /// Check a `max_message_bytes` setting: a limit below 1 refuses every

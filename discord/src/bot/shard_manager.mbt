@@ -1,5 +1,6 @@
 ///|
 /// Selects which Gateway shards this process owns.
+#derive(Debug)
 pub(all) enum ShardConfig {
   /// Use Discord's recommended shard count and run every shard locally.
   Auto
@@ -10,7 +11,7 @@ pub(all) enum ShardConfig {
   Fixed(count~ : Int32)
   /// Run only `ids` while identifying them with the shared logical `count`.
   Range(ids~ : Array[Int32], count~ : Int32)
-} derive(Debug)
+}
 
 ///|
 priv struct ResolvedShardConfig {

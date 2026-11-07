@@ -2,10 +2,11 @@
 /// How a connection ended. `InvalidSession` is opcode 9; everything else is a
 /// close with its WebSocket code (`None` for an unclean end or a server
 /// request to reconnect).
+#derive(Debug)
 priv suberror ConnectionEnded {
   ConnectionEnded(code~ : Int32?, reason~ : String)
   InvalidSession(resumable~ : Bool)
-} derive(Debug)
+}
 
 ///|
 /// The wait before the next connection attempt.

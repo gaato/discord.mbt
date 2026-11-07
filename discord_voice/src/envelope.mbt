@@ -1,5 +1,6 @@
 ///|
 /// A decoded voice gateway v8 message.
+#derive(Debug, Eq)
 #non_exhaustive
 pub(all) enum VoiceMessage {
   Ready(ssrc~ : UInt32, ip~ : String, port~ : Int32, modes~ : Array[String])
@@ -22,15 +23,16 @@ pub(all) enum VoiceMessage {
   DaveMlsAnnounceCommitTransition(transition_id~ : Int32, commit~ : Bytes)
   DaveMlsWelcome(transition_id~ : Int32, welcome~ : Bytes)
   Unknown(op~ : Int32)
-} derive(Debug, Eq)
+}
 
 ///|
 /// A malformed JSON or binary voice gateway envelope.
+#derive(Debug, Eq)
 #doc(hidden)
 pub(all) suberror VoiceEnvelopeError {
   InvalidTextFrame(reason~ : String)
   InvalidBinaryFrame(reason~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 fn invalid_text(reason : String) -> VoiceEnvelopeError {

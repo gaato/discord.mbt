@@ -15,12 +15,13 @@ fn text_response(status : Int32, body : String) -> @app.InteractionHttpResponse 
 
 ///|
 /// Configuration rejected by `serve_interactions` before it starts listening.
+#derive(@debug.Debug)
 pub(all) suberror ServerConfigError {
   InvalidMaxBodyBytes(value~ : Int32)
   InvalidBodyTimeoutMs(value~ : Int32)
   InvalidHeaderTimeoutMs(value~ : Int32)
   InvalidMaxConnections(value~ : Int32)
-} derive(@debug.Debug)
+}
 
 ///|
 priv enum BodyRead {

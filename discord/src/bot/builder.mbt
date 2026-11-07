@@ -1,6 +1,7 @@
 ///|
 /// A gateway configuration that cannot run, found by `BotBuilder::build`
 /// before any connection is attempted.
+#derive(Debug)
 pub(all) suberror BotConfigError {
   /// The bot token is empty.
   EmptyToken
@@ -15,7 +16,7 @@ pub(all) suberror BotConfigError {
   InvalidShutdownGrace(value~ : Int32)
   /// `max_message_bytes` must be positive.
   InvalidMaxMessageBytes(value~ : Int32)
-} derive(Debug)
+}
 
 ///|
 /// Collects a gateway bot's configuration and registrations: typed and raw

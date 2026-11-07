@@ -1,5 +1,6 @@
 ///|
 /// A user's connection state in a Discord voice channel.
+#derive(ToJson(fields(guild_member(rename="member"))), FromJson(fields(guild_member(rename="member"))), Debug)
 pub(all) struct VoiceState {
   guild_id : GuildId?
   channel_id : Nullable[ChannelId]
@@ -14,18 +15,15 @@ pub(all) struct VoiceState {
   self_video : Bool?
   suppress : Bool
   request_to_speak_timestamp : Nullable[Timestamp]
-} derive (
-  ToJson(fields(guild_member(rename="member"))),
-  FromJson(fields(guild_member(rename="member"))),
-  Debug,
-)
+}
 
 ///|
 /// A voice server region available to Discord clients.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct VoiceRegion {
   id : String
   name : String
   optimal : Bool
   deprecated : Bool
   custom : Bool
-} derive(ToJson, FromJson, Debug)
+}

@@ -20,19 +20,22 @@ pub async fn connect_websocket(String, max_message_bytes? : Int32) -> &GatewayTr
 pub fn on_close(Int32?, Bool) -> ReconnectPolicy
 
 // Errors
+#derive(@debug.Debug)
 pub(all) suberror GatewayConfigError {
   InvalidMaxMessageBytes(value~ : Int32)
-} derive(@debug.Debug)
+}
 
+#derive(@debug.Debug)
 pub(all) suberror InflateError {
   Malformed(message~ : String)
   InvalidUtf8
   TooLarge(limit~ : Int32)
-} derive(@debug.Debug)
+}
 
+#derive(@debug.Debug)
 pub(all) suberror TransportClosed {
   TransportClosed(code~ : Int32?, reason~ : String)
-} derive(@debug.Debug)
+}
 
 // Types and methods
 pub struct CommandLimiter {
@@ -42,30 +45,34 @@ pub fn CommandLimiter::CommandLimiter(limit? : Int32, window_ms? : Int32, clock?
 pub async fn CommandLimiter::acquire(Self) -> Unit
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum GatewayCompression {
   ZlibStream
   ZstdStream
-} derive(Eq, @debug.Debug)
+}
 pub fn GatewayCompression::equal(Self, Self) -> Bool
 pub fn GatewayCompression::not_equal(Self, Self) -> Bool
 
+#derive(@debug.Debug)
 pub(all) enum GatewayFrame {
   Text(String)
   Binary(Bytes)
-} derive(@debug.Debug)
+}
 
+#derive(Eq, @debug.Debug)
 pub(all) enum ReconnectPolicy {
   Resume
   Reidentify
   Fatal
-} derive(Eq, @debug.Debug)
+}
 
+#derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct Session {
   id : String
   resume_url : String
   mut sequence : Int64
-} derive(ToJson, @debug.Debug, @json.FromJson)
-pub fn Session::to_json(Self) -> Json
+}
+pub fn Session::to_json(Self) -> @json.Json
 
 pub struct Shard {
   // private fields
@@ -76,7 +83,7 @@ pub async fn Shard::next(Self) -> ShardEvent
 pub async fn Shard::request_channel_info(Self, @model.RequestChannelInfo) -> Unit
 pub async fn Shard::request_guild_members(Self, @model.RequestGuildMembers) -> Unit
 pub async fn Shard::request_soundboard_sounds(Self, @model.RequestSoundboardSounds) -> Unit
-pub async fn Shard::send(Self, Json) -> Unit
+pub async fn Shard::send(Self, @json.Json) -> Unit
 pub fn Shard::session(Self) -> Session?
 pub fn[X] Shard::start(@async.TaskGroup[X], token~ : String, intents~ : @model.Intents, capabilities? : @model.GatewayCapabilities, gateway_url? : String, shard_id? : Int32, shard_count? : Int32, identify_queue? : &@queue.IdentifyQueue, event_filter? : (@model.EventKind) -> Bool, connector? : async (String) -> &GatewayTransport, compress? : Bool, compression? : GatewayCompression, inflater_factory? : () -> &Inflater raise, max_message_bytes? : Int32, queue_capacity? : Int32, telemetry? : (@telemetry.TelemetryEvent) -> Unit, clock? : &@clock.Clock, rand? : @random.Rand, session? : Session, presence? : @model.UpdatePresence) -> Self
 pub fn Shard::state(Self) -> ShardState
@@ -84,13 +91,15 @@ pub async fn Shard::update_presence(Self, @model.UpdatePresence) -> Unit
 pub async fn Shard::update_voice_state(Self, @model.UpdateVoiceState) -> Unit
 
 #non_exhaustive
+#derive(@debug.Debug)
 pub(all) enum ShardEvent {
   Dispatch(@model.Event)
   Connected(resumed~ : Bool)
   Disconnected(code~ : Int32?, resuming~ : Bool)
   FatallyClosed(code~ : Int32)
-} derive(@debug.Debug)
+}
 
+#derive(Eq, @debug.Debug)
 pub(all) enum ShardState {
   Disconnected(reconnect_attempts~ : Int32)
   Connecting
@@ -98,7 +107,7 @@ pub(all) enum ShardState {
   Resuming
   Active
   FatallyClosed(code~ : Int32)
-} derive(Eq, @debug.Debug)
+}
 
 // Type aliases
 

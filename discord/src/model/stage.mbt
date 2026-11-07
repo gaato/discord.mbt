@@ -1,5 +1,6 @@
 ///|
 /// A live stage instance associated with a guild stage channel.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct StageInstance {
   id : StageInstanceId
   guild_id : GuildId
@@ -7,16 +8,17 @@ pub(all) struct StageInstance {
   topic : String
   privacy_level : StagePrivacyLevel
   guild_scheduled_event_id : Nullable[ScheduledEventId]
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// The audience allowed to discover a stage instance.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum StagePrivacyLevel {
   Public
   GuildOnly
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `StagePrivacyLevel`.

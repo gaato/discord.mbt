@@ -1,5 +1,6 @@
 ///|
 /// The result of attempting to start a cooldown window.
+#derive(Debug, Eq)
 pub(all) enum CooldownDecision {
   Acquired
   Active(retry_after_ms~ : Int64)
@@ -7,7 +8,7 @@ pub(all) enum CooldownDecision {
   /// is unreachable. The App decides whether the command runs (see
   /// `AppBuilder(cooldown_outage~)`) and reports the outage.
   Unavailable(reason~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 /// Storage for command cooldown windows. Implementations own their clock.

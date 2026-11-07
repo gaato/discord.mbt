@@ -9,9 +9,11 @@ breaking change is listed with a migration note.
 
 ### Changed
 
-- Built and tested with MoonBit 0.10.16. The generated `.mbti` interface
-  files now spell `Int` as `Int32` and `UInt` as `UInt32`, which are the same
-  types; no signature changed.
+- Built and tested with MoonBit 0.10.20. The generated `.mbti` interface
+  files spell `Int` as `Int32` and `UInt` as `UInt32` (since 0.10.16), list
+  derived traits as a `#derive(...)` attribute above each declaration, and
+  qualify `Json` as `@json.Json`; these are the same types, and no signature
+  changed.
 
 ### Fixed
 

@@ -1,5 +1,6 @@
 ///|
-priv suberror TelemetryHookFailure derive(Debug)
+#derive(Debug)
+priv suberror TelemetryHookFailure
 
 ///|
 async test "429 retry_after longer than the request timeout retries with telemetry" {

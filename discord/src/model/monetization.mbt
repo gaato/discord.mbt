@@ -1,5 +1,6 @@
 ///|
 /// A grant of access to a Discord application SKU.
+#derive(ToJson(fields(typ(rename="type"))), FromJson(fields(typ(rename="type"))), Debug)
 pub(all) struct Entitlement {
   id : EntitlementId
   sku_id : SkuId
@@ -12,14 +13,11 @@ pub(all) struct Entitlement {
   guild_id : GuildId?
   consumed : Bool?
   // Not modeled: fulfillment fields appear in OpenAPI but not in the public documentation.
-} derive (
-  ToJson(fields(typ(rename="type"))),
-  FromJson(fields(typ(rename="type"))),
-  Debug,
-)
+}
 
 ///|
 /// The origin of an application entitlement.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum EntitlementType {
   Purchase
@@ -31,7 +29,7 @@ pub(all) enum EntitlementType {
   PremiumPurchase
   ApplicationSubscription
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `EntitlementType`.
@@ -85,12 +83,13 @@ pub impl @json.FromJson for EntitlementType with fn from_json(json, path) {
 
 ///|
 /// The owner scope used when creating a test entitlement.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum EntitlementOwnerType {
   Guild
   User
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `EntitlementOwnerType`.
@@ -130,6 +129,7 @@ pub impl @json.FromJson for EntitlementOwnerType with fn from_json(json, path) {
 
 ///|
 /// A purchasable Discord application product.
+#derive(ToJson(fields(typ(rename="type"))), FromJson(fields(typ(rename="type"))), Debug)
 pub(all) struct Sku {
   id : SkuId
   typ : SkuType
@@ -137,14 +137,11 @@ pub(all) struct Sku {
   name : String
   slug : String
   flags : SkuFlags
-} derive (
-  ToJson(fields(typ(rename="type"))),
-  FromJson(fields(typ(rename="type"))),
-  Debug,
-)
+}
 
 ///|
 /// The product category represented by a SKU.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum SkuType {
   Durable
@@ -152,7 +149,7 @@ pub(all) enum SkuType {
   Subscription
   SubscriptionGroup
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `SkuType`.
@@ -198,7 +195,8 @@ pub impl @json.FromJson for SkuType with fn from_json(json, path) {
 
 ///|
 /// Bit flags describing availability and subscription scope for a SKU.
-pub(all) struct SkuFlags(UInt64) derive(Eq)
+#derive(Eq)
+pub(all) struct SkuFlags(UInt64)
 
 ///|
 /// No flags set.
@@ -286,6 +284,7 @@ pub fn SkuFlags::user_subscription() -> SkuFlags {
 
 ///|
 /// A user's recurring subscription to one or more application SKUs.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct Subscription {
   id : GenericId
   user_id : UserId
@@ -297,17 +296,18 @@ pub(all) struct Subscription {
   status : SubscriptionStatus
   canceled_at : Nullable[Timestamp]
   country : String?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// The renewal state of a Discord application subscription.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum SubscriptionStatus {
   Active
   Ending
   Inactive
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `SubscriptionStatus`.

@@ -10,7 +10,8 @@ import {
 // Errors
 
 // Types and methods
-type Echo derive(@debug.Debug)
+#derive(@debug.Debug)
+type Echo
 
 // Type aliases
 

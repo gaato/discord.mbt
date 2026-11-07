@@ -1,5 +1,6 @@
 ///|
 /// Shard lifecycle state.
+#derive(Eq, Debug)
 pub(all) enum ShardState {
   Disconnected(reconnect_attempts~ : Int32)
   Connecting
@@ -7,27 +8,29 @@ pub(all) enum ShardState {
   Resuming
   Active
   FatallyClosed(code~ : Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// Action after a gateway close: resume the session, identify from scratch,
 /// or give up because reconnecting cannot succeed.
+#derive(Eq, Debug)
 pub(all) enum ReconnectPolicy {
   Resume
   Reidentify
   Fatal
-} derive(Eq, Debug)
+}
 
 ///|
 /// Gateway session state retained across reconnects for RESUME. Persist it
 /// (for example with `to_json`) and pass it to `Shard::start(session~)` after a
 /// process restart. `sequence` serializes as a JSON string (core's `Int64`
 /// encoding); `from_json` accepts that form.
+#derive(Debug, ToJson, FromJson)
 pub(all) struct Session {
   id : String
   resume_url : String
   mut sequence : Int64
-} derive(Debug, ToJson, FromJson)
+}
 
 ///|
 /// Classify a close code into the action to take, per the Discord docs.

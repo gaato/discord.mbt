@@ -1,46 +1,51 @@
 ///|
 /// Errors reported while coordinating Discord's DAVE protocol.
+#derive(Debug, Eq)
 #doc(hidden)
 pub(all) suberror DaveError {
   DaveInvalid(reason~ : String)
   DaveUnavailable(reason~ : String)
   DaveInternal(reason~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 /// Side effects requested by the DAVE gateway/MLS orchestration state machine.
+#derive(Debug, Eq)
 #doc(hidden)
 #non_exhaustive
 pub(all) enum DaveAction {
   SendJson(Json)
   SendBinary(op~ : Int32, payload~ : Bytes)
   SwitchMediaContext(protocol_version~ : Int32)
-} derive(Debug, Eq)
+}
 
 ///|
 /// A change to the DAVE group roster that a commit or Welcome applied: a
 /// member whose signing key was added or replaced, or one that left.
+#derive(Debug, Eq)
 enum DaveRosterChange {
   UpsertDaveMember(user_id~ : UInt64)
   RemoveDaveMember(user_id~ : UInt64)
-} derive(Debug, Eq)
+}
 
 ///|
 /// What processing an MLS commit did: applied with roster changes, ignored by
 /// libdave, or failed with a reason that triggers recovery.
+#derive(Debug, Eq)
 enum DaveCommitOutcome {
   CommitApplied(changes~ : Array[DaveRosterChange])
   CommitIgnored
   CommitFailed(reason~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 /// What processing an MLS Welcome did: joined the group with roster changes,
 /// or failed with a reason that triggers recovery.
+#derive(Debug, Eq)
 enum DaveWelcomeOutcome {
   WelcomeApplied(changes~ : Array[DaveRosterChange])
   WelcomeFailed(reason~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 /// The private seam between gateway orchestration and the official libdave

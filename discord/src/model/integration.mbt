@@ -1,6 +1,7 @@
 ///|
 /// A guild integration. All fields are optional because audit logs and user
 /// connections carry documented partial forms of this object.
+#derive(ToJson(fields(typ(rename="type"))), FromJson(fields(typ(rename="type"))), Debug)
 pub(all) struct Integration {
   id : IntegrationId?
   name : String?
@@ -19,37 +20,36 @@ pub(all) struct Integration {
   application : IntegrationApplication?
   application_id : ApplicationId?
   scopes : Array[String]?
-} derive (
-  ToJson(fields(typ(rename="type"))),
-  FromJson(fields(typ(rename="type"))),
-  Debug,
-)
+}
 
 ///|
 /// The provider-side account an integration is linked to.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct IntegrationAccount {
   id : String
   name : String
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// The OAuth2 application backing a Discord-app integration.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct IntegrationApplication {
   id : ApplicationId
   name : String
   icon : Nullable[ImageHash]
   description : String
   bot : User?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// What happens to a subscriber when their integration expires.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum IntegrationExpireBehavior {
   RemoveRole
   Kick
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `IntegrationExpireBehavior`.

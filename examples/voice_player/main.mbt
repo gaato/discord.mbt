@@ -8,9 +8,10 @@
 ///
 /// Run with DISCORD_TOKEN, GUILD_ID, CHANNEL_ID, and AUDIO_FILE set:
 ///   moon run --target native --release examples/voice_player
+#derive(Debug)
 suberror VoicePlayerError {
   MissingEnvironmentVariable(String)
-} derive(Debug)
+}
 
 ///|
 fn required_env(name : String) -> String raise VoicePlayerError {

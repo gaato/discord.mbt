@@ -15,6 +15,7 @@
 ///
 /// Run with DISCORD_TOKEN, GUILD_ID, and CHANNEL_ID set:
 ///   moon run --target native --release examples/dave_probe
+#derive(Debug)
 suberror DaveProbeError {
   MissingEnvironmentVariable(String)
   DavePeerRequired(negotiated_version~ : Int32)
@@ -22,7 +23,7 @@ suberror DaveProbeError {
   DaveMediaFailure(String)
   DaveReceiveTimeout
   ProbeDidNotComplete
-} derive(Debug)
+}
 
 ///|
 fn required_env(name : String) -> String raise DaveProbeError {

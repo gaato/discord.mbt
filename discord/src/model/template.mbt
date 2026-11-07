@@ -1,5 +1,6 @@
 ///|
 /// A reusable Discord guild template and its serialized guild snapshot.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct GuildTemplate {
   code : String
   name : String
@@ -12,13 +13,14 @@ pub(all) struct GuildTemplate {
   source_guild_id : GuildId
   serialized_source_guild : GuildTemplateSource
   is_dirty : Nullable[Bool]
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// Stable guild settings exposed in a serialized template snapshot.
 ///
 /// Discord uses integer placeholder IDs for nested roles and channels in this
 /// payload, so this is intentionally distinct from `PartialGuild`.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct GuildTemplateSource {
   name : String?
   description : Nullable[String]?
@@ -34,10 +36,11 @@ pub(all) struct GuildTemplateSource {
   system_channel_id : Nullable[Int32]?
   system_channel_flags : SystemChannelFlags?
   icon_hash : Nullable[ImageHash]?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// A role in a template snapshot, using the snapshot's integer placeholder ID.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct GuildTemplateRole {
   id : Int32
   name : String
@@ -48,10 +51,11 @@ pub(all) struct GuildTemplateRole {
   mentionable : Bool
   icon : Nullable[ImageHash]?
   unicode_emoji : Nullable[String]?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// A channel in a template snapshot, using integer placeholder IDs.
+#derive(ToJson(fields(typ(rename="type"))), FromJson(fields(typ(rename="type"))), Debug)
 pub(all) struct GuildTemplateChannel {
   id : Int32
   typ : ChannelType
@@ -64,28 +68,22 @@ pub(all) struct GuildTemplateChannel {
   rate_limit_per_user : Int32?
   parent_id : Nullable[Int32]?
   permission_overwrites : Array[GuildTemplatePermissionOverwrite]?
-} derive (
-  ToJson(fields(typ(rename="type"))),
-  FromJson(fields(typ(rename="type"))),
-  Debug,
-)
+}
 
 ///|
 /// A permission overwrite using a template placeholder ID.
+#derive(ToJson(fields(typ(rename="type"))), FromJson(fields(typ(rename="type"))), Debug)
 pub(all) struct GuildTemplatePermissionOverwrite {
   id : Int32
   typ : Int32
   allow : GuildTemplatePermissions
   deny : GuildTemplatePermissions
-} derive (
-  ToJson(fields(typ(rename="type"))),
-  FromJson(fields(typ(rename="type"))),
-  Debug,
-)
+}
 
 ///|
 /// A permission bitset encoded as a JSON number in template snapshots.
-pub(all) struct GuildTemplatePermissions(UInt64) derive(Eq)
+#derive(Eq)
+pub(all) struct GuildTemplatePermissions(UInt64)
 
 ///|
 /// The raw bit field.

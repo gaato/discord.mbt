@@ -35,10 +35,12 @@ fn raw_app(run : async (@framework.CommandCtx) -> Unit) -> @app.AppBuilder {
 }
 
 ///|
-priv suberror HandlerBoom derive(Debug)
+#derive(Debug)
+priv suberror HandlerBoom
 
 ///|
-priv suberror PolicyBoom derive(Debug)
+#derive(Debug)
+priv suberror PolicyBoom
 
 ///|
 async test "the default policy answers every HandlerError with an error reply" {

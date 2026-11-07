@@ -9,7 +9,8 @@ type ProbeError
 // Types and methods
 type Entry
 
-type Outcome derive(Eq)
+#derive(Eq)
+type Outcome
 
 type P
 

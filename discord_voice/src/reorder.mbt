@@ -1,10 +1,11 @@
 ///|
 /// Values produced while restoring RTP sequence order.
+#derive(Debug, Eq)
 #doc(hidden)
 pub(all) enum ReorderOutput[T] {
   Deliver(T)
   Lost(count~ : Int32)
-} derive(Debug, Eq)
+}
 
 ///|
 priv struct ReorderEntry[T] {

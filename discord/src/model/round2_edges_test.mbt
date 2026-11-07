@@ -51,7 +51,7 @@ test "flattened event decoders pin missing-field and wrong-shape failures" {
     |> ignore
   catch {
     @json.JsonDecodeError((path, message)) => {
-      assert_eq(Repr(path).to_string(), "Key(Root, key=\"guild_id\")")
+      assert_eq(path.to_string(), "/guild_id")
       assert_eq(message, "missing required field")
     }
     error => fail("unexpected missing-field error: \{Repr(error)}")

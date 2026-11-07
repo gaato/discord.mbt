@@ -1,10 +1,11 @@
 ///|
 /// Errors raised while reading typed values out of submitted command options.
+#derive(Debug)
 pub(all) suberror OptionError {
   MissingOption(name~ : String)
   WrongType(name~ : String, expected~ : String)
   MissingResolved(name~ : String, kind~ : String)
-} derive(Debug)
+}
 
 ///|
 /// Typed reader over the options submitted with an application command.
@@ -161,7 +162,7 @@ fn[M] json_id(
   expected : String,
 ) -> @model.Id[M] raise OptionError {
   guard value is String(s) else { raise WrongType(name~, expected~) }
-  @model.Id::parse(s.view()) catch {
+  @model.Id::parse(s) catch {
     _ => raise WrongType(name~, expected~)
   }
 }

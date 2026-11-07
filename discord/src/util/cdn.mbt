@@ -3,12 +3,13 @@ let cdn_base = "https://cdn.discordapp.com"
 
 ///|
 /// A raster image format accepted by Discord's CDN.
+#derive(Eq, Debug)
 pub(all) enum CdnImageFormat {
   Png
   Jpeg
   Webp
   Gif
-} derive(Eq, Debug)
+}
 
 ///|
 fn CdnImageFormat::extension(self : CdnImageFormat) -> String {
@@ -22,11 +23,12 @@ fn CdnImageFormat::extension(self : CdnImageFormat) -> String {
 
 ///|
 /// Invalid CDN URL parameters rejected before a request is made.
+#derive(Eq, Debug)
 pub(all) suberror CdnUrlError {
   InvalidSize(Int32)
   UnsupportedStickerFormat(Int32)
   UnsupportedFormat(endpoint~ : String, format~ : CdnImageFormat)
-} derive(Eq, Debug)
+}
 
 ///|
 fn valid_size(size : Int32) -> Bool {

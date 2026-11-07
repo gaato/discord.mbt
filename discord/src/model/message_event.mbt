@@ -1,16 +1,18 @@
 ///|
 /// A message-create dispatch with gateway-only message fields.
+#derive(Debug)
 pub(all) struct MessageCreateEvent {
   message : Message
   guild_id : GuildId?
   guild_member : GuildMember?
   mention_members : Map[UserId, GuildMember]
   channel_type : ChannelType?
-} derive(Debug)
+}
 
 ///|
 /// A message-update dispatch with the same gateway-only fields as message
 /// creation.
+#derive(Debug)
 pub(all) struct MessageUpdateEvent {
   message : Message
   /// `None` when decoded via `FromJson`. The bot gateway runtime supplies the
@@ -21,7 +23,7 @@ pub(all) struct MessageUpdateEvent {
   guild_member : GuildMember?
   mention_members : Map[UserId, GuildMember]
   channel_type : ChannelType?
-} derive(Debug)
+}
 
 ///|
 /// Whether this update changed the message's edit timestamp.
@@ -61,10 +63,11 @@ fn edited_timestamps_equal(
 }
 
 ///|
+#derive(FromJson(fields(guild_member(rename="member"))))
 priv struct GatewayMessageMention {
   id : UserId
   guild_member : GuildMember?
-} derive(FromJson(fields(guild_member(rename="member"))))
+}
 
 ///|
 priv struct GatewayMessageEventFields {

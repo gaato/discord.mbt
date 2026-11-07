@@ -16,13 +16,15 @@ suberror GateFuzzFailure {
 
 ///|
 /// How the next sink invocation behaves; a blocked one waits for `Release`.
+#derive(Debug)
 enum SinkPlan {
   Succeed
   Fail(@framework.DeliveryFailure)
   Block
-} derive(Debug)
+}
 
 ///|
+#derive(Debug)
 enum GateStep {
   Send(@model.InteractionResponseType)
   Release(SinkPlan)
@@ -30,18 +32,19 @@ enum GateStep {
   Cancel(Int32)
   Expire
   Advance(Int32)
-} derive(Debug)
+}
 
 ///|
 /// The gate's state as deliveries so far imply it. `InFlight` reads as
 /// `Sent`, which the gate records before its sink runs.
+#derive(Debug, Eq)
 enum GateModelState {
   Pending
   InFlight(@model.InteractionResponseType)
   Sent(@model.InteractionResponseType)
   Unconfirmed(@model.InteractionResponseType)
   Expired
-} derive(Debug, Eq)
+}
 
 ///|
 struct GateModel {

@@ -1,10 +1,11 @@
 ///|
 /// Members and optional presence/not-found fragments collected from all chunks.
+#derive(Debug)
 pub(all) struct FetchedMembers {
   members : Array[@model.GuildMember]
   presences : Array[@model.PresenceUpdateEvent]
   not_found : Array[Json]
-} derive(Debug)
+}
 
 ///|
 /// Broadcast presence to all locally managed shards. Shards in other processes

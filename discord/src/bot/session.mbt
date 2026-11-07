@@ -4,10 +4,11 @@
 /// Optional cache contents and application-owned state are not restored.
 /// Persisting a receive sequence periodically does not guarantee exactly-once
 /// event handling after a restart.
+#derive(Debug, ToJson, FromJson)
 pub(all) struct BotSession {
   gateway : @gateway.Session
   ready : @model.Ready
-} derive(Debug, ToJson, FromJson)
+}
 
 ///|
 fn clone_ready(ready : @model.Ready) -> @model.Ready {

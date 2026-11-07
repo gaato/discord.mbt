@@ -1,5 +1,6 @@
 ///|
 /// A Discord user account returned by the API.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct User {
   id : UserId
   username : String
@@ -21,35 +22,39 @@ pub(all) struct User {
   avatar_decoration_data : Nullable[AvatarDecorationData]?
   collectibles : Nullable[Collectibles]?
   primary_guild : Nullable[UserPrimaryGuild]?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// Collectible profile cosmetics owned by a user or guild member.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct Collectibles {
   nameplate : Nameplate?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// A profile nameplate collectible.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct Nameplate {
   sku_id : SkuId
   asset : String
   label : String
   palette : String
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// The primary-guild identity displayed on a user's profile.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct UserPrimaryGuild {
   identity_guild_id : Nullable[GuildId]?
   identity_enabled : Nullable[Bool]?
   tag : Nullable[String]?
   badge : Nullable[ImageHash]?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// Bit flags describing badges and account properties assigned to a user.
-pub(all) struct UserFlags(UInt64) derive(Eq)
+#derive(Eq)
+pub(all) struct UserFlags(UInt64)
 
 ///|
 /// No flags set.
@@ -259,6 +264,7 @@ pub fn UserFlags::restricted_collaborator() -> UserFlags {
 
 ///|
 /// The type of Nitro subscription on a user's account.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum PremiumType {
   None
@@ -266,7 +272,7 @@ pub(all) enum PremiumType {
   Nitro
   NitroBasic
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `PremiumType`.
@@ -309,7 +315,8 @@ pub impl @json.FromJson for PremiumType with fn from_json(json, path) {
 
 ///|
 /// Metadata identifying the decoration displayed over a user's avatar.
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct AvatarDecorationData {
   asset : ImageHash
   sku_id : SkuId
-} derive(ToJson, FromJson, Debug, Eq)
+}

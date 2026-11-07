@@ -3,6 +3,7 @@
 ///
 /// Unknown event names retain both the name and payload for forward
 /// compatibility.
+#derive(Debug)
 #non_exhaustive
 pub(all) enum Event {
   ApplicationCommandPermissionsUpdate(GuildApplicationCommandPermissions)
@@ -85,10 +86,11 @@ pub(all) enum Event {
   VoiceStateUpdate(VoiceState)
   WebhooksUpdate(WebhooksUpdateEvent)
   Unknown(t~ : String, d~ : Json)
-} derive(Debug)
+}
 
 ///|
 /// A dispatch event category without its payload.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum EventKind {
   KApplicationCommandPermissionsUpdate
@@ -171,7 +173,7 @@ pub(all) enum EventKind {
   KVoiceStateUpdate
   KWebhooksUpdate
   KUnknown
-} derive(Eq, Debug)
+}
 
 ///|
 /// Map a gateway dispatch name (e.g. `"MESSAGE_CREATE"`) to its kind;

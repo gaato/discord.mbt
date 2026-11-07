@@ -101,7 +101,7 @@ serves interactions**, including HTTP interaction workers:
 async test "shared cooldown store wiring" {
   @async.with_task_group(group => {
     let coordinator = @coordinator.Coordinator::serve(group, addr="127.0.0.1:0")
-    defer coordinator.close()
+    defer @async.protect_from_cancel(() => coordinator.close())
     let cooldown = @coordinator.RemoteCooldownStore::connect(
       coordinator.addr(),
       timeout_ms=1000,

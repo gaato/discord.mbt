@@ -4,6 +4,7 @@ package "gaato/discord/interaction"
 import {
   "gaato/discord/model",
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
 }
 
 // Values
@@ -94,15 +95,17 @@ pub fn user_option(String, String, required? : Bool, name_localizations? : Map[S
 pub fn user_select(custom_id~ : String, placeholder? : String, min_values? : Int32, max_values? : Int32, disabled? : Bool, required? : Bool) -> @model.Component
 
 // Errors
+#derive(@debug.Debug)
 pub(all) suberror ArgsDecodeError {
   Validation(name~ : String, message~ : String)
-} derive(@debug.Debug)
+}
 
+#derive(@debug.Debug)
 pub(all) suberror OptionError {
   MissingOption(name~ : String)
   WrongType(name~ : String, expected~ : String)
   MissingResolved(name~ : String, kind~ : String)
-} derive(@debug.Debug)
+}
 
 // Types and methods
 pub struct Arg[A] {
@@ -163,6 +166,7 @@ pub fn CommandOptions::string_opt(Self, String) -> String? raise OptionError
 pub fn CommandOptions::user(Self, String) -> @model.Id[@model.UserMarker] raise OptionError
 pub fn CommandOptions::user_opt(Self, String) -> @model.Id[@model.UserMarker]? raise OptionError
 
+#derive(@debug.Debug)
 pub(all) struct CommandSpec {
   name : String
   name_localizations : Map[String, String]?
@@ -174,13 +178,13 @@ pub(all) struct CommandSpec {
   nsfw : Bool?
   integration_types : Array[@model.ApplicationIntegrationType]?
   contexts : Array[@model.InteractionContextType]?
-} derive(@debug.Debug)
+}
 pub fn CommandSpec::limit_violations(Self) -> Array[@model.LimitViolation]
 pub fn CommandSpec::message(String, default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType], name_localizations? : Map[String, String]) -> Self
 pub fn CommandSpec::slash(String, String, options? : Array[@model.CommandOption], default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType], name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> Self
-pub fn CommandSpec::to_json(Self) -> Json
+pub fn CommandSpec::to_json(Self) -> @json.Json
 pub fn CommandSpec::user(String, default_member_permissions? : @model.Permissions, nsfw? : Bool, integration_types? : Array[@model.ApplicationIntegrationType], contexts? : Array[@model.InteractionContextType], name_localizations? : Map[String, String]) -> Self
-pub impl ToJson for CommandSpec
+pub impl @json.ToJson for CommandSpec
 
 pub(all) struct SuggestCtx {
   interaction : @model.Interaction

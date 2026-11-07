@@ -1,5 +1,6 @@
 ///|
 /// The operation whose handler failed.
+#derive(Debug)
 #non_exhaustive
 pub(all) enum FailureOrigin {
   Command(name~ : String)
@@ -8,7 +9,7 @@ pub(all) enum FailureOrigin {
   Modal(custom_id~ : String)
   Event(kind~ : @model.EventKind)
   Service(name~ : String)
-} derive(Debug)
+}
 
 ///|
 /// The underlying interaction context for a failure.

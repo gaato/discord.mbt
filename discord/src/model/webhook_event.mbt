@@ -1,24 +1,22 @@
 ///|
 /// An outbound HTTP webhook event payload sent by Discord.
+#derive(ToJson(fields(typ(rename="type"))), FromJson(fields(typ(rename="type"))), Debug)
 pub(all) struct WebhookEventPayload {
   version : Int32
   application_id : ApplicationId
   typ : WebhookPayloadType
   event : WebhookEventBody?
-} derive (
-  ToJson(fields(typ(rename="type"))),
-  FromJson(fields(typ(rename="type"))),
-  Debug,
-)
+}
 
 ///|
 /// The outer category of an outbound Discord webhook payload.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum WebhookPayloadType {
   Ping
   Event
   Unknown(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord integer value of this `WebhookPayloadType`.
@@ -60,18 +58,16 @@ pub impl @json.FromJson for WebhookPayloadType with fn from_json(json, path) {
 
 ///|
 /// The timestamped body nested inside an event webhook payload.
+#derive(ToJson(fields(typ(rename="type"))), FromJson(fields(typ(rename="type"))), Debug)
 pub(all) struct WebhookEventBody {
   typ : WebhookEventType
   timestamp : Timestamp
   data : Json?
-} derive (
-  ToJson(fields(typ(rename="type"))),
-  FromJson(fields(typ(rename="type"))),
-  Debug,
-)
+}
 
 ///|
 /// A subscribable outbound webhook event category.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum WebhookEventType {
   ApplicationAuthorized
@@ -87,7 +83,7 @@ pub(all) enum WebhookEventType {
   GameDirectMessageDelete
   QuestUserEnrollment
   Unknown(String)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord string value of this `WebhookEventType`.
@@ -152,6 +148,7 @@ pub impl @json.FromJson for WebhookEventType with fn from_json(json, path) {
 ///
 /// Known event names always use a typed variant. Unknown names retain their
 /// original name and optional data for forward compatibility.
+#derive(Debug)
 #non_exhaustive
 pub(all) enum WebhookEvent {
   ApplicationAuthorized(ApplicationAuthorizedEvent)
@@ -167,7 +164,7 @@ pub(all) enum WebhookEvent {
   GameDirectMessageDelete(GameDirectMessage)
   QuestUserEnrollment
   Unknown(typ~ : String, data~ : Json?)
-} derive(Debug)
+}
 
 ///|
 /// Decode the event-specific data carried by this body.
@@ -195,24 +192,27 @@ pub fn WebhookEventBody::project(self : WebhookEventBody) -> WebhookEvent raise 
 
 ///|
 /// Data sent when a user authorizes an application.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct ApplicationAuthorizedEvent {
   integration_type : ApplicationIntegrationType?
   user : User
   scopes : Array[String]
   guild : Guild?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// Data sent when a user deauthorizes an application.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct ApplicationDeauthorizedEvent {
   user : User
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// A lobby message view for outbound webhook events.
 ///
 /// The documented fields are decoded for direct use while `raw` preserves
 /// the complete object, including SDK extensions that are not a Lobby domain.
+#derive(Debug)
 pub(all) struct LobbyMessage {
   id : MessageId
   typ : MessageType
@@ -226,9 +226,10 @@ pub(all) struct LobbyMessage {
   timestamp : Timestamp?
   edited_timestamp : Nullable[Timestamp]?
   raw : Json
-} derive(Debug)
+}
 
 ///|
+#derive(FromJson(fields(typ(rename="type"))))
 priv struct LobbyMessageFields {
   id : MessageId
   typ : MessageType
@@ -241,7 +242,7 @@ priv struct LobbyMessageFields {
   application_id : ApplicationId?
   timestamp : Timestamp?
   edited_timestamp : Nullable[Timestamp]?
-} derive(FromJson(fields(typ(rename="type"))))
+}
 
 ///|
 /// Decodes the lobby message from its Discord JSON representation.
@@ -271,17 +272,19 @@ pub impl ToJson for LobbyMessage with fn to_json(self) {
 
 ///|
 /// Identifiers for a lobby message that was deleted.
+#derive(Debug)
 pub(all) struct LobbyMessageDeleteEvent {
   id : MessageId
   lobby_id : GenericId
   raw : Json
-} derive(Debug)
+}
 
 ///|
+#derive(FromJson)
 priv struct LobbyMessageDeleteFields {
   id : MessageId
   lobby_id : GenericId
-} derive(FromJson)
+}
 
 ///|
 /// Decodes the lobby message delete event from its Discord JSON representation.
@@ -305,6 +308,7 @@ pub impl ToJson for LobbyMessageDeleteEvent with fn to_json(self) {
 /// These webhook objects may be standard messages or the smaller SDK DM
 /// shape. Fields that differ between those forms are optional, and `raw`
 /// preserves all unmodeled standard-message and SDK extension fields.
+#derive(Debug)
 pub(all) struct GameDirectMessage {
   id : MessageId
   typ : MessageType?
@@ -322,9 +326,10 @@ pub(all) struct GameDirectMessage {
   activity : MessageActivity?
   application : Json?
   raw : Json
-} derive(Debug)
+}
 
 ///|
+#derive(FromJson(fields(typ(rename="type"))))
 priv struct GameDirectMessageFields {
   id : MessageId
   typ : MessageType?
@@ -341,7 +346,7 @@ priv struct GameDirectMessageFields {
   components : Array[Component]?
   activity : MessageActivity?
   application : Json?
-} derive(FromJson(fields(typ(rename="type"))))
+}
 
 ///|
 /// Decodes the game direct message from its Discord JSON representation.

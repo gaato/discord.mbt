@@ -1,10 +1,12 @@
 ///|
+#derive(Debug)
 pub(all) enum MessageKind {
   Binary
   Text
-} derive(Debug)
+}
 
 ///|
+#derive(Debug, Eq)
 pub(all) enum CloseCode {
   Normal
   GoingAway
@@ -17,11 +19,12 @@ pub(all) enum CloseCode {
   MissingExtension
   InternalError
   Other(UInt16)
-} derive(Debug, Eq)
+}
 
 ///|
+#derive(Debug)
 pub suberror WebSocketError {
   ConnectionClosed(CloseCode, String?)
   InvalidHandshake(String)
   ProtocolError(String)
-} derive(Debug)
+}

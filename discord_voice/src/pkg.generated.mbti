@@ -23,11 +23,13 @@ pub fn shim_available() -> Bool
 pub fn shim_unavailable_reason() -> String?
 
 // Errors
+#derive(Eq, @debug.Debug)
 pub(all) suberror OggOpusError {
   InvalidOggPage(reason~ : String)
   InvalidOpusStream(reason~ : String)
-} derive(Eq, @debug.Debug)
+}
 
+#derive(@debug.Debug)
 pub(all) suberror VoiceError {
   MissingIntent(intent~ : String)
   JoinTimeout
@@ -38,18 +40,22 @@ pub(all) suberror VoiceError {
   Disconnected
   InvalidBacklog(value~ : Int32)
   ClientNotRunning
-} derive(@debug.Debug)
+}
 
+#derive(@debug.Debug)
 pub(all) suberror VoiceTransportClosed {
   VoiceTransportClosed(code~ : Int32?, reason~ : String)
-} derive(@debug.Debug)
+}
 
 // Types and methods
-type DaveCommitOutcome derive(Eq, @debug.Debug)
+#derive(Eq, @debug.Debug)
+type DaveCommitOutcome
 
-type DaveRosterChange derive(Eq, @debug.Debug)
+#derive(Eq, @debug.Debug)
+type DaveRosterChange
 
-type DaveWelcomeOutcome derive(Eq, @debug.Debug)
+#derive(Eq, @debug.Debug)
+type DaveWelcomeOutcome
 
 pub struct OggOpusSource {
   // private fields
@@ -74,10 +80,11 @@ pub(all) struct PendingVoiceEvent[T] {
   cancel : () -> Unit
 }
 
+#derive(Eq, @debug.Debug)
 pub(all) enum ReceivedAudio {
   Opus(sequence~ : Int32, timestamp~ : UInt32, opus~ : Bytes)
   Lost(count~ : Int32)
-} derive(Eq, @debug.Debug)
+}
 
 pub struct VoiceClient {
   // private fields
@@ -104,36 +111,41 @@ pub async fn VoiceConnection::stop(Self) -> Unit
 pub fn VoiceConnection::subscribe(Self, user_id~ : String, end_after_silence_ms? : Int32?, backlog? : Int32) -> VoiceReceiveStream raise VoiceError
 pub async fn VoiceConnection::wait_ready(Self, timeout_ms? : Int32) -> Unit raise VoiceError
 
+#derive(Eq, @debug.Debug)
 pub(all) enum VoiceConnectionState {
   Connecting
   Ready
   Reconnecting
   Rejoining
   Closed(code~ : Int32?)
-} derive(Eq, @debug.Debug)
+}
 
+#derive(Eq, @debug.Debug)
 pub(all) struct VoiceCredentials {
   server_id : String
   session_id : String
   token : String
   endpoint : String
-} derive(Eq, @debug.Debug)
+}
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum VoiceEvent {
   SpeakingChanged(user_id~ : String, ssrc~ : UInt32, flags~ : Int32)
   UserConnected(user_id~ : String)
   UserDisconnected(user_id~ : String)
   ConnectionReady
   ConnectionResumed
-} derive(Eq, @debug.Debug)
+}
 
+#derive(Eq, @debug.Debug)
 pub(all) enum VoiceFrame {
   Text(String)
   Binary(Bytes)
-} derive(Eq, @debug.Debug)
+}
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum VoiceGatewayEvent {
   ReadyReceived
   SessionEstablished(mode~ : String, secret_key~ : Bytes, dave_protocol_version~ : Int32)
@@ -143,7 +155,7 @@ pub(all) enum VoiceGatewayEvent {
   ConnectFailed(reason~ : String)
   NeedsRejoin(code~ : Int32?)
   FatallyClosed(code~ : Int32)
-} derive(Eq, @debug.Debug)
+}
 
 pub(all) struct VoiceGatewayPort {
   user_id : @model.Id[@model.UserMarker]
@@ -155,6 +167,7 @@ pub(all) struct VoiceGatewayPort {
 pub fn VoiceGatewayPort::from_gateway(@bot.GatewayCtx) -> Self
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum VoiceMessage {
   Ready(ssrc~ : UInt32, ip~ : String, port~ : Int32, modes~ : Array[String])
   Hello(heartbeat_interval~ : Int32)
@@ -172,7 +185,7 @@ pub(all) enum VoiceMessage {
   DaveMlsAnnounceCommitTransition(transition_id~ : Int32, commit~ : Bytes)
   DaveMlsWelcome(transition_id~ : Int32, welcome~ : Bytes)
   Unknown(op~ : Int32)
-} derive(Eq, @debug.Debug)
+}
 
 pub struct VoiceReceiveStream {
   // private fields
@@ -182,12 +195,14 @@ pub async fn VoiceReceiveStream::next_frame(Self) -> Bytes?
 pub async fn VoiceReceiveStream::next_packet(Self) -> ReceivedAudio?
 pub impl AudioSource for VoiceReceiveStream
 
+#derive(Eq, @debug.Debug)
 pub(all) struct VoiceServer {
   token : String
   endpoint : String?
-} derive(Eq, @debug.Debug)
+}
 
 #non_exhaustive
+#derive(Eq, @debug.Debug)
 pub(all) enum VoiceTelemetry {
   GatewayEvent(VoiceGatewayEvent)
   DaveMediaContextActivated(protocol_version~ : Int32)
@@ -197,7 +212,7 @@ pub(all) enum VoiceTelemetry {
   DaveDecryptDropped(user_id~ : String?, ssrc~ : UInt32, count~ : Int32, reason~ : String)
   EventDropped(backlog~ : Int32)
   ReceiveDropped(user_id~ : String, backlog~ : Int32)
-} derive(Eq, @debug.Debug)
+}
 
 // Type aliases
 

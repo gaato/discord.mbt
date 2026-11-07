@@ -1,30 +1,33 @@
 ///|
 /// A live instance of an application activity.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct ActivityInstance {
   application_id : ApplicationId
   instance_id : String
   launch_id : GenericId
   location : ActivityLocation
   users : Array[UserId]
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// The Discord location hosting an application activity instance.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct ActivityLocation {
   id : String
   kind : ActivityLocationKind
   channel_id : ChannelId
   guild_id : Nullable[GuildId]?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// The channel context hosting an application activity instance.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum ActivityLocationKind {
   GuildChannel
   PrivateChannel
   Unknown(String)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord string value of this `ActivityLocationKind`.

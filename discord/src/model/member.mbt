@@ -1,5 +1,6 @@
 ///|
 /// A user's membership state and profile within a guild.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct GuildMember {
   user : User?
   nick : Nullable[String]?
@@ -17,11 +18,12 @@ pub(all) struct GuildMember {
   communication_disabled_until : Nullable[Timestamp]?
   avatar_decoration_data : Nullable[AvatarDecorationData]?
   collectibles : Nullable[Collectibles]?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// Bit flags describing onboarding, verification, and moderation member state.
-pub(all) struct GuildMemberFlags(UInt64) derive(Eq)
+#derive(Eq)
+pub(all) struct GuildMemberFlags(UInt64)
 
 ///|
 /// No flags set.

@@ -1,5 +1,6 @@
 ///|
 /// A user's linked external service account.
+#derive(ToJson(fields(typ(rename="type"))), FromJson(fields(typ(rename="type"))), Debug)
 pub(all) struct Connection {
   id : String
   name : String
@@ -11,14 +12,11 @@ pub(all) struct Connection {
   show_activity : Bool
   two_way_link : Bool
   visibility : Int32
-} derive (
-  ToJson(fields(typ(rename="type"))),
-  FromJson(fields(typ(rename="type"))),
-  Debug,
-)
+}
 
 ///|
 /// An external service linked to a Discord user account.
+#derive(Eq, Debug)
 #non_exhaustive
 pub(all) enum ConnectionService {
   AmazonMusic
@@ -48,7 +46,7 @@ pub(all) enum ConnectionService {
   Xbox
   Youtube
   Unknown(String)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The Discord string value of this `ConnectionService`.
@@ -135,11 +133,12 @@ pub impl @json.FromJson for ConnectionService with fn from_json(json, path) {
 
 ///|
 /// Metadata attached to a user's application role connection.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct ApplicationRoleConnection {
   platform_name : Nullable[String]
   platform_username : Nullable[String]
   metadata : Json
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// Details about the OAuth2 authorization represented by an access token.
@@ -147,9 +146,10 @@ pub(all) struct ApplicationRoleConnection {
 /// Discord returns a partial application object here. `Application` is safe
 /// for that payload because it requires only the guaranteed `id`, `name`,
 /// `icon`, and `description` fields; all other application fields are optional.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct AuthorizationInformation {
   application : Application
   scopes : Array[String]
   expires : Timestamp
   user : User?
-} derive(ToJson, FromJson, Debug)
+}

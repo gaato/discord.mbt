@@ -1,0 +1,6 @@
+# Model fields the shape audit flags on purpose: "Struct.field KIND  # reason".
+# Role tags are presence flags: the hand-written decoder reads an absent key as
+# false and a present one (Discord sends null) as true.
+RoleTags.premium_subscriber OPTIONAL
+RoleTags.available_for_purchase OPTIONAL
+RoleTags.guild_connections OPTIONAL

@@ -1,12 +1,13 @@
 ///|
 /// Raised when a compressed Gateway stream cannot be decoded.
+#derive(Debug)
 pub(all) suberror InflateError {
   /// The compressed stream is corrupt or ends early.
   Malformed(message~ : String)
   InvalidUtf8
   /// One message, compressed or inflated, exceeded `limit` bytes.
   TooLarge(limit~ : Int32)
-} derive(Debug)
+}
 
 ///|
 /// Stateful decoder seam for Gateway compression. Implementations retain one

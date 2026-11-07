@@ -1,5 +1,6 @@
 ///|
-priv suberror ResponseStateFailure derive(Debug)
+#derive(Debug)
+priv suberror ResponseStateFailure
 
 ///|
 fn state_flow_framework(

@@ -1,6 +1,7 @@
 ///|
 /// The complete guild and gateway-only collections sent when it becomes
 /// available to the client.
+#derive(Debug)
 pub(all) struct AvailableGuildCreateEvent {
   guild : Guild
   joined_at : Timestamp
@@ -15,15 +16,16 @@ pub(all) struct AvailableGuildCreateEvent {
   stage_instances : Array[StageInstance]
   guild_scheduled_events : Array[GuildScheduledEvent]
   soundboard_sounds : Array[SoundboardSound]
-} derive(Debug)
+}
 
 ///|
 /// A guild-create dispatch is either a complete available guild or the small
 /// unavailable-guild sentinel emitted while Discord is having an outage.
+#derive(Debug)
 pub(all) enum GuildCreateEvent {
   Available(AvailableGuildCreateEvent)
   Unavailable(UnavailableGuild)
-} derive(Debug)
+}
 
 ///|
 /// Decodes the available guild create event from its Discord JSON representation.

@@ -79,11 +79,13 @@ def model_structs():
         if path.name.endswith(("_test.mbt", "_wbtest.mbt")):
             continue
         text = path.read_text()
-        for m in re.finditer(r"pub\(all\) struct (\w+)(?:\[[^\]]*\])? \{\n(.*?)\n\}(.*?)\n", text, re.S):
-            name, body, derive = m.group(1), m.group(2), m.group(3)
-            if "FromJson" not in derive and "FromJson" not in text[m.end():m.end() + 400]:
+        # The attribute lines (`#derive(...)`, `#non_exhaustive`) sit right
+        # above the declaration.
+        for m in re.finditer(r"^((?:#[^\n]*\n)*)pub\(all\) struct (\w+)(?:\[[^\]]*\])? \{\n(.*?)\n\}\n", text, re.S | re.M):
+            attrs, name, body = m.group(1), m.group(2), m.group(3)
+            if "FromJson" not in attrs and not re.search(rf"impl(?:\[[^\]]*\])? @json\.FromJson for {name}\b|impl(?:\[[^\]]*\])? FromJson for {name}\b", text):
                 continue
-            renames = dict(re.findall(r"(\w+)\(rename=\"(\w+)\"\)", text[m.end():m.end() + 600]))
+            renames = dict(re.findall(r"(\w+)\(rename=\"(\w+)\"\)", attrs))
             fields = {}
             # Join multi-line field types (`x : Map[\n  K,\n  V,\n]?`).
             joined, depth = [], 0

@@ -1,12 +1,13 @@
 ///|
 /// Failures reported by the coordinator server or a remote client.
+#derive(Debug)
 pub(all) suberror CoordinatorError {
   InvalidConfig(message~ : String)
   Transport(message~ : String)
   Disconnected
   InvalidResponse(message~ : String)
   Remote(message~ : String)
-} derive(Debug)
+}
 
 ///|
 fn ok_response() -> Json {

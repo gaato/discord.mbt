@@ -3,6 +3,7 @@
 ///
 /// Partial guild payloads vary by endpoint, so fields other than `id` are
 /// optional on receipt.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct PartialGuild {
   id : GuildId
   name : String?
@@ -16,24 +17,22 @@ pub(all) struct PartialGuild {
   nsfw_level : NsfwLevel?
   premium_subscription_count : Int32?
   locale : String?
-} derive(ToJson, FromJson, Debug)
+}
 
 ///|
 /// The documented subset of a channel embedded in another Discord resource.
+#derive(ToJson(fields(typ(rename="type"))), FromJson(fields(typ(rename="type"))), Debug)
 pub(all) struct PartialChannel {
   id : ChannelId
   typ : ChannelType?
   name : Nullable[String]?
   icon : Nullable[ImageHash]?
   permissions : Permissions?
-} derive (
-  ToJson(fields(typ(rename="type"))),
-  FromJson(fields(typ(rename="type"))),
-  Debug,
-)
+}
 
 ///|
 /// The subset of a role returned on an invite.
+#derive(ToJson, FromJson, Debug)
 pub(all) struct PartialRole {
   id : RoleId
   name : String
@@ -42,4 +41,4 @@ pub(all) struct PartialRole {
   colors : RoleColors?
   icon : Nullable[ImageHash]?
   unicode_emoji : Nullable[String]?
-} derive(ToJson, FromJson, Debug)
+}

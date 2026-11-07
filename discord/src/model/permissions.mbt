@@ -3,7 +3,8 @@
 ///
 /// Wire format: a decimal **string** (Discord serializes permissions as
 /// strings because they exceed JavaScript's 53-bit safe-integer range).
-pub(all) struct Permissions(UInt64) derive(Eq)
+#derive(Eq)
+pub(all) struct Permissions(UInt64)
 
 ///|
 /// No flags set.

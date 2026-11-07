@@ -23,6 +23,7 @@
 ///   }
 /// }
 /// ```
+#derive(Debug)
 pub(all) suberror HandlerError {
   UserMessage(message~ : String, ephemeral~ : Bool)
   GuildOnly
@@ -47,7 +48,7 @@ pub(all) suberror HandlerError {
   /// (`AppBuilder`'s `max_pending`). Raised before anything is acknowledged;
   /// the default policy asks the user to try again.
   Busy
-} derive(Debug)
+}
 
 ///|
 /// Keep a `HandlerError` raised by user code as is, and classify any other

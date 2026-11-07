@@ -1,5 +1,6 @@
 ///|
 /// Fatal runtime failures reported by Discord.
+#derive(Debug)
 pub(all) suberror BotError {
   /// Close codes 4013 and 4014 indicate invalid or disallowed gateway
   /// intents. Check explicit intents and privileged-intent approval.
@@ -24,7 +25,7 @@ pub(all) suberror BotError {
   GatewayRateLimited(opcode~ : Int32, retry_after_ms~ : Int64)
   /// A complete member response did not arrive within the operation deadline.
   GatewayRequestTimeout
-} derive(Debug)
+}
 
 ///|
 /// Makes `error.to_string()` return the message `Show` renders.

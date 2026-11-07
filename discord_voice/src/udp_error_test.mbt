@@ -1,7 +1,8 @@
 ///|
+#derive(Debug)
 priv suberror UdpTestFailure {
   UdpTestFailure
-} derive(Debug)
+}
 
 ///|
 struct FailingVoiceUdp {}

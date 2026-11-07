@@ -1,5 +1,6 @@
 ///|
-priv suberror PolicyTestFailure derive(Debug)
+#derive(Debug)
+priv suberror PolicyTestFailure
 
 ///|
 fn policy_test_embed(title : String) -> @model.Embed {

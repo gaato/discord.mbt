@@ -6,21 +6,23 @@ import {
   "gaato/http-async/mock",
   "moonbitlang/async/aqueue",
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
   "moonbitlang/core/ref",
 }
 
 // Values
 
 // Errors
+#derive(@debug.Debug)
 pub suberror SimFailure {
   SimFailure
-} derive(@debug.Debug)
+}
 
 // Types and methods
 pub struct FakeTransport {
   incoming : @aqueue.Queue[@gateway.GatewayFrame]
-  outgoing : @aqueue.Queue[Json]
-  sent : Array[Json]
+  outgoing : @aqueue.Queue[@json.Json]
+  sent : Array[@json.Json]
   block_next_send : @ref.Ref[Bool]
   send_started : @aqueue.Queue[Unit]
   fail_close : @ref.Ref[Bool]

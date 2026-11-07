@@ -8,11 +8,12 @@
 /// `custom_id` is the nearest component custom id, when there is one.
 /// Text lengths are `text_length` characters, except where the protocol
 /// explicitly requires bytes (such as a Gateway member-request nonce).
+#derive(Eq, Debug)
 pub(all) struct LimitViolation {
   path : String
   custom_id : String?
   reason : String
-} derive(Eq, Debug)
+}
 
 ///|
 /// The violation as one line: `path: reason`.
