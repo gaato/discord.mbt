@@ -7,6 +7,8 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-11-07
+
 Follows Discord's developer docs through
 [`da52492c`](https://github.com/discord/discord-api-docs/commit/da52492ced82d375981c46618cc3e182daada9a2).
 
