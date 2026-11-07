@@ -4303,12 +4303,13 @@ pub impl @json.FromJson for TypingStartEvent
 #derive(@json.FromJson)
 type TypingStartEventWire
 
-#derive(@debug.Debug, @json.FromJson, @json.ToJson)
+#derive(@debug.Debug, @json.ToJson)
 pub(all) struct UnavailableGuild {
   id : Id[GuildMarker]
   unavailable : Bool
 }
 pub fn UnavailableGuild::to_json(Self) -> @json.Json
+pub impl @json.FromJson for UnavailableGuild
 
 #derive(@debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct UnfurledMediaItem {

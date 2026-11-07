@@ -80,6 +80,14 @@ test "discord docs: example unavailable guild (line 247)" {
 }
 
 ///|
+test "unavailable guild without unavailable means the user was removed" {
+  let guild : @model.UnavailableGuild = @json.from_json(
+    @json.parse("{\"id\": \"41771983423143937\"}"),
+  )
+  assert_false(guild.unavailable)
+}
+
+///|
 test "discord docs: example ban (line 518)" {
   let fixture =
     #|{

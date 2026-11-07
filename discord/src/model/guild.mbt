@@ -676,10 +676,27 @@ pub(all) struct WelcomeScreenChannel {
 /// event, `unavailable` is true while the guild is unavailable, for example
 /// during an outage, and a Guild Create follows when it returns; otherwise
 /// the user left or was removed from the guild.
-#derive(ToJson, FromJson, Debug)
+#derive(ToJson, Debug)
 pub(all) struct UnavailableGuild {
   id : GuildId
   unavailable : Bool
+}
+
+///|
+/// Decodes an unavailable guild, reading a missing `unavailable` as false:
+/// Discord has documented omitting it when the user was removed.
+pub impl @json.FromJson for UnavailableGuild with fn from_json(json, path) {
+  guard json is Object(fields) else {
+    raise JsonDecodeError((path, "expected unavailable guild (object)"))
+  }
+  guard fields.get("id") is Some(id) else {
+    raise JsonDecodeError((path, "missing field id"))
+  }
+  let unavailable = match fields.get("unavailable") {
+    None => false
+    Some(value) => @json.from_json(value, path=path.add_key("unavailable"))
+  }
+  { id: @json.from_json(id, path=path.add_key("id")), unavailable, }
 }
 
 ///|

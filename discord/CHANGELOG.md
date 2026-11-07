@@ -66,6 +66,9 @@ Follows Discord's developer docs through
 
 ### Fixed
 
+- **A Guild Delete without `unavailable` decodes.** Discord has documented
+  omitting the field when the user was removed from the guild;
+  `UnavailableGuild` failed to decode then, and now reads it as `false`.
 - **Every public declaration has a doc comment, and the README example
   compiles.** The facade re-exports one name per `pub using`, each with its
   own one-line description, so mooncakes no longer repeats one group comment
