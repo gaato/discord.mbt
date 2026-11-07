@@ -163,31 +163,31 @@ fn seal(
     };
     match mode {
         MODE_AES_256_GCM => {
-            if nonce.len() != 12 {
-                return Err(FfiError::new(
+            let nonce = AesNonce::try_from(nonce).map_err(|_| {
+                FfiError::new(
                     STATUS_INVALID_ARGUMENT,
                     "AES-256-GCM requires a 12-byte nonce",
-                ));
-            }
+                )
+            })?;
             let cipher = Aes256Gcm::new_from_slice(key).map_err(|_| {
                 FfiError::new(STATUS_INVALID_ARGUMENT, "key must contain exactly 32 bytes")
             })?;
             cipher
-                .encrypt(AesNonce::from_slice(nonce), payload)
+                .encrypt(&nonce, payload)
                 .map_err(|_| FfiError::new(STATUS_CRYPTO_ERROR, "AES-256-GCM seal failed"))
         }
         MODE_XCHACHA20_POLY1305 => {
-            if nonce.len() != 24 {
-                return Err(FfiError::new(
+            let nonce = XNonce::try_from(nonce).map_err(|_| {
+                FfiError::new(
                     STATUS_INVALID_ARGUMENT,
                     "XChaCha20-Poly1305 requires a 24-byte nonce",
-                ));
-            }
+                )
+            })?;
             let cipher = XChaCha20Poly1305::new_from_slice(key).map_err(|_| {
                 FfiError::new(STATUS_INVALID_ARGUMENT, "key must contain exactly 32 bytes")
             })?;
             cipher
-                .encrypt(XNonce::from_slice(nonce), payload)
+                .encrypt(&nonce, payload)
                 .map_err(|_| FfiError::new(STATUS_CRYPTO_ERROR, "XChaCha20-Poly1305 seal failed"))
         }
         _ => Err(FfiError::new(
@@ -216,42 +216,38 @@ fn open(
     };
     match mode {
         MODE_AES_256_GCM => {
-            if nonce.len() != 12 {
-                return Err(FfiError::new(
+            let nonce = AesNonce::try_from(nonce).map_err(|_| {
+                FfiError::new(
                     STATUS_INVALID_ARGUMENT,
                     "AES-256-GCM requires a 12-byte nonce",
-                ));
-            }
+                )
+            })?;
             let cipher = Aes256Gcm::new_from_slice(key).map_err(|_| {
                 FfiError::new(STATUS_INVALID_ARGUMENT, "key must contain exactly 32 bytes")
             })?;
-            cipher
-                .decrypt(AesNonce::from_slice(nonce), payload)
-                .map_err(|_| {
-                    FfiError::new(
-                        STATUS_AUTHENTICATION_FAILED,
-                        "AES-256-GCM authentication failed",
-                    )
-                })
+            cipher.decrypt(&nonce, payload).map_err(|_| {
+                FfiError::new(
+                    STATUS_AUTHENTICATION_FAILED,
+                    "AES-256-GCM authentication failed",
+                )
+            })
         }
         MODE_XCHACHA20_POLY1305 => {
-            if nonce.len() != 24 {
-                return Err(FfiError::new(
+            let nonce = XNonce::try_from(nonce).map_err(|_| {
+                FfiError::new(
                     STATUS_INVALID_ARGUMENT,
                     "XChaCha20-Poly1305 requires a 24-byte nonce",
-                ));
-            }
+                )
+            })?;
             let cipher = XChaCha20Poly1305::new_from_slice(key).map_err(|_| {
                 FfiError::new(STATUS_INVALID_ARGUMENT, "key must contain exactly 32 bytes")
             })?;
-            cipher
-                .decrypt(XNonce::from_slice(nonce), payload)
-                .map_err(|_| {
-                    FfiError::new(
-                        STATUS_AUTHENTICATION_FAILED,
-                        "XChaCha20-Poly1305 authentication failed",
-                    )
-                })
+            cipher.decrypt(&nonce, payload).map_err(|_| {
+                FfiError::new(
+                    STATUS_AUTHENTICATION_FAILED,
+                    "XChaCha20-Poly1305 authentication failed",
+                )
+            })
         }
         _ => Err(FfiError::new(
             STATUS_UNSUPPORTED_MODE,
