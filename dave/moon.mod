@@ -16,7 +16,8 @@ preferred_target = "native"
 
 supported_targets = "js + native + wasm"
 
-// Keep the existing derived-trait API while validating on the pinned 0.10.16.
+// Keep the derived trait methods callable as methods: moonc 0.10.14 and
+// later warn about that implicit promotion.
 
 warnings = "-implicit_impl_as_method"
 
