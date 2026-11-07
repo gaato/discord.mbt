@@ -14,7 +14,7 @@ test "official libdave backend creates a key package and starts in passthrough" 
   let actions = machine.handle(
     SessionDescription(
       mode="aead_aes256_gcm_rtpsize",
-      secret_key=Bytes::new(32),
+      secret_key=Bytes::make(32, b'\x00'),
       dave_protocol_version=1,
     ),
   )

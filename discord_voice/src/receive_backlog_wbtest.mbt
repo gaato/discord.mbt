@@ -143,7 +143,10 @@ async test "resubscribing never replays packets buffered for an earlier stream" 
     let pipeline = connection.receiver
     pipeline.handle_gateway_message(Speaking(ssrc=77U, user_id="200", flags=1))
     |> ignore
-    let cipher = TransportCipher::new(AeadAes256GcmRtpsize, Bytes::new(32))
+    let cipher = TransportCipher::new(
+      AeadAes256GcmRtpsize,
+      Bytes::make(32, b'\x00'),
+    )
     let receive = (sequence : Int32) => {
       let header = build_rtp_header(
         sequence=sequence.to_uint16(),

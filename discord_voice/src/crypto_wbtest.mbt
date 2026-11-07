@@ -5,10 +5,10 @@ test "AEAD known-answer vectors" {
   }
   let aes = aead_seal_raw(
     AeadAes256GcmRtpsize,
-    Bytes::new(32),
-    Bytes::new(12),
+    Bytes::make(32, b'\x00'),
+    Bytes::make(12, b'\x00'),
     b"",
-    Bytes::new(16),
+    Bytes::make(16, b'\x00'),
   )
   assert_eq(
     aes,
@@ -40,7 +40,7 @@ test "transport cipher round-trips, increments suffix, and rejects tampering" {
     return
   }
   for mode in [AeadAes256GcmRtpsize, AeadXChaCha20Poly1305Rtpsize] {
-    let cipher = TransportCipher::new(mode, Bytes::new(32))
+    let cipher = TransportCipher::new(mode, Bytes::make(32, b'\x00'))
     let header = build_rtp_header(sequence=1, timestamp=960U, ssrc=42U)
     let first = cipher.seal(header~, b"first")
     let second = cipher.seal(header~, b"second")
@@ -64,7 +64,10 @@ test "transport cipher refuses to reuse a nonce after 2^32 packets" {
   if !shim_available() {
     return
   }
-  let cipher = TransportCipher::new(AeadAes256GcmRtpsize, Bytes::new(32))
+  let cipher = TransportCipher::new(
+    AeadAes256GcmRtpsize,
+    Bytes::make(32, b'\x00'),
+  )
   cipher.counter = 0xFFFFFFFEUL
   let header = build_rtp_header(sequence=1, timestamp=960U, ssrc=42U)
   let last_but_one = cipher.seal(header~, b"a")

@@ -83,7 +83,7 @@ async test "send loop delegates advancing RTP packets to DAVE after handshake" {
   }
   let transport = AudioTestTransport::new()
   let udp = AudioTestUdp::new()
-  let secret_key = Bytes::new(32)
+  let secret_key = Bytes::make(32, b'\x00')
   let frames : Array[Bytes] = [b"frame-1", b"frame-2", b"frame-3"]
   @async.with_task_group(group => {
     let gateway = @voice.VoiceGateway::start(

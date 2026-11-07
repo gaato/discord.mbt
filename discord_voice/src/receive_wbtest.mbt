@@ -145,7 +145,10 @@ test "receive pipeline strips RTP extensions and decrypts mapped DAVE frames" {
   )
   let provider = ReceiveTestDave::new(active_version=1, remote_users=[200UL])
   let machine = receive_test_machine(provider)
-  let cipher = TransportCipher::new(AeadAes256GcmRtpsize, Bytes::new(32))
+  let cipher = TransportCipher::new(
+    AeadAes256GcmRtpsize,
+    Bytes::make(32, b'\x00'),
+  )
   let header = build_rtp_header(sequence=10, timestamp=960U, ssrc=77U)
   let encrypted_dave = cipher.seal(header~, b"encrypted\xFA\xFA")
   assert_eq(
@@ -191,7 +194,10 @@ test "receive pipeline discards unmapped and unwanted senders before decrypting"
   let pipeline = ReceivePipeline::new(event => telemetry.push(event))
   let provider = ReceiveTestDave::new(active_version=1, remote_users=[200UL])
   let machine = receive_test_machine(provider)
-  let cipher = TransportCipher::new(AeadAes256GcmRtpsize, Bytes::new(32))
+  let cipher = TransportCipher::new(
+    AeadAes256GcmRtpsize,
+    Bytes::make(32, b'\x00'),
+  )
   // the payload is not a valid ciphertext: decrypting it would be reported
   let undecryptable = build_rtp_header(sequence=1, timestamp=960U, ssrc=99U) +
     b"not-a-ciphertext-at-all"
@@ -240,7 +246,10 @@ test "receive pipeline delegates an old encrypted frame after downgrade" {
   |> ignore
   let provider = ReceiveTestDave::new(active_version=0, remote_users=[200UL])
   let machine = receive_test_machine(provider)
-  let cipher = TransportCipher::new(AeadAes256GcmRtpsize, Bytes::new(32))
+  let cipher = TransportCipher::new(
+    AeadAes256GcmRtpsize,
+    Bytes::make(32, b'\x00'),
+  )
   let header = build_rtp_header(sequence=1, timestamp=960U, ssrc=77U)
   let datagram = cipher.seal(header~, b"old-encrypted\xFA\xFA")
   assert_eq(
@@ -273,7 +282,10 @@ test "receive pipeline delegates plaintext-looking media during active DAVE" {
     reject_unmarked_frames=true,
   )
   let machine = receive_test_machine(provider)
-  let cipher = TransportCipher::new(AeadAes256GcmRtpsize, Bytes::new(32))
+  let cipher = TransportCipher::new(
+    AeadAes256GcmRtpsize,
+    Bytes::make(32, b'\x00'),
+  )
   let header = build_rtp_header(sequence=1, timestamp=960U, ssrc=77U)
   let datagram = cipher.seal(header~, b"plaintext-opus")
   assert_eq(
@@ -306,7 +318,10 @@ test "receive pipeline permits plaintext only while DAVE is disabled" {
   |> ignore
   let provider = ReceiveTestDave::new(active_version=0)
   let machine = receive_test_machine(provider)
-  let cipher = TransportCipher::new(AeadAes256GcmRtpsize, Bytes::new(32))
+  let cipher = TransportCipher::new(
+    AeadAes256GcmRtpsize,
+    Bytes::make(32, b'\x00'),
+  )
   let plain_header = build_rtp_header(sequence=1, timestamp=960U, ssrc=77U)
   let plain_datagram = cipher.seal(header=plain_header, b"plaintext-opus")
   assert_eq(

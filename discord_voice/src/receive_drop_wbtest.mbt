@@ -29,7 +29,10 @@ test "receive pipeline drops undecodable datagrams with telemetry" {
   }
   let telemetry : Array[VoiceTelemetry] = []
   let pipeline = ReceivePipeline::new(event => telemetry.push(event))
-  let cipher = TransportCipher::new(AeadAes256GcmRtpsize, Bytes::new(32))
+  let cipher = TransportCipher::new(
+    AeadAes256GcmRtpsize,
+    Bytes::make(32, b'\x00'),
+  )
 
   // Looks like RTP by its first byte but is too short to be a packet.
   assert_eq(
@@ -52,7 +55,7 @@ test "receive pipeline drops undecodable datagrams with telemetry" {
   pipeline.handle_gateway_message(Speaking(ssrc=9U, user_id="200", flags=1))
   |> ignore
   let header = build_rtp_header(sequence=1, timestamp=960U, ssrc=9U)
-  let tampered = header + Bytes::new(24)
+  let tampered = header + Bytes::make(24, b'\x00')
   assert_eq(
     pipeline.process_udp_packet(tampered, cipher, None, arrival_ms=1L, wants=_ => {
       true
@@ -71,15 +74,18 @@ test "transport cipher rejects impossible packet geometry" {
   if !shim_available() {
     return
   }
-  let cipher = TransportCipher::new(AeadAes256GcmRtpsize, Bytes::new(32))
-  try cipher.open(Bytes::new(30), header_len=-1) catch {
+  let cipher = TransportCipher::new(
+    AeadAes256GcmRtpsize,
+    Bytes::make(32, b'\x00'),
+  )
+  try cipher.open(Bytes::make(30, b'\x00'), header_len=-1) catch {
     InvalidEncryptedPacket(reason~) =>
       assert_eq(reason, "invalid RTP header length")
     _ => fail("unexpected crypto error")
   } noraise {
     _ => fail("expected a header length error")
   }
-  try cipher.open(Bytes::new(30), header_len=12) catch {
+  try cipher.open(Bytes::make(30, b'\x00'), header_len=12) catch {
     InvalidEncryptedPacket(reason~) =>
       assert_eq(
         reason, "packet is shorter than authentication tag and nonce suffix",

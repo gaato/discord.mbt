@@ -138,7 +138,7 @@ test "Ogg Opus writer rejects unwritable frames and splits full pages" {
   } noraise {
     _ => fail("expected a negative sample count error")
   }
-  try writer.write_frame(Bytes::new(66000)) catch {
+  try writer.write_frame(Bytes::make(66000, b'\x00')) catch {
     InvalidOpusStream(reason~) =>
       assert_eq(reason, "Opus packet exceeds one Ogg page")
     _ => fail("unexpected writer error")
@@ -146,8 +146,8 @@ test "Ogg Opus writer rejects unwritable frames and splits full pages" {
     _ => fail("expected an oversized packet error")
   }
   // Two ~half-page packets force the mid-stream page flush.
-  writer.write_frame(Bytes::new(33000))
-  writer.write_frame(Bytes::new(33000))
+  writer.write_frame(Bytes::make(33000, b'\x00'))
+  writer.write_frame(Bytes::make(33000, b'\x00'))
   writer.finish()
   assert_true(writer.take_output().length() > 66000)
 }

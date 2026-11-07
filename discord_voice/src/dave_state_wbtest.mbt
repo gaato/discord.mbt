@@ -240,7 +240,7 @@ fn fake_machine(
 fn session_description(version : Int32) -> VoiceMessage {
   SessionDescription(
     mode="aead_aes256_gcm_rtpsize",
-    secret_key=Bytes::new(32),
+    secret_key=Bytes::make(32, b'\x00'),
     dave_protocol_version=version,
   )
 }
@@ -792,7 +792,11 @@ async test "voice connection DAVE session failures close the connection with the
       } else {
         fake.fail_reinitialize = true
       }
-      connection.establish_session("aead_aes256_gcm_rtpsize", Bytes::new(32), 1)
+      connection.establish_session(
+        "aead_aes256_gcm_rtpsize",
+        Bytes::make(32, b'\x00'),
+        1,
+      )
       assert_eq(connection.state(), Closed(code=None))
       try connection.wait_ready() catch {
         VoiceError::ShimUnavailable(reason~) =>
@@ -827,7 +831,11 @@ async test "voice connection reports initial DAVE key package send failure" {
     transport.binary.close(
       error=VoiceTransportClosed(code=None, reason="fake binary failure"),
     )
-    connection.establish_session("aead_aes256_gcm_rtpsize", Bytes::new(32), 1)
+    connection.establish_session(
+      "aead_aes256_gcm_rtpsize",
+      Bytes::make(32, b'\x00'),
+      1,
+    )
     assert_eq(connection.next_event(), ConnectionReady)
     assert_true(
       telemetry.any(event => {
@@ -929,7 +937,11 @@ async test "voice playback reports DAVE drops and source failures and replaces s
     )
     identify_dave_test_connection(transport)
     connection.dave = Some(fake_machine(fake))
-    connection.establish_session("aead_aes256_gcm_rtpsize", Bytes::new(32), 0)
+    connection.establish_session(
+      "aead_aes256_gcm_rtpsize",
+      Bytes::make(32, b'\x00'),
+      0,
+    )
     assert_eq(connection.next_event(), ConnectionReady)
     connection.set_udp(Some(udp))
     connection.set_ssrc(Some(42U))
@@ -993,7 +1005,11 @@ async test "voice playback discards sources superseded in the queue and during s
     @async.pause()
     connection.stop()
     connection.dave = Some(fake_machine(FakeDaveBackend::new()))
-    connection.establish_session("aead_aes256_gcm_rtpsize", Bytes::new(32), 0)
+    connection.establish_session(
+      "aead_aes256_gcm_rtpsize",
+      Bytes::make(32, b'\x00'),
+      0,
+    )
     connection.set_udp(Some(udp))
     connection.set_ssrc(Some(42U))
     connection.play(current)

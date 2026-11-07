@@ -605,7 +605,7 @@ async test "voice receiver discards empty datagrams and stops after UDP close" {
     udp.recv_started.get()
     let cipher = @voice.TransportCipher::new(
       AeadAes256GcmRtpsize,
-      Bytes::new(32),
+      Bytes::make(32, b'\x00'),
     )
     let header = @voice.build_rtp_header(sequence=1, timestamp=960U, ssrc=77U)
     udp.incoming.put(cipher.seal(header~, b"after-empty"))
@@ -1038,7 +1038,7 @@ async test "voice connection becomes ready, plays, receives, and disconnects ide
     let encrypted = udp.outgoing.get()
     let decryptor = @voice.TransportCipher::new(
       AeadAes256GcmRtpsize,
-      Bytes::new(32),
+      Bytes::make(32, b'\x00'),
     )
     let plain = decryptor.open(encrypted, header_len=12)
     assert_eq(@voice.parse_rtp_packet(plain).payload, b"voice-frame")
@@ -1055,7 +1055,7 @@ async test "voice connection becomes ready, plays, receives, and disconnects ide
     let stream = connection.subscribe(user_id="200")
     let sender = @voice.TransportCipher::new(
       AeadAes256GcmRtpsize,
-      Bytes::new(32),
+      Bytes::make(32, b'\x00'),
     )
     // an SSRC nobody announced is discarded rather than surfaced
     let unknown_header = @voice.build_rtp_header(
@@ -1092,7 +1092,7 @@ async test "voice connection reports reordered packet loss" {
     let stream = connection.subscribe(user_id="200")
     let sender = @voice.TransportCipher::new(
       AeadAes256GcmRtpsize,
-      Bytes::new(32),
+      Bytes::make(32, b'\x00'),
     )
     let packet = (sequence : Int32, timestamp : UInt32) => {
       let header = @voice.build_rtp_header(
@@ -1386,7 +1386,10 @@ fn connection_opus_datagram(
   sequence : Int32,
   opus : Bytes,
 ) -> Bytes raise {
-  let sender = @voice.TransportCipher::new(AeadAes256GcmRtpsize, Bytes::new(32))
+  let sender = @voice.TransportCipher::new(
+    AeadAes256GcmRtpsize,
+    Bytes::make(32, b'\x00'),
+  )
   let header = @voice.build_rtp_header(
     sequence=sequence.to_uint16(),
     timestamp=(sequence * 960).reinterpret_as_uint(),
@@ -1578,7 +1581,10 @@ async test "voice playback paces frames and the closing silence on the clock" {
   let transport = ConnectionTestTransport::new()
   let udp = ConnectionTestUdp::new()
   let clock = @simclock.VirtualClock()
-  let cipher = @voice.TransportCipher::new(AeadAes256GcmRtpsize, Bytes::new(32))
+  let cipher = @voice.TransportCipher::new(
+    AeadAes256GcmRtpsize,
+    Bytes::make(32, b'\x00'),
+  )
   // the next packet, decrypted, as (sequence, timestamp, payload)
   let next_packet = () => {
     let rtp = @voice.parse_rtp_packet(
@@ -1643,7 +1649,10 @@ async test "stopping voice playback flushes paced silence before it returns" {
   let transport = ConnectionTestTransport::new()
   let udp = ConnectionTestUdp::new()
   let clock = @simclock.VirtualClock()
-  let cipher = @voice.TransportCipher::new(AeadAes256GcmRtpsize, Bytes::new(32))
+  let cipher = @voice.TransportCipher::new(
+    AeadAes256GcmRtpsize,
+    Bytes::make(32, b'\x00'),
+  )
   let next_payload = () => {
     @voice.parse_rtp_packet(cipher.open(udp.outgoing.get(), header_len=12)).payload
   }

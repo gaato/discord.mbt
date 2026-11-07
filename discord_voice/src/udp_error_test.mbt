@@ -34,7 +34,10 @@ fn expect_discovery_error(bytes : Bytes, expected : String) -> Unit raise {
 
 ///|
 test "IP discovery parsing rejects each malformed response" {
-  expect_discovery_error(Bytes::new(73), "response must contain 74 bytes")
+  expect_discovery_error(
+    Bytes::make(73, b'\x00'),
+    "response must contain 74 bytes",
+  )
   let wrong_type = discovery_response(7U, "203.0.113.9", 62000).to_array()
   wrong_type[1] = 3
   expect_discovery_error(
