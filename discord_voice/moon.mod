@@ -27,7 +27,7 @@ import {
   "gaato/discord@0.14.0",
   "gaato/dave@0.1.1",
   "gaato/http@0.5.0",
-  "gaato/http-async@0.5.0",
+  "gaato/http-async@0.5.1",
   "moonbitlang/async@0.22.7",
 }
 
