@@ -27,9 +27,10 @@ if [ -f "$index" ] && grep -Eq "\"version\"[[:space:]]*:[[:space:]]*\"$version\"
   echo "skip    $name@$version (already published)"; exit 0
 fi
 if $dry_run; then
-  # `moon publish --dry-run` exits non-zero even when the server accepts it.
-  out=$(moon publish --dry-run 2>&1) || true
-  echo "$out" | grep -q 'Dry run completed successfully' || { echo "$out"; exit 1; }
+  # Since moon 0.1.20261104 a dry run exits 0 when the server accepts it and
+  # non-zero when it rejects it; it no longer prints "Dry run completed
+  # successfully", which earlier versions printed while exiting non-zero.
+  moon publish --dry-run
   echo "would   $name@$version"
 else
   echo "publish $name@$version"
