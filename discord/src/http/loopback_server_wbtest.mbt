@@ -310,7 +310,9 @@ async test "the default transport times its phases on the client's clock" {
     assert_eq(outcome.val, None)
     clock.advance(1)
     clock.settle(until=() => outcome.val is Some(_))
-    assert_eq(outcome.val, Some("Timeout Unknown 30000"))
+    // The owned backend runs on the same clock, so its own deadline reports
+    // the phase it was in rather than the client's outer `Unknown`.
+    assert_eq(outcome.val, Some("Timeout Head 30000"))
     release.put(())
   })
 }

@@ -89,8 +89,8 @@ const MAX_RESPONSE_BODY_BYTES : Int32 = 67_108_864
 /// resend back-off, the default rate limiter's windows, the attempt timeout
 /// around either backend, telemetry durations, the window of
 /// `invalid_requests`, and the typing keepalive of `ChannelRef::with_typing`.
-/// AsyncBackend's connection-pool and phase clocks are independent; its
-/// constructor does not accept the injected clock.
+/// The owned AsyncBackend's connection-pool expiry and phase deadlines use
+/// the same clock. A supplied backend keeps its own clocks.
 pub fn Client::Client(
   token : String,
   base_url~ : String = "https://discord.com",
@@ -107,16 +107,23 @@ pub fn Client::Client(
     Some(l) => l
     None => @ratelimit.rate_limiter(clock~)
   }
+  // Bound the whole attempt on the injected clock, whichever backend runs
+  // it. The outer deadline cannot prove a phase.
+  let timer : &@hclock.Timer = @transport.ClockTimer::new(clock~)
   let (transport, owned_transport) : (&@ghttp.Backend, @backend.AsyncBackend?) = match
     backend {
     Some(shared) => (shared, None)
     None => {
-      let owned = @backend.AsyncBackend::new(config={
-        ..@h1client.ClientConfig::default(),
-        max_idle_per_origin: max_connections,
-        max_body_bytes: Some(MAX_RESPONSE_BODY_BYTES),
-        proxy: @h1client.ProxyConfig::from_env(@env.get_env_var),
-      })
+      let owned = @backend.AsyncBackend::new(
+        config={
+          ..@h1client.ClientConfig::default(),
+          max_idle_per_origin: max_connections,
+          max_body_bytes: Some(MAX_RESPONSE_BODY_BYTES),
+          proxy: @h1client.ProxyConfig::from_env(@env.get_env_var),
+        },
+        clock~,
+        timer~,
+      )
       (owned, Some(owned))
     }
   }
@@ -124,9 +131,6 @@ pub fn Client::Client(
   let warn_ : Ref[(String) -> Unit] = Ref(message => println(message))
   let closed_ = Ref(false)
   let invalid_ = InvalidRequests::new()
-  // Bound the whole attempt on the injected clock even when the backend's
-  // phase clocks cannot be injected. The outer deadline cannot prove a phase.
-  let timer : &@hclock.Timer = @transport.ClockTimer::new(clock~)
   let runtime = @runtime.Client::new(
     ClosedGate::{ inner: transport, closed: closed_, },
     clock,

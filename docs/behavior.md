@@ -98,8 +98,8 @@ one client.
 - The mttp client's `timeout_ms` wraps every backend on the injected clock,
   including the default `AsyncBackend`. An outer timeout has phase `Unknown`;
   an earlier backend failure preserves its phase, including unsent `Pool`
-  and `Dial` failures. AsyncBackend's pool and phase clocks cannot currently
-  be injected through its constructor.
+  and `Dial` failures. The owned `AsyncBackend` gets the same clock and
+  timer, so its pool expiry and phase deadlines follow the injected clock.
 - The limiter releases the exact `Admission` returned by acquire, including
   on failure or cancellation. If response heads arrived before a body failure,
   release and telemetry retain their status and headers.

@@ -25,8 +25,8 @@ breaking change is listed with a migration note.
   than the total parked connections. Both supplied and owned backends have
   a 64 MiB decoded-body limit and a clock-driven whole-attempt deadline.
   An outer deadline reports `Timeout(phase=Unknown)`; earlier backend errors
-  retain their phases. Backend pool and phase clocks remain independent of
-  the client's injected clock.
+  retain their phases. The owned backend's pool expiry and phase deadlines
+  now follow the client's injected clock.
 - **All public injected clocks use `gaato/http/rt.Clock`.** This affects
   `Client` and `Client::offline`, `App::serve`, `Framework` and
   `Framework::clock`, `ResponseGate` (constructor, `capture`, and `rest`),
