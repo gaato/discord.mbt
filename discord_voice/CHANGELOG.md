@@ -6,7 +6,7 @@ releases (0.x → 0.y) may contain breaking changes; patch releases do not.
 
 ## [Unreleased]
 
-## [0.4.0]
+## [0.4.0] - 2026-11-10
 
 ### Changed
 

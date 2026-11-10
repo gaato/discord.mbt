@@ -7,7 +7,7 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
-## [0.15.0]
+## [0.15.0] - 2026-11-10
 
 ### Changed
 
