@@ -119,7 +119,7 @@ pub fn Client::Client(
           ..@h1client.ClientConfig::default(),
           max_idle_per_origin: max_connections,
           max_body_bytes: Some(MAX_RESPONSE_BODY_BYTES),
-          proxy: @h1client.ProxyConfig::from_env(@env.get_env_var),
+          proxy: proxy_from_env(),
         },
         clock~,
         timer~,

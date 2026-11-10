@@ -11,11 +11,16 @@ import {
   "gaato/mttp/multipart",
   "gaato/http-async/backend",
   "gaato/http/h1client",
-  "moonbitlang/core/env",
   "moonbitlang/core/async",
   "moonbitlang/core/json",
   "moonbitlang/core/debug",
   "moonbitlang/core/encoding/utf8",
+}
+
+// Only proxy_env.mbt reads the environment; see proxy_env_js.mbt.
+#cfg(not(target="js"))
+import {
+  "moonbitlang/core/env",
 }
 
 import {
@@ -46,5 +51,9 @@ options(
     "moonbitlang/core/async/http",
     "moonbitlang/core/async/socket",
   ],
-  targets: { "loopback_server_wbtest.mbt": [ "native", "wasm" ] },
+  targets: {
+    "loopback_server_wbtest.mbt": [ "native", "wasm" ],
+    "proxy_env.mbt": [ "native", "wasm" ],
+    "proxy_env_js.mbt": [ "js" ],
+  },
 )
