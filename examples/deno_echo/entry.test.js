@@ -90,5 +90,12 @@ Deno.test("Deno.serve uses the shared signed Interaction dispatch", async () => 
   } finally {
     await handler.whenIdle();
     await Promise.all([server.shutdown(), rest.shutdown()]);
+    // core/async's JS scheduler runs one round per macrotask and queues the
+    // next with setTimeout(0) while coroutines are still finishing, which can
+    // outlive the promises above. Let those rounds run so Deno's timer
+    // sanitizer sees none pending; the sanitizer stays on for real leaks.
+    for (let round = 0; round < 10; round++) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
   }
 });
