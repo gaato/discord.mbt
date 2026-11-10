@@ -4,14 +4,14 @@ import {
   "gaato/dave",
   "gaato/discord/bot",
   "gaato/discord/model",
-  "gaato/http/clock" @hclock,
-  "gaato/http-async" @transport,
-  "moonbitlang/async",
-  "moonbitlang/async/aqueue",
-  "moonbitlang/async/cond_var",
-  "moonbitlang/async/io",
-  "moonbitlang/async/websocket",
-  "moonbitlang/async/socket",
+  "gaato/http/rt" @hclock,
+  "gaato/http-async/runtime" @transport,
+  "moonbitlang/core/async",
+  "moonbitlang/core/async/aqueue",
+  "moonbitlang/core/async/cond_var",
+  "moonbitlang/core/async/io",
+  "moonbitlang/core/async/websocket",
+  "moonbitlang/core/async/socket",
   "moonbitlang/core/buffer",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/json",
@@ -22,22 +22,22 @@ import {
 import {
   "gaato/discord",
   "gaato/discord_voice" @voice,
-  "gaato/http-async/mock" @simclock,
-  "moonbitlang/async",
-  "moonbitlang/async/aqueue",
-  "moonbitlang/async/pipe",
+  "gaato/http-async/runtime" @transport,
+  "moonbitlang/core/async",
+  "moonbitlang/core/async/aqueue",
+  "moonbitlang/core/async/io",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/env",
   "moonbitlang/core/json",
   "moonbitlang/core/random",
-  "moonbitlang/async/http" @ahttp,
-  "moonbitlang/async/socket",
-  "moonbitlang/async/websocket" @asyncws,
+  "moonbitlang/core/async/http" @ahttp,
+  "moonbitlang/core/async/socket",
+  "moonbitlang/core/async/websocket" @asyncws,
 } for "test"
 
 import {
   "gaato/discord/app",
-  "gaato/http-async/mock" @simclock,
+  "gaato/http-async/runtime" @transport,
   "moonbitlang/core/encoding/hex",
 } for "wbtest"
 
@@ -48,5 +48,14 @@ warnings = "-29"
 supported_targets = "native"
 
 options(
+  "allow-experimental-packages": [
+    "moonbitlang/core/async",
+    "moonbitlang/core/async/aqueue",
+    "moonbitlang/core/async/cond_var",
+    "moonbitlang/core/async/io",
+    "moonbitlang/core/async/websocket",
+    "moonbitlang/core/async/socket",
+    "moonbitlang/core/async/http",
+  ],
   "native-stub": [ "shim_stub.c" ],
 )

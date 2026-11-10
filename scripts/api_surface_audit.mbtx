@@ -1,7 +1,7 @@
 ----
 import {
-  "moonbitlang/async@0.22.7",
-  "moonbitlang/async@0.22.7/fs",
+  "moonbitlang/core/async",
+  "moonbitlang/core/async/fs",
   "moonbitlang/core/env",
 }
 ----
@@ -471,11 +471,11 @@ async fn main {
   if args.length() > 2 || (args.length() == 2 && !self_test) {
     fail("usage: moon run scripts/api_surface_audit.mbtx [--self-test]")
   }
-  let facade = @fs.read_file("discord/src/pkg.generated.mbti").text()
+  let facade = @fs.read_text("discord/src/pkg.generated.mbti")
   let package_texts : Map[String, String] = Map([])
   for entry in tracked {
     let (pkg, dir) = entry
-    package_texts[pkg] = @fs.read_file("\{dir}/pkg.generated.mbti").text()
+    package_texts[pkg] = @fs.read_text("\{dir}/pkg.generated.mbti")
   }
   let paths : Array[String] = []
   for root in source_roots {
@@ -494,9 +494,9 @@ async fn main {
   paths.sort()
   let sources : Array[(String, String)] = []
   for path in paths {
-    sources.push((path, @fs.read_file(path).text()))
+    sources.push((path, @fs.read_text(path)))
   }
-  let allow = @fs.read_file("scripts/api_surface_audit.allow").text()
+  let allow = @fs.read_text("scripts/api_surface_audit.allow")
   audit(facade, package_texts, sources, allow)
   if self_test {
     // Dropping a re-export, an allow entry, or a label must each fail.

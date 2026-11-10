@@ -15,9 +15,10 @@ async test "deadline races preserve every accepted capture" {
   // in the order the timers were registered.
   let timings = [(0, 0), (1, 1), (0, 10), (10, 0)]
   for (delay, deadline) in timings {
-    let clock = @simclock.VirtualClock()
+    let clock = @transport.VirtualClock()
     let app = @app.AppBuilder()
     let ends : Array[RaceEnd] = []
+    let started = Ref(false)
     app.on_warn(warning => ends.push(Warned(warning)))
     app.command(
       @app.slash(
@@ -25,6 +26,7 @@ async test "deadline races preserve every accepted capture" {
         description="Race the callback deadline",
         args=@interaction.Args::unit(),
         handler=Raw(raw => {
+          started.val = true
           (clock : &@hclock.Clock).sleep(delay)
           raw.respond(content="captured")
           ends.push(Gate(raw.response_state()))
@@ -50,8 +52,19 @@ async test "deadline races preserve every accepted capture" {
           deadline_ms=deadline,
         )
       })
-      while clock.advance_to_next() {
-        ()
+      clock.settle(until=() => {
+        !ends.is_empty() ||
+        (
+          started.val &&
+          delay > 0 &&
+          clock.pending().length() >= 2 &&
+          clock.pending().contains(delay) &&
+          clock.pending().contains(deadline)
+        )
+      })
+      if ends.is_empty() {
+        clock.advance(delay)
+        clock.settle(until=() => !ends.is_empty())
       }
       let outcome = handling.wait()
       match ends {

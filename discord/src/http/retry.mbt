@@ -1,34 +1,11 @@
 ///|
-/// Discord's retry rule for one logical call, as `resend_decision` decides.
-/// `closed` is the client's own flag, so a closed client sends nothing more.
-priv struct DiscordRetry {
-  max_retries : Int32
-  closed : Ref[Bool]
-}
-
-///|
-impl @runtime.RetryDecider for DiscordRetry with fn decide(self, error, context) {
-  resend_decision(
-    error,
-    context,
-    max_retries=self.max_retries,
-    closed=self.closed.val,
-  )
-}
-
-///|
-/// The request header that marks a call as safe to send again although its
-/// method is not idempotent: a message create with a `nonce` and
-/// `enforce_nonce: true`, which Discord answers with the message it already
-/// created instead of creating another (`wire_request` sets it). It lives
-/// only between the client and its transport: `ClosedGate` removes it from
-/// every attempt before the transport sees the request, so it never reaches
-/// Discord. The runtime's observer, and so telemetry, sees the request with
-/// it.
+/// Reserved header stripped from caller-supplied headers before the backend
+/// sees them. Retry safety uses the typed `replay_safe` attribute instead, so
+/// a caller cannot forge safety with a wire header.
 const REPLAY_SAFE_HEADER : String = "x-discord-mbt-replay-safe"
 
 ///|
-/// Discord's resend rule as a `gaato/http/retry` rule, up to `max_retries`
+/// Discord's resend rule as a `gaato/mttp/client/retry` rule, up to `max_retries`
 /// resends:
 ///
 /// - a 429 for any method, after the delay Discord asked for (supplied by
@@ -76,9 +53,9 @@ fn discord_retry_rule(max_retries : Int32) -> @retry.RetryRule {
 ///   of Discord) gives no wait to honour, and resending it only adds to the
 ///   address's invalid requests, so it fails at once;
 /// - a call is idempotent when its method is (`GET`, `HEAD`, `PUT`,
-///   `DELETE`, `OPTIONS`) or when it carries `REPLAY_SAFE_HEADER`.
+///   `DELETE`, `OPTIONS`) or when its typed `replay_safe` attribute is true.
 fn resend_decision(
-  error : @runtime.SdkError,
+  attempt : @runtime.AttemptResult[Result[Bytes, @runtime.ResponseFailure]],
   context : @runtime.RetryContext,
   max_retries~ : Int32,
   closed~ : Bool,
@@ -86,9 +63,22 @@ fn resend_decision(
   if closed {
     return Stop(NotRetryable)
   }
-  guard error.outcome() is Some(outcome) else { return Stop(NotRetryable) }
-  let server_delay_ms = match error {
-    RateLimited(headers~, body~, ..) => {
+  let outcome = attempt.http_outcome()
+  let server_delay_ms = match attempt {
+    Buffered(reply) if reply.status == 429 => {
+      let head : @ghttp.ResponseHead = {
+        status: reply.status,
+        headers: reply.headers,
+      }
+      let body = match reply.body {
+        Ok(body) => body
+        Err(
+          @runtime.UnexpectedStatus(_, body~)
+          | @runtime.Deserialization(_, body~, ..)
+        ) => body
+        Err(@runtime.ResponseFailure::..) => b""
+      }
+      let headers = head.headers
       if !@ratelimit.is_discord_rate_limit(headers) {
         return Stop(NotRetryable)
       }
@@ -109,8 +99,7 @@ fn resend_decision(
     now_unix_ms=context.now_unix_ms,
     remaining_ms?=context.remaining_ms,
     server_delay_ms?,
-    idempotent=@ghttp.is_idempotent(request) ||
-      request.headers.contains(REPLAY_SAFE_HEADER),
+    idempotent=context.idempotent,
     replayable=context.replayable,
   )
 }

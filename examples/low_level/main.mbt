@@ -60,7 +60,7 @@ async fn main {
     let client = @dhttp.Client(token)
     let gateway_url = client.get_gateway()
     @async.with_timeout_opt(run_seconds * 1000, () => {
-      @async.with_task_group((group : @async.TaskGroup[Unit]) => {
+      @async.with_task_group((group : @async.TaskGroup) => {
         let shard = @gateway.Shard::start(
           group,
           token~,

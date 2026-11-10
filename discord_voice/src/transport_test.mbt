@@ -13,7 +13,9 @@ async test "the voice WebSocket transport closes an oversized message with 1009"
       ws.send_binary(b"bin")
       ws.send_binary(Bytes::make(4 * 1024 * 1024 + 1, b'x'))
       try ws.recv() |> ignore catch {
-        error => peer_saw.val = "\{error}"
+        @asyncws.WebSocketError::ConnectionClosed(MessageTooBig, _) =>
+          peer_saw.val = "MessageTooBig"
+        error => peer_saw.val = "\{Repr(error)}"
       }
     })
     let transport = @voice.connect_voice_websocket(

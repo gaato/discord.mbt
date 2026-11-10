@@ -59,17 +59,19 @@ fn ready_shard(ready : @model.Ready) -> Int32 raise {
 }
 
 ///|
-/// Take what `stage` should have produced once the tasks have gone idle.
+/// Wait for the specific stage's queue delivery.
 async fn[T] manager_get(
-  clock : @simclock.VirtualClock,
+  clock : @transport.VirtualClock,
   queue : @aqueue.Queue[T],
   stage : String,
 ) -> T {
-  clock.settle()
-  match queue.try_get() {
-    Some(value) => value
-    None => fail("\{stage} did not happen")
-  }
+  let observed : Ref[T?] = Ref(None)
+  clock.settle(until=() => {
+    observed.val = queue.try_get() catch { _ => None }
+    observed.val is Some(_)
+  })
+  ignore(stage)
+  observed.val.unwrap()
 }
 
 ///|
@@ -87,11 +89,14 @@ fn sent_identify(transport : @gatewaysim.FakeTransport) -> Json? {
 /// Fire timers in deadline order until every transport has sent an IDENTIFY,
 /// and return the virtual time each one was sent at.
 async fn identify_times(
-  clock : @simclock.VirtualClock,
+  clock : @transport.VirtualClock,
   transports : Array[@gatewaysim.FakeTransport],
+  first_wave~ : Int32 = 1,
 ) -> Array[Int64] {
   let times : Array[Int64?] = transports.map(_ => None)
-  clock.settle()
+  clock.settle(until=() => {
+    transports.filter(t => sent_identify(t) is Some(_)).length() >= first_wave
+  })
   while true {
     for index, transport in transports {
       if times[index] is None && sent_identify(transport) is Some(_) {
@@ -101,7 +106,12 @@ async fn identify_times(
     if times.iter().all(time => time is Some(_)) {
       break
     }
-    guard clock.advance_to_next() else { fail("an IDENTIFY was never sent") }
+    let before = transports.filter(t => sent_identify(t) is Some(_)).length()
+    clock.settle(until=() => clock.pending().contains(5250))
+    clock.advance(5250)
+    clock.settle(until=() => {
+      transports.filter(t => sent_identify(t) is Some(_)).length() > before
+    })
   }
   times.map(time => time.unwrap())
 }
@@ -245,7 +255,7 @@ fn manager_bot_session(
 
 ///|
 async test "fixed shards share identify queue and dispatch path" {
-  let clock = @simclock.VirtualClock()
+  let clock = @transport.VirtualClock()
   let first = @gatewaysim.FakeTransport(clock~)
   let second = @gatewaysim.FakeTransport(clock~)
   let pending : Array[@gatewaysim.FakeTransport] = [second, first]
@@ -330,7 +340,7 @@ async test "fixed shards share identify queue and dispatch path" {
 
 ///|
 async test "fatal close fails the manager and closes sibling shards" {
-  let clock = @simclock.VirtualClock()
+  let clock = @transport.VirtualClock()
   let first = @gatewaysim.FakeTransport(clock~)
   let second = @gatewaysim.FakeTransport(clock~)
   let pending : Array[@gatewaysim.FakeTransport] = [second, first]
@@ -381,7 +391,7 @@ async test "fatal close fails the manager and closes sibling shards" {
 
 ///|
 async test "voice state updates go to the shard that owns the guild" {
-  let clock = @simclock.VirtualClock()
+  let clock = @transport.VirtualClock()
   let first = @gatewaysim.FakeTransport(clock~)
   let second = @gatewaysim.FakeTransport(clock~)
   let pending : Array[@gatewaysim.FakeTransport] = [second, first]
@@ -455,7 +465,7 @@ async test "voice state updates go to the shard that owns the guild" {
 
 ///|
 async test "a voice state update for a shard run elsewhere raises" {
-  let clock = @simclock.VirtualClock()
+  let clock = @transport.VirtualClock()
   let transport = @gatewaysim.FakeTransport(clock~)
   let app = @app.AppBuilder()
   let bot = BotBuilder(

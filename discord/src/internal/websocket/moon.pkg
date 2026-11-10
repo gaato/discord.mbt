@@ -1,27 +1,34 @@
 import {
-  "moonbitlang/async",
-  "moonbitlang/async/js_async",
-  "moonbitlang/async/io",
-  "moonbitlang/async/http",
-  "moonbitlang/async/websocket" @upstream,
+  "moonbitlang/core/async",
+  "moonbitlang/core/async/js_async",
+  "moonbitlang/core/async/io",
+  "moonbitlang/core/async/http",
+  "moonbitlang/core/async/websocket" @upstream,
   "moonbitlang/core/buffer",
   "moonbitlang/core/encoding/utf8",
 }
 
 import {
-  "moonbitlang/async",
-  "moonbitlang/async/js_async",
-  "moonbitlang/async/io",
-  "moonbitlang/async/http",
+  "moonbitlang/core/async",
+  "moonbitlang/core/async/js_async",
+  "moonbitlang/core/async/io",
+  "moonbitlang/core/async/http",
 } for "test"
 
-// Native and Wasm re-export moonbitlang/async/websocket; JS implements the client subset over the platform WebSocket API.
+// Native and Wasm re-export moonbitlang/core/async/websocket; JS implements the client subset over the platform WebSocket API.
 
 warnings = "-29"
 
 supported_targets = "js + native + wasm"
 
 options(
+  "allow-experimental-packages": [
+    "moonbitlang/core/async",
+    "moonbitlang/core/async/js_async",
+    "moonbitlang/core/async/io",
+    "moonbitlang/core/async/http",
+    "moonbitlang/core/async/websocket",
+  ],
   targets: {
     "native.mbt": [ "native", "wasm" ],
     "types.mbt": [ "js" ],

@@ -6,9 +6,10 @@ import {
   "gaato/discord/queue",
   "gaato/discord/ratelimit",
   "gaato/http",
-  "gaato/sdk-runtime" @runtime,
-  "moonbitlang/async",
-  "moonbitlang/async/socket",
+  "gaato/mttp/client" @runtime,
+  "gaato/mttp/client/ratelimit" @limits,
+  "moonbitlang/core/async",
+  "moonbitlang/core/async/socket",
   "moonbitlang/core/json",
   "moonbitlang/core/env",
   "moonbitlang/core/string",
@@ -19,8 +20,8 @@ import {
   "gaato/discord/queue",
   "gaato/discord/ratelimit",
   "gaato/http",
-  "gaato/sdk-runtime" @runtime,
-  "moonbitlang/async",
+  "gaato/mttp/client" @runtime,
+  "moonbitlang/core/async",
 } for "wbtest"
 
 // TCP coordination runs on native and moonrun Wasm; this package is empty on JS.
@@ -30,6 +31,10 @@ supported_targets = "js + native + wasm"
 warnings = "-29"
 
 options(
+  "allow-experimental-packages": [
+    "moonbitlang/core/async",
+    "moonbitlang/core/async/socket",
+  ],
   targets: {
     "coordinator_wbtest.mbt": [ "native", "wasm" ],
     "line.mbt": [ "native", "wasm" ],

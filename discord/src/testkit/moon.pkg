@@ -8,8 +8,12 @@ import {
   "gaato/discord/framework",
   "gaato/discord/http",
   "gaato/discord/interaction",
-  "moonbitlang/async",
+  "moonbitlang/core/async",
   "moonbitlang/core/json",
 } for "test"
 
 supported_targets = "js + native + wasm"
+
+options(
+  "allow-experimental-packages": [ "moonbitlang/core/async" ],
+)

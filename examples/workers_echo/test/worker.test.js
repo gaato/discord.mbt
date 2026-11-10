@@ -217,7 +217,7 @@ describe("Cloudflare Worker interaction endpoint", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(calls[0].method).toBe("PATCH");
-    expect(calls[0].url).toBe(
+    expect(new URL(calls[0].url).href).toBe(
       "https://discord.com/api/v10/webhooks/400000000000000001/interaction-token/messages/@original",
     );
     expect(JSON.parse(calls[0].requestBody)).toEqual({
@@ -243,7 +243,7 @@ describe("Cloudflare Worker interaction endpoint", () => {
     await waitOnExecutionContext(ctx);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(calls[0]).toEqual({
+    expect({ ...calls[0], url: new URL(calls[0].url).href }).toEqual({
       method: "DELETE",
       url: "https://discord.com/api/v10/webhooks/400000000000000001/interaction-token/messages/@original",
     });

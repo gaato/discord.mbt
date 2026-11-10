@@ -85,6 +85,12 @@ test "unavailable guild without unavailable means the user was removed" {
     @json.parse("{\"id\": \"41771983423143937\"}"),
   )
   assert_false(guild.unavailable)
+  expect_model_decode_error(
+    Json::null(),
+    "expected unavailable guild (object)",
+    guild,
+  )
+  expect_model_decode_error(Json::object(Map([])), "missing field id", guild)
 }
 
 ///|

@@ -524,7 +524,7 @@ fn BotCore::event_filter(self : BotCore) -> (@model.EventKind) -> Bool {
 ///|
 fn BotCore::spawn_services(
   self : BotCore,
-  group : @async.TaskGroup[Unit],
+  group : @async.TaskGroup,
   gateway : GatewayCtx,
 ) -> Unit {
   for service in self.services_ {
@@ -581,7 +581,7 @@ async fn BotCore::spawn_event_handlers(
 ///|
 fn BotCore::spawn_interaction(
   self : BotCore,
-  group : @async.TaskGroup[Unit],
+  group : @async.TaskGroup,
   handlers : HandlerTracker,
   framework : @framework.Framework,
   interaction : @model.Interaction,
@@ -625,7 +625,7 @@ async fn BotCore::run(self : BotCore) -> Unit {
     self.starting_.val = false
   }
   let resolved = self.resolve_shards(client)
-  @async.with_task_group((group : @async.TaskGroup[Unit]) => {
+  @async.with_task_group((group : @async.TaskGroup) => {
     let filter = self.event_filter()
     let shard_events : @aqueue.Queue[ManagedShardEvent] = Queue(kind=Unbounded)
     let identify_queue : &@queue.IdentifyQueue = match self.identify_queue_ {
@@ -944,7 +944,7 @@ async fn BotCore::run(self : BotCore) -> Unit {
           message="\{handlers.active} handlers were still running \{grace_ms} ms after shutdown; cancelling them",
         ),
       )
-      group.return_immediately(())
+      group.return_immediately()
     }
   })
 }

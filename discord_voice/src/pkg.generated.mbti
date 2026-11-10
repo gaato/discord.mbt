@@ -4,9 +4,9 @@ package "gaato/discord_voice"
 import {
   "gaato/discord/bot",
   "gaato/discord/model",
-  "gaato/http/clock",
-  "moonbitlang/async",
-  "moonbitlang/async/io",
+  "gaato/http/rt",
+  "moonbitlang/core/async",
+  "moonbitlang/core/async/io",
   "moonbitlang/core/debug",
   "moonbitlang/core/random",
 }
@@ -62,7 +62,7 @@ pub struct OggOpusSource {
 }
 pub fn OggOpusSource::channels(Self) -> Int32
 pub fn OggOpusSource::from_bytes(Bytes) -> Self raise OggOpusError
-pub async fn OggOpusSource::from_reader(&@io.Reader) -> Self
+pub async fn OggOpusSource::from_reader(&@io.BinaryReader) -> Self
 pub async fn OggOpusSource::next_frame(Self) -> Bytes?
 pub fn OggOpusSource::pre_skip(Self) -> Int32
 pub impl AudioSource for OggOpusSource
@@ -89,7 +89,7 @@ pub(all) enum ReceivedAudio {
 pub struct VoiceClient {
   // private fields
 }
-pub fn VoiceClient::VoiceClient(clock? : &@clock.Clock) -> Self
+pub fn VoiceClient::VoiceClient(clock? : &@rt.Clock) -> Self
 pub fn VoiceClient::attach(Self, @bot.BotBuilder) -> Unit
 pub fn VoiceClient::connection(Self, @model.Id[@model.GuildMarker]) -> VoiceConnection?
 pub async fn VoiceClient::join(Self, @bot.GatewayCtx, @model.Id[@model.GuildMarker], @model.Id[@model.ChannelMarker], self_mute? : Bool, self_deaf? : Bool, timeout_ms? : Int32, telemetry? : (VoiceTelemetry) -> Unit) -> VoiceConnection
@@ -105,7 +105,7 @@ pub fn VoiceConnection::latency_ms(Self) -> Int64?
 pub async fn VoiceConnection::next_event(Self) -> VoiceEvent
 pub async fn VoiceConnection::play(Self, &AudioSource) -> Unit
 pub async fn VoiceConnection::set_speaking(Self, Int32) -> Unit
-pub fn[X] VoiceConnection::start(@async.TaskGroup[X], VoiceCredentials, user_id~ : String, channel_id~ : UInt64, leave~ : async () -> Unit, rejoin~ : async () -> VoiceCredentials, next_server? : async () -> VoiceServer?, next_channel? : async () -> UInt64?, server_timeout_ms? : Int32, connector? : async (String) -> &VoiceTransport, udp_opener? : async (String, Int32) -> &VoiceUdp, receive? : Bool, event_backlog? : Int32, telemetry? : (VoiceTelemetry) -> Unit, clock? : &@clock.Clock, rand? : @random.Rand) -> Self raise VoiceError
+pub fn VoiceConnection::start(@async.TaskGroup, VoiceCredentials, user_id~ : String, channel_id~ : UInt64, leave~ : async () -> Unit, rejoin~ : async () -> VoiceCredentials, next_server? : async () -> VoiceServer?, next_channel? : async () -> UInt64?, server_timeout_ms? : Int32, connector? : async (String) -> &VoiceTransport, udp_opener? : async (String, Int32) -> &VoiceUdp, receive? : Bool, event_backlog? : Int32, telemetry? : (VoiceTelemetry) -> Unit, clock? : &@rt.Clock, rand? : @random.Rand) -> Self raise VoiceError
 pub fn VoiceConnection::state(Self) -> VoiceConnectionState
 pub async fn VoiceConnection::stop(Self) -> Unit
 pub fn VoiceConnection::subscribe(Self, user_id~ : String, end_after_silence_ms? : Int32?, backlog? : Int32) -> VoiceReceiveStream raise VoiceError

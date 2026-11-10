@@ -1,8 +1,8 @@
 import {
   "gaato/discord/gateway",
-  "gaato/http-async/mock" @simclock,
-  "gaato/http/clock" @hclock,
-  "moonbitlang/async/aqueue",
+  "gaato/http-async/runtime" @transport,
+  "gaato/http/rt" @hclock,
+  "moonbitlang/core/async/aqueue",
   "moonbitlang/core/json",
 }
 
@@ -10,6 +10,13 @@ supported_targets = "js + native + wasm"
 
 import {
   "gaato/discord/gateway",
-  "gaato/http-async/mock" @simclock,
-  "moonbitlang/async",
+  "gaato/http-async/runtime" @transport,
+  "moonbitlang/core/async",
 } for "test"
+
+options(
+  "allow-experimental-packages": [
+    "moonbitlang/core/async/aqueue",
+    "moonbitlang/core/async",
+  ],
+)

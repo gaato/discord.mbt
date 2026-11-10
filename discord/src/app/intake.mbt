@@ -42,7 +42,7 @@ async fn HandlerIntake::until_closed(
       while self.open {
         self.closed.wait()
       }
-      group.return_immediately(())
+      group.return_immediately()
     })
     wait()
   })

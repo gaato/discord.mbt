@@ -3,9 +3,9 @@ import {
   "gaato/discord/model",
   "gaato/discord/interaction",
   "gaato/discord/http" @dhttp,
-  "moonbitlang/async",
-  "moonbitlang/async/aqueue",
-  "moonbitlang/async/signal",
+  "moonbitlang/core/async",
+  "moonbitlang/core/async/aqueue",
+  "moonbitlang/core/async/signal",
   "moonbitlang/core/env",
 }
 
@@ -14,5 +14,10 @@ supported_targets = "native"
 pkgtype(kind: "executable")
 
 options(
+  "allow-experimental-packages": [
+    "moonbitlang/core/async",
+    "moonbitlang/core/async/aqueue",
+    "moonbitlang/core/async/signal",
+  ],
   targets: { "main.mbt": [ "native" ] },
 )

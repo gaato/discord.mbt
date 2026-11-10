@@ -8,8 +8,8 @@ import {
   "gaato/discord/interaction",
   "gaato/discord/model",
   "gaato/discord/verify",
-  "gaato/http/clock",
-  "moonbitlang/async",
+  "gaato/http/rt",
+  "moonbitlang/core/async",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
@@ -102,8 +102,8 @@ pub struct App {
 pub fn App::attach(Self, @framework.Framework, client~ : @http.Client, application_id~ : @model.Id[@model.ApplicationMarker], waiter? : async (String, @model.Id[@model.UserMarker]?, Int32?) -> @framework.ComponentCtx?, latency_ms? : () -> Int64?, intake? : HandlerIntake) -> AppCtx
 pub async fn App::plan_commands(Self, @http.Client, @model.Id[@model.ApplicationMarker], scope~ : CommandScope, unowned? : @framework.UnownedCommands) -> CommandPlan
 pub async fn App::report_failure(Self, FailureOrigin, Error) -> Unit
-pub async fn App::serve(Self, @async.TaskGroup[Unit], access~ : RestAccess, application_id? : @model.Id[@model.ApplicationMarker], clock? : &@clock.Clock) -> InteractionEndpoint
-pub fn App::spawner(Self, @async.TaskGroup[Unit], intake? : HandlerIntake) -> async (async () -> Unit) -> Unit
+pub async fn App::serve(Self, @async.TaskGroup, access~ : RestAccess, application_id? : @model.Id[@model.ApplicationMarker], clock? : &@rt.Clock) -> InteractionEndpoint
+pub fn App::spawner(Self, @async.TaskGroup, intake? : HandlerIntake) -> async (async () -> Unit) -> Unit
 pub async fn App::sync_commands(Self, @http.Client, @model.Id[@model.ApplicationMarker], scope~ : CommandScope, unowned? : @framework.UnownedCommands) -> SyncReport
 pub fn App::warn(Self, AppWarning) -> Unit
 

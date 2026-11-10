@@ -214,7 +214,7 @@ async fn play_audible_probe(
   connection : @voice.VoiceConnection,
   audio_path : String,
 ) -> Int32 {
-  let audio = @fs.read_file(audio_path).binary()
+  let audio = @fs.read_binary(audio_path)
   let ogg = @voice.OggOpusSource::from_bytes(audio)
   let done : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   let frames = Ref(0)

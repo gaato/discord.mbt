@@ -503,7 +503,7 @@ fn AppBuilder::validate(self : AppBuilder) -> Unit raise AppConfigError {
 
 ///|
 async fn spawn_limited(
-  group : @async.TaskGroup[Unit],
+  group : @async.TaskGroup,
   limiter : @async.Semaphore,
   intake : HandlerIntake,
   body : async () -> Unit,
@@ -523,7 +523,7 @@ async fn spawn_limited(
 
 ///|
 fn bounded_spawner(
-  group : @async.TaskGroup[Unit],
+  group : @async.TaskGroup,
   limiter : @async.Semaphore,
   intake : HandlerIntake,
 ) -> Spawner {
@@ -538,7 +538,7 @@ fn bounded_spawner(
 /// task spawned but not yet started does not run its body.
 pub fn App::spawner(
   self : App,
-  group : @async.TaskGroup[Unit],
+  group : @async.TaskGroup,
   intake~ : HandlerIntake = HandlerIntake(),
 ) -> Spawner {
   bounded_spawner(group, Semaphore(self.max_in_flight_), intake)

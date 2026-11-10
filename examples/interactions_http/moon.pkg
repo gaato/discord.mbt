@@ -4,8 +4,8 @@ import {
   "gaato/discord/interaction",
   "gaato/discord/endpoint_http",
   "gaato/discord/model",
-  "moonbitlang/async",
-  "moonbitlang/async/signal",
+  "moonbitlang/core/async",
+  "moonbitlang/core/async/signal",
   "moonbitlang/core/env",
   "moonbitlang/core/string",
 }
@@ -15,5 +15,9 @@ supported_targets = "native + wasm"
 pkgtype(kind: "executable")
 
 options(
+  "allow-experimental-packages": [
+    "moonbitlang/core/async",
+    "moonbitlang/core/async/signal",
+  ],
   targets: { "main.mbt": [ "native", "wasm" ] },
 )

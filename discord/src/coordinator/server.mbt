@@ -2,13 +2,13 @@
 /// A lightweight TCP coordinator shared by multiple bot processes.
 pub struct Coordinator {
   priv address : String
-  priv runner : Ref[@async.TaskGroup[Unit]?]
+  priv runner : Ref[@async.TaskGroup?]
 }
 
 ///|
 priv struct CoordinatorState {
   identify : @queue.InMemoryQueue
-  limiter : @runtime.WindowLimiter
+  limiter : @limits.WindowLimiter
   cooldown : @cooldown.InMemoryCooldownStore
   owners : Map[String, BucketOwner]
   next_connection_id : Ref[Int32]
@@ -28,6 +28,7 @@ priv struct ConnectionState {
 priv struct BucketOwner {
   connection : ConnectionState
   lease : String
+  admission : @runtime.Admission
 }
 
 ///|
@@ -35,8 +36,8 @@ priv struct BucketOwner {
 ///
 /// Use port zero in `addr` to let the OS choose a free port, then pass
 /// `coordinator.addr()` to remote clients.
-pub async fn[X] Coordinator::serve(
-  group : @async.TaskGroup[X],
+pub async fn Coordinator::serve(
+  group : @async.TaskGroup,
   addr~ : String,
   max_concurrency~ : Int32 = 1,
   identify_spacing_ms~ : Int32 = 5250,
@@ -68,7 +69,7 @@ pub async fn[X] Coordinator::serve(
     instance,
     next_lease_id: Ref(0),
   }
-  let runner : Ref[@async.TaskGroup[Unit]?] = Ref(None)
+  let runner : Ref[@async.TaskGroup?] = Ref(None)
   let started = @async.Semaphore(1, initial_value=0)
   group.spawn_bg(allow_failure=true, () => {
     @async.with_task_group(inner => {
@@ -121,7 +122,7 @@ pub fn Coordinator::addr(self : Coordinator) -> String {
 /// the listener itself (its documented contract forbids closing them here).
 pub async fn Coordinator::close(self : Coordinator) -> Unit noraise {
   if self.runner.val is Some(inner) {
-    inner.return_immediately(())
+    inner.return_immediately()
   }
 }
 
@@ -139,14 +140,16 @@ async fn serve_connection(conn : @socket.Tcp, state : CoordinatorState) -> Unit 
   })
   let reader = LineReader::new()
   for ;; {
-    let line = match reader.next(chunk => conn.read(chunk)) {
+    let line = match reader.next(chunk => conn.read_into(chunk)) {
       Line(line) => line
       Ended => return
       TooLong => {
         // The stream cannot be resynchronized; answer and hang up.
         conn.write(
-          error_response("request line longer than \{MAX_LINE_BYTES} bytes").stringify() +
-          "\n",
+          @utf8.encode(
+            error_response("request line longer than \{MAX_LINE_BYTES} bytes").stringify() +
+            "\n",
+          ),
         )
         return
       }
@@ -159,7 +162,7 @@ async fn serve_connection(conn : @socket.Tcp, state : CoordinatorState) -> Unit 
     } noraise {
       response => response
     }
-    conn.write(response.stringify() + "\n")
+    conn.write(@utf8.encode(response.stringify() + "\n"))
   }
 }
 
@@ -173,7 +176,11 @@ async fn cleanup_connection(
     if state.owners.get(bucket) is Some(owner) &&
       owner.connection.id == connection.id {
       state.owners.remove(bucket)
-      state.limiter.release(bucket, status=0, headers=@http.Headers::new())
+      state.limiter.release(
+        owner.admission,
+        status=0,
+        headers=@http.Headers::empty(),
+      )
     }
     connection.held_buckets.val.remove(bucket)
   }
@@ -198,16 +205,16 @@ async fn dispatch_request(
       ok_response()
     }
     HttpAcquire(bucket~, global_exempt~) => {
-      state.limiter.acquire(bucket, global_exempt~)
+      let admission = state.limiter.acquire(bucket, global_exempt~)
       let lease = "\{state.instance}-\{state.next_lease_id.val}"
       state.next_lease_id.val += 1
-      state.owners[bucket] = BucketOwner::{ connection, lease, }
+      state.owners[bucket] = BucketOwner::{ connection, lease, admission, }
       connection.held_buckets.val[bucket] = lease
       { "ok": true, "lease": lease }
     }
     HttpRelease(bucket~, lease~, status~, headers~) => {
       if state.owners.get(bucket) is Some(owner) && owner.lease == lease {
-        state.limiter.release(bucket, status~, headers~)
+        state.limiter.release(owner.admission, status~, headers~)
         owner.connection.held_buckets.val.remove(bucket)
         state.owners.remove(bucket)
       }

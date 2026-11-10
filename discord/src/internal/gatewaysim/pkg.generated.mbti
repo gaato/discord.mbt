@@ -3,8 +3,8 @@ package "gaato/discord/internal/gatewaysim"
 
 import {
   "gaato/discord/gateway",
-  "gaato/http-async/mock",
-  "moonbitlang/async/aqueue",
+  "gaato/http-async/runtime",
+  "moonbitlang/core/async/aqueue",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
   "moonbitlang/core/ref",
@@ -34,9 +34,11 @@ pub struct FakeTransport {
   sends_after_close : @ref.Ref[Int32]
   send_in_flight : @ref.Ref[Bool]
   recv_in_flight : @ref.Ref[Bool]
+  received : @ref.Ref[Int32]
+  enqueued : @ref.Ref[Int32]
   // private fields
 }
-pub fn FakeTransport::FakeTransport(clock? : @mock.VirtualClock) -> Self
+pub fn FakeTransport::FakeTransport(clock? : @runtime.VirtualClock) -> Self
 pub async fn FakeTransport::put(Self, String) -> Unit
 pub fn FakeTransport::server_close(Self, Int32?) -> Unit
 pub impl @gateway.GatewayTransport for FakeTransport

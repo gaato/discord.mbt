@@ -15,22 +15,23 @@ fn TimeoutTestLimiter::TimeoutTestLimiter(
 ///|
 impl @runtime.RateLimiter for TimeoutTestLimiter with fn acquire(
   self,
-  _bucket_key,
+  bucket_key,
   global_exempt~,
 ) {
   ignore(global_exempt)
   self.acquires += 1
   (self.acquire_)()
+  @runtime.Admission::new(bucket_key, sequence=self.acquires.to_int64())
 }
 
 ///|
 impl @runtime.RateLimiter for TimeoutTestLimiter with fn release(
   self,
-  bucket_key,
+  admission,
   status~,
   headers~,
 ) {
-  self.releases.push((bucket_key, status, header_map(headers)))
+  self.releases.push((admission.bucket(), status, header_map(headers)))
 }
 
 ///|

@@ -61,7 +61,7 @@ fn[T] pending_voice_event(event : @bot.PendingEvent[T]) -> PendingVoiceEvent[T] 
 pub struct VoiceClient {
   priv connections : Map[@model.GuildId, VoiceConnection]
   priv join_gates : Map[@model.GuildId, JoinGate]
-  priv mut group : @async.TaskGroup[Unit]?
+  priv mut group : @async.TaskGroup?
   priv started : @cond_var.Cond
   // What the connections open, and the clock they and the joins use; a
   // test replaces them.
@@ -284,7 +284,7 @@ pub async fn VoiceClient::join_via(
 async fn VoiceClient::running_group(
   self : VoiceClient,
   timeout_ms : Int32,
-) -> @async.TaskGroup[Unit] {
+) -> @async.TaskGroup {
   if self.group is Some(group) {
     return group
   }
@@ -322,6 +322,7 @@ async fn request_voice_credentials(
     self_mute,
     self_deaf,
   })
+  let credentials : Ref[VoiceCredentials?] = Ref(None)
   @async.with_task_group(group => {
     let state_task = group.spawn(no_wait=true, () => {
       (state.wait)(Some(timeout_ms))
@@ -339,13 +340,14 @@ async fn request_voice_credentials(
     guard server_update.endpoint is Value(endpoint) else {
       raise VoiceError::JoinTimeout
     }
-    {
+    credentials.val = Some({
       server_id: guild_id.to_string(),
       session_id: state_update.session_id,
       token: server_update.token,
       endpoint,
-    }
+    })
   })
+  credentials.val.unwrap()
 }
 
 ///|

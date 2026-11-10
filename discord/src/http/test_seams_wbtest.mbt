@@ -50,7 +50,7 @@ priv struct FakeWire {
 }
 
 ///|
-impl @ghttp.Transport for FakeWire with fn send(self, request) {
+impl @ghttp.Backend for FakeWire with fn send(self, request, _options) {
   let url = request.url
   let path = match url.find("/api/") {
     Some(index) => url[index:].to_owned()
@@ -69,26 +69,28 @@ impl @ghttp.Transport for FakeWire with fn send(self, request) {
     }
   }
   let response = (self.answer)(path, headers, body) catch {
-    error => raise @ghttp.HttpError::Protocol(@debug.to_string(error))
+    error =>
+      raise @ghttp.TransportError(
+        kind=Protocol,
+        phase=Unknown,
+        detail=@debug.to_string(error),
+      )
   }
-  let wire_headers = @ghttp.Headers::new()
+  let mut wire_headers = @ghttp.Headers::empty()
   for name, value in response.headers {
-    wire_headers.set(name, value)
+    wire_headers = wire_headers.set(name, value)
   }
-  {
-    status: response.status,
-    headers: wire_headers,
-    body: match response.body {
-      _ if response.status == 204 => b""
-      String(text) => @utf8.encode(text)
-      json => @utf8.encode(json.stringify())
-    },
-  }
-}
-
-///|
-impl @ghttp.Transport for FakeWire with fn send_stream(_self, _request) {
-  raise @ghttp.HttpError::Protocol("FakeWire does not stream")
+  @ghttp.Response::new(
+    response.status,
+    headers=wire_headers,
+    body=Bytes(
+      match response.body {
+        _ if response.status == 204 => b""
+        String(text) => @utf8.encode(text)
+        json => @utf8.encode(json.stringify())
+      },
+    ),
+  )
 }
 
 ///|
@@ -101,7 +103,7 @@ fn wire_test_client(
 ) -> Client {
   Client(
     "test-token",
-    transport=FakeWire::{ answer, },
+    backend=FakeWire::{ answer, },
     limiter?,
     max_retries~,
     request_timeout_ms~,

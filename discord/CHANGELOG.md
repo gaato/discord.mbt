@@ -7,6 +7,63 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+## [0.15.0]
+
+### Changed
+
+- **The runtime is `moonbitlang/core/async`.** Remove `moonbitlang/async`
+  imports and dependencies; opt into each experimental core/async package in
+  `moon.pkg`. `App::serve`, `App::spawner`, `Shard::start`,
+  `Coordinator::serve`, and `serve_interactions` now take the non-generic
+  core `TaskGroup`. Use result cells or tasks for values previously returned
+  by a generic group.
+- **The HTTP stack is `gaato/http` 0.6.0, `gaato/http-async` 0.6.0, and
+  `gaato/mttp` 0.1.0.** `Client(transport=...)` becomes
+  `Client(backend=...)`, taking a `gaato/http.Backend`; the default is an
+  owned `gaato/http-async/backend.AsyncBackend`. Supplied backends remain
+  shared. `max_connections` now limits idle connections per origin, rather
+  than the total parked connections. Both supplied and owned backends have
+  a 64 MiB decoded-body limit and a clock-driven whole-attempt deadline.
+  An outer deadline reports `Timeout(phase=Unknown)`; earlier backend errors
+  retain their phases. Backend pool and phase clocks remain independent of
+  the client's injected clock.
+- **All public injected clocks use `gaato/http/rt.Clock`.** This affects
+  `Client` and `Client::offline`, `App::serve`, `Framework` and
+  `Framework::clock`, `ResponseGate` (constructor, `capture`, and `rest`),
+  `CommandLimiter`, `Shard::start`, `InMemoryQueue`, and `rate_limiter`.
+- **Rate limiters use mttp Admission tokens.** `Client(limiter=...)` and
+  `RemoteRateLimiter` implement `gaato/mttp/client.RateLimiter`.
+  `RemoteRateLimiter::acquire` returns `Admission`; pass that exact token to
+  `release` instead of a bucket string. `rate_limiter` returns
+  `gaato/mttp/client/ratelimit.WindowLimiter`. Local and coordinator limiters
+  retain Discord's bucket/hash, major-parameter, global and shared-scope
+  rules. Release and telemetry now retain response heads when reading a
+  response body fails.
+- **`Method` replaces the `RequestMethod` re-export.** `Route::Custom`,
+  `Route::custom`, and `Route::method_` use `gaato/http.Method`; import
+  `Method` from `gaato/discord/http` when naming the type.
+- **`Paginator[T]` is an owned wrapper instead of an sdk-runtime alias.**
+  The root facade also exports it so callers can name handle return types.
+  All seven `Client::paginate_*` functions and the `ChannelRef::messages`,
+  `GuildRef::audit_log`, `GuildRef::bans`, `GuildRef::members`,
+  `MessageRef::poll_answer_voters`, and `ScheduledEventRef::users` handles
+  return this type. `next_page`, `each`, and `collect` still raise
+  `DiscordHttpError` and share cursor state; do not pass it as an external
+  runtime paginator.
+- **Interaction serving uses `gaato/http-async/server.serve`.**
+  `ListenError` is re-exported by the root facade and `endpoint_http`;
+  configuration failures are `ListenError::Config(ServerConfigError)`.
+  `ServerConfigError` now re-exports the bounded HTTP server's type instead
+  of the library's four-case error. Request heads and trailers are bounded
+  to 16 KiB; a partial-head timeout gets 408 then closes, an idle timeout
+  closes silently, and an oversized declared body gets 413 before signature
+  authentication. Handler/deferred response timing and streamed multipart
+  responses are preserved.
+- The mttp observer runs after retry selection. Closing a client from an
+  attempt telemetry hook still prevents subsequent sends, but a selected
+  retry can wait and acquire another admission before the close is observed.
+  `VERSION` and the REST User-Agent are now `0.15.0`.
+
 ## [0.14.0] - 2026-11-07
 
 Follows Discord's developer docs through

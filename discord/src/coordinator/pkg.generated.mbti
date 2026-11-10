@@ -5,8 +5,8 @@ import {
   "gaato/discord/cooldown",
   "gaato/discord/queue",
   "gaato/http",
-  "gaato/sdk-runtime",
-  "moonbitlang/async",
+  "gaato/mttp/client",
+  "moonbitlang/core/async",
   "moonbitlang/core/debug",
 }
 
@@ -28,7 +28,7 @@ pub struct Coordinator {
 }
 pub fn Coordinator::addr(Self) -> String
 pub async fn Coordinator::close(Self) -> Unit noraise
-pub async fn[X] Coordinator::serve(@async.TaskGroup[X], addr~ : String, max_concurrency? : Int32, identify_spacing_ms? : Int32, global_limit? : Int32) -> Self
+pub async fn Coordinator::serve(@async.TaskGroup, addr~ : String, max_concurrency? : Int32, identify_spacing_ms? : Int32, global_limit? : Int32) -> Self
 
 pub struct RemoteCooldownStore {
   // private fields
@@ -51,12 +51,12 @@ pub impl @queue.IdentifyQueue for RemoteIdentifyQueue
 pub struct RemoteRateLimiter {
   // private fields
 }
-pub async fn RemoteRateLimiter::acquire(Self, String, global_exempt~ : Bool) -> Unit
+pub async fn RemoteRateLimiter::acquire(Self, String, global_exempt~ : Bool) -> @client.Admission
 pub fn RemoteRateLimiter::close(Self) -> Unit
 pub async fn RemoteRateLimiter::connect(String) -> Self
 pub async fn RemoteRateLimiter::ping(Self) -> Unit
-pub async fn RemoteRateLimiter::release(Self, String, status~ : Int32, headers~ : @http.Headers) -> Unit
-pub impl @sdk-runtime.RateLimiter for RemoteRateLimiter
+pub async fn RemoteRateLimiter::release(Self, @client.Admission, status~ : Int32, headers~ : @http.Headers) -> Unit
+pub impl @client.RateLimiter for RemoteRateLimiter
 
 // Type aliases
 

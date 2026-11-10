@@ -282,7 +282,7 @@ async fn VoiceConnection::while_open(
   @async.with_task_group(group => {
     group.spawn_bg(no_wait=true, () => {
       self.wait_until(() => self.closing)
-      group.return_immediately(())
+      group.return_immediately()
     })
     body()
   }) catch {
@@ -368,9 +368,9 @@ async fn VoiceConnection::select_protocol(
 }
 
 ///|
-fn[X] VoiceConnection::new_gateway(
+fn VoiceConnection::new_gateway(
   self : VoiceConnection,
-  group : @async.TaskGroup[X],
+  group : @async.TaskGroup,
   credentials : VoiceCredentials,
 ) -> VoiceGateway {
   VoiceGateway::start(
@@ -393,9 +393,9 @@ fn[X] VoiceConnection::new_gateway(
 
 ///|
 /// Start a gateway for `credentials` and make it the current one.
-fn[X] VoiceConnection::switch_gateway(
+fn VoiceConnection::switch_gateway(
   self : VoiceConnection,
-  group : @async.TaskGroup[X],
+  group : @async.TaskGroup,
   credentials : VoiceCredentials,
 ) -> VoiceGateway {
   let gateway = self.new_gateway(group, credentials)
@@ -407,9 +407,9 @@ fn[X] VoiceConnection::switch_gateway(
 ///|
 /// Ask the main gateway for a fresh session and connect to it. `None` when
 /// that fails, which closes the connection, or when it closed meanwhile.
-async fn[X] VoiceConnection::rejoin_session(
+async fn VoiceConnection::rejoin_session(
   self : VoiceConnection,
-  group : @async.TaskGroup[X],
+  group : @async.TaskGroup,
 ) -> VoiceGateway? noraise {
   self.set_state(Rejoining)
   self.reset_session()
@@ -429,9 +429,9 @@ async fn[X] VoiceConnection::rejoin_session(
 
 ///|
 /// Connect a new session to `credentials`, replacing the current gateway.
-fn[X] VoiceConnection::connect_to(
+fn VoiceConnection::connect_to(
   self : VoiceConnection,
-  group : @async.TaskGroup[X],
+  group : @async.TaskGroup,
   credentials : VoiceCredentials,
 ) -> VoiceGateway {
   self.set_state(Connecting)
@@ -445,9 +445,9 @@ fn[X] VoiceConnection::connect_to(
 /// next, as Discord asks, instead of resuming against the old one. The close
 /// runs in `group`, so the watch is listening for the next change while the
 /// old gateway's close frame goes out.
-fn[X] VoiceConnection::follow_server(
+fn VoiceConnection::follow_server(
   self : VoiceConnection,
-  group : @async.TaskGroup[X],
+  group : @async.TaskGroup,
   server : VoiceServer,
 ) -> Unit {
   self.server_change = Some(
@@ -467,9 +467,9 @@ fn[X] VoiceConnection::follow_server(
 /// Wait without a voice server for Discord to name the next one, for at most
 /// `server_timeout_ms`, and connect to it; rejoin when none came. `None` when
 /// the connection closed or the rejoin failed.
-async fn[X] VoiceConnection::replace_lost_server(
+async fn VoiceConnection::replace_lost_server(
   self : VoiceConnection,
-  group : @async.TaskGroup[X],
+  group : @async.TaskGroup,
 ) -> VoiceGateway? noraise {
   self.set_state(Reconnecting)
   self.set_gateway(None)
@@ -683,9 +683,9 @@ async fn VoiceConnection::handle_message(
 }
 
 ///|
-async fn[X] VoiceConnection::run_event_pump(
+async fn VoiceConnection::run_event_pump(
   self : VoiceConnection,
-  group : @async.TaskGroup[X],
+  group : @async.TaskGroup,
   gateway : VoiceGateway,
 ) -> Unit noraise {
   // Teardown runs to the end even when the pump is cancelled; otherwise its
@@ -889,8 +889,8 @@ async fn VoiceConnection::run_playback(self : VoiceConnection) -> Unit noraise {
 /// uses from the next session on. Each is called again after every update, in
 /// a task that ends with the connection, so whatever it registers to wait
 /// should be released when the call is cancelled.
-pub fn[X] VoiceConnection::start(
-  group : @async.TaskGroup[X],
+pub fn VoiceConnection::start(
+  group : @async.TaskGroup,
   credentials : VoiceCredentials,
   user_id~ : String,
   channel_id~ : UInt64,

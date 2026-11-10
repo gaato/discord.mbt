@@ -15,7 +15,7 @@ async fn sec_gateway(p : P) -> Unit {
   }
   try
     @async.with_timeout_opt(120_000, () => {
-      @async.with_task_group((group : @async.TaskGroup[Unit]) => {
+      @async.with_task_group((group : @async.TaskGroup) => {
         let shard = @gateway.Shard::start(
           group,
           token~,
@@ -214,7 +214,7 @@ async fn sec_gateway(p : P) -> Unit {
           }
         })
         shard.close()
-        group.return_immediately(())
+        group.return_immediately()
       })
     })
     |> ignore

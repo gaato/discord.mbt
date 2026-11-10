@@ -31,7 +31,7 @@ signed PING and echo requests plus invalid requests. It does not call Discord.
 Set `SPIN_BIN` if `spin` is not on `PATH`.
 
 The experiment stops at immediate responses. The current `@discord.App` HTTP
-dispatch depends on `moonbitlang/async` host imports that Spin does not
+dispatch depends on `moonbitlang/core/async` host imports that Spin does not
 implement, so this Component directly calls the existing verifier and model
 parser. Outbound HTTP, deferred callbacks, and production deployment are not
 established by this test.

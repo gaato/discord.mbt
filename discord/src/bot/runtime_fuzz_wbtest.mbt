@@ -161,7 +161,7 @@ priv struct BotFuzzCommand {
 /// The reference model: the event pipeline the backlog implies, every
 /// handler invocation, every interaction, and every connection so far.
 priv struct BotFuzzModel {
-  clock : @simclock.VirtualClock
+  clock : @transport.VirtualClock
   seed : Int32
   log : Array[String]
   started_at : Int64
@@ -297,7 +297,6 @@ fn BotFuzzModel::start(
   }
   self.runs.push(run)
   self.note("  start \{label} for \{bot_fuzz_dbg(duration)}")
-  self.clock.touch()
   run
 }
 
@@ -311,7 +310,6 @@ async fn BotFuzzModel::hold(self : BotFuzzModel, run : BotFuzzRun) -> Unit {
     } else {
       Cancelled(self.now())
     }
-    self.clock.touch()
   }
   match run.finish_at {
     Some(at) =>
@@ -373,7 +371,6 @@ fn BotFuzzModel::message_started(
 
 ///|
 fn BotFuzzModel::warn(self : BotFuzzModel, warning : @app.AppWarning) -> Unit {
-  self.clock.touch()
   let deadline = @framework.DEFAULT_INTERACTION_DEADLINE_MS.to_int64()
   match warning {
     InteractionDropped(target~) => {
@@ -466,7 +463,6 @@ fn BotFuzzModel::connect(self : BotFuzzModel) -> &@gateway.GatewayTransport {
     active: false,
     server_closed: false,
   })
-  self.clock.touch()
   transport
 }
 
@@ -516,6 +512,118 @@ fn BotFuzzModel::pump(self : BotFuzzModel) -> Unit {
         self.blocked = job
       }
     }
+  }
+}
+
+///|
+/// Observe scripted frames, modelled handler transitions, and their timers.
+/// Each condition names work this schedule caused; no quiet-period heuristic
+/// is used to infer that unrelated tasks are idle.
+fn BotFuzzModel::settled(self : BotFuzzModel, bot : Bot) -> Bool {
+  if self.flagged is Some(_) {
+    return true
+  }
+  if self.returned_at is Some(_) {
+    return self.clock.pending().is_empty() &&
+      self.conns.all(c => c.transport.close_calls.val > 0)
+  }
+  if self.fatal_at is Some(_) || self.cancelled_at is Some(_) {
+    return false
+  }
+  if bot.core.running_shards_.val.length() != self.shard_count {
+    return false
+  }
+  let now = self.now()
+  let pending = self.clock.pending()
+  let mut timers = 0
+  let work_timers : Array[Int32] = []
+  for run in self.runs {
+    if run.outcome == Running && run.finish_at is Some(at) {
+      if at <= now {
+        return false
+      }
+      timers += 1
+      work_timers.push((at - run.started_at).to_int())
+    }
+  }
+  if self.shutdown_at is Some(_) {
+    if self.alive() == 0 ||
+      self.conns.any(c => c.transport.close_calls.val == 0) ||
+      self.commands.any(c => c.state == Waiting) ||
+      self.discards != self.expected_discards {
+      return false
+    }
+    return pending.contains(self.grace) && pending.length() >= timers + 1
+  }
+  self.pump()
+  if self.messages != self.expected_messages ||
+    self.taken != self.expected_taken ||
+    self.drops != self.expected_drops ||
+    self.backlog_warnings != self.expected_backlog_warnings {
+    return false
+  }
+  for command in self.commands {
+    if command.state == Waiting {
+      if command.immediate ||
+        now >=
+        command.arrived_at +
+        @framework.DEFAULT_INTERACTION_DEADLINE_MS.to_int64() {
+        return false
+      }
+      timers += 1
+      work_timers.push(@framework.DEFAULT_INTERACTION_DEADLINE_MS)
+    }
+  }
+  for duration in work_timers {
+    if pending.filter(ms => ms == duration).length() <
+      work_timers.filter(ms => ms == duration).length() {
+      return false
+    }
+  }
+  let mut open = 0
+  let mut awaiting_identify = false
+  for conn in self.conns {
+    let wire = conn.transport
+    if wire.close_calls.val > 0 {
+      continue
+    }
+    open += 1
+    if !conn.hello {
+      if wire.received.val != wire.enqueued.val ||
+        !wire.recv_in_flight.val ||
+        conn.server_closed {
+        return false
+      }
+    } else {
+      timers += 1 // the heartbeat, including its first jitter
+      if bot_fuzz_identified(conn) is None && !bot_fuzz_resuming(conn) {
+        // Only the bucket owner sleeps; other shards wait on its semaphore.
+        // Frames queued after HELLO stay unread until Identify is allowed.
+        if wire.received.val == 0 {
+          return false
+        }
+        awaiting_identify = true
+      } else if wire.received.val != wire.enqueued.val ||
+        !wire.recv_in_flight.val ||
+        conn.server_closed {
+        return false
+      }
+    }
+  }
+  timers += self.shard_count - open // reconnect backoffs
+  if awaiting_identify {
+    timers += 1
+  }
+  pending.length() >= timers
+}
+
+///|
+async fn BotFuzzModel::settle(self : BotFuzzModel, bot : Bot) -> Unit {
+  self.clock.settle(until=() => self.settled(bot)) catch {
+    _ =>
+      self.violation(
+        "observation not reached: timers=\{Repr(self.clock.pending())}, running=\{self.alive()}, taken=\{self.taken}/\{self.expected_taken}, messages=\{self.messages.length()}/\{self.expected_messages.length()}",
+      )
   }
 }
 
@@ -898,7 +1006,6 @@ fn BotFuzzModel::on_return(self : BotFuzzModel) -> Unit {
   for conn in self.conns {
     self.sent_at_return.push(conn.transport.sent.length())
   }
-  self.clock.touch()
 }
 
 ///|
@@ -912,6 +1019,7 @@ async fn BotFuzzModel::advance(
   let target = self.now() + ms.to_int64()
   while self.clock.next_deadline() is Some(deadline) && deadline <= target {
     ignore(self.clock.advance_to_next())
+    self.settle(bot)
     self.observe(bot)
   }
   self.clock.advance((target - self.now()).to_int())
@@ -948,7 +1056,7 @@ async fn BotFuzzModel::end(
       run.cancel()
     }
   }
-  self.clock.settle()
+  self.settle(bot)
   self.observe(bot)
   true
 }
@@ -1003,7 +1111,7 @@ async fn run_bot_schedule(
   } else {
     Shutdown
   }
-  let clock = @simclock.VirtualClock()
+  let clock = @transport.VirtualClock()
   let model = BotFuzzModel::{
     clock,
     seed,
@@ -1100,7 +1208,7 @@ async fn run_bot_schedule(
         error => model.raised = Some(error)
       }
     })
-    clock.settle()
+    model.settle(bot)
     model.observe(bot)
     // After `End`, an ending that cannot happen yet (no READY context to ask
     // for a shutdown) is retried before every later step.
@@ -1123,7 +1231,7 @@ async fn run_bot_schedule(
         Advance(ms) => model.advance(bot, ms)
         step =>
           if model.apply(step, pick) {
-            clock.settle()
+            model.settle(bot)
             model.observe(bot)
           }
       }
@@ -1143,7 +1251,7 @@ async fn run_bot_schedule(
           Advance(ms) => model.advance(bot, ms)
           step =>
             if model.apply(step, 0) {
-              clock.settle()
+              model.settle(bot)
               model.observe(bot)
             }
         }
@@ -1156,9 +1264,10 @@ async fn run_bot_schedule(
         )
         return
       }
+      model.settle(bot)
       model.observe(bot)
     }
-    clock.settle()
+    model.settle(bot)
     model.observe(bot)
   })
   model.finish()

@@ -49,15 +49,15 @@ async fn http_request(
   path : String,
   body : String,
   headers : Map[String, String],
-) -> (@ahttp.Response, String) {
-  let client = @ahttp.Client("http://\{addr}")
+) -> (@ahttp.ResponseHeader, String) {
+  let client = @ahttp.ClientConnection("http://\{addr}")
   defer client.close()
   client.request(meth, path, extra_headers=to_async_headers(headers))
   if meth is Post {
-    @io.Writer::write(client, body)
+    @io.BinaryWriter::write(client, @utf8.encode(body))
   }
   let response = client.end_request()
-  (response, client.read_all().text())
+  (response, @utf8.decode(client.read_all()))
 }
 
 ///|
@@ -66,13 +66,13 @@ async fn http_request_bytes(
   path : String,
   body : Bytes,
   headers : Map[String, String],
-) -> (@ahttp.Response, String) {
-  let client = @ahttp.Client("http://\{addr}")
+) -> (@ahttp.ResponseHeader, String) {
+  let client = @ahttp.ClientConnection("http://\{addr}")
   defer client.close()
   client.request(Post, path, extra_headers=to_async_headers(headers))
-  @io.Writer::write(client, body)
+  @io.BinaryWriter::write(client, body)
   let response = client.end_request()
-  (response, client.read_all().text())
+  (response, @utf8.decode(client.read_all()))
 }
 
 ///|
@@ -371,9 +371,11 @@ async test "interactions server answers 202, 504, and 500 and reports startup fa
     let socket = @socket.Tcp::connect(@socket.Addr::parse(server.addr()))
     defer socket.close()
     socket.write(
-      "POST / HTTP/1.1\r\nHost: localhost\r\nContent-Length: 100\r\n" +
-      "X-Signature-Ed25519: \{headers["X-Signature-Ed25519"]}\r\n" +
-      "X-Signature-Timestamp: \{timestamp}\r\n\r\n{}",
+      @utf8.encode(
+        "POST / HTTP/1.1\r\nHost: localhost\r\nContent-Length: 100\r\n" +
+        "X-Signature-Ed25519: \{headers["X-Signature-Ed25519"]}\r\n" +
+        "X-Signature-Timestamp: \{timestamp}\r\n\r\n{}",
+      ),
     )
     socket.close()
     guard @async.with_timeout_opt(1000, () => warnings.get()) is Some(warning) else {
@@ -389,8 +391,8 @@ async test "interactions server answers 202, 504, and 500 and reports startup fa
 async fn raw_exchange(addr : String, head : String, body : String) -> String {
   let socket = @socket.Tcp::connect(@socket.Addr::parse(addr))
   defer socket.close()
-  socket.write(head + body)
-  guard @async.with_timeout_opt(2000, () => socket.read_all().text())
+  socket.write(@utf8.encode(head + body))
+  guard @async.with_timeout_opt(2000, () => @utf8.decode(socket.read_all()))
     is Some(reply) else {
     fail("the server kept the connection open")
   }
@@ -450,14 +452,13 @@ async test "interactions server bounds request bodies by size and read time" {
       "{}",
     )
     assert_true(stalled.has_prefix("HTTP/1.1 408 Request Timeout\r\n"))
-    // A rejected request with an oversized body is answered and closed rather
-    // than drained.
+    // The server rejects oversized framing before dispatching authentication.
     let unsigned = raw_exchange(
       server.addr(),
       "POST / HTTP/1.1\r\nHost: localhost\r\nContent-Length: \{over.length()}\r\n\r\n",
       over,
     )
-    assert_true(unsigned.has_prefix("HTTP/1.1 401 Unauthorized\r\n"))
+    assert_true(unsigned.has_prefix("HTTP/1.1 413 Content Too Large\r\n"))
   })
 }
 
@@ -476,7 +477,8 @@ async test "interactions server rejects non-positive body limits" {
       )
       |> ignore
     catch {
-      InvalidMaxBodyBytes(value~) => assert_eq(value, 0)
+      ListenError::Config(ServerConfigError::InvalidMaxBodyBytes(value~)) =>
+        assert_eq(value, 0)
       error => fail("unexpected startup error: \{Repr(error)}")
     } noraise {
       _ => fail("a zero body limit was accepted")
@@ -492,64 +494,13 @@ async test "interactions server rejects non-positive body limits" {
       )
       |> ignore
     catch {
-      InvalidBodyTimeoutMs(value~) => assert_eq(value, -1)
+      ListenError::Config(ServerConfigError::InvalidBodyTimeoutMs(value~)) =>
+        assert_eq(value, -1)
       error => fail("unexpected startup error: \{Repr(error)}")
     } noraise {
       _ => fail("a negative body timeout was accepted")
     }
   })
-}
-
-///|
-test "request_rejection checks the method, then the path, then the signature headers" {
-  let signed : @ahttp.Headers = {
-    "x-signature-ed25519": "aa",
-    "x-signature-timestamp": "1",
-  }
-  let cases : Array[(@ahttp.RequestMethod, String, @ahttp.Headers, Int32?)] = [
-    (Get, "/", signed, Some(405)),
-    (Get, "/x", signed, Some(405)),
-    (Post, "/x", signed, Some(404)),
-    (Post, "/", {}, Some(401)),
-    (Post, "/", { "x-signature-ed25519": "aa" }, Some(401)),
-    (Post, "/", { "x-signature-timestamp": "1" }, Some(401)),
-    (Post, "/", signed, None),
-    (
-      Post,
-      "/",
-      { "X-Signature-Ed25519": "aa", "X-SIGNATURE-TIMESTAMP": "1" },
-      None,
-    ),
-  ]
-  for case in cases {
-    let (meth, path, headers, expected) = case
-    let rejection = request_rejection({ meth, path, headers, }, "/")
-    assert_eq(rejection.map(response => response.status), expected)
-  }
-}
-
-///|
-test "settle_body keeps the connection only for a body read to its end" {
-  let unauthorized = Some(text_response(401, "missing signature"))
-  let not_allowed = Some(text_response(405, "method not allowed"))
-  let cases : Array[
-    (@app.InteractionHttpResponse?, BodyRead, Result[Bytes, (Int32, Bool)]),
-  ] = [
-    (None, Complete(b"{}"), Ok(b"{}")),
-    (None, TooLarge, Err((413, true))),
-    (None, TimedOut, Err((408, true))),
-    (unauthorized, Complete(b""), Err((401, false))),
-    (unauthorized, TooLarge, Err((401, true))),
-    (not_allowed, TimedOut, Err((405, true))),
-  ]
-  for case in cases {
-    let (rejection, body, expected) = case
-    let settled = settle_body(rejection, body).map_err(answer => {
-      let (response, close) = answer
-      (response.status, close)
-    })
-    assert_eq(settled, expected)
-  }
 }
 
 ///|
@@ -576,9 +527,10 @@ async test "interactions server closes idle connections and serves at most max_c
     // A connection that sends nothing, or a head that never ends, is closed
     // once the header timeout passes.
     assert_eq(raw_exchange(server.addr(), "", ""), "")
-    assert_eq(
-      raw_exchange(server.addr(), "POST / HTTP/1.1\r\nHost: localhost\r\n", ""),
-      "",
+    assert_true(
+      raw_exchange(server.addr(), "POST / HTTP/1.1\r\nHost: localhost\r\n", "").has_prefix(
+        "HTTP/1.1 408 Request Timeout\r\n",
+      ),
     )
     // With one slot, a second client is served only after the idle first
     // one has been closed.
@@ -625,12 +577,127 @@ async test "interactions server rejects non-positive connection limits" {
         )
         "started"
       } catch {
-        InvalidHeaderTimeoutMs(value~) => "header timeout \{value}"
-        InvalidMaxConnections(value~) => "max connections \{value}"
+        ListenError::Config(ServerConfigError::InvalidHeaderTimeoutMs(value~)) =>
+          "header timeout \{value}"
+        ListenError::Config(ServerConfigError::InvalidMaxConnections(value~)) =>
+          "max connections \{value}"
         error => "unexpected \{Repr(error)}"
       }
       outcomes.push(outcome)
     }
     assert_eq(outcomes, ["header timeout 0", "max connections 0"])
+  })
+}
+
+///|
+async test "interaction endpoint preserves rejection order and bounds signed raw bodies" {
+  let key = "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a"
+  let verifier = @verify.InteractionVerifier::new(key)
+  @async.with_task_group(group => {
+    let endpoint = @app.AppBuilder()
+      .build()
+      .serve(
+        group,
+        access=Token("test-token"),
+        application_id=@model.Id::parse("400000000000000001"),
+      )
+    let handler = interaction_handler(endpoint, verifier, max_body_bytes=2)
+    for
+      (request, status) in [
+        (@hmodel.Request::get("http://localhost/"), 405),
+        (@hmodel.Request::get("http://localhost/other"), 405),
+        (@hmodel.Request::post("http://localhost/other"), 404),
+        (@hmodel.Request::post("http://localhost/"), 401),
+        (
+          @hmodel.Request::post("http://localhost/").header(
+            "x-signature-ed25519", "aa",
+          ),
+          401,
+        ),
+        (
+          @hmodel.Request::post("http://localhost/")
+          .header("x-signature-ed25519", "aa")
+          .header("x-signature-timestamp", "1")
+          .body_bytes(b"{}"),
+          401,
+        ),
+        (
+          @hmodel.Request::post("http://localhost/")
+          .header("x-signature-ed25519", "aa")
+          .header("x-signature-timestamp", "1")
+          .body_bytes(b"too large"),
+          413,
+        ),
+      ] {
+      let response = handler(request)
+      defer response.close()
+      assert_eq(response.status, status)
+    }
+  })
+}
+
+///|
+async test "multipart response streams skip empty chunks and close without copying the payload" {
+  let body = response_body(Chunks([b"", b"first", b"", b"second", b""]))
+  assert_eq(body.length(), Some(11L))
+  guard body is Stream(owner) else { fail("expected multipart stream") }
+  let stream = owner.take()
+  assert_eq(stream.read_some(), Some(b"first"))
+  assert_eq(stream.read_some(), Some(b"second"))
+  assert_eq(stream.read_some(), None)
+  assert_eq(stream.read_some(), None)
+  stream.close()
+  let early = response_body(Chunks([b"one", b"two"]))
+  guard early is Stream(owner) else { fail("expected multipart stream") }
+  let stream = owner.take()
+  assert_eq(stream.read_some(), Some(b"one"))
+  stream.close()
+  assert_eq(stream.read_some(), None)
+}
+
+///|
+async test "interaction endpoint reports reply encoding failures as 500" {
+  let key = "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a"
+  let seed = @hex.decode(
+    "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60",
+  )
+  let verifier = @verify.InteractionVerifier::new(key)
+  let app = @app.AppBuilder()
+  app.command(
+    @app.slash(
+      name="broken",
+      description="Invalid attachment",
+      args=@interaction.Args::unit(),
+      handler=Immediate((_, _) => {
+        @app.CommandReply::message(files=[@dhttp.FileUpload("", b"payload")])
+      }),
+    ),
+  )
+  let text =
+    #|{"id":"500000000000000201","application_id":"400000000000000001","type":2,"token":"interaction-token","version":1,"user":{"id":"200000000000000001","username":"nelly","discriminator":"0","global_name":null,"avatar":null},"data":{"id":"600000000000000201","name":"broken","type":1}}
+  let body = @utf8.encode(text)
+  let signature = @hex.encode(@ed25519.sign(seed, b"1" + body))
+  @async.with_task_group(group => {
+    let endpoint = app
+      .build()
+      .serve(
+        group,
+        access=Token("test-token"),
+        application_id=@model.Id::parse("400000000000000001"),
+      )
+    let warnings = []
+    let handler = interaction_handler(endpoint, verifier, warn=warning => {
+      warnings.push(warning.to_string())
+    })
+    let response = handler(
+      @hmodel.Request::post("http://localhost/")
+      .header("x-signature-ed25519", signature)
+      .header("x-signature-timestamp", "1")
+      .body_bytes(body),
+    )
+    defer response.close()
+    assert_eq(response.status, 500)
+    assert_eq(warnings.length(), 1)
+    assert_true(warnings[0].contains("interaction HTTP request failed"))
   })
 }

@@ -1,15 +1,23 @@
 import {
-  "gaato/sdk-runtime/json" @sdkjson,
+  "gaato/mttp/jsonkit" @sdkjson,
   "gaato/discord/model",
   "gaato/discord/http" @dhttp,
   "gaato/discord/gateway",
   "gaato/discord/interaction",
-  "moonbitlang/async",
-  "moonbitlang/async/fs",
-  "moonbitlang/async/signal",
+  "moonbitlang/core/async",
+  "moonbitlang/core/async/fs",
+  "moonbitlang/core/async/signal",
   "moonbitlang/core/env",
 }
 
 supported_targets = "native"
 
 pkgtype(kind: "executable")
+
+options(
+  "allow-experimental-packages": [
+    "moonbitlang/core/async",
+    "moonbitlang/core/async/fs",
+    "moonbitlang/core/async/signal",
+  ],
+)

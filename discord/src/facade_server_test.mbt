@@ -15,7 +15,7 @@ async test "root facade serves HTTP interactions and rejects unsigned requests" 
         application_id=@model.Id::parse("400000000000000001"),
       )
       defer @async.protect_from_cancel(() => server.close())
-      let request = @ahttp.Client("http://\{server.addr()}")
+      let request = @ahttp.ClientConnection("http://\{server.addr()}")
       defer request.close()
       request.request(Post, "/")
       assert_eq(request.end_request().code, 401)

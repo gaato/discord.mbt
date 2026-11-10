@@ -23,21 +23,6 @@ fn base_headers(
 }
 
 ///|
-fn wire_method(meth : @ahttp.RequestMethod) -> String {
-  match meth {
-    Get => "GET"
-    Head => "HEAD"
-    Post => "POST"
-    Put => "PUT"
-    Delete => "DELETE"
-    Connect => "CONNECT"
-    Options => "OPTIONS"
-    Trace => "TRACE"
-    Patch => "PATCH"
-  }
-}
-
-///|
 /// The telemetry spelling of a wire method: `GET` is reported as `Get`.
 fn method_name(wire : String) -> String {
   match wire {
@@ -59,7 +44,7 @@ fn rate_limit_from_json(headers : @ghttp.Headers, body : Json) -> (Int64, Bool) 
   let retry_after_ms : Int64 = match body {
     { "retry_after": Number(seconds, ..), .. } => (seconds * 1000.0).to_int64()
     _ =>
-      match @ghttp.retry_after_ms(headers) {
+      match @runtime.retry_after_ms(headers) {
         Some(ms) => ms.to_int64()
         None => 1000L
       }
@@ -84,17 +69,17 @@ fn Client::wire_request(
   let route = request.route
   let headers = base_headers(self.token, route, request.audit_reason)
   headers.merge_in_place(request.headers)
-  let wire = @ghttp.Request::new(
-    wire_method(route.method_()),
+  let mut wire = @ghttp.Request::new(
+    route.method_(),
     self.base_url + self.base_path + route.path(),
   )
   for name, value in headers {
-    wire.headers.set(name, value)
+    wire = wire.set_header(name, value)
   }
   // Only the client decides that a call is safe to resend.
-  wire.headers.remove(REPLAY_SAFE_HEADER)
+  wire = { ..wire, headers: wire.headers.remove(REPLAY_SAFE_HEADER), }
   if is_replay_safe(route, request.body) {
-    wire.headers.set(REPLAY_SAFE_HEADER, "1")
+    wire = wire.attribute(@ghttp.replay_safe, true)
   }
   match (route, request.files, request.body) {
     (CreateGuildSticker(..), Some([file]), Some(json)) =>
@@ -118,7 +103,7 @@ fn Client::wire_request(
         ),
       )
     (_, _, Some(json)) => {
-      wire.headers.set("content-type", "application/json")
+      wire = wire.set_header("content-type", "application/json")
       { head: wire.body_bytes(@utf8.encode(json.stringify())), body: None, }
     }
     (_, _, None) => { head: wire, body: None, }
@@ -323,7 +308,7 @@ async fn Client::answer_offline(
   )
   if response.status == 429 {
     let (retry_after_ms, global) = rate_limit_from_json(
-      @ghttp.Headers::from_array(response.headers.to_array()),
+      @ghttp.Headers::of(response.headers.to_array()),
       response.body,
     )
     self.emit_telemetry(
@@ -338,23 +323,25 @@ async fn Client::answer_offline(
 /// What a failed runtime send means to the client: a status error is a
 /// response for middleware to see, and the rest raise. A 429 here has
 /// outlived its retries. A transport failure keeps its phase; a decoding or
-/// rate-limiter failure (`Config`) may come after the exchange, so it may
-/// have reached Discord (`Unknown`). `ClosedGate`'s refusal is the client's
-/// closure, reported as the check before the call reports it.
-fn settle_runtime_error(
-  error : @runtime.SdkError,
+/// rate-limiter failure may come after the exchange, so it may have reached
+/// Discord (`Unknown`). `ClosedGate`'s refusal is the client's closure,
+/// reported as the check before the call reports it.
+fn settle_response_failure(
+  error : @runtime.ResponseFailure,
 ) -> HttpResponse raise DiscordHttpError {
   match error {
-    Transport(Connect(message)) if message == CLOSED_MESSAGE =>
-      raise DiscordHttpError::Transport(phase=Pool, message=CLOSED_MESSAGE)
-    Status(status~, headers~, body~) => decode_response(status, headers, body)
-    RateLimited(headers~, body~, ..) => {
-      let (retry_after_ms, global) = rate_limit_details(headers, body)
+    @runtime.UnexpectedStatus(head, body~) if head.status == 429 => {
+      let (retry_after_ms, global) = rate_limit_details(head.headers, body)
       raise DiscordHttpError::RateLimited(retry_after_ms~, global~)
     }
-    Transport(error) => raise transport_failure(error)
-    Decode(message~, ..) | Config(message) =>
-      raise DiscordHttpError::Transport(phase=Unknown, message~)
+    @runtime.UnexpectedStatus(head, body~) =>
+      decode_response(head.status, head.headers, body)
+    @runtime.Deserialization(_, message~, ..) =>
+      raise DiscordHttpError::Deserialize(message~)
+    @runtime.ResponseFailure::.. =>
+      raise DiscordHttpError::Deserialize(
+        message="unsupported response failure",
+      )
   }
 }
 
@@ -371,15 +358,41 @@ async fn Client::request_online(
   request : HttpRequest,
 ) -> HttpResponse {
   let wire = self.wire_request(request)
-  let response = runtime.send(
-    wire.head,
-    bucket=request.route.bucket(),
-    global_exempt=request.route.is_interaction(),
-    body?=wire.body,
-  ) catch {
-    error => return settle_runtime_error(error)
+  let excerpt = Ref(b"")
+  let reader = @runtime.as_bytes().map(result => {
+    excerpt.val = match result {
+      Ok(_) => b""
+      Err(
+        @runtime.UnexpectedStatus(_, body~)
+        | @runtime.Deserialization(_, body~, ..)
+      ) => body
+      Err(_) => b""
+    }
+    result
+  })
+  let call = @runtime.RequestPlan::new(wire.head, reader)
+    .attribute(attempt_excerpt, excerpt)
+    .attribute(@runtime.rate_limit_bucket, request.route.bucket())
+    .attribute(@runtime.global_exempt, request.route.is_interaction())
+  let call = match wire.body {
+    Some(body) => call.body_fn(body)
+    None => call
   }
-  decode_response(response.status, response.headers, response.body)
+  let response = runtime.send(call, decide_retry=(attempt, context) => {
+    resend_decision(
+      attempt,
+      context,
+      max_retries=self.max_retries,
+      closed=self.closed_.val,
+    )
+  }) catch {
+    @ghttp.TransportError(..) as error => raise transport_failure(error)
+    error => raise error
+  }
+  match response.body {
+    Ok(body) => decode_response(response.status, response.headers, body)
+    Err(error) => settle_response_failure(error)
+  }
 }
 
 ///|

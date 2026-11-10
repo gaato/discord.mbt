@@ -1,12 +1,63 @@
 ///|
 /// A stateful, asynchronously fetched sequence of REST result pages: the
-/// `gaato/sdk-runtime` paginator with `DiscordHttpError` as its error.
+/// a wrapper around the `gaato/mttp/client` paginator that preserves
+/// `DiscordHttpError` as the raised error type.
 ///
 /// Call `next_page`, `each`, or `collect` sequentially; all three consume the
 /// same cursor state. Empty and short REST pages both mark the sequence as
 /// finished, and the items a `collect` did not use come back first from the
 /// next call.
-pub type Paginator[T] = @runtime.Paginator[T, DiscordHttpError]
+pub struct Paginator[T] {
+  priv inner : @runtime.Paginator[T, DiscordHttpError]
+}
+
+///|
+/// Fetch the next page, preserving Discord's typed error contract.
+pub async fn[T] Paginator::next_page(
+  self : Paginator[T],
+) -> Array[T]? raise DiscordHttpError {
+  let result = self.inner.next_page() catch {
+    error => raise Transport(phase=Unknown, message="\{Repr(error)}")
+  }
+  match result {
+    Ok(page) => page
+    Err(error) => raise error
+  }
+}
+
+///|
+/// Visit each remaining item sequentially.
+pub async fn[T] Paginator::each(
+  self : Paginator[T],
+  visit : async (T) -> Unit raise DiscordHttpError,
+) -> Unit raise DiscordHttpError {
+  let result = self.inner.each(item => {
+    Ok(visit(item)) catch {
+      error => Err(error)
+    }
+  }) catch {
+    error => raise Transport(phase=Unknown, message="\{Repr(error)}")
+  }
+  match result {
+    Ok(_) => ()
+    Err(error) => raise error
+  }
+}
+
+///|
+/// Collect at most `max` items, keeping the unused page tail for the next call.
+pub async fn[T] Paginator::collect(
+  self : Paginator[T],
+  max~ : Int32,
+) -> Array[T] raise DiscordHttpError {
+  let result = self.inner.collect(max~) catch {
+    error => raise Transport(phase=Unknown, message="\{Repr(error)}")
+  }
+  match result {
+    Ok(items) => items
+    Err(error) => raise error
+  }
+}
 
 ///|
 fn validate_page_limit(
@@ -85,14 +136,14 @@ fn[T, C] paginator_from_cursor(
 ) -> Paginator[T] {
   let cursor = Ref(initial_cursor)
   let finished = Ref(false)
-  @runtime.Paginator::new(() => {
+  let inner = @runtime.Paginator::new(() => {
     if finished.val {
-      return None
+      return Ok(None)
     }
-    let page = fetch(cursor.val, page_size)
+    let page = fetch(cursor.val, page_size) catch { error => return Err(error) }
     if page.is_empty() {
       finished.val = true
-      return None
+      return Ok(None)
     }
     let following = next_cursor(page)
     if page.length() < page_size || following is None {
@@ -100,8 +151,9 @@ fn[T, C] paginator_from_cursor(
     } else {
       cursor.val = following
     }
-    Some(page)
+    Ok(Some(page))
   })
+  { inner, }
 }
 
 ///|

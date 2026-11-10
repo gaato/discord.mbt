@@ -2,13 +2,20 @@
 // tests, so it stays out of the library's dependency graph.
 
 import {
-  "moonbitlang/async",
+  "moonbitlang/core/async",
   "moonbitlang/core/debug",
 }
 
 import {
-  "moonbitlang/async",
-  "moonbitlang/async/aqueue",
+  "moonbitlang/core/async",
+  "moonbitlang/core/async/aqueue",
 } for "wbtest"
 
 supported_targets = "js + native + wasm"
+
+options(
+  "allow-experimental-packages": [
+    "moonbitlang/core/async",
+    "moonbitlang/core/async/aqueue",
+  ],
+)

@@ -7,12 +7,12 @@ import {
   "gaato/discord/queue",
   "gaato/discord/framework",
   "gaato/discord/app",
-  "gaato/http-async" @transport,
-  "gaato/http/clock" @hclock,
+  "gaato/http-async/runtime" @transport,
+  "gaato/http/rt" @hclock,
   "moonbitlang/core/json",
-  "moonbitlang/async",
-  "moonbitlang/async/aqueue",
-  "moonbitlang/async/cond_var",
+  "moonbitlang/core/async",
+  "moonbitlang/core/async/aqueue",
+  "moonbitlang/core/async/cond_var",
   "moonbitlang/core/random",
 }
 
@@ -25,12 +25,12 @@ import {
 
 import {
   "gaato/discord/interaction",
-  "gaato/http-async/mock" @simclock,
+  "gaato/http-async/runtime" @transport,
   "gaato/discord/internal/gatewaysim",
   "moonbitlang/core/json",
   "moonbitlang/core/random",
   "moonbitlang/core/debug",
-  "moonbitlang/async/aqueue",
+  "moonbitlang/core/async/aqueue",
   "gaato/discord/internal/fuzz",
 } for "wbtest"
 
@@ -41,6 +41,11 @@ warnings = "-29"
 supported_targets = "js + native + wasm"
 
 options(
+  "allow-experimental-packages": [
+    "moonbitlang/core/async",
+    "moonbitlang/core/async/aqueue",
+    "moonbitlang/core/async/cond_var",
+  ],
   targets: {
     "runtime_fuzz_seeds_wbtest.mbt": [ "native", "wasm" ],
     "runtime_fuzz_seeds_js_wbtest.mbt": [ "js" ],

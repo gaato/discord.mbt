@@ -2,10 +2,10 @@ import {
   "gaato/discord/model",
   "gaato/discord/telemetry",
   "gaato/discord/queue",
-  "gaato/http-async" @transport,
-  "gaato/http/clock" @hclock,
-  "moonbitlang/async",
-  "moonbitlang/async/aqueue",
+  "gaato/http-async/runtime" @transport,
+  "gaato/http/rt" @hclock,
+  "moonbitlang/core/async",
+  "moonbitlang/core/async/aqueue",
   "gaato/discord/internal/websocket",
   "moonbitlang/core/json",
   "moonbitlang/core/random",
@@ -16,25 +16,25 @@ import {
 }
 
 import {
-  "moonbitlang/async",
-  "moonbitlang/async/aqueue",
+  "moonbitlang/core/async",
+  "moonbitlang/core/async/aqueue",
   "moonbitlang/core/json",
   "gaato/discord/model",
   "gaato/discord/telemetry",
   "gaato/discord/queue",
-  "gaato/http-async/mock" @simclock,
+  "gaato/http-async/runtime" @transport,
   "gaato/discord/internal/gatewaysim",
-  "gaato/http/clock" @hclock,
+  "gaato/http/rt" @hclock,
   "moonbitlang/core/random",
   "moonbitlang/core/debug",
-  "moonbitlang/async/http" @ahttp,
-  "moonbitlang/async/socket",
-  "moonbitlang/async/websocket" @asyncws,
+  "moonbitlang/core/async/http" @ahttp,
+  "moonbitlang/core/async/socket",
+  "moonbitlang/core/async/websocket" @asyncws,
   "gaato/discord/internal/fuzz",
 } for "test"
 
 import {
-  "gaato/http-async/mock" @simclock,
+  "gaato/http-async/runtime" @transport,
 } for "wbtest"
 
 // The gateway, including zlib-stream and zstd-stream compression, runs on native, JavaScript, and moonrun Wasm.
@@ -44,6 +44,13 @@ warnings = "-29"
 supported_targets = "js + native + wasm"
 
 options(
+  "allow-experimental-packages": [
+    "moonbitlang/core/async",
+    "moonbitlang/core/async/aqueue",
+    "moonbitlang/core/async/http",
+    "moonbitlang/core/async/socket",
+    "moonbitlang/core/async/websocket",
+  ],
   targets: {
     "command_limit.mbt": [ "js", "native", "wasm" ],
     "command_limit_wbtest.mbt": [ "js", "native", "wasm" ],

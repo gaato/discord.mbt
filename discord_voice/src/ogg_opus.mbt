@@ -220,7 +220,7 @@ fn OggPacketReader::has_incomplete_input(self : OggPacketReader) -> Bool {
 /// frames; this demuxer does not decode or resample them.
 pub struct OggOpusSource {
   priv reader : OggPacketReader
-  priv input : &@io.Reader?
+  priv input : &@io.BinaryReader?
   priv channels_ : Int32
   priv pre_skip_ : Int32
 }
@@ -295,7 +295,9 @@ pub fn OggOpusSource::from_bytes(
 ///   }
 /// }
 /// ```
-pub async fn OggOpusSource::from_reader(input : &@io.Reader) -> OggOpusSource {
+pub async fn OggOpusSource::from_reader(
+  input : &@io.BinaryReader,
+) -> OggOpusSource {
   let reader = OggPacketReader::new()
   let mut head : Bytes? = None
   let mut tags : Bytes? = None
@@ -311,7 +313,7 @@ pub async fn OggOpusSource::from_reader(input : &@io.Reader) -> OggOpusSource {
     if tags is Some(_) {
       break
     }
-    match input.read_some(max_len=8192) {
+    match read_ogg_chunk(input) {
       Some(chunk) => reader.push(chunk)
       None => break
     }
@@ -345,7 +347,7 @@ pub impl AudioSource for OggOpusSource with fn next_frame(self) {
       return Some(packet)
     }
     guard self.input is Some(input) else { return None }
-    match input.read_some(max_len=8192) {
+    match read_ogg_chunk(input) {
       Some(chunk) => self.reader.push(chunk)
       None => {
         if self.reader.has_incomplete_input() {
@@ -354,6 +356,17 @@ pub impl AudioSource for OggOpusSource with fn next_frame(self) {
         return None
       }
     }
+  }
+}
+
+///|
+async fn read_ogg_chunk(input : &@io.BinaryReader) -> Bytes? {
+  let buffer = FixedArray::make(8192, b'\x00')
+  let count = input.read_into(buffer)
+  if count == 0 {
+    None
+  } else {
+    Some(Bytes::from_array(buffer[:count]))
   }
 }
 

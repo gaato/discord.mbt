@@ -54,7 +54,7 @@ Idempotent calls are `GET`, `HEAD`, `PUT`, `DELETE`, `OPTIONS`, and a message
 create with a `nonce` and `enforce_nonce: true`. A `POST` or `PATCH` that may
 have reached Discord is otherwise raised at once rather than risk a second
 effect. Resends stop after `max_retries` (default 4); the backoff is
-`gaato/sdk-runtime`'s conservative one (500 ms doubling up to 30 s, within
+`gaato/mttp/client`'s conservative one (500 ms doubling up to 30 s, within
 ±20 %), and each attempt is bounded by `request_timeout_ms` (default 30 s).
 
 **Whose 429 is it?** A 429 is Discord's when it has an `X-RateLimit-Scope`
@@ -88,14 +88,18 @@ one client.
 
 ## Implementation
 
-- `discord/src/http/retry.mbt`: `discord_retry_rule` is a `gaato/http/retry`
+- `discord/src/http/retry.mbt`: `discord_retry_rule` is a `gaato/mttp/client/retry`
   `RetryRule`, and `resend_decision` adds the Discord-specific inputs (the
   429 wait and whether the call is idempotent).
 - The resend decision cannot see a multipart body, which is assembled just
   before sending. `wire_request` therefore marks a `CreateMessage` whose body
-  has a `nonce` and `enforce_nonce: true` with the internal header
-  `x-discord-mbt-replay-safe`; the client removes it before the transport, so
-  it never reaches Discord, and removes it from callers' requests first.
-- `Timeouts` from `gaato/sdk-runtime` wrap only a transport the caller
-  supplies. The default `AsyncTransport` times each phase itself, so it can
-  tell a timeout before sending (`Pool`, `Dial`) from one after.
+  has a `nonce` and `enforce_nonce: true` with the typed `gaato/http.replay_safe`
+  request attribute. It is metadata and is never sent as an HTTP header.
+- The mttp client's `timeout_ms` wraps every backend on the injected clock,
+  including the default `AsyncBackend`. An outer timeout has phase `Unknown`;
+  an earlier backend failure preserves its phase, including unsent `Pool`
+  and `Dial` failures. AsyncBackend's pool and phase clocks cannot currently
+  be injected through its constructor.
+- The limiter releases the exact `Admission` returned by acquire, including
+  on failure or cancellation. If response heads arrived before a body failure,
+  release and telemetry retain their status and headers.

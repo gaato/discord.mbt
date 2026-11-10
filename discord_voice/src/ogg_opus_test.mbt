@@ -146,8 +146,9 @@ async fn read_pipe_fixture(
   fixture : Bytes,
   chunk_size : Int32,
 ) -> (Int32, Int32, Array[Bytes]) {
+  let result = Ref(None)
   @async.with_task_group(group => {
-    let (read_end, write_end) = @pipe.pipe()
+    let (read_end, write_end) = @io.pipe()
     defer read_end.close()
     group.spawn_bg(() => {
       defer write_end.close()
@@ -159,8 +160,11 @@ async fn read_pipe_fixture(
       }
     })
     let source = @voice.OggOpusSource::from_reader(read_end)
-    (source.channels(), source.pre_skip(), collect_ogg_source(source))
+    result.val = Some(
+      (source.channels(), source.pre_skip(), collect_ogg_source(source)),
+    )
   })
+  result.val.unwrap()
 }
 
 ///|
@@ -194,7 +198,7 @@ async test "Ogg Opus reader rejects a stream truncated mid-page" {
   let complete = writer.take_output()
   let truncated = complete[:complete.length() - 1].to_owned()
   @async.with_task_group(group => {
-    let (read_end, write_end) = @pipe.pipe()
+    let (read_end, write_end) = @io.pipe()
     defer read_end.close()
     group.spawn_bg(() => {
       defer write_end.close()

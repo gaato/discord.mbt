@@ -40,7 +40,10 @@ impl VoiceTransport for VoiceWsTransport with fn recv(self) {
       )
     error => raise VoiceTransportClosed(code=None, reason="\{Repr(error)}")
   }
-  let data = read_bounded(chunk => message.read(chunk), MAX_VOICE_MESSAGE_BYTES) catch {
+  let data = read_bounded(
+    chunk => message.read_into(chunk),
+    MAX_VOICE_MESSAGE_BYTES,
+  ) catch {
     error if @async.is_being_cancelled() => raise error
     error => raise VoiceTransportClosed(code=None, reason="\{Repr(error)}")
   }

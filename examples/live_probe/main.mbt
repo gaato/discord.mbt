@@ -378,7 +378,7 @@ async fn main {
     "live_probe_payloads.jsonl",
   )
   let body = p.payloads.join("\n") + "\n"
-  @fs.write_file(log_path, body, create_mode=CreateOrTruncate) catch {
+  @fs.write_text(log_path, body, create_mode=CreateOrTruncate) catch {
     err => println("payload log write failed: \{Repr(err)}")
   }
   println("payload log: \{log_path} (\{p.payloads.length()} calls)")

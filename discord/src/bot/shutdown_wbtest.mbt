@@ -29,7 +29,7 @@ async fn shutdown_with_running_handler(
   grace_ms : Int32,
   finish_after_ms : Int32?,
 ) -> (Int64, Array[String]) {
-  let clock = @simclock.VirtualClock()
+  let clock = @transport.VirtualClock()
   let transport = @gatewaysim.FakeTransport(clock~)
   let app = @app.AppBuilder()
   let warnings : Array[String] = []
@@ -69,7 +69,7 @@ async fn shutdown_with_running_handler(
       bot_bot.run()
       returned_at.val = Some(clock.now_unix_ms())
     })
-    clock.settle()
+    clock.settle(until=() => transport.recv_in_flight.val)
     transport.put(BOT_HELLO)
     transport.put(bot_ready_frame())
     let ctx = ready_contexts.get()
@@ -77,8 +77,12 @@ async fn shutdown_with_running_handler(
     started.get()
     shutdown_at.val = clock.now_unix_ms()
     ctx.shutdown()
-    while returned_at.val is None && clock.advance_to_next() {
-      ()
+    clock.settle(until=() => {
+      returned_at.val is Some(_) || clock.pending().contains(grace_ms)
+    })
+    if returned_at.val is None {
+      assert_true(clock.advance_to_next())
+      clock.settle(until=() => returned_at.val is Some(_))
     }
     assert_eq(transport.close_calls.val, 1)
     assert_eq(transport.close_code.val, Some(1000))
@@ -110,7 +114,7 @@ async test "shutdown cancels handlers still running after the grace period" {
 /// default randomness is seeded from the system.
 fn BotCore::use_test_time(
   self : BotCore,
-  clock : @simclock.VirtualClock,
+  clock : @transport.VirtualClock,
   rand~ : @random.Rand = @random.Rand::chacha8(),
 ) -> Unit {
   self.clock_.val = clock
@@ -119,7 +123,7 @@ fn BotCore::use_test_time(
 
 ///|
 async test "shutdown from a handler starts the grace once every shard has closed" {
-  let clock = @simclock.VirtualClock()
+  let clock = @transport.VirtualClock()
   let first = @gatewaysim.FakeTransport(clock~)
   let second = @gatewaysim.FakeTransport(clock~)
   // The second shard takes longer to close than the grace allows.
@@ -167,7 +171,7 @@ async test "shutdown from a handler starts the grace once every shard has closed
     })
     first.put(MANAGER_HELLO)
     second.put(MANAGER_HELLO)
-    ignore(identify_times(clock, [first, second]))
+    ignore(identify_times(clock, [first, second], first_wave=2))
     for transport in [first, second] {
       guard sent_identify(transport) is Some(identify) else {
         fail("expected identify")
@@ -175,11 +179,20 @@ async test "shutdown from a handler starts the grace once every shard has closed
       let (shard_id, _) = identify_shard(identify)
       transport.put(manager_ready_frame(shard_id, 2))
     }
-    clock.settle()
+    clock.settle(until=() => {
+      ready_ctx.val is Some(_) &&
+      bot_bot.core.running_shards_.val.all(owner => owner.context is Some(_))
+    })
     first.put(command_frame(2, "500000000000000001"))
-    while !returned.val && clock.advance_to_next() {
-      ()
-    }
+    // shutdown() returns after closing every shard; observe the slow close
+    // itself before advancing, rather than waiting for its caller to return.
+    clock.settle(until=() => {
+      first.close_calls.val == 1 &&
+      second.close_calls.val == 1 &&
+      clock.pending().contains(3000)
+    })
+    clock.advance(3000)
+    clock.settle(until=() => returned.val)
   })
   assert_true(returned.val)
   assert_true(stopped.val)
@@ -192,7 +205,7 @@ async test "shutdown from a handler starts the grace once every shard has closed
 /// Handlers that run until the test releases them by id, recording when each
 /// started.
 priv struct HeldHandlers {
-  clock : @simclock.VirtualClock
+  clock : @transport.VirtualClock
   started : Array[(String, Int64)]
   releases : Map[String, @aqueue.Queue[Unit]]
 }
@@ -219,7 +232,7 @@ async test "handlers that have not started when shutdown is requested never star
   // of one: message 1 runs, message 2 waits for a permit, message 3 waits in
   // the backlog; command 1 runs and command 2 waits for a permit. After the
   // shutdown request only message 1 and command 1 may run.
-  let clock = @simclock.VirtualClock()
+  let clock = @transport.VirtualClock()
   let transport = @gatewaysim.FakeTransport(clock~)
   let held = HeldHandlers::{ clock, started: [], releases: Map([]), }
   let app = @app.AppBuilder(max_in_flight=1)
@@ -265,26 +278,33 @@ async test "handlers that have not started when shutdown is requested never star
       bot_bot.run()
       returned_at.val = Some(clock.now_unix_ms())
     })
-    clock.settle()
+    clock.settle(until=() => transport.recv_in_flight.val)
     transport.put(BOT_HELLO)
     transport.put(bot_ready_frame())
     let ctx = ready_contexts.get()
-    clock.settle()
+    clock.settle(until=() => {
+      transport.received.val == transport.enqueued.val &&
+      transport.recv_in_flight.val
+    })
     transport.put(message_delete_frame(2, "700000000000000001"))
     transport.put(message_delete_frame(3, "700000000000000002"))
-    clock.settle()
+    clock.settle(until=() => {
+      held.started.length() == 1 && telemetry.length() >= 3
+    })
     transport.put(message_delete_frame(4, "700000000000000003"))
     transport.put(command_frame(5, "500000000000000001"))
-    clock.settle()
+    clock.settle(until=() => held.started.length() == 2)
     transport.put(command_frame(6, "500000000000000002"))
-    clock.settle()
+    clock.settle(until=() => telemetry.length() == 5)
     assert_eq(held.started.map(entry => entry.0), [
       "message 700000000000000001", "command 500000000000000001",
     ])
     clock.advance(100)
     let shutdown_at = clock.now_unix_ms()
     ctx.shutdown()
-    clock.settle()
+    clock.settle(until=() => {
+      warnings.length() == 2 && clock.pending().contains(5000)
+    })
     // The waiting interaction gives up at once; the running handlers finish.
     assert_eq(warnings, [
       "event handlers are 1 events behind; dropping KInteractionCreate and later events until they catch up",
@@ -293,7 +313,7 @@ async test "handlers that have not started when shutdown is requested never star
     clock.advance(100)
     held.release("message 700000000000000001")
     held.release("command 500000000000000001")
-    clock.settle()
+    clock.settle(until=() => returned_at.val is Some(_))
     assert_eq(returned_at.val, Some(shutdown_at + 100L))
   })
   assert_eq(held.started.map(entry => entry.0), [
@@ -326,7 +346,7 @@ fn event_telemetry(bot : BotBuilder) -> Array[String] {
 
 ///|
 async test "event middleware running at shutdown gets the grace, and the events behind it are discarded" {
-  let clock = @simclock.VirtualClock()
+  let clock = @transport.VirtualClock()
   let transport = @gatewaysim.FakeTransport(clock~)
   let app = @app.AppBuilder()
   let bot = BotBuilder(
@@ -364,7 +384,7 @@ async test "event middleware running at shutdown gets the grace, and the events 
       bot_bot.run()
       returned_at.val = Some(clock.now_unix_ms())
     })
-    clock.settle()
+    clock.settle(until=() => transport.recv_in_flight.val)
     transport.put(BOT_HELLO)
     transport.put(bot_ready_frame())
     let ctx = ready_contexts.get()
@@ -373,14 +393,17 @@ async test "event middleware running at shutdown gets the grace, and the events 
     // The runner is inside the middleware for message 1; these wait.
     transport.put(message_delete_frame(3, "700000000000000002"))
     transport.put(message_delete_frame(4, "700000000000000003"))
-    clock.settle()
+    clock.settle(until=() => {
+      transport.received.val == transport.enqueued.val &&
+      transport.recv_in_flight.val
+    })
     let shutdown_at = clock.now_unix_ms()
     ctx.shutdown()
-    clock.settle()
+    clock.settle(until=() => clock.pending().contains(5000))
     assert_eq(returned_at.val, None)
     clock.advance(1000)
     release.put(())
-    clock.settle()
+    clock.settle(until=() => returned_at.val is Some(_))
     assert_eq(returned_at.val, Some(shutdown_at + 1000L))
   })
   assert_true(finished.val)
@@ -395,7 +418,7 @@ async test "event middleware running at shutdown gets the grace, and the events 
 
 ///|
 async test "events the run loop reads after the shutdown request reach no handler" {
-  let clock = @simclock.VirtualClock()
+  let clock = @transport.VirtualClock()
   let transport = @gatewaysim.FakeTransport(clock~)
   let client = @dhttp.Client("test-token")
   defer client.close()
@@ -431,18 +454,21 @@ async test "events the run loop reads after the shutdown request reach no handle
       bot_bot.run()
       returned.val = true
     })
-    clock.settle()
+    clock.settle(until=() => transport.recv_in_flight.val)
     transport.put(BOT_HELLO)
     transport.put(bot_ready_frame())
     syncing.get()
     transport.put(message_delete_frame(2, "700000000000000001"))
-    clock.settle()
+    clock.settle(until=() => {
+      transport.received.val == transport.enqueued.val &&
+      transport.recv_in_flight.val
+    })
     guard bot_bot.core.running_shards_.val is [{ context: Some(ctx), .. }] else {
       fail("expected the shard's context")
     }
     ctx.shutdown()
     release.put(())
-    clock.settle()
+    clock.settle(until=() => returned.val)
     assert_true(returned.val)
   })
   assert_eq(handled, [])

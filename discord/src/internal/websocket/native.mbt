@@ -12,7 +12,7 @@ pub using @upstream {
 pub async fn connect(
   url : String,
   headers? : Map[@http.CaseInsensitiveString, String],
-  proxy? : @http.Client,
+  proxy? : @http.ClientConnection,
 ) -> Conn {
   @upstream.connect(url, headers?, proxy?)
 }
@@ -24,7 +24,7 @@ pub async fn connect(
 pub async fn read_message(message : Message, max_bytes~ : Int32) -> Bytes? {
   let data = @buffer.Buffer()
   let chunk = FixedArray::make(65536, b'\x00')
-  while message.read(chunk) is n && n > 0 {
+  while message.read_into(chunk) is n && n > 0 {
     if data.length() + n > max_bytes {
       return None
     }

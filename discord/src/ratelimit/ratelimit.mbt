@@ -1,7 +1,7 @@
 ///|
-/// REST rate limiting through sdk-runtime's requester-driven `RateLimiter`
-/// contract. Each completed acquire is paired with a release carrying response
-/// headers, or status 0 when no response arrived. `rate_limiter()` configures
+/// REST rate limiting through mttp's requester-driven `RateLimiter`
+/// contract. Each completed acquire returns an Admission paired with a release
+/// carrying response headers, or status 0 when no response heads arrived. `rate_limiter()` configures
 /// `WindowLimiter` for Discord; `coordinator` offers the cross-process
 /// `RemoteRateLimiter` through the same contract.
 ///
@@ -28,10 +28,10 @@
 pub fn rate_limiter(
   global_limit~ : Int32 = 50,
   clock~ : &@clock.Clock = @transport.AsyncClock::new(),
-) -> @runtime.WindowLimiter {
-  @runtime.WindowLimiter::new(
+) -> @limits.WindowLimiter {
+  @limits.WindowLimiter::new(
     clock,
-    @runtime.rate_limit_headers(
+    @limits.rate_limit_headers(
       remaining="x-ratelimit-remaining",
       reset_after_seconds="x-ratelimit-reset-after",
     ),
@@ -105,7 +105,7 @@ fn major_parameter(bucket : String) -> String? {
 fn discord_scope(
   _status : Int32,
   headers : @http.Headers,
-) -> @runtime.LimitScope {
+) -> @limits.LimitScope {
   let scope = headers
     .get("x-ratelimit-scope")
     .map(value => value.trim().to_lower())

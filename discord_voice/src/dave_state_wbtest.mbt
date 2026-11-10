@@ -698,8 +698,8 @@ impl VoiceTransport for DaveConnectionTransport with fn close(self, code~) {
 }
 
 ///|
-fn[X] dave_test_connection(
-  group : @async.TaskGroup[X],
+fn dave_test_connection(
+  group : @async.TaskGroup,
   transport : DaveConnectionTransport,
   telemetry : Array[VoiceTelemetry],
 ) -> VoiceConnection raise {
@@ -719,7 +719,7 @@ fn[X] dave_test_connection(
     connector=_ => (transport : &VoiceTransport),
     receive=false,
     telemetry=event => telemetry.push(event),
-    clock=@simclock.VirtualClock(),
+    clock=@transport.VirtualClock(),
   )
 }
 
@@ -916,7 +916,7 @@ async test "voice playback reports DAVE drops and source failures and replaces s
   let udp = DaveConnectionUdp::{ sent: Queue(kind=Unbounded), }
   let first = DaveConnectionAudio()
   let replacement = DaveConnectionAudio()
-  let clock = @simclock.VirtualClock()
+  let clock = @transport.VirtualClock()
   @async.with_task_group(group => {
     let connection = VoiceConnection::start(
       group,
@@ -958,7 +958,7 @@ async test "voice playback reports DAVE drops and source failures and replaces s
     }
     // the dropped frame still takes its 20ms slot before the next is read;
     // behind it wait the UDP keepalive and the gateway heartbeat
-    clock.settle()
+    clock.settle(until=() => clock.pending() == [20, 5000, 60000])
     assert_eq(first.requests.try_get(), None)
     assert_eq(clock.pending(), [20, 5000, 60000])
     clock.advance(20)

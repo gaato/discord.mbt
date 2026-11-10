@@ -25,7 +25,7 @@ async fn main {
       @model.Intents::direct_messages() |
       @model.Intents::message_content()
     @async.with_timeout_opt(run_seconds * 1000, () => {
-      @async.with_task_group((group : @async.TaskGroup[Unit]) => {
+      @async.with_task_group((group : @async.TaskGroup) => {
         let shard = @gateway.Shard::start(group, token~, intents~, gateway_url~)
         for ;; {
           match shard.next() {

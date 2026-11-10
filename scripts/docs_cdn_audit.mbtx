@@ -1,7 +1,7 @@
 ----
 import {
-  "moonbitlang/async@0.22.7",
-  "moonbitlang/async@0.22.7/fs",
+  "moonbitlang/core/async",
+  "moonbitlang/core/async/fs",
   "moonbitlang/core/env",
 }
 ----
@@ -299,9 +299,9 @@ async fn main {
       "usage: moon run scripts/docs_cdn_audit.mbtx REFERENCE.mdx [--self-test]",
     )
   }
-  let text = @fs.read_file(args[1]).text()
-  let allow = @fs.read_file("scripts/docs_cdn_audit.allow").text()
-  let source = @fs.read_file("discord/src/util/cdn.mbt").text()
+  let text = @fs.read_text(args[1])
+  let allow = @fs.read_text("scripts/docs_cdn_audit.allow")
+  let source = @fs.read_text("discord/src/util/cdn.mbt")
   audit(text, allow, source)
   if args.length() == 3 {
     if args[2] != "--self-test" {

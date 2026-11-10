@@ -38,7 +38,7 @@ test("Vercel fetch adapter passes deferred work to waitUntil", async () => {
     assert.equal(pending.length, 2);
     await Promise.all(pending);
     assert.deepEqual(failures, []);
-    assert.deepEqual(calls, [{
+    assert.deepEqual(calls.map(call => ({ ...call, url: new URL(call.url).href })), [{
       url: "https://discord.com/api/v10/webhooks/400000000000000001/interaction-token/messages/@original",
       method: "PATCH",
     }]);

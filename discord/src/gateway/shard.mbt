@@ -213,8 +213,8 @@ async fn Shard::finish_transport(
 /// `compression` asks Discord for transport compression; `compress=true` is
 /// the older spelling of `compression=ZlibStream`, and `compression` wins
 /// when both are given. `inflater_factory` replaces the decoder built for it.
-pub fn[X] Shard::start(
-  group : @async.TaskGroup[X],
+pub fn Shard::start(
+  group : @async.TaskGroup,
   token~ : String,
   intents~ : @model.Intents,
   capabilities~ : @model.GatewayCapabilities = @model.GatewayCapabilities::none(),

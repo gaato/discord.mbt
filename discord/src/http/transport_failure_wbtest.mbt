@@ -1,55 +1,79 @@
 ///|
 test "transport_failure keeps the phase and agrees on what was not sent" {
-  let cases : Array[(@ghttp.HttpError, DiscordHttpError, Bool)] = [
+  let cases : Array[(@ghttp.TransportError, DiscordHttpError, Bool)] = [
     (
-      Connect("refused"),
+      @ghttp.TransportError(kind=Connect, phase=Dial, detail="refused"),
       Transport(phase=Dial, message="could not connect: refused"),
       true,
     ),
     (
-      Proxy(status=407, message="auth"),
+      @ghttp.TransportError(kind=Proxy(status=407), phase=Dial, detail="auth"),
       Transport(phase=Dial, message="proxy refused the tunnel with 407: auth"),
       true,
     ),
-    (Timeout(phase=Pool, ms=5), Timeout(phase=Pool, timeout_ms=5), true),
-    (Timeout(phase=Dial, ms=5), Timeout(phase=Dial, timeout_ms=5), true),
-    (Timeout(phase=Write, ms=5), Timeout(phase=Write, timeout_ms=5), false),
-    (Timeout(phase=Head, ms=5), Timeout(phase=Head, timeout_ms=5), false),
-    (Timeout(phase=Body, ms=5), Timeout(phase=Body, timeout_ms=5), false),
-    (Timeout(phase=Unknown, ms=5), Timeout(phase=Unknown, timeout_ms=5), false),
     (
-      Network(phase=Write, message="reset"),
+      @ghttp.TransportError(kind=Timeout(ms=5), phase=Pool, detail="timeout"),
+      Timeout(phase=Pool, timeout_ms=5),
+      true,
+    ),
+    (
+      @ghttp.TransportError(kind=Timeout(ms=5), phase=Dial, detail="timeout"),
+      Timeout(phase=Dial, timeout_ms=5),
+      true,
+    ),
+    (
+      @ghttp.TransportError(kind=Timeout(ms=5), phase=Write, detail="timeout"),
+      Timeout(phase=Write, timeout_ms=5),
+      false,
+    ),
+    (
+      @ghttp.TransportError(kind=Timeout(ms=5), phase=Head, detail="timeout"),
+      Timeout(phase=Head, timeout_ms=5),
+      false,
+    ),
+    (
+      @ghttp.TransportError(kind=Timeout(ms=5), phase=Body, detail="timeout"),
+      Timeout(phase=Body, timeout_ms=5),
+      false,
+    ),
+    (
+      @ghttp.TransportError(kind=Timeout(ms=5), phase=Unknown, detail="timeout"),
+      Timeout(phase=Unknown, timeout_ms=5),
+      false,
+    ),
+    (
+      @ghttp.TransportError(kind=Network, phase=Write, detail="reset"),
       Transport(phase=Write, message="reset"),
       false,
     ),
     (
-      Network(phase=Head, message="eof"),
+      @ghttp.TransportError(kind=Network, phase=Head, detail="eof"),
       Transport(phase=Head, message="eof"),
       false,
     ),
     (
-      Network(phase=Body, message="eof"),
+      @ghttp.TransportError(kind=Network, phase=Body, detail="eof"),
       Transport(phase=Body, message="eof"),
       false,
     ),
     (
-      Network(phase=Unknown, message="fetch failed"),
+      @ghttp.TransportError(kind=Network, phase=Unknown, detail="fetch failed"),
       Transport(phase=Unknown, message="fetch failed"),
       false,
     ),
-    // a network failure claiming a pre-connection phase proves nothing
+    // The Backend contract makes Pool and Dial failures provably unsent.
     (
-      Network(phase=Dial, message="odd"),
-      Transport(phase=Unknown, message="odd"),
-      false,
+      @ghttp.TransportError(kind=Network, phase=Dial, detail="odd"),
+      Transport(phase=Dial, message="odd"),
+      true,
     ),
     (
-      Network(phase=Pool, message="odd"),
-      Transport(phase=Unknown, message="odd"),
-      false,
+      @ghttp.TransportError(kind=Network, phase=Pool, detail="odd"),
+      Transport(phase=Pool, message="odd"),
+      true,
     ),
     (
-      Protocol("garbled"),
+      @ghttp.TransportError(kind=Protocol, phase=Unknown, detail="garbled"),
       Transport(phase=Unknown, message="protocol error: garbled"),
       false,
     ),

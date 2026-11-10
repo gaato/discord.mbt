@@ -27,11 +27,10 @@ artifact, and requires it to load so transport AEAD tests cannot skip.
 `--from-json` only rechecks a stored report against the ledger; it does not
 repeat either native bootstrap or runtime load check.
 
-Snapshot at the last full measurement (2026-10-18, after the robustness
-work): **94.9 %** across the library (9617/10133 coverage points; http
-97.8 %, bot 97.8 %, model 95.9 %, framework 95.5 %, interaction 95.1 %,
-cache 93.7 %, app 93.0 %, endpoint_http 92.6 %, gateway 91.8 %,
-coordinator 91.3 %, voice 87.7 %).
+Snapshot after the HTTP/core-async migration (2026-11-10): **95.3 %** across
+the library (10211/10717 coverage points; http 97.7 %, bot 98.0 %, model
+96.0 %, framework 95.6 %, interaction 95.1 %, cache 96.4 %, app 93.3 %,
+endpoint_http 95.2 %, gateway 92.3 %, coordinator 92.3 %, voice 88.8 %).
 
 ## Policy
 
@@ -45,7 +44,7 @@ Must be covered by tests:
   machines behind trait seams (fakes exist for gateway and voice transports);
 - every `raise` arm reachable through the public API;
 - wire boundaries via `Client::offline` handlers (route and body) or a
-  scripted `@ghttp.Transport` wbtest (`wire_test_client`: exact wire request,
+  scripted `@ghttp.Backend` wbtest (`wire_test_client`: exact wire request,
   retries, limiter pairing, telemetry), or a loopback `@ahttp.Server` where
   the real connection path itself is the subject (multipart request arms).
 
@@ -58,7 +57,7 @@ Accepted as uncovered (needs a ledger row):
   shard_manager). The gateway shard, command limiter, and identify queue
   take a `clock~`, and the voice gateway, voice connection, and voice client
   a `clock?` (a
-  `gaato/http/clock` `Clock`, driven in tests by `gaato/http-async/mock`'s
+  `gaato/http/rt` `Clock`, driven in tests by `gaato/http-async/runtime`'s
   `VirtualClock`; `scripts/clock_guard.mbtx` keeps library code off the real
   clock), plus `rand?`; their backoff/heartbeat/keepalive
   cadences, and for voice also playback pacing, receive backoff and
@@ -84,11 +83,11 @@ Live socket, websocket, and FFI adapters (live-verified; no unit seam):
 | discord_voice/src/shim_ffi.mbt | 3 | Extern-C glue whose arms depend on host library state. |
 | discord_voice/src/crypto.mbt | 5 | Shim error-status translation paths; round-trips and geometry checks are covered with the shim loaded. |
 | discord/src/http/client.mbt | 2 | Default warning sinks (`println`) of the online and offline constructors. |
-| discord/src/http/request.mbt | 1 | The `Api` re-raise for middleware that raises it itself; the send loop, its retry rule, request validation, and every error mapping are covered by table and fake-wire contract tests. |
-| discord/src/endpoint_http/endpoint_http.mbt | 6 | Arms that need a broken connection or a cancellation mid-failure: a response write that fails because the peer is gone, cancellation of a failed request or write, and a server that stops after startup. Startup failure, 202/504 replies, and a request whose body fails mid-read are tested. |
-| discord/src/internal/fuzz/schedule.mbt | 1 | The cancellation re-raise arm of the one helper every run goes through: async 0.22 cancellation does not pass through ordinary catches, so it only catches an error raised while being cancelled; a test cancels each stage (both full runs, shrinking, and the final re-run). |
+| discord/src/http/request.mbt | 3 | The `Api` re-raise for middleware that raises it itself, plus two non-exhaustive `ResponseFailure` fallbacks: the current mttp `as_bytes` reader produces only UnexpectedStatus or Deserialization errors. The send loop, retry rule, validation, and current error mappings are covered by table and fake-wire tests. |
+| discord/src/endpoint_http/endpoint_http.mbt | 2 | Cancellation of the listener and a server failure after startup. Startup failures, response writes, bounded bodies/heads, and 202/504 replies are exercised over loopback; the HTTP engine now owns socket-error cleanup. |
+| discord/src/internal/fuzz/schedule.mbt | 1 | The cancellation re-raise arm of the one helper every run goes through: core/async cancellation does not pass through ordinary catches, so it only catches an error raised while being cancelled; a test cancels each stage (both full runs, shrinking, and the final re-run). |
 | discord/src/internal/gatewaysim/fake_transport.mbt | 2 | The test fake's flags recording a close during a send or receive, which a correct shard never triggers; tests assert they stay false. |
-| discord/src/coordinator/remote.mbt | 17 | Reconnecting remote clients against a real coordinator socket; for the cooldown store, the cancellation-during-connect arms (its outage, deadline, gate-wait, and malformed-response paths are covered); the cancellation arm of the ping watchdog, which runs only when a request completes while its ping is in flight. |
+| discord/src/coordinator/remote.mbt | 15 | Reconnecting remote clients against a real coordinator socket; for the cooldown store, the cancellation-during-connect arms (its outage, deadline, gate-wait, and malformed-response paths are covered); the cancellation arm of the ping watchdog, which runs only when a request completes while its ping is in flight. |
 | discord/src/coordinator/server.mbt | 6 | Config validation arms, and per-connection cleanup on real disconnects. |
 
 Voice session state machine (the transport and session flow is verified live
@@ -98,8 +97,8 @@ paths remain ledgered):
 
 | File | Budget | Reason |
 | --- | --- | --- |
-| discord_voice/src/connection.mbt | 18 | Impossible alternate negotiation errors, shim-loader failure while the shim is required, opener/discovery cancellation catches, the cancellation catches of `while_open` and of the wait for a new voice server, event-pump and receiver queue teardown, an unemitted `ConnectFailed` case, the pump's non-resuming `Disconnected` arm (the voice gateway reports one only as it is closed, after the pump has stopped for the teardown), the teardown check after session establishment's DAVE sends, and unreachable session-state/typed-error fallbacks. Negotiation, discovery, session, DAVE-control, source-replacement, receiver, and lifecycle-recovery failures are tested through the UDP/voice/DAVE seams. |
-| discord_voice/src/gateway.mbt | 8 | Protected-shutdown and event-queue teardown catches, stale-transport and non-returning-loop fallbacks, and read-loop cancellation propagation. Disconnected sends, malformed Hello/frames, the Hello sequence, send failures, and protected connector cleanup are tested; backoff, heartbeat, and ACK-latency timing run on a `VirtualClock`. |
+| discord_voice/src/connection.mbt | 19 | Impossible alternate negotiation errors, shim-loader failure while the shim is required, opener/discovery cancellation catches, the cancellation catches of `while_open` and of the wait for a new voice server, event-pump and receiver queue teardown, an unemitted `ConnectFailed` case, the pump's non-resuming `Disconnected` arm (the voice gateway reports one only as it is closed, after the pump has stopped for the teardown), the teardown check after session establishment's DAVE sends, and unreachable session-state/typed-error fallbacks. Negotiation, discovery, session, DAVE-control, source-replacement, receiver, and lifecycle-recovery failures are tested through the UDP/voice/DAVE seams. |
+| discord_voice/src/gateway.mbt | 7 | Protected-shutdown and event-queue teardown catches, stale-transport and non-returning-loop fallbacks, and read-loop cancellation propagation. Disconnected sends, malformed Hello/frames, the Hello sequence, send failures, and protected connector cleanup are tested; backoff, heartbeat, and ACK-latency timing run on a `VirtualClock`. |
 | discord_voice/src/dave.mbt | 52 | DAVE/MLS transitions that need a second member and real libdave group state. |
 | discord_voice/src/audio.mbt | 5 | `DaveUnavailable`/`DaveInternal` encrypt-drop telemetry arms, and the DAVE-less frame arm that only direct `run_send_loop` callers reach (a connection holds a machine once its session is up). Frame and silence pacing, stop, and `DaveInvalid` drops are tested on a `VirtualClock`. |
 | discord_voice/src/subscribe.mbt | 2 | Re-raise arms of the timed and untimed reads for a queue error other than closure, which the stream never raises. Silence end, close during either read, and disconnect are tested. |
@@ -113,7 +112,7 @@ run; the gateway and voice loops are additionally tested on injected clocks):
 
 | File | Budget | Reason |
 | --- | --- | --- |
-| discord/src/gateway/shard.mbt | 15 | Protected-shutdown and event-queue teardown catches (including the shared fatal close before connecting, reached by a failing inflater factory or a size limit below 1), stale-transport and normal-return fallbacks, and read-loop cancellation re-raise plumbing (async 0.22 cancellation does not pass through ordinary catches). Malformed Hello/frame, compression-mismatch, connector/backoff, the default connector, and disconnected-send arms are tested. |
+| discord/src/gateway/shard.mbt | 15 | Protected-shutdown and event-queue teardown catches (including the shared fatal close before connecting, reached by a failing inflater factory or a size limit below 1), stale-transport and normal-return fallbacks, and read-loop cancellation re-raise plumbing (core/async cancellation does not pass through ordinary catches). Malformed Hello/frame, compression-mismatch, connector/backoff, the default connector, and disconnected-send arms are tested. |
 | discord/src/gateway/platform_native.mbt | 2 | Two OS-specific Identify property arms unavailable on Linux. |
 | discord/src/http/handles_channel.mbt | 3 | `with_typing` refresh-failure arm sits behind the real 8-second cadence. |
 | discord/src/bot/middleware.mbt | 1 | Middleware chain cancellation arm. |
@@ -127,6 +126,8 @@ Defensive arms unreachable by construction:
 | discord/src/util/cdn.mbt | 1 | The `StickerFormatType::..` arm that `#non_exhaustive` requires outside `@model`; every current format is matched by name. |
 | discord/src/bot/session.mbt | 1 | Abort if an already decoded READY fails its own JSON round trip; snapshot independence and serialization are tested. |
 | discord/src/http/multipart.mbt | 2 | `attachments_json` always returns an array, and encoder errors other than a boundary collision, which `validate_files` rules out before encoding. |
+| discord/src/http/retry.mbt | 1 | Non-exhaustive `ResponseFailure` fallback; both variants currently produced by mttp carry the body excerpt. |
+| discord/src/endpoint_http/handler.mbt | 2 | The security-input encoder is required by mttp but unused by server decoding, and the unknown-atom decode-failure fallback cannot occur with the two signature headers and raw-body inputs declared here. Signature failures, size limits, malformed bodies and response encoding failures are covered. |
 | discord/src/model/interaction.mbt | 4 | Fallbacks behind emitters that always produce objects. |
 | discord/src/model/component.mbt | 8 | Non-object fallback plus emit arms for component kinds Discord never sends in the covered contexts. |
 | discord/src/model/message.mbt | 3 | Timestamp-parse fallback for values the Timestamp decoder already rejects. |

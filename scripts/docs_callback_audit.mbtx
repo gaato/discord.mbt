@@ -1,7 +1,7 @@
 ----
 import {
-  "moonbitlang/async@0.22.7",
-  "moonbitlang/async@0.22.7/fs",
+  "moonbitlang/core/async",
+  "moonbitlang/core/async/fs",
   "moonbitlang/core/env",
 }
 ----
@@ -279,15 +279,15 @@ async fn main {
   let sources : Map[String, String] = Map([])
   for surface in surfaces() {
     if !docs.contains(surface.doc) {
-      docs[surface.doc] = @fs.read_file("\{args[1]}/\{surface.doc}").text()
+      docs[surface.doc] = @fs.read_text("\{args[1]}/\{surface.doc}")
     }
     for builder in surface.builders {
       if !sources.contains(builder.0) {
-        sources[builder.0] = @fs.read_file(builder.0).text()
+        sources[builder.0] = @fs.read_text(builder.0)
       }
     }
   }
-  let allow = @fs.read_file("scripts/docs_callback_audit.allow").text()
+  let allow = @fs.read_text("scripts/docs_callback_audit.allow")
   audit(docs, sources, allow)
   if self_test {
     let callback_doc = "developers/interactions/receiving-and-responding.mdx"

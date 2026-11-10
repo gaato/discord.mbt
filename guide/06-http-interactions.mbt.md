@@ -12,7 +12,7 @@ The caller owns the task group that keeps deferred handlers alive:
 ///|
 async fn dispatch_interaction(
   app : @discord.App,
-  group : @async.TaskGroup[Unit],
+  group : @async.TaskGroup,
   token : String,
   body : Json,
 ) -> Json? {
@@ -28,7 +28,7 @@ async fn dispatch_interaction(
 ///|
 async fn serve_with_existing_client(
   app : @discord.App,
-  group : @async.TaskGroup[Unit],
+  group : @async.TaskGroup,
   client : @dhttp.Client,
   application_id : @model.ApplicationId,
 ) -> @discord.InteractionEndpoint {

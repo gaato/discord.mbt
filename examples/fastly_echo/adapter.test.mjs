@@ -38,7 +38,7 @@ test("Fastly registers lifetime synchronously and waits for deferred work", asyn
     const response = await responding;
     assert.equal(await response.text(), '{"type":5,"data":{}}');
     await lifetime;
-    assert.deepEqual(calls, [{
+    assert.deepEqual(calls.map(call => ({ ...call, url: new URL(call.url).href })), [{
       url: "https://discord.com/api/v10/webhooks/400000000000000001/interaction-token/messages/@original",
       method: "PATCH",
     }]);

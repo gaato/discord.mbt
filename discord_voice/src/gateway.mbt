@@ -158,8 +158,8 @@ async fn VoiceGateway::finish_transport(
 /// a supported maximum explicitly to enable it. `clock` times the heartbeat
 /// and the reconnect backoff and stamps heartbeat nonces.
 #doc(hidden)
-pub fn[X] VoiceGateway::start(
-  group : @async.TaskGroup[X],
+pub fn VoiceGateway::start(
+  group : @async.TaskGroup,
   server_id~ : String,
   user_id~ : String,
   session_id~ : String,

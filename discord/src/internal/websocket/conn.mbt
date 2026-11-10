@@ -3,6 +3,7 @@ struct Conn {
   handle : WsHandle
   mut closed : WebSocketError?
   mut pending : (MessageKind, @buffer.Buffer)?
+  writer : @io.BinaryWriterController
 }
 
 ///|
@@ -18,9 +19,9 @@ pub struct Message {
 }
 
 ///|
-/// The whole message. Text is returned as a `String`, binary as `Bytes`.
+/// The whole message as bytes; text messages are encoded as UTF-8.
 #warnings("-unused_async")
-pub async fn Message::read_all(self : Message) -> &@io.Data {
+pub async fn Message::read_all(self : Message) -> Bytes {
   match self.payload {
     Text(text) => utf8_encode(text)
     Binary(data) => data
@@ -44,7 +45,7 @@ pub async fn connect(
   ) catch {
     error => raise WebSocketError::InvalidHandshake("\{Repr(error)}")
   }
-  { handle, closed: None, pending: None, }
+  { handle, closed: None, pending: None, writer: @io.BinaryWriterController(), }
 }
 
 ///|
@@ -115,7 +116,12 @@ pub fn Conn::start_message(self : Conn, kind : MessageKind) -> Unit {
 
 ///|
 #warnings("-unused_async")
-pub impl @io.Writer for Conn with fn write_once(self, buf, offset~, len~) {
+pub impl @io.BinaryWriterImpl for Conn with fn raw_write_impl(
+  self,
+  buf,
+  offset~,
+  len~,
+) {
   guard self.pending is Some((_, pending)) else {
     raise WebSocketError::ProtocolError("no message started")
   }
@@ -124,7 +130,15 @@ pub impl @io.Writer for Conn with fn write_once(self, buf, offset~, len~) {
 }
 
 ///|
-pub extend Conn with @io.Writer::{write, write_reader}
+pub impl @io.BinaryWriterImpl for Conn with fn get_controller(self) {
+  self.writer
+}
+
+///|
+pub impl @io.BinaryWriter for Conn
+
+///|
+pub extend Conn with @io.BinaryWriter::{write, write_reader}
 
 ///|
 pub async fn Conn::end_message(self : Conn) -> Unit {
@@ -171,7 +185,7 @@ pub fn Conn::close(self : Conn) -> Unit {
 /// The whole message, or `None` when it exceeds `max_bytes`. The platform has
 /// already received it; the limit keeps an oversized one from going further.
 pub async fn read_message(message : Message, max_bytes~ : Int32) -> Bytes? {
-  let data = message.read_all().binary()
+  let data = message.read_all()
   if data.length() > max_bytes {
     None
   } else {

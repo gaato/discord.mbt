@@ -1,17 +1,18 @@
 import {
-  "gaato/sdk-runtime/json" @sdkjson,
+  "gaato/mttp/jsonkit" @sdkjson,
   "gaato/discord/model",
   "gaato/discord/telemetry",
   "gaato/discord/ratelimit",
-  "gaato/http/clock" @hclock,
+  "gaato/http/rt" @hclock,
   "gaato/http" @ghttp,
-  "gaato/http/retry",
-  "gaato/http-async" @transport,
-  "gaato/sdk-runtime" @runtime,
-  "gaato/http/multipart",
-  "gaato/http/random",
-  "moonbitlang/async",
-  "moonbitlang/async/http" @ahttp,
+  "gaato/mttp/client/retry",
+  "gaato/http-async/runtime" @transport,
+  "gaato/mttp/client" @runtime,
+  "gaato/mttp/multipart",
+  "gaato/http-async/backend",
+  "gaato/http/h1client",
+  "moonbitlang/core/env",
+  "moonbitlang/core/async",
   "moonbitlang/core/json",
   "moonbitlang/core/debug",
   "moonbitlang/core/encoding/utf8",
@@ -24,9 +25,14 @@ import {
 } for "test"
 
 import {
-  "gaato/http-async/mock" @simclock,
-  "moonbitlang/async/socket",
+  "gaato/http-async/runtime" @transport,
   "moonbitlang/core/json",
+} for "wbtest"
+
+#cfg(not(target="js"))
+import {
+  "moonbitlang/core/async/http" @ahttp,
+  "moonbitlang/core/async/socket",
 } for "wbtest"
 
 // REST transport uses async HTTP on native, JavaScript, and moonrun Wasm.
@@ -34,5 +40,11 @@ import {
 supported_targets = "js + native + wasm"
 
 options(
+  "allow-experimental-packages": [
+    "gaato/http/h1client",
+    "moonbitlang/core/async",
+    "moonbitlang/core/async/http",
+    "moonbitlang/core/async/socket",
+  ],
   targets: { "loopback_server_wbtest.mbt": [ "native", "wasm" ] },
 )

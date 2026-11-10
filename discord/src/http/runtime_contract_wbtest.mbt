@@ -1,5 +1,5 @@
 ///|
-/// The contracts the send loop keeps now that `gaato/sdk-runtime` runs it:
+/// The contracts the send loop keeps now that `gaato/mttp/client` runs it:
 /// Discord's retry rule, where a 429's delay and scope come from, how limiter
 /// and deadline failures surface, and the wire shape of uploads.
 
@@ -117,10 +117,11 @@ priv struct RejectingLimiter {
 ///|
 impl @runtime.RateLimiter for RejectingLimiter with fn acquire(
   _self,
-  _bucket,
+  bucket,
   global_exempt~,
 ) {
   ignore(global_exempt)
+  @runtime.Admission::new(bucket, sequence=0L)
 }
 
 ///|
@@ -149,10 +150,8 @@ async test "a rate limiter whose release fails surfaces as a transport error" {
   )
   defer client.close()
   try client.request(GetGateway) catch {
-    Transport(phase=Unknown, message~) => {
-      assert_true(message.contains("rate limiter release failed"))
+    Transport(phase=Unknown, message~) =>
       assert_true(message.contains("ReleaseRejected"))
-    }
     error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected the release failure")
@@ -184,7 +183,7 @@ async test "files upload as payload_json then files[n] on the wire" {
     _ => fail("expected the fake response to fail message decoding")
   }
   assert_true(
-    captured_type.val.has_prefix("multipart/form-data; boundary=mbt-sdk-"),
+    captured_type.val.has_prefix("multipart/form-data; boundary=mttp-"),
   )
   let body = captured_body.val
   let payload = body.find("name=\"payload_json\"").unwrap_or(-1)
@@ -199,24 +198,18 @@ async test "files upload as payload_json then files[n] on the wire" {
 ///|
 /// A transport that fails or stalls in a chosen way on both methods.
 priv struct ScriptedFailure {
-  fail_with : @ghttp.HttpError?
+  fail_with : @ghttp.TransportError?
 }
 
 ///|
-impl @ghttp.Transport for ScriptedFailure with fn send(self, _request) {
+impl @ghttp.Backend for ScriptedFailure with fn send(self, _request, _options) {
   match self.fail_with {
     Some(error) => raise error
     None => {
       @async.sleep(60000)
-      { status: 200, headers: @ghttp.Headers::new(), body: b"", }
+      @ghttp.Response::new(200)
     }
   }
-}
-
-///|
-impl @ghttp.Transport for ScriptedFailure with fn send_stream(self, request) {
-  ignore(@ghttp.Transport::send(self, request))
-  raise @ghttp.HttpError::Protocol("unreachable")
 }
 
 ///|
@@ -224,19 +217,31 @@ async test "a supplied transport keeps its errors and gets the attempt deadline"
   let request = @ghttp.Request::get("https://discord.com/api/v10/gateway")
   for
     error in [
-      @ghttp.HttpError::Connect("refused"),
-      @ghttp.HttpError::Protocol("garbled"),
+      @ghttp.TransportError(kind=Connect, phase=Dial, detail="refused"),
+      @ghttp.TransportError(kind=Protocol, phase=Unknown, detail="garbled"),
     ] {
-    let transport = @transport.DeadlineTransport::new(
+    let client = @runtime.Client::new(
       ScriptedFailure::{ fail_with: Some(error), },
+      @transport.AsyncClock::new(),
       timeout_ms=1000,
+      timer=@transport.ClockTimer::new(),
     )
     for streaming in [false, true] {
       let raised = try {
         if streaming {
-          ignore(@ghttp.Transport::send_stream(transport, request))
+          ignore(
+            client.send(
+              @runtime.request(request).response(
+                @runtime.as_stream((_head, body) => {
+                  @ghttp.read_bounded(body, 1024)
+                }),
+              ),
+            ),
+          )
         } else {
-          ignore(@ghttp.Transport::send(transport, request))
+          ignore(
+            client.send(@runtime.request(request).response(@runtime.as_bytes())),
+          )
         }
         "no error"
       } catch {
@@ -245,19 +250,31 @@ async test "a supplied transport keeps its errors and gets the attempt deadline"
       assert_eq(raised, @debug.to_string(error))
     }
   }
-  let stalled = @transport.DeadlineTransport::new(
+  let stalled = @runtime.Client::new(
     ScriptedFailure::{ fail_with: None, },
+    @transport.AsyncClock::new(),
     timeout_ms=10,
+    timer=@transport.ClockTimer::new(),
   )
   for streaming in [false, true] {
     try {
       if streaming {
-        ignore(@ghttp.Transport::send_stream(stalled, request))
+        ignore(
+          stalled.send(
+            @runtime.request(request).response(
+              @runtime.as_stream((_head, body) => {
+                @ghttp.read_bounded(body, 1024)
+              }),
+            ),
+          ),
+        )
       } else {
-        ignore(@ghttp.Transport::send(stalled, request))
+        ignore(
+          stalled.send(@runtime.request(request).response(@runtime.as_bytes())),
+        )
       }
     } catch {
-      @ghttp.HttpError::Timeout(ms~, ..) => inspect(ms, content="10")
+      @ghttp.TransportError(kind=Timeout(ms~), ..) => inspect(ms, content="10")
       error => fail("unexpected error: \{Repr(error)}")
     } noraise {
       _ => fail("expected the deadline")
@@ -267,7 +284,7 @@ async test "a supplied transport keeps its errors and gets the attempt deadline"
 
 ///|
 test "wire methods and their telemetry names" {
-  let methods : Array[@ahttp.RequestMethod] = [
+  let methods : Array[@ghttp.Method] = [
     Get,
     Head,
     Post,
@@ -279,12 +296,12 @@ test "wire methods and their telemetry names" {
     Patch,
   ]
   inspect(
-    methods.map(wire_method).join(" "),
+    methods.map(verb => verb.to_string()).join(" "),
     content="GET HEAD POST PUT DELETE CONNECT OPTIONS TRACE PATCH",
   )
   // Online telemetry names a method the way the offline path always has.
   for verb in methods {
-    assert_eq(method_name(wire_method(verb)), @debug.to_string(verb))
+    assert_eq(method_name(verb.to_string()), @debug.to_string(verb))
   }
   inspect(method_name(""), content="")
 }

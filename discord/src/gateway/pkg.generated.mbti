@@ -5,8 +5,8 @@ import {
   "gaato/discord/model",
   "gaato/discord/queue",
   "gaato/discord/telemetry",
-  "gaato/http/clock",
-  "moonbitlang/async",
+  "gaato/http/rt",
+  "moonbitlang/core/async",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
   "moonbitlang/core/random",
@@ -41,7 +41,7 @@ pub(all) suberror TransportClosed {
 pub struct CommandLimiter {
   // private fields
 }
-pub fn CommandLimiter::CommandLimiter(limit? : Int32, window_ms? : Int32, clock? : &@clock.Clock) -> Self
+pub fn CommandLimiter::CommandLimiter(limit? : Int32, window_ms? : Int32, clock? : &@rt.Clock) -> Self
 pub async fn CommandLimiter::acquire(Self) -> Unit
 
 #non_exhaustive
@@ -85,7 +85,7 @@ pub async fn Shard::request_guild_members(Self, @model.RequestGuildMembers) -> U
 pub async fn Shard::request_soundboard_sounds(Self, @model.RequestSoundboardSounds) -> Unit
 pub async fn Shard::send(Self, @json.Json) -> Unit
 pub fn Shard::session(Self) -> Session?
-pub fn[X] Shard::start(@async.TaskGroup[X], token~ : String, intents~ : @model.Intents, capabilities? : @model.GatewayCapabilities, gateway_url? : String, shard_id? : Int32, shard_count? : Int32, identify_queue? : &@queue.IdentifyQueue, event_filter? : (@model.EventKind) -> Bool, connector? : async (String) -> &GatewayTransport, compress? : Bool, compression? : GatewayCompression, inflater_factory? : () -> &Inflater raise, max_message_bytes? : Int32, queue_capacity? : Int32, telemetry? : (@telemetry.TelemetryEvent) -> Unit, clock? : &@clock.Clock, rand? : @random.Rand, session? : Session, presence? : @model.UpdatePresence) -> Self
+pub fn Shard::start(@async.TaskGroup, token~ : String, intents~ : @model.Intents, capabilities? : @model.GatewayCapabilities, gateway_url? : String, shard_id? : Int32, shard_count? : Int32, identify_queue? : &@queue.IdentifyQueue, event_filter? : (@model.EventKind) -> Bool, connector? : async (String) -> &GatewayTransport, compress? : Bool, compression? : GatewayCompression, inflater_factory? : () -> &Inflater raise, max_message_bytes? : Int32, queue_capacity? : Int32, telemetry? : (@telemetry.TelemetryEvent) -> Unit, clock? : &@rt.Clock, rand? : @random.Rand, session? : Session, presence? : @model.UpdatePresence) -> Self
 pub fn Shard::state(Self) -> ShardState
 pub async fn Shard::update_presence(Self, @model.UpdatePresence) -> Unit
 pub async fn Shard::update_voice_state(Self, @model.UpdateVoiceState) -> Unit

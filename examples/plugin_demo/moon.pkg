@@ -2,11 +2,18 @@ import {
   "gaato/discord",
   "gaato/discord/model",
   "local/discord_examples/plugin_demo/feedback",
-  "moonbitlang/async",
-  "moonbitlang/async/signal",
+  "moonbitlang/core/async",
+  "moonbitlang/core/async/signal",
   "moonbitlang/core/env",
 }
 
 supported_targets = "native"
 
 pkgtype(kind: "executable")
+
+options(
+  "allow-experimental-packages": [
+    "moonbitlang/core/async",
+    "moonbitlang/core/async/signal",
+  ],
+)

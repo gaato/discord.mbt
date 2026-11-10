@@ -1,6 +1,6 @@
 ///|
 /// HTTP methods accepted by Discord REST routes.
-pub using @ahttp {type RequestMethod}
+pub using @ghttp {type Method}
 
 ///|
 /// Invalid metadata supplied while constructing a custom REST route.
@@ -18,7 +18,7 @@ pub(all) suberror CustomRouteError {
 /// identity ids) are held raw and percent-encoded by `Route::path`.
 pub(all) enum Route {
   Custom(
-    request_method~ : @ahttp.RequestMethod,
+    request_method~ : @ghttp.Method,
     path~ : String,
     bucket_key~ : String,
     is_interaction~ : Bool,
@@ -531,7 +531,7 @@ pub(all) enum Route {
 /// }
 /// ```
 pub fn Route::custom(
-  request_method~ : @ahttp.RequestMethod,
+  request_method~ : @ghttp.Method,
   path~ : String,
   bucket? : String,
   is_interaction~ : Bool = false,
@@ -558,7 +558,7 @@ pub fn Route::custom(
 
 ///|
 /// The HTTP method this route is requested with.
-pub fn Route::method_(self : Route) -> @ahttp.RequestMethod {
+pub fn Route::method_(self : Route) -> @ghttp.Method {
   match self {
     Custom(request_method~, ..) => request_method
     GetGateway

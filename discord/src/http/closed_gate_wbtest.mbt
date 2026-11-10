@@ -15,18 +15,25 @@ async test "ClosedGate passes exchanges through until closed, then refuses them"
   let outcome = async fn(stream : Bool) -> String {
     try {
       if stream {
-        ignore(@ghttp.Transport::send_stream(gate, request))
+        ignore(
+          @ghttp.Backend::send(gate, request, {
+            timeout_ms: None,
+            body: Stream(idle_ms=None),
+          }),
+        )
       } else {
-        ignore(@ghttp.Transport::send(gate, request))
+        ignore(
+          @ghttp.Backend::send(gate, request, @ghttp.SendOptions::default()),
+        )
       }
       "sent"
     } catch {
-      @ghttp.HttpError::Connect(message) => "refused: \{message}"
+      @ghttp.TransportError(kind=Closed, detail~, ..) => "refused: \{detail}"
       error => "inner: \{@debug.to_string(error)}"
     }
   }
   assert_eq(outcome(false), "sent")
-  assert_eq(outcome(true), "inner: Protocol(\"FakeWire does not stream\")")
+  assert_eq(outcome(true), "sent")
   closed.val = true
   assert_eq(outcome(false), "refused: client is closed")
   assert_eq(outcome(true), "refused: client is closed")

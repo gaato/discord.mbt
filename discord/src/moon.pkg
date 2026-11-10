@@ -12,9 +12,9 @@ import {
 }
 
 import {
-  "moonbitlang/async",
+  "moonbitlang/core/async",
   "gaato/discord/model",
-  "moonbitlang/async/http" @ahttp,
+  "moonbitlang/core/async/http" @ahttp,
 } for "test"
 
 // Target-specific facade imports are unused on the other targets.
@@ -24,6 +24,10 @@ warnings = "-29"
 supported_targets = "js + native + wasm"
 
 options(
+  "allow-experimental-packages": [
+    "moonbitlang/core/async",
+    "moonbitlang/core/async/http",
+  ],
   targets: {
     "overview.mbt.md": [ "native" ],
     "facade_gateway.mbt": [ "native", "js", "wasm" ],

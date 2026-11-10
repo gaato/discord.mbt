@@ -51,7 +51,8 @@ try {
   await Promise.all(background);
   assert(calls.length === 1, "deferred REST count differs");
   assert(calls[0].method === "PATCH", "deferred REST method differs");
-  assert(calls[0].url === "https://discord.com/api/v10/webhooks/400000000000000001/interaction-token/messages/@original", "deferred REST URL differs");
+  // The HTTP stack may spell the default HTTPS port explicitly.
+  assert(new URL(calls[0].url).href === "https://discord.com/api/v10/webhooks/400000000000000001/interaction-token/messages/@original", "deferred REST URL differs");
   assert(JSON.parse(calls[0].body).content === "Finished in the background.", "deferred REST payload differs");
 } finally {
   globalThis.fetch = originalFetch;

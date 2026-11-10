@@ -6,6 +6,8 @@ releases (0.x → 0.y) may contain breaking changes; patch releases do not.
 
 ## [Unreleased]
 
+## [0.4.0]
+
 ### Changed
 
 - Built and tested with MoonBit 0.10.20. The generated `.mbti` interface
@@ -13,12 +15,17 @@ releases (0.x → 0.y) may contain breaking changes; patch releases do not.
   derived traits as a `#derive(...)` attribute above each declaration, and
   qualify `Json` as `@json.Json`; these are the same types, and no signature
   changed.
-- **Builds against `moonbitlang/async` 0.22.7**, which uses
-  `moonbitlang/core/async` and so needs MoonBit 0.10.20 or later.
-- **Builds against `gaato/discord` 0.14.0**, which decides whether a 429 is
-  Discord's from its headers alone (since 0.12.1), and against
-  `gaato/http` 0.5.0 and `gaato/http-async` 0.5.0. Voice itself is
-  unchanged.
+- **Uses `moonbitlang/core/async` directly**, including websocket, UDP,
+  process and binary I/O. Remove the old `moonbitlang/async` dependency and
+  opt into the exact experimental packages imported by each `moon.pkg`.
+  `VoiceConnection::start` now accepts the non-generic core `TaskGroup`.
+- **Uses `gaato/discord` 0.15.0, `gaato/http` 0.6.0 and
+  `gaato/http-async` 0.6.0.** `VoiceClient` and `VoiceConnection::start`
+  take `gaato/http/rt.Clock` instead of `gaato/http/clock.Clock`.
+- **`OggOpusSource::from_reader` takes
+  `moonbitlang/core/async/io.BinaryReader`.** Replace old `Reader`
+  implementations with the core binary-reader interface. Incremental Ogg
+  parsing and its packet-size limit are preserved.
 
 ### Fixed
 

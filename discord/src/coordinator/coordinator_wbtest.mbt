@@ -21,43 +21,55 @@ async test "coordinator serializes identify and HTTP limits across clients" {
     let second_admitted_at = @clock.now_ms()
     assert_true(second_admitted_at - first_admitted_at >= 25L)
 
-    remote_limiter.acquire("POST:/channels/1/messages", global_exempt=false)
-    remote_limiter.release(
+    let admission_remote_limiter__POST__channels_1_messages_ = remote_limiter.acquire(
       "POST:/channels/1/messages",
+      global_exempt=false,
+    )
+    remote_limiter.release(
+      admission_remote_limiter__POST__channels_1_messages_,
       status=200,
-      headers=@http.Headers::from_array([
+      headers=@http.Headers::of([
         ("x-ratelimit-remaining", "0"),
         ("x-ratelimit-reset-after", "0.04"),
       ]),
     )
     let rate_wait_started = @clock.now_ms()
-    remote_limiter.acquire("POST:/channels/1/messages", global_exempt=false)
+    let admission_remote_limiter__POST__channels_1_messages_ = remote_limiter.acquire(
+      "POST:/channels/1/messages",
+      global_exempt=false,
+    )
     let rate_wait = @clock.now_ms() - rate_wait_started
     remote_limiter.release(
-      "POST:/channels/1/messages",
+      admission_remote_limiter__POST__channels_1_messages_,
       status=200,
-      headers=@http.Headers::from_array([("x-ratelimit-remaining", "1")]),
+      headers=@http.Headers::of([("x-ratelimit-remaining", "1")]),
     )
     assert_true(rate_wait >= 25L)
 
     let concurrent_bucket = "POST:/channels/2/messages"
-    remote_limiter.acquire(concurrent_bucket, global_exempt=false)
+    let admission_remote_limiter_concurrent_bucket = remote_limiter.acquire(
+      concurrent_bucket,
+      global_exempt=false,
+    )
     let blocked_acquire = group.spawn(() => {
       let started = @clock.now_ms()
-      remote_limiter.acquire(concurrent_bucket, global_exempt=false)
+      let admission_remote_limiter_concurrent_bucket = remote_limiter.acquire(
+        concurrent_bucket,
+        global_exempt=false,
+      )
       let waited = @clock.now_ms() - started
       remote_limiter.release(
-        concurrent_bucket,
+        admission_remote_limiter_concurrent_bucket,
         status=200,
-        headers=@http.Headers::from_array([("x-ratelimit-remaining", "1")]),
+        headers=@http.Headers::of([("x-ratelimit-remaining", "1")]),
       )
       waited
     })
     @async.sleep(10)
     remote_limiter.release(
-      concurrent_bucket,
+      admission_remote_limiter_concurrent_bucket,
       status=200,
-      headers=@http.Headers::from_array([("x-ratelimit-remaining", "1")]),
+      headers=@http.Headers::of([("x-ratelimit-remaining", "1")]),
     )
     assert_true(blocked_acquire.wait() >= 8L)
 
@@ -131,17 +143,17 @@ async test "coordinator EOF releases a held HTTP bucket" {
     defer @async.protect_from_cancel(() => first.close())
     defer @async.protect_from_cancel(() => second.close())
     let bucket = "POST:/channels/9/messages"
-    @runtime.RateLimiter::acquire(first, bucket, global_exempt=true)
+    ignore(@runtime.RateLimiter::acquire(first, bucket, global_exempt=true))
     first.acquire_client.close()
 
-    @async.with_timeout(1000, () => {
+    let admission = @async.with_timeout(1000, () => {
       @runtime.RateLimiter::acquire(second, bucket, global_exempt=true)
     })
     @runtime.RateLimiter::release(
       second,
-      bucket,
+      admission,
       status=0,
-      headers=@http.Headers::new(),
+      headers=@http.Headers::empty(),
     )
   })
 }
@@ -318,7 +330,7 @@ async fn with_silent_coordinator(
     group.spawn_bg(no_wait=true, () => {
       server.run_forever(allow_failure=true, (conn, _) => {
         connections.val += 1
-        conn.read_until("\n") |> ignore
+        conn.read_until(b"\n") |> ignore
         @async.sleep(5_000)
       })
     })
@@ -384,10 +396,13 @@ async test "a blocked http_acquire does not delay cooldown_acquire" {
     defer limiter.close()
     defer cooldown.close()
     let bucket = "POST:/channels/cooldown-test/messages"
-    limiter.acquire(bucket, global_exempt=true)
+    let admission_limiter_bucket = limiter.acquire(bucket, global_exempt=true)
     let acquired = Ref(false)
     let blocked = group.spawn(() => {
-      limiter.acquire(bucket, global_exempt=true)
+      let _admission_limiter_bucket = limiter.acquire(
+        bucket,
+        global_exempt=true,
+      )
       acquired.val = true
     })
     @async.sleep(10)
@@ -398,9 +413,17 @@ async test "a blocked http_acquire does not delay cooldown_acquire" {
       )
     })
     assert_false(acquired.val)
-    limiter.release(bucket, status=200, headers=@http.Headers::new())
+    limiter.release(
+      admission_limiter_bucket,
+      status=200,
+      headers=@http.Headers::empty(),
+    )
     blocked.wait()
-    limiter.release(bucket, status=200, headers=@http.Headers::new())
+    limiter.release(
+      admission_limiter_bucket,
+      status=200,
+      headers=@http.Headers::empty(),
+    )
   })
 }
 
@@ -493,7 +516,8 @@ async test "an acquire waiting through a coordinator restart lands on the new on
     let holder : Ref[RemoteRateLimiter?] = Ref(None)
     let waiter : Ref[RemoteRateLimiter?] = Ref(None)
     let acquired = Ref(false)
-    let waiting : Ref[@async.Task[Unit]?] = Ref(None)
+    let waiting : Ref[@async.Task[@runtime.Admission]?] = Ref(None)
+    let held : Ref[@runtime.Admission?] = Ref(None)
     // The first coordinator's group ends with its listener closed, so the
     // second can bind the same address.
     @async.with_task_group(first_group => {
@@ -503,11 +527,19 @@ async test "an acquire waiting through a coordinator restart lands on the new on
       let first_waiter = RemoteRateLimiter::connect(address.val)
       holder.val = Some(first_holder)
       waiter.val = Some(first_waiter)
-      first_holder.acquire(bucket, global_exempt=true)
+      let admission_first_holder_bucket = first_holder.acquire(
+        bucket,
+        global_exempt=true,
+      )
+      held.val = Some(admission_first_holder_bucket)
       waiting.val = Some(
         group.spawn(() => {
-          first_waiter.acquire(bucket, global_exempt=true)
+          let admission_first_waiter_bucket = first_waiter.acquire(
+            bucket,
+            global_exempt=true,
+          )
           acquired.val = true
+          admission_first_waiter_bucket
         }),
       )
       @async.sleep(20)
@@ -525,11 +557,20 @@ async test "an acquire waiting through a coordinator restart lands on the new on
     // coordinator, which knows nothing of the old holder.
     let second = Coordinator::serve(group, addr=address.val)
     defer @async.protect_from_cancel(() => second.close())
-    guard @async.with_timeout_opt(5000, () => waiting.wait()) is Some(_) else {
+    guard @async.with_timeout_opt(5000, () => waiting.wait())
+      is Some(admission_waiter_bucket) else {
       fail("the waiting acquire never reached the new coordinator")
     }
-    waiter.release(bucket, status=200, headers=@http.Headers::new())
-    holder.release(bucket, status=200, headers=@http.Headers::new())
+    waiter.release(
+      admission_waiter_bucket,
+      status=200,
+      headers=@http.Headers::empty(),
+    )
+    holder.release(
+      held.val.unwrap(),
+      status=200,
+      headers=@http.Headers::empty(),
+    )
   })
 }
 
@@ -546,8 +587,8 @@ async fn with_scripted_coordinator(
     group.spawn_bg(no_wait=true, () => {
       server.run_forever(allow_failure=true, (conn, _) => {
         while true {
-          conn.read_until("\n") |> ignore
-          conn.write(reply)
+          conn.read_until(b"\n") |> ignore
+          conn.write(@utf8.encode(reply))
           if close_after {
             break
           }
@@ -602,15 +643,21 @@ async test "a lease from before a coordinator restart cannot release a new owner
   let bucket = "POST:/channels/restart-lease/messages"
   let address : Ref[String?] = Ref(None)
   let stale : Ref[RemoteRateLimiter?] = Ref(None)
+  let stale_admission : Ref[@runtime.Admission?] = Ref(None)
   @async.with_task_group(first_group => {
     let first = Coordinator::serve(first_group, addr="127.0.0.1:0")
     defer @async.protect_from_cancel(() => first.close())
     let limiter = RemoteRateLimiter::connect(first.addr())
     for _ in 0..<2 {
-      limiter.acquire(bucket, global_exempt=true)
-      limiter.release(bucket, status=200, headers=@http.Headers::new())
+      let admission_limiter_bucket = limiter.acquire(bucket, global_exempt=true)
+      limiter.release(
+        admission_limiter_bucket,
+        status=200,
+        headers=@http.Headers::empty(),
+      )
     }
-    limiter.acquire(bucket, global_exempt=true)
+    let admission_limiter_bucket = limiter.acquire(bucket, global_exempt=true)
+    stale_admission.val = Some(admission_limiter_bucket)
     address.val = Some(first.addr())
     stale.val = Some(limiter)
   })
@@ -628,21 +675,33 @@ async test "a lease from before a coordinator restart cannot release a new owner
     // The restarted coordinator counts leases from zero again, so after two
     // rounds the owner's lease carries the stale client's count.
     for _ in 0..<2 {
-      owner.acquire(bucket, global_exempt=true)
-      owner.release(bucket, status=200, headers=@http.Headers::new())
+      let admission_owner_bucket = owner.acquire(bucket, global_exempt=true)
+      owner.release(
+        admission_owner_bucket,
+        status=200,
+        headers=@http.Headers::empty(),
+      )
     }
-    owner.acquire(bucket, global_exempt=true)
-    stale.release(bucket, status=200, headers=@http.Headers::new())
+    let admission_owner_bucket = owner.acquire(bucket, global_exempt=true)
+    stale.release(
+      stale_admission.val.unwrap(),
+      status=200,
+      headers=@http.Headers::empty(),
+    )
     let acquired = Ref(false)
     let blocked = second_group.spawn(() => {
-      waiter.acquire(bucket, global_exempt=true)
+      let admission_waiter_bucket = waiter.acquire(bucket, global_exempt=true)
       acquired.val = true
+      admission_waiter_bucket
     })
     @async.sleep(20)
     assert_false(acquired.val)
-    owner.release(bucket, status=200, headers=@http.Headers::new())
-    blocked.wait()
-    waiter.release(bucket, status=200, headers=@http.Headers::new())
+    owner.release(
+      admission_owner_bucket,
+      status=200,
+      headers=@http.Headers::empty(),
+    )
+    waiter.release(blocked.wait(), status=200, headers=@http.Headers::empty())
   })
 }
 
@@ -654,7 +713,8 @@ async test "a client still works with an older coordinator's integer leases" {
     let omit_lease = Ref(false)
     group.spawn_bg(no_wait=true, () => {
       server.run_forever(allow_failure=true, (conn, _) => {
-        while conn.read_until("\n") is Some(line) {
+        while conn.read_until(b"\n") is Some(bytes) {
+          let line = @utf8.decode(bytes)
           let request = @json.parse(line)
           let reply : Json = match request {
             { "op": "http_acquire", .. } if omit_lease.val => { "ok": true }
@@ -665,15 +725,19 @@ async test "a client still works with an older coordinator's integer leases" {
             }
             _ => { "ok": true }
           }
-          conn.write(reply.stringify() + "\n")
+          conn.write(@utf8.encode(reply.stringify() + "\n"))
         }
       })
     })
     let limiter = RemoteRateLimiter::connect(server.addr.to_string())
     defer limiter.close()
     let bucket = "POST:/channels/old-coordinator/messages"
-    limiter.acquire(bucket, global_exempt=true)
-    limiter.release(bucket, status=200, headers=@http.Headers::new())
+    let admission_limiter_bucket = limiter.acquire(bucket, global_exempt=true)
+    limiter.release(
+      admission_limiter_bucket,
+      status=200,
+      headers=@http.Headers::empty(),
+    )
     // The integer comes back exactly as the older coordinator issued it.
     assert_eq(released, [7])
     omit_lease.val = true
@@ -711,8 +775,14 @@ async test "a legacy client is refused before it can hold a bucket" {
     // Nothing was reserved: a current client takes the bucket at once.
     let current = RemoteRateLimiter::connect(coordinator.addr())
     defer current.close()
-    @async.with_timeout(1000, () => current.acquire(bucket, global_exempt=false))
-    current.release(bucket, status=200, headers=@http.Headers::new())
+    let admission_current_bucket = @async.with_timeout(1000, () => {
+      current.acquire(bucket, global_exempt=false)
+    })
+    current.release(
+      admission_current_bucket,
+      status=200,
+      headers=@http.Headers::empty(),
+    )
   })
 }
 
@@ -728,14 +798,14 @@ async test "the coordinator answers an over-long request line and hangs up" {
     // and the client sees a clean end instead of a reset.
     conn.write(Bytes::make(MAX_LINE_BYTES + 1, b'x'))
     let reader = LineReader::new()
-    guard reader.next(chunk => conn.read(chunk)) is Line(line) else {
+    guard reader.next(chunk => conn.read_into(chunk)) is Line(line) else {
       fail("no answer to an over-long line")
     }
     assert_eq(
       decode_error_message(line),
       "request line longer than \{MAX_LINE_BYTES} bytes",
     )
-    assert_true(reader.next(chunk => conn.read(chunk)) is Ended)
+    assert_true(reader.next(chunk => conn.read_into(chunk)) is Ended)
   })
 }
 
@@ -760,16 +830,17 @@ async fn with_stalling_coordinator(
     let ops : Array[String] = []
     group.spawn_bg(no_wait=true, () => {
       server.run_forever(allow_failure=true, (conn, _) => {
-        while conn.read_until("\n") is Some(line) {
+        while conn.read_until(b"\n") is Some(bytes) {
+          let line = @utf8.decode(bytes)
           guard @json.parse(line) is { "op": String(op), .. } else { break }
           ops.push(op)
           if op == "ping" {
             if answer_pings {
-              conn.write("{\"ok\":true}\n")
+              conn.write(b"{\"ok\":true}\n")
             }
           } else if stall_ms is Some(stall_ms) {
             @async.sleep(stall_ms)
-            conn.write("{\"ok\":true,\"lease\":\"l-1\"}\n")
+            conn.write(b"{\"ok\":true,\"lease\":\"l-1\"}\n")
           }
         }
       })
@@ -795,7 +866,10 @@ async test "a long acquisition survives while the coordinator answers pings" {
       CoordinatorClient::connect(addr, liveness=(50, 200))
     })
     defer limiter.close()
-    limiter.acquire("GET:/gateway", global_exempt=false)
+    let _admission_limiter__GET__gateway_ = limiter.acquire(
+      "GET:/gateway",
+      global_exempt=false,
+    )
     // Each request was sent once, and the pings in between were answered.
     assert_eq(count_ops(ops, "identify_acquire"), 1)
     assert_eq(count_ops(ops, "http_acquire"), 1)

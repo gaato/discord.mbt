@@ -3,7 +3,8 @@
 pub struct Client {
   priv token : String
   // The transport this client created and therefore closes.
-  priv owned_transport : @transport.AsyncTransport?
+  priv owned_transport : @backend.AsyncBackend?
+  priv max_retries : Int32
   priv backend : Backend
   priv base_url : String
   priv base_path : String
@@ -21,7 +22,7 @@ pub struct Client {
 ///|
 /// What answers a validated logical call, below the middleware.
 priv enum Backend {
-  // The `gaato/sdk-runtime` client: rate limiting, the wire exchange, and
+  // The `gaato/mttp/client` client: rate limiting, the wire exchange, and
   // retries, above which status mapping and decoding happen.
   Online(@runtime.Client)
   // A handler that answers in place of all of that.
@@ -30,10 +31,10 @@ priv enum Backend {
 
 ///|
 /// Library version, sent in the User-Agent header.
-pub const VERSION : String = "0.14.0"
+pub const VERSION : String = "0.15.0"
 
 ///|
-/// The largest response body the default transport buffers, the same 64 MiB
+/// The largest decoded response body the client buffers, the same 64 MiB
 /// as the Gateway's `DEFAULT_MAX_MESSAGE_BYTES`. A longer body fails the
 /// attempt instead of growing without bound.
 const MAX_RESPONSE_BODY_BYTES : Int32 = 67_108_864
@@ -69,34 +70,33 @@ const MAX_RESPONSE_BODY_BYTES : Int32 = 67_108_864
 /// The backoff is 500 ms, doubling up to 30 s, within ±20 %. Anything else,
 /// 401 and 403 included, is Discord's answer and is never resent.
 ///
-/// `transport` is the `gaato/http` `Transport` that performs the wire
+/// `backend` is the `gaato/http` `Backend` that performs the wire
 /// exchange, below request validation, middleware, rate limiting, retries,
 /// status mapping, and decoding. By default the client creates a
-/// `gaato/http-async` `AsyncTransport` with `request_timeout_ms`, a
-/// keep-alive pool of up to `max_connections` parked connections, and a
-/// 64 MiB bound on each buffered response body, and closes it in `close`. A
-/// supplied transport is shared: the client never closes it,
-/// `max_connections` and the body bound do not apply to it, and each attempt
-/// through it is still bounded by `request_timeout_ms`, by the
-/// `gaato/sdk-runtime` client's `Timeouts` on `clock`. A supplied transport
-/// cannot say how far an attempt got, so one that runs out of time fails
-/// with `Timeout(phase=Unknown)`, as does every attempt when
-/// `request_timeout_ms` is not positive.
+/// `gaato/http-async/backend` `AsyncBackend` with up to `max_connections`
+/// idle connections per origin and a 64 MiB wire-body bound, and closes it
+/// in `close`. A supplied backend is shared: the client never closes it,
+/// and `max_connections` does not configure it. In both cases the mttp
+/// client bounds decoded response bodies to 64 MiB and each attempt to
+/// `request_timeout_ms`, using `clock`. This outer deadline reports
+/// `Timeout(phase=Unknown)`; an earlier backend failure retains its phase.
+/// A non-positive attempt timeout fails immediately with `Unknown`.
 ///
-/// `limiter` is a `gaato/sdk-runtime` `RateLimiter`; the default is an
+/// `limiter` is a `gaato/mttp/client` `RateLimiter`; the default is an
 /// `@ratelimit.rate_limiter()` with Discord's per-bucket and global accounting.
 ///
 /// `clock` (default: the wall clock) drives the client's time: 429 and
 /// resend back-off, the default rate limiter's windows, the attempt timeout
-/// around a supplied transport, telemetry durations, the window of
-/// `invalid_requests`, the typing keepalive of `ChannelRef::with_typing`,
-/// and the default transport's phase limits and idle connections.
+/// around either backend, telemetry durations, the window of
+/// `invalid_requests`, and the typing keepalive of `ChannelRef::with_typing`.
+/// AsyncBackend's connection-pool and phase clocks are independent; its
+/// constructor does not accept the injected clock.
 pub fn Client::Client(
   token : String,
   base_url~ : String = "https://discord.com",
   api_version~ : Int32 = 10,
   limiter? : &@runtime.RateLimiter,
-  transport? : &@ghttp.Transport,
+  backend? : &@ghttp.Backend,
   max_connections~ : Int32 = 4,
   request_timeout_ms~ : Int32 = 30000,
   max_retries~ : Int32 = 4,
@@ -107,18 +107,16 @@ pub fn Client::Client(
     Some(l) => l
     None => @ratelimit.rate_limiter(clock~)
   }
-  let (transport, owned_transport) : (
-    &@ghttp.Transport,
-    @transport.AsyncTransport?,
-  ) = match transport {
+  let (transport, owned_transport) : (&@ghttp.Backend, @backend.AsyncBackend?) = match
+    backend {
     Some(shared) => (shared, None)
     None => {
-      let owned = @transport.AsyncTransport::new(
-        timeout_ms=request_timeout_ms,
-        max_idle_per_origin=max_connections,
-        max_body_bytes=MAX_RESPONSE_BODY_BYTES,
-        clock~,
-      )
+      let owned = @backend.AsyncBackend::new(config={
+        ..@h1client.ClientConfig::default(),
+        max_idle_per_origin: max_connections,
+        max_body_bytes: Some(MAX_RESPONSE_BODY_BYTES),
+        proxy: @h1client.ProxyConfig::from_env(@env.get_env_var),
+      })
       (owned, Some(owned))
     }
   }
@@ -126,25 +124,14 @@ pub fn Client::Client(
   let warn_ : Ref[(String) -> Unit] = Ref(message => println(message))
   let closed_ = Ref(false)
   let invalid_ = InvalidRequests::new()
-  // The default transport bounds each exchange itself, phase by phase, which
-  // tells an unsent timeout from a sent one; a shared one gets the same
-  // limit from the runtime. Giving the default one both would race two
-  // timers on one deadline.
-  let timeouts = if owned_transport is None {
-    Some(
-      @runtime.Timeouts::new(
-        @transport.ClockTimer::new(clock~),
-        attempt_ms=request_timeout_ms,
-      ),
-    )
-  } else {
-    None
-  }
+  // Bound the whole attempt on the injected clock even when the backend's
+  // phase clocks cannot be injected. The outer deadline cannot prove a phase.
+  let timer : &@hclock.Timer = @transport.ClockTimer::new(clock~)
   let runtime = @runtime.Client::new(
     ClosedGate::{ inner: transport, closed: closed_, },
     clock,
     base_url~,
-    retry=DiscordRetry::{ max_retries, closed: closed_, },
+    retry=@runtime.RetryPolicy::from_rule(discord_retry_rule(max_retries)),
     limiter~,
     observer=attempt => {
       if is_invalid_request(attempt.status, attempt.headers) {
@@ -152,11 +139,14 @@ pub fn Client::Client(
       }
       emit_attempt(telemetry_, warn_, attempt)
     },
-    timeouts?,
+    timer~,
+    timeout_ms=request_timeout_ms,
+    max_body_bytes=MAX_RESPONSE_BODY_BYTES,
   )
   {
     token,
     owned_transport,
+    max_retries,
     backend: Online(runtime),
     base_url,
     base_path: "/api/v\{api_version}",
@@ -211,6 +201,7 @@ pub fn Client::offline(
   {
     token: "",
     owned_transport: None,
+    max_retries: 0,
     backend: Offline(handler),
     base_url: "",
     base_path: "/api/v10",
@@ -321,7 +312,7 @@ fn emit_attempt(
     warn,
     HttpRequest(
       route_bucket=attempt.bucket,
-      method_name=method_name(attempt.request.http_method),
+      method_name=method_name(attempt.request.meth.to_string()),
       status=attempt.status,
       duration_ms=attempt.duration_ms,
       retries=attempt.attempt,
@@ -330,7 +321,10 @@ fn emit_attempt(
   if attempt.status == 429 {
     let (retry_after_ms, global) = rate_limit_details(
       attempt.headers,
-      attempt.body,
+      attempt.attributes
+      .get(attempt_excerpt)
+      .map(cell => cell.val)
+      .unwrap_or(b""),
     )
     emit_event(
       hooks,
@@ -341,9 +335,9 @@ fn emit_attempt(
 }
 
 ///|
-/// Close the client's own transport (parked keep-alive connections) and
+/// Close the client's own backend (including idle keep-alive connections) and
 /// reject future requests, including those of an offline client. A supplied
-/// transport is left open. A request already inside an offline handler is not
+/// backend is left open. A request already inside an offline handler is not
 /// cancelled by this method.
 pub fn Client::close(self : Client) -> Unit {
   self.closed_.val = true
@@ -362,3 +356,9 @@ pub impl Show for Client with fn output(self, logger) {
   ignore(self.token)
   logger.write_string("discord.Client")
 }
+
+///|
+// A separate cell for each logical call keeps concurrent 429 observations apart.
+let attempt_excerpt : @ghttp.AttributeKey[Ref[Bytes]] = @ghttp.AttributeKey::new(
+  "discord.attempt_excerpt",
+)

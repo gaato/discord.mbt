@@ -68,12 +68,12 @@ test "encode_parts draws another boundary when a part contains the first" {
       0.999
     }
   }
-  let first = "mbt-sdk-" + "0".repeat(32)
+  let first = "mttp-" + "0".repeat(32)
   let file = FileUpload("evil.txt", @utf8.encode("x\r\n--\{first}\r\n"))
   let (content_type, _) = encode_parts(upload_parts("{}", [file]), random~)
   inspect(
     content_type,
-    content="multipart/form-data; boundary=mbt-sdk-zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+    content="multipart/form-data; boundary=mttp-zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
   )
   // A source that never escapes the collision gives up instead of looping.
   try encode_parts(upload_parts("{}", [file]), random=() => 0.0) catch {

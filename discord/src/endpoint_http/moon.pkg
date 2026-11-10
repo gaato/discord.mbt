@@ -1,22 +1,30 @@
+#cfg(not(target="js"))
 import {
   "gaato/discord/app",
   "gaato/discord/verify",
   "gaato/discord/http" @dhttp,
   "gaato/discord/model",
-  "moonbitlang/async",
-  "moonbitlang/async/aqueue",
-  "moonbitlang/async/http" @ahttp,
-  "moonbitlang/async/io",
-  "moonbitlang/async/socket",
+  "gaato/http" @hmodel,
+  "gaato/http/h1server",
+  "gaato/http-async/server",
+  "gaato/mttp/endpoint",
+  "gaato/mttp/router",
+  "gaato/mttp/schema",
+  "moonbitlang/core/async",
+  "moonbitlang/core/async/aqueue",
+  "moonbitlang/core/async/http" @ahttp,
+  "moonbitlang/core/async/io",
+  "moonbitlang/core/async/socket",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
   "moonbitlang/core/encoding/utf8",
 }
 
+#cfg(not(target="js"))
 import {
   "gaato/discord/interaction",
   "hustcer/ed25519",
-  "moonbitlang/async",
+  "moonbitlang/core/async",
   "moonbitlang/core/encoding/hex",
 } for "wbtest"
 
@@ -27,8 +35,19 @@ warnings = "-29"
 supported_targets = "js + native + wasm"
 
 options(
+  "allow-experimental-packages": [
+    "gaato/http/h1server",
+    "gaato/mttp/endpoint",
+    "gaato/mttp/router",
+    "moonbitlang/core/async",
+    "moonbitlang/core/async/aqueue",
+    "moonbitlang/core/async/http",
+    "moonbitlang/core/async/io",
+    "moonbitlang/core/async/socket",
+  ],
   targets: {
     "endpoint_http.mbt": [ "native", "wasm" ],
+    "handler.mbt": [ "native", "wasm" ],
     "endpoint_http_wbtest.mbt": [ "native", "wasm" ],
     "pkg.generated.mbti": [ "native", "wasm" ],
   },

@@ -139,21 +139,15 @@ struct RefusingTransport {
 }
 
 ///|
-impl @ghttp.Transport for RefusingTransport with fn send(self, _request) {
+impl @ghttp.Backend for RefusingTransport with fn send(self, _request, _options) {
   self.attempts += 1
-  raise @ghttp.HttpError::Connect("refused")
-}
-
-///|
-impl @ghttp.Transport for RefusingTransport with fn send_stream(self, _request) {
-  self.attempts += 1
-  raise @ghttp.HttpError::Connect("refused")
+  raise @ghttp.TransportError(kind=Connect, phase=Dial, detail="refused")
 }
 
 ///|
 async test "a callback that never reached Discord leaves the window open" {
   let transport = RefusingTransport::{ attempts: 0, }
-  let client = @dhttp.Client("test-token", transport~, max_retries=0)
+  let client = @dhttp.Client("test-token", backend=transport, max_retries=0)
   defer client.close()
   let gate = @framework.ResponseGate::rest(client, gate_interaction(2))
   try gate.send({ typ: DeferredChannelMessageWithSource, data: None, }) catch {

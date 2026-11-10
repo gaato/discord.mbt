@@ -32,6 +32,10 @@ pub using @dhttp {type FileUpload}
 pub using @dhttp {type DiscordHttpError}
 
 ///|
+/// A sequential REST paginator whose operations raise `DiscordHttpError`.
+pub using @dhttp {type Paginator}
+
+///|
 /// A message id and its channel id bound to the REST client that operates on
 /// it.
 pub using @dhttp {type MessageRef}

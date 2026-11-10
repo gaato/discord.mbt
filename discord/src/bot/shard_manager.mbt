@@ -114,9 +114,9 @@ async fn BotCore::gateway_bot_info(
 }
 
 ///|
-fn[X] BotCore::start_managed_shard(
+fn BotCore::start_managed_shard(
   self : BotCore,
-  group : @async.TaskGroup[X],
+  group : @async.TaskGroup,
   token~ : String,
   intents~ : @model.Intents,
   gateway_url~ : String,

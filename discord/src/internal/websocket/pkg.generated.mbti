@@ -2,31 +2,31 @@
 package "gaato/discord/internal/websocket"
 
 import {
-  "moonbitlang/async/http",
+  "moonbitlang/core/async/http",
 }
 
 // Values
-pub fn close_code_from_int(Int32) -> @moonbitlang/async/websocket.CloseCode
+pub fn close_code_from_int(Int32) -> @moonbitlang/core/async/websocket.CloseCode
 
-pub fn close_code_to_int(@moonbitlang/async/websocket.CloseCode) -> Int32
+pub fn close_code_to_int(@moonbitlang/core/async/websocket.CloseCode) -> Int32
 
-pub async fn connect(String, headers? : Map[@http.CaseInsensitiveString, String], proxy? : @http.Client) -> @moonbitlang/async/websocket.Conn
+pub async fn connect(String, headers? : Map[@http.CaseInsensitiveString, String], proxy? : @http.ClientConnection) -> @moonbitlang/core/async/websocket.Conn
 
-pub async fn read_message(@moonbitlang/async/websocket.Message, max_bytes~ : Int32) -> Bytes?
+pub async fn read_message(@moonbitlang/core/async/websocket.Message, max_bytes~ : Int32) -> Bytes?
 
 // Errors
 
 // Types and methods
 
 // Type aliases
-pub using @moonbitlang/async/websocket {type CloseCode}
+pub using @moonbitlang/core/async/websocket {type CloseCode}
 
-pub using @moonbitlang/async/websocket {type Conn}
+pub using @moonbitlang/core/async/websocket {type Conn}
 
-pub using @moonbitlang/async/websocket {type Message}
+pub using @moonbitlang/core/async/websocket {type Message}
 
-pub using @moonbitlang/async/websocket {type MessageKind}
+pub using @moonbitlang/core/async/websocket {type MessageKind}
 
-pub using @moonbitlang/async/websocket {type WebSocketError}
+pub using @moonbitlang/core/async/websocket {type WebSocketError}
 
 // Traits

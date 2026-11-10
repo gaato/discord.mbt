@@ -1,7 +1,7 @@
 import {
-  "gaato/http-async" @transport,
-  "gaato/http/clock" @hclock,
-  "moonbitlang/async",
+  "gaato/http-async/runtime" @transport,
+  "gaato/http/rt" @hclock,
+  "moonbitlang/core/async",
 }
 
 import {
@@ -9,3 +9,7 @@ import {
 } for "wbtest"
 
 supported_targets = "js + native + wasm"
+
+options(
+  "allow-experimental-packages": [ "moonbitlang/core/async" ],
+)

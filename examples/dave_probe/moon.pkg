@@ -2,10 +2,10 @@ import {
   "gaato/discord",
   "gaato/discord_voice" @voice,
   "gaato/discord/model",
-  "moonbitlang/async",
-  "moonbitlang/async/aqueue",
-  "moonbitlang/async/fs",
-  "moonbitlang/async/signal",
+  "moonbitlang/core/async",
+  "moonbitlang/core/async/aqueue",
+  "moonbitlang/core/async/fs",
+  "moonbitlang/core/async/signal",
   "moonbitlang/core/env",
 }
 
@@ -14,5 +14,11 @@ supported_targets = "native"
 pkgtype(kind: "executable")
 
 options(
+  "allow-experimental-packages": [
+    "moonbitlang/core/async",
+    "moonbitlang/core/async/aqueue",
+    "moonbitlang/core/async/fs",
+    "moonbitlang/core/async/signal",
+  ],
   targets: { "main.mbt": [ "native" ] },
 )

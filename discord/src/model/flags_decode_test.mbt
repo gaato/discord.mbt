@@ -185,6 +185,9 @@ test "SKU, role, invite, embed, and activity flags pin wire values" {
     assert_eq(flag.bits(), expected)
   }
   let gore = @model.ContentScanFlags::is_gore_content()
+  let scan = @model.ContentScanFlags::from_bits(133UL)
+  assert_eq((scan & gore).bits(), 0UL)
+  debug_inspect(scan, content="133")
   assert_eq(@model.ContentScanFlags::none().bits(), 0UL)
   assert_true(
     (@model.ContentScanFlags::is_explicit_content() | gore).contains(gore),
@@ -236,6 +239,16 @@ test "every user flag constant pins its exact bit" {
 ///|
 test "numeric flag decoders reject non-numbers and negative representations" {
   let non_number = Json::string("flags")
+  expect_model_decode_error(
+    non_number,
+    "expected content scan flags (number)",
+    @model.ContentScanFlags::none(),
+  )
+  expect_model_decode_error(
+    Json::number(1, repr="bad"),
+    "expected content scan flags (number), got bad",
+    @model.ContentScanFlags::none(),
+  )
   expect_model_decode_error(
     Json::string("flags"),
     "expected application flags (integer string), got flags",

@@ -25,7 +25,7 @@ async test "a handler waiting at full capacity still receives its component" {
   let client = @dhttp.Client("test-token")
   defer client.close()
   let application_id = @model.Id::parse("400000000000000001")
-  let clock = @simclock.VirtualClock()
+  let clock = @transport.VirtualClock()
   let framework = @framework.Framework(client, application_id, clock~)
   let waiter : @app.ComponentWaiter = (custom_id, user, timeout_ms) => {
     framework.wait_for_component(custom_id~, user?, timeout_ms?)
@@ -42,8 +42,12 @@ async test "a handler waiting at full capacity still receives its component" {
     let component = app_component("confirm-yes", "500000000000000901")
     let (gate, _) = @framework.ResponseGate::capture(component, clock~)
     assert_true(framework.process_with(component, gate~))
-    clock.settle()
-    assert_eq(woke.try_get(), Some(true))
+    let observed_queue_0 = Ref(None)
+    clock.settle(until=() => {
+      observed_queue_0.val = woke.try_get() catch { _ => None }
+      observed_queue_0.val is Some(_)
+    })
+    assert_eq(observed_queue_0.val, Some(true))
   })
 }
 
@@ -79,7 +83,7 @@ async test "handler capacity waits count against the response deadline" {
   )
   let client = @dhttp.Client("test-token")
   defer client.close()
-  let clock = @simclock.VirtualClock()
+  let clock = @transport.VirtualClock()
   @async.with_task_group(group => {
     let endpoint = app
       .build()
@@ -105,10 +109,11 @@ async test "handler capacity waits count against the response deadline" {
     })
     // The endpoint's timeout and the admission waiter's capacity wait both
     // end with the window.
+    clock.settle(until=() => clock.pending().contains(50))
     clock.advance(50)
     assert_true(quick.wait() is TimedOut)
     release.put(())
-    clock.settle()
+    clock.settle(until=() => warnings.length() == 1)
     assert_false(quick_ran.val)
     assert_eq(warnings, [
       "interaction dropped (command:quick): the response deadline passed before the handler could start",
@@ -127,7 +132,7 @@ async test "slow middleware on a deferring route is acknowledged automatically" 
     { status: 200, headers: Map([]), body: app_test_message().to_json(), }
   })
   let handled : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
-  let clock = @simclock.VirtualClock()
+  let clock = @transport.VirtualClock()
   app.middleware((ctx, next) => {
     if ctx.interaction().data is Some(Command(data)) && data.name == "denied" {
       (clock : &@hclock.Clock).sleep(200)
@@ -172,6 +177,9 @@ async test "slow middleware on a deferring route is acknowledged automatically" 
         deadline_ms=1100,
       )
     })
+    clock.settle(until=() => {
+      clock.pending().contains(100) && clock.pending().contains(200)
+    })
     clock.advance(100)
     guard report.wait() is Reply(response~, ..) else {
       fail("expected an automatic deferral")
@@ -180,12 +188,15 @@ async test "slow middleware on a deferring route is acknowledged automatically" 
     json_inspect(response.data.unwrap(), content={ "flags": 64 })
     assert_true(handled.try_get() is None)
     clock.advance(100)
-    assert_eq(handled.try_get(), Some(()))
+    assert_eq(handled.get(), ())
     let denied = group.spawn(() => {
       endpoint.handle_interaction(
         app_command("denied", "500000000000000905"),
         deadline_ms=1100,
       )
+    })
+    clock.settle(until=() => {
+      clock.pending().contains(100) && clock.pending().contains(200)
     })
     clock.advance(100)
     guard denied.wait() is Reply(response~, ..) else {
@@ -193,6 +204,7 @@ async test "slow middleware on a deferring route is acknowledged automatically" 
     }
     assert_eq(response.typ, DeferredChannelMessageWithSource)
     clock.advance(100)
+    clock.settle(until=() => requests.length() == 2)
     assert_eq(requests, [
       "Patch /webhooks/400000000000000001/interaction-token/messages/@original",
       "Patch /webhooks/400000000000000001/interaction-token/messages/@original",
@@ -213,7 +225,7 @@ async test "fast failures on a deferring route stay ephemeral initial responses"
   )
   let client = @dhttp.Client("test-token")
   defer client.close()
-  let clock = @simclock.VirtualClock()
+  let clock = @transport.VirtualClock()
   @async.with_task_group(group => {
     let endpoint = app
       .build()
@@ -272,7 +284,7 @@ async test "a deferred interaction beyond max_pending is refused before it is ac
     headers: Map([]),
     body: app_test_message().to_json(),
   })
-  let clock = @simclock.VirtualClock()
+  let clock = @transport.VirtualClock()
   @async.with_task_group(group => {
     let endpoint = app
       .build()
@@ -298,6 +310,7 @@ async test "a deferred interaction beyond max_pending is refused before it is ac
         deadline_ms=1200,
       )
     })
+    clock.settle(until=() => clock.pending().contains(200))
     clock.advance(50)
     let refused = endpoint.handle_interaction(
       app_command("later", "500000000000000972"),
@@ -315,12 +328,13 @@ async test "a deferred interaction beyond max_pending is refused before it is ac
     })
     // The watchdog defers the first one 200 ms after it arrived.
     clock.advance(150)
+    clock.settle(until=() => (first.try_wait() is Some(_)) catch { _ => true })
     guard first.try_wait() is Some(Reply(response~, ..)) else {
       fail("expected the first interaction to be deferred")
     }
     assert_eq(response.typ, DeferredChannelMessageWithSource)
     release.put(())
-    clock.settle()
+    clock.settle(until=() => ran.length() == 1)
     assert_eq(ran, ["500000000000000971"])
   })
 }

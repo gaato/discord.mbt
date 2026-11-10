@@ -97,7 +97,7 @@ async fn join_and_play(
   channel_id : @model.ChannelId,
 ) -> Unit {
   let connection = voice.join(ctx, guild_id, channel_id, timeout_ms=10_000)
-  let bytes = @fs.read_file("audio.ogg").binary()
+  let bytes = @fs.read_binary("audio.ogg")
   let source = @voice.OggOpusSource::from_bytes(bytes)
   connection.play((source : &@voice.AudioSource))
 }

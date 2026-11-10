@@ -390,7 +390,7 @@ async test "another user's click does not satisfy a component wait" {
   defer client.close()
   let fw = @framework.Framework(client, @model.Id::parse("400000000000000001"))
   let invoker : @model.UserId = @model.Id::parse("200000000000000001")
-  @async.with_task_group((group : @async.TaskGroup[Unit]) => {
+  @async.with_task_group((group : @async.TaskGroup) => {
     let pending = group.spawn(no_wait=true, () => {
       fw.wait_for_component(
         custom_id="confirm:guide",

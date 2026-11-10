@@ -4,10 +4,10 @@ async fn with_command_context(
   body : async (
     GatewayCtx,
     Array[@gatewaysim.FakeTransport],
-    @simclock.VirtualClock,
+    @transport.VirtualClock,
   ) -> Unit,
 ) -> Unit {
-  let clock = @simclock.VirtualClock()
+  let clock = @transport.VirtualClock()
   let transports = [
     @gatewaysim.FakeTransport(clock~),
     @gatewaysim.FakeTransport(clock~),
@@ -128,7 +128,7 @@ async test "presence broadcast continues after the first shard fails" {
 
 ///|
 async test "unmanaged guild commands fail before sending any soundboard group" {
-  with_command_context(Single(id=0, count=2), (ctx, transports, clock) => {
+  with_command_context(Single(id=0, count=2), (ctx, transports, _clock) => {
     try
       ctx.request_guild_members({
         guild_id: Id(4194304UL),
@@ -160,7 +160,6 @@ async test "unmanaged guild commands fail before sending any soundboard group" {
     } noraise {
       _ => fail("expected unmanaged shard")
     }
-    clock.settle()
     assert_true(transports[0].outgoing.try_get() is None)
   })
 }
@@ -377,7 +376,7 @@ test "rate_limit_matches requires opcode 8, the guild, and this nonce or none" {
 /// `ms` wakes, before the sleeper resumes: an event that arrives as a timeout
 /// fires.
 priv struct HookedClock {
-  inner : @simclock.VirtualClock
+  inner : @transport.VirtualClock
   ms : Int32
   mut hook : (async () -> Unit noraise)?
 }
@@ -431,9 +430,13 @@ async fn fetch_with_late_event(
         fail("expected nonce")
       }
       let nonce = nonce.to_string()
+      let seen = ctx.expect_event(Events::guild_members_chunk(), event => {
+        event.chunk_index == 1
+      })
       transports[0].put(chunk_frame(nonce, 0))
       transports[0].put(chunk_frame(nonce, 1))
-      clock.settle()
+      ignore(seen.wait())
+      clock.settle(until=() => clock.pending().contains(50))
       let event = late(nonce)
       let deliver = async fn() noraise {
         reached.val = ctx.collector_.waits_for(KGuildMembersChunk)
@@ -520,9 +523,13 @@ async test "a partial fetch that times out still raises" {
         is { "d": { "nonce": String(nonce), .. }, .. } else {
         fail("expected nonce")
       }
+      let seen = ctx.expect_event(Events::guild_members_chunk(), event => {
+        event.chunk_index == 2
+      })
       transports[0].put(chunk_frame(nonce.to_string(), 0))
       transports[0].put(chunk_frame(nonce.to_string(), 2))
-      clock.settle()
+      ignore(seen.wait())
+      clock.settle(until=() => clock.pending().contains(50))
       clock.advance(50)
       try fetching.wait() catch {
         GatewayRequestTimeout => ()

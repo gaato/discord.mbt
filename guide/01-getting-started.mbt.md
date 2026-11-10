@@ -19,7 +19,7 @@ From a MoonBit module root:
 ```sh
 moon update
 moon add gaato/discord
-moon add moonbitlang/async
+moon add moonbitlang/core/async
 ```
 
 The resulting `moon.mod` contains module dependencies equivalent to:
@@ -28,7 +28,7 @@ The resulting `moon.mod` contains module dependencies equivalent to:
 ///|
 import {
   "gaato/discord",
-  "moonbitlang/async",
+  "moonbitlang/core/async",
 }
 ```
 
@@ -37,8 +37,8 @@ Create an executable package, for example `src/main/moon.pkg`:
 ```mbt nocheck
 import {
   "gaato/discord",
-  "moonbitlang/async",
-  "moonbitlang/async/signal",
+  "moonbitlang/core/async",
+  "moonbitlang/core/async/signal",
   "moonbitlang/core/env",
 }
 

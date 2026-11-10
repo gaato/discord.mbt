@@ -1,14 +1,14 @@
 ----
 import {
-  "moonbitlang/async@0.22.7",
-  "moonbitlang/async@0.22.7/fs",
+  "moonbitlang/core/async",
+  "moonbitlang/core/async/fs",
   "moonbitlang/core/env",
 }
 ----
 
 ///|
 /// Guard the injected clock: library code (tests excluded) must wait and read
-/// time through a `gaato/http/clock` `Clock` it was given, so a test can drive
+/// time through a `gaato/http/rt` `Clock` it was given, so a test can drive
 /// it with a virtual clock. This audit fails on any direct use of a real-time
 /// entry point in the library sources of every module.
 ///
@@ -240,7 +240,7 @@ async fn library_files() -> Array[(String, String)] {
   paths.sort()
   let files : Array[(String, String)] = []
   for path in paths {
-    files.push((path, @fs.read_file(path).text()))
+    files.push((path, @fs.read_text(path)))
   }
   files
 }
@@ -253,7 +253,7 @@ async fn main {
     fail("usage: moon run scripts/clock_guard.mbtx [--self-test]")
   }
   let files = library_files()
-  let allow = @fs.read_file("scripts/clock_guard.allow").text()
+  let allow = @fs.read_text("scripts/clock_guard.allow")
   audit(files, allow)
   if self_test {
     let with_file = (path : String, text : String) => {

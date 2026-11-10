@@ -90,6 +90,7 @@ pub async fn[T] ChannelRef::with_typing(
   body : async () -> T,
 ) -> T {
   self.typing()
+  let result : Ref[T?] = Ref(None)
   @async.with_task_group(group => {
     group.spawn_bg(no_wait=true, () => {
       for ;; {
@@ -99,8 +100,9 @@ pub async fn[T] ChannelRef::with_typing(
         }
       }
     })
-    body()
+    result.val = Some(body())
   })
+  result.val.unwrap()
 }
 
 ///|

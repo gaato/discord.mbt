@@ -16,7 +16,7 @@ pub(all) enum InteractionOutcome {
 /// A gateway-free interaction dispatcher backed by a caller-owned task group.
 pub struct InteractionEndpoint {
   priv framework : @framework.Framework
-  priv group : @async.TaskGroup[Unit]
+  priv group : @async.TaskGroup
   priv warn : (AppWarning) -> Unit
 }
 
@@ -52,7 +52,7 @@ pub(all) enum RestAccess {
 /// per request.
 pub async fn App::serve(
   self : App,
-  group : @async.TaskGroup[Unit],
+  group : @async.TaskGroup,
   access~ : RestAccess,
   application_id? : @model.ApplicationId,
   clock? : &@hclock.Clock,
@@ -114,6 +114,7 @@ pub async fn InteractionEndpoint::handle_interaction(
       race.put(Completed(routed))
     }
   })
+  let outcome : Ref[InteractionOutcome?] = Ref(None)
   @async.with_task_group(group => {
     let capture_task = group.spawn(no_wait=true, allow_failure=true, () => {
       let captured = capture.get()
@@ -139,8 +140,9 @@ pub async fn InteractionEndpoint::handle_interaction(
       }
     }
     capture_task.cancel()
-    result
+    outcome.val = Some(result)
   })
+  outcome.val.unwrap()
 }
 
 ///|

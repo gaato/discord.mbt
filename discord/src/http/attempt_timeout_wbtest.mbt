@@ -1,27 +1,28 @@
 ///|
+fn[T] task_finished(task : @async.Task[T]) -> Bool {
+  (task.try_wait() is Some(_)) catch {
+    _ => true
+  }
+}
+
+///|
 /// A wire that answers after `delay_ms` on `clock`, or fails with `fail_with`,
 /// counting the exchanges it starts.
 priv struct SlowWire {
-  clock : @simclock.VirtualClock
+  clock : @transport.VirtualClock
   delay_ms : Int32
-  fail_with : @ghttp.HttpError?
+  fail_with : @ghttp.TransportError?
   mut started : Int32
 }
 
 ///|
-impl @ghttp.Transport for SlowWire with fn send(self, _request) {
+impl @ghttp.Backend for SlowWire with fn send(self, _request, _options) {
   self.started += 1
   self.clock.sleep(self.delay_ms)
   if self.fail_with is Some(error) {
     raise error
   }
-  { status: 204, headers: @ghttp.Headers::new(), body: b"", }
-}
-
-///|
-impl @ghttp.Transport for SlowWire with fn send_stream(self, request) {
-  ignore(@ghttp.Transport::send(self, request))
-  raise @ghttp.HttpError::Protocol("SlowWire does not stream")
+  @ghttp.Response::new(204)
 }
 
 ///|
@@ -31,15 +32,15 @@ impl @ghttp.Transport for SlowWire with fn send_stream(self, request) {
 async fn timed_call(
   delay_ms : Int32,
   request_timeout_ms : Int32,
-  fail_with? : @ghttp.HttpError,
+  fail_with? : @ghttp.TransportError,
   route~ : Route = GetGateway,
   max_retries~ : Int32 = 0,
 ) -> (String, Int64, Int32) {
-  let clock = @simclock.VirtualClock()
+  let clock = @transport.VirtualClock()
   let wire = SlowWire::{ clock, delay_ms, fail_with, started: 0, }
   let client = Client(
     "test-token",
-    transport=wire,
+    backend=wire,
     limiter=@runtime.NoLimiter::new(),
     request_timeout_ms~,
     max_retries~,
@@ -47,7 +48,8 @@ async fn timed_call(
   )
   defer client.close()
   let started_at = clock.now_unix_ms()
-  let outcome = @async.with_task_group(group => {
+  let outcome = Ref("")
+  @async.with_task_group(group => {
     let task = group.spawn(() => {
       try {
         ignore(client.request(route))
@@ -56,12 +58,32 @@ async fn timed_call(
         error => @debug.to_string(error)
       }
     })
-    while task.try_wait() is None {
-      guard clock.advance_to_next() else { break }
+    clock.settle(until=() => {
+      task_finished(task) || clock.pending().length() == 2
+    })
+    while !task_finished(task) {
+      assert_true(clock.advance_to_next())
+      // A completed attempt removes both its delay and deadline. A retry
+      // then has only its distinct backoff timer pending.
+      clock.settle(until=() => {
+        task_finished(task) ||
+        (
+          clock.pending().length() == 1 &&
+          clock.pending()[0] != request_timeout_ms &&
+          clock.pending()[0] != delay_ms
+        )
+      })
+      if task_finished(task) {
+        break
+      }
+      assert_true(clock.advance_to_next())
+      clock.settle(until=() => {
+        task_finished(task) || clock.pending().length() == 2
+      })
     }
-    task.wait()
+    outcome.val = task.wait()
   })
-  (outcome, clock.now_unix_ms() - started_at, wire.started)
+  (outcome.val, clock.now_unix_ms() - started_at, wire.started)
 }
 
 ///|
@@ -75,7 +97,15 @@ async test "request_timeout_ms bounds each attempt through a supplied transport"
   )
   // the transport's own failure passes through
   assert_eq(
-    timed_call(10, 1000, fail_with=Connect("refused")),
+    timed_call(
+      10,
+      1000,
+      fail_with=@ghttp.TransportError(
+        kind=Connect,
+        phase=Dial,
+        detail="refused",
+      ),
+    ),
     ("Transport(phase=Dial, message=\"could not connect: refused\")", 10L, 1),
   )
 }
@@ -111,7 +141,7 @@ async test "a timed-out attempt is sent again only for an idempotent call" {
 
 ///|
 async test "an offline client times its telemetry on its clock" {
-  let clock = @simclock.VirtualClock()
+  let clock = @transport.VirtualClock()
   let client = Client::offline(
     _ => {
       clock.sleep(250)
@@ -123,9 +153,8 @@ async test "an offline client times its telemetry on its clock" {
   client.on_telemetry(event => events.push(event))
   @async.with_task_group(group => {
     let task = group.spawn(() => client.get_gateway())
-    while task.try_wait() is None {
-      guard clock.advance_to_next() else { fail("nothing left to wait for") }
-    }
+    clock.settle(until=() => clock.pending() == [250])
+    clock.advance(250)
     assert_eq(task.wait(), "wss://x")
   })
   guard events is [HttpRequest(status=200, duration_ms=250L, ..)] else {

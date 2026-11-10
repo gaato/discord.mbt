@@ -29,12 +29,12 @@ struct TrackedOggSource {
 }
 
 ///|
-async fn[X] load_audio_source(
-  group : @async.TaskGroup[X],
+async fn load_audio_source(
+  group : @async.TaskGroup,
   audio_path : String,
 ) -> (@voice.OggOpusSource, () -> Unit) {
   if audio_path.has_suffix(".ogg") {
-    let audio = @fs.read_file(audio_path).binary()
+    let audio = @fs.read_binary(audio_path)
     (@voice.OggOpusSource::from_bytes(audio), () => ())
   } else {
     let (stdout, process_stdout) = @process.read_from_process()
@@ -46,7 +46,7 @@ async fn[X] load_audio_source(
         "-loglevel", "error", "-i", audio_path, "-f", "ogg", "-c:a", "libopus", "-ar",
         "48000", "-ac", "2", "-frame_duration", "20", "pipe:1",
       ],
-      stdout=process_stdout,
+      stdout=Shared(process_stdout),
       no_wait=true,
     )
     |> ignore

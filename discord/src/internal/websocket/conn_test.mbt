@@ -71,7 +71,7 @@ async test "text echo" {
   conn.send_text("hello")
   let message = conn.recv()
   assert_true(message.kind is Text)
-  assert_eq(message.read_all().text(), "hello")
+  assert_eq(@utf8.decode(message.read_all()), "hello")
 }
 
 ///|
@@ -83,7 +83,7 @@ async test "binary echo" {
   conn.send_binary(b"\x00\x01\xff")
   let message = conn.recv()
   assert_true(message.kind is Binary)
-  assert_eq(message.read_all().binary(), b"\x00\x01\xff")
+  assert_eq(message.read_all(), b"\x00\x01\xff")
 }
 
 ///|
@@ -96,7 +96,7 @@ async test "streaming write" {
   conn.write(b"ab")
   conn.write(b"cd")
   conn.end_message()
-  assert_eq(conn.recv().read_all().text(), "abcd")
+  assert_eq(@utf8.decode(conn.recv().read_all()), "abcd")
 }
 
 ///|
@@ -159,7 +159,7 @@ async test "cancelled recv loses nothing" {
     error => raise error
   }
   conn.send_text("later")
-  assert_eq(conn.recv().read_all().text(), "later")
+  assert_eq(@utf8.decode(conn.recv().read_all()), "later")
 }
 
 ///|

@@ -130,7 +130,7 @@ fn coordinator_retryable(error : Error) -> Bool {
 /// a protocol error.
 async fn read_line(conn : @socket.Tcp) -> String? {
   let reader = LineReader::new()
-  match reader.next(chunk => conn.read(chunk)) {
+  match reader.next(chunk => conn.read_into(chunk)) {
     Line(line) => {
       if reader.has_pending() {
         raise CoordinatorError::InvalidResponse(
@@ -162,6 +162,7 @@ async fn CoordinatorClient::request_watched(
   guard self.liveness is Some(liveness) else {
     return self.request_once(request)
   }
+  let result : Ref[Json?] = Ref(None)
   @async.with_task_group(group => {
     group.spawn_bg(no_wait=true, () => {
       for ;; {
@@ -183,8 +184,9 @@ async fn CoordinatorClient::request_watched(
         }
       }
     })
-    self.request_once(request)
+    result.val = Some(self.request_once(request))
   })
+  result.val.unwrap()
 }
 
 ///|
@@ -194,7 +196,7 @@ async fn CoordinatorClient::request_once(
 ) -> Json {
   let conn = self.connection()
   let response_line = try {
-    conn.write(request.stringify() + "\n")
+    conn.write(@utf8.encode(request.stringify() + "\n"))
     match read_line(conn) {
       Some(line) => line
       None => raise CoordinatorError::Disconnected
@@ -313,7 +315,8 @@ pub impl @queue.IdentifyQueue for RemoteIdentifyQueue with fn wait_for_identify(
 pub struct RemoteRateLimiter {
   priv acquire_client : CoordinatorClient
   priv release_client : CoordinatorClient
-  priv leases : Map[String, Json]
+  priv leases : Map[Int64, (String, Json)]
+  priv next_admission : Ref[Int64]
 }
 
 ///|
@@ -332,7 +335,7 @@ async fn RemoteRateLimiter::connect_with(
   let acquire_client = connector(addr)
   errdefer acquire_client.close()
   let release_client = connector(addr)
-  { acquire_client, release_client, leases: Map([]), }
+  { acquire_client, release_client, leases: Map([]), next_admission: Ref(0L), }
 }
 
 ///|
@@ -354,12 +357,14 @@ pub async fn RemoteRateLimiter::ping(self : RemoteRateLimiter) -> Unit {
 pub extend RemoteRateLimiter with @runtime.RateLimiter::{acquire, release}
 
 ///|
-/// Acquire the HTTP bucket slot from the coordinator's shared accounting.
+/// Acquire the HTTP bucket slot from the coordinator's shared accounting,
+/// returning the token that must be passed to `release`.
 pub impl @runtime.RateLimiter for RemoteRateLimiter with fn acquire(
   self,
   bucket_key,
   global_exempt~,
 ) {
+  errdefer self.acquire_client.drop_connection()
   let response = self.acquire_client.request({
     "op": "http_acquire",
     "bucket": Json::string(bucket_key),
@@ -373,28 +378,32 @@ pub impl @runtime.RateLimiter for RemoteRateLimiter with fn acquire(
     (lease is String(_) || json_nonnegative_int(lease) is Some(_)) else {
     raise CoordinatorError::InvalidResponse(message="missing lease")
   }
-  self.leases[bucket_key] = lease
+  let sequence = self.next_admission.val
+  self.next_admission.val += 1L
+  self.leases[sequence] = (bucket_key, lease)
+  @runtime.Admission::new(bucket_key, sequence~)
 }
 
 ///|
-/// Report the response's rate-limit headers back to the coordinator. A
+/// Release this exact Admission and report the response's rate-limit headers
+/// back to the coordinator. A duplicate release is a no-op. A
 /// release cut short by cancellation is recovered by the `errdefer` below, as
 /// the runtime's `RateLimiter` contract requires.
 pub impl @runtime.RateLimiter for RemoteRateLimiter with fn release(
   self,
-  bucket_key,
+  admission,
   status~,
   headers~,
 ) {
-  guard self.leases.get(bucket_key) is Some(lease) else {
-    raise CoordinatorError::InvalidResponse(message="bucket is not acquired")
+  guard self.leases.get(admission.sequence()) is Some((bucket_key, lease)) &&
+    bucket_key == admission.bucket() else {
+    return
   }
-  errdefer {
-    // The acquire connection owns the server-side gate. If release cannot be
-    // confirmed, dropping it makes EOF cleanup release that ownership.
-    self.acquire_client.drop_connection()
-    self.leases.remove(bucket_key)
-  }
+  // Retire before any suspension: a retry of the same Admission is a no-op.
+  self.leases.remove(admission.sequence())
+  // The acquire connection owns the server-side gate. If release cannot be
+  // confirmed, dropping it makes EOF cleanup release that ownership.
+  errdefer self.acquire_client.drop_connection()
   ignore(
     self.release_client.request({
       "op": "http_release",
@@ -404,7 +413,6 @@ pub impl @runtime.RateLimiter for RemoteRateLimiter with fn release(
       "headers": encode_headers(headers),
     }),
   )
-  self.leases.remove(bucket_key)
 }
 
 ///|

@@ -104,6 +104,7 @@ fn app_modal_submit(
 ///|
 async test "timed-out interaction expires its gate" {
   let app = @app.AppBuilder()
+  let started = Ref(false)
   let release : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
   let failures : @aqueue.Queue[(@framework.ResponseState?, Bool)] = Queue(
     kind=Unbounded,
@@ -116,6 +117,7 @@ async test "timed-out interaction expires its gate" {
       description="Wait beyond the callback deadline",
       args=@interaction.Args::unit(),
       handler=Raw(raw => {
+        started.val = true
         release.get()
         raw.respond(content="too late")
       }),
@@ -129,7 +131,7 @@ async test "timed-out interaction expires its gate" {
   })
   let client = @dhttp.Client("test-token")
   defer client.close()
-  let clock = @simclock.VirtualClock()
+  let clock = @transport.VirtualClock()
   @async.with_task_group(group => {
     let endpoint = app
       .build()
@@ -145,11 +147,16 @@ async test "timed-out interaction expires its gate" {
         deadline_ms=50,
       )
     })
+    clock.settle(until=() => started.val && clock.pending().contains(50))
     clock.advance(50)
     assert_true(handling.wait() is TimedOut)
     release.put(())
-    clock.settle()
-    assert_eq(failures.try_get(), Some((Some(Expired), true)))
+    let observed_queue_0 = Ref(None)
+    clock.settle(until=() => {
+      observed_queue_0.val = failures.try_get() catch { _ => None }
+      observed_queue_0.val is Some(_)
+    })
+    assert_eq(observed_queue_0.val, Some((Some(Expired), true)))
     assert_eq(warnings, [
       "cannot respond to an expired interaction: expired reply",
     ])
@@ -345,6 +352,7 @@ async test "interaction endpoint dispatches captured responses and completion ou
   // The slow handler waits for the test to release it after the deadline has
   // been observed, so no timer ordering is involved.
   let slow_release : @aqueue.Queue[Unit] = Queue(kind=Unbounded)
+  let slow_started = Ref(false)
   app.command(
     @app.slash(
       name="immediate",
@@ -393,6 +401,7 @@ async test "interaction endpoint dispatches captured responses and completion ou
       description="Slow initial response",
       args=@interaction.Args::unit(),
       handler=Raw(raw => {
+        slow_started.val = true
         slow_release.get()
         try raw.respond(content="late") catch {
           @framework.ResponseGateError::Expired => ()
@@ -418,7 +427,7 @@ async test "interaction endpoint dispatches captured responses and completion ou
     max_connections=1,
   )
   defer client.close()
-  let clock = @simclock.VirtualClock()
+  let clock = @transport.VirtualClock()
   @async.with_task_group(group => {
     // Explicit client/id must perform no startup HTTP.
     let app = app
@@ -458,7 +467,7 @@ async test "interaction endpoint dispatches captured responses and completion ou
     let silent = group.spawn(() => {
       app.handle_interaction(app_command("silent", "500000000000000103"))
     })
-    clock.settle()
+    clock.settle(until=() => (silent.try_wait() is Some(_)) catch { _ => true })
     match silent.try_wait() {
       Some(NoResponse) => ()
       outcome => fail("expected prompt NoResponse, got \{Repr(outcome)}")
@@ -482,14 +491,19 @@ async test "interaction endpoint dispatches captured responses and completion ou
         deadline_ms=100,
       )
     })
+    clock.settle(until=() => slow_started.val && clock.pending().contains(100))
     clock.advance(100)
     match slow.wait() {
       TimedOut => ()
       outcome => fail("expected TimedOut, got \{Repr(outcome)}")
     }
     slow_release.put(())
-    clock.settle()
-    guard slow_finished.try_get() is Some(_) else {
+    let observed_queue_1 = Ref(None)
+    clock.settle(until=() => {
+      observed_queue_1.val = slow_finished.try_get() catch { _ => None }
+      observed_queue_1.val is Some(_)
+    })
+    guard observed_queue_1.val is Some(_) else {
       fail("timed-out handler did not continue in the app task group")
     }
     guard app.handle(app_command("immediate", "500000000000000105").to_json())

@@ -1,4 +1,55 @@
 ///|
+priv suberror PaginatorFixtureError {
+  PaginatorFixtureError
+}
+
+///|
+async test "paginator preserves typed fetch and visitor failures and contains unexpected failures" {
+  for operation in ["next", "each", "collect"] {
+    let typed : Paginator[Int32] = paginator_from_cursor(
+      1,
+      None,
+      (_ : Int32?, _) => raise Validation(message="fetch failed"),
+      page => minimum_cursor(page, item => item),
+    )
+    let broken : Paginator[Int32] = {
+      inner: @runtime.Paginator::new(() => raise PaginatorFixtureError),
+    }
+    for
+      (paginator, expected) in [(typed, "fetch failed"), (broken, "unexpected")] {
+      try {
+        match operation {
+          "next" => ignore(paginator.next_page())
+          "each" => paginator.each(_ => ())
+          _ => ignore(paginator.collect(max=1))
+        }
+      } catch {
+        Validation(message~) => assert_eq(message, expected)
+        Transport(phase=Unknown, message~) => {
+          assert_eq(expected, "unexpected")
+          assert_true(message.contains("PaginatorFixtureError"))
+        }
+        error => fail("unexpected error: \{Repr(error)}")
+      } noraise {
+        _ => fail("expected a paginator failure")
+      }
+    }
+  }
+  let page : Paginator[Int32] = paginator_from_cursor(
+    1,
+    None,
+    (_ : Int32?, _) => [1],
+    items => minimum_cursor(items, item => item),
+  )
+  try page.each(_ => raise Validation(message="visitor failed")) catch {
+    Validation(message~) => assert_eq(message, "visitor failed")
+    error => fail("unexpected visitor error: \{Repr(error)}")
+  } noraise {
+    _ => fail("expected visitor failure")
+  }
+}
+
+///|
 async test "paginator advances a before cursor and stops on a short page" {
   let seen : Array[Int32?] = []
   let calls = Ref(0)

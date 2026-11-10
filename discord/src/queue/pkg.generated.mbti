@@ -2,7 +2,7 @@
 package "gaato/discord/queue"
 
 import {
-  "gaato/http/clock",
+  "gaato/http/rt",
 }
 
 // Values
@@ -13,7 +13,7 @@ import {
 pub struct InMemoryQueue {
   // private fields
 }
-pub fn InMemoryQueue::InMemoryQueue(max_concurrency? : Int32, spacing_ms? : Int32, clock? : &@clock.Clock) -> Self
+pub fn InMemoryQueue::InMemoryQueue(max_concurrency? : Int32, spacing_ms? : Int32, clock? : &@rt.Clock) -> Self
 pub async fn InMemoryQueue::wait_for_identify(Self, Int32) -> Unit
 pub impl IdentifyQueue for InMemoryQueue
 

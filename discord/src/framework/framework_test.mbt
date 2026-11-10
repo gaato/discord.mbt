@@ -576,8 +576,8 @@ async test "framework cancellation bypasses the error hook" {
 
 ///|
 async test "component waiters beat prefix handlers and time out cleanly" {
-  @async.with_task_group((group : @async.TaskGroup[Unit]) => {
-    let clock = @simclock.VirtualClock()
+  @async.with_task_group((group : @async.TaskGroup) => {
+    let clock = @transport.VirtualClock()
     let fw = test_framework(clock~)
     let log : Array[String] = []
     fw.component("confirm", ctx => log.push("handler:\{ctx.data.custom_id}"))
@@ -588,10 +588,10 @@ async test "component waiters beat prefix handlers and time out cleanly" {
         None => log.push("waiter:none")
       }
     })
-    clock.settle()
+    clock.settle(until=() => clock.pending().contains(1000))
     // the waiter wins over the registered prefix handler
     assert_true(fw.process(component_interaction("confirm:1")))
-    clock.settle()
+    clock.settle(until=() => log.length() == 1)
     // with the waiter gone, the prefix handler takes over
     assert_true(fw.process(component_interaction("confirm:2")))
     // no waiter, no matching prefix
@@ -606,6 +606,7 @@ async test "component waiters beat prefix handlers and time out cleanly" {
     let never = group.spawn(() => {
       fw.wait_for_component(custom_id="never", timeout_ms=20)
     })
+    clock.settle(until=() => clock.pending().contains(20))
     clock.advance(20)
     guard! never.wait() is None
   })
@@ -613,8 +614,8 @@ async test "component waiters beat prefix handlers and time out cleanly" {
 
 ///|
 async test "waiter ignores another user's click and the route handles it" {
-  @async.with_task_group((group : @async.TaskGroup[Unit]) => {
-    let clock = @simclock.VirtualClock()
+  @async.with_task_group((group : @async.TaskGroup) => {
+    let clock = @transport.VirtualClock()
     let fw = test_framework(clock~)
     let routed : Array[String] = []
     let allowed_user : @model.UserId = @model.Id::parse("200000000000000001")
@@ -627,7 +628,7 @@ async test "waiter ignores another user's click and the route handles it" {
         timeout_ms=1000,
       )
     })
-    clock.settle()
+    clock.settle(until=() => clock.pending().contains(1000))
     assert_true(
       fw.process(
         component_interaction_from("confirm:restricted", "200000000000000002"),
@@ -644,8 +645,8 @@ async test "waiter ignores another user's click and the route handles it" {
 
 ///|
 async test "waiter ignores another user's click and stays pending" {
-  @async.with_task_group((group : @async.TaskGroup[Unit]) => {
-    let clock = @simclock.VirtualClock()
+  @async.with_task_group((group : @async.TaskGroup) => {
+    let clock = @transport.VirtualClock()
     let fw = test_framework(clock~)
     let allowed_user : @model.UserId = @model.Id::parse("200000000000000001")
     let pending = group.spawn(no_wait=true, () => {
@@ -655,7 +656,7 @@ async test "waiter ignores another user's click and stays pending" {
         timeout_ms=1000,
       )
     })
-    clock.settle()
+    clock.settle(until=() => clock.pending().contains(1000))
     assert_false(
       fw.process(
         component_interaction_from("confirm:pending", "200000000000000002"),

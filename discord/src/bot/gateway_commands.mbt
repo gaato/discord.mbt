@@ -151,13 +151,13 @@ pub async fn GatewayCtx::fetch_guild_members(
           if chunks.waiter.queue.get() is GuildMembersChunk(chunk) &&
             collected.add(chunk) is Some(members) {
             fetched.val = Some(members)
-            group.return_immediately(members)
+            group.return_immediately()
           }
         }
       })
     },
   )
-  if result is Some(members) {
+  if result is Some(_) && fetched.val is Some(members) {
     return members
   }
   // Judge by what was delivered, not by the timeout's result: the last chunk
