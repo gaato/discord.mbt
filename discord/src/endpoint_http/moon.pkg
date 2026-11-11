@@ -4,9 +4,9 @@ import {
   "gaato/discord/verify",
   "gaato/discord/http" @dhttp,
   "gaato/discord/model",
-  "gaato/http" @hmodel,
-  "gaato/http/h1server",
-  "gaato/http-async/server",
+  "gaato/mttp" @hmodel,
+  "gaato/mttp/h1server",
+  "gaato/mttp_async/server",
   "gaato/mttp/endpoint",
   "gaato/mttp/router",
   "gaato/mttp/schema",
@@ -36,9 +36,6 @@ supported_targets = "js + native + wasm"
 
 options(
   "allow-experimental-packages": [
-    "gaato/http/h1server",
-    "gaato/mttp/endpoint",
-    "gaato/mttp/router",
     "moonbitlang/core/async",
     "moonbitlang/core/async/aqueue",
     "moonbitlang/core/async/http",

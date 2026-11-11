@@ -93,7 +93,7 @@ one client.
   429 wait and whether the call is idempotent).
 - The resend decision cannot see a multipart body, which is assembled just
   before sending. `wire_request` therefore marks a `CreateMessage` whose body
-  has a `nonce` and `enforce_nonce: true` with the typed `gaato/http.replay_safe`
+  has a `nonce` and `enforce_nonce: true` with the typed `gaato/mttp.replay_safe`
   request attribute. It is metadata and is never sent as an HTTP header.
 - The mttp client's `timeout_ms` wraps every backend on the injected clock,
   including the default `AsyncBackend`. An outer timeout has phase `Unknown`;

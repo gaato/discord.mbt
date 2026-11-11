@@ -5,7 +5,7 @@ import {
   "gaato/discord/model",
   "gaato/discord/queue",
   "gaato/discord/telemetry",
-  "gaato/http/rt",
+  "gaato/mttp/rt",
   "moonbitlang/core/async",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",

@@ -33,9 +33,9 @@ kind say what that product is.
 | Learned `X-RateLimit-Bucket` keys (`ratelimit/ratelimit.mbt`, `server_key`; the `WindowLimiter`'s aliases) | One per route bucket that named a hash, pointing at a recorded state: an alias whose state has expired is swept with the states | — |
 | Invalid-request count (`http/invalid_requests.mbt`, one per REST client) | 60 counters, one per ten-second step of the last ten minutes | The oldest step's counter is reset and reused |
 | REST response body (`http/client.mbt`) | 64 MiB decoded through mttp for every backend; the default AsyncBackend also bounds wire bytes to 64 MiB | The attempt fails and its response body is closed |
-| REST response heads and trailers (default `gaato/http-async/backend` backend) | 16 KiB each | The attempt fails and the connection closes; a supplied `backend=` keeps its own wire policy |
+| REST response heads and trailers (default `gaato/mttp_async/backend` backend) | 16 KiB each | The attempt fails and the connection closes; a supplied `backend=` keeps its own wire policy |
 | Idle REST connections (default backend) | `max_connections`, default 4, per origin | Excess idle connections close; this is not a cap on active connections |
-| Interaction request heads and trailers (`gaato/http/h1server`) | 16 KiB each | The server rejects the request and closes the connection |
+| Interaction request heads and trailers (`gaato/mttp/h1server`) | 16 KiB each | The server rejects the request and closes the connection |
 | Inbound interaction request body (`endpoint_http/endpoint_http.mbt`) | `max_body_bytes`, default 1 MiB | 413 and the connection closes |
 | Interaction HTTP connections (`endpoint_http/endpoint_http.mbt`, `serve_interactions`) | `max_connections`, default 256, served at once | Further clients wait to be accepted |
 | Time to the next request head on an interaction HTTP connection (`endpoint_http/endpoint_http.mbt`, server limits) | `header_timeout_ms`, default 5 s, idle keep-alive time included | The connection closes, freeing its slot; a partial head gets 408 |

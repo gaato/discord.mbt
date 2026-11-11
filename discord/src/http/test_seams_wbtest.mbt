@@ -38,7 +38,7 @@ fn offline_test_client() -> (
 }
 
 ///|
-/// A `gaato/http` transport for whitebox tests of the send loop. Each wire
+/// A `gaato/mttp` transport for whitebox tests of the send loop. Each wire
 /// request is decoded into its path under the host, its lowercase headers,
 /// and its JSON body (a body that is not JSON, such as a multipart upload,
 /// arrives as a JSON string of its text); `answer`'s logical response is

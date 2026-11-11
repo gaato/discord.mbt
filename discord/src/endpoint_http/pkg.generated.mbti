@@ -4,8 +4,8 @@ package "gaato/discord/endpoint_http"
 import {
   "gaato/discord/app",
   "gaato/discord/model",
-  "gaato/http-async/server",
-  "gaato/http/h1server",
+  "gaato/mttp/h1server",
+  "gaato/mttp_async/server",
   "moonbitlang/core/async",
 }
 

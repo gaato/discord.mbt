@@ -19,18 +19,19 @@ From a MoonBit module root:
 ```sh
 moon update
 moon add gaato/discord
-moon add moonbitlang/core/async
 ```
 
-The resulting `moon.mod` contains module dependencies equivalent to:
+The resulting `moon.mod` contains:
 
 ```mbt nocheck
 ///|
 import {
-  "gaato/discord",
-  "moonbitlang/core/async",
+  "gaato/discord@0.16.0",
 }
 ```
+
+`moonbitlang/core/async` is part of the standard library, so it is imported
+by packages without being listed in `moon.mod`.
 
 Create an executable package, for example `src/main/moon.pkg`:
 

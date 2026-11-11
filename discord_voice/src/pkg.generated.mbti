@@ -4,7 +4,7 @@ package "gaato/discord_voice"
 import {
   "gaato/discord/bot",
   "gaato/discord/model",
-  "gaato/http/rt",
+  "gaato/mttp/rt",
   "moonbitlang/core/async",
   "moonbitlang/core/async/io",
   "moonbitlang/core/debug",

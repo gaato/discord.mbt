@@ -22,9 +22,8 @@ preferred_target = "native"
 warnings = "-implicit_impl_as_method"
 
 import {
-  "gaato/http@0.6.0",
-  "gaato/http-async@0.6.0",
-  "gaato/mttp@0.1.0",
+  "gaato/mttp_async@0.1.0",
+  "gaato/mttp@0.2.0",
   "hustcer/ed25519@0.6.1",
   "gaato/codec_bytes@0.1.1",
   "gaato/deflate@0.1.0",

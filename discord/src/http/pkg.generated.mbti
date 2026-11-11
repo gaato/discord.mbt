@@ -4,8 +4,9 @@ package "gaato/discord/http"
 import {
   "gaato/discord/model",
   "gaato/discord/telemetry",
-  "gaato/http/rt",
+  "gaato/mttp",
   "gaato/mttp/client",
+  "gaato/mttp/rt",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
@@ -29,8 +30,8 @@ pub(all) suberror DiscordHttpError {
   Api(status~ : Int32, error~ : ApiError)
   RateLimited(retry_after_ms~ : Int64, global~ : Bool)
   Deserialize(message~ : String)
-  Transport(phase~ : @gaato/http.Phase, message~ : String)
-  Timeout(phase~ : @gaato/http.Phase, timeout_ms~ : Int32)
+  Transport(phase~ : @mttp.Phase, message~ : String)
+  Timeout(phase~ : @mttp.Phase, timeout_ms~ : Int32)
   Validation(message~ : String)
 }
 pub fn DiscordHttpError::is_unsent(Self) -> Bool
@@ -139,7 +140,7 @@ pub async fn[T] ChannelRef::with_typing(Self, async () -> T) -> T
 pub struct Client {
   // private fields
 }
-pub fn Client::Client(String, base_url? : String, api_version? : Int32, limiter? : &@client.RateLimiter, backend? : &@gaato/http.Backend, max_connections? : Int32, request_timeout_ms? : Int32, max_retries? : Int32, default_allowed_mentions? : @model.AllowedMentions, clock? : &@rt.Clock) -> Self
+pub fn Client::Client(String, base_url? : String, api_version? : Int32, limiter? : &@client.RateLimiter, backend? : &@mttp.Backend, max_connections? : Int32, request_timeout_ms? : Int32, max_retries? : Int32, default_allowed_mentions? : @model.AllowedMentions, clock? : &@rt.Clock) -> Self
 pub async fn Client::add_guild_member(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker], String, nick? : String, roles? : Array[@model.Id[@model.RoleMarker]], mute? : Bool, deaf? : Bool) -> @model.GuildMember? raise DiscordHttpError
 pub async fn Client::add_invite_target_user(Self, String, @model.Id[@model.UserMarker]) -> Unit raise DiscordHttpError
 pub async fn Client::add_member_role(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker], @model.Id[@model.RoleMarker], audit_reason? : String) -> Unit raise DiscordHttpError
@@ -592,7 +593,7 @@ pub async fn RoleRef::fetch(Self) -> @model.Role raise DiscordHttpError
 pub async fn RoleRef::permissions(Self) -> @model.Permissions raise DiscordHttpError
 
 pub(all) enum Route {
-  Custom(request_method~ : @gaato/http.Method, path~ : String, bucket_key~ : String, is_interaction~ : Bool, supports_reason~ : Bool)
+  Custom(request_method~ : @mttp.Method, path~ : String, bucket_key~ : String, is_interaction~ : Bool, supports_reason~ : Bool)
   GetGateway
   GetGatewayBot
   GetCurrentApplication
@@ -817,9 +818,9 @@ pub(all) enum Route {
   EditApplicationCommandPermissions(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker], command_id~ : @model.Id[@model.CommandMarker])
 }
 pub fn Route::bucket(Self) -> String
-pub fn Route::custom(request_method~ : @gaato/http.Method, path~ : String, bucket? : String, is_interaction? : Bool, supports_reason? : Bool) -> Self raise CustomRouteError
+pub fn Route::custom(request_method~ : @mttp.Method, path~ : String, bucket? : String, is_interaction? : Bool, supports_reason? : Bool) -> Self raise CustomRouteError
 pub fn Route::is_interaction(Self) -> Bool
-pub fn Route::method_(Self) -> @gaato/http.Method
+pub fn Route::method_(Self) -> @mttp.Method
 pub fn Route::needs_auth(Self) -> Bool
 pub fn Route::path(Self) -> String
 pub fn Route::supports_reason(Self) -> Bool
@@ -898,6 +899,6 @@ pub async fn WebhookTokenRef::send_slack(Self, @json.Json, thread_id? : @model.I
 // Type aliases
 pub type HttpMiddleware = async (HttpRequest, async (HttpRequest) -> HttpResponse) -> HttpResponse
 
-pub using @gaato/http {type Method}
+pub using @mttp {type Method}
 
 // Traits

@@ -20,8 +20,13 @@ Install `git` (Moon uses it to clone the package registry), then:
 ```sh
 moon update
 moon add gaato/discord
-moon add moonbitlang/core/async
 ```
+
+The bot's `main` is an `async fn main`, so its package imports
+`moonbitlang/core/async` (part of the standard library; there is nothing to
+`moon add`) and lists it under `allow-experimental-packages`. The
+[bot template](https://github.com/gaato/discord.mbt/blob/main/template/README.md)
+has the whole setup.
 
 ## Quickstart
 

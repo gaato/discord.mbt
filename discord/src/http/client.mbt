@@ -70,10 +70,10 @@ const MAX_RESPONSE_BODY_BYTES : Int32 = 67_108_864
 /// The backoff is 500 ms, doubling up to 30 s, within ±20 %. Anything else,
 /// 401 and 403 included, is Discord's answer and is never resent.
 ///
-/// `backend` is the `gaato/http` `Backend` that performs the wire
+/// `backend` is the `gaato/mttp` `Backend` that performs the wire
 /// exchange, below request validation, middleware, rate limiting, retries,
 /// status mapping, and decoding. By default the client creates a
-/// `gaato/http-async/backend` `AsyncBackend` with up to `max_connections`
+/// `gaato/mttp_async/backend` `AsyncBackend` with up to `max_connections`
 /// idle connections per origin and a 64 MiB wire-body bound, and closes it
 /// in `close`. A supplied backend is shared: the client never closes it,
 /// and `max_connections` does not configure it. In both cases the mttp

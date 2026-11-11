@@ -8,7 +8,7 @@ import {
   "gaato/discord/interaction",
   "gaato/discord/model",
   "gaato/discord/verify",
-  "gaato/http/rt",
+  "gaato/mttp/rt",
   "moonbitlang/core/async",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",

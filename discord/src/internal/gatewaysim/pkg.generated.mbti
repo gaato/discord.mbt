@@ -3,7 +3,7 @@ package "gaato/discord/internal/gatewaysim"
 
 import {
   "gaato/discord/gateway",
-  "gaato/http-async/runtime",
+  "gaato/mttp_async/runtime",
   "moonbitlang/core/async/aqueue",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",

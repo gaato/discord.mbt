@@ -1,6 +1,6 @@
 import {
-  "gaato/http-async/runtime" @transport,
-  "gaato/http/rt" @hclock,
+  "gaato/mttp_async/runtime" @transport,
+  "gaato/mttp/rt" @hclock,
   "moonbitlang/core/async",
 }
 

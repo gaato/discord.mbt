@@ -3,14 +3,14 @@ import {
   "gaato/discord/model",
   "gaato/discord/telemetry",
   "gaato/discord/ratelimit",
-  "gaato/http/rt" @hclock,
-  "gaato/http" @ghttp,
+  "gaato/mttp/rt" @hclock,
+  "gaato/mttp" @ghttp,
   "gaato/mttp/client/retry",
-  "gaato/http-async/runtime" @transport,
+  "gaato/mttp_async/runtime" @transport,
   "gaato/mttp/client" @runtime,
   "gaato/mttp/multipart",
-  "gaato/http-async/backend",
-  "gaato/http/h1client",
+  "gaato/mttp_async/backend",
+  "gaato/mttp/h1client",
   "moonbitlang/core/async",
   "moonbitlang/core/json",
   "moonbitlang/core/debug",
@@ -30,7 +30,7 @@ import {
 } for "test"
 
 import {
-  "gaato/http-async/runtime" @transport,
+  "gaato/mttp_async/runtime" @transport,
   "moonbitlang/core/json",
 } for "wbtest"
 
@@ -46,7 +46,6 @@ supported_targets = "js + native + wasm"
 
 options(
   "allow-experimental-packages": [
-    "gaato/http/h1client",
     "moonbitlang/core/async",
     "moonbitlang/core/async/http",
     "moonbitlang/core/async/socket",

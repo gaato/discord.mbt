@@ -12,8 +12,8 @@ import {
   "gaato/discord/interaction",
   "gaato/discord/model",
   "gaato/discord/verify",
-  "gaato/http-async/server",
-  "gaato/http/h1server",
+  "gaato/mttp/h1server",
+  "gaato/mttp_async/server",
   "moonbitlang/core/async",
 }
 

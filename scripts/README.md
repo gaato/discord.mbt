@@ -32,8 +32,8 @@ function (`positional @pkg.function`).
 moon run scripts/clock_guard.mbtx --self-test
 ```
 
-Library code waits and reads time through an injected `gaato/http/rt`
-`Clock`, so tests can drive it with `VirtualClock` from `gaato/http-async/runtime`
+Library code waits and reads time through an injected `gaato/mttp/rt`
+`Clock`, so tests can drive it with `VirtualClock` from `gaato/mttp_async/runtime`
 instead of sleeping. The guard scans the library sources of every module
 (tests excluded) for real-time entry points: `@async.sleep`,
 `@async.with_timeout(_opt)`, `@async.now`, `@async.retry` and its delays,

@@ -57,7 +57,7 @@ Accepted as uncovered (needs a ledger row):
   shard_manager). The gateway shard, command limiter, and identify queue
   take a `clock~`, and the voice gateway, voice connection, and voice client
   a `clock?` (a
-  `gaato/http/rt` `Clock`, driven in tests by `gaato/http-async/runtime`'s
+  `gaato/mttp/rt` `Clock`, driven in tests by `gaato/mttp_async/runtime`'s
   `VirtualClock`; `scripts/clock_guard.mbtx` keeps library code off the real
   clock), plus `rand?`; their backoff/heartbeat/keepalive
   cadences, and for voice also playback pacing, receive backoff and
