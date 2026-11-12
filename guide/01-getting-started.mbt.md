@@ -26,7 +26,7 @@ The resulting `moon.mod` contains:
 ```mbt nocheck
 ///|
 import {
-  "gaato/discord@0.16.0",
+  "gaato/discord@0.17.0",
 }
 ```
 

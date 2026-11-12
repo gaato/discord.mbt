@@ -31,7 +31,7 @@ priv enum Backend {
 
 ///|
 /// Library version, sent in the User-Agent header.
-pub const VERSION : String = "0.16.0"
+pub const VERSION : String = "0.17.0"
 
 ///|
 /// The largest decoded response body the client buffers, the same 64 MiB

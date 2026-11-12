@@ -7,6 +7,8 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-11-12
+
 ### Changed
 
 - **The HTTP stack is `gaato/mttp_core` 0.1.0 and `gaato/mttp` 0.3.0.** The
@@ -45,6 +47,7 @@ breaking change is listed with a migration note.
     `gaato/mttp_core/client/ratelimit.WindowLimiter`; `ListenError` is
     `gaato/mttp/server`'s and `ServerConfigError`
     `gaato/mttp_core/h1server`'s.
+- `VERSION` and the REST User-Agent are now `0.17.0`.
 
 ### Fixed
 
