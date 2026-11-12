@@ -21,7 +21,8 @@ fn captured_obfuscated_category_and_voice() -> String {
 ///|
 /// A hidden stage channel synthesized from the documented obfuscation rules
 /// (only `id`, `type`, `position` and `parent_id` kept, everything else
-/// nulled): the probe guild cannot create stage channels without COMMUNITY.
+/// nulled). The live captures fill plain fields with defaults instead, so
+/// this keeps the null case the docs allow in the GUILD_CREATE.
 fn synthesized_obfuscated_stage() -> String {
   (
     #|{"id":"413","type":13,"position":5,"parent_id":"410","flags":131072,"name":"___hidden___","permission_overwrites":[{"type":0,"id":"100","deny":"1024","allow":"0"}],"nsfw":null,"bitrate":null,"user_limit":null,"rate_limit_per_user":null,"rtc_region":null,"video_quality_mode":null,"topic":null}

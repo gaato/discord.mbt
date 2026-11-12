@@ -3,8 +3,8 @@
 /// `id`, `type`, `position` and `parent_id` kept, `name` `"___hidden___"`,
 /// one placeholder overwrite, and every other field this type carries nulled.
 /// The 2026-11-12 captures (below) reduced plain fields to defaults instead,
-/// but the docs allow nulls and stage, media and announcement channels have
-/// not been captured, so this is the case the decoder must survive.
+/// but the docs allow nulls and media channels have not been captured, so
+/// this is the case the decoder must survive.
 fn synthesized_obfuscated_channels() -> Array[(String, Json)] {
   let placeholder : Json = [
     { "type": 0, "id": "100", "deny": "1024", "allow": "0" },
@@ -141,7 +141,9 @@ fn rejects(decode : () -> @model.Channel raise) -> Bool {
 
 ///|
 /// Obfuscated channels from a GUILD_CREATE, captured live on 2026-11-12 by
-/// the live probe with the CHANNEL_OBFUSCATION capability, verbatim.
+/// the live probe with the CHANNEL_OBFUSCATION capability, verbatim. The
+/// stage and announcement channels come from a later run that day, after
+/// COMMUNITY was enabled on the probe guild.
 fn captured_obfuscated_channels_2026_11_12() -> Array[(String, String)] {
   [
     (
@@ -166,6 +168,18 @@ fn captured_obfuscated_channels_2026_11_12() -> Array[(String, String)] {
       "forum",
       (
         #|{"voice_hangout":null,"voice_background_display":null,"version":1794456437385,"type":15,"topic":null,"theme_color":null,"template":"","status":null,"rtc_region":null,"rate_limit_per_user":0,"position":2,"permission_overwrites":[{"type":0,"id":"1527253314998108220","deny":"1024","allow":"0"}],"parent_id":"1570288848808710204","nsfw":false,"name":"___hidden___","linked_lobby":null,"last_pin_timestamp":null,"last_message_id":null,"id":"1570288854131282001","icon_emoji":null,"hd_streaming_until":null,"hd_streaming_buyer_id":null,"game_id":null,"flags":131072,"default_tag_setting":null,"default_sort_order":null,"default_reaction_emoji":null,"available_tags":[],"application_id":null}
+      ),
+    ),
+    (
+      "stage",
+      (
+        #|{"voice_hangout":null,"voice_background_display":null,"version":1794457137837,"user_limit":10000,"type":13,"topic":null,"theme_color":null,"status":null,"rtc_region":null,"rate_limit_per_user":0,"position":0,"permission_overwrites":[{"type":0,"id":"1527253314998108220","deny":"1024","allow":"0"}],"parent_id":"1570291785060716545","nsfw":false,"name":"___hidden___","linked_lobby":null,"last_pin_timestamp":null,"last_message_id":null,"id":"1570291791645773899","icon_emoji":null,"hd_streaming_until":null,"hd_streaming_buyer_id":null,"game_id":null,"flags":131072,"default_tag_setting":null,"default_sort_order":null,"default_reaction_emoji":null,"bitrate":64000,"available_tags":[],"application_id":null}
+      ),
+    ),
+    (
+      "announcement",
+      (
+        #|{"voice_hangout":null,"voice_background_display":null,"version":1794457138515,"type":5,"topic":null,"theme_color":null,"status":null,"rtc_region":null,"rate_limit_per_user":0,"position":0,"permission_overwrites":[{"type":0,"id":"1527253314998108220","deny":"1024","allow":"0"}],"parent_id":"1570291785060716545","nsfw":false,"name":"___hidden___","linked_lobby":null,"last_pin_timestamp":null,"last_message_id":null,"id":"1570291794892029982","icon_emoji":null,"hd_streaming_until":null,"hd_streaming_buyer_id":null,"game_id":null,"flags":131072,"default_tag_setting":null,"default_sort_order":null,"default_reaction_emoji":null,"available_tags":[],"application_id":null}
       ),
     ),
   ]
@@ -200,6 +214,18 @@ fn captured_regained_channels_2026_11_12() -> Array[(String, String)] {
         #|{"version":1794456437385,"type":15,"topic":null,"theme_color":null,"template":"","rate_limit_per_user":0,"position":2,"permission_overwrites":[{"type":0,"id":"1527253314998108220","deny":"1024","allow":"0"},{"type":0,"id":"1570288846070095923","deny":"0","allow":"1024"}],"parent_id":"1570288848808710204","nsfw":false,"name":"probe-hidden-forum","last_message_id":null,"id":"1570288854131282001","icon_emoji":null,"guild_id":"1527253314998108220","flags":0,"default_tag_setting":"match_some","default_sort_order":null,"default_reaction_emoji":null,"available_tags":[]}
       ),
     ),
+    (
+      "stage",
+      (
+        #|{"version":1794457137837,"user_limit":10000,"type":13,"topic":null,"rtc_region":null,"rate_limit_per_user":0,"position":0,"permission_overwrites":[{"type":0,"id":"1527253314998108220","deny":"1024","allow":"0"},{"type":0,"id":"1570291778702024735","deny":"0","allow":"1024"}],"parent_id":"1570291785060716545","nsfw":false,"name":"probe-hidden-stage","last_message_id":null,"id":"1570291791645773899","guild_id":"1527253314998108220","flags":0,"bitrate":64000}
+      ),
+    ),
+    (
+      "announcement",
+      (
+        #|{"version":1794457138515,"type":5,"topic":null,"rate_limit_per_user":0,"position":0,"permission_overwrites":[{"type":0,"id":"1527253314998108220","deny":"1024","allow":"0"},{"type":0,"id":"1570291778702024735","deny":"0","allow":"1024"}],"parent_id":"1570291785060716545","nsfw":false,"name":"probe-hidden-announcement","last_message_id":null,"id":"1570291794892029982","guild_id":"1527253314998108220","flags":0}
+      ),
+    ),
   ]
 }
 
@@ -225,7 +251,14 @@ test "obfuscated channels captured live on 2026-11-12 decode" {
   debug_inspect(
     decoded,
     content=(
-      #|["category:4:4", "text:0:8", "voice:2:4", "forum:15:2"]
+      #|[
+      #|  "category:4:4",
+      #|  "text:0:8",
+      #|  "voice:2:4",
+      #|  "forum:15:2",
+      #|  "stage:13:0",
+      #|  "announcement:5:0",
+      #|]
     ),
   )
   // What Discord sent once the bot could view them again: the full channels.
@@ -248,6 +281,8 @@ test "obfuscated channels captured live on 2026-11-12 decode" {
       #|  "text:probe-hidden-text",
       #|  "voice:probe-hidden-voice",
       #|  "forum:probe-hidden-forum",
+      #|  "stage:probe-hidden-stage",
+      #|  "announcement:probe-hidden-announcement",
       #|]
     ),
   )
