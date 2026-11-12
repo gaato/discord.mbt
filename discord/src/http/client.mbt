@@ -136,6 +136,10 @@ pub fn Client::Client(
     clock,
     base_url~,
     retry=@runtime.RetryPolicy::from_rule(discord_retry_rule(max_retries)),
+    // Discord's 429 is flow control that the limiter and the resend wait
+    // out, so a budget must not cut a run of them short; `max_retries` and
+    // the resend rule already bound every other resend.
+    retry_budget=@runtime.RetryBudget::unlimited(),
     limiter~,
     observer=attempt => {
       if is_invalid_request(attempt.status, attempt.headers) {

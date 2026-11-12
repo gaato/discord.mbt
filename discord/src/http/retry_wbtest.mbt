@@ -742,6 +742,55 @@ async test "a 429 that is not Discord's is raised without a resend" {
 }
 
 ///|
+/// Discord's 429 is flow control: the client waits out each one and sends
+/// again, however many come in a row. `gaato/mttp/client`'s default retry
+/// budget (10 resends a second plus 20 % of the requests over 10 s) would
+/// stop this run after about a hundred resends; the client must not use it.
+async test "a long run of Discord 429s is resent without a retry budget" {
+  let clock = @transport.VirtualClock()
+  let answered = Ref(0)
+  let wire = FakeWire::{
+    answer: (_path, _headers, _body) => {
+      answered.val += 1
+      // Four 429s, then the answer, for every call.
+      if answered.val % 5 != 0 {
+        {
+          status: 429,
+          headers: {
+            "content-type": "application/json",
+            "x-ratelimit-scope": "user",
+          },
+          body: { "retry_after": 0.001, "global": false },
+        }
+      } else {
+        { status: 200, headers: Map([]), body: { "url": "wss://x" }, }
+      }
+    },
+  }
+  let client = Client(
+    "test-token",
+    backend=wire,
+    limiter=@runtime.NoLimiter::new(),
+    clock~,
+  )
+  defer client.close()
+  let calls = 40
+  let started_at = clock.now_unix_ms()
+  let urls = on_virtual_time(clock, () => {
+    let urls : Array[String] = []
+    for _ in 0..<calls {
+      urls.push(client.get_gateway())
+    }
+    urls
+  })
+  assert_eq(urls.length(), calls)
+  assert_true(urls.iter().all(url => url == "wss://x"))
+  // 160 resends within a few virtual seconds, past the default budget.
+  assert_eq(answered.val, calls * 5)
+  assert_true(clock.now_unix_ms() - started_at < 10_000L)
+}
+
+///|
 async test "a 401 is raised without a resend and counted" {
   let answered = Ref(0)
   let client = status_sequence_client(
