@@ -7,6 +7,54 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-11-12
+
+Follows Discord's developer docs through
+[`36adecb2`](https://github.com/discord/discord-api-docs/commit/36adecb2e0bbbf500c430147ef4acbe9aa1a389e).
+
+### Changed
+
+- **The HTTP stack is `gaato/mttp` 0.2.0 and `gaato/mttp_async` 0.1.0.**
+  `gaato/http` became part of `gaato/mttp` (its vocabulary is the root
+  package, `@mttp`) and `gaato/http-async` became `gaato/mttp_async`; the
+  types are the same under the new paths. Migration, only where your code
+  names these types: in `moon.mod`, replace `gaato/http`, `gaato/http-async`
+  and `gaato/mttp@0.1.0` with `gaato/mttp@0.2.0` and
+  `gaato/mttp_async@0.1.0`; in `moon.pkg`, `gaato/http` becomes `gaato/mttp`
+  (keep the `@http` alias, or rename `@http.` to `@mttp.`), `gaato/http/rt`
+  becomes `gaato/mttp/rt`, and `gaato/http-async/...` becomes
+  `gaato/mttp_async/...`; drop `gaato/mttp/endpoint`, `gaato/mttp/router`,
+  `h1client` and `h1server` from `allow-experimental-packages`, as they are
+  no longer experimental. The public signatures that name them:
+  - `Client(backend=...)` takes a `gaato/mttp.Backend`, and the default is a
+    `gaato/mttp_async/backend.AsyncBackend`. A backend you write raises
+    `@mttp.TransportError`.
+  - Every injected clock is a `gaato/mttp/rt.Clock` (`Client`,
+    `Client::offline`, `App::serve`, `Framework`, `ResponseGate`,
+    `CommandLimiter`, `Shard::start`, `InMemoryQueue`, `rate_limiter`);
+    tests drive it with `VirtualClock` from `gaato/mttp_async/runtime`.
+  - `DiscordHttpError::Transport` and `Timeout` carry a `gaato/mttp.Phase`;
+    `Method`, and with it `Route::Custom`, `Route::custom` and
+    `Route::method_`, is `gaato/mttp.Method`; `RemoteRateLimiter::release`
+    and `@ratelimit.is_discord_rate_limit` take `gaato/mttp.Headers`.
+  - `ListenError` is `gaato/mttp_async/server`'s and `ServerConfigError`
+    `gaato/mttp/h1server`'s. `ListenError::Bind` and `Accept` now name the
+    cause in `detail` (the address and the system's reason), and the
+    interaction server binds with `SO_REUSEADDR`, so a restart no longer
+    fails to bind while old connections are in TIME-WAIT.
+- **The REST client follows redirects**, as `gaato/mttp` 0.2's client does
+  by default. A 301, 302, 303, 307 or 308 is followed up to 10 hops within
+  one attempt, under its rate-limit admission and `request_timeout_ms`;
+  `Authorization` is dropped when the origin changes and an `https` to
+  `http` redirect is refused. Such a response used to come back as the 3xx
+  itself; a redirect that cannot be followed (too many hops, a downgrade, a
+  body that cannot be sent again) now raises `DiscordHttpError::Transport`.
+  The client does not take mttp's default retry budget, on purpose: Discord's
+  429 is flow control that the rate limiter and the resend wait out, so a
+  budget must not end a run of them with `RateLimited`. Resends stay bounded
+  by `max_retries` and the resend rules, as in 0.15.0.
+- `VERSION` and the REST User-Agent are now `0.16.0`.
+
 ### Fixed
 
 - **Obfuscated channels decode, and the cache does not guess their

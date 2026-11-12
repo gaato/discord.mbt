@@ -6,6 +6,21 @@ releases (0.x → 0.y) may contain breaking changes; patch releases do not.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-12
+
+### Changed
+
+- **Uses `gaato/discord` 0.16.0, `gaato/mttp` 0.2.0 and `gaato/mttp_async`
+  0.1.0** in place of `gaato/http` 0.6.0 and `gaato/http-async` 0.6.0, which
+  became part of them. `VoiceClient` and `VoiceConnection::start` take a
+  `gaato/mttp/rt.Clock` (formerly `gaato/http/rt.Clock`), and tests drive
+  them with `VirtualClock` from `gaato/mttp_async/runtime`. Voice itself is
+  unchanged; the REST client underneath now follows redirects, as listed in
+  [its changelog](https://github.com/gaato/discord.mbt/blob/main/discord/CHANGELOG.md).
+  Migration: depend on `gaato/discord@0.16.0` alongside this release, and
+  replace `gaato/http/rt` with `gaato/mttp/rt` and `gaato/http-async/...`
+  with `gaato/mttp_async/...` in `moon.pkg`.
+
 ## [0.4.0] - 2026-11-10
 
 ### Changed

@@ -56,6 +56,18 @@ have reached Discord is otherwise raised at once rather than risk a second
 effect. Resends stop after `max_retries` (default 4); the backoff is
 `gaato/mttp/client`'s conservative one (500 ms doubling up to 30 s, within
 ±20 %), and each attempt is bounded by `request_timeout_ms` (default 30 s).
+There is no retry budget: the client passes `gaato/mttp/client`'s
+`RetryBudget::unlimited()` instead of its default, which caps resends at a
+share of recent requests and would end a run of Discord's 429s with
+`RateLimited`. A 429 is flow control whose wait Discord names, and the rate
+limiter holds the bucket for it, so only `max_retries` and the rules above
+bound the resends.
+
+A redirect (301, 302, 303, 307, 308) is followed inside the attempt, up to 10
+hops, under the same rate-limit admission and attempt deadline, as the
+`gaato/mttp/client` default: `Authorization` is dropped when the origin
+changes and an `https` to `http` redirect is refused. Discord does not
+document redirects on its API.
 
 **Whose 429 is it?** A 429 is Discord's when it has an `X-RateLimit-Scope`
 or `X-RateLimit-Global` header or a JSON content type, as Discord documents.
