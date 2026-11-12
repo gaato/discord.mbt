@@ -365,6 +365,7 @@ async fn main {
     sec_templates(p)
     sec_commands(p)
     sec_monetization(p)
+    sec_obfuscation(p)
     sec_gateway(p)
   } catch {
     err => println("!! probe aborted: \{describe(err)}")

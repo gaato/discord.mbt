@@ -7,6 +7,18 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Obfuscated channels decode, and the cache does not guess their
+  permissions.** From 2026-11-16 Discord obfuscates every guild channel a bot
+  cannot view: only `id`, `type`, `position` and `parent_id` are reliable and
+  other fields may be null. A `Channel` with the `CHANNEL_OBFUSCATED` flag now
+  reads any other field that is null or malformed as `None`, so such a
+  channel no longer fails the whole `GUILD_CREATE` (which left the guild out
+  of the cache) or channel event; channels without the flag decode as
+  strictly as before. `InMemoryCache::permissions_in` returns `None` for an
+  obfuscated channel instead of computing from its placeholder overwrite.
+
 ## [0.15.0] - 2026-11-10
 
 ### Changed

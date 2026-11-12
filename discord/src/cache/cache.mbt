@@ -1357,6 +1357,11 @@ pub fn InMemoryCache::unavailable_guilds(
 
 ///|
 /// The cached channel or thread, if retained.
+///
+/// A guild channel the bot cannot view is cached as Discord sent it:
+/// obfuscated (`Channel::is_obfuscated`), with only `id`, `typ`, `position`
+/// and `parent_id` reliable. The `CHANNEL_UPDATE` Discord sends when the bot
+/// gains access replaces it with the full channel.
 pub fn InMemoryCache::channel(
   self : InMemoryCache,
   id : @model.ChannelId,
@@ -1366,7 +1371,8 @@ pub fn InMemoryCache::channel(
 }
 
 ///|
-/// All cached channels and threads.
+/// All cached channels and threads, including obfuscated ones (see
+/// `InMemoryCache::channel`).
 pub fn InMemoryCache::channels(self : InMemoryCache) -> Array[@model.Channel] {
   self.expire()
   self.channels_
@@ -1536,7 +1542,12 @@ pub fn InMemoryCache::permissions(
 ///|
 /// Computes channel permissions using the cached base resources and channel
 /// overwrites. Returns `None` when any required cache resource is disabled or
-/// absent.
+/// absent, and for an obfuscated channel (`Channel::is_obfuscated`, one the
+/// bot cannot view): Discord replaces its overwrites with a single placeholder
+/// that denies `VIEW_CHANNEL` to `@everyone`, so a result computed from them
+/// would be wrong for every user. `Client::get_channel_member_permissions` has
+/// Discord compute a member's permissions instead, but it requires the bot to
+/// view the channel, so it serves channels the bot can see.
 pub fn InMemoryCache::permissions_in(
   self : InMemoryCache,
   guild_id : @model.GuildId,
@@ -1549,7 +1560,8 @@ pub fn InMemoryCache::permissions_in(
     self.guild_member(guild_id, user_id) is Some(cached_member) &&
     self.cached_channel(channel_id)
     is Some({ channel, guild_id: channel_guild_id, }) &&
-    channel_guild_id == Some(guild_id) else {
+    channel_guild_id == Some(guild_id) &&
+    !channel.is_obfuscated() else {
     return None
   }
   Some(

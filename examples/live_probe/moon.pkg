@@ -8,6 +8,7 @@ import {
   "moonbitlang/core/async/fs",
   "moonbitlang/core/async/signal",
   "moonbitlang/core/env",
+  "moonbitlang/core/json",
 }
 
 supported_targets = "native"

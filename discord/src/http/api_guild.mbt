@@ -168,7 +168,12 @@ pub async fn Client::get_guild_bans(
 }
 
 ///|
-/// List the channels in a guild.
+/// List the channels in a guild, without threads.
+///
+/// From 2026-11-16 Discord omits the channels the bot cannot view (no
+/// `VIEW_CHANNEL`, and not connected to it if it is a voice channel; a
+/// category counts as viewable while any of its channels is). The gateway
+/// still sends those channels, obfuscated (`Channel::is_obfuscated`).
 pub async fn Client::get_guild_channels(
   self : Client,
   guild_id : @model.GuildId,

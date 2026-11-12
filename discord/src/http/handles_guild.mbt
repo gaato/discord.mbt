@@ -175,7 +175,8 @@ pub async fn GuildRef::bulk_ban(
 }
 
 ///|
-/// List channels in this guild.
+/// List channels in this guild, without threads. From 2026-11-16 Discord
+/// omits the channels the bot cannot view (see `Client::get_guild_channels`).
 pub async fn GuildRef::channels(
   self : GuildRef,
 ) -> Array[@model.Channel] raise DiscordHttpError {

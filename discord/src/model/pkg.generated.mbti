@@ -925,7 +925,7 @@ pub fn ButtonStyle::to_json(Self) -> @json.Json
 pub impl @json.FromJson for ButtonStyle
 pub impl @json.ToJson for ButtonStyle
 
-#derive(@debug.Debug, @json.FromJson, @json.ToJson)
+#derive(@debug.Debug, @json.ToJson)
 pub(all) struct Channel {
   id : Id[ChannelMarker]
   typ : ChannelType
@@ -966,6 +966,7 @@ pub(all) struct Channel {
 }
 pub fn Channel::is_obfuscated(Self) -> Bool
 pub fn Channel::to_json(Self) -> @json.Json
+pub impl @json.FromJson for Channel
 
 #derive(Eq)
 pub(all) struct ChannelFlags(UInt64)

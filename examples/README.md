@@ -62,7 +62,10 @@ These run against the real Discord API and are for checking the library
 itself, not for copying.
 
 - `live_probe`: calls every typed REST endpoint in a disposable guild,
-  creating and deleting resources there, and prints a pass/fail report.
+  creating and deleting resources there, and prints a pass/fail report. Its
+  channel obfuscation section records real obfuscated payloads only when
+  the bot's role lacks ADMINISTRATOR, since an administrator sees every
+  channel.
 - `gate_probe`: error-policy recovery and user-restricted component waits,
   driven from a Discord client.
 - `update_probe`: decoding of `MESSAGE_UPDATE` payloads and related fixes.

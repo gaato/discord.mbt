@@ -1,6 +1,10 @@
 ///|
 /// A flat channel model covering every Discord channel variant.
-#derive(ToJson(fields(typ(rename="type"), thread_member(rename="member"))), FromJson(fields(typ(rename="type"), thread_member(rename="member"))), Debug)
+///
+/// A guild channel the bot cannot view arrives over the gateway obfuscated
+/// (`Channel::is_obfuscated`): only `id`, `typ`, `position` and `parent_id`
+/// are reliable, and Discord nulls or reduces the rest.
+#derive(ToJson(fields(typ(rename="type"), thread_member(rename="member"))), Debug)
 pub(all) struct Channel {
   id : ChannelId
   typ : ChannelType
@@ -38,6 +42,137 @@ pub(all) struct Channel {
   default_thread_rate_limit_per_user : Int32?
   default_sort_order : Nullable[SortOrderType]?
   default_forum_layout : ForumLayoutType?
+}
+
+///|
+/// Decodes a channel from its Discord JSON representation.
+///
+/// Every field is checked against its type, so a malformed channel fails.
+/// The exception is a channel whose `flags` carry `CHANNEL_OBFUSCATED`:
+/// Discord guarantees only `id`, `type`, `position` and `parent_id` there and
+/// nulls or reduces the rest, so those four and `flags` stay strict while any
+/// other field that is null or does not decode becomes `None`. One hidden
+/// channel then cannot fail the `GUILD_CREATE` that lists it.
+pub impl @json.FromJson for Channel with fn from_json(json, path) {
+  guard json is Object(fields) else {
+    raise JsonDecodeError((path, "expected channel (object)"))
+  }
+  let flags : ChannelFlags? = channel_field(
+    fields,
+    "flags",
+    path,
+    lenient=false,
+  )
+  let lenient = flags is Some(flags) &&
+    flags.contains(ChannelFlags::channel_obfuscated())
+  {
+    id: event_field(fields, "id", path),
+    typ: event_field(fields, "type", path),
+    guild_id: channel_field(fields, "guild_id", path, lenient~),
+    position: channel_field(fields, "position", path, lenient=false),
+    permission_overwrites: channel_field(
+      fields,
+      "permission_overwrites",
+      path,
+      lenient~,
+    ),
+    name: channel_field(fields, "name", path, lenient~),
+    topic: channel_field(fields, "topic", path, lenient~),
+    nsfw: channel_field(fields, "nsfw", path, lenient~),
+    last_message_id: channel_field(fields, "last_message_id", path, lenient~),
+    bitrate: channel_field(fields, "bitrate", path, lenient~),
+    user_limit: channel_field(fields, "user_limit", path, lenient~),
+    rate_limit_per_user: channel_field(
+      fields,
+      "rate_limit_per_user",
+      path,
+      lenient~,
+    ),
+    recipients: channel_field(fields, "recipients", path, lenient~),
+    icon: channel_field(fields, "icon", path, lenient~),
+    owner_id: channel_field(fields, "owner_id", path, lenient~),
+    application_id: channel_field(fields, "application_id", path, lenient~),
+    managed: channel_field(fields, "managed", path, lenient~),
+    parent_id: channel_field(fields, "parent_id", path, lenient=false),
+    last_pin_timestamp: channel_field(
+      fields,
+      "last_pin_timestamp",
+      path,
+      lenient~,
+    ),
+    rtc_region: channel_field(fields, "rtc_region", path, lenient~),
+    video_quality_mode: channel_field(
+      fields,
+      "video_quality_mode",
+      path,
+      lenient~,
+    ),
+    message_count: channel_field(fields, "message_count", path, lenient~),
+    member_count: channel_field(fields, "member_count", path, lenient~),
+    thread_metadata: channel_field(fields, "thread_metadata", path, lenient~),
+    thread_member: channel_field(fields, "member", path, lenient~),
+    default_auto_archive_duration: channel_field(
+      fields,
+      "default_auto_archive_duration",
+      path,
+      lenient~,
+    ),
+    permissions: channel_field(fields, "permissions", path, lenient~),
+    app_permissions: channel_field(fields, "app_permissions", path, lenient~),
+    flags,
+    total_message_sent: channel_field(
+      fields,
+      "total_message_sent",
+      path,
+      lenient~,
+    ),
+    available_tags: channel_field(fields, "available_tags", path, lenient~),
+    applied_tags: channel_field(fields, "applied_tags", path, lenient~),
+    default_reaction_emoji: channel_field(
+      fields,
+      "default_reaction_emoji",
+      path,
+      lenient~,
+    ),
+    default_thread_rate_limit_per_user: channel_field(
+      fields,
+      "default_thread_rate_limit_per_user",
+      path,
+      lenient~,
+    ),
+    default_sort_order: channel_field(
+      fields,
+      "default_sort_order",
+      path,
+      lenient~,
+    ),
+    default_forum_layout: channel_field(
+      fields,
+      "default_forum_layout",
+      path,
+      lenient~,
+    ),
+  }
+}
+
+///|
+/// An optional channel field: absent is `None`; otherwise it must decode,
+/// unless `lenient`, where a value that does not decode (including a null
+/// for a non-nullable field) is `None` as well.
+fn[T : @json.FromJson] channel_field(
+  fields : Map[String, Json],
+  key : String,
+  path : @json.JsonPath,
+  lenient~ : Bool,
+) -> T? raise @json.JsonDecodeError {
+  match fields.get(key) {
+    None => None
+    Some(value) if lenient =>
+      Some(@json.from_json(value, path=path.add_key(key))) catch {
+        _ => None
+      }
+    Some(value) => Some(@json.from_json(value, path=path.add_key(key)))
+  }
 }
 
 ///|
