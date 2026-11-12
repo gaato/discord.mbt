@@ -5,9 +5,9 @@ import {
   "gaato/discord/internal/clock",
   "gaato/discord/queue",
   "gaato/discord/ratelimit",
-  "gaato/mttp" @http,
-  "gaato/mttp/client" @runtime,
-  "gaato/mttp/client/ratelimit" @limits,
+  "gaato/mttp_core" @http,
+  "gaato/mttp_core/client" @runtime,
+  "gaato/mttp_core/client/ratelimit" @limits,
   "moonbitlang/core/async",
   "moonbitlang/core/async/socket",
   "moonbitlang/core/json",
@@ -19,8 +19,8 @@ import {
 import {
   "gaato/discord/queue",
   "gaato/discord/ratelimit",
-  "gaato/mttp" @http,
-  "gaato/mttp/client" @runtime,
+  "gaato/mttp_core" @http,
+  "gaato/mttp_core/client" @runtime,
   "moonbitlang/core/async",
 } for "wbtest"
 

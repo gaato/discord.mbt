@@ -1,5 +1,5 @@
 import {
-  "gaato/mttp/jsonkit" @sdkjson,
+  "gaato/mttp_core/jsonkit" @sdkjson,
   "gaato/discord/model",
   "gaato/discord/http" @dhttp,
   "gaato/discord/gateway",

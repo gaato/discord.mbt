@@ -6,6 +6,24 @@ releases (0.x → 0.y) may contain breaking changes; patch releases do not.
 
 ## [Unreleased]
 
+### Changed
+
+- **Uses `gaato/mttp_core` 0.1.0 and `gaato/mttp` 0.3.0** in place of
+  `gaato/mttp` 0.2.0 and `gaato/mttp_async` 0.1.0, which they were renamed
+  to: the I/O-free library is now `gaato/mttp_core`, and the module an app
+  adds took the name `gaato/mttp`. `VoiceClient` and `VoiceConnection::start`
+  take a `gaato/mttp_core/rt.Clock` (formerly `gaato/mttp/rt.Clock`), and
+  tests drive them with `VirtualClock` from `gaato/mttp/runtime` (formerly
+  `gaato/mttp_async/runtime`). Voice itself is unchanged; the REST client
+  underneath gains the HTTP/1.1 connection fixes listed in
+  [its changelog](https://github.com/gaato/discord.mbt/blob/main/discord/CHANGELOG.md).
+  Migration: rename the old `gaato/mttp` first, then `gaato/mttp_async`. In
+  `moon.mod`, replace `gaato/mttp@0.2.0` with `gaato/mttp_core@0.1.0` and
+  then `gaato/mttp_async@0.1.0` with `gaato/mttp@0.3.0`; in `moon.pkg`,
+  replace `gaato/mttp/rt` with `gaato/mttp_core/rt` and then
+  `gaato/mttp_async/...` with `gaato/mttp/...`; in code, `@mttp_async.`
+  becomes `@mttp.`.
+
 ## [0.5.0] - 2026-11-12
 
 ### Changed

@@ -1,7 +1,7 @@
 import {
   "gaato/discord/gateway",
-  "gaato/mttp_async/runtime" @transport,
-  "gaato/mttp/rt" @hclock,
+  "gaato/mttp/runtime" @transport,
+  "gaato/mttp_core/rt" @hclock,
   "moonbitlang/core/async/aqueue",
   "moonbitlang/core/json",
 }
@@ -10,7 +10,7 @@ supported_targets = "js + native + wasm"
 
 import {
   "gaato/discord/gateway",
-  "gaato/mttp_async/runtime" @transport,
+  "gaato/mttp/runtime" @transport,
   "moonbitlang/core/async",
 } for "test"
 

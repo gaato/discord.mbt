@@ -1,16 +1,16 @@
 import {
-  "gaato/mttp/jsonkit" @sdkjson,
+  "gaato/mttp_core/jsonkit" @sdkjson,
   "gaato/discord/model",
   "gaato/discord/telemetry",
   "gaato/discord/ratelimit",
-  "gaato/mttp/rt" @hclock,
-  "gaato/mttp" @ghttp,
-  "gaato/mttp/client/retry",
-  "gaato/mttp_async/runtime" @transport,
-  "gaato/mttp/client" @runtime,
-  "gaato/mttp/multipart",
-  "gaato/mttp_async/backend",
-  "gaato/mttp/h1client",
+  "gaato/mttp_core/rt" @hclock,
+  "gaato/mttp_core" @ghttp,
+  "gaato/mttp_core/client/retry",
+  "gaato/mttp/runtime" @transport,
+  "gaato/mttp_core/client" @runtime,
+  "gaato/mttp_core/multipart",
+  "gaato/mttp/backend",
+  "gaato/mttp_core/h1client",
   "moonbitlang/core/async",
   "moonbitlang/core/json",
   "moonbitlang/core/debug",
@@ -30,7 +30,7 @@ import {
 } for "test"
 
 import {
-  "gaato/mttp_async/runtime" @transport,
+  "gaato/mttp/runtime" @transport,
   "moonbitlang/core/json",
 } for "wbtest"
 

@@ -276,8 +276,8 @@ async fn walk_history(
 `next_page()` returns `Array[T]?`, where `None` is the terminal state.
 `next_page`, `collect`, and `each` consume the same paginator state and must be
 called sequentially. A `collect` that stops partway through a page keeps the
-rest for the next call. `Paginator[T]` wraps the `gaato/mttp/client` paginator
-and raises `DiscordHttpError`; the callback of `each` may be async.
+rest for the next call. `Paginator[T]` wraps the `gaato/mttp_core/client`
+paginator and raises `DiscordHttpError`; the callback of `each` may be async.
 See the `Client::paginate_messages` documentation for cursor direction details.
 
 ## Custom routes
@@ -329,7 +329,7 @@ global` (or `X-RateLimit-Global`) holds every non-interaction route, one with
 nothing beyond the resend's own wait, and any other 429 holds its bucket.
 Typed and custom
 routes use the same request path, so no separate limiter integration is
-required. A custom limiter implements the `gaato/mttp/client` `RateLimiter`
+required. A custom limiter implements the `gaato/mttp_core/client` `RateLimiter`
 trait and is passed through `Client(limiter=...)`. The client calls its
 `acquire` to obtain an `Admission`, then `release` exactly once with that token
 and the response's status and headers, or status 0 when no response heads

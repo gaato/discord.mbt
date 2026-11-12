@@ -5,8 +5,8 @@
 const REPLAY_SAFE_HEADER : String = "x-discord-mbt-replay-safe"
 
 ///|
-/// Discord's resend rule as a `gaato/mttp/client/retry` rule, up to `max_retries`
-/// resends:
+/// Discord's resend rule as a `gaato/mttp_core/client/retry` rule, up to
+/// `max_retries` resends:
 ///
 /// - a 429 for any method, after the delay Discord asked for (supplied by
 ///   `resend_decision`, uncapped: the caller's deadline bounds it);

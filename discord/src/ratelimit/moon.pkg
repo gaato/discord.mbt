@@ -1,12 +1,12 @@
 import {
-  "gaato/mttp" @http,
-  "gaato/mttp/rt" @clock,
-  "gaato/mttp_async/runtime" @transport,
-  "gaato/mttp/client/ratelimit" @limits,
+  "gaato/mttp_core" @http,
+  "gaato/mttp_core/rt" @clock,
+  "gaato/mttp/runtime" @transport,
+  "gaato/mttp_core/client/ratelimit" @limits,
 }
 
 import {
-  "gaato/mttp/sim" @mock,
+  "gaato/mttp_core/sim" @mock,
   "moonbitlang/core/async",
 } for "test"
 

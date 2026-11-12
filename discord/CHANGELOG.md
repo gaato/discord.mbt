@@ -7,6 +7,62 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+### Changed
+
+- **The HTTP stack is `gaato/mttp_core` 0.1.0 and `gaato/mttp` 0.3.0.** The
+  mttp modules were renamed: `gaato/mttp` 0.2, the HTTP library without I/O,
+  is now `gaato/mttp_core`, and `gaato/mttp_async` 0.1, the module an app
+  adds, took the name `gaato/mttp`. The types are the same under the new
+  paths. Migration, only where your code names these types; rename the old
+  `gaato/mttp` first, then `gaato/mttp_async`, or the two end up under one
+  name:
+  - In `moon.mod`, replace `gaato/mttp@0.2.0` with `gaato/mttp_core@0.1.0`
+    (only if a package still imports one of its packages), then
+    `gaato/mttp_async@0.1.0` with `gaato/mttp@0.3.0`. A new app runs
+    `moon add gaato/discord`, and `moon add gaato/mttp` where it names HTTP
+    types itself.
+  - In `moon.pkg`, `gaato/mttp` and `gaato/mttp/<package>` become
+    `gaato/mttp_core` and `gaato/mttp_core/<package>` (`gaato/mttp/rt`
+    becomes `gaato/mttp_core/rt`), then `gaato/mttp_async/<package>` becomes
+    `gaato/mttp/<package>` (`"gaato/mttp_async/runtime" @transport` becomes
+    `"gaato/mttp/runtime" @transport`). `gaato/mttp/driver` in
+    `allow-experimental-packages` becomes `gaato/mttp_core/driver`.
+  - In code, `@mttp_async.` becomes `@mttp.`. The old root's `@mttp.`
+    becomes `@mttp_core.`, or stays `@mttp.` for a name the new
+    `gaato/mttp` root re-exports (`Request`, `Response`, `Body`, `Headers`,
+    `Method`, `TransportError`, `Url`, `Handler`, `Backend` and
+    `SendOptions` among them). A constructor does not come through the
+    re-export: write `@mttp.Body::Bytes(...)`, not `@mttp.Bytes(...)`.
+  - The public signatures that name them: `Client(backend=...)` takes a
+    `gaato/mttp_core.Backend`, and the default is a
+    `gaato/mttp/backend.AsyncBackend`; every injected clock is a
+    `gaato/mttp_core/rt.Clock`, driven in tests by `VirtualClock` from
+    `gaato/mttp/runtime`; `DiscordHttpError::Transport` and `Timeout` carry
+    a `gaato/mttp_core.Phase`; `Method`, and with it `Route::Custom`,
+    `Route::custom` and `Route::method_`, is `gaato/mttp_core.Method`;
+    `RemoteRateLimiter::release` and `@ratelimit.is_discord_rate_limit` take
+    `gaato/mttp_core.Headers`, and `@ratelimit.rate_limiter` returns a
+    `gaato/mttp_core/client/ratelimit.WindowLimiter`; `ListenError` is
+    `gaato/mttp/server`'s and `ServerConfigError`
+    `gaato/mttp_core/h1server`'s.
+
+### Fixed
+
+- **A REST call after an idle pause no longer fails as if it had been
+  sent.** The default backend's HTTP/1.1 client, from `gaato/mttp_core`
+  0.1.0 and `gaato/mttp` 0.3.0, checks a pooled connection parked for
+  100 ms or more before reusing it and drops it if Discord closed it or
+  wrote to it. A reused connection that refuses the first write with
+  nothing sent, including a TLS session the server already shut down, now
+  sends the request on a new connection. Before, a `POST` or `PATCH` sent
+  a few seconds after Discord closed the idle connection failed with
+  `DiscordHttpError::Transport` in phase `Write` and was not resent, as it
+  might have been sent; a response the server sent on the idle connection
+  could also be taken as the answer to the next request. A request that
+  sets `Expect: 100-continue` now waits for the server's 100 (or one
+  second) before sending its body, so a refusal that comes first is read
+  instead of lost to a reset.
+
 ## [0.16.0] - 2026-11-12
 
 Follows Discord's developer docs through

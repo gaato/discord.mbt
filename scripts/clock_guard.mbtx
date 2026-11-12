@@ -8,8 +8,8 @@ import {
 
 ///|
 /// Guard the injected clock: library code (tests excluded) must wait and read
-/// time through a `gaato/mttp/rt` `Clock` it was given, so a test can drive
-/// it with a virtual clock. This audit fails on any direct use of a real-time
+/// time through a `gaato/mttp_core/rt` `Clock` it was given, so a test can
+/// drive it with a virtual clock. This audit fails on any direct use of a real-time
 /// entry point in the library sources of every module.
 ///
 /// A real clock as a labelled argument's default (`clock~ : &@hclock.Clock =

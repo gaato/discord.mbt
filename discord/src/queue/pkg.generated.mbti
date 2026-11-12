@@ -2,7 +2,7 @@
 package "gaato/discord/queue"
 
 import {
-  "gaato/mttp/rt",
+  "gaato/mttp_core/rt",
 }
 
 // Values

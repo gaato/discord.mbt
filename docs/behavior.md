@@ -54,9 +54,9 @@ Idempotent calls are `GET`, `HEAD`, `PUT`, `DELETE`, `OPTIONS`, and a message
 create with a `nonce` and `enforce_nonce: true`. A `POST` or `PATCH` that may
 have reached Discord is otherwise raised at once rather than risk a second
 effect. Resends stop after `max_retries` (default 4); the backoff is
-`gaato/mttp/client`'s conservative one (500 ms doubling up to 30 s, within
+`gaato/mttp_core/client`'s conservative one (500 ms doubling up to 30 s, within
 ±20 %), and each attempt is bounded by `request_timeout_ms` (default 30 s).
-There is no retry budget: the client passes `gaato/mttp/client`'s
+There is no retry budget: the client passes `gaato/mttp_core/client`'s
 `RetryBudget::unlimited()` instead of its default, which caps resends at a
 share of recent requests and would end a run of Discord's 429s with
 `RateLimited`. A 429 is flow control whose wait Discord names, and the rate
@@ -65,7 +65,7 @@ bound the resends.
 
 A redirect (301, 302, 303, 307, 308) is followed inside the attempt, up to 10
 hops, under the same rate-limit admission and attempt deadline, as the
-`gaato/mttp/client` default: `Authorization` is dropped when the origin
+`gaato/mttp_core/client` default: `Authorization` is dropped when the origin
 changes and an `https` to `http` redirect is refused. Discord does not
 document redirects on its API.
 
@@ -100,13 +100,13 @@ one client.
 
 ## Implementation
 
-- `discord/src/http/retry.mbt`: `discord_retry_rule` is a `gaato/mttp/client/retry`
-  `RetryRule`, and `resend_decision` adds the Discord-specific inputs (the
+- `discord/src/http/retry.mbt`: `discord_retry_rule` is a
+  `gaato/mttp_core/client/retry` `RetryRule`, and `resend_decision` adds the Discord-specific inputs (the
   429 wait and whether the call is idempotent).
 - The resend decision cannot see a multipart body, which is assembled just
   before sending. `wire_request` therefore marks a `CreateMessage` whose body
-  has a `nonce` and `enforce_nonce: true` with the typed `gaato/mttp.replay_safe`
-  request attribute. It is metadata and is never sent as an HTTP header.
+  has a `nonce` and `enforce_nonce: true` with the typed
+  `gaato/mttp_core.replay_safe` request attribute. It is metadata and is never sent as an HTTP header.
 - The mttp client's `timeout_ms` wraps every backend on the injected clock,
   including the default `AsyncBackend`. An outer timeout has phase `Unknown`;
   an earlier backend failure preserves its phase, including unsent `Pool`

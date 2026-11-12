@@ -1,5 +1,5 @@
 # Library call sites that may use real time directly. Everything else waits
-# and reads time through an injected `gaato/mttp/rt` `Clock`. Each entry is
+# and reads time through an injected `gaato/mttp_core/rt` `Clock`. Each entry is
 # `<file> <function> <entry point> # reason`, so a new call site always needs
 # its own decision.
 

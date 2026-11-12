@@ -1,5 +1,5 @@
 ///|
-/// The contracts the send loop keeps now that `gaato/mttp/client` runs it:
+/// The contracts the send loop keeps now that `gaato/mttp_core/client` runs it:
 /// Discord's retry rule, where a 429's delay and scope come from, how limiter
 /// and deadline failures surface, and the wire shape of uploads.
 

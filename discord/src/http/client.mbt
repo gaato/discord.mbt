@@ -22,7 +22,7 @@ pub struct Client {
 ///|
 /// What answers a validated logical call, below the middleware.
 priv enum Backend {
-  // The `gaato/mttp/client` client: rate limiting, the wire exchange, and
+  // The `gaato/mttp_core/client` client: rate limiting, the wire exchange, and
   // retries, above which status mapping and decoding happen.
   Online(@runtime.Client)
   // A handler that answers in place of all of that.
@@ -70,10 +70,10 @@ const MAX_RESPONSE_BODY_BYTES : Int32 = 67_108_864
 /// The backoff is 500 ms, doubling up to 30 s, within ±20 %. Anything else,
 /// 401 and 403 included, is Discord's answer and is never resent.
 ///
-/// `backend` is the `gaato/mttp` `Backend` that performs the wire
+/// `backend` is the `gaato/mttp_core` `Backend` that performs the wire
 /// exchange, below request validation, middleware, rate limiting, retries,
 /// status mapping, and decoding. By default the client creates a
-/// `gaato/mttp_async/backend` `AsyncBackend` with up to `max_connections`
+/// `gaato/mttp/backend` `AsyncBackend` with up to `max_connections`
 /// idle connections per origin and a 64 MiB wire-body bound, and closes it
 /// in `close`. A supplied backend is shared: the client never closes it,
 /// and `max_connections` does not configure it. In both cases the mttp
@@ -82,7 +82,7 @@ const MAX_RESPONSE_BODY_BYTES : Int32 = 67_108_864
 /// `Timeout(phase=Unknown)`; an earlier backend failure retains its phase.
 /// A non-positive attempt timeout fails immediately with `Unknown`.
 ///
-/// `limiter` is a `gaato/mttp/client` `RateLimiter`; the default is an
+/// `limiter` is a `gaato/mttp_core/client` `RateLimiter`; the default is an
 /// `@ratelimit.rate_limiter()` with Discord's per-bucket and global accounting.
 ///
 /// `clock` (default: the wall clock) drives the client's time: 429 and

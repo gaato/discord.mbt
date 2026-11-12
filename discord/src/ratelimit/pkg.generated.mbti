@@ -2,14 +2,14 @@
 package "gaato/discord/ratelimit"
 
 import {
-  "gaato/mttp",
-  "gaato/mttp/rt",
+  "gaato/mttp_core",
+  "gaato/mttp_core/rt",
 }
 
 // Values
-pub fn is_discord_rate_limit(@mttp.Headers) -> Bool
+pub fn is_discord_rate_limit(@mttp_core.Headers) -> Bool
 
-pub fn rate_limiter(global_limit? : Int32, clock? : &@rt.Clock) -> @gaato/mttp/client/ratelimit.WindowLimiter
+pub fn rate_limiter(global_limit? : Int32, clock? : &@rt.Clock) -> @gaato/mttp_core/client/ratelimit.WindowLimiter
 
 // Errors
 

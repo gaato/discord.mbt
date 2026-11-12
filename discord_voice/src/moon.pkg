@@ -4,8 +4,8 @@ import {
   "gaato/dave",
   "gaato/discord/bot",
   "gaato/discord/model",
-  "gaato/mttp/rt" @hclock,
-  "gaato/mttp_async/runtime" @transport,
+  "gaato/mttp_core/rt" @hclock,
+  "gaato/mttp/runtime" @transport,
   "moonbitlang/core/async",
   "moonbitlang/core/async/aqueue",
   "moonbitlang/core/async/cond_var",
@@ -22,7 +22,7 @@ import {
 import {
   "gaato/discord",
   "gaato/discord_voice" @voice,
-  "gaato/mttp_async/runtime" @transport,
+  "gaato/mttp/runtime" @transport,
   "moonbitlang/core/async",
   "moonbitlang/core/async/aqueue",
   "moonbitlang/core/async/io",
@@ -37,7 +37,7 @@ import {
 
 import {
   "gaato/discord/app",
-  "gaato/mttp_async/runtime" @transport,
+  "gaato/mttp/runtime" @transport,
   "moonbitlang/core/encoding/hex",
 } for "wbtest"
 

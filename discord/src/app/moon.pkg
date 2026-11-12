@@ -5,8 +5,8 @@ import {
   "gaato/discord/interaction",
   "gaato/discord/framework",
   "gaato/discord/verify",
-  "gaato/mttp_async/runtime" @transport,
-  "gaato/mttp/rt" @hclock,
+  "gaato/mttp/runtime" @transport,
+  "gaato/mttp_core/rt" @hclock,
   "moonbitlang/core/async",
   "moonbitlang/core/async/aqueue",
   "moonbitlang/core/async/cond_var",
@@ -23,13 +23,13 @@ import {
   "gaato/discord/model",
   "hustcer/ed25519",
   "moonbitlang/core/encoding/hex",
-  "gaato/mttp_async/runtime" @transport,
+  "gaato/mttp/runtime" @transport,
 } for "test"
 
 import {
   "hustcer/ed25519",
   "moonbitlang/core/encoding/hex",
-  "gaato/mttp_async/runtime" @transport,
+  "gaato/mttp/runtime" @transport,
   "moonbitlang/core/random",
   "moonbitlang/core/debug",
   "gaato/discord/internal/fuzz",

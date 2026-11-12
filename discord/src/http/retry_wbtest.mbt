@@ -743,7 +743,7 @@ async test "a 429 that is not Discord's is raised without a resend" {
 
 ///|
 /// Discord's 429 is flow control: the client waits out each one and sends
-/// again, however many come in a row. `gaato/mttp/client`'s default retry
+/// again, however many come in a row. `gaato/mttp_core/client`'s default retry
 /// budget (10 resends a second plus 20 % of the requests over 10 s) would
 /// stop this run after about a hundred resends; the client must not use it.
 async test "a long run of Discord 429s is resent without a retry budget" {

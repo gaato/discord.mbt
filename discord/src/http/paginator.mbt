@@ -1,6 +1,6 @@
 ///|
 /// A stateful, asynchronously fetched sequence of REST result pages: the
-/// a wrapper around the `gaato/mttp/client` paginator that preserves
+/// a wrapper around the `gaato/mttp_core/client` paginator that preserves
 /// `DiscordHttpError` as the raised error type.
 ///
 /// Call `next_page`, `each`, or `collect` sequentially; all three consume the
