@@ -22,15 +22,35 @@
 # own steps, so a change to the dave gate here must be made there too.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+root=$PWD
 
 run() {
   echo "+ $*"
   "$@"
 }
 
+# Whether moon on PATH is the toolchain moonbit-version pins.
+on_pinned_toolchain() {
+  moon version --all | grep -qF -- "$(cat "$root/moonbit-version")"
+}
+
+# The committed sources are formatted by the pinned toolchain. Another
+# toolchain's formatter may lay out the same code otherwise: the nightly's
+# adds a trailing comma after the last parameter of an enum constructor it
+# breaks over several lines, and 0.10.20's removes it, so no source satisfies
+# both. On another toolchain (the canary) a difference is news about the
+# formatter, printed as a note.
+fmt_check() {
+  if on_pinned_toolchain; then
+    run moon fmt --check
+  elif ! run moon fmt --check; then
+    echo "note: moon fmt on this toolchain lays out the code above differently from moonbit-version's" >&2
+  fi
+}
+
 gate_check() {
   run moon check --target native --deny-warn
-  run moon fmt --check
+  fmt_check
   # The workspace resolves every member to its directory; a consumer gets
   # every dependency from the registry.
   run env MOON_WORK=off moon -C discord check --target native --deny-warn
@@ -63,7 +83,7 @@ gate_dave() (
   run env MBT_DAVE_REQUIRE_NATIVE=1 moon check --target native --deny-warn
   run env MBT_DAVE_REQUIRE_NATIVE=1 moon build --target native --release --deny-warn
   run env MBT_DAVE_REQUIRE_NATIVE=1 moon test --target native --release --deny-warn
-  run moon fmt --check
+  fmt_check
   # js and Wasm test the unavailable facade and must not bootstrap libdave.
   for target in js wasm; do
     run env MBT_DAVE_NATIVE_ROOT=/definitely/missing/dave-must-not-bootstrap \
