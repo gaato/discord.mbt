@@ -51,6 +51,7 @@ options(
     "moonbitlang/core/async/socket",
   ],
   targets: {
+    "loopback_flush_wbtest.mbt": [ "native", "wasm" ],
     "loopback_server_wbtest.mbt": [ "native", "wasm" ],
     "proxy_env.mbt": [ "native", "wasm" ],
     "proxy_env_js.mbt": [ "js" ],

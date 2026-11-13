@@ -1,0 +1,10 @@
+// Replaces discord_voice/src/udp_recv.mbt on toolchains after MoonBit
+// 0.10.20, where core/async's UdpClient::recv into a buffer is named
+// recv_into and no source file builds on both. The canary copies this file
+// over the in-tree one on such a toolchain. When moonbit-version moves past
+// 0.10.20, move it there for good and delete compat/.
+
+///|
+impl VoiceUdp for SocketVoiceUdp with fn recv(self, buffer) {
+  self.client.recv_into(buffer)
+}

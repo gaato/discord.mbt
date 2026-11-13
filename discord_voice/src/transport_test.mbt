@@ -18,9 +18,7 @@ async test "the voice WebSocket transport closes an oversized message with 1009"
         error => peer_saw.val = "\{Repr(error)}"
       }
     })
-    let transport = @voice.connect_voice_websocket(
-      "ws://127.0.0.1:\{server.addr.port()}",
-    )
+    let transport = @voice.connect_voice_websocket("ws://\{server.addr}")
     assert_eq(transport.recv(), Text("hello"))
     assert_eq(transport.recv(), Binary(b"bin"))
     try transport.recv() |> ignore catch {
@@ -48,9 +46,7 @@ async test "the voice WebSocket transport reports the peer's close code" {
         _ => ()
       }
     })
-    let transport = @voice.connect_voice_websocket(
-      "ws://127.0.0.1:\{server.addr.port()}",
-    )
+    let transport = @voice.connect_voice_websocket("ws://\{server.addr}")
     try transport.recv() |> ignore catch {
       @voice.VoiceTransportClosed(code=Some(4006), ..) => ()
       error => fail("unexpected \{Repr(error)}")

@@ -1,0 +1,11 @@
+// Replaces discord/src/http/loopback_flush_wbtest.mbt on toolchains after
+// MoonBit 0.10.20, where core/async's ServerConnection::flush is named
+// flush_partial_data and no source file builds on both. The canary copies
+// this file over the in-tree one on such a toolchain. When moonbit-version
+// moves past 0.10.20, move it there for good and delete compat/.
+
+///|
+/// Send what `conn` has buffered so far.
+async fn flush_response(conn : @ahttp.ServerConnection) -> Unit {
+  conn.flush_partial_data()
+}

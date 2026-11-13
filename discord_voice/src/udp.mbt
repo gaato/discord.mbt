@@ -21,11 +21,6 @@ priv struct SocketVoiceUdp {
 }
 
 ///|
-impl VoiceUdp for SocketVoiceUdp with fn recv(self, buffer) {
-  self.client.recv(buffer)
-}
-
-///|
 impl VoiceUdp for SocketVoiceUdp with fn send(self, bytes) {
   self.client.send(bytes)
 }
@@ -36,10 +31,35 @@ impl VoiceUdp for SocketVoiceUdp with fn close(self) {
 }
 
 ///|
+/// The type `@socket.Addr::resolve` takes a port as: `Int32` on MoonBit
+/// 0.10.20, `UInt16` on later toolchains. The parameter's type picks the impl,
+/// so `open_voice_udp` builds on both; each toolchain leaves the other impl
+/// unused.
+priv trait SocketPort {
+  fn of_port(Int32) -> Self
+}
+
+///|
+#warnings("-unused_value")
+impl SocketPort for Int32 with fn of_port(port) {
+  port
+}
+
+///|
+/// `open_voice_udp` refuses a port outside 0..=65535 first, so none wraps here.
+#warnings("-unused_value")
+impl SocketPort for UInt16 with fn of_port(port) {
+  port.to_uint16()
+}
+
+///|
 /// Open a connected UDP socket for a Discord voice server.
 #doc(hidden)
 pub async fn open_voice_udp(ip : String, port : Int32) -> &VoiceUdp {
-  let address = @socket.Addr::resolve(ip, port~)
+  guard port >= 0 && port <= 65535 else {
+    fail("voice UDP port \{port} is outside 0..=65535")
+  }
+  let address = @socket.Addr::resolve(ip, port=SocketPort::of_port(port))
   let client = @socket.UdpClient(address)
   SocketVoiceUdp::{ client, }
 }

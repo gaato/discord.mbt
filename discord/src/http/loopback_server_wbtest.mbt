@@ -79,7 +79,7 @@ async test "a stalled response body times out and releases the bucket once" {
           "Content-Type": "application/json",
         })
         conn.write_string("{")
-        conn.flush()
+        flush_response(conn)
         @async.sleep(60000)
         conn.end_response()
       })

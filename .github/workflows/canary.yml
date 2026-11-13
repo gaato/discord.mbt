@@ -4,6 +4,9 @@ name: Canary
 # and nightly toolchains. When latest breaks, fix it, then bump the pinned image
 # and MOONBIT_INSTALL_VERSION in ci.yml, dave.yml, release.yml, and
 # voice-shim.yml. unzip extracts the libdave archive for the gaato/dave gate.
+# On a toolchain after 0.10.20 the shared workflow first copies
+# compat/core_async_next into the tree; the bump past 0.10.20 moves those
+# files in for good and deletes compat/.
 
 on:
   schedule:

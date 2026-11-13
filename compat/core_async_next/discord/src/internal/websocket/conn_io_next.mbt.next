@@ -1,0 +1,20 @@
+// The impls core/async's IO traits require after MoonBit 0.10.20, which
+// 0.10.20 refuses, so no source file builds on both. On a toolchain that
+// requires them, the canary copies this file to
+// discord/src/internal/websocket/conn_io_next.mbt (moon.pkg already limits
+// that path to js, like conn.mbt). When moonbit-version moves past 0.10.20,
+// move it there for good and delete compat/.
+
+///|
+pub impl @io.BinaryWriterImpl for Conn with fn name(_) {
+  "@websocket.Conn"
+}
+
+///|
+/// Does nothing: Conn holds a started message until `end_message` sends it
+/// as one frame, and the platform WebSocket API cannot send part of a
+/// message, so there is nothing it may deliver early.
+#warnings("-unused_async")
+pub impl @io.BinaryWriterImpl for Conn with fn flush_partial_data(_) {
+
+}

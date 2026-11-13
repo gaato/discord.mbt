@@ -15,7 +15,7 @@ async fn with_loopback_websocket(
       defer ws.close()
       serve(ws)
     })
-    run("ws://127.0.0.1:\{server.addr.port()}")
+    run("ws://\{server.addr}")
   })
 }
 

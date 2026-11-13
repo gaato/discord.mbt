@@ -146,25 +146,10 @@ async fn read_pipe_fixture(
   fixture : Bytes,
   chunk_size : Int32,
 ) -> (Int32, Int32, Array[Bytes]) {
-  let result = Ref(None)
-  @async.with_task_group(group => {
-    let (read_end, write_end) = @io.pipe()
-    defer read_end.close()
-    group.spawn_bg(() => {
-      defer write_end.close()
-      for offset = 0; offset < fixture.length(); {
-        let next = offset + chunk_size
-        let end = if next < fixture.length() { next } else { fixture.length() }
-        write_end.write(fixture[offset:end])
-        continue end
-      }
-    })
-    let source = @voice.OggOpusSource::from_reader(read_end)
-    result.val = Some(
-      (source.channels(), source.pre_skip(), collect_ogg_source(source)),
-    )
+  through_pipe(fixture, chunk_size~, reader => {
+    let source = @voice.OggOpusSource::from_reader(reader)
+    (source.channels(), source.pre_skip(), collect_ogg_source(source))
   })
-  result.val.unwrap()
 }
 
 ///|
@@ -197,14 +182,8 @@ async test "Ogg Opus reader rejects a stream truncated mid-page" {
   writer.finish()
   let complete = writer.take_output()
   let truncated = complete[:complete.length() - 1].to_owned()
-  @async.with_task_group(group => {
-    let (read_end, write_end) = @io.pipe()
-    defer read_end.close()
-    group.spawn_bg(() => {
-      defer write_end.close()
-      write_end.write(truncated)
-    })
-    let source = @voice.OggOpusSource::from_reader(read_end)
+  through_pipe(truncated, chunk_size=truncated.length(), reader => {
+    let source = @voice.OggOpusSource::from_reader(reader)
     let audio : &@voice.AudioSource = source
     try audio.next_frame() catch {
       @voice.OggOpusError::InvalidOpusStream(reason~) =>

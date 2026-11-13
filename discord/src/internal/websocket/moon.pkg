@@ -35,6 +35,7 @@ options(
     "ffi.mbt": [ "js" ],
     "conn.mbt": [ "js" ],
     "conn_test.mbt": [ "js" ],
+    "conn_io_next.mbt": [ "js" ],
     "pkg.generated.mbti": [ "native" ],
   },
 )
