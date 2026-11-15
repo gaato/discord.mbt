@@ -7,6 +7,13 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+### Changed
+
+- discord requires gaato/zstd 0.4.1, gaato/deflate 0.1.2 and
+  gaato/codec_bytes 0.1.2. The gateway decompresses zstd-stream 2.6 to 3.1
+  times as fast, and zlib-stream on JS 1.2 times. The output and the
+  errors are unchanged.
+
 ## [0.17.0] - 2026-11-12
 
 ### Changed

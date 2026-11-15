@@ -25,7 +25,7 @@ import {
   "gaato/mttp@0.3.0",
   "gaato/mttp_core@0.1.0",
   "hustcer/ed25519@0.6.1",
-  "gaato/codec_bytes@0.1.1",
-  "gaato/deflate@0.1.0",
-  "gaato/zstd@0.3.1",
+  "gaato/codec_bytes@0.1.2",
+  "gaato/deflate@0.1.2",
+  "gaato/zstd@0.4.1",
 }
