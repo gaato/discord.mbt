@@ -16,7 +16,8 @@ kind say what that product is.
 
 | Structure | Bound | On overflow |
 |---|---|---|
-| One received Gateway message (`gateway/transport.mbt`, `gateway/compression.mbt`) | `max_message_bytes`, default 64 MiB, for the frame, accumulated compressed bytes, and inflated output | The connection ends (1009 for a frame, `InflateError::TooLarge` for zlib-stream and zstd-stream) and the shard resumes |
+| One Gateway message (`gateway/transport.mbt`, `gateway/compression.mbt`) | `max_message_bytes`, default 64 MiB, for incoming/outgoing messages, accumulated compressed bytes, and inflated output; on JS, also total queued UTF-8/binary bytes | The connection ends (local 1009 for a message, `InflateError::TooLarge` for zlib-stream and zstd-stream) and the shard resumes; JS hosts that forbid sending 1009 send 4009 |
+| JS Gateway receive queue (`gaato/mttp/ws`) | 1024 queued messages, including empty ones | Local Close 1008 (4008 on hosts that forbid sending 1008), drops the queue |
 | Shard event queue (`gateway/shard.mbt`) | `queue_capacity`, default 256 | The read loop waits (backpressure) |
 | Bot event handler backlog (`bot/bot.mbt`) | `event_backlog`, default 10 000 | Handlers skip the event: `EventDropped` telemetry each, one warning per overload |
 | Running interaction handlers (`app/admission.mbt`) | `max_in_flight`, default 64 | Wait within the callback window, then `InteractionDropped` / `DeferredInteractionExpired` |
@@ -44,7 +45,7 @@ kind say what that product is.
 | Voice reorder buffer (`discord_voice/src/reorder.mbt`) | 8 packets or 60 ms | Flushed as `Lost` |
 | Voice SSRC mappings and reorder windows (`discord_voice/src/receive.mbt`) | One per user in the channel: a user's new SSRC replaces the old one, and both leave on `ClientDisconnect` or a session reset | — |
 | DAVE prepared transitions (`discord_voice/src/dave.mbt`) | 16 | The oldest is forgotten; executing it later does nothing |
-| One received voice gateway message (`discord_voice/src/transport.mbt`) | 4 MiB | The connection ends with 1009 and resumes |
+| One voice gateway message (`discord_voice/src/transport.mbt`) | 4 MiB incoming or outgoing | The connection ends with 1009 and resumes |
 | Coordinator request and response lines (`coordinator/line.mbt`) | 64 KiB | The coordinator answers with an error and closes the connection; the client drops it with `InvalidResponse` |
 | Ogg input (`discord_voice/src/ogg_opus.mbt`, `OggPacketReader`) | Only the unparsed tail is kept; one packet at most 16 MiB | `InvalidOggPage` |
 

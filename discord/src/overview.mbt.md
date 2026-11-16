@@ -28,6 +28,15 @@ The bot's `main` is an `async fn main`, so its package imports
 [bot template](https://github.com/gaato/discord.mbt/blob/main/template/README.md)
 has the whole setup.
 
+Gateway connections use `gaato/mttp/ws` on native, JS, and moonrun Wasm.
+On JS, provide a host WebSocket API (Node.js 22+ includes it); see
+[mttp's host support](https://github.com/gaato/mttp/blob/main/mttp/hosts/README.md#websockets)
+for runtime requirements. The default message limit is 64 MiB, including
+outgoing messages and, on JS, total queued bytes; JS also limits the queue
+to 1024 messages. Exceeding the byte limit reports local Close 1009 (hosts
+that forbid sending it send 4009); exceeding the JS queue count reports
+1008 (sent as 4008 on those hosts).
+
 ## Quickstart
 
 Build the interaction `App`, then hand it to the Gateway `Bot`. This bot

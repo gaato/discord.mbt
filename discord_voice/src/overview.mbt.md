@@ -8,6 +8,10 @@ Discord voice for bots built with
 Discord's DAVE end-to-end encryption, Opus playback, and per-user Opus
 receive. It runs on MoonBit's native backend only.
 
+The voice gateway uses `gaato/mttp/ws` with a 4 MiB limit on incoming and
+outgoing messages. An oversized message ends the connection with Close
+1009; the voice gateway resumes when its session permits it.
+
 > **Status**: experimental. Minor releases may contain breaking changes; the
 > [changelog](https://github.com/gaato/discord.mbt/blob/main/discord_voice/CHANGELOG.md)
 > lists each one.

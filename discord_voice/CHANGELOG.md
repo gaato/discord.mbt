@@ -6,6 +6,25 @@ releases (0.x → 0.y) may contain breaking changes; patch releases do not.
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-17
+
+### Changed
+
+- `VoiceTransport` has an optional `abort` hook for waking protected I/O;
+  its default is a no-op for transports with cancellable I/O. Voice gateway
+  shutdown aborts the WebSocket before cancelling/joining its receiver,
+  so a protected Pong/Close reply to a stalled peer cannot delay shutdown.
+  The interrupted connection may close without a WebSocket status.
+- Voice gateway WebSockets use `gaato/mttp/ws` and `gaato/mttp_core/ws`.
+  Text, binary DAVE messages, and Discord close codes/reasons retain their
+  transport semantics. The 4 MiB message bound is enforced by the Session
+  and now also applies to outgoing messages. Discord's voice heartbeat
+  remains in charge of liveness; WebSocket Ping keepalive is disabled.
+  Requires the published `gaato/mttp` 0.4.0 and `gaato/mttp_core` 0.2.0;
+  WebSocket permessage-deflate is not enabled.
+- **Uses `gaato/discord` 0.18.0.** Migration: depend on
+  `gaato/discord@0.18.0` alongside this release.
+
 ## [0.6.0] - 2026-11-12
 
 ### Changed

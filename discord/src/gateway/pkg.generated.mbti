@@ -116,6 +116,7 @@ pub(open) trait GatewayTransport {
   async fn recv(Self) -> GatewayFrame
   async fn send(Self, String) -> Unit
   async fn close(Self, code~ : Int32) -> Unit
+  fn abort(Self) -> Unit = _
 }
 
 pub(open) trait Inflater {

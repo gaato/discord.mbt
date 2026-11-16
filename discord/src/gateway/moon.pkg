@@ -6,7 +6,8 @@ import {
   "gaato/mttp_core/rt" @hclock,
   "moonbitlang/core/async",
   "moonbitlang/core/async/aqueue",
-  "gaato/discord/internal/websocket",
+  "gaato/mttp/ws",
+  "gaato/mttp_core/ws" @core_ws,
   "moonbitlang/core/json",
   "moonbitlang/core/random",
   "moonbitlang/core/encoding/utf8",
@@ -27,14 +28,31 @@ import {
   "gaato/mttp_core/rt" @hclock,
   "moonbitlang/core/random",
   "moonbitlang/core/debug",
-  "moonbitlang/core/async/http" @ahttp,
-  "moonbitlang/core/async/socket",
-  "moonbitlang/core/async/websocket" @asyncws,
+  "gaato/mttp/ws",
   "gaato/discord/internal/fuzz",
+} for "test"
+
+#cfg(not(target="js"))
+import {
+  "gaato/mttp/server",
+  "gaato/mttp_core/h1server",
+  "moonbitlang/core/env",
+  "moonbitlang/core/async/fs",
+  "moonbitlang/core/encoding/utf8",
+  "gaato/deflate/zlib",
+  "gaato/codec_bytes",
+} for "test"
+
+#cfg(target="js")
+import {
+  "moonbitlang/core/async/js_async",
 } for "test"
 
 import {
   "gaato/mttp/runtime" @transport,
+  "gaato/mttp_core/sim",
+  "gaato/mttp_core" @hmodel,
+  "gaato/mttp_core/ws/frame" @wsframe,
 } for "wbtest"
 
 // The gateway, including zlib-stream and zstd-stream compression, runs on native, JavaScript, and moonrun Wasm.
@@ -47,9 +65,8 @@ options(
   "allow-experimental-packages": [
     "moonbitlang/core/async",
     "moonbitlang/core/async/aqueue",
-    "moonbitlang/core/async/http",
-    "moonbitlang/core/async/socket",
-    "moonbitlang/core/async/websocket",
+    "moonbitlang/core/async/js_async",
+    "moonbitlang/core/async/fs",
   ],
   targets: {
     "command_limit.mbt": [ "js", "native", "wasm" ],
@@ -76,5 +93,7 @@ options(
     "state.mbt": [ "js", "native", "wasm" ],
     "transport.mbt": [ "js", "native", "wasm" ],
     "transport_native_test.mbt": [ "native" ],
+    "transport_node_test.mbt": [ "js" ],
+    "transport_sequence_test.mbt": [ "native", "js" ],
   },
 )

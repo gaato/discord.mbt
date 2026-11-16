@@ -7,12 +7,34 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-11-17
+
 ### Changed
 
-- discord requires gaato/zstd 0.4.1, gaato/deflate 0.1.2 and
-  gaato/codec_bytes 0.1.2. The gateway decompresses zstd-stream 2.6 to 3.1
-  times as fast, and zlib-stream on JS 1.2 times. The output and the
-  errors are unchanged.
+- `GatewayTransport` has an optional `abort` hook for waking protected I/O.
+  The default is a no-op for transports whose I/O is already cancellable.
+  Shard shutdown aborts the WebSocket before cancelling/joining its receiver,
+  so a protected Pong/Close reply to a stalled peer cannot hold shutdown
+  open. `Shard::close` clears the local session; an interrupted connection
+  may close without a WebSocket status.
+- Gateway WebSockets use `gaato/mttp/ws` and `gaato/mttp_core/ws` on native,
+  JS, and moonrun Wasm. Discord close codes and reasons are preserved;
+  binary zlib-stream and zstd-stream payloads still use the Gateway's
+  decoders. Discord heartbeats continue to drive liveness, with WebSocket
+  Ping keepalive disabled. The message limit also bounds outgoing messages
+  and JS queued bytes; JS queues at most 1024 messages. Oversized input
+  reports local code 1009 on every target (JS hosts that forbid sending it
+  send 4009, previously 4000). The repository's WebSocket wrapper is removed.
+  Requires the published `gaato/mttp` 0.4.0 and `gaato/mttp_core` 0.2.0;
+  the workspace no longer substitutes local mttp checkouts.
+- Requires `hustcer/ed25519` 0.6.2, `gaato/deflate` 0.3.0 and
+  `gaato/zstd` 0.5.1; `gaato/codec_bytes` stays at 0.1.2. Ed25519 retains
+  the existing verification API. Gateway decoder error messages follow
+  the codecs' updated wording, and zstd reports `TrailingData` for one to
+  three trailing bytes that cannot begin a frame. Gateway compression
+  remains Discord's zlib-stream or zstd-stream; WebSocket
+  permessage-deflate is not enabled.
+- `VERSION` and the REST User-Agent are now `0.18.0`.
 
 ## [0.17.0] - 2026-11-12
 

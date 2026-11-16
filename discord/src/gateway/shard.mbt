@@ -134,8 +134,9 @@ pub async fn Shard::request_channel_info(
 }
 
 ///|
-/// Request a graceful shutdown: closes the connection with code 1000 (which
-/// invalidates the session — Discord will not allow a resume after it).
+/// Shut down the shard and discard its local session. Interrupt the transport
+/// before cancelling/joining the receiver, so protected control replies cannot
+/// hold shutdown open. An interrupted WebSocket may close without a status.
 pub async fn Shard::close(self : Shard) -> Unit noraise {
   if self.closing {
     @async.protect_from_cancel(() => self.wait_runner()) catch {
@@ -160,6 +161,11 @@ async fn Shard::wait_runner(self : Shard) -> Unit noraise {
 
 ///|
 async fn Shard::stop_runner(self : Shard) -> Unit noraise {
+  // A receiver may be shielding a Pong/Close write. Wake its I/O before
+  // cancellation joins it; waiting for runner cleanup to close is too late.
+  if self.transport is Some(transport) {
+    transport.abort()
+  }
   if self.runner is Some(runner) {
     runner.cancel()
     self.wait_runner()

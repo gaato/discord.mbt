@@ -10,9 +10,9 @@ import {
   "moonbitlang/core/async/aqueue",
   "moonbitlang/core/async/cond_var",
   "moonbitlang/core/async/io",
-  "moonbitlang/core/async/websocket",
+  "gaato/mttp/ws",
+  "gaato/mttp_core/ws" @core_ws,
   "moonbitlang/core/async/socket",
-  "moonbitlang/core/buffer",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/json",
   "moonbitlang/core/random",
@@ -30,15 +30,19 @@ import {
   "moonbitlang/core/env",
   "moonbitlang/core/json",
   "moonbitlang/core/random",
-  "moonbitlang/core/async/http" @ahttp,
   "moonbitlang/core/async/socket",
-  "moonbitlang/core/async/websocket" @asyncws,
+  "gaato/mttp/ws",
+  "gaato/mttp/server",
+  "gaato/mttp_core/h1server",
 } for "test"
 
 import {
   "gaato/discord/app",
   "gaato/mttp/runtime" @transport,
   "moonbitlang/core/encoding/hex",
+  "gaato/mttp_core/sim",
+  "gaato/mttp_core" @hmodel,
+  "gaato/mttp_core/ws/frame" @wsframe,
 } for "wbtest"
 
 // Voice networking runs only on the native async runtime.
@@ -53,9 +57,7 @@ options(
     "moonbitlang/core/async/aqueue",
     "moonbitlang/core/async/cond_var",
     "moonbitlang/core/async/io",
-    "moonbitlang/core/async/websocket",
     "moonbitlang/core/async/socket",
-    "moonbitlang/core/async/http",
   ],
   "native-stub": [ "shim_stub.c" ],
 )

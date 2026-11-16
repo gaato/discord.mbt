@@ -13,6 +13,15 @@ pub(open) trait GatewayTransport {
   async fn recv(Self) -> GatewayFrame
   async fn send(Self, String) -> Unit
   async fn close(Self, code~ : Int32) -> Unit
+  /// Interrupt pending I/O before shutdown joins the receiver. Transports
+  /// with protected reads/writes must wake them here; the default is a
+  /// no-op for transports whose I/O is already interrupted by cancellation.
+  fn abort(Self) -> Unit = _
+}
+
+///|
+impl GatewayTransport with fn abort(_) {
+
 }
 
 ///|
@@ -26,9 +35,8 @@ pub(all) suberror TransportClosed {
 
 ///|
 priv struct WsTransport {
-  conn : @websocket.Conn
+  conn : &@ws.Session
   closed : Ref[Bool]
-  max_message_bytes : Int32
 }
 
 ///|
@@ -58,43 +66,44 @@ fn check_max_message_bytes(value : Int32) -> Unit raise GatewayConfigError {
 impl GatewayTransport for WsTransport with fn recv(self) {
   let message = self.conn.recv() catch {
     error if @async.is_being_cancelled() => raise error
-    @websocket.WebSocketError::ConnectionClosed(code, reason) =>
-      raise TransportClosed(
-        code=Some(@websocket.close_code_to_int(code)),
-        reason=reason.unwrap_or(""),
-      )
-    e => raise TransportClosed(code=None, reason="\{Repr(e)}")
+    error => raise transport_error(error)
   }
-  let data = @websocket.read_message(message, max_bytes=self.max_message_bytes) catch {
-    error if @async.is_being_cancelled() => raise error
-    e => raise TransportClosed(code=None, reason="\{Repr(e)}")
+  match message {
+    Text(text) => Text(text)
+    Binary(data) => Binary(data)
   }
-  guard data is Some(data) else {
-    // Sent to the peer too, so the shard's own close that follows is a
-    // no-op. The session survives, so the shard resumes.
-    GatewayTransport::close(self, code=OVERSIZED_CLOSE_CODE) catch {
-      error if @async.is_being_cancelled() => raise error
-      _ => ()
-    }
-    raise TransportClosed(
-      code=Some(OVERSIZED_CLOSE_CODE),
-      reason="message larger than \{self.max_message_bytes} bytes",
-    )
-  }
-  match message.kind {
-    Text =>
-      Text(
-        @utf8.decode(data) catch {
-          e => raise TransportClosed(code=None, reason="\{Repr(e)}")
+}
+
+///|
+fn transport_error(error : @ws.WsError) -> TransportClosed {
+  match error {
+    @core_ws.WsError(kind=Closed(frame), ..) =>
+      TransportClosed(
+        code=if frame.code is (Abnormal | NoStatus) {
+          None
+        } else {
+          Some(frame.code.to_int())
         },
+        reason=frame.reason,
       )
-    Binary => Binary(data)
+    // Preserve the portable status even when a JS host sends 4009 instead.
+    @core_ws.WsError(kind=TooLarge(_), detail~) =>
+      TransportClosed(code=Some(1009), reason=detail)
+    _ => TransportClosed(code=None, reason="\{Repr(error)}")
   }
 }
 
 ///|
 impl GatewayTransport for WsTransport with fn send(self, text) {
-  self.conn.send_text(text)
+  self.conn.send(Text(text)) catch {
+    error if @async.is_being_cancelled() => raise error
+    error => {
+      if error is @core_ws.WsError(kind=TooLarge(_), ..) {
+        GatewayTransport::close(self, code=1009)
+      }
+      raise transport_error(error)
+    }
+  }
 }
 
 ///|
@@ -103,24 +112,34 @@ impl GatewayTransport for WsTransport with fn close(self, code~) {
     return
   }
   self.closed.val = true
-  // `send_close` only writes the WebSocket close frame. The underlying
-  // transport must be closed even when that write fails or is cancelled.
-  defer self.conn.close()
-  @async.with_timeout(1000, () => {
-    self.conn.send_close(code=@websocket.close_code_from_int(code))
-  })
+  defer self.conn.abort()
+  self.conn.close({ code: @ws.CloseCode::from_int(code), reason: "", })
+}
+
+///|
+impl GatewayTransport for WsTransport with fn abort(self) {
+  self.conn.abort()
 }
 
 ///|
 /// Connect to the gateway over WebSocket (the default connector). A message
-/// larger than `max_message_bytes` ends the connection with code 1009
-/// (Message Too Big), or 4000 on JavaScript, whose WebSocket API can send
-/// only 1000 and 3000-4999.
+/// larger than `max_message_bytes` ends the connection with local code 1009
+/// (Message Too Big); JS hosts that forbid sending 1009 send 4009 instead.
+/// The same bound applies to outgoing messages, and on JS to total queued
+/// bytes. Discord's opcode heartbeat owns liveness; WebSocket Ping is off.
 pub async fn connect_websocket(
   url : String,
   max_message_bytes~ : Int32 = DEFAULT_MAX_MESSAGE_BYTES,
 ) -> &GatewayTransport {
   check_max_message_bytes(max_message_bytes)
-  let conn = @websocket.connect(url)
-  WsTransport::{ conn, closed: Ref(false), max_message_bytes, }
+  let limits = {
+    ..@ws.WsLimits::default(),
+    max_frame_bytes: max_message_bytes.max(125),
+    max_message_bytes,
+    close_timeout_ms: 1000,
+    ping_interval_ms: None,
+    pong_timeout_ms: None,
+  }
+  let conn = @ws.connect(url, limits~)
+  WsTransport::{ conn, closed: Ref(false), }
 }

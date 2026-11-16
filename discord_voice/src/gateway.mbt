@@ -89,7 +89,8 @@ pub async fn VoiceGateway::send_binary(
 }
 
 ///|
-/// Request graceful shutdown of the voice WebSocket.
+/// Shut down the voice gateway, interrupting transport I/O before cancelling
+/// and joining the receiver. The WebSocket may close without a status.
 #doc(hidden)
 pub async fn VoiceGateway::close(self : VoiceGateway) -> Unit noraise {
   if self.closing {
@@ -115,6 +116,11 @@ async fn VoiceGateway::wait_runner(self : VoiceGateway) -> Unit noraise {
 
 ///|
 async fn VoiceGateway::stop_runner(self : VoiceGateway) -> Unit noraise {
+  // Protected control replies must be woken before joining the receiver,
+  // rather than relying on that receiver's eventual cleanup to close I/O.
+  if self.transport is Some(transport) {
+    transport.abort()
+  }
   if self.runner is Some(runner) {
     runner.cancel()
     self.wait_runner()

@@ -34,8 +34,8 @@ endpoint_http 95.2 %, gateway 92.3 %, coordinator 92.3 %, voice 88.8 %).
 
 ## Policy
 
-Files compiled only on JavaScript or Wasm (`*.js.mbt`,
-`*_unsupported.mbt`, and the JS files in `discord/src/internal/websocket`) are outside
+Files compiled only on JavaScript or Wasm (`*.js.mbt` and
+`*_unsupported.mbt`) are outside
 the native measurement; `moon test --target js` and `--target wasm` cover them.
 
 Must be covered by tests:
@@ -77,8 +77,8 @@ Live socket, websocket, and FFI adapters (live-verified; no unit seam):
 
 | File | Budget | Reason |
 | --- | --- | --- |
-| discord/src/gateway/transport.mbt | 8 | Error arms of the real WebSocket adapter: cancellation re-raises, receive and read failures other than a close, a failing 1009 close, invalid UTF-8 text, and `send`. A loopback test covers receiving, the size limit, the peer's close code, and closing twice. |
-| discord_voice/src/transport.mbt | 20 | Error arms of the real voice WebSocket adapter (cancellation re-raises, failures other than a close, a failing 1009 close, invalid UTF-8), `send_text`/`send_binary`, and the close-code mapping arms other than an application code. Loopback tests cover receiving, the size limit, the peer's close code, and closing twice. |
+| discord/src/gateway/transport.mbt | 2 | Cancellation re-raise guards in receive/send: core/async cancellation bypasses ordinary catches. Stub tests verify cancellation remains cancellation; mapping tests and real mttp upgrade loopbacks cover errors, Close codes/reasons, text/binary, both message limits, and repeated close. Shutdown tests cover abort waking protected replies to a peer that stopped reading; Node loopback verifies cancelled sends preserve Resume. Measured after the shutdown fix: 34/36 points. |
+| discord_voice/src/transport.mbt | 3 | Cancellation re-raise guards in receive/text-send/binary-send: core/async cancellation bypasses ordinary catches. Stub tests verify cancellation and send errors; real mttp upgrade loopbacks cover text/binary in both directions, incoming/outgoing limits, Close codes/reasons, and repeated close. Shutdown tests cover abort waking protected replies to a peer that stopped reading. Measured after the shutdown fix: 36/39 points. |
 | discord_voice/src/udp.mbt | 4 | SocketVoiceUdp impls and `open_voice_udp` over a real UDP socket; parse and retry logic is covered via fakes. |
 | discord_voice/src/shim_ffi.mbt | 3 | Extern-C glue whose arms depend on host library state. |
 | discord_voice/src/crypto.mbt | 5 | Shim error-status translation paths; round-trips and geometry checks are covered with the shim loaded. |

@@ -24,6 +24,15 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 root=$PWD
 
+# Check this repository's modules even when moon.work also contains local
+# dependency checkouts: running their tests may require their own fixtures.
+mapfile -t workspace_paths < <(
+  find discord/src discord_voice/src dave/src examples guide template/src \
+    -type d \( -name _build -o -name .mooncakes -o -name node_modules \) -prune \
+    -o -name moon.pkg -print
+)
+workspace_paths=("${workspace_paths[@]%/moon.pkg}")
+
 run() {
   echo "+ $*"
   "$@"
@@ -42,14 +51,14 @@ on_pinned_toolchain() {
 # formatter, printed as a note.
 fmt_check() {
   if on_pinned_toolchain; then
-    run moon fmt --check
-  elif ! run moon fmt --check; then
+    run moon fmt "${workspace_paths[@]}" --check
+  elif ! run moon fmt "${workspace_paths[@]}" --check; then
     echo "note: moon fmt on this toolchain lays out the code above differently from moonbit-version's" >&2
   fi
 }
 
 gate_check() {
-  run moon check --target native --deny-warn
+  run moon check "${workspace_paths[@]}" --target native --deny-warn
   fmt_check
   # The workspace resolves every member to its directory; a consumer gets
   # every dependency from the registry.
@@ -57,26 +66,27 @@ gate_check() {
 }
 
 gate_native() {
-  run moon test --target native "$@"
+  run moon test "${workspace_paths[@]}" --target native "$@"
 }
 
 gate_js() {
-  run moon check --target js --deny-warn
-  run moon test --target js
+  run moon check "${workspace_paths[@]}" --target js --deny-warn
+  run moon test "${workspace_paths[@]}" --target js
 }
 
 gate_wasm() {
-  run moon check --target wasm --deny-warn
+  run moon check "${workspace_paths[@]}" --target wasm --deny-warn
   # Explicit roots must not silently disappear through target filtering.
   run moon check discord/src discord/src/coordinator discord/src/endpoint_http \
     discord/src/testkit --target wasm --deny-warn
   # --verbose names each test, including the HTTP and TCP loopback ones.
-  run moon test --target wasm --release --verbose
+  run moon test "${workspace_paths[@]}" --target wasm --release --verbose
   run moon build examples/interactions_http --target wasm --release --deny-warn
 }
 
 gate_dave() (
   cd dave
+  workspace_paths=(src src/internal/ffi)
   export MOON_WORK=off
   # Only the native backend can load libdave; the native gates must not fall
   # back to the unavailable facade.

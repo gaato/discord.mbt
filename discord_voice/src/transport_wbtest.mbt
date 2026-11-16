@@ -1,30 +1,80 @@
 ///|
-/// A reader that yields `total` bytes of `b'x'`, `step` at a time.
-fn chunked_reader(
-  total : Int32,
-  step : Int32,
-) -> async (FixedArray[Byte]) -> Int32 {
-  let left = Ref(total)
-  fn(chunk) {
-    let mut n = if left.val < step { left.val } else { step }
-    if chunk.length() < n {
-      n = chunk.length()
+test "voice transport errors preserve application codes and local size failures" {
+  for code in [1000, 1001, 4000, 4006, 4014, 4015] {
+    let error = @core_ws.WsError(
+      kind=Closed({
+        code: @ws.CloseCode::from_int(code),
+        reason: "peer reason",
+      }),
+      detail="closed",
+    )
+    guard voice_transport_error(error)
+      is VoiceTransportClosed(code=Some(actual), reason="peer reason") else {
+      fail("lost close status or reason")
     }
-    for i in 0..<n {
-      chunk[i] = b'x'
-    }
-    left.val -= n
-    n
+    assert_eq(actual, code)
   }
+  guard! voice_transport_error(
+      @core_ws.WsError(kind=TooLarge(limit=1), detail="limit"),
+    )
+    is VoiceTransportClosed(code=Some(1009), reason="limit")
+  for code in [@ws.CloseCode::Abnormal, @ws.CloseCode::NoStatus] {
+    guard! voice_transport_error(
+        @core_ws.WsError(kind=Closed({ code, reason: "", }), detail="closed"),
+      )
+      is VoiceTransportClosed(code=None, ..)
+  }
+  guard! voice_transport_error(
+      @core_ws.WsError(kind=Protocol, detail="bad frame"),
+    )
+    is VoiceTransportClosed(code=None, ..)
 }
 
 ///|
-async test "a voice message is read up to the size limit and no further" {
-  guard read_bounded(chunked_reader(100, 7), 100) is Some(data) else {
-    fail("a message at the limit was refused")
+async test "cancelling voice recv stays cancellation and sends map peer Close" {
+  let (conn, peer) = @sim.WebSocketStub::pair(
+    @transport.RuntimeCoordination::new(),
+  )
+  defer peer.abort()
+  let transport : &VoiceTransport = VoiceWsTransport::{
+    conn,
+    closed: Ref(false),
   }
-  assert_eq(data.length(), 100)
-  assert_true(read_bounded(chunked_reader(101, 7), 100) is None)
-  // A reader that never ends is cut off once it passes the limit.
-  assert_true(read_bounded(_ => 65536, 1_000_000) is None)
+  let entered : @async.Queue[Unit] = @async.Queue(kind=Unbounded)
+  let converted = Ref(false)
+  @async.with_task_group(group => {
+    let task = group.spawn(() => {
+      entered.put(())
+      (transport.recv() |> ignore) catch {
+        VoiceTransportClosed(..) => converted.val = true
+        error => raise error
+      }
+    })
+    entered.get()
+    task.cancel()
+    task.wait() catch {
+      @async.WaitedTaskAlreadyCancelled => ()
+      error => raise error
+    }
+  })
+  assert_false(converted.val)
+  peer.send(Binary(b"\x00\xff"))
+  assert_true(transport.recv() is Binary(b"\x00\xff"))
+  peer.close({ code: Other(4006), reason: "session invalid", })
+  for binary in [false, true] {
+    try {
+      if binary {
+        transport.send_binary(b"closed")
+      } else {
+        transport.send_text("closed")
+      }
+    } catch {
+      VoiceTransportClosed(code=Some(4006), reason="session invalid") => ()
+      error => fail("unexpected \{Repr(error)}")
+    } noraise {
+      _ => fail("send after close succeeded")
+    }
+  }
+  transport.close(code=1000)
+  transport.close(code=1000)
 }

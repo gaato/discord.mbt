@@ -31,6 +31,10 @@ Run these from this directory; they cover every module and build each against
 the in-tree versions of the others. Native builds here run every module's
 prebuild hook, so they need Node.js on `PATH`.
 
+The JS Gateway integration test also needs the native compiler (`cc` by
+default): Node's WebSocket client connects to a native mttp upgrade fixture.
+The test starts, joins, and cleans up that loopback server itself.
+
 ```sh
 moon check --target native --deny-warn
 moon check --target js --deny-warn
