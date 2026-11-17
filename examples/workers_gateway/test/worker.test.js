@@ -20,48 +20,43 @@ const control = (path, method, token) => worker.fetch(request(path, method, toke
 function installFakeGateway() {
   const sockets = [];
   const sent = [];
-  class FakeGatewaySocket extends EventTarget {
-    constructor(url) {
-      super();
-      this.url = url;
-      this.readyState = 0;
-      sockets.push(this);
-      queueMicrotask(() => {
-        this.readyState = 1;
-        this.dispatchEvent(new Event("open"));
-        this.message('{"op":10,"d":{"heartbeat_interval":60000}}');
+  // mttp uses Workers' fetch upgrade path. Keep the real WebSocketPair so
+  // READY, cancellation, and resume exercise workerd's socket lifecycle.
+  vi.stubGlobal("WebSocket", vi.fn(() => {
+    throw new Error("Workers gateway must use fetch upgrade");
+  }));
+  const fetch = vi.fn(async (url, options) => {
+    const target = new URL(url);
+    if (target.hostname === "127.0.0.1" || target.hostname === "resume.example") {
+      expect(new Headers(options?.headers).get("Upgrade")).toBe("websocket");
+      expect(target.protocol).toBe(target.hostname === "resume.example" ? "https:" : "http:");
+      expect(target.searchParams.get("v")).toBe("10");
+      expect(target.searchParams.get("encoding")).toBe("json");
+      const { 0: client, 1: server } = new WebSocketPair();
+      const connection = { url: target.href, closeCode: null };
+      sockets.push(connection);
+      server.accept();
+      server.addEventListener("close", ({ code }) => {
+        connection.closeCode = code;
       });
-    }
-    message(data) {
-      const event = new Event("message");
-      Object.defineProperty(event, "data", { value: data });
-      this.dispatchEvent(event);
-    }
-    send(text) {
-      const payload = JSON.parse(text);
-      sent.push(payload);
-      if (payload.op === 2) {
-        this.message('{"op":0,"s":1,"t":"READY","d":{"v":10,"user":{"id":"1","username":"bot","discriminator":"0","global_name":null,"avatar":null},"guilds":[],"session_id":"saved-session","resume_gateway_url":"wss://resume.example","application":{"id":"42"},"shard":[0,1]}}');
-      } else if (payload.op === 6) {
-        this.message('{"op":0,"s":2,"t":"RESUMED","d":{}}');
-      }
-    }
-    close(code = 1000) {
-      this.readyState = 3;
-      const event = new Event("close");
-      Object.defineProperties(event, {
-        code: { value: code },
-        reason: { value: "test close" },
+      server.addEventListener("message", ({ data }) => {
+        const payload = JSON.parse(data);
+        sent.push(payload);
+        if (payload.op === 2) {
+          server.send('{"op":0,"s":1,"t":"READY","d":{"v":10,"user":{"id":"1","username":"bot","discriminator":"0","global_name":null,"avatar":null},"guilds":[],"session_id":"saved-session","resume_gateway_url":"wss://resume.example","application":{"id":"42"},"shard":[0,1]}}');
+        } else if (payload.op === 6) {
+          server.send('{"op":0,"s":2,"t":"RESUMED","d":{}}');
+        }
       });
-      this.dispatchEvent(event);
+      server.send('{"op":10,"d":{"heartbeat_interval":60000}}');
+      return new Response(null, { status: 101, webSocket: client });
     }
-  }
-  vi.stubGlobal("WebSocket", FakeGatewaySocket);
-  vi.stubGlobal("fetch", vi.fn(async () =>
-    new Response("[]", {
+    return new Response("[]", {
       status: 200,
       headers: { "content-type": "application/json" },
-    })));
+    });
+  });
+  vi.stubGlobal("fetch", fetch);
   return { sockets, sent };
 }
 
@@ -73,9 +68,9 @@ afterEach(async () => {
 
 describe("Gateway Durable Object", () => {
   it("keeps controls private and explicit stop survives alarms and cron", async () => {
-    vi.stubGlobal("WebSocket", class {
-      constructor() { throw new Error("local connector refused"); }
-    });
+    vi.stubGlobal("fetch", vi.fn(async () => {
+      throw new Error("local connector refused");
+    }));
     const missing = await control("/status", "GET", "wrong");
     expect(missing.status).toBe(401);
     const noToken = await control("/status", "GET", "");
@@ -160,7 +155,7 @@ describe("Gateway Durable Object", () => {
     });
     expect(await runDurableObjectAlarm(stub())).toBe(true);
     expect((await control("/stop", "POST")).status).toBe(200);
-    expect(sockets[0].readyState).toBe(3);
+    await vi.waitFor(() => expect(sockets[0].closeCode).toBe(1000));
     expect(await runInDurableObject(stub(), (_, state) =>
       state.storage.get("sessions"))).toBeUndefined();
     expect(await (await control("/status")).json()).toEqual({
@@ -187,7 +182,7 @@ describe("Gateway Durable Object", () => {
       handle.controller.abort();
       await handle.bridge.finished.catch(() => {});
     });
-    expect(sockets[0].readyState).toBe(3);
+    await vi.waitFor(() => expect(sockets[0].closeCode).toBe(1000));
     const ctx = createExecutionContext();
     await worker.scheduled({}, env, ctx);
     await waitOnExecutionContext(ctx);
@@ -198,6 +193,11 @@ describe("Gateway Durable Object", () => {
     expect(resume.d.session_id).toBe("saved-session");
     expect(resume.d.seq).toBe(1);
     expect(sockets.at(-1).url).toContain("resume.example");
+    await vi.waitFor(async () => {
+      const sessions = await runInDurableObject(stub(), (instance) =>
+        instance.handle?.bridge.sessions());
+      expect(JSON.parse(sessions)["0"].gateway.sequence).toBe("2");
+    });
     await control("/stop", "POST");
   }, 15_000);
 });
