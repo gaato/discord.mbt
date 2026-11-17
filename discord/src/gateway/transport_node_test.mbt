@@ -121,15 +121,21 @@ priv type InterruptedSendProbe
 ///|
 /// Real Node WebSockets remain in use; only bufferedAmount is held above
 /// zero for one command so cancellation reliably interrupts its drain wait.
-extern "js" fn install_interrupted_send_probe() -> InterruptedSendProbe =
-  #| () => {
+extern "js" fn install_interrupted_send_probe(
+  fixture_url : String,
+) -> InterruptedSendProbe =
+  #| fixtureUrl => {
   #|   const original = globalThis.WebSocket;
+  #|   // Async tests overlap: each fixture owns a distinct loopback origin.
+  #|   // Stalling another fixture's command would prevent its .sent handshake.
+  #|   const origin = new URL(fixtureUrl).origin;
   #|   let entered;
   #|   const started = new Promise(resolve => { entered = resolve; });
   #|   globalThis.WebSocket = class extends original {
   #|     send(data) {
   #|       super.send(data);
-  #|       if (typeof data === 'string' && JSON.parse(data).op === 3) {
+  #|       if (new URL(this.url).origin === origin &&
+  #|           typeof data === 'string' && JSON.parse(data).op === 3) {
   #|         this.stalled = true;
   #|         entered();
   #|       }
@@ -152,6 +158,44 @@ extern "js" fn restore_interrupted_send_probe(
   #| probe => { globalThis.WebSocket = probe.original; }
 
 ///|
+// Synchronous scope: restore the fake constructor before other async tests
+// can start socket work, so this regression test itself cannot contaminate them.
+extern "js" fn with_fake_websocket(check : () -> Bool) -> Bool =
+  #| check => {
+  #|   const original = globalThis.WebSocket;
+  #|   globalThis.WebSocket = class {
+  #|     constructor(url) { this.url = new URL(url).href; }
+  #|     send(_) {}
+  #|     get bufferedAmount() { return 0; }
+  #|   };
+  #|   try { return check(); }
+  #|   finally { globalThis.WebSocket = original; }
+  #| }
+
+///|
+extern "js" fn check_interrupted_probe_scope() -> Bool =
+  #| () => {
+  #|   const other = new WebSocket('ws://127.0.0.1:2222/?v=10&encoding=json&compress=zlib-stream');
+  #|   const owned = new WebSocket('ws://127.0.0.1:1111/?v=10&encoding=json');
+  #|   other.send('{"op":3,"d":null}');
+  #|   owned.send('{"op":2,"d":{}}');
+  #|   if (other.bufferedAmount !== 0 || owned.bufferedAmount !== 0) return false;
+  #|   owned.send('{"op":3,"d":null}');
+  #|   return other.bufferedAmount === 0 && owned.bufferedAmount === 1;
+  #| }
+
+///|
+test "interrupted send probe leaves other Gateway connections draining" {
+  assert_true(
+    with_fake_websocket(() => {
+      let probe = install_interrupted_send_probe("ws://127.0.0.1:1111")
+      defer restore_interrupted_send_probe(probe)
+      check_interrupted_probe_scope()
+    }),
+  )
+}
+
+///|
 async test "cancelled JS Gateway send closes without status and reconnects with Resume" {
   let controller = @js_async.AbortController::new()
   let fixture = start_node_gateway_fixture("resume", controller.signal()).wait(
@@ -160,7 +204,7 @@ async test "cancelled JS Gateway send closes without status and reconnects with 
   defer @async.protect_from_cancel(() => {
     stop_node_gateway_fixture(fixture).wait()
   })
-  let probe = install_interrupted_send_probe()
+  let probe = install_interrupted_send_probe(node_gateway_fixture_url(fixture))
   defer restore_interrupted_send_probe(probe)
   let clock = @transport.VirtualClock()
   // Bound a hang, not response time: host load slows real I/O across processes.
