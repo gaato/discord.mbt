@@ -238,7 +238,7 @@ async test "js dispatch rejects a pre-aborted response and still finishes" {
       ),
     ),
   )
-  let controller = @js_async.AbortController::new()
+  let controller = @js_async.AbortController()
   controller.abort()
   let dispatch = js_start(
     app.build(),

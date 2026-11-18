@@ -17,12 +17,12 @@ pub(all) enum TelemetryEvent {
     method_name~ : String,
     status~ : Int32,
     duration_ms~ : Int64,
-    retries~ : Int32
+    retries~ : Int32,
   )
   HttpRateLimited(
     route_bucket~ : String,
     global~ : Bool,
-    retry_after_ms~ : Int64
+    retry_after_ms~ : Int64,
   )
   EventDispatched(kind~ : String, handler_count~ : Int32)
   /// A gateway event was not handed to event handlers because `backlog`

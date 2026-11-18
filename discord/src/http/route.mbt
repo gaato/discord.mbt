@@ -22,7 +22,7 @@ pub(all) enum Route {
     path~ : String,
     bucket_key~ : String,
     is_interaction~ : Bool,
-    supports_reason~ : Bool
+    supports_reason~ : Bool,
   )
   GetGateway
   GetGatewayBot
@@ -30,86 +30,86 @@ pub(all) enum Route {
   EditCurrentApplication
   GetApplicationActivityInstance(
     application_id~ : @model.ApplicationId,
-    instance_id~ : String
+    instance_id~ : String,
   )
   UpdateApplicationIdentityProfile(
     application_id~ : @model.ApplicationId,
     user_id~ : @model.UserId,
-    provider_issued_user_id~ : String
+    provider_issued_user_id~ : String,
   )
   GetApplicationIdentityProfile(
     application_id~ : @model.ApplicationId,
     user_id~ : @model.UserId,
-    provider_issued_user_id~ : String
+    provider_issued_user_id~ : String,
   )
   GetApplicationIdentitiesByUserId(
     user_id~ : @model.UserId,
-    application_id~ : @model.ApplicationId
+    application_id~ : @model.ApplicationId,
   )
   GetApplicationIdentitiesByExternalId(
     application_id~ : @model.ApplicationId,
     provider_type~ : String,
     provider_issued_user_id~ : String,
-    query~ : String
+    query~ : String,
   )
   DeleteApplicationIdentity(
     user_id~ : @model.UserId,
     application_id~ : @model.ApplicationId,
     provider_type~ : String,
-    provider_issued_user_id~ : String
+    provider_issued_user_id~ : String,
   )
   GetApplicationRoleConnectionMetadataRecords(
-    application_id~ : @model.ApplicationId
+    application_id~ : @model.ApplicationId,
   )
   UpdateApplicationRoleConnectionMetadataRecords(
-    application_id~ : @model.ApplicationId
+    application_id~ : @model.ApplicationId,
   )
   ListApplicationEmojis(application_id~ : @model.ApplicationId)
   GetApplicationEmoji(
     application_id~ : @model.ApplicationId,
-    emoji_id~ : @model.EmojiId
+    emoji_id~ : @model.EmojiId,
   )
   CreateApplicationEmoji(application_id~ : @model.ApplicationId)
   ModifyApplicationEmoji(
     application_id~ : @model.ApplicationId,
-    emoji_id~ : @model.EmojiId
+    emoji_id~ : @model.EmojiId,
   )
   DeleteApplicationEmoji(
     application_id~ : @model.ApplicationId,
-    emoji_id~ : @model.EmojiId
+    emoji_id~ : @model.EmojiId,
   )
   ListEntitlements(application_id~ : @model.ApplicationId, query~ : String)
   GetEntitlement(
     application_id~ : @model.ApplicationId,
-    entitlement_id~ : @model.EntitlementId
+    entitlement_id~ : @model.EntitlementId,
   )
   CreateTestEntitlement(application_id~ : @model.ApplicationId)
   ConsumeEntitlement(
     application_id~ : @model.ApplicationId,
-    entitlement_id~ : @model.EntitlementId
+    entitlement_id~ : @model.EntitlementId,
   )
   DeleteTestEntitlement(
     application_id~ : @model.ApplicationId,
-    entitlement_id~ : @model.EntitlementId
+    entitlement_id~ : @model.EntitlementId,
   )
   ListSkus(application_id~ : @model.ApplicationId)
   ListSkuSubscriptions(sku_id~ : @model.SkuId, query~ : String)
   GetSkuSubscription(
     sku_id~ : @model.SkuId,
-    subscription_id~ : @model.SubscriptionId
+    subscription_id~ : @model.SubscriptionId,
   )
   GetCurrentUser
   GetCurrentUserGuilds(query~ : String)
   GetCurrentUserConnections
   GetCurrentUserGuildMember(guild_id~ : @model.GuildId)
   GetCurrentUserApplicationRoleConnection(
-    application_id~ : @model.ApplicationId
+    application_id~ : @model.ApplicationId,
   )
   UpdateCurrentUserApplicationRoleConnection(
-    application_id~ : @model.ApplicationId
+    application_id~ : @model.ApplicationId,
   )
   DeleteCurrentUserApplicationRoleConnection(
-    application_id~ : @model.ApplicationId
+    application_id~ : @model.ApplicationId,
   )
   LeaveGuild(guild_id~ : @model.GuildId)
   GetUser(user_id~ : @model.UserId)
@@ -123,7 +123,7 @@ pub(all) enum Route {
   GetChannelMessages(channel_id~ : @model.ChannelId, query~ : String)
   GetChannelMessage(
     channel_id~ : @model.ChannelId,
-    message_id~ : @model.MessageId
+    message_id~ : @model.MessageId,
   )
   CreateMessage(channel_id~ : @model.ChannelId)
   EditMessage(channel_id~ : @model.ChannelId, message_id~ : @model.MessageId)
@@ -132,43 +132,43 @@ pub(all) enum Route {
   CreateReaction(
     channel_id~ : @model.ChannelId,
     message_id~ : @model.MessageId,
-    emoji~ : String
+    emoji~ : String,
   )
   DeleteOwnReaction(
     channel_id~ : @model.ChannelId,
     message_id~ : @model.MessageId,
-    emoji~ : String
+    emoji~ : String,
   )
   DeleteUserReaction(
     channel_id~ : @model.ChannelId,
     message_id~ : @model.MessageId,
     emoji~ : String,
-    user_id~ : @model.UserId
+    user_id~ : @model.UserId,
   )
   DeleteAllReactions(
     channel_id~ : @model.ChannelId,
-    message_id~ : @model.MessageId
+    message_id~ : @model.MessageId,
   )
   DeleteAllReactionsForEmoji(
     channel_id~ : @model.ChannelId,
     message_id~ : @model.MessageId,
-    emoji~ : String
+    emoji~ : String,
   )
   CrosspostMessage(
     channel_id~ : @model.ChannelId,
-    message_id~ : @model.MessageId
+    message_id~ : @model.MessageId,
   )
   GetReactions(
     channel_id~ : @model.ChannelId,
     message_id~ : @model.MessageId,
     emoji~ : String,
-    query~ : String
+    query~ : String,
   )
   GetPollAnswerVoters(
     channel_id~ : @model.ChannelId,
     message_id~ : @model.MessageId,
     answer_id~ : Int32,
-    query~ : String
+    query~ : String,
   )
   ExpirePoll(channel_id~ : @model.ChannelId, message_id~ : @model.MessageId)
   SendSoundboardSound(channel_id~ : @model.ChannelId)
@@ -180,21 +180,21 @@ pub(all) enum Route {
   GetPinnedMessages(channel_id~ : @model.ChannelId)
   EditChannelPermissions(
     channel_id~ : @model.ChannelId,
-    overwrite_id~ : @model.GenericId
+    overwrite_id~ : @model.GenericId,
   )
   DeleteChannelPermission(
     channel_id~ : @model.ChannelId,
-    overwrite_id~ : @model.GenericId
+    overwrite_id~ : @model.GenericId,
   )
   GetChannelMemberPermissions(
     channel_id~ : @model.ChannelId,
     user_id~ : @model.UserId,
-    query~ : String
+    query~ : String,
   )
   GetChannelRolePermissions(
     channel_id~ : @model.ChannelId,
     role_id~ : @model.RoleId,
-    query~ : String
+    query~ : String,
   )
   GetChannelInvites(channel_id~ : @model.ChannelId)
   CreateChannelInvite(channel_id~ : @model.ChannelId)
@@ -203,13 +203,13 @@ pub(all) enum Route {
   GroupDmAddRecipient(channel_id~ : @model.ChannelId, user_id~ : @model.UserId)
   GroupDmRemoveRecipient(
     channel_id~ : @model.ChannelId,
-    user_id~ : @model.UserId
+    user_id~ : @model.UserId,
   )
   CreateWebhook(channel_id~ : @model.ChannelId)
   GetChannelWebhooks(channel_id~ : @model.ChannelId)
   StartThreadFromMessage(
     channel_id~ : @model.ChannelId,
-    message_id~ : @model.MessageId
+    message_id~ : @model.MessageId,
   )
   StartThreadWithoutMessage(channel_id~ : @model.ChannelId)
   JoinThread(channel_id~ : @model.ChannelId)
@@ -218,7 +218,7 @@ pub(all) enum Route {
   GetThreadMember(
     channel_id~ : @model.ChannelId,
     user_id~ : @model.UserId,
-    query~ : String
+    query~ : String,
   )
   AddThreadMember(channel_id~ : @model.ChannelId, user_id~ : @model.UserId)
   RemoveThreadMember(channel_id~ : @model.ChannelId, user_id~ : @model.UserId)
@@ -226,7 +226,7 @@ pub(all) enum Route {
   ListPrivateArchivedThreads(channel_id~ : @model.ChannelId, query~ : String)
   ListJoinedPrivateArchivedThreads(
     channel_id~ : @model.ChannelId,
-    query~ : String
+    query~ : String,
   )
   ListActiveGuildThreads(guild_id~ : @model.GuildId)
   SearchGuildMessages(guild_id~ : @model.GuildId, query~ : String)
@@ -240,7 +240,7 @@ pub(all) enum Route {
   GetGuildMember(guild_id~ : @model.GuildId, user_id~ : @model.UserId)
   GetGuildMemberPermissions(
     guild_id~ : @model.GuildId,
-    user_id~ : @model.UserId
+    user_id~ : @model.UserId,
   )
   ListGuildMembers(guild_id~ : @model.GuildId, query~ : String)
   SearchGuildMembers(guild_id~ : @model.GuildId, query~ : String)
@@ -257,12 +257,12 @@ pub(all) enum Route {
   AddGuildMemberRole(
     guild_id~ : @model.GuildId,
     user_id~ : @model.UserId,
-    role_id~ : @model.RoleId
+    role_id~ : @model.RoleId,
   )
   RemoveGuildMemberRole(
     guild_id~ : @model.GuildId,
     user_id~ : @model.UserId,
-    role_id~ : @model.RoleId
+    role_id~ : @model.RoleId,
   )
   RemoveGuildMember(guild_id~ : @model.GuildId, user_id~ : @model.UserId)
   CreateGuildBan(guild_id~ : @model.GuildId, user_id~ : @model.UserId)
@@ -277,7 +277,7 @@ pub(all) enum Route {
   GetGuildIntegrations(guild_id~ : @model.GuildId)
   DeleteGuildIntegration(
     guild_id~ : @model.GuildId,
-    integration_id~ : @model.IntegrationId
+    integration_id~ : @model.IntegrationId,
   )
   GetGuildVanityUrl(guild_id~ : @model.GuildId)
   GetGuildWidgetSettings(guild_id~ : @model.GuildId)
@@ -292,16 +292,16 @@ pub(all) enum Route {
   ListAutoModerationRules(guild_id~ : @model.GuildId)
   GetAutoModerationRule(
     guild_id~ : @model.GuildId,
-    rule_id~ : @model.AutoModerationRuleId
+    rule_id~ : @model.AutoModerationRuleId,
   )
   CreateAutoModerationRule(guild_id~ : @model.GuildId)
   ModifyAutoModerationRule(
     guild_id~ : @model.GuildId,
-    rule_id~ : @model.AutoModerationRuleId
+    rule_id~ : @model.AutoModerationRuleId,
   )
   DeleteAutoModerationRule(
     guild_id~ : @model.GuildId,
-    rule_id~ : @model.AutoModerationRuleId
+    rule_id~ : @model.AutoModerationRuleId,
   )
   ListGuildStickers(guild_id~ : @model.GuildId)
   GetGuildSticker(guild_id~ : @model.GuildId, sticker_id~ : @model.StickerId)
@@ -313,34 +313,34 @@ pub(all) enum Route {
   GetGuildScheduledEvent(
     guild_id~ : @model.GuildId,
     event_id~ : @model.ScheduledEventId,
-    query~ : String
+    query~ : String,
   )
   ModifyGuildScheduledEvent(
     guild_id~ : @model.GuildId,
-    event_id~ : @model.ScheduledEventId
+    event_id~ : @model.ScheduledEventId,
   )
   DeleteGuildScheduledEvent(
     guild_id~ : @model.GuildId,
-    event_id~ : @model.ScheduledEventId
+    event_id~ : @model.ScheduledEventId,
   )
   ListGuildScheduledEventUsers(
     guild_id~ : @model.GuildId,
     event_id~ : @model.ScheduledEventId,
-    query~ : String
+    query~ : String,
   )
   ListGuildSoundboardSounds(guild_id~ : @model.GuildId)
   CreateGuildSoundboardSound(guild_id~ : @model.GuildId)
   GetGuildSoundboardSound(
     guild_id~ : @model.GuildId,
-    sound_id~ : @model.SoundboardSoundId
+    sound_id~ : @model.SoundboardSoundId,
   )
   ModifyGuildSoundboardSound(
     guild_id~ : @model.GuildId,
-    sound_id~ : @model.SoundboardSoundId
+    sound_id~ : @model.SoundboardSoundId,
   )
   DeleteGuildSoundboardSound(
     guild_id~ : @model.GuildId,
-    sound_id~ : @model.SoundboardSoundId
+    sound_id~ : @model.SoundboardSoundId,
   )
   GetGuildWebhooks(guild_id~ : @model.GuildId)
   ListGuildEmojis(guild_id~ : @model.GuildId)
@@ -385,125 +385,125 @@ pub(all) enum Route {
   ExecuteWebhook(
     webhook_id~ : @model.WebhookId,
     token~ : String,
-    query~ : String
+    query~ : String,
   )
   ExecuteSlackCompatibleWebhook(
     webhook_id~ : @model.WebhookId,
     token~ : String,
-    query~ : String
+    query~ : String,
   )
   ExecuteGithubCompatibleWebhook(
     webhook_id~ : @model.WebhookId,
     token~ : String,
-    query~ : String
+    query~ : String,
   )
   GetWebhookMessage(
     webhook_id~ : @model.WebhookId,
     token~ : String,
     message_id~ : @model.MessageId,
-    query~ : String
+    query~ : String,
   )
   EditWebhookMessage(
     webhook_id~ : @model.WebhookId,
     token~ : String,
     message_id~ : @model.MessageId,
-    query~ : String
+    query~ : String,
   )
   DeleteWebhookMessage(
     webhook_id~ : @model.WebhookId,
     token~ : String,
     message_id~ : @model.MessageId,
-    query~ : String
+    query~ : String,
   )
   CreateInteractionResponse(
     interaction_id~ : @model.InteractionId,
     token~ : String,
-    query~ : String
+    query~ : String,
   )
   GetOriginalInteractionResponse(
     application_id~ : @model.ApplicationId,
-    token~ : String
+    token~ : String,
   )
   EditOriginalInteractionResponse(
     application_id~ : @model.ApplicationId,
-    token~ : String
+    token~ : String,
   )
   DeleteOriginalInteractionResponse(
     application_id~ : @model.ApplicationId,
-    token~ : String
+    token~ : String,
   )
   CreateFollowupMessage(application_id~ : @model.ApplicationId, token~ : String)
   GetFollowupMessage(
     application_id~ : @model.ApplicationId,
     token~ : String,
-    message_id~ : @model.MessageId
+    message_id~ : @model.MessageId,
   )
   EditFollowupMessage(
     application_id~ : @model.ApplicationId,
     token~ : String,
-    message_id~ : @model.MessageId
+    message_id~ : @model.MessageId,
   )
   DeleteFollowupMessage(
     application_id~ : @model.ApplicationId,
     token~ : String,
-    message_id~ : @model.MessageId
+    message_id~ : @model.MessageId,
   )
   GetGlobalCommands(application_id~ : @model.ApplicationId, query~ : String)
   CreateGlobalCommand(application_id~ : @model.ApplicationId)
   GetGlobalCommand(
     application_id~ : @model.ApplicationId,
-    command_id~ : @model.CommandId
+    command_id~ : @model.CommandId,
   )
   EditGlobalCommand(
     application_id~ : @model.ApplicationId,
-    command_id~ : @model.CommandId
+    command_id~ : @model.CommandId,
   )
   DeleteGlobalCommand(
     application_id~ : @model.ApplicationId,
-    command_id~ : @model.CommandId
+    command_id~ : @model.CommandId,
   )
   BulkOverwriteGlobalCommands(application_id~ : @model.ApplicationId)
   GetGuildCommands(
     application_id~ : @model.ApplicationId,
     guild_id~ : @model.GuildId,
-    query~ : String
+    query~ : String,
   )
   CreateGuildCommand(
     application_id~ : @model.ApplicationId,
-    guild_id~ : @model.GuildId
+    guild_id~ : @model.GuildId,
   )
   GetGuildCommand(
     application_id~ : @model.ApplicationId,
     guild_id~ : @model.GuildId,
-    command_id~ : @model.CommandId
+    command_id~ : @model.CommandId,
   )
   EditGuildCommand(
     application_id~ : @model.ApplicationId,
     guild_id~ : @model.GuildId,
-    command_id~ : @model.CommandId
+    command_id~ : @model.CommandId,
   )
   DeleteGuildCommand(
     application_id~ : @model.ApplicationId,
     guild_id~ : @model.GuildId,
-    command_id~ : @model.CommandId
+    command_id~ : @model.CommandId,
   )
   BulkOverwriteGuildCommands(
     application_id~ : @model.ApplicationId,
-    guild_id~ : @model.GuildId
+    guild_id~ : @model.GuildId,
   )
   GetGuildApplicationCommandPermissions(
     application_id~ : @model.ApplicationId,
-    guild_id~ : @model.GuildId
+    guild_id~ : @model.GuildId,
   )
   GetApplicationCommandPermissions(
     application_id~ : @model.ApplicationId,
     guild_id~ : @model.GuildId,
-    command_id~ : @model.CommandId
+    command_id~ : @model.CommandId,
   )
   EditApplicationCommandPermissions(
     application_id~ : @model.ApplicationId,
     guild_id~ : @model.GuildId,
-    command_id~ : @model.CommandId
+    command_id~ : @model.CommandId,
   )
 }
 
@@ -799,12 +799,12 @@ pub fn Route::path(self : Route) -> String {
     UpdateApplicationIdentityProfile(
       application_id~,
       user_id~,
-      provider_issued_user_id~
+      provider_issued_user_id~,
     )
     | GetApplicationIdentityProfile(
       application_id~,
       user_id~,
-      provider_issued_user_id~
+      provider_issued_user_id~,
     ) =>
       "/applications/\{application_id}/users/\{user_id}/identities/\{@ghttp.percent_encode(provider_issued_user_id)}/profile"
     GetApplicationIdentitiesByUserId(user_id~, application_id~) =>
@@ -813,14 +813,14 @@ pub fn Route::path(self : Route) -> String {
       application_id~,
       provider_type~,
       provider_issued_user_id~,
-      query~
+      query~,
     ) =>
       "/applications/\{application_id}/application-identities/\{@ghttp.percent_encode(provider_type)}/\{@ghttp.percent_encode(provider_issued_user_id)}\{query}"
     DeleteApplicationIdentity(
       user_id~,
       application_id~,
       provider_type~,
-      provider_issued_user_id~
+      provider_issued_user_id~,
     ) =>
       "/users/\{user_id}/application-identities/\{application_id}/\{@ghttp.percent_encode(provider_type)}/\{@ghttp.percent_encode(provider_issued_user_id)}/delete"
     GetApplicationRoleConnectionMetadataRecords(application_id~)

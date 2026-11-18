@@ -42,7 +42,7 @@ pub(all) enum VoiceTelemetry {
     user_id~ : String?,
     ssrc~ : UInt32,
     count~ : Int32,
-    reason~ : String
+    reason~ : String,
   )
   /// `next_event` fell `backlog` events behind, so the oldest unread event
   /// was discarded.

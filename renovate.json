@@ -29,6 +29,16 @@
       "platformAutomerge": false
     },
     {
+      "description": "The template's toolchain image follows the gaato/discord release its moon.mod pins and moves in the release commit, not on its own.",
+      "matchFileNames": [
+        "template/Dockerfile"
+      ],
+      "matchPackageNames": [
+        "ghcr.io/gaato/moonbit"
+      ],
+      "enabled": false
+    },
+    {
       "description": "gaato/.github is our own reusable workflow, referenced at main so a change reaches every repository at once.",
       "matchPackageNames": [
         "gaato/.github"

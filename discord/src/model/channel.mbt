@@ -162,7 +162,7 @@ pub impl @json.FromJson for Channel with fn from_json(json, path) {
 fn[T : @json.FromJson] channel_field(
   fields : Map[String, Json],
   key : String,
-  path : @json.JsonPath,
+  path : @json.DecodeContext,
   lenient~ : Bool,
 ) -> T? raise @json.JsonDecodeError {
   match fields.get(key) {

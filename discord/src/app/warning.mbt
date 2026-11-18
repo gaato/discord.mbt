@@ -34,7 +34,7 @@ pub(all) enum AppWarning {
   AutocompleteTruncated(
     command_path~ : String,
     option~ : String,
-    count~ : Int32
+    count~ : Int32,
   )
   /// A handler registered directly on the framework raised.
   HandlerFailed(target~ : String, error~ : Error)

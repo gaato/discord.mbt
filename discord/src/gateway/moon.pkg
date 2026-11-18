@@ -16,6 +16,13 @@ import {
   "gaato/zstd",
 }
 
+// platform_native.mbt names Platform for the catch-all arm that
+// #non_exhaustive needs.
+#cfg(not(target="js"))
+import {
+  "moonbitlang/core/async/types",
+}
+
 import {
   "moonbitlang/core/async",
   "moonbitlang/core/async/aqueue",
@@ -67,6 +74,7 @@ options(
     "moonbitlang/core/async/aqueue",
     "moonbitlang/core/async/js_async",
     "moonbitlang/core/async/fs",
+    "moonbitlang/core/async/types",
   ],
   targets: {
     "command_limit.mbt": [ "js", "native", "wasm" ],

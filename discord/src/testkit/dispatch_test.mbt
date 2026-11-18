@@ -65,7 +65,7 @@ async test "the default policy answers every HandlerError with an error reply" {
     assert_true(matched)
     guard captured
       is Some(
-        { response: { data: Some({ "content": String(content), .. }), .. }, .. }
+        { response: { data: Some({ "content": String(content), .. }), .. }, .. },
       ) else {
       fail("expected an error reply for \{Repr(error)}")
     }
@@ -82,7 +82,7 @@ async test "the default policy hides internal failures behind a generic reply" {
   assert_true(matched)
   guard captured
     is Some(
-      { response: { data: Some({ "content": String(content), .. }), .. }, .. }
+      { response: { data: Some({ "content": String(content), .. }), .. }, .. },
     ) else {
     fail("expected a generic error reply")
   }
@@ -97,7 +97,7 @@ async test "the default policy hides internal failures behind a generic reply" {
   let (_, captured) = dispatch(malformed.build(), @testkit.slash("run"))
   guard captured
     is Some(
-      { response: { data: Some({ "content": String(content), .. }), .. }, .. }
+      { response: { data: Some({ "content": String(content), .. }), .. }, .. },
     ) else {
     fail("expected an out-of-date reply")
   }

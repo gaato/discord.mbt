@@ -261,9 +261,9 @@ test "the default error policy reports unexpected failures" {
     is Report(
       MalformedInteraction(
         origin=Component(custom_id="confirm"),
-        reason="stale"
+        reason="stale",
       ),
-      "This interaction is out of date. Please try again."
+      "This interaction is out of date. Please try again.",
     ),
   )
   assert_true(
@@ -271,9 +271,9 @@ test "the default error policy reports unexpected failures" {
     is Report(
       UnhandledFailure(
         origin=Component(custom_id="confirm"),
-        error=PolicyTestFailure
+        error=PolicyTestFailure,
       ),
-      "Something went wrong."
+      "Something went wrong.",
     ),
   )
 }

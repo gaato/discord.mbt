@@ -24,14 +24,14 @@ pub(all) suberror AppConfigError {
   DuplicateComponentRoute(
     custom_id~ : String,
     first~ : SourceLoc,
-    second~ : SourceLoc
+    second~ : SourceLoc,
   )
   /// Two modal routes share an effective prefix; `first` and `second` are
   /// their call sites.
   DuplicateModalRoute(
     custom_id~ : String,
     first~ : SourceLoc,
-    second~ : SourceLoc
+    second~ : SourceLoc,
   )
   EmptyComponentRoute
   EmptyModalRoute

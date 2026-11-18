@@ -3,6 +3,8 @@
 # executable on a distroless base. The executable links only libc and libm.
 # Runtime images: gcr.io/distroless/base-debian13 matches the Debian trixie
 # builder; a `-bookworm` builder tag pairs with base-debian12.
+# The toolchain the gaato/discord release in moon.mod builds on: move both in
+# the release commit, since a newer toolchain may not build the older release.
 ARG MOONBIT_IMAGE=ghcr.io/gaato/moonbit:0.10.20-65efd5b93
 
 FROM ${MOONBIT_IMAGE} AS build

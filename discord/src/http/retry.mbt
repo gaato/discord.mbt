@@ -74,7 +74,7 @@ fn resend_decision(
         Ok(body) => body
         Err(
           @runtime.UnexpectedStatus(_, body~)
-          | @runtime.Deserialization(_, body~, ..)
+          | @runtime.Deserialization(_, body~, ..),
         ) => body
         Err(@runtime.ResponseFailure::..) => b""
       }

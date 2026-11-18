@@ -298,7 +298,7 @@ async fn run_probe(
       GatewayEvent(Message(DaveMlsProposals(payload~))) =>
         println("[dave] received proposals (\{payload.length()} bytes)")
       GatewayEvent(
-        Message(DaveMlsAnnounceCommitTransition(transition_id~, commit~))
+        Message(DaveMlsAnnounceCommitTransition(transition_id~, commit~)),
       ) =>
         println(
           "[dave] received commit for transition \{transition_id} (\{commit.length()} bytes)",
@@ -308,7 +308,7 @@ async fn run_probe(
           "[dave] received Welcome for transition \{transition_id} (\{welcome.length()} bytes)",
         )
       GatewayEvent(
-        Message(DavePrepareTransition(transition_id~, protocol_version~))
+        Message(DavePrepareTransition(transition_id~, protocol_version~)),
       ) =>
         println(
           "[dave] prepare transition \{transition_id} for v\{protocol_version}",

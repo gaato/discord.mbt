@@ -97,7 +97,7 @@ extern "js" fn acknowledge_gateway_send(
 
 ///|
 async test "Node host WebSocket carries mttp Gateway hello identify dispatch and Close" {
-  let controller = @js_async.AbortController::new()
+  let controller = @js_async.AbortController()
   let fixture = start_node_gateway_fixture("sequence", controller.signal()).wait(
     abort_controller=controller,
   )
@@ -197,7 +197,7 @@ test "interrupted send probe leaves other Gateway connections draining" {
 
 ///|
 async test "cancelled JS Gateway send closes without status and reconnects with Resume" {
-  let controller = @js_async.AbortController::new()
+  let controller = @js_async.AbortController()
   let fixture = start_node_gateway_fixture("resume", controller.signal()).wait(
     abort_controller=controller,
   )

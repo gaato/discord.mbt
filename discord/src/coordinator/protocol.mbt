@@ -107,7 +107,7 @@ priv enum Request {
     bucket~ : String,
     lease~ : String,
     status~ : Int32,
-    headers~ : @http.Headers
+    headers~ : @http.Headers,
   )
 }
 

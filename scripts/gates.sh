@@ -44,11 +44,11 @@ on_pinned_toolchain() {
 }
 
 # The committed sources are formatted by the pinned toolchain. Another
-# toolchain's formatter may lay out the same code otherwise: the nightly's
-# adds a trailing comma after the last parameter of an enum constructor it
-# breaks over several lines, and 0.10.20's removes it, so no source satisfies
-# both. On another toolchain (the canary) a difference is news about the
-# formatter, printed as a note.
+# toolchain's formatter may lay out the same code otherwise: 0.10.20's removed
+# the trailing comma after the last parameter of an enum constructor broken
+# over several lines, and the nightly of the time added it, so no source
+# satisfied both. On another toolchain (the canary) a difference is news about
+# the formatter, printed as a note.
 fmt_check() {
   if on_pinned_toolchain; then
     run moon fmt "${workspace_paths[@]}" --check

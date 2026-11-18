@@ -405,7 +405,7 @@ pub(all) struct PresenceUpdateEvent {
 fn[T : @json.FromJson] lenient_presence_field(
   fields : Map[String, Json],
   key : String,
-  path : @json.JsonPath,
+  path : @json.DecodeContext,
 ) -> T? {
   match fields.get(key) {
     None => None

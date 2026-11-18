@@ -364,7 +364,7 @@ async fn Client::request_online(
       Ok(_) => b""
       Err(
         @runtime.UnexpectedStatus(_, body~)
-        | @runtime.Deserialization(_, body~, ..)
+        | @runtime.Deserialization(_, body~, ..),
       ) => body
       Err(_) => b""
     }

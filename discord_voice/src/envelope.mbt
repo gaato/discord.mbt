@@ -8,7 +8,7 @@ pub(all) enum VoiceMessage {
   SessionDescription(
     mode~ : String,
     secret_key~ : Bytes,
-    dave_protocol_version~ : Int32
+    dave_protocol_version~ : Int32,
   )
   HeartbeatAck(nonce~ : Int64)
   Speaking(ssrc~ : UInt32, user_id~ : String, flags~ : Int32)

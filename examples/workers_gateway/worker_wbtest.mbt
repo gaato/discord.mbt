@@ -1,6 +1,6 @@
 ///|
 async test "bot bridge cancels an unreachable connection" {
-  let controller = @js_async.AbortController::new()
+  let controller = @js_async.AbortController()
   let handle = start_bot(
     "test-token",
     "ws://127.0.0.1:9",

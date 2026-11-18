@@ -7,7 +7,7 @@ pub(all) enum VoiceGatewayEvent {
   SessionEstablished(
     mode~ : String,
     secret_key~ : Bytes,
-    dave_protocol_version~ : Int32
+    dave_protocol_version~ : Int32,
   )
   Message(VoiceMessage)
   Connected(resumed~ : Bool)

@@ -82,7 +82,7 @@ priv struct GatewayMessageEventFields {
 fn[T : @json.FromJson] optional_message_event_field(
   fields : Map[String, Json],
   key : String,
-  path : @json.JsonPath,
+  path : @json.DecodeContext,
 ) -> T? raise @json.JsonDecodeError {
   match fields.get(key) {
     None => None
@@ -93,7 +93,7 @@ fn[T : @json.FromJson] optional_message_event_field(
 ///|
 fn decode_gateway_message_event(
   json : Json,
-  path : @json.JsonPath,
+  path : @json.DecodeContext,
 ) -> GatewayMessageEventFields raise @json.JsonDecodeError {
   guard json is Object(fields) else {
     raise JsonDecodeError((path, "expected gateway message (object)"))

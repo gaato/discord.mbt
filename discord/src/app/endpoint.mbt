@@ -5,7 +5,7 @@
 pub(all) enum InteractionOutcome {
   Reply(
     response~ : @model.InteractionResponse,
-    files~ : Array[@dhttp.FileUpload]?
+    files~ : Array[@dhttp.FileUpload]?,
   )
   NoRoute
   NoResponse

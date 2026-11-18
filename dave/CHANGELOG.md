@@ -9,7 +9,7 @@ to 0.1.1 were made from [gaato/dave.mbt](https://github.com/gaato/dave.mbt).
 
 ### Changed
 
-- Built and tested with MoonBit 0.10.20. The generated `.mbti` interface
+- Built and tested with MoonBit 0.10.21. The generated `.mbti` interface
   files spell `Int` as `Int32` and `UInt` as `UInt32` (since 0.10.16), list
   derived traits as a `#derive(...)` attribute above each declaration; these
   are the same types, and no signature changed.

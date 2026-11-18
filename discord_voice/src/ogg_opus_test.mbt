@@ -142,6 +142,32 @@ async fn collect_ogg_source(source : @voice.OggOpusSource) -> Array[Bytes] {
 }
 
 ///|
+/// Write `data` into an in-memory pipe in pieces of `chunk_size` bytes from a
+/// background task, and return what `read` makes of the other end.
+async fn[T] through_pipe(
+  data : Bytes,
+  chunk_size~ : Int32,
+  read : async (&@io.BinaryReader) -> T,
+) -> T {
+  let result = Ref(None)
+  @async.with_task_group(group => {
+    let (read_end, write_end) = @io.memory_pipe()
+    defer read_end.close()
+    group.spawn_bg(() => {
+      defer write_end.close()
+      for offset = 0; offset < data.length(); {
+        let next = offset + chunk_size
+        let end = if next < data.length() { next } else { data.length() }
+        write_end.write(data[offset:end])
+        continue end
+      }
+    })
+    result.val = Some(read(read_end))
+  })
+  result.val.unwrap()
+}
+
+///|
 async fn read_pipe_fixture(
   fixture : Bytes,
   chunk_size : Int32,

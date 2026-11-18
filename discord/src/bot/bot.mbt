@@ -16,7 +16,7 @@ pub(all) suberror BotError {
   SessionStartLimitExceeded(
     required~ : Int32,
     remaining~ : Int32,
-    reset_after_ms~ : Int64
+    reset_after_ms~ : Int64,
   )
   /// A guild command such as `GatewayCtx::update_voice_state` belongs on a
   /// shard that this process does not run.

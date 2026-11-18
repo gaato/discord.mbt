@@ -26,13 +26,13 @@ concurrency:
 # upstream script. The image tag must match this version, which the
 # containerized jobs verify.
 env:
-  MOONBIT_INSTALL_VERSION: "0.10.20+65efd5b93"
+  MOONBIT_INSTALL_VERSION: "0.10.21+06da1ed44"
 
 jobs:
   check:
     runs-on: ubuntu-26.04
     timeout-minutes: 20
-    container: ghcr.io/gaato/moonbit:0.10.20-65efd5b93
+    container: ghcr.io/gaato/moonbit:0.10.21-06da1ed44
 
     steps:
       - name: Check out repository
@@ -121,7 +121,7 @@ jobs:
   js:
     runs-on: ubuntu-26.04
     timeout-minutes: 20
-    container: ghcr.io/gaato/moonbit:0.10.20-65efd5b93
+    container: ghcr.io/gaato/moonbit:0.10.21-06da1ed44
 
     steps:
       - name: Check out repository
@@ -215,7 +215,7 @@ jobs:
   wasm:
     runs-on: ubuntu-26.04
     timeout-minutes: 20
-    container: ghcr.io/gaato/moonbit:0.10.20-65efd5b93
+    container: ghcr.io/gaato/moonbit:0.10.21-06da1ed44
 
     steps:
       - name: Check out repository
@@ -238,7 +238,7 @@ jobs:
   spin-component:
     runs-on: ubuntu-26.04
     timeout-minutes: 20
-    container: ghcr.io/gaato/moonbit:0.10.20-65efd5b93
+    container: ghcr.io/gaato/moonbit:0.10.21-06da1ed44
 
     steps:
       - name: Check out repository
@@ -357,7 +357,11 @@ jobs:
           mkdir "$stage/discord"
           git archive HEAD discord | tar -x -C "$stage"
           printf 'members = [\n  ".",\n  "discord",\n]\n' > "$stage/moon.work"
-          docker build --tag discord-bot-template "$stage"
+          # The library in this commit builds on the pinned toolchain; the
+          # Dockerfile's default names the one its published release needs.
+          image="ghcr.io/gaato/moonbit:$(tr + - < moonbit-version)"
+          docker build --build-arg "MOONBIT_IMAGE=$image" \
+            --tag discord-bot-template "$stage"
 
       - name: Start the image without a token
         run: |

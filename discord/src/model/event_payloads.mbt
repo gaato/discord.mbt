@@ -2,7 +2,7 @@
 fn[T : @json.FromJson] event_field(
   fields : Map[String, Json],
   key : String,
-  path : @json.JsonPath,
+  path : @json.DecodeContext,
 ) -> T raise @json.JsonDecodeError {
   match fields.get(key) {
     Some(value) => @json.from_json(value, path=path.add_key(key))

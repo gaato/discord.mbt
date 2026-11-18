@@ -10,7 +10,7 @@ test "text envelopes decode v8 voice and DAVE opcodes" {
       ssrc=42,
       ip="127.0.0.1",
       port=5000,
-      modes=["aead_aes256_gcm_rtpsize", ..]
+      modes=["aead_aes256_gcm_rtpsize", ..],
     ) else {
     fail("unexpected Ready: \{Repr(ready)}")
   }

@@ -6,7 +6,7 @@ pub(all) suberror ResponseGateError {
   Expired
   InvalidCallback(
     kind~ : @model.InteractionType,
-    typ~ : @model.InteractionResponseType
+    typ~ : @model.InteractionResponseType,
   )
 }
 

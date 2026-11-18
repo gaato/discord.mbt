@@ -463,7 +463,7 @@ async fn finish_handshake(
     is SessionEstablished(
       mode="aead_aes256_gcm_rtpsize",
       secret_key=b"\x01\x02\x03\x04",
-      dave_protocol_version=1
+      dave_protocol_version=1,
     )
   guard! gateway.next() is Connected(resumed=false)
 }

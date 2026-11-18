@@ -7,6 +7,16 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+### Changed
+
+- **Needs MoonBit 0.10.21.** Requires `gaato/mttp` 0.5.0 and
+  `gaato/mttp_core` 0.3.1, which follow 0.10.21's core/async IO traits;
+  `gaato/mttp` 0.4.0 does not build on 0.10.21 for native or Wasm, and 0.5.0
+  does not build on 0.10.20. Migration: build with MoonBit 0.10.21 or later.
+- Requires `gaato/deflate` 0.4.0 and `gaato/zstd` 0.6.0. Their new
+  compression levels are not ones the Gateway uses, and decoding is unchanged.
+- Built and tested with MoonBit 0.10.21. The public interfaces are unchanged.
+
 ## [0.18.0] - 2026-11-17
 
 ### Changed

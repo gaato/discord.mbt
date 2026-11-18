@@ -157,7 +157,7 @@ fn Interaction::fields(self : Interaction) -> InteractionFields {
 fn decode_interaction_data(
   typ : InteractionType,
   raw : Json,
-  path : @json.JsonPath,
+  path : @json.DecodeContext,
 ) -> InteractionData raise @json.JsonDecodeError {
   match typ {
     ApplicationCommand | ApplicationCommandAutocomplete =>

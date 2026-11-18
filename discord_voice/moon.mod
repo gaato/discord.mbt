@@ -26,8 +26,8 @@ warnings = "-implicit_impl_as_method"
 import {
   "gaato/discord@0.18.0",
   "gaato/dave@0.1.1",
-  "gaato/mttp_core@0.2.0",
-  "gaato/mttp@0.4.0",
+  "gaato/mttp_core@0.3.1",
+  "gaato/mttp@0.5.0",
 }
 
 options(
