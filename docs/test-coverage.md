@@ -79,7 +79,7 @@ Live socket, websocket, and FFI adapters (live-verified; no unit seam):
 | --- | --- | --- |
 | discord/src/gateway/transport.mbt | 2 | Cancellation re-raise guards in receive/send: core/async cancellation bypasses ordinary catches. Stub tests verify cancellation remains cancellation; mapping tests and real mttp upgrade loopbacks cover errors, Close codes/reasons, text/binary, both message limits, and repeated close. Shutdown tests cover abort waking protected replies to a peer that stopped reading; Node loopback verifies cancelled sends preserve Resume. Measured after the shutdown fix: 34/36 points. |
 | discord_voice/src/transport.mbt | 3 | Cancellation re-raise guards in receive/text-send/binary-send: core/async cancellation bypasses ordinary catches. Stub tests verify cancellation and send errors; real mttp upgrade loopbacks cover text/binary in both directions, incoming/outgoing limits, Close codes/reasons, and repeated close. Shutdown tests cover abort waking protected replies to a peer that stopped reading. Measured after the shutdown fix: 36/39 points. |
-| discord_voice/src/udp.mbt | 4 | SocketVoiceUdp impls and `open_voice_udp` over a real UDP socket; parse and retry logic is covered via fakes. |
+| discord_voice/src/udp.mbt | 4 | SocketVoiceUdp's recv/send/close and the socket opening in `open_voice_udp`, which need a real UDP socket; its port range check, parse and retry logic are covered, the last two via fakes. |
 | discord_voice/src/shim_ffi.mbt | 3 | Extern-C glue whose arms depend on host library state. |
 | discord_voice/src/crypto.mbt | 5 | Shim error-status translation paths; round-trips and geometry checks are covered with the shim loaded. |
 | discord/src/http/client.mbt | 2 | Default warning sinks (`println`) of the online and offline constructors. |
@@ -113,7 +113,7 @@ run; the gateway and voice loops are additionally tested on injected clocks):
 | File | Budget | Reason |
 | --- | --- | --- |
 | discord/src/gateway/shard.mbt | 15 | Protected-shutdown and event-queue teardown catches (including the shared fatal close before connecting, reached by a failing inflater factory or a size limit below 1), stale-transport and normal-return fallbacks, and read-loop cancellation re-raise plumbing (core/async cancellation does not pass through ordinary catches). Malformed Hello/frame, compression-mismatch, connector/backoff, the default connector, and disconnected-send arms are tested. |
-| discord/src/gateway/platform_native.mbt | 2 | Two OS-specific Identify property arms unavailable on Linux. |
+| discord/src/gateway/platform_native.mbt | 3 | The Identify OS arms a Linux run cannot take: macOS, Windows, and the catch-all for a platform core/async adds later. |
 | discord/src/http/handles_channel.mbt | 3 | `with_typing` refresh-failure arm sits behind the real 8-second cadence. |
 | discord/src/bot/middleware.mbt | 1 | Middleware chain cancellation arm. |
 | discord/src/bot/shard_manager.mbt | 1 | Live gateway discovery's invalid-info arm; fake-connector startup and resume are tested. |
@@ -177,7 +177,7 @@ show-flows beyond the covered happy and failing paths):
 | discord/src/framework/gate.mbt | 2 | The callback rule for an unknown interaction type and the cancellation re-raise during delivery. |
 | discord/src/interaction/args.mbt | 8 | Suggest-handler closures that only run inside a live autocomplete dispatch. |
 | discord/src/interaction/options.mbt | 8 | Focused-option accessors for kinds not used by any covered command shape. |
-| discord/src/cache/cache.mbt | 17 | Defensive arms (10): payloads without a guild id for presences and voice states, an unavailable `GUILD_CREATE`, role events with roles off, a READY marking a guild available, unhandled events, and `permissions_in` guards; and the expiry arms of lookups and in-place replacements (7), which run only when time passes between the expiry every read and event starts with and the lookup itself. |
+| discord/src/cache/cache.mbt | 16 | Defensive arms (9): payloads without a guild id for presences and voice states, an unavailable `GUILD_CREATE`, role events with roles off, a READY marking a guild available, unhandled events, and `permissions_in` guards; and the expiry arms of lookups and in-place replacements (7), which run only when time passes between the expiry every read and event starts with and the lookup itself. |
 | discord/src/http/api_application.mbt | 2 | Emit arms of optional request fields not exercised by the pinned shapes. |
 | discord/src/http/api_guild.mbt | 4 | Remaining optional-parameter emit arms. |
 | discord/src/http/api_interaction.mbt | 3 | Callback-with-files arms needing a live token. |

@@ -182,3 +182,18 @@ async test "IP discovery rejects non-positive retries and timeouts" {
   }
   assert_eq(udp.sends.length(), 0)
 }
+
+///|
+async test "opening voice UDP refuses a port outside 0..=65535" {
+  for port in [-1, 65536] {
+    try @voice.open_voice_udp("127.0.0.1", port) catch {
+      Failure(message) =>
+        assert_true(
+          message.contains("voice UDP port \{port} is outside 0..=65535"),
+        )
+      error => fail("unexpected error: \{Repr(error)}")
+    } noraise {
+      _ => fail("expected port \{port} to be refused")
+    }
+  }
+}
