@@ -6,11 +6,17 @@ releases (0.x → 0.y) may contain breaking changes; patch releases do not.
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-18
+
 ### Changed
 
-- **Needs MoonBit 0.10.21.** Requires `gaato/mttp` 0.5.0 and
-  `gaato/mttp_core` 0.3.1, which follow 0.10.21's core/async IO traits and
-  do not build on 0.10.20. Migration: build with MoonBit 0.10.21 or later.
+- **Needs MoonBit 0.10.21.** Requires `gaato/discord` 0.19.0,
+  `gaato/mttp` 0.5.0 and `gaato/mttp_core` 0.3.1, which follow 0.10.21's
+  core/async IO traits and do not build on 0.10.20. Migration: build with
+  MoonBit 0.10.21 or later, and depend on `gaato/discord@0.19.0` alongside
+  this release.
+- Requires `gaato/dave` 0.2.0. No `gaato/dave` type is part of this module's
+  public interface, so the change does not reach your code.
 - Built and tested with MoonBit 0.10.21. The public interfaces are unchanged.
 
 ## [0.7.0] - 2026-11-17

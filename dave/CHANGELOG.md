@@ -7,6 +7,8 @@ to 0.1.1 were made from [gaato/dave.mbt](https://github.com/gaato/dave.mbt).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-18
+
 ### Changed
 
 - Built and tested with MoonBit 0.10.21. The generated `.mbti` interface

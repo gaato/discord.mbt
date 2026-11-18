@@ -7,6 +7,8 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-11-18
+
 ### Changed
 
 - **Needs MoonBit 0.10.21.** Requires `gaato/mttp` 0.5.0 and
@@ -16,6 +18,7 @@ breaking change is listed with a migration note.
 - Requires `gaato/deflate` 0.4.0 and `gaato/zstd` 0.6.0. Their new
   compression levels are not ones the Gateway uses, and decoding is unchanged.
 - Built and tested with MoonBit 0.10.21. The public interfaces are unchanged.
+- `VERSION` and the REST User-Agent are now `0.19.0`.
 
 ## [0.18.0] - 2026-11-17
 

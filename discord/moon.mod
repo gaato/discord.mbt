@@ -1,6 +1,6 @@
 name = "gaato/discord"
 
-version = "0.18.0"
+version = "0.19.0"
 
 readme = "README.md"
 

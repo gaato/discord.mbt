@@ -5,7 +5,7 @@
 # builder; a `-bookworm` builder tag pairs with base-debian12.
 # The toolchain the gaato/discord release in moon.mod builds on: move both in
 # the release commit, since a newer toolchain may not build the older release.
-ARG MOONBIT_IMAGE=ghcr.io/gaato/moonbit:0.10.20-65efd5b93
+ARG MOONBIT_IMAGE=ghcr.io/gaato/moonbit:0.10.21-06da1ed44
 
 FROM ${MOONBIT_IMAGE} AS build
 # The image also carries Node.js, which the prebuild hooks of
