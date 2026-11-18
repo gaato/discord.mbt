@@ -1,4 +1,13 @@
-/* Dynamic MoonBit binding for the official libdave v1.2.0 C API.
+/* Dynamic MoonBit binding for the official libdave C API, pinned to the
+ * release named by MBT_DAVE_RELEASE (dave/release/libdave-*.js has the same
+ * pin and the asset digests).
+ *
+ * libdave exports no ABI version, so the loader can tell releases apart only
+ * by the symbols they export. Every symbol below is required: a library from
+ * before v1.3.0/cpp lacks daveSessionAddRecognizedUser and is refused instead
+ * of being called with the older argument lists. A later release that changes
+ * a signature without renaming it would still load; check the C headers when
+ * moving the pin.
  *
  * libdave-owned output buffers are copied into MoonBit Bytes and released
  * before returning. Successful dynamic-library handles intentionally remain
@@ -12,6 +21,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#define MBT_DAVE_RELEASE "v1.3.0/cpp"
+#define MBT_DAVE_CACHE_TAG "v1.3.0-cpp"
 
 #define MBT_DAVE_UNAVAILABLE (-100)
 #define MBT_DAVE_MISSING_SYMBOL (-101)
@@ -87,13 +99,14 @@ typedef void (*dave_session_get_bytes_fn)(DAVESessionHandle, uint8_t **,
                                           size_t *);
 typedef void (*dave_session_set_external_sender_fn)(DAVESessionHandle,
                                                      const uint8_t *, size_t);
+typedef void (*dave_session_recognized_user_fn)(DAVESessionHandle,
+                                                const char *);
 typedef void (*dave_session_process_proposals_fn)(
-    DAVESessionHandle, const uint8_t *, size_t, const char **, size_t,
-    uint8_t **, size_t *);
+    DAVESessionHandle, const uint8_t *, size_t, uint8_t **, size_t *);
 typedef DAVECommitResultHandle (*dave_session_process_commit_fn)(
     DAVESessionHandle, const uint8_t *, size_t);
 typedef DAVEWelcomeResultHandle (*dave_session_process_welcome_fn)(
-    DAVESessionHandle, const uint8_t *, size_t, const char **, size_t);
+    DAVESessionHandle, const uint8_t *, size_t);
 typedef DAVEKeyRatchetHandle (*dave_session_get_key_ratchet_fn)(
     DAVESessionHandle, const char *);
 typedef void (*dave_session_get_pairwise_fingerprint_fn)(
@@ -153,6 +166,8 @@ typedef struct {
   dave_session_get_protocol_version_fn session_get_protocol_version;
   dave_session_get_bytes_fn session_get_last_epoch_authenticator;
   dave_session_set_external_sender_fn session_set_external_sender;
+  dave_session_recognized_user_fn session_add_recognized_user;
+  dave_session_recognized_user_fn session_remove_recognized_user;
   dave_session_process_proposals_fn session_process_proposals;
   dave_session_process_commit_fn session_process_commit;
   dave_session_process_welcome_fn session_process_welcome;
@@ -544,7 +559,7 @@ static void *mbt_dave_open_library(char *reason, size_t reason_len) {
       char cache_suffix[256];
       int suffix_written = snprintf(
           cache_suffix, sizeof(cache_suffix),
-          "gaato-dave/libdave/v1.2.0-cpp/%s", asset_id);
+          "gaato-dave/libdave/" MBT_DAVE_CACHE_TAG "/%s", asset_id);
       if (suffix_written >= 0 &&
           (size_t)suffix_written < sizeof(cache_suffix) &&
           mbt_dave_join_path(cache_root, sizeof(cache_root), cache_base,
@@ -560,8 +575,8 @@ static void *mbt_dave_open_library(char *reason, size_t reason_len) {
 
   snprintf(reason, reason_len,
            "official libdave was not found at MBT_DAVE_NATIVE_ROOT or the "
-           "deterministic v1.2.0-cpp cache; run the native bootstrap or set "
-           "an absolute MBT_DAVE_NATIVE_LIB");
+           "deterministic " MBT_DAVE_CACHE_TAG " cache; run the native "
+           "bootstrap or set an absolute MBT_DAVE_NATIVE_LIB");
   return NULL;
 }
 
@@ -577,8 +592,16 @@ static void mbt_dave_noop_log_sink(DAVELoggingSeverity severity,
 static int mbt_dave_load_symbol(void *library, void *destination,
                                 size_t destination_size, const char *name,
                                 char *reason, size_t reason_len) {
-  return mbt_dave_library_symbol(library, name, destination,
-                                 destination_size, reason, reason_len);
+  if (mbt_dave_library_symbol(library, name, destination, destination_size,
+                              reason, reason_len)) {
+    return 1;
+  }
+  size_t used = strlen(reason);
+  if (used < reason_len) {
+    snprintf(reason + used, reason_len - used,
+             "; gaato/dave needs the libdave " MBT_DAVE_RELEASE " C API");
+  }
+  return 0;
 }
 
 #define MBT_DAVE_LOAD(field, symbol_name)                                      \
@@ -612,6 +635,9 @@ static void mbt_dave_initialize(void) {
   MBT_DAVE_LOAD(session_get_last_epoch_authenticator,
                 "daveSessionGetLastEpochAuthenticator");
   MBT_DAVE_LOAD(session_set_external_sender, "daveSessionSetExternalSender");
+  MBT_DAVE_LOAD(session_add_recognized_user, "daveSessionAddRecognizedUser");
+  MBT_DAVE_LOAD(session_remove_recognized_user,
+                "daveSessionRemoveRecognizedUser");
   MBT_DAVE_LOAD(session_process_proposals, "daveSessionProcessProposals");
   MBT_DAVE_LOAD(session_process_commit, "daveSessionProcessCommit");
   MBT_DAVE_LOAD(session_process_welcome, "daveSessionProcessWelcome");
@@ -1024,82 +1050,44 @@ mbt_dave_session_key_package(MbtDaveSession *session) {
   return mbt_dave_take_output(session, output, output_length);
 }
 
-typedef struct {
-  const char **values;
-  char *storage;
-  size_t length;
-} MbtDaveUserIds;
-
-static const char *mbt_dave_empty_user_ids[1] = {NULL};
-
-static int mbt_dave_user_ids_init(MbtDaveSession *session,
-                                  const uint64_t *ids, size_t length,
-                                  MbtDaveUserIds *result) {
-  result->values = mbt_dave_empty_user_ids;
-  result->storage = NULL;
-  result->length = length;
-  if (length == 0) {
-    return 1;
+MOONBIT_FFI_EXPORT void
+mbt_dave_session_add_recognized_user(MbtDaveSession *session,
+                                     uint64_t user_id) {
+  if (!mbt_dave_session_begin(session)) {
+    return;
   }
-  if (ids == NULL || length > SIZE_MAX / sizeof(char *) ||
-      length > SIZE_MAX / 21) {
-    mbt_dave_session_binding_failure(session, MBT_DAVE_INVALID_ARGUMENT,
-                                     "invalid recognized user id array");
-    return 0;
-  }
-  result->values = (const char **)malloc(length * sizeof(char *));
-  result->storage = (char *)malloc(length * 21);
-  if (result->values == NULL || result->storage == NULL) {
-    free((void *)result->values);
-    free(result->storage);
-    result->values = mbt_dave_empty_user_ids;
-    result->storage = NULL;
-    mbt_dave_session_binding_failure(session, MBT_DAVE_ALLOCATION_FAILURE,
-                                     "could not format recognized user ids");
-    return 0;
-  }
-  for (size_t index = 0; index < length; index += 1) {
-    char *slot = result->storage + index * 21;
-    mbt_dave_format_user_id(ids[index], slot);
-    result->values[index] = slot;
-  }
-  return 1;
+  char user_id_string[21];
+  mbt_dave_format_user_id(user_id, user_id_string);
+  mbt_dave_api()->session_add_recognized_user(session->handle, user_id_string);
 }
 
-static void mbt_dave_user_ids_destroy(MbtDaveUserIds *ids) {
-  if (ids->values != mbt_dave_empty_user_ids) {
-    free((void *)ids->values);
+MOONBIT_FFI_EXPORT void
+mbt_dave_session_remove_recognized_user(MbtDaveSession *session,
+                                        uint64_t user_id) {
+  if (!mbt_dave_session_begin(session)) {
+    return;
   }
-  free(ids->storage);
-  ids->values = mbt_dave_empty_user_ids;
-  ids->storage = NULL;
-  ids->length = 0;
+  char user_id_string[21];
+  mbt_dave_format_user_id(user_id, user_id_string);
+  mbt_dave_api()->session_remove_recognized_user(session->handle,
+                                                 user_id_string);
 }
 
 MOONBIT_FFI_EXPORT moonbit_bytes_t mbt_dave_session_process_proposals(
-    MbtDaveSession *session, moonbit_bytes_t proposals,
-    const uint64_t *recognized_user_ids) {
+    MbtDaveSession *session, moonbit_bytes_t proposals) {
   if (!mbt_dave_session_begin(session)) {
     return moonbit_make_bytes(0, 0);
   }
-  if (proposals == NULL || Moonbit_array_length(proposals) == 0 ||
-      recognized_user_ids == NULL) {
+  if (proposals == NULL || Moonbit_array_length(proposals) == 0) {
     mbt_dave_session_binding_failure(session, MBT_DAVE_INVALID_ARGUMENT,
                                      "proposal bytes must not be empty");
-    return moonbit_make_bytes(0, 0);
-  }
-  MbtDaveUserIds ids;
-  size_t ids_length = (size_t)Moonbit_array_length(recognized_user_ids);
-  if (!mbt_dave_user_ids_init(session, recognized_user_ids, ids_length,
-                              &ids)) {
     return moonbit_make_bytes(0, 0);
   }
   uint8_t *output = NULL;
   size_t output_length = 0;
   mbt_dave_api()->session_process_proposals(
       session->handle, proposals, (size_t)Moonbit_array_length(proposals),
-      ids.values, ids.length, &output, &output_length);
-  mbt_dave_user_ids_destroy(&ids);
+      &output, &output_length);
   return mbt_dave_take_output(session, output, output_length);
 }
 
@@ -1258,28 +1246,18 @@ MOONBIT_FFI_EXPORT moonbit_bytes_t *mbt_dave_session_process_commit(
 }
 
 MOONBIT_FFI_EXPORT moonbit_bytes_t *mbt_dave_session_process_welcome(
-    MbtDaveSession *session, moonbit_bytes_t welcome,
-    const uint64_t *recognized_user_ids) {
+    MbtDaveSession *session, moonbit_bytes_t welcome) {
   if (!mbt_dave_session_begin(session)) {
     return mbt_dave_tagged_result(2);
   }
-  if (welcome == NULL || Moonbit_array_length(welcome) == 0 ||
-      recognized_user_ids == NULL) {
+  if (welcome == NULL || Moonbit_array_length(welcome) == 0) {
     mbt_dave_session_binding_failure(session, MBT_DAVE_INVALID_ARGUMENT,
                                      "welcome bytes must not be empty");
     return mbt_dave_tagged_result(2);
   }
-  MbtDaveUserIds ids;
-  size_t ids_length = (size_t)Moonbit_array_length(recognized_user_ids);
-  if (!mbt_dave_user_ids_init(session, recognized_user_ids, ids_length,
-                              &ids)) {
-    return mbt_dave_tagged_result(2);
-  }
   const MbtDaveApi *api = mbt_dave_api();
   DAVEWelcomeResultHandle result = api->session_process_welcome(
-      session->handle, welcome, (size_t)Moonbit_array_length(welcome),
-      ids.values, ids.length);
-  mbt_dave_user_ids_destroy(&ids);
+      session->handle, welcome, (size_t)Moonbit_array_length(welcome));
   if (result == NULL) {
     mbt_dave_session_protocol_failure_if_empty(session,
                                                "welcome processing failed");
@@ -1441,7 +1419,7 @@ MOONBIT_FFI_EXPORT moonbit_bytes_t mbt_dave_session_pairwise_fingerprint(
       session->handle, fingerprint_version, user_id_string,
       mbt_dave_capture_fingerprint, &capture);
   /*
-   * libdave v1.2.0 computes the fingerprint on a detached worker. Its C API
+   * libdave (as of v1.3.0/cpp) computes the fingerprint on a detached worker. Its C API
    * offers neither cancellation nor a completion handle, so waiting without a
    * timeout is the only policy that guarantees userData remains alive without
    * leaking an abandoned capture.

@@ -157,8 +157,8 @@ fn Session::check_operation(
 ///|
 /// Create and initialize an MLS session.
 ///
-/// The official libdave v1.2.0 prebuilt C ABI has persistent keys disabled, so
-/// each `Session` receives a new transient signing identity. Persisted native
+/// The official libdave prebuilt C ABI has persistent keys disabled, so each
+/// `Session` receives a new transient signing identity. Persisted native
 /// authentication-session IDs are intentionally not exposed by this v0.1 API.
 pub fn Session::new(
   protocol_version~ : UInt16,
@@ -191,9 +191,10 @@ pub fn Session::new(
 ///
 /// This invokes libdave's session initialization again on the same native
 /// handle. libdave retains a configured external sender and uses it to create
-/// the new pending group state. The official v1.2.0 prebuilt C ABI also
-/// generates a new transient signing identity on every reinitialization, so
-/// verification state from the previous group must not be carried forward.
+/// the new pending group state, and the recognized users. The official prebuilt
+/// C ABI also generates a new transient signing identity on every
+/// reinitialization, so verification state from the previous group must not be
+/// carried forward.
 pub fn Session::reinitialize(
   self : Session,
   protocol_version~ : UInt16,
@@ -215,8 +216,9 @@ pub fn Session::reinitialize(
 ///|
 /// Clear this session's MLS group state and group context.
 ///
-/// libdave retains a configured external sender, so a later `reinitialize`
-/// can create pending group state without setting the sender again.
+/// libdave retains a configured external sender and the recognized users, so a
+/// later `reinitialize` can create pending group state without setting them
+/// again.
 pub fn Session::reset(self : Session) -> Unit raise DaveError {
   self.has_group_context.val = false
   self.raw.reset()
@@ -300,20 +302,44 @@ pub fn Session::key_package(self : Session) -> Bytes raise DaveError {
 }
 
 ///|
-fn recognized_user_ids_with_self(
-  recognized_user_ids : ArrayView[UInt64],
-  self_user_id : UInt64,
-) -> Array[UInt64] {
-  let result = []
-  for user_id in recognized_user_ids {
-    if !result.contains(user_id) {
-      result.push(user_id)
-    }
+/// Recognize `user_id` as a member of the call, allowing it in the MLS group.
+///
+/// libdave accepts an add proposal, a commit that applies one, or a Welcome
+/// only for recognized users. In Discord voice, recognize each user that
+/// clients_connect (op 11) announces and stop recognizing one on
+/// client_disconnect (op 13). This session's own user is always recognized.
+/// Recognized users persist across `reinitialize` and `reset`. Recognizing a
+/// user twice has no further effect.
+pub fn Session::add_recognized_user(
+  self : Session,
+  user_id~ : UInt64,
+) -> Unit raise DaveError {
+  self.raw.add_recognized_user(user_id~)
+  self.check_native_status("Session::add_recognized_user")
+}
+
+///|
+/// Stop recognizing `user_id`, so later proposals, commits, and Welcomes that
+/// add it are rejected. Removing a user that is not recognized has no effect.
+pub fn Session::remove_recognized_user(
+  self : Session,
+  user_id~ : UInt64,
+) -> Unit raise DaveError {
+  self.raw.remove_recognized_user(user_id~)
+  self.check_native_status("Session::remove_recognized_user")
+}
+
+///|
+/// Recognize the users a caller still passes as the deprecated
+/// `recognized_user_ids` argument.
+fn Session::recognize_all(
+  self : Session,
+  user_ids : ArrayView[UInt64]?,
+) -> Unit raise DaveError {
+  guard user_ids is Some(user_ids) else { return }
+  for user_id in user_ids {
+    self.add_recognized_user(user_id~)
   }
-  if !result.contains(self_user_id) {
-    result.push(self_user_id)
-  }
-  result
 }
 
 ///|
@@ -329,41 +355,44 @@ fn require_nonempty_payload(
 ///|
 /// Process a complete libdave proposals payload.
 ///
-/// The nonempty payload includes its leading revoke/append byte. On success libdave
-/// returns one serialized commit followed by an optional serialized Welcome.
-/// Processing requires pending or established MLS group state, normally
-/// created by `set_external_sender` after initialization. A successful call
-/// always returns a nonempty outbound commit/Welcome payload.
-/// `recognized_user_ids` is the caller's explicit identity-recognition policy;
-/// the wrapper adds this session's local user ID when it is absent.
+/// The nonempty payload includes its leading revoke/append byte. Processing
+/// requires pending or established MLS group state, normally created by
+/// `set_external_sender` after initialization. libdave validates the whole
+/// batch before queueing any of it, and refuses it when an add proposal names
+/// a user that is not recognized (see `add_recognized_user`).
+///
+/// On success this returns one serialized commit followed by an optional
+/// serialized Welcome, or `None` when no proposal is left queued, as after a
+/// revoke that withdraws every queued proposal: there is nothing to commit
+/// and nothing to send.
+///
+/// `recognized_user_ids` is deprecated and will be removed in the next minor
+/// release: each listed user is recognized with `add_recognized_user` before
+/// the proposals are processed, and none is removed.
+#label_migration(recognized_user_ids, fill=false, msg="call `add_recognized_user` and `remove_recognized_user` instead")
 pub fn Session::process_proposals(
   self : Session,
   proposals : Bytes,
-  recognized_user_ids~ : ArrayView[UInt64],
-) -> Bytes raise DaveError {
+  recognized_user_ids? : ArrayView[UInt64],
+) -> Bytes? raise DaveError {
   let operation = "Session::process_proposals"
   require_nonempty_payload(operation, proposals)
+  self.recognize_all(recognized_user_ids)
   if !self.has_group_context.val || !self.has_external_sender.val {
     raise InvalidState(
       operation~,
       reason="proposals require pending or established MLS group state",
     )
   }
-  let recognized = recognized_user_ids_with_self(
-    recognized_user_ids,
-    self.self_user_id.val,
-  )
-  let result = self.raw.process_proposals(proposals, recognized)
+  let result = self.raw.process_proposals(proposals)
+  // libdave reports every refusal through the failure callback, which
+  // check_operation raises; an empty result without one is an empty queue.
   self.check_operation(operation)
   if result.length() == 0 {
-    raise MlsOperationFailed(
-      operation~,
-      failure=self.failure_detail(
-        "libdave produced no commit/Welcome payload from the proposals",
-      ),
-    )
+    None
+  } else {
+    Some(result)
   }
-  result
 }
 
 ///|
@@ -486,21 +515,23 @@ pub fn Session::process_commit(
 /// Process an incoming MLS Welcome without collapsing protocol rejection into
 /// an exception. An applied result carries a roster delta: an `Upsert` has a
 /// signature key and a `Remove` represents an empty native signature.
-/// `recognized_user_ids` must contain the IDs that the caller recognizes for
-/// this group; the wrapper adds this session's local user ID when it is absent.
-/// An empty serialized Welcome is rejected before FFI.
+/// libdave fails a Welcome whose group lists a user that is not recognized
+/// (see `add_recognized_user`). An empty serialized Welcome is rejected before
+/// FFI.
+///
+/// `recognized_user_ids` is deprecated and will be removed in the next minor
+/// release: each listed user is recognized with `add_recognized_user` before
+/// the Welcome is processed, and none is removed.
+#label_migration(recognized_user_ids, fill=false, msg="call `add_recognized_user` and `remove_recognized_user` instead")
 pub fn Session::process_welcome(
   self : Session,
   welcome : Bytes,
-  recognized_user_ids~ : ArrayView[UInt64],
+  recognized_user_ids? : ArrayView[UInt64],
 ) -> WelcomeResult raise DaveError {
   let operation = "Session::process_welcome"
   require_nonempty_payload(operation, welcome)
-  let recognized = recognized_user_ids_with_self(
-    recognized_user_ids,
-    self.self_user_id.val,
-  )
-  let raw = self.raw.process_welcome(welcome, recognized)
+  self.recognize_all(recognized_user_ids)
+  let raw = self.raw.process_welcome(welcome)
   self.check_native_status(operation)
   decode_welcome_result(
     raw,
@@ -527,7 +558,7 @@ pub fn Session::key_ratchet(
 /// Compute a pairwise fingerprint for the currently established MLS group.
 ///
 /// This proves only that the two signing keys in the current group produce the
-/// same comparison value. With the official v1.2.0 prebuilt C ABI, signing
+/// same comparison value. With the official prebuilt C ABI, signing
 /// identities differ between concurrent `Session` values and rotate on every
 /// `reinitialize`, so this is not persistent identity verification or DAVE
 /// identity continuity. Discard the result when the session is reinitialized

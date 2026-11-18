@@ -77,14 +77,24 @@ pub fn RawSession::key_package(self : Self) -> Bytes {
 }
 
 ///|
-pub fn RawSession::process_proposals(
+pub fn RawSession::add_recognized_user(self : Self, user_id~ : UInt64) -> Unit {
+  ignore(self)
+  ignore(user_id)
+}
+
+///|
+pub fn RawSession::remove_recognized_user(
   self : Self,
-  proposals : Bytes,
-  recognized_user_ids : Array[UInt64],
-) -> Bytes {
+  user_id~ : UInt64,
+) -> Unit {
+  ignore(self)
+  ignore(user_id)
+}
+
+///|
+pub fn RawSession::process_proposals(self : Self, proposals : Bytes) -> Bytes {
   ignore(self)
   ignore(proposals)
-  ignore(recognized_user_ids)
   b""
 }
 
@@ -102,11 +112,9 @@ pub fn RawSession::process_commit(
 pub fn RawSession::process_welcome(
   self : Self,
   welcome : Bytes,
-  recognized_user_ids : Array[UInt64],
 ) -> FixedArray[Bytes] {
   ignore(self)
   ignore(welcome)
-  ignore(recognized_user_ids)
   [b"\x02"]
 }
 

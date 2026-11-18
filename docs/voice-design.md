@@ -65,7 +65,7 @@ the connection's end. `disconnect` returns once the teardown is done, which
 `VoiceClient::join` waits for before rejoining a guild.
 
 Media E2EE is supported, but pairwise identity verification is intentionally
-not exposed. The official prebuilt libdave v1.2.0 C ABI rotates its ephemeral
+not exposed. The official prebuilt libdave C ABI rotates its ephemeral
 signing identity on every `Init` and provides no reusable identity handle.
 This can be revisited once upstream exposes an identity-handle API.
 
@@ -107,7 +107,7 @@ Discord voice client while leaving the compact transport shim local to
 discord.mbt. Interaction signature verification is implemented separately in
 pure MoonBit.
 
-`gaato/dave` pins upstream `libdave` `v1.2.0/cpp`, and `gaato/discord_voice`
+`gaato/dave` pins upstream `libdave` `v1.3.0/cpp`, and `gaato/discord_voice`
 pins transport component release `voice-shim-v0.1.0`. Their prebuild hooks
 download and verify the matching host archives only when a native build opts
 in with `MBT_DAVE_REQUIRE_NATIVE=1` and `DISCORD_VOICE_REQUIRE_SHIM=1`; the

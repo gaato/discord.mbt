@@ -12,7 +12,8 @@
 #   js      js type check and tests
 #   wasm    Wasm type check, tests, and the HTTP interactions example build
 #   dave    gaato/dave built on its own, as published: native against
-#           libdave, and the unavailable facade on js and Wasm
+#           libdave, and the unavailable facade on js and Wasm; and its API
+#           against libdave with a stand-in voice server (dave_interop)
 #   all     every gate above, in that order (the default)
 #
 # The audits, the voice shim, the JavaScript host runtimes, the Spin
@@ -32,6 +33,9 @@ mapfile -t workspace_paths < <(
     -o -name moon.pkg -print
 )
 workspace_paths=("${workspace_paths[@]%/moon.pkg}")
+# dave_interop builds only for native, and naming it for js or Wasm is an
+# error. Its tests need libdave, so the dave gate runs them.
+native_paths=("${workspace_paths[@]}" dave_interop/src)
 
 run() {
   echo "+ $*"
@@ -51,14 +55,14 @@ on_pinned_toolchain() {
 # the formatter, printed as a note.
 fmt_check() {
   if on_pinned_toolchain; then
-    run moon fmt "${workspace_paths[@]}" --check
-  elif ! run moon fmt "${workspace_paths[@]}" --check; then
+    run moon fmt "${native_paths[@]}" --check
+  elif ! run moon fmt "${native_paths[@]}" --check; then
     echo "note: moon fmt on this toolchain lays out the code above differently from moonbit-version's" >&2
   fi
 }
 
 gate_check() {
-  run moon check "${workspace_paths[@]}" --target native --deny-warn
+  run moon check "${native_paths[@]}" --target native --deny-warn
   fmt_check
   # The workspace resolves every member to its directory; a consumer gets
   # every dependency from the registry.
@@ -86,13 +90,17 @@ gate_wasm() {
 
 gate_dave() (
   cd dave
-  workspace_paths=(src src/internal/ffi)
+  native_paths=(src src/internal/ffi)
   export MOON_WORK=off
   # Only the native backend can load libdave; the native gates must not fall
   # back to the unavailable facade.
   run env MBT_DAVE_REQUIRE_NATIVE=1 moon check --target native --deny-warn
   run env MBT_DAVE_REQUIRE_NATIVE=1 moon build --target native --release --deny-warn
   run env MBT_DAVE_REQUIRE_NATIVE=1 moon test --target native --release --deny-warn
+  # gaato/dave's API against libdave with signed proposals from a stand-in
+  # voice server; dave_interop/ is a workspace member, not built on its own.
+  run env MOON_WORK= MBT_DAVE_REQUIRE_NATIVE=1 \
+    moon -C "$root" test dave_interop/src --target native --release --deny-warn
   fmt_check
   # js and Wasm test the unavailable facade and must not bootstrap libdave.
   for target in js wasm; do

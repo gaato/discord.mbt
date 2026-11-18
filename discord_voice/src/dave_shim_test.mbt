@@ -30,6 +30,24 @@ test "official libdave backend creates a key package and starts in passthrough" 
 }
 
 ///|
+test "official libdave backend follows connecting and disconnecting users" {
+  if !@dave.available() {
+    if @env.get_env_var("MBT_DAVE_REQUIRE_NATIVE") == Some("1") {
+      fail(@dave.unavailable_reason().unwrap_or("libdave is unavailable"))
+    }
+    return
+  }
+  let machine = @voice.DaveMachine::new(
+    protocol_version=1,
+    self_user_id="100",
+    channel_id=42UL,
+    roster=["200"],
+  )
+  assert_eq(machine.handle(ClientsConnect(user_ids=["300"])), [])
+  assert_eq(machine.handle(ClientDisconnect(user_id="200")), [])
+}
+
+///|
 test "official libdave backend rejects invalid constructor inputs" {
   try
     @voice.DaveMachine::new(

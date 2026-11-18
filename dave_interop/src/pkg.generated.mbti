@@ -1,0 +1,29 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "local/dave_interop"
+
+// Values
+pub fn append(ArrayView[SignedProposal]) -> Bytes
+
+pub fn revoke(ArrayView[SignedProposal]) -> Bytes
+
+pub fn split_commit(Bytes) -> (Bytes, Bytes) raise
+
+// Errors
+
+// Types and methods
+pub struct SignedProposal {
+  message : Bytes
+  reference : Bytes
+}
+
+pub struct VoiceServer {
+  // private fields
+}
+pub fn VoiceServer::add(Self, epoch~ : UInt64, Bytes) -> SignedProposal
+pub fn VoiceServer::external_sender(Self) -> Bytes
+pub fn VoiceServer::new(group_id~ : UInt64) -> Self raise
+pub fn VoiceServer::remove(Self, epoch~ : UInt64, leaf_index~ : UInt32) -> SignedProposal
+
+// Type aliases
+
+// Traits

@@ -153,7 +153,7 @@ test "Session rejects an empty proposals payload before FFI" {
     group_id=42UL,
     self_user_id=100UL,
   )
-  try session.process_proposals(b"", recognized_user_ids=[]) catch {
+  try session.process_proposals(b"") catch {
     @dave.DaveError::InvalidArgument(operation="Session::process_proposals", ..) =>
       ()
     _ => fail("unexpected empty proposals error")
@@ -172,7 +172,7 @@ test "Session rejects proposals before MLS group state exists" {
     group_id=42UL,
     self_user_id=100UL,
   )
-  try session.process_proposals(b"\x00", recognized_user_ids=[]) catch {
+  try session.process_proposals(b"\x00") catch {
     @dave.DaveError::InvalidState(operation="Session::process_proposals", ..) =>
       ()
     _ => fail("unexpected proposals state error")
@@ -201,7 +201,7 @@ test "Session rejects replacing an external sender after MLS state exists" {
   }
 
   session.reset()
-  try session.process_proposals(b"\x00", recognized_user_ids=[]) catch {
+  try session.process_proposals(b"\x00") catch {
     @dave.DaveError::InvalidState(operation="Session::process_proposals", ..) =>
       ()
     _ => fail("unexpected reset proposals state error")
@@ -242,11 +242,31 @@ test "Session rejects an empty Welcome payload before FFI" {
     group_id=42UL,
     self_user_id=100UL,
   )
-  try session.process_welcome(b"", recognized_user_ids=[]) catch {
+  try session.process_welcome(b"") catch {
     @dave.DaveError::InvalidArgument(operation="Session::process_welcome", ..) =>
       ()
     _ => fail("unexpected empty Welcome error")
   } noraise {
     _ => fail("expected an empty Welcome payload to fail")
   }
+}
+
+///|
+test "Session recognizes users across reset and reinitialization" {
+  if !@dave.available() {
+    return
+  }
+  let session = @dave.Session::new(
+    protocol_version=1,
+    group_id=42UL,
+    self_user_id=100UL,
+  )
+  session.add_recognized_user(user_id=200UL)
+  session.add_recognized_user(user_id=200UL)
+  session.add_recognized_user(user_id=300UL)
+  session.reset()
+  session.remove_recognized_user(user_id=300UL)
+  session.remove_recognized_user(user_id=400UL)
+  session.reinitialize(protocol_version=1, group_id=42UL, self_user_id=100UL)
+  session.add_recognized_user(user_id=300UL)
 }

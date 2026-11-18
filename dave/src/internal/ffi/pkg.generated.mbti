@@ -35,6 +35,7 @@ pub type RawKeyRatchet
 pub fn RawKeyRatchet::is_valid(Self) -> Bool
 
 pub type RawSession
+pub fn RawSession::add_recognized_user(Self, user_id~ : UInt64) -> Unit
 pub fn RawSession::init(Self, protocol_version~ : UInt16, group_id~ : UInt64, self_user_id~ : UInt64) -> Unit
 pub fn RawSession::is_valid(Self) -> Bool
 pub fn RawSession::key_package(Self) -> Bytes
@@ -45,9 +46,10 @@ pub fn RawSession::last_status(Self) -> Int32
 pub fn RawSession::new(auth_session_id? : String) -> Self
 pub fn RawSession::pairwise_fingerprint(Self, user_id~ : UInt64, fingerprint_version~ : UInt16) -> Bytes
 pub fn RawSession::process_commit(Self, Bytes) -> FixedArray[Bytes]
-pub fn RawSession::process_proposals(Self, Bytes, Array[UInt64]) -> Bytes
-pub fn RawSession::process_welcome(Self, Bytes, Array[UInt64]) -> FixedArray[Bytes]
+pub fn RawSession::process_proposals(Self, Bytes) -> Bytes
+pub fn RawSession::process_welcome(Self, Bytes) -> FixedArray[Bytes]
 pub fn RawSession::protocol_version(Self) -> UInt16
+pub fn RawSession::remove_recognized_user(Self, user_id~ : UInt64) -> Unit
 pub fn RawSession::reset(Self) -> Unit
 pub fn RawSession::set_external_sender(Self, Bytes) -> Unit
 pub fn RawSession::set_protocol_version(Self, protocol_version~ : UInt16) -> Unit

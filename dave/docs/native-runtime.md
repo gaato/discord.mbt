@@ -14,7 +14,7 @@ preseed a verified extraction as described below.
 
 The module's experimental Moon prebuild hook provisions a host library only
 when a Moon command sets `MBT_DAVE_REQUIRE_NATIVE=1`. It selects the asset
-matching the build host, downloads the pinned `v1.2.0/cpp` archive, checks its
+matching the build host, downloads the pinned `v1.3.0/cpp` archive, checks its
 size and SHA-256 digest, extracts it into the user's cache, checks the shared
 library's SHA-256 digest, and leaves it at a deterministic path shared with the
 C loader. The Mooncake itself contains no platform binaries, and later builds
@@ -70,13 +70,16 @@ The following environment variables are supported:
 - `MBT_DAVE_NATIVE_LIB`: a runtime-only absolute path to an ABI-compatible
   library. This intentional override is not downloaded or hash-checked by the
   build hook. It is an explicit trust override and takes precedence over the
-  pinned locations.
+  pinned locations. The loader refuses a library that lacks a function of the
+  pinned C API, which turns away releases before `v1.3.0/cpp`; libdave reports
+  no ABI version, so a later release that changes a signature under the same
+  name would still load.
 
 For example, an air-gapped build can pre-extract the matching official archive
 and run:
 
 ```sh
-export MBT_DAVE_NATIVE_ROOT=/opt/libdave/v1.2.0-cpp/linux-x64
+export MBT_DAVE_NATIVE_ROOT=/opt/libdave/v1.3.0-cpp/linux-x64
 export MBT_DAVE_NATIVE_OFFLINE=1
 env MBT_DAVE_REQUIRE_NATIVE=1 moon build --target native --release
 ```
@@ -87,7 +90,7 @@ The C loader searches in this order:
 2. the prebuild-verified `MBT_DAVE_NATIVE_ROOT` plus the current asset's
    library-relative path
 3. `MBT_DAVE_NATIVE_CACHE_DIR`, or the platform default cache, plus
-   `gaato-dave/libdave/v1.2.0-cpp/<asset-id>/<library-relative-path>`
+   `gaato-dave/libdave/v1.3.0-cpp/<asset-id>/<library-relative-path>`
 
 The two explicit library locations are authoritative: if
 `MBT_DAVE_NATIVE_LIB` or `MBT_DAVE_NATIVE_ROOT` is set but cannot be loaded,
@@ -140,4 +143,4 @@ build and run inside a newer runtime environment.
 Moon marks module prebuild hooks as experimental. As with any module
 that uses one, review `build.js` before adopting it in a high-trust build. This
 hook has no package-manager dependencies and accepts only the release URLs and
-digests recorded in `release/libdave-v1.2.0.js`.
+digests recorded in `release/libdave-v1.3.0.js`.
