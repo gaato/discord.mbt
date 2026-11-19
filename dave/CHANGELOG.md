@@ -7,6 +7,8 @@ to 0.1.1 were made from [gaato/dave.mbt](https://github.com/gaato/dave.mbt).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-20
+
 ### Changed
 
 - **Native builds use libdave 1.3.0** (`v1.3.0/cpp`, released 2026-11-10) instead

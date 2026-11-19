@@ -15,6 +15,6 @@ warnings = "-implicit_impl_as_method"
 
 import {
   "gaato/discord@0.19.0",
-  "gaato/discord_voice@0.8.0",
+  "gaato/discord_voice@0.9.0",
   "gaato/mttp_core@0.3.1",
 }

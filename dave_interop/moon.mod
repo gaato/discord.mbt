@@ -19,6 +19,6 @@ warnings = "-implicit_impl_as_method"
 source = "src"
 
 import {
-  "gaato/dave@0.2.0",
+  "gaato/dave@0.3.0",
   "moonbitstack/mooncrypt@0.5.2",
 }
