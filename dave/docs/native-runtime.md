@@ -8,7 +8,7 @@ facade, so a multi-target dependency graph can still be checked and tested.
 ## Normal installation
 
 Native bootstrap requires Node.js 18 or newer. Linux and macOS hosts also need
-`unzip`; Windows uses PowerShell's `Expand-Archive`. The first online build
+`unzip`; Windows uses Windows PowerShell with .NET's `ZipFile`. The first online build
 needs HTTPS access to the pinned GitHub Release asset. Offline builds must
 preseed a verified extraction as described below.
 
@@ -38,8 +38,8 @@ asset. This keeps JavaScript and applications that do not use voice free from
 an unnecessary native dependency.
 
 Node.js executes the JavaScript-format `build.js` prebuild script. Extraction
-uses `unzip` on Linux and macOS and Windows PowerShell's `Expand-Archive` on
-Windows. The script writes only JSON to stdout, as required by Moon's prebuild
+uses `unzip` on Linux and macOS and .NET's `ZipFile` through Windows
+PowerShell on Windows. The script writes only JSON to stdout, as required by Moon's prebuild
 protocol.
 
 Default cache locations are:

@@ -13,10 +13,18 @@ releases (0.x → 0.y) may contain breaking changes; patch releases do not.
 - **DAVE runs on libdave 1.3.0**, through `gaato/dave` 0.3.0, which this
   release requires. The voice client tells libdave which users the gateway
   reports as connected as they connect and disconnect, and libdave refuses
-  proposals, commits, and Welcomes that add anyone else. When the gateway revokes every queued
-  proposal, libdave 1.3.0 has nothing to commit and the client sends no
-  commit. No `gaato/dave` type is part of this module's public interface, so
+  proposals, commits, and Welcomes that add anyone else. When the gateway
+  revokes every queued proposal, libdave 1.3.0 has nothing to commit and the
+  client sends no commit. No `gaato/dave` type is part of this module's public interface, so
   the change does not reach your code.
+
+### Fixed
+
+- **Windows extracts the native archive with .NET's `ZipFile`** instead of
+  `Expand-Archive`, which depends on the installed PowerShell archive module.
+  On the GitHub Actions Windows image of 2026-11-16, `Expand-Archive` under
+  Windows PowerShell fails with "Cannot find an overload for
+  ExtractToDirectory".
 
 ## [0.8.0] - 2026-11-18
 

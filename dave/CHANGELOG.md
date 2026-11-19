@@ -40,6 +40,12 @@ to 0.1.1 were made from [gaato/dave.mbt](https://github.com/gaato/dave.mbt).
 
 ### Fixed
 
+- **Windows extracts the native archive with .NET's `ZipFile`** instead of
+  `Expand-Archive`, which depends on the installed PowerShell archive module.
+  On the GitHub Actions Windows image of 2026-11-16, `Expand-Archive` under
+  Windows PowerShell fails with "Cannot find an overload for
+  ExtractToDirectory".
+
 - **A libdave without the pinned C API is refused when it loads.** A library
   named by `MBT_DAVE_NATIVE_LIB` or `MBT_DAVE_NATIVE_ROOT` that lacks a
   function of the libdave 1.3.0 C API, such as any release before 1.3.0, makes

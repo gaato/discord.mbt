@@ -384,7 +384,13 @@ function extractZip(archivePath, destination) {
       "$ErrorActionPreference='Stop'",
       `$archive=[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${archiveBase64}'))`,
       `$destination=[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${destinationBase64}'))`,
-      "Expand-Archive -LiteralPath $archive -DestinationPath $destination -Force",
+      // .NET's ZipFile rather than Expand-Archive, which depends on the
+      // installed archive module: on the GitHub Actions Windows image of
+      // 2026-11-16 it fails under Windows PowerShell ("Cannot find an
+      // overload for ExtractToDirectory"). The destination is a fresh
+      // staging directory, so nothing is replaced.
+      "Add-Type -AssemblyName System.IO.Compression.FileSystem",
+      "[IO.Compression.ZipFile]::ExtractToDirectory($archive, $destination)",
     ].join("; ");
     command = "powershell.exe";
     args = [
