@@ -39,13 +39,18 @@ impl DaveBackend for ReceiveTestDave with fn key_package(_self) {
 }
 
 ///|
-impl DaveBackend for ReceiveTestDave with fn process_proposals(
-  _self,
-  _payload,
-  recognized_user_ids~,
-) {
-  ignore(recognized_user_ids)
-  b"commit-and-welcome"
+impl DaveBackend for ReceiveTestDave with fn recognize_user(_self, user_id~) {
+  ignore(user_id)
+}
+
+///|
+impl DaveBackend for ReceiveTestDave with fn forget_user(_self, user_id~) {
+  ignore(user_id)
+}
+
+///|
+impl DaveBackend for ReceiveTestDave with fn process_proposals(_self, _payload) {
+  Some(b"commit-and-welcome")
 }
 
 ///|
@@ -54,12 +59,7 @@ impl DaveBackend for ReceiveTestDave with fn process_commit(_self, _payload) {
 }
 
 ///|
-impl DaveBackend for ReceiveTestDave with fn process_welcome(
-  _self,
-  _payload,
-  recognized_user_ids~,
-) {
-  ignore(recognized_user_ids)
+impl DaveBackend for ReceiveTestDave with fn process_welcome(_self, _payload) {
   WelcomeApplied(changes=[])
 }
 
@@ -128,8 +128,14 @@ fn ReceiveTestDave::new(
 }
 
 ///|
-fn receive_test_machine(provider : ReceiveTestDave) -> DaveMachine {
-  DaveMachine::new_with_backend((provider : &DaveBackend), self_user_id=100UL)
+fn receive_test_machine(
+  provider : ReceiveTestDave,
+) -> DaveMachine raise DaveError {
+  DaveMachine::with_backend(
+    (provider : &DaveBackend),
+    self_user_id=100UL,
+    connected_roster=Set([]),
+  )
 }
 
 ///|

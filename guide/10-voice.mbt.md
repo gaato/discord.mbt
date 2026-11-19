@@ -26,7 +26,7 @@ import {
 ## Install the native dependencies
 
 `gaato/discord_voice` pins transport shim release `voice-shim-v0.1.0` and
-depends on `gaato/dave`, which pins official `libdave` `v1.2.0/cpp`. Bootstrap both
+depends on `gaato/dave`, which pins official `libdave` `v1.3.0/cpp`. Bootstrap both
 verified native runtimes from a native build:
 
 ```sh
@@ -57,7 +57,7 @@ for the shim (`DISCORD_VOICE_SHIM_*`), which also covers building the shim
 yourself for another host.
 
 Media E2EE is supported, but pairwise identity verification is intentionally
-not exposed. The official prebuilt libdave v1.2.0 C ABI rotates its ephemeral
+not exposed. The official prebuilt libdave C ABI rotates its ephemeral
 signing identity on every `Init` and provides no reusable identity handle; the
 API can be added once upstream exposes one.
 

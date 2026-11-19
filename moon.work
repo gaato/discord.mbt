@@ -2,6 +2,7 @@ members = [
   "./discord",
   "./discord_voice",
   "./dave",
+  "./dave_interop",
   "./examples",
   "./guide",
   "./template",

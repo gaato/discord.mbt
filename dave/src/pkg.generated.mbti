@@ -110,16 +110,20 @@ pub(all) enum RosterChange {
 pub struct Session {
   // private fields
 }
+pub fn Session::add_recognized_user(Self, user_id~ : UInt64) -> Unit raise DaveError
 pub fn Session::current_group_pairwise_fingerprint_blocking(Self, user_id~ : UInt64) -> Bytes raise DaveError
 pub fn Session::key_package(Self) -> Bytes raise DaveError
 pub fn Session::key_ratchet(Self, user_id~ : UInt64) -> KeyRatchet? raise DaveError
 pub fn Session::last_epoch_authenticator(Self) -> Bytes? raise DaveError
 pub fn Session::new(protocol_version~ : UInt16, group_id~ : UInt64, self_user_id~ : UInt64) -> Self raise DaveError
 pub fn Session::process_commit(Self, Bytes) -> CommitResult raise DaveError
-pub fn Session::process_proposals(Self, Bytes, recognized_user_ids~ : ArrayView[UInt64]) -> Bytes raise DaveError
-pub fn Session::process_welcome(Self, Bytes, recognized_user_ids~ : ArrayView[UInt64]) -> WelcomeResult raise DaveError
+#label_migration(recognized_user_ids, fill=false, msg="call `add_recognized_user` and `remove_recognized_user` instead")
+pub fn Session::process_proposals(Self, Bytes, recognized_user_ids? : ArrayView[UInt64]) -> Bytes? raise DaveError
+#label_migration(recognized_user_ids, fill=false, msg="call `add_recognized_user` and `remove_recognized_user` instead")
+pub fn Session::process_welcome(Self, Bytes, recognized_user_ids? : ArrayView[UInt64]) -> WelcomeResult raise DaveError
 pub fn Session::protocol_version(Self) -> UInt16
 pub fn Session::reinitialize(Self, protocol_version~ : UInt16, group_id~ : UInt64, self_user_id~ : UInt64) -> Unit raise DaveError
+pub fn Session::remove_recognized_user(Self, user_id~ : UInt64) -> Unit raise DaveError
 pub fn Session::reset(Self) -> Unit raise DaveError
 pub fn Session::set_external_sender(Self, Bytes) -> Unit raise DaveError
 pub fn Session::set_protocol_version(Self, protocol_version~ : UInt16) -> Unit raise DaveError

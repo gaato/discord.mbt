@@ -6,6 +6,16 @@ releases (0.x → 0.y) may contain breaking changes; patch releases do not.
 
 ## [Unreleased]
 
+### Changed
+
+- **DAVE runs on libdave 1.3.0**, through the next `gaato/dave` release. The
+  voice client tells libdave which users the gateway reports as connected as
+  they connect and disconnect, and libdave refuses proposals, commits, and
+  Welcomes that add anyone else. When the gateway revokes every queued
+  proposal, libdave 1.3.0 has nothing to commit and the client sends no
+  commit. No `gaato/dave` type is part of this module's public interface, so
+  the change does not reach your code.
+
 ## [0.8.0] - 2026-11-18
 
 ### Changed

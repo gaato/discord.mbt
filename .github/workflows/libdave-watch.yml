@@ -1,0 +1,138 @@
+name: libdave watch
+
+# Compares the libdave C++ release gaato/dave pins (dave/release/libdave-*.js)
+# with Discord's newest one. While a newer release exists, one issue titled
+# "Update libdave to <tag>" stays open with the releases since the pin and
+# whether the public headers changed; once the pin reaches the newest release,
+# the next run closes it. Renovate cannot do this: a bump needs new asset
+# digests (scripts/libdave_release.sh) and a review of the C API.
+
+on:
+  schedule:
+    # 07:37 JST, twenty minutes after the Discord docs watch.
+    - cron: "37 22 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: libdave-watch
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Open, update, or close the update issue
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const fs = require('fs')
+            const upstream = { owner: 'discord', repo: 'libdave' }
+            const { owner, repo } = context.repo
+
+            const pins = fs.readdirSync('dave/release').filter(name => /^libdave-.*\.js$/.test(name))
+            if (pins.length !== 1) {
+              core.setFailed(`expected one dave/release/libdave-*.js, found ${pins.length}`)
+              return
+            }
+            const pinFile = `dave/release/${pins[0]}`
+            const pinnedTag = fs.readFileSync(pinFile, 'utf8').match(/^\s*tag: "([^"]+)",$/m)?.[1]
+            if (!pinnedTag) {
+              core.setFailed(`no tag in ${pinFile}`)
+              return
+            }
+
+            const releases = (await github.paginate(github.rest.repos.listReleases, {
+              ...upstream, per_page: 100,
+            }))
+              .filter(release => !release.draft && !release.prerelease && release.tag_name.endsWith('/cpp'))
+              .sort((a, b) => Date.parse(a.published_at) - Date.parse(b.published_at))
+            const pinned = releases.find(release => release.tag_name === pinnedTag)
+            if (!pinned) {
+              core.setFailed(`the pinned ${pinnedTag} is not a published libdave release`)
+              return
+            }
+            const newer = releases.filter(release => Date.parse(release.published_at) > Date.parse(pinned.published_at))
+
+            const open = await github.paginate(github.rest.issues.listForRepo, {
+              owner, repo, state: 'open', per_page: 100,
+            })
+            const existing = open.find(issue => !issue.pull_request && issue.title.startsWith('Update libdave'))
+
+            if (newer.length === 0) {
+              if (existing) {
+                await github.rest.issues.createComment({
+                  owner, repo, issue_number: existing.number,
+                  body: `gaato/dave pins ${pinnedTag}, the newest libdave C++ release.`,
+                })
+                await github.rest.issues.update({
+                  owner, repo, issue_number: existing.number, state: 'closed',
+                })
+              }
+              return
+            }
+
+            const latest = newer[newer.length - 1]
+            const comparison = await github.rest.repos.compareCommitsWithBasehead({
+              ...upstream, basehead: `${pinnedTag}...${latest.tag_name}`,
+            })
+            const headers = (comparison.data.files ?? [])
+              .map(file => file.filename)
+              .filter(name => name.startsWith('cpp/includes/dave/'))
+            const day = release => release.published_at.slice(0, 10)
+            const link = release => `[\`${release.tag_name}\`](${release.html_url}) (${day(release)})`
+            const compareUrl = comparison.data.html_url
+
+            const lines = [
+              'Discord has published a libdave C++ release newer than the one gaato/dave pins.',
+              '',
+              `- Pinned: ${link(pinned)}`,
+              `- Latest: ${link(latest)}`,
+              '',
+            ]
+            if (headers.length > 0) {
+              lines.push(
+                `**The public headers changed** ([diff](${compareUrl})): ${headers.map(name => `\`${name}\``).join(', ')}. ` +
+                'Compare every function `dave/src/internal/ffi/loader.c` resolves with the new `dave.h`: ' +
+                'libdave reports no ABI version, so a changed signature under the same name would still load.',
+              )
+            } else {
+              lines.push(`The public headers did not change ([diff](${compareUrl})).`)
+            }
+            lines.push(
+              '',
+              '## Update',
+              '',
+              `1. Run \`scripts/libdave_release.sh ${latest.tag_name}\`. It writes the new \`dave/release/libdave-*.js\` from the release assets and points \`dave/build.js\` at it.`,
+              `2. Move the release the rest of the repository names: \`MBT_DAVE_RELEASE\` and \`MBT_DAVE_CACHE_TAG\` in \`dave/src/internal/ffi/loader.c\`, the macOS cache path in \`.github/workflows/dave.yml\`, and the docs (\`git grep -F '${pinnedTag.replace('/cpp', '')}'\`). Regenerate the table in \`dave/THIRD_PARTY.md\` from the new release file.`,
+              '3. Follow any C API change in the loader, `dave/src/internal/ffi`, and `dave/src/session.mbt`, and run `scripts/gates.sh dave`, which includes the `dave_interop` tests against the new library.',
+              '',
+              '## Releases since the pin',
+            )
+            for (const release of newer) {
+              lines.push('', `### ${release.name || release.tag_name} — ${link(release)}`, '', (release.body ?? '').trim() || 'No release notes.')
+            }
+            // GitHub refuses an issue body over 65,536 characters.
+            let body = lines.join('\n')
+            if (body.length > 60000) {
+              body = `${body.slice(0, 60000)}\n\n…truncated; see the releases linked above.`
+            }
+
+            const title = `Update libdave to ${latest.tag_name}`
+            if (!existing) {
+              await github.rest.issues.create({ owner, repo, title, body })
+            } else if (existing.title !== title || existing.body !== body) {
+              await github.rest.issues.update({
+                owner, repo, issue_number: existing.number, title, body,
+              })
+            }

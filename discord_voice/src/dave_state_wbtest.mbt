@@ -1,15 +1,9 @@
 ///|
+/// What the machine told libdave about connected users, in order.
 #derive(Debug, Eq)
-struct FakeProposalCall {
-  payload : Bytes
-  recognized_user_ids : Array[UInt64]
-}
-
-///|
-#derive(Debug, Eq)
-struct FakeWelcomeCall {
-  payload : Bytes
-  recognized_user_ids : Array[UInt64]
+enum FakeRecognition {
+  Recognize(UInt64)
+  Forget(UInt64)
 }
 
 ///|
@@ -41,16 +35,17 @@ struct FakeDaveBackend {
   mut reset_calls : Int32
   external_senders : Array[Bytes]
   mut key_package_calls : Int32
-  proposal_calls : Array[FakeProposalCall]
+  recognitions : Array[FakeRecognition]
+  proposal_calls : Array[Bytes]
   commits : Array[Bytes]
-  welcome_calls : Array[FakeWelcomeCall]
+  welcome_calls : Array[Bytes]
   prepared_remotes : Array[FakePreparedRemote]
   removed_remotes : Array[UInt64]
   activated_self : Array[Int32]
   encrypted_opus : Array[FakeEncryptedOpus]
   decrypted_opus : Array[FakeDecryptedOpus]
   remote_users : Set[UInt64]
-  proposal_result : Bytes
+  mut proposal_result : Bytes?
   mut commit_outcome : DaveCommitOutcome
   mut welcome_outcome : DaveWelcomeOutcome
   mut fail_external_sender : Bool
@@ -67,6 +62,7 @@ fn FakeDaveBackend::new() -> FakeDaveBackend {
     reset_calls: 0,
     external_senders: [],
     key_package_calls: 0,
+    recognitions: [],
     proposal_calls: [],
     commits: [],
     welcome_calls: [],
@@ -76,7 +72,7 @@ fn FakeDaveBackend::new() -> FakeDaveBackend {
     encrypted_opus: [],
     decrypted_opus: [],
     remote_users: Set([]),
-    proposal_result: b"commit-and-welcome",
+    proposal_result: Some(b"commit-and-welcome"),
     commit_outcome: CommitIgnored,
     welcome_outcome: WelcomeApplied(changes=[]),
     fail_external_sender: false,
@@ -122,15 +118,18 @@ impl DaveBackend for FakeDaveBackend with fn key_package(self) {
 }
 
 ///|
-impl DaveBackend for FakeDaveBackend with fn process_proposals(
-  self,
-  payload,
-  recognized_user_ids~,
-) {
-  self.proposal_calls.push({
-    payload,
-    recognized_user_ids: recognized_user_ids.copy(),
-  })
+impl DaveBackend for FakeDaveBackend with fn recognize_user(self, user_id~) {
+  self.recognitions.push(Recognize(user_id))
+}
+
+///|
+impl DaveBackend for FakeDaveBackend with fn forget_user(self, user_id~) {
+  self.recognitions.push(Forget(user_id))
+}
+
+///|
+impl DaveBackend for FakeDaveBackend with fn process_proposals(self, payload) {
+  self.proposal_calls.push(payload)
   self.proposal_result
 }
 
@@ -141,15 +140,8 @@ impl DaveBackend for FakeDaveBackend with fn process_commit(self, payload) {
 }
 
 ///|
-impl DaveBackend for FakeDaveBackend with fn process_welcome(
-  self,
-  payload,
-  recognized_user_ids~,
-) {
-  self.welcome_calls.push({
-    payload,
-    recognized_user_ids: recognized_user_ids.copy(),
-  })
+impl DaveBackend for FakeDaveBackend with fn process_welcome(self, payload) {
+  self.welcome_calls.push(payload)
   self.welcome_outcome
 }
 
@@ -207,32 +199,14 @@ impl DaveBackend for FakeDaveBackend with fn decrypt_opus(self, user_id~, frame)
 /// Private constructor compiled only with the white-box state tests. Keeping
 /// the seam here prevents alternate crypto backends from entering the package
 /// API or the production build.
-fn DaveMachine::new_with_backend(
-  backend : &DaveBackend,
-  self_user_id~ : UInt64,
-  roster~ : Array[UInt64] = [],
-) -> DaveMachine {
-  let connected_roster = Set(roster)
-  connected_roster.remove(self_user_id)
-  {
-    backend,
-    self_user_id,
-    connected_roster,
-    mls_roster: Set([]),
-    pending: Map([]),
-    latest_prepared_version: 0,
-  }
-}
-
-///|
 fn fake_machine(
   fake : FakeDaveBackend,
   roster~ : Array[UInt64] = [],
-) -> DaveMachine {
-  DaveMachine::new_with_backend(
+) -> DaveMachine raise DaveError {
+  DaveMachine::with_backend(
     (fake : &DaveBackend),
     self_user_id=100UL,
-    roster~,
+    connected_roster=Set(roster),
   )
 }
 
@@ -310,17 +284,32 @@ test "DAVE reinitializes a same-version Session Description after v0 reset" {
 }
 
 ///|
-test "DAVE forwards complete proposals and only the connected roster" {
+test "DAVE tells libdave which users are connected, never the local one" {
   let fake = FakeDaveBackend::new()
-  let machine = fake_machine(fake, roster=[200UL])
-  machine.handle(ClientsConnect(user_ids=["300"])) |> ignore
+  let machine = fake_machine(fake, roster=[100UL, 200UL])
+  machine.handle(ClientsConnect(user_ids=["300", "100"])) |> ignore
   machine.handle(ClientDisconnect(user_id="200")) |> ignore
-  assert_eq(machine.handle(DaveMlsProposals(payload=b"\x01revoke")), [
+  machine.handle(ClientDisconnect(user_id="100")) |> ignore
+  assert_eq(fake.recognitions, [Recognize(200), Recognize(300), Forget(200)])
+}
+
+///|
+test "DAVE forwards complete proposals and sends the commit libdave returns" {
+  let fake = FakeDaveBackend::new()
+  let machine = fake_machine(fake)
+  assert_eq(machine.handle(DaveMlsProposals(payload=b"\x00append")), [
     SendBinary(op=28, payload=b"commit-and-welcome"),
   ])
-  assert_eq(fake.proposal_calls, [
-    { payload: b"\x01revoke", recognized_user_ids: [300UL], },
-  ])
+  assert_eq(fake.proposal_calls, [b"\x00append"])
+}
+
+///|
+test "DAVE sends nothing when the proposals leave nothing to commit" {
+  let fake = FakeDaveBackend::new()
+  let machine = fake_machine(fake)
+  fake.proposal_result = None
+  assert_eq(machine.handle(DaveMlsProposals(payload=b"\x01revoke")), [])
+  assert_eq(fake.proposal_calls, [b"\x01revoke"])
 }
 
 ///|
@@ -424,10 +413,7 @@ test "DAVE Welcome applies a roster delta" {
     machine.handle(DaveMlsWelcome(transition_id=8, welcome=b"replacement")),
     [SendJson(encode_transition_ready(transition_id=8))],
   )
-  assert_eq(fake.welcome_calls[1], {
-    payload: b"replacement",
-    recognized_user_ids: [200UL, 300UL],
-  })
+  assert_eq(fake.welcome_calls, [b"first", b"replacement"])
   assert_eq(fake.removed_remotes, [300UL])
   assert_eq(fake.prepared_remotes, [{ user_id: 200UL, protocol_version: 1, }])
 }
@@ -647,8 +633,7 @@ test "DAVE rejects non-snowflake gateway user IDs before mutating the roster" {
   } noraise {
     _ => fail("expected an invalid-snowflake error")
   }
-  machine.handle(DaveMlsProposals(payload=b"\x00proposal")) |> ignore
-  assert_eq(fake.proposal_calls[0].recognized_user_ids, [])
+  assert_eq(fake.recognitions, [])
 }
 
 ///|

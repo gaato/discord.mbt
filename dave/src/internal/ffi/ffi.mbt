@@ -76,11 +76,24 @@ extern "c" fn raw_session_set_external_sender(
 extern "c" fn raw_session_key_package(session : RawSession) -> Bytes = "mbt_dave_session_key_package"
 
 ///|
-#borrow(session, proposals, recognized_user_ids)
+#borrow(session)
+extern "c" fn raw_session_add_recognized_user(
+  session : RawSession,
+  user_id : UInt64,
+) -> Unit = "mbt_dave_session_add_recognized_user"
+
+///|
+#borrow(session)
+extern "c" fn raw_session_remove_recognized_user(
+  session : RawSession,
+  user_id : UInt64,
+) -> Unit = "mbt_dave_session_remove_recognized_user"
+
+///|
+#borrow(session, proposals)
 extern "c" fn raw_session_process_proposals(
   session : RawSession,
   proposals : Bytes,
-  recognized_user_ids : FixedArray[UInt64],
 ) -> Bytes = "mbt_dave_session_process_proposals"
 
 ///|
@@ -91,11 +104,10 @@ extern "c" fn raw_session_process_commit(
 ) -> FixedArray[Bytes] = "mbt_dave_session_process_commit"
 
 ///|
-#borrow(session, welcome, recognized_user_ids)
+#borrow(session, welcome)
 extern "c" fn raw_session_process_welcome(
   session : RawSession,
   welcome : Bytes,
-  recognized_user_ids : FixedArray[UInt64],
 ) -> FixedArray[Bytes] = "mbt_dave_session_process_welcome"
 
 ///|
@@ -219,18 +231,7 @@ extern "c" fn raw_decryptor_decrypt(
 extern "c" fn raw_decryptor_last_status(decryptor : RawDecryptor) -> Int32 = "mbt_dave_decryptor_last_status"
 
 ///|
-fn recognized_ids_to_fixed(
-  recognized_user_ids : Array[UInt64],
-) -> FixedArray[UInt64] {
-  let result = FixedArray::make(recognized_user_ids.length(), 0UL)
-  for index = 0; index < recognized_user_ids.length(); index = index + 1 {
-    result[index] = recognized_user_ids[index]
-  }
-  result
-}
-
-///|
-/// Whether official libdave v1.2.0's required C API is loadable.
+/// Whether the pinned official libdave release's C API is loadable.
 pub fn available() -> Bool {
   loader_status() == 0
 }
@@ -307,16 +308,21 @@ pub fn RawSession::key_package(self : Self) -> Bytes {
 }
 
 ///|
-pub fn RawSession::process_proposals(
+pub fn RawSession::add_recognized_user(self : Self, user_id~ : UInt64) -> Unit {
+  raw_session_add_recognized_user(self, user_id)
+}
+
+///|
+pub fn RawSession::remove_recognized_user(
   self : Self,
-  proposals : Bytes,
-  recognized_user_ids : Array[UInt64],
-) -> Bytes {
-  raw_session_process_proposals(
-    self,
-    proposals,
-    recognized_ids_to_fixed(recognized_user_ids),
-  )
+  user_id~ : UInt64,
+) -> Unit {
+  raw_session_remove_recognized_user(self, user_id)
+}
+
+///|
+pub fn RawSession::process_proposals(self : Self, proposals : Bytes) -> Bytes {
+  raw_session_process_proposals(self, proposals)
 }
 
 ///|
@@ -333,13 +339,8 @@ pub fn RawSession::process_commit(
 pub fn RawSession::process_welcome(
   self : Self,
   welcome : Bytes,
-  recognized_user_ids : Array[UInt64],
 ) -> FixedArray[Bytes] {
-  raw_session_process_welcome(
-    self,
-    welcome,
-    recognized_ids_to_fixed(recognized_user_ids),
-  )
+  raw_session_process_welcome(self, welcome)
 }
 
 ///|

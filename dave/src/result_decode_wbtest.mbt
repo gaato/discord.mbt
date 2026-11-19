@@ -121,11 +121,3 @@ test "native result decoder rejects malformed records and tags" {
     _ => fail("expected a failed result with roster data to fail")
   }
 }
-
-///|
-test "recognized user IDs are deduplicated and always include self" {
-  let remote = [10UL, 20UL, 20UL]
-  assert_eq(recognized_user_ids_with_self(remote, 30UL), [10UL, 20UL, 30UL])
-  assert_eq(remote, [10UL, 20UL, 20UL])
-  assert_eq(recognized_user_ids_with_self(remote, 20UL), [10UL, 20UL])
-}

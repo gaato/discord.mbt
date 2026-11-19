@@ -12,7 +12,7 @@ const { spawnSync } = require("node:child_process");
 const { Transform, pipeline } = require("node:stream");
 const { promisify } = require("node:util");
 
-const { assetFor, release } = require("./release/libdave-v1.2.0.js");
+const { assetFor, release } = require("./release/libdave-v1.3.0.js");
 
 const pipelineAsync = promisify(pipeline);
 const MARKER_FILE = ".dave-mbt-runtime.json";

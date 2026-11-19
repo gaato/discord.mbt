@@ -57,9 +57,11 @@ trait DaveBackend {
   fn reset(Self) -> Unit raise DaveError
   fn set_external_sender(Self, Bytes) -> Unit raise DaveError
   fn key_package(Self) -> Bytes raise DaveError
-  fn process_proposals(Self, Bytes, recognized_user_ids~ : Array[UInt64]) -> Bytes raise DaveError
+  fn recognize_user(Self, user_id~ : UInt64) -> Unit raise DaveError
+  fn forget_user(Self, user_id~ : UInt64) -> Unit raise DaveError
+  fn process_proposals(Self, Bytes) -> Bytes? raise DaveError
   fn process_commit(Self, Bytes) -> DaveCommitOutcome raise DaveError
-  fn process_welcome(Self, Bytes, recognized_user_ids~ : Array[UInt64]) -> DaveWelcomeOutcome raise DaveError
+  fn process_welcome(Self, Bytes) -> DaveWelcomeOutcome raise DaveError
   fn prepare_remote_ratchet(Self, user_id~ : UInt64, protocol_version~ : Int32) -> Unit raise DaveError
   fn has_remote(Self, user_id~ : UInt64) -> Bool
   fn remove_remote(Self, user_id~ : UInt64) -> Unit
@@ -193,13 +195,23 @@ impl DaveBackend for LibdaveBackend with fn key_package(self) {
 }
 
 ///|
-impl DaveBackend for LibdaveBackend with fn process_proposals(
-  self,
-  payload,
-  recognized_user_ids~,
-) {
+impl DaveBackend for LibdaveBackend with fn recognize_user(self, user_id~) {
+  with_libdave("recognize a connected user", () => {
+    self.session.add_recognized_user(user_id~)
+  })
+}
+
+///|
+impl DaveBackend for LibdaveBackend with fn forget_user(self, user_id~) {
+  with_libdave("forget a disconnected user", () => {
+    self.session.remove_recognized_user(user_id~)
+  })
+}
+
+///|
+impl DaveBackend for LibdaveBackend with fn process_proposals(self, payload) {
   with_libdave("process MLS proposals", () => {
-    self.session.process_proposals(payload, recognized_user_ids~)
+    self.session.process_proposals(payload)
   })
 }
 
@@ -226,13 +238,9 @@ impl DaveBackend for LibdaveBackend with fn process_commit(self, payload) {
 }
 
 ///|
-impl DaveBackend for LibdaveBackend with fn process_welcome(
-  self,
-  payload,
-  recognized_user_ids~,
-) {
+impl DaveBackend for LibdaveBackend with fn process_welcome(self, payload) {
   let result = with_libdave("process MLS Welcome", () => {
-    self.session.process_welcome(payload, recognized_user_ids~)
+    self.session.process_welcome(payload)
   })
   match result {
     Applied(changes~) => {
@@ -400,25 +408,39 @@ pub fn DaveMachine::new(
 ) -> DaveMachine raise DaveError {
   let local_user = parse_snowflake(self_user_id, "self user ID")
   let connected_roster = parse_roster(roster)
-  connected_roster.remove(local_user)
   let backend = LibdaveBackend::new(
     protocol_version~,
     self_user_id=local_user,
     channel_id~,
   )
+  DaveMachine::with_backend(
+    (backend : &DaveBackend),
+    self_user_id=local_user,
+    connected_roster~,
+  )
+}
+
+///|
+/// Assemble a machine over `backend` and tell libdave which users are
+/// connected: it admits only those to the MLS group. The local user is always
+/// admitted, so it is neither tracked nor recognized here.
+fn DaveMachine::with_backend(
+  backend : &DaveBackend,
+  self_user_id~ : UInt64,
+  connected_roster~ : Set[UInt64],
+) -> DaveMachine raise DaveError {
+  connected_roster.remove(self_user_id)
+  for user_id in connected_roster {
+    backend.recognize_user(user_id~)
+  }
   {
-    backend: (backend : &DaveBackend),
-    self_user_id: local_user,
+    backend,
+    self_user_id,
     connected_roster,
     mls_roster: Set([]),
     pending: Map([]),
     latest_prepared_version: 0,
   }
-}
-
-///|
-fn DaveMachine::recognized_users(self : DaveMachine) -> Array[UInt64] {
-  self.connected_roster.to_array()
 }
 
 ///|
@@ -520,11 +542,7 @@ fn DaveMachine::handle_welcome(
   transition_id : Int32,
   welcome : Bytes,
 ) -> Array[DaveAction] raise DaveError {
-  match
-    self.backend.process_welcome(
-      welcome,
-      recognized_user_ids=self.recognized_users(),
-    ) {
+  match self.backend.process_welcome(welcome) {
     WelcomeFailed(..) => self.recover_invalid_group(transition_id)
     WelcomeApplied(changes~) => {
       for change in changes {
@@ -569,11 +587,12 @@ pub fn DaveMachine::handle(
       if payload.length() == 0 {
         raise DaveInvalid(reason="proposals payload is empty")
       }
-      let commit_welcome = self.backend.process_proposals(
-        payload,
-        recognized_user_ids=self.recognized_users(),
-      )
-      [SendBinary(op=28, payload=commit_welcome)]
+      // No commit means the batch left nothing queued, such as a revoke of
+      // every queued proposal: there is nothing to send.
+      match self.backend.process_proposals(payload) {
+        Some(commit_welcome) => [SendBinary(op=28, payload=commit_welcome)]
+        None => []
+      }
     }
     DaveMlsAnnounceCommitTransition(transition_id~, commit~) =>
       self.handle_commit(transition_id, commit)
@@ -601,6 +620,7 @@ pub fn DaveMachine::handle(
       for user_id in parsed {
         if user_id != self.self_user_id {
           self.connected_roster.add(user_id)
+          self.backend.recognize_user(user_id~)
           if self.mls_roster.contains(user_id) {
             self.backend.prepare_remote_ratchet(
               user_id~,
@@ -614,6 +634,9 @@ pub fn DaveMachine::handle(
     ClientDisconnect(user_id~) => {
       let parsed = parse_snowflake(user_id, "disconnected user ID")
       self.connected_roster.remove(parsed)
+      if parsed != self.self_user_id {
+        self.backend.forget_user(user_id=parsed)
+      }
       self.backend.remove_remote(user_id=parsed)
       []
     }
