@@ -6,6 +6,11 @@ releases (0.x → 0.y) may contain breaking changes; patch releases do not.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The README's import block lists `gaato/discord/model`**, whose `GuildId`
+  and `ChannelId` the usage example takes.
+
 ## [0.9.0] - 2026-11-20
 
 ### Changed

@@ -23,12 +23,14 @@ moon add gaato/discord
 moon add gaato/discord_voice
 ```
 
-Import it next to `gaato/discord` in your package's `moon.pkg`, as `@voice`:
+Import it next to `gaato/discord` in your package's `moon.pkg`, as `@voice`,
+with `gaato/discord/model` for the ids the example takes:
 
 ```mbt nocheck
 ///|
 import {
   "gaato/discord",
+  "gaato/discord/model",
   "gaato/discord_voice" @voice,
 }
 ```
