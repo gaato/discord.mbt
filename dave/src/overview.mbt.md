@@ -95,7 +95,9 @@ constructors raise `DaveError::LibraryUnavailable` when DAVE is required.
 - Invalid use, unavailable native support and native failures raise
   `DaveError`. A rejected commit or Welcome is a protocol outcome, returned as
   `CommitResult::Failed` or `WelcomeResult::Failed`, for your state machine to
-  handle.
+  handle. An applied commit or Welcome carries the changes to the roster of
+  signature keys: `Upsert` with a user's key, or `Remove` for a user whose key
+  libdave returned empty.
 - `Session::new` always uses transient signing keys. Persisted keys are not
   exposed.
 
