@@ -798,14 +798,14 @@ async test "the coordinator answers an over-long request line and hangs up" {
     // and the client sees a clean end instead of a reset.
     conn.write(Bytes::make(MAX_LINE_BYTES + 1, b'x'))
     let reader = LineReader::new()
-    guard reader.next(chunk => conn.read_into(chunk)) is Line(line) else {
+    guard reader.next(chunk => conn.read_into(chunk.mut_view())) is Line(line) else {
       fail("no answer to an over-long line")
     }
     assert_eq(
       decode_error_message(line),
       "request line longer than \{MAX_LINE_BYTES} bytes",
     )
-    assert_true(reader.next(chunk => conn.read_into(chunk)) is Ended)
+    assert_true(reader.next(chunk => conn.read_into(chunk.mut_view())) is Ended)
   })
 }
 

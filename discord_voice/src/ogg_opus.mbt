@@ -362,7 +362,7 @@ pub impl AudioSource for OggOpusSource with fn next_frame(self) {
 ///|
 async fn read_ogg_chunk(input : &@io.BinaryReader) -> Bytes? {
   let buffer = FixedArray::make(8192, b'\x00')
-  let count = input.read_into(buffer)
+  let count = input.read_into(buffer.mut_view())
   if count == 0 {
     None
   } else {

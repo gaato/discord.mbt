@@ -140,7 +140,7 @@ async fn serve_connection(conn : @socket.Tcp, state : CoordinatorState) -> Unit 
   })
   let reader = LineReader::new()
   for ;; {
-    let line = match reader.next(chunk => conn.read_into(chunk)) {
+    let line = match reader.next(chunk => conn.read_into(chunk.mut_view())) {
       Line(line) => line
       Ended => return
       TooLong => {

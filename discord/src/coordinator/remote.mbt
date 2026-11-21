@@ -130,7 +130,7 @@ fn coordinator_retryable(error : Error) -> Bool {
 /// a protocol error.
 async fn read_line(conn : @socket.Tcp) -> String? {
   let reader = LineReader::new()
-  match reader.next(chunk => conn.read_into(chunk)) {
+  match reader.next(chunk => conn.read_into(chunk.mut_view())) {
     Line(line) => {
       if reader.has_pending() {
         raise CoordinatorError::InvalidResponse(

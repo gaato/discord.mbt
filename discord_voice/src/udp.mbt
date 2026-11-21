@@ -22,7 +22,7 @@ priv struct SocketVoiceUdp {
 
 ///|
 impl VoiceUdp for SocketVoiceUdp with fn recv(self, buffer) {
-  self.client.recv_into(buffer)
+  self.client.recv_into(buffer.mut_view())
 }
 
 ///|
