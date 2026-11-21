@@ -1,24 +1,20 @@
 # gaato/dave
 
-[![CI](https://github.com/gaato/discord.mbt/actions/workflows/dave.yml/badge.svg)](https://github.com/gaato/discord.mbt/actions/workflows/dave.yml)
-[![License](https://img.shields.io/github/license/gaato/discord.mbt)](https://github.com/gaato/discord.mbt/blob/main/dave/LICENSE)
+Native MoonBit bindings for Discord's official
+[`libdave`](https://github.com/discord/libdave), the library behind Discord's
+DAVE end-to-end encryption for voice and video. Use it to establish the MLS
+group and encrypt or decrypt media frames in your own voice implementation.
 
-Safe native MoonBit bindings for Discord's official
-[`libdave`](https://github.com/discord/libdave) C API, for applications that
-implement Discord's DAVE end-to-end encryption themselves.
-
-`gaato/dave` owns the unsafe FFI boundary and exposes opaque MoonBit types for
-MLS sessions, key ratchets, and media encryptors/decryptors. It is a protocol
-and media-crypto library, not a Discord client: Gateway and voice WebSocket
-opcodes, participant bookkeeping, transition timing, RTP/UDP transport, and
-recovery policy stay in the application. Bots built with `gaato/discord` get
-all of this from
+**Most bots do not need this module directly.** Bots built with
+[`gaato/discord`](https://mooncakes.io/docs/gaato/discord) get DAVE, together
+with the voice gateway and RTP transport, from
 [`gaato/discord_voice`](https://mooncakes.io/docs/gaato/discord_voice).
 
-Real DAVE operations run on MoonBit's native backend. The package also
-type-checks on JavaScript and linear-memory Wasm so it can remain in a
-multi-target dependency graph; there `available()` is false and native-handle
-constructors raise `DaveError::LibraryUnavailable`.
+`gaato/dave` owns the unsafe FFI boundary and exposes opaque types for MLS
+sessions, key ratchets and media encryptors and decryptors. It is a protocol
+and media-crypto library, not a Discord client. Gateway and voice WebSocket
+opcodes, participant bookkeeping, transition timing, RTP/UDP transport and
+recovery policy stay in your application.
 
 ## Install
 
@@ -26,19 +22,38 @@ constructors raise `DaveError::LibraryUnavailable`.
 moon add gaato/dave
 ```
 
-Then import the root package in your package's `moon.pkg`:
+Import `gaato/dave` in your package's `moon.pkg`. Then download the native
+library once, from a native build:
 
-```mbt nocheck
-///|
-import {
-  "gaato/dave",
-}
+```sh
+env MBT_DAVE_REQUIRE_NATIVE=1 moon build --target native --release
 ```
 
-## Usage
+The build hook fetches Discord's official prebuilt `libdave` for the host,
+checks its size and SHA-256 digest, and caches it for loading at run time.
+Nothing is installed system-wide. The hook runs with `node`, so Node.js must be
+on `PATH` for native builds. Linux and macOS also need `unzip`. Builds without
+`MBT_DAVE_REQUIRE_NATIVE=1` download nothing.
 
-Create an MLS session and obtain the key package that the Discord DAVE
-orchestration layer sends to the voice server:
+| Host | Architecture | Support |
+| --- | --- | --- |
+| Linux | x86-64, ARM64 | Supported |
+| macOS | ARM64 | Supported |
+| Windows | x86-64 | Supported |
+| macOS | x86-64 | Upstream asset only. MoonBit has no Darwin x86-64 toolchain. |
+
+Other hosts have no upstream asset. Upstream's Linux binaries need a recent
+glibc. On older distributions, point `MBT_DAVE_NATIVE_LIB` at a compatible
+self-built library.
+
+On JavaScript and linear-memory Wasm the package still type-checks, so it can
+stay in a multi-target dependency graph. There, `available()` is false and
+native-handle constructors raise `DaveError::LibraryUnavailable`.
+
+## Start a session
+
+Create an MLS session and obtain the key package that your DAVE orchestration
+sends to the voice server:
 
 ```mbt check
 ///|
@@ -54,40 +69,41 @@ test "create a session and its key package" {
 }
 ```
 
-The application sets the external sender before processing proposals, then
-feeds proposal, commit, and Welcome messages into the session. The external
-sender cannot be replaced while pending or established MLS group state exists;
-call `reset`, replace it, and then `reinitialize` when a replacement is needed.
-`reset` itself retains the configured external sender, matching libdave, so an
-ordinary `reinitialize` recreates pending group state with that sender. Once an
-epoch is established, obtain per-user `KeyRatchet` values and install them into
-an `Encryptor` or `Decryptor`. Outbound SSRCs must be assigned a supported codec
-before encrypted frames are processed.
+Then:
 
-Check `available()` before starting an optional DAVE path, or let constructors
-raise `DaveError::LibraryUnavailable` when DAVE is required.
+1. Set the external sender before processing proposals.
+2. Feed proposal, commit and Welcome messages into the session.
+3. Once an epoch is established, get each participant's `KeyRatchet` and
+   install it into an `Encryptor` or `Decryptor`.
+4. Assign a supported codec to each outbound SSRC before encrypting its
+   frames.
+
+The external sender cannot be replaced while pending or established group
+state exists. Call `reset`, replace it, then `reinitialize`. `reset` keeps the
+configured external sender, as libdave does.
+
+Check `available()` before starting an optional DAVE path, or let
+constructors raise `DaveError::LibraryUnavailable` when DAVE is required.
 
 ## Ownership and errors
 
-- `Session`, `KeyRatchet`, `Encryptor`, and `Decryptor` own finalizable native
-  handles. Copying one of these MoonBit values aliases the same mutable native
-  state, so access to a single value must be serialized by the application.
-- Byte strings returned from native code are copied into MoonBit-owned memory.
-  Installing a `KeyRatchet` copies its native key state into the media object.
-- `Session::new` always requests libdave's transient signing-key behavior.
-  Native authentication-session IDs and persisted-key lookup are not
-  exposed by the safe API.
-- Invalid use, unavailable native support, and wrapper/native failures raise
-  `DaveError`. MLS commit and Welcome rejections remain protocol outcomes in
-  `CommitResult::Failed` or `WelcomeResult::Failed`. Applied commit and Welcome
-  results both carry roster deltas; `RosterChange::Remove` represents an empty
-  signature returned by libdave.
+- `Session`, `KeyRatchet`, `Encryptor` and `Decryptor` own native handles.
+  Copying one of these values aliases the same mutable native state, so
+  serialize access to each one.
+- Bytes returned from native code are copied into MoonBit memory. Installing a
+  `KeyRatchet` copies its key state into the media object.
+- Invalid use, unavailable native support and native failures raise
+  `DaveError`. A rejected commit or Welcome is a protocol outcome, returned as
+  `CommitResult::Failed` or `WelcomeResult::Failed`, for your state machine to
+  handle.
+- `Session::new` always uses transient signing keys. Persisted keys are not
+  exposed.
 
 ## Verification codes
 
-`Session::current_group_pairwise_fingerprint_blocking` returns the pairwise
-fingerprint for a peer in the currently established MLS group, and
-`pairwise_verification_code` formats it as the DAVE verification code:
+`current_group_pairwise_fingerprint_blocking` returns the pairwise fingerprint
+for a peer in the current group, and `pairwise_verification_code` formats it as
+the code users compare:
 
 ```mbt check
 ///|
@@ -107,57 +123,25 @@ test "the verification example compiles" {
 }
 ```
 
-A code is valid for the current group only. Signing identities are transient,
-so discard any stored fingerprint, code, or trust decision after a reconnect,
-`reinitialize`, or a replacement `Session`. The method blocks until libdave's
-fingerprint worker answers; do not call it on an event-loop thread.
-
-## Native runtime
-
-Opt in once from a native Moon build to download Discord's official prebuilt
-libdave archive for the host, verify its size and SHA-256 digest, and store
-the extraction in a user cache:
-
-```sh
-env MBT_DAVE_REQUIRE_NATIVE=1 moon build --target native --release
-```
-
-The module's prebuild hook runs with `node`, so Node.js must be on `PATH` for
-native builds; Linux and macOS also need `unzip`. The shared library is loaded
-at run time; it is not installed system-wide or embedded in the package.
-Builds without `MBT_DAVE_REQUIRE_NATIVE=1`, including JavaScript and Wasm
-builds, download nothing.
-
-Native DAVE runs on these hosts:
-
-| Host | Architecture | Support |
-| --- | --- | --- |
-| Linux | x86-64, ARM64 | Supported |
-| macOS | ARM64 | Supported |
-| Windows | x86-64 | Supported |
-| macOS | x86-64 | Upstream asset only; MoonBit has no Darwin x86-64 toolchain |
-
-Other hosts have no upstream asset, and the bootstrap does not cross-compile.
-Upstream's Linux binaries need a recent glibc; on older distributions, supply a
-compatible self-built library through `MBT_DAVE_NATIVE_LIB`. The
-[native runtime notes](https://github.com/gaato/discord.mbt/blob/main/dave/docs/native-runtime.md)
-cover the exact requirements, cache paths, offline builds, environment
-overrides, and loader order.
+A code is valid for the current group only. Because signing identities are
+transient, discard any stored fingerprint, code or trust decision after a
+reconnect, a `reinitialize` or a new `Session`. The call blocks until
+libdave's worker answers, so do not make it on an event-loop thread.
 
 ## Upstream and licensing
 
-This project is an independent binding. It is not affiliated with or endorsed
-by Discord. `libdave` and its bundled dependencies keep their upstream
-licenses and notices; the downloaded release and its digests are recorded in
+This is an independent binding, not affiliated with or endorsed by Discord.
+`libdave` and its bundled dependencies keep their upstream licenses. The
+downloaded release and its digests are recorded in
 [THIRD_PARTY.md](https://github.com/gaato/discord.mbt/blob/main/dave/THIRD_PARTY.md).
 
 ## Links
 
-- [Changelog](https://github.com/gaato/discord.mbt/blob/main/dave/CHANGELOG.md)
-- [Repository](https://github.com/gaato/discord.mbt) (the module lives in
-  `dave/`)
-- [Native runtime notes](https://github.com/gaato/discord.mbt/blob/main/dave/docs/native-runtime.md)
+- [Native runtime notes](https://github.com/gaato/discord.mbt/blob/main/dave/docs/native-runtime.md):
+  exact requirements, cache paths, offline builds and loader order
 - [Verification boundary](https://github.com/gaato/discord.mbt/blob/main/dave/docs/verification-boundary.md)
+- [Changelog](https://github.com/gaato/discord.mbt/blob/main/dave/CHANGELOG.md)
+- [Repository](https://github.com/gaato/discord.mbt) (the module lives in `dave/`)
 - [`libdave`](https://github.com/discord/libdave)
 
 ## License

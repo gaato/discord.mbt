@@ -6,8 +6,13 @@
 [![Ask DeepWiki](https://img.shields.io/badge/Ask-DeepWiki-blue)](https://deepwiki.com/gaato/discord.mbt)
 [![License](https://img.shields.io/github/license/gaato/discord.mbt)](LICENSE)
 
-Discord libraries for [MoonBit](https://www.moonbitlang.com). This repository
-is a MoonBit workspace; each directory below is a module.
+Discord libraries for [MoonBit](https://www.moonbitlang.com): slash-command
+bots on the Gateway, interaction endpoints on Cloudflare Workers, Deno or a
+native server, REST tools, and voice. Unofficial, and not affiliated with
+Discord. This repository is a MoonBit workspace; each directory below is a
+module.
+
+[日本語](README.ja.md)
 
 | Directory | Module | Contents |
 | --- | --- | --- |
@@ -23,7 +28,10 @@ maintainers' ledgers and design notes, [`scripts/`](scripts/README.md) the
 audits and release tooling, and `experiments/` host experiments. Each
 published module has its own `CHANGELOG.md`.
 
-See [`discord/README.md`](discord/README.md) for usage.
+See [`discord/README.md`](discord/README.md) for usage. For a command-line
+tool over the same REST API, see
+[discord-cli](https://github.com/gaato/discord-cli). Bugs and requests go to
+[Issues](https://github.com/gaato/discord.mbt/issues).
 
 ## Development
 
