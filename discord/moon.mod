@@ -1,6 +1,6 @@
 name = "gaato/discord"
 
-version = "0.19.1"
+version = "0.19.2"
 
 readme = "README.md"
 
@@ -22,7 +22,7 @@ preferred_target = "native"
 warnings = "-implicit_impl_as_method"
 
 import {
-  "gaato/mttp@0.5.1",
+  "gaato/mttp@0.5.2",
   "gaato/mttp_core@0.3.2",
   "hustcer/ed25519@0.6.2",
   "gaato/codec_bytes@0.1.3",

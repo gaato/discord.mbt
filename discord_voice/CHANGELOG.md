@@ -6,6 +6,15 @@ releases (0.x → 0.y) may contain breaking changes; patch releases do not.
 
 ## [Unreleased]
 
+## [0.9.2] - 2026-11-21
+
+### Changed
+
+- **Needs MoonBit 0.10.22.** Requires `gaato/discord` 0.19.2 and
+  `gaato/mttp` 0.5.2; Ogg input and UDP receive read through
+  `read_into(MutArrayView[Byte])`, which 0.9.1 does not, so 0.9.1 does not
+  build on 0.10.22. Migration: build with MoonBit 0.10.22 or later.
+
 ## [0.9.1] - 2026-11-21
 
 ### Changed

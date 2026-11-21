@@ -7,6 +7,15 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+## [0.19.2] - 2026-11-21
+
+### Changed
+
+- **Needs MoonBit 0.10.22.** Requires `gaato/mttp` 0.5.2. On 0.10.22,
+  core/async's readers take `read_into(MutArrayView[Byte])`, so
+  `gaato/discord` 0.19.1 and `gaato/mttp` 0.5.1 and earlier do not build
+  there for native or Wasm. Migration: build with MoonBit 0.10.22 or later.
+
 ## [0.19.1] - 2026-11-21
 
 ### Changed
