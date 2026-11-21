@@ -6,6 +6,12 @@ releases (0.x → 0.y) may contain breaking changes; patch releases do not.
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-11-21
+
+### Changed
+
+- **The README is rewritten**: playing and receiving audio, the two native libraries and how they are fetched, and the message limit.
+
 ### Fixed
 
 - **The README's import block lists `gaato/discord/model`**, whose `GuildId`

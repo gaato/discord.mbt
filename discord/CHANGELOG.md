@@ -7,6 +7,12 @@ breaking change is listed with a migration note.
 
 ## [Unreleased]
 
+## [0.19.1] - 2026-11-21
+
+### Changed
+
+- **The README is rewritten**: a quickstart bot that syncs its commands to the scope it is given, which packages to import for each kind of application, and the guides.
+
 ## [0.19.0] - 2026-11-18
 
 ### Changed

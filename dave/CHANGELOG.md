@@ -7,6 +7,12 @@ to 0.1.1 were made from [gaato/dave.mbt](https://github.com/gaato/dave.mbt).
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-11-21
+
+### Changed
+
+- **The README is rewritten**: starting a session, the hosts with a prebuilt libdave, ownership, errors and roster changes, and verification codes.
+
 ## [0.3.0] - 2026-11-20
 
 ### Changed
