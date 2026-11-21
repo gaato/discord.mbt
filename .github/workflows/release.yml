@@ -3,7 +3,8 @@ name: Release
 # Publishes one module to mooncakes.io when its release tag is pushed:
 # `discord-v<version>`, `discord_voice-v<version>`, or `dave-v<version>`.
 # The tag must name the version in that module's moon.mod and point at a
-# commit on main, which CI has checked. The module is built on its own and
+# commit on main whose CI passed: the ci job waits for the CI run of that
+# commit and stops the release unless it succeeded. The module is built on its own and
 # resolves its dependencies from the registry, as consumers do, so a module
 # that needs a new version of another is tagged after that version is
 # published. Earlier gaato/discord releases are tagged `v<version>`;
@@ -33,15 +34,47 @@ on:
 permissions:
   contents: read
 
+# One run per tag. Tags of different modules release side by side; GitHub
+# keeps one waiting run per group and cancels an older waiting one, so a tag
+# pushed again waits for its earlier run instead.
 concurrency:
-  group: release
+  group: release-${{ github.ref_name }}
   cancel-in-progress: false
 
 env:
   MOONBIT_INSTALL_VERSION: "0.10.21+06da1ed44"
 
 jobs:
+  ci:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 40
+    permissions:
+      actions: read
+    steps:
+      - name: Wait for CI on the tagged commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          # A tag is usually pushed right after main, so the CI run of the
+          # commit may not have started yet.
+          id=
+          for _ in $(seq 1 30); do
+            id=$(gh run list --workflow CI --commit "$SHA" --event push --limit 1 \
+              --json databaseId --jq '.[0].databaseId // empty')
+            [ -n "$id" ] && break
+            sleep 20
+          done
+          if [ -z "$id" ]; then
+            echo "no CI run on main for $SHA; nothing published" >&2
+            exit 1
+          fi
+          gh run watch "$id" --interval 30 --exit-status
+
   publish:
+    needs: ci
     if: github.event_name == 'push'
     runs-on: ubuntu-26.04
     timeout-minutes: 20
