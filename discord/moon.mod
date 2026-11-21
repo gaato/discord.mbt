@@ -22,10 +22,10 @@ preferred_target = "native"
 warnings = "-implicit_impl_as_method"
 
 import {
-  "gaato/mttp@0.5.0",
-  "gaato/mttp_core@0.3.1",
+  "gaato/mttp@0.5.1",
+  "gaato/mttp_core@0.3.2",
   "hustcer/ed25519@0.6.2",
-  "gaato/codec_bytes@0.1.2",
-  "gaato/deflate@0.4.0",
-  "gaato/zstd@0.6.0",
+  "gaato/codec_bytes@0.1.3",
+  "gaato/deflate@0.4.1",
+  "gaato/zstd@0.6.1",
 }

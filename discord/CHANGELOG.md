@@ -11,6 +11,7 @@ breaking change is listed with a migration note.
 
 ### Changed
 
+- **Depends on gaato/mttp 0.5.1, gaato/mttp_core 0.3.2, gaato/deflate 0.4.1, gaato/zstd 0.6.1 and gaato/codec_bytes 0.1.3**, whose decoders are faster with the same bytes out; gateway compression and REST behave as before.
 - **The README is rewritten**: a quickstart bot that syncs its commands to the scope it is given, which packages to import for each kind of application, and the guides.
 
 ## [0.19.0] - 2026-11-18

@@ -10,6 +10,7 @@ releases (0.x → 0.y) may contain breaking changes; patch releases do not.
 
 ### Changed
 
+- **Depends on gaato/discord 0.19.1, gaato/dave 0.3.1, gaato/mttp 0.5.1 and gaato/mttp_core 0.3.2.**
 - **The README is rewritten**: playing and receiving audio, the two native libraries and how they are fetched, and the message limit.
 
 ### Fixed

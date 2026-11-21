@@ -24,10 +24,10 @@ supported_targets = "native"
 warnings = "-implicit_impl_as_method"
 
 import {
-  "gaato/discord@0.19.0",
-  "gaato/dave@0.3.0",
-  "gaato/mttp_core@0.3.1",
-  "gaato/mttp@0.5.0",
+  "gaato/discord@0.19.1",
+  "gaato/dave@0.3.1",
+  "gaato/mttp_core@0.3.2",
+  "gaato/mttp@0.5.1",
 }
 
 options(
